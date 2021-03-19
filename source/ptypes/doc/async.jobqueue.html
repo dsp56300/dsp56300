@@ -1,0 +1,82 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: multithreading: jobqueue</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="async.html">Multithreading</a>: 
+jobqueue</p>
+<blockquote> 
+<pre class="lang">#include &lt;pasync.h&gt;
+
+class jobqueue {
+    jobqueue(int limit = DEF_QUEUE_LIMIT);
+
+    void post(message* msg);
+    void post(int id, int param = 0);
+    void posturgent(message* msg);
+    void posturgent(int id, int param = 0);
+    message* getmessage(int timeout = -1);
+
+    int get_count();
+    int get_limit();
+}</pre>
+</blockquote>
+<p>The <span class="lang">jobqueue</span> class implements a thread-safe list 
+of objects of type <span class="lang"><a href="async.message.html">message</a></span> 
+or any derivative class. <span class="lang">Jobqueue</span> supports posting to 
+and reading from the list from multiple threads simultaneously.</p>
+<p>The <span class="lang">jobqueue</span> class can help to build multithreaded 
+server/robot applications by maintaining a pool of reusable threads that receive 
+job 'assignments' from a queue. This threading model can be faster compared to 
+applications that create and destroy separate thread objects for each task. See 
+<a href="async.examples.html">Examples</a> for a full-featured server template 
+with a thread pool.</p>
+<p><span class="def">jobqueue::jobqueue(int limit = DEF_QUEUE_LIMIT)</span> constructs 
+a job queue object. <span class="lang">Limit</span> specifies the maximum number 
+of messages this queue can hold. If the limit is reached, the next thread that 
+posts a message will wait until the queue becomes available again. In this version 
+the default for <span class="def">limit</span> is 5000.</p>
+<p><span class="def">void jobqueue::post(message* msg)</span> adds a message to 
+the queue. <span class="lang">Msg</span> can be an object of class <span class="lang">message</span> 
+or any derivative class. The <span class="lang">message</span> object should always 
+be created dynamically using operator <span class="lang">new</span>. The messages 
+in the queue are processed in order they were posted, i.e. on first-in-first-out 
+basis.</p>
+<p><span class="def">void jobqueue::post(int id, pintptr param = 0)</span> creates 
+a message object using <span class="lang">id</span> and <span class="lang">param</span> 
+and calls <span class="lang">post(message*)</span>.</p>
+<p><span class="def">void msgqueue::posturgent(message* msg)</span> posts a message 
+object &quot;out of turn&quot;, i.e. this message will be processed first. The 
+messages posted through this method are processed on first-in-last-out basis. 
+<span class="lang">post()</span> and <span class="lang">posturgent()</span> can 
+be used alternately on the same queue.</p>
+<p><span class="def">void jobqueue::posturgent(int id, pintptr param = 0)</span> 
+creates a message object using <span class="lang">id</span> and <span class="lang">param</span> 
+and calls <span class="lang">posturgent(message*)</span>.</p>
+<p><span class="def">message* jobqueue::getmessage(int timeout = -1)</span> retrieves 
+the next message from the queue or waits if there are no messages available. The 
+<span class="lang">timeout</span> parameter specifies the timeout value in milliseconds. 
+If <span class="lang">timeout</span> is -1 (the default) <span class="lang">getmessage()</span> 
+will wait for a message infinitely. This function returns a message object, or 
+otherwise <span class="lang">NULL</span> if the time specified in <span class="lang">timeout</span> 
+has elapsed. <b>NOTE</b>: the message object returned by this function must be 
+freed with operator <span class="lang">delete</span>. It is safe to call <span class="lang">getmessage()</span> 
+concurrently.</p>
+<p><span class="def">int jobqueue::get_count()</span> returns the number of messages 
+currently in the queue.</p>
+<p><span class="def">int jobqueue::get_limit()</span> returns the queue limit 
+set by the constructor.</p>
+<p class="seealso">See also: <a href="async.message.html">message</a>, <a href="async.msgqueue.html">msgqueue</a>, 
+<a href="async.examples.html">Examples</a></p>
+<span class="lang"></span><!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

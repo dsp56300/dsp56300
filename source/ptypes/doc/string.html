@@ -1,0 +1,65 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: string</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+string</p>
+<ul>
+<li> 
+<h5><a href="string.constructors.html">Constructors/destructors</a></h5>
+</li>
+<li> 
+<h5><a href="string.operators.html">Operators</a></h5>
+</li>
+<li> 
+<h5><a href="string.typecasts.html">Typecasts</a></h5>
+</li>
+<li> 
+<h5><a href="string.manipulation.html">Manipulation</a></h5>
+</li>
+<li> 
+<h5><a href="string.conversion.html">Conversion</a></h5>
+</li>
+</ul>
+<p>The <span class="lang">string</span> class implements dynamically allocated 
+reference-counted 8-bit character strings. The <span class="lang">string</span> 
+class is a mixture of L-type and null-terminated strings: it has both the length 
+indicator and the terminating null-symbol. The length of a string is theoretically 
+limited to <span class="lang">INT_MAX</span>, and practically is limited to the 
+amount of virtual memory space available to the application. </p>
+<p>A string object itself contains only a reference to the first character of 
+the string buffer. A string object can be implicitly converted to a null-terminated 
+string, either a variable or passed as an actual parameter, thus allowing to combine 
+both PTypes strings and traditional C strings in your application. A string object 
+converted to <span class="lang">char*</span> or <span class="lang">const char*</span> 
+never returns <span class="lang">NULL</span> pointers: it guarantees to always 
+point to some data, even if the string is zero-sized.</p>
+<p>The reference counting mechanism works <b>transparently</b> (known also as 
+copy-on-write) and <b>safely</b> with regard to multithreading. You can manipulate 
+string objects as if each object had its own copy of string data. Whenever you 
+modify a string object the library safely detaches the buffer from all other string 
+objects that may be using the same buffer and creates a unique copy so that changes 
+won't affect the other &quot;holders&quot; of this string.</p>
+<p><b>NOTE on multithreading</b>: the dynamic string objects themselves are NOT 
+thread-safe. In other words, each thread can manipulate objects (variables) of 
+type <span class="lang">string</span> only within their scope. However, it is 
+safe to pass strings as (copy) parameters when, for example, sending a message 
+to a concurrent thread through a message queue. Whenever the recipient thread 
+tries to modify the string, the shared data buffer is being safely detached.</p>
+<p>The string class is declared in <a href="include/ptypes.h.html">&lt;ptypes.h&gt;</a>.</p>
+<p class="seealso">See also: <a href="string.constructors.html">Constructors/destructors</a>, 
+<a href="string.operators.html">Operators</a>, <a href="string.typecasts.html">Typecasts</a>, 
+<a href="string.manipulation.html">Manipulation</a>, <a href="string.conversion.html">Conversion</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

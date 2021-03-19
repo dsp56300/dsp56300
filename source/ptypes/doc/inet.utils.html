@@ -1,0 +1,49 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: networking: utilities</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="inet.html">Networking</a>: 
+Utilities</p>
+<blockquote> 
+<pre class="lang">#include &lt;pinet.h&gt;
+
+string     iptostring(ipaddress ip);
+ipaddress  phostbyname(const string&amp; name);
+string     phostbyaddr(ipaddress ip);
+string     phostcname(const string&amp; name);
+</pre>
+</blockquote>
+<p>Many PTypes networking utility functions and class methods manipulate a new 
+data type <span class="lang">ipaddress</span> - IPv4 (4-byte) internetwork address 
+type. The objects of this type can be constructed either by explicitly specifying 
+the 4 bytes separately (e.g. <span class="lang">ipaddress(192, 168, 1, 1)</span>) 
+or by assigning another <span class="lang">ipaddress</span>. The objects of this 
+type are mutually compatible with <span class="lang">unsigned long</span> type, 
+however, you can not rely on the order of bytes if an <span class="lang">ipaddress</span> 
+is converted to a <span class="lang">unsigned long</span> and vice versa. This 
+implicit typecast is provided only for comparing an <span class="lang">ipaddress</span> 
+value with 0 or <span class="lang">ipnone</span> (see <a href="inet.examples.html">Examples</a>).</p>
+<p><span class="def">string iptostring(ipaddress ip)</span> converts an IP address 
+to a string, e.g. <span class="lang">ipaddress(127, 0, 0, 1)</span> would be &quot;127.0.0.1&quot;.</p>
+<p><span class="def">ipaddress phostbyname(const string&amp; name)</span> resolves 
+a symbolic DNS name or a numeric IP addresses to <span class="lang">ipaddress</span>. 
+On error this function returns <span class="lang">ipnone</span>.</p>
+<p><span class="def">string phostbyaddr(ipaddress ip)</span> performs reverse 
+DNS lookup for the given IP address. On error this function returns an empty string.</p>
+<p><span class="def">string phostcname(const string&amp; name)</span> returns 
+the canonical name of the host. On error this function returns an empty string.</p>
+<p class="seealso">See also: <a href="inet.ipstream.html">ipstream</a>, <a href="inet.ipstmserver.html">ipstmserver</a>, 
+<a href="inet.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

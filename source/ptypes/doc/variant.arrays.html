@@ -1,0 +1,86 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: variant: arrays</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="variant.html">variant</a>: Arrays</p>
+<blockquote> 
+<pre class="lang">
+#include &lt;ptypes.h&gt;
+ 
+void aclear(variant&amp; a);<br>variant aclone(const variant&amp; a);
+
+void put(variant&amp; a, <i>&lt;key&gt;</i>, const variant&amp; item);
+const variant&amp; get(const variant&amp; a, <i>&lt;key&gt;</i>);
+const variant&amp; variant::operator [](<i>&lt;key&gt;</i>) const;
+void del(variant&amp; a, <i>&lt;key&gt;</i>);
+
+bool anext(const variant&amp; array, int&amp; index, variant&amp; item, [ string&amp; key ]);
+</pre>
+</blockquote>
+<p>A variant object can hold an associative array of variants. The variant changes 
+its type to an array as soon as <span class="lang">put()</span> or <span class="lang">aclear()</span> 
+is called for an object. When assigning variants, only a reference to an array 
+is being copied, which means, modifying an array through one variant object affects 
+all other objects that hold a reference to the same array. To duplicate the contents 
+of an array use <span class="lang">aclone()</span>.</p>
+<p>Variant arrays can associate values with either strings or integers (32 or 
+64 bit). Integer keys are not required to be consecutive. It should be noted that 
+in the current implementation there is no difference in performance between these 
+two methods. Both methods can be mixed in one array.</p>
+<p>PTypes uses reference counting on arrays to properly clean up unused dynamic 
+structures. However, since variant arrays may recursively contain arrays and in 
+some situations there may be a circular reference, it is possible to have memory 
+leak when using such structures. Since PTypes does not provide garbage collection 
+(e.g. like in Java), compound variant data structures should be designed so that 
+variants never reference each other circularly.</p>
+<p><span class="def">void aclear(variant&amp; a)</span> clears the variant array. 
+This function may affect other variant objects holding a reference to the same 
+array data.</p>
+<p><span class="def">variant aclone(const variant&amp; a)</span> creates a copy 
+of an array or creates an empty array if <span class="lang">a</span> is of any 
+other variant type. If <span class="lang">a</span> contains variant arrays as 
+elements, only their references are being copied.</p>
+<p><span class="def">void put(variant&amp; a, <i>&lt;key&gt;</i>, const variant&amp; 
+item)</span> associates <span class="lang">item</span> with <span class="lang">key</span> 
+in the variant array <span class="lang">a</span>. <span class="lang">Key</span> 
+can be either a string or an integer. The previous value associated with this 
+key, if any, is replaced with the new value. <span class="lang"></span>If <span class="lang">item</span> 
+is an unassigned variant, the new value is not stored in the array.</p>
+<p><span class="def">const variant&amp; get(const variant&amp; a, <i>&lt;key&gt;</i>)</span> 
+retrieves an element associated with <span class="lang">key</span> in the array 
+<span class="lang">a</span>. If the element does not exist, or <span class="lang">a</span> 
+is not an array, this function returns an unassigned variant (a reference to <span class="lang">nullvar</span>). 
+<span class="lang">Key</span> can be either a string or an integer. Variant arrays 
+use hashing to retrieve elements by keys.</p>
+<p><span class="def">const variant&amp; variant::operator [](<i>&lt;key&gt;</i>)</span> 
+equivalent to <span class="lang">get()</span>. This operator can be used only 
+for retrieving elements.</p>
+<p><span class="def">void del(variant&amp; a, <i>&lt;key&gt;</i>)</span> removes 
+the element associated with <span class="lang">key</span> from the array <span class="lang">a</span>. 
+Does nothing if the element does not exist or <span class="lang">a</span> is not 
+an array. Equivalent to calling <span class="lang">put()</span> with an unassigned 
+variant item.</p>
+<p><span class="def">bool anext(const variant&amp; a, int&amp; index, variant&amp; 
+item, [ string&amp; key ])</span> iterates through array elements (please see 
+examples in the introduction to variants). Each time <span class="lang">anext()</span> 
+is called it assigns the next item in the array to <span class="lang">item</span> 
+and optionally assigns its key value to <span class="lang">key</span>. <span class="lang">Index</span> 
+must be zero when calling this function first time. If there are no items left 
+in the array, or <span class="lang">a</span> is not an array, this function returns 
+<span class="lang">false</span>.</p>
+<p class="seealso">See also: <a href="string.html">string</a>, <a href="variant.typecasts.html">Assignments 
+and typecasts</a>, <a href="variant.objrefs.html">Object references</a>, <a href="variant.utils.html">Utilities</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

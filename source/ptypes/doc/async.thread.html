@@ -1,0 +1,117 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: multithreading: thread</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="async.html">Multithreading</a>: 
+thread </p>
+<blockquote> 
+<pre class="lang">#include &lt;pasync.h&gt;
+
+class thread {
+    thread(bool autofree);
+    ~thread();
+
+    void start();
+    void waitfor();
+    void signal();
+    pthread_id_t get_id();
+    bool get_running();
+    bool get_finished();
+    bool get_signaled();
+
+    virtual void execute() = 0;
+    virtual void cleanup() = 0;
+    bool relax(int milliseconds);
+}</pre>
+</blockquote>
+<p>Create a descendant of <span class="lang">thread</span> to represent an execution 
+thread in a multithreaded application. All threads are running within the framework 
+of the parent process and share the same global variables. Each thread, however, 
+has its own stack. The execution of a thread can be started either from the main 
+process or from another thread. Further, the newly launched thread executes its 
+code concurrently.</p>
+<p>Multithreading can significantly improve your application when a process consumes 
+time by waiting for data from some communication device, a slow storage device 
+or user input. When such pieces of code run concurrently the CPU is loaded more 
+efficiently. Also, many networking services use threading to serve multiple users 
+simultaneously.</p>
+<p>When threads concurrently access and modify shared data structures precautions 
+should be taken to preserve logical integrity of these data structures. Synchronization 
+between threads is performed using either of: <a href="async.semaphore.html">semaphore</a>, 
+<a href="async.mutex.html">mutex</a>, <a href="async.rwlock.html">rwlock</a>, 
+<a href="async.trigger.html">trigger</a> or <a href="async.msgqueue.html">msgqueue</a>.</p>
+<p><span class="def">thread::thread(bool autofree)</span> creates a thread object, 
+but does not run it. If <span class="lang">autofree</span> is <span class="lang">true</span> 
+the thread will destroy itself upon termination. Note, that you can use <span class="lang">autofree</span> 
+only for dynamically allocated thread objects. A variable that holds a pointer 
+to a dynamic <span class="lang">autofree</span> thread object can be considered 
+invalid after a call to <span class="lang">start()</span>.</p>
+<p><span class="def">thread::~thread()</span> destroys the thread object. Usually 
+both the constructor and the destructor for non-autofree threads are called from 
+a different context. In contrary, autofree threads call their destructors from 
+their own context.</p>
+<p><span class="def">void thread::start()</span> runs the thread. The overridden 
+virtual method <span class="lang">execute()</span> is called asynchronously. <span class="lang">Start()</span> 
+itself returns immediately. Each thread object can be run only once.</p>
+<p><span class="def">void thread::waitfor()</span> waits for the thread to terminate. 
+This function is called when a thread needs to synchronize its execution with 
+the completion of the target non-autofree thread. For non-autofree threads this 
+method must be called <b>at least once</b> and within the scope of a thread that 
+called <span class="lang">start()</span>. For convenience, you can place a call 
+to <span class="lang">waitfor()</span> in the overridden destructor. <span class="lang">waitfor()</span>, 
+however, can not be called for autofree threads.</p>
+<p><span class="def">void thread::signal()</span> sets signaled attribute to true 
+and possibly wakes up the thread if in a `relaxed' state (see <span class="lang">relax()</span> 
+below). <span class="lang">signal()</span> is usually called from a different 
+thread to let the given thread know that the execution should be terminated as 
+soon as possible. If the given thread performs an iteration one of the conditions 
+of leaving the loop should be <span class="lang">(!get_signaled())</span>. <span class="lang">Signal()</span> 
+can be called only once for a thread object.</p>
+<p><span class="def">pthread_id_t thread::get_id()</span> returns the thread 
+ID assigned by the operating system. This ID can then be used in call to <span class="lang">pthrequal()</span>.</p>
+<p><span class="def">bool thread::get_running()</span> returns <span class="lang">true</span> 
+if the given thread object is running. This property is never set to <span class="lang">false</span> 
+once the thread started. To check whether the thread finished its job, i.e. returned 
+from <span class="lang">execute()</span>, use <span class="lang">get_finished()</span>.</p>
+<p><span class="def">bool thread::get_finished()</span> returns <span class="lang">true</span> 
+if thread has already terminated its execution, or, in other words, has left <span class="lang">execute()</span>.</p>
+<p><span class="def">bool thread::get_signaled()</span> returns <span class="lang">true</span> 
+if the thread object is in signaled state, i.e. <span class="lang">signal()</span> 
+has been called from a concurrent thread. See also <span class="lang">signal()</span>.</p>
+<p><span class="def">virtual void thread::execute()</span> -- this pure virtual 
+method should be overridden in the descendant class to implement the functionality 
+of your thread. <span class="lang">execute()</span> can be viewed as <span class="lang">main()</span> 
+for your mini-process. Typically, you create a class descendant from <span class="lang">thread</span> 
+and override at least two virtual methods: <span class="lang">execute()</span> 
+and <span class="lang">cleanup()</span>.</p>
+<p><span class="def">virtual void thread::cleanup()</span> -- this pure virtual 
+method should be overridden in the descendant class. <span class="lang">cleanup()</span> 
+is called either when the thread terminates normally or when an exception is raised 
+within the thread's context. When implementing this method you might want to clean 
+up any memory and other resources allocated by your thread object. <span class="lang">cleanup()</span> 
+is guaranteed to be called once upon termination of the thread. To properly shut 
+down the thread, avoid using operations that can cause exceptions in <span class="lang">cleanup()</span>.</p>
+<p><span class="def">bool thread::relax(int milliseconds)</span> is a protected 
+member function which can be called only from within the overridden <span class="lang">execute()</span> 
+method. This function suspends the execution of the thread until either of: the 
+specified amount of time is elapsed, in which case the function returns false, 
+or <span class="lang">signal()</span> is called from a concurrent thread, in which 
+case <span class="lang">relax()</span> returns true. If parameter <span class="lang">milliseconds</span> 
+is -1 the function will wait infinitely. The relax/signal mechanism is useful 
+for threads doing some job that requires taking periodic actions in the background.</p>
+<p class="seealso">See also: <a href="async.semaphore.html">semaphore</a>, <a href="async.examples.html">mutex</a>, 
+<a href="async.rwlock.html">rwlock</a>, <a href="async.trigger.html">trigger</a>, 
+<a href="async.utils.html">Utilities</a>, <a href="async.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

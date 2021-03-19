@@ -1,0 +1,60 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: cset</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+cset</p>
+<ul>
+<li> 
+<h5><a href="cset.constructors.html">Constructors</a></h5>
+</li>
+<li> 
+<h5><a href="cset.operators.html">Operators</a></h5>
+</li>
+<li> 
+<h5><a href="cset.manipulation.html">Manipulation</a></h5>
+</li>
+</ul>
+<p>The character set class (<span class="lang">cset</span>) implements Pascal-style 
+set of integer values from 0 to 255, or set of characters. Unlike Pascal sets, 
+the range of a <span class="lang">cset</span> cannot be changed and is always 
+0 through 255. <span class="lang">Cset</span> class implements various operators 
+(membership, union, intersection, equality, less than or equal to, etc.) as they 
+are described in the Pascal language. See <a href="cset.operators.html">Operators</a> 
+for details.</p>
+<p><span class="lang">Cset</span> is a packed array of 256 bits, it occupies 32 
+bytes of static or local memory. Each bit indicates whether the corresponding 
+character is a member of a given set.</p>
+<p>Another difference between <span class="lang">cset</span> and Pascal sets is 
+that since C++ compiler does not have a built-in set constructor like the one 
+in Pascal (e.g. ['A'..'Z', 'a'..'z']), <span class="lang">cset</span> provides 
+a simple run-time interpreter instead (see <a href="cset.constructors.html"> Constructors</a>).</p>
+<p>The <span class="lang">cset</span> class is declared in <a href="include/ptypes.h.html">&lt;ptypes.h&gt;</a>.</p>
+<p>The example below shows the general usage of character sets.</p>
+<blockquote> 
+<pre>cset s = &quot;A-Za-z!&quot;;       <span class="comment">// same as ['A'..'Z', 'a'..'z', '!'] in Pascal</span>
+
+include(s, '_');      <span class="comment">    // include underscore character</span>
+include(s, '0', '9'); <span class="comment">    // include all chars from '0' to '9'</span>
+
+if ('a' &amp; s)          <span class="comment">    // check membership</span>
+    cout &lt;&lt; &quot;Letter 'a' found in the set! :)\n&quot;;
+
+const cset letters = &quot;A-Za-z_&quot;;     <span class="comment">// define a set of letters</span>
+string tok = pin.token(letters);    <span class="comment">// read a token from the input stream</span></pre>
+</blockquote>
+<p class="seealso">See also: <a href="cset.constructors.html">Constructors</a>, 
+<a href="cset.operators.html">Operators</a>, <a href="cset.manipulation.html">Manipulation</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

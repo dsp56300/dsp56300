@@ -1,0 +1,79 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: variant</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+variant </p>
+<ul>
+<li> 
+<h5><a href="variant.typecasts.html">Assignments and typecasts</a></h5>
+</li>
+<li> 
+<h5><a href="variant.arrays.html">Arrays</a></h5>
+</li>
+<li> 
+<h5><a href="variant.objrefs.html">Object references</a></h5>
+</li>
+<li> 
+<h5><a href="variant.utils.html">Utilities</a></h5>
+</li>
+</ul>
+<p>The <span class="lang">variant</span> class offers a universal and flexible 
+way to store values whose types can not be determined at compile time. A variant 
+object can hold integer, boolean, floating point or string values as well as associative 
+arrays of variants or references to objects derived from <span class="lang">component</span>. 
+Variants can change their types at run-time. In return for their flexibility, 
+variants have some memory usage and performance overhead. They always occupy 12 
+bytes of static or local memory, however, they may also use dynamic memory allocation 
+for strings and arrays.</p>
+<p>The <span class="lang">variant</span> class provides all possible automatic 
+typecasts, so that in most cases, when variants are used in assignments and function 
+calls, the compiler will generate implicit typecasts appropriate for the context. 
+The typecast functions always try to perform conversion regardless of the current 
+and target types, although it may not always be sensible. For example, if a variant 
+object holds an integer value, an attempt to cast it to a string will result in 
+converting the value to its string representation; if a variant is an associative 
+array, an attempt to cast it to boolean will return true if the array is not empty. 
+Variant typecast routines never generate errors except when a 64-bit integer value 
+is being converted to 32-bit int and the value exceeds the allowed range.</p>
+<p>A variant variable may itself represent an associative array of variants. </p>
+<p>This interface can be useful for (but not limited to) designing interpreters 
+and compilers, working with databases and spreadsheets, etc. </p>
+<p>The variant class is declared in <a href="include/ptypes.h.html">&lt;ptypes.h&gt;</a>.</p>
+<p><b>Examples</b></p>
+<blockquote> 
+<pre>variant v1 = 11;
+variant v2 = &quot;33&quot;;
+variant v3 = int(v1) + int(v2) + 22;  <span class="comment">// explicit typecasts: without them the compiler can't</span> 
+variant v4 = string(v2) + &quot; cows&quot;;    <span class="comment">//    figure out which of + operators to use here</span>
+large i1 = v1;                        <span class="comment">// implicit typecast is possible here</span>
+int a = v2;                           <span class="comment">// large-to-int: may generate (evariant*) exception</span>
+variant v5;
+put(v5, &quot;key1&quot;, v1);                  <span class="comment">// variants may be associated with both strings and</span>
+put(v5, 15, &quot;value2&quot;);                <span class="comment">//    integer values in variant arrays</span>
+variant v6 = v5[15];
+variant v7 = v5;                      <span class="comment">// a reference to the array is being passed</span>
+
+variant varray = aclone(v5);          <span class="comment">// array is being duplicated</span>
+
+variant item;  <span class="comment">                       // array iteration example</span>
+for (int i = 0; anext(varray, i, item); )
+    pout.putf(&quot;%d: %d\n&quot;, i, int(item));<br></pre>
+</blockquote>
+<p class="seealso">See also: <a href="string.html">string</a>, <a href="unknown.html">unknown 
+&amp; component</a>, <a href="variant.typecasts.html">Assignments and typecasts</a>, 
+<a href="variant.arrays.html">Arrays</a>, <a href="variant.objrefs.html">Object 
+references</a>, <a href="variant.utils.html">Utilities</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

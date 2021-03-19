@@ -1,0 +1,168 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" -->
+<title>PTypes: introduction</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" -->
+<p class="hpath"><a href="index.html">Top</a>: Introduction</p>
+<ul>
+  <li>
+    <h5><a href="compiling.html">Compiling and Porting</a></h5>
+  </li>
+  <li>
+    <h5><a href="changes.html">Changes</a></h5>
+  </li>
+</ul>
+<p><br>
+  <b>Basic features</b></p>
+<ul>
+  <li>
+    
+<p>Threads and synchronization primitives solve the vital problem of diversity 
+of the threading API's on different platforms. The library also offers message 
+queues and job queues as additional methods of thread synchronization and maintenance.</p>
+  </li>
+  <li>
+    <p> IP socket classes and utilities provide complete IP-based framework for
+      both client-side and server-side programming. Combined with PTypes multithreading,
+      these classes can be used for designing complex non-visual applications,
+      such like network daemons or web robots.</p>
+  </li>
+  <li>
+    <p> Dynamic strings, variants, character sets, date/time type and various
+      kinds of dynamic and associative arrays: Delphi programmers will find them
+      very similar to the ones in their favorite language. The collection of
+      these basic data types may be useful, among other things, for building
+      compilers and interpreters for higher-level languages.</p>
+  </li>
+  <li>
+    <p>Streaming interfaces provide buffered I/O with simple and powerful text
+      parsing methods. A strictly defined syntax for a given text format or a
+      formal language can be represented by calls to PTypes token extraction
+      methods. The unified streaming interface is applicable to files, named
+      pipes and network sockets.</p>
+  </li>
+  <li>
+    
+<p>Special thread class with enhanced functionality called unit. Units have their 
+own main() and input/output 'plugs'; they can be connected to each other within 
+one application to form pipes, like processes in the UNIX shell.</p>
+  </li>
+  <li>
+    <p>Finally, everything above is portable: all platform-dependent details
+      are hidden inside.</p>
+  </li>
+</ul>
+<p><b><br>
+  Why use PTypes?</b></p>
+<blockquote>
+  <p>PTypes is yet another generic class library among tens and hundreds of others.
+    To find its own niche in this variety of generic programming tools we decided
+    to emphasis on simplicity of the interfaces and readability of the resulting
+    code (i.e. the code that uses the library). The library focuses
+    only on most widely used data types and functional interfaces. We think that
+    like programming languages themselves, low-level libraries, too, should use
+    the minimal set of notions for covering most programming patterns.</p>
+  
+<p>Some data types in the library (strings, character sets and variants) use algebraic 
+notation rather than object-oriented, i.e. you write <span class="lang">length(s)</span> 
+for a string object instead of <span class="lang">s.length()</span>. We believe 
+that traditional notation better fits to a class that represents some fundamental 
+notion and is not supposed to produce subclasses with overridden methods. In other 
+words, if there is no inheritance and polymorphism, there is no need for method 
+calls as well.</p>
+  <p>PTypes uses old-fashioned all-lowercase naming style, since it  can
+   peacefully co-exist with other styles in one program. Whether you are a `unixoid'
+   or you are using modern writing styles (Hungarian, Borland, etc.) you can
+   combine your favorite style with PTypes with no or very little  harm to your
+   source code.</p>
+  <p>And finally, in order to achieve better readability of the resulting
+    code we use
+    clean
+    class
+    naming,
+     i.e. the string type is called <span class="lang">string</span>, thread
+     is <span class="lang">thread</span>,
+     etc.</p>
+  <p>We designed this library in the hope that PTypes with its conciseness and
+    intuitiveness could find its own 'target audience'.</p>
+</blockquote>
+<p><br>
+  <b>Versions and availability</b></p>
+<blockquote>
+  
+<p>Version 2.0 of PTypes is the tenth public release. The third number in the 
+version indicates insignificant improvements or bug fixes. You might want to take 
+a look at the <a href="changes.html">Changes</a> page if you are familiar with 
+one of the previous versions.</p>
+  
+<p>The latest source code and both on-line and out-of-line documentation can be 
+found at</p>
+  <blockquote>
+    
+<p><a href="http://www.melikyan.com/ptypes/">http://www.melikyan.com/ptypes/</a></p>
+  </blockquote>
+  <p>You can receive announcements about new releases through one of the following
+    services:</p>
+  <blockquote>
+    <p><a href="http://freshmeat.net/projects/ptypes/">Subscribe to the project
+        at freshmeat.net</a><br>
+        <a href="http://sourceforge.net/projects/ptypes/">Monitor the project
+        at SourceForge.net</a></p>
+  </blockquote>
+  
+<p>The development version of PTypes is available at SourceForge.net's CVS server. 
+If you are willing to join the development of the library, please become a SourceForge.net 
+user and then contact me to get full access to the CVS repository. The file TODO 
+in the development branch contains the immediate development plan for the library.</p>
+</blockquote>
+<p><br>
+  <b>Bugs and known problems</b></p>
+<blockquote>
+  <p>The list of problems encountered in the latest version along with their
+    solutions, if available, can be found at PTypes project management page (at
+    SourceForge.net):</p>
+  <blockquote>
+    <p><a href="http://sourceforge.net/projects/ptypes/">PTypes project management
+        page</a></p>
+  </blockquote>
+</blockquote>
+<p><b><br>
+  Contributors</b></p>
+<blockquote> 
+<p>We would like to thank:</p>
+<blockquote>
+<p>Pierre-Frederic Caillaud &lt;peufeu at free dot fr&gt;<br>
+Ralph Siemsen &lt;ralphs at netwinder dot org&gt;<br>
+Marco Geri &lt;m.geri at list dot it&gt;<br>
+Philippe Le Rohellec &lt;plerohel at hotmail dot com&gt;<br>
+Mark Lentczner &lt;markl at glyphic dot com&gt;<br>
+Jordan Ritter &lt;jpr5 at darkridge dot com&gt;<br>
+Sergey Matveychuk &lt;sem at ciam dot ru&gt;</p>
+</blockquote>
+</blockquote>
+<p><b><br>
+  Contacts</b></p>
+<blockquote>
+  <p>PTypes is open and free, which also means it is open to your comments and
+    suggestions. Please, submit bug reports and feature requests through <a href="http://sourceforge.net/projects/ptypes/">PTypes
+    project management page</a> at sf.net. There is a public <a href="http://sourceforge.net/forum/forum.php?forum_id=187216">discussion
+    forum</a> for general questions.</p>
+  <p>The author would be grateful if you let him know that you use the library
+    in your project. The author's email address is:</p>
+  <blockquote>
+<p>Hovik Melikyan &lt;hovik at melikyan dot com&gt;</p>
+  </blockquote>
+</blockquote>
+<p class="seealso">See also: <a href="compiling.html">Compiling and Porting</a>, <a href="changes.html">Changes</a>, <a href="http://www.melikyan.com/ptypes/doc/ext/">Resources</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

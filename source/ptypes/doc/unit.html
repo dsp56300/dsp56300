@@ -1,0 +1,136 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: unit</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+unit</p>
+<p> 
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+class unit {
+    compref&lt;instm&gt; uin;
+    compref&lt;outstm&gt; uout;
+
+    virtual void main() = 0;
+    virtual void cleanup() = 0;
+
+    void connect(unit* next);
+    void run(bool async = false);
+    void waitfor();
+}</pre>
+</blockquote>
+<p><span class="lang">Units</span> represent functionality similar to console 
+applications in UNIX. Each unit has its own <span class="lang">main()</span> along 
+with input and output 'plugs' - <span class="lang">uin</span> and <span class="lang">uout</span>, 
+that may be mapped to the standard input and output, a local pipe or any other 
+stream compatible with <span class="lang">instm</span> and <span class="lang">outstm</span>, 
+respectively. </p>
+<p>Each unit class must at least override the abstract method <span class="lang">main()</span>. 
+Overridden unit classes typically read input data from <span class="lang">uin</span> 
+and send the result of processing to <span class="lang">uout</span>, like if they 
+were console applications. By default <span class="lang">uin</span> and <span class="lang">uout</span> 
+are attached to standard input and output. After instantiating a unit object you 
+(the user of a unit class) may attach any <span class="lang">instm</span>-compatible 
+stream to <span class="lang">uin</span> and any <span class="lang">outstm</span>-compatible 
+stream to <span class="lang">uout</span>. In addition, units are able to connect 
+to each other using local pipes, and thus form data processing chains within your 
+application.</p>
+<p>You may define other public methods or fields in your unit class that represent 
+additional options. E.g. a regular expression parser unit may have a string field 
+that represents the regular expression itself (see example below).</p>
+<p>Units can be run either synchronously or asynchronously. In the latter case, 
+a separate thread is being created for executing unit's <span class="lang">main()</span> 
+function. If connected to a pipe using <span class="lang">connect()</span>, the 
+first unit in the chain runs within the scope of the calling thread, the others 
+run in separate threads.</p>
+<p>The <span class="lang">unit</span> class is a subclass of <a href="unknown.html">component</a>, 
+and thus it inherits reference counting and delete notification mechanisms from 
+<span class="lang">component</span>. <span class="lang">Unit</span> is declared 
+in <a href="include/pstreams.h.html">&lt;pstreams.h&gt;</a>.</p>
+<p>This interface is available only in the multithreaded versions of the library. 
+</p>
+<p><span class="def">compref&lt;instm&gt; unit::uin</span> is a reference-counted 
+pointer to an input stream, that is unit's input 'plug'. By default <span class="lang">uin</span> 
+refers to the standard input object <span class="lang">pin</span>. Typically both 
+<span class="lang">uin</span> and <span class="lang">uout</span> are assigned 
+by the user of the unit after instantiating a unit object. You may assign dynamically 
+allocated stream objects to <span class="lang">uin</span> and <span class="lang">uout</span> 
+- they will be freed automatically by the 'smart' <span class="lang">compref</span> 
+pointer.</p>
+<p><span class="def">compref&lt;outstm&gt; unit::uout</span> -- same as <span class="lang">uin</span>; 
+represents the output 'plug' of the unit.</p>
+<p><span class="def">virtual void unit::main()</span> is unit's main code. Override 
+this method to implement functionality of your mini-process. Note that code in 
+<span class="lang">main()</span> must avoid accessing static/global data, since 
+it may be executed in a separate thread. You may choose to write a reusable unit, 
+i.e. when <span class="lang">main()</span> can be called multiple times for the 
+same object, however <span class="lang">main()</span> is protected from overlapping 
+(recursive) calls, which means, you need not to write reentrant code in this function.</p>
+<p><span class="def">virtual void unit::cleanup()</span> -- override this method 
+to perform finalization and cleanup of a unit. This function is guaranteed to 
+be called even if <span class="lang">main()</span> threw an exception of type 
+<span class="lang">(exception*)</span> or a derivative.</p>
+<p><span class="def">void unit::connect(unit* next)</span> connects a unit object 
+to another object using a local pipe. Multiple units can be connected to form 
+a chain. A user then calls <span class="lang">run()</span> for the first object; 
+all other members of the chain are being started automatically in separate threads.</p>
+<p><span class="def">void unit::run(bool async = false)</span> runs a unit object. 
+This function calls <span class="lang">main()</span> for the given object and 
+possibly for other units, if this is the first object of a chain. You can not 
+call <span class="lang">run()</span> for an object which is not the first in a 
+chain. If <span class="lang">async</span> is <span class="lang">true</span>, this 
+function starts a unit in a separate thread and returns immediately. Use <span class="lang">waitfor()</span> 
+to synchronize with the completion of a unit if started asynchronously.</p>
+<p><span class="def">void unit::waitfor()</span> waits for the unit to terminate 
+if run asynchronously. For unit chains, this method needs to be called only for 
+the first object in a chain.</p>
+<p><b>Example</b>. Consider there is a unit type <span class="lang">ugrep</span> 
+that performs regular expression matching and a unit type <span class="lang">utextconv</span> 
+for converting various text formats. The code below demonstrates how to connect 
+these units and run the chain.</p>
+<blockquote> 
+<pre>#include &lt;pstreams.h&gt;
+
+#include &quot;ugrep.h&quot;        <span class="comment">// imaginary headers with unit declarations</span>
+#include &quot;utextconv.h&quot;
+
+USING_PTYPES
+
+int main()
+{
+    ugrep grep;
+    grep.regex = &quot;^abc&quot;;
+    grep.casesens = false;
+
+    utextconv textconv;
+    textconv.from = CONV_UNIX;
+    textconv.to = CONV_WIN;
+
+    <span class="comment">// connect the two units and set up the input and output plugs.
+</span>    grep.uin = new ipstream(&quot;somehost.com&quot;, 8282);
+    grep.connect(&amp;textconv);
+    textconv.uout = new outfile(&quot;output.txt&quot;);
+
+    <span class="comment">// now run the chain; will read input from the socket, pass 
+    // through the grep and textconv units and write it to the 
+    // output file.</span>
+    grep.run();
+}
+</pre>
+</blockquote>
+<p class="seealso">See also: <a href="unknown.html">unknown &amp; component</a>, 
+<a href="streams.html">Streams</a> </p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

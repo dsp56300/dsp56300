@@ -1,0 +1,128 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: lists: tstrlist</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="lists.html">Lists</a>: tstrlist</p>
+<blockquote> 
+<pre class="lang">template &lt;class X&gt; class tstrlist {
+    tstrlist(int flags = 0);
+    ~tstrlist();
+
+    int    get/set_count(int);
+    int    get/set_capacity(int);
+    bool   get/set_ownobjects(bool);
+    void   clear();
+    void   pack();
+
+    bool   get_sorted() const;
+    bool   get_duplicates() const;
+    bool   get_casesens() const;
+
+    <span class="comment">// methods that work both on sorted and unsorted lists</span>
+    void   ins(int index, string key, X* obj);
+    void   put(int index, string key, X* obj);
+    void   put(int index, X* obj);
+    int    add(string key, X* obj);
+    X*     operator [](int index) const;
+    string getkey(int index) const;
+    void   del(int index);
+    int    indexof(string key) const;
+    int    indexof(void* obj) const;
+
+    <span class="comment">// these methods are allowed only on sorted lists</span>
+    int    put(string key, X* obj);
+    X*     operator [](string key) const;
+    void   del(string key);
+    bool   search(string key, int&amp; index) const;
+}</pre>
+</blockquote>
+<p><br>
+The <span class="lang">tstrlist</span> template is similar to <span class="lang">tobjlist</span> 
+in many ways, except that it maintains pairs of strings and objects of type <span class="lang">X</span>, 
+and defines some additional methods described below. <span class="lang">Tstrlist</span> 
+can optionally be sorted by string keys, which allows to use it as an associative 
+array of objects. Thus, <span class="lang">tstrlist</span> combines functionality 
+of an indexed dynamic array and an associative array at the same time. Like <span class="lang">tobjlist</span>, 
+<span class="lang">tstrlist</span> can 'own objects', which means it can automatically 
+free objects whenever they are removed from a list.</p>
+<p>The methods <span class="lang">get/set_count()</span>, <span class="lang">get/set_capacity()</span>, 
+<span class="lang">get/set_ownobjects()</span>, <span class="lang">clear()</span> 
+and <span class="lang">pack()</span> work as for <a href="lists.tobjlist.html">tobjlist</a> 
+and are not described in this section.</p>
+<p><span class="def">tstrlist::tstrlist(int flags = 0)</span> constructs a <span class="lang">tstrlist</span> 
+object. The parameter <span class="lang">flags</span> can be a combination of 
+the following constants:</p>
+<ul>
+<li><span class="lang">SL_OWNOBJECTS</span> - this <span class="lang">tstrlist</span> 
+object will be responsible for freeing objects.</li>
+<li><span class="lang">SL_SORTED</span> - create a sorted list; the items are 
+kept in an alphabetically sorted order. This allows to use a <span class="lang">tstrlist</span> 
+object as an associative array.</li>
+<li><span class="lang">SL_DUPLICATES</span> - allow duplicate keys. Must be combined 
+with <span class="lang">SL_SORTED</span>.</li>
+<li><span class="lang">SL_CASESENS</span> - perform case-sensitive search. By 
+default the search is case-insensitive.</li>
+</ul>
+<p><span class="def">void tstrlist::ins(int index, string key, X* obj)</span> 
+inserts a key/object pair into a list at the position <span class="lang">index</span>. 
+For sorted lists <span class="lang">index</span> must be equal to the value returned 
+by <span class="lang">search()</span> for the given <span class="lang">key</span>. 
+A common pattern of using <span class="lang">ins()</span> on sorted lists is to 
+call <span class="lang">search()</span> for a key to determine whether an object 
+associated with a given key exists, then either insert a new object at the position 
+pointed to by <span class="lang">search()</span> or to get the existing object 
+at that position.</p>
+<p><span class="def">void tstrlist::put(int index, string key, X* obj)</span> 
+puts (replaces) the key/object pair at the position <span class="lang">index</span>.</p>
+<p><span class="def">void tstrlist::put(int index, X* obj)</span> puts <span class="lang">obj</span> 
+at the position <span class="lang">index</span>. The key at this position remains 
+unchanged.</p>
+<p><span class="def">int tstrlist::add(string key, X* obj)</span> on sorted lists 
+this method performs search and inserts the key/object pair at a proper position 
+to keep the list in a sorted order. For ordinary (unsorted) lists this method 
+adds the key/object pair at the end of a list.</p>
+<p><span class="def">X* tstrlist::operator [](int index)</span> returns an object 
+at the position <span class="lang">index</span>.</p>
+<p><span class="def">string tstrlist::getkey(int index)</span> returns the key 
+value at the position <span class="lang">index</span>.</p>
+<p><span class="def">void tstrlist::del(int index)</span> deletes the key/object 
+pair at the position <span class="lang">index</span>.</p>
+<p><span class="def">int tstrlist::indexof(string key)</span> determines the index 
+of a given <span class="lang">key</span>. This function performs binary search 
+on sorted lists, or otherwise linear search on unsorted lists. Returns -1 if <span class="lang">key</span> 
+is not found.</p>
+<p><span class="def">int tstrlist::indexof(void* obj)</span> determines the index 
+of a given object. Always uses linear search. Returns -1 if <span class="lang">obj</span> 
+is not found.</p>
+<p><span class="def">int tstrlist::put(string key, X* obj)</span> is a universal 
+method of adding, replacing and removing objects in a sorted list. <span class="lang">Put()</span> 
+performs search by a given <span class="lang">key</span> and inserts <span class="lang">obj</span> 
+if the key doesn't exist in a list, replaces the old object with <span class="lang">obj</span> 
+if the key was found in a list, or deletes the key/object pair if the parameter 
+<span class="lang">obj</span> was NULL.</p>
+<p><span class="def">X* tstrlist::operator [](string key)</span> returns an object 
+associated with a given <span class="lang">key</span>. Works only on sorted lists. 
+Returns NULL if <span class="lang">key</span> is not found.</p>
+<p><span class="def">void tstrlist::del(string key)</span> deletes the key/object 
+pair for a given <span class="lang">key</span>. Works only on sorted lists. </p>
+<p><span class="def">bool tstrlist::search(string key, int&amp; index)</span> 
+performs binary search on a list. Returns <span class="lang">true</span> if key 
+is present in a list. The output parameter <span class="lang">index</span> contains 
+either the position at which <span class="lang">key</span> was found, or otherwise 
+the position where <span class="lang">key</span> must be inserted to preserve 
+the sorted order.</p>
+<p class="seealso">See also: <a href="lists.tobjlist.html">tobjlist</a>, <a href="lists.textmap.html">textmap</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

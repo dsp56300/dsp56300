@@ -1,0 +1,50 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: outfile</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+outfile </p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+class outfile: outstm {
+    outfile( [ const string& filename, bool append = false ] );
+
+    string get/set_filename(string);
+    bool   get/set_append(bool);
+    int    get/set_umode(int);
+}
+</pre>
+</blockquote>
+<p>This class derives all public methods and properties from <a href="streams.iobase.html">iobase</a> 
+and <a href="streams.outstm.html">outstm</a>, and in addition defines the following:</p>
+<p><span class="def">outfile::outfile( [ const string&amp; filename, bool append 
+= false ] )</span> creates an output file stream, but does not open the file. 
+When opening a file with <span class="lang">open()</span>, it is truncated to 
+zero unless <span class="lang">append</span> property is set to true. <span class="lang">Filename</span> 
+and <span class="lang">append</span> parameters are optional.</p>
+<p><span class="def">string outfile::get/set_filename(string)</span> sets the 
+file name. <span class="lang">set_filename()</span> closes the stream prior to 
+assigning the new value.</p>
+<p><span class="def">bool outfile::get/set_append(bool)</span> -- if set to true, 
+the file pointer is set beyond the last byte of the file when opening the stream 
+with <span class="lang">open()</span>.</p>
+<p><span class="def">int outfile::get/set_umode(int)</span> sets UNIX file mode 
+when creating a new file. By default a file is created with <span class="lang">0644</span> 
+octal, which on UNIX means read/write access for the owner and read-only access 
+for group members and all others. This property has no effect on Windows.</p>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.outstm.html">outstm</a>, 
+<a href="streams.logfile.html">logfile</a>, <a href="streams.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

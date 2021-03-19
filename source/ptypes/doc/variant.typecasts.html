@@ -1,0 +1,75 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: variant: assignments and typecasts</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="variant.html">variant</a>: Assignments and typecasts</p>
+<p><br>
+Variants may hold values of the following types:</p>
+<ul>
+<li>64-bit integer (<span class="lang">large</span>)</li>
+<li>boolean (<span class="lang">bool</span>)</li>
+<li>floating point (<span class="lang">double</span>)</li>
+<li><span class="lang">string</span></li>
+<li>associative array of variants</li>
+<li>reference to an object derived from <span class="lang">component</span></li>
+<li>unassigned (no type)</li>
+</ul>
+<p>Variants are compatible with variables and constants of all numeric types, 
+the string type and a pointer to <span class="lang">component</span>, which means, 
+you can assign any of these values to a variant object and vice versa, including 
+passing as parameters to functions. The type of a variant can be changed at run-time 
+by simply assigning a new value to it. </p>
+<p>By default variants are initialized to an unassigned state, which is the same 
+as calling <span class="lang">clear()</span> for a variant object.</p>
+<p>You may store <span class="lang">datetime</span> values in variants, since 
+<span class="lang">datetime</span> is equivalent to <span class="lang">large</span> 
+in PTypes. Besides, arbitrary binary data can be stored in a dynamic string and 
+then assigned to a variant.</p>
+<p>The variant class declares (or rather, overloads) all possible typecast operators 
+to other fundamental data types. These typecast operators always try to return 
+some value, even when it is not sensible. Below is a list of rules for typecasts 
+that may make sense in your program, leaving the other less meaningful cases as 
+'unspecified'. Although variants store integers as 64-bit values, for simplicity 
+we use the word <span class="lang">int</span> in this list.</p>
+<ul>
+<li>integers and floating point variants are compatible and mutually castable 
+in a manner similar to the C language rules</li>
+<li>int to bool: returns true if the value is non-zero</li>
+<li>int to string: returns the string representing the value in ASCII form</li>
+<li>bool to int: returns 0 or 1</li>
+<li>bool to string: returns &quot;0&quot; or &quot;1&quot;</li>
+<li>string to int: converts the string to an integer; no spaces are allowed before 
+or after the number; returns 0 if the string does not represent a number</li>
+<li>string to float: similar to string-to-int, converts the string to a floating-point 
+value</li>
+<li>string to bool: returns true if the string is not empty</li>
+<li>array to bool: returns true if the array is not empty</li>
+<li>(component*) to bool: returns true if the pointer is not NULL</li>
+<li>unassigned variants return 0, false, 0.0, empty string, empty array or NULL 
+when trying to cast to int, boolean, floating point, string, array or reference, 
+respectively.</li>
+</ul>
+<p>Typecast operators never affect the actual value of a variant object.</p>
+<p>When trying to cast a variant to signed or unsigned 32-bit <span class="lang">int</span>, 
+the typecast operator first casts the value to 64-bit <span class="lang">large</span> 
+according to the rules above, and then checks the resulting value. If the value 
+is out of range, an exception of type (evariant*) is raised. You may always cast 
+variants to <span class="lang">large</span> to get rid of extra exception handling 
+code in your program.</p>
+<p class="seealso">See also: <a href="string.html">string</a>, <a href="time.html">datetime</a>, 
+<a href="unknown.html">unknown &amp; component</a>, <a href="variant.arrays.html">Arrays</a>, 
+<a href="variant.objrefs.html">Object references</a>, <a href="variant.utils.html">Utilities</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

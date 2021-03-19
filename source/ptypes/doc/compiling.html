@@ -1,0 +1,164 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: Compiling and Porting</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="intro.html">Introduction</a>: 
+Compiling and Porting</p>
+<p><br>
+<b>Supported platforms and compilers</b></p>
+<blockquote> 
+<p><b>Windows</b>: MSVC 6, VC.NET, Dev-C++/MinGW, BCC, Cygwin</p>
+<p><b>FreeBSD</b>: GNU C/C++</p>
+<p><b>Linux/i386, Alpha, PPC, Sparc, AMD64</b>: GNU C/C++</p>
+<p><b>SunOS/Sparc</b>: GNU C/C++</p>
+<p><b>MacOS X/PPC (Darwin)</b>: CC - Apple Objective-C compiler</p>
+<p><b>BSD/OS</b>: GNU C/C++</p>
+<p><b><br>
+</b><br>
+The build process on all platforms produces 3 versions of the library: static 
+single-threaded, static multithreaded and dynamic (shared) multithreaded. In addition, 
+MSVC can build debug versions for each of these 3 libraries.</p>
+<p>Single-threaded versions have a suffix 'n' (non-reentrant) in their names: 
+<span class="lang">libptypesn.a</span> for UNIX and MinGW and <span class="lang">ptypesn.lib</span> 
+for MSVC. They are somewhat faster and smaller than the multithreaded versions 
+and are intended to be used in smaller projects that do not require to be linked 
+with the slower reentrant system libraries.</p>
+<p>The dynamic versions of the library have the library version number in their 
+names: <span class="lang">ptypes20.dll</span>, <span class="lang">libptypes.so.20</span> 
+and <span class="lang">libptypes.20.dylib</span>. The version number in file names 
+reflects incompatible changes and/or significant enhancement of functionality. 
+Change in the third number in the version usually indicates a compatible improvement 
+and/or bug fix release, so it is not reflected in the DLL/so file name.</p>
+</blockquote>
+<p><b><br>
+Building on UNIX and MacOS X</b></p>
+<blockquote> 
+<p>In order to build the library on one of the UNIX systems listed above, run 
+<span class="lang">make</span> in the library's root directory. The makefile in 
+this directory actually calls makefiles in <span class="lang">src/</span> and 
+<span class="lang">wshare/</span> with a suffix which is an output of <span class="lang">uname</span> 
+on the given system (e.g. <span class="lang">src/Makefile.Linux</span> or <span class="lang">src/Makefile.FreeBSD</span>). 
+Make builds the library and the demo program, and then places:</p>
+<ul>
+<li>Static single-threaded version -&gt; <span class="lang">lib/libptypesn.a</span></li>
+<li>Static multi-threaded version -&gt; <span class="lang">lib/libptypes.a</span></li>
+<li>Shared multi-threaded version -&gt; <span class="lang">so/libptypes.so.20</span> 
+(<span class="lang">libptypes.20.dylib</span> on MacOS X)</li>
+<li>Demo program -&gt; <span class="lang">bin/wshare</span></li>
+</ul>
+<p> The public headers are in <span class="lang">include/</span>.</p>
+<p>When building your own multithreaded application on <b>Linux</b> or <b>FreeBSD</b>, 
+GCC requires you to specify a special command-line option <span class="lang">-pthread</span> 
+which automatically links POSIX threads library and the reentrant version of <span class="lang">libc</span>. 
+On <b>Linux</b> you should specify a macro <span class="lang">-D_GNU_SOURCE</span> 
+in the command line to include the <span class="lang">rwlock</span> interface.</p>
+<p>When building your multithreaded application on <b>SunOS</b>, you should specify 
+a macro <span class="lang">-D_REENTRANT</span> and also link the following libraries: 
+<span class="lang">-lpthread -lposix4</span> for multithreaded applications, and 
+in addition, <span class="lang">-lsocket -lnsl</span> for network applications. 
+<i>NOTE</i>: if you omit <span class="lang">-lpthread</span>, the program links 
+without errors, but then the thread objects fail to initialize.</p>
+</blockquote>
+<p><b><br>
+Building on Windows with MSVC</b></p>
+<blockquote> 
+<p>The MSVC project files are:</p>
+<ul>
+<li><span class="lang">win32\PTypes_Lib_ST.dsp</span> - static single-threaded 
+version </li>
+<li><span class="lang">win32\PTypes_Lib.dsp</span> - static multithreaded version</li>
+<li><span class="lang">win32\PTypes_DLL.dsp</span> - dynamic multithreaded version</li>
+<li><span class="lang">win32\wshare</span> - the demo program</li>
+</ul>
+<p> A workspace file <span class="lang">PTypes.dsw</span> is provided for building 
+all components and versions of the library.</p>
+<p> You can include one of the project files in your own workspace. Make your 
+project dependent of PTypes to automatically link the library to your program. 
+To use PTypes headers you will have to explicitly specify the directory in your 
+project settings, e.g. &quot;<span class="lang">..\ptypes\include</span>&quot;.</p>
+<p>In order to link a program to the DLL version of PTypes (<span class="lang">ptypes20.dll</span>) 
+use <span class="lang">PTYPES_DLL</span> macro definition when compiling your 
+modules. You may want to add a post-build command in the MSVC environment that 
+copies the PTypes DLL to the directory where you build and debug your application.</p>
+<p>You should link your application with the multithreaded version of CRTL, except 
+when using the single-threaded <span class="lang">ptypesn.lib</span>. When compiling 
+with the dynamic version of PTypes, it is recommended also to use the multithreaded 
+DLL version of CRTL.</p>
+<p>Specify an additional library <span class="lang">ws2_32.lib</span> if you are 
+using PTypes' IP socket classes.</p>
+</blockquote>
+<p><br>
+<b>Building on Windows with Dev-C++/MinGW</b></p>
+<blockquote> 
+<p>The Dev-C++ projects files are in <span class="lang">win32</span> directory 
+and have an extension <span class="lang">.dev</span>.</p>
+<p><span class="lang">win32/PTypes_Lib_ST.dev</span> and <span class="lang">win32/PTypes_Lib.dev</span> 
+build the static versions (single and multithreaded) of the library named <span class="lang">libptypesn.a</span> 
+and <span class="lang">libptypes.a</span> and copy them to <span class="lang">lib/</span>. 
+With Dev-C++/MinGW you can link the library to your application by specifying 
+the option <span class="lang">-lptypesn</span> or <span class="lang">-lptypes</span> 
+and providing the correct library path in Project Options dialog.</p>
+<p><span class="lang">win32/PTypes_DLL.dev</span> builds the multithreaded DLL 
+version of the library named <span class="lang">ptypes20g.dll</span> and copies 
+it to <span class="lang">so/</span>. Although an import library is being built 
+along with the shared object, with MinGW compiler tools you can directly link 
+your program with the PTypes DLL.</p>
+<p><span class="lang">win32/wshare.dev</span> builds the demo program and places 
+it in <span class="lang">bin/wshare.exe</span>.</p>
+<p>These project files produce binaries without any debugging information and 
+use directories <span class="lang">Release_ST</span>, <span class="lang">Release</span> 
+and <span class="lang">DLL_Release</span> to place all intermediate binaries. 
+If you need debug versions, create separate project files (or copy them from the 
+existing ones), add proper compiler options for debugging/profiling and change 
+the output directories to <span class="lang">Debug_ST</span> , <span class="lang">Debug</span> 
+and <span class="lang">DLL_Debug</span> respectively.</p>
+</blockquote>
+<p><b><br>
+Building on Windows with BCC</b></p>
+<blockquote> 
+<p> The makefile for Borland's C/C++ compiler (aka C++Builder) is <span class="lang">src\ptypes.mak</span>. 
+You will need tasm32.exe since some modules contain assembly code which BCC compiles 
+using an external assembler. The BCC makefile for wshare is <span class="lang">wshare\wshare.mak</span>. 
+Currently BCC only builds the static multithreaded version of the library.</p>
+</blockquote>
+<p><b><br>
+PTypes namespace</b></p>
+<blockquote> 
+<p>The entire PTypes interface is enclosed within a namespace called <span class="lang">pt</span>. 
+The header file <a href="include/pport.h.html">&lt;pport.h&gt;</a> provides a 
+macro <span class="lang">USING_PTYPES</span>, which is equivalent to <span class="lang">using 
+namespace pt</span>. This macro allows you to use PTypes interface symbols without 
+the scope specifier <span class="lang">pt::</span> in your source code.</p>
+</blockquote>
+<p><b><br>
+Porting the library to other platforms</b></p>
+<blockquote> 
+<p>The author would greatly appreciate any effort to port the library to other 
+popular platforms. If you either ported the library or just found that PTypes 
+builds with no problem under your favorite platform with your favorite compiler, 
+then all you'd have to do is to create a makefile with proper definitions in it. 
+Take a look at <span class="lang">Makefile.FreeBSD</span> or <span class="lang">Makefile.SunOS</span>, 
+for example. Besides <span class="lang">OS_CXXOPTS</span> you can specify additional 
+libraries through <span class="lang">OS_LDLIBS</span>. Name your makefile so that 
+running <span class="lang">make Makefile.`uname`</span> would work on the given 
+operating system. Try to build the library and then run <span class="lang">src/ptypes_test</span> 
+to make sure the library is functioning properly. </p>
+<p>And finally, if you send the changes to the author, then (obviously) others 
+would be able to benefit from using PTypes on your favorite operating system with 
+your favorite compiler.</p>
+</blockquote>
+<p class="seealso">See also: <a href="deploying.html">Deploying the shared (dynamic) 
+library</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

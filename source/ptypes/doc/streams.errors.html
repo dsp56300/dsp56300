@@ -1,0 +1,56 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: error handling</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+Error handling</p>
+<p>When a recoverable error occurs during input/output operations, an exception 
+of type <span class="lang">(estream*)</span> is being thrown. The exception object 
+contains an error message which can be shown to the user. The message is accessible 
+through <span class="def">estream::get_message()</span>. </p>
+<p>The example below shows how to catch an exception and recover normal execution 
+of the program:</p>
+<blockquote> 
+<pre>#include &lt;pstreams.h&gt;
+
+USING_PTYPES
+
+infile f(&quot;somefile.txt&quot;);
+try 
+{
+    f.open();
+    while(!f.get_eof())
+    <span class="comment">    // read the file...</span>
+}
+catch (estream* e) 
+{
+    perr.putline(e-&gt;get_message());
+    delete e;
+}
+</pre>
+</blockquote>
+<p>The <span class="lang">estream</span> class provides a system error code in 
+UNIX errno semantics through <span class="def">estream::get_code()</span>. On 
+Windows most error codes are translated into corresponding UNIX errno codes. Less 
+frequently occurring errors are translated to a generic errno code EIO. When an 
+<span class="lang">estream</span> object returns EIO, the actual message string 
+is constructed based on the status code of the stream. For example, if the status 
+code was IO_OPENING, the error code was EIO, the message would be &quot;Couldn't 
+open <i>[filename]</i>&quot;. For explanations on what each errno code means, 
+see comments in <span class="lang">src/piobase.cxx</span> source file.</p>
+<p><span class="lang">Estream</span> also provides a reference to the stream object 
+that raised the error condition through <span class="lang">estream::get_errstm()</span>.</p>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

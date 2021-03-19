@@ -1,0 +1,107 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: unknown &amp; component</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+unknown &amp; component</p>
+<p> 
+<blockquote> 
+<pre class="lang">#include &lt;ptypes.h&gt;
+
+class unknown {
+    unknown();
+    virtual ~unknown();
+}
+
+class component {
+    component();
+    virtual ~component();
+    void addnotification(component* c);
+    void delnotification(component* c);
+    virtual void freenotify(component* c);
+}
+
+component* addref(component*);
+bool release(component*);
+
+template &lt;class T&gt; class compref;
+
+int objalloc;</pre>
+</blockquote>
+<p>The <span class="lang">unknown</span> interface is the base for all interfaces 
+(classes) in PTypes, <b>except</b> <span class="lang">string</span>, <span class="lang">cset</span>, 
+<span class="lang">variant</span>, <span class="lang">mutex</span>, <span class="lang">rwlock</span>, 
+<span class="lang">msgqueue</span> and <span class="lang">tpodlist</span>. The 
+<span class="lang">unknown</span> class has no semantic or functional meaning, 
+except that deriving a class from <span class="lang">unknown</span> provides a 
+simple mechanism of tracking the number of created/destroyed objects in a program. 
+Historically, <span class="lang">unknown</span> was used in PTypes as a base for 
+all list item types, however, starting from version 2.0 of the library this requirement 
+is no longer in place.</p>
+<p>The <span class="lang">component</span> class adds reference-counting functionality 
+to <span class="lang">unknown</span> (see <span class="lang">addref()</span> and 
+<span class="lang">release()</span> below). PTypes variants require objects to 
+be derived from <span class="lang">component</span> instead of <span class="lang">unknown</span> 
+to be able to make assignments and destruction of variants properly. See also 
+<span class="lang">compref </span>below.</p>
+<p>As an alternative to reference-counting <span class="lang">component</span> 
+also provides so-called 'delete notification' mechanism. If object A holds a reference 
+to object B, A can add itself to B's notification list to be notified when B is 
+being destroyed. This allows A to take appropriate actions, e.g. invalidate the 
+reference to B. A in this case can declare reference to B as a plain pointer. 
+In other words, A should override its own virtual method <span class="lang">freenotify()</span>, 
+and it also should call <span class="lang">addnotification(this)</span> for the 
+object it holds reference to.</p>
+<p>All stream objects in PTypes and aslo the <span class="lang">unit</span> class 
+are derived from <span class="lang">component</span>.</p>
+<p>A global variable <span class="lang">objalloc</span> is declared to keep track 
+of the number of allocated objects (derived from <span class="lang">unknown</span> 
+or <span class="lang">component</span>) in an application program, which can help 
+you to find memory leaks or other potential bugs. The allocation counting works 
+only in <span class="lang">DEBUG</span> mode. If the memory is cleaned up properly, 
+this value should be zero upon program termination. You can write code, possibly 
+enclosed within <span class="lang">#ifdef DEBUG ... #endif</span>, which checks 
+whether this value is zero at the end of <span class="lang">main()</span>.</p>
+<p>These interfaces are declared in <a href="include/ptypes.h.html">&lt;ptypes.h&gt;</a>.</p>
+<p><span class="def">component* addref(component* c)</span> increments the reference 
+counter for the given component object <span class="lang">c</span>. The return 
+value is the same as <span class="lang">c</span> and is provided for convenience.</p>
+<p><span class="def">bool release(component* c)</span> decrements the reference 
+counter and destroys the object <span class="lang">c</span> if the counter reached 
+0. Returns <span class="lang">true</span> if the object has been destroyed. Passing 
+<span class="lang">NULL</span> to this function is not an error.</p>
+<p><span class="def">template &lt;class T&gt; class compref</span> implements 
+a 'smart' pointer to <span class="lang">component</span> (or any derivative class) 
+with automatic reference counting. Use this template in place of a plain pointer 
+declaration (e.g. <span class="lang">compref&lt;myclass&gt;</span> instead of 
+<span class="lang">myclass*</span>) to automatically destroy objects as soon as 
+there are no more references left. The behavior of <span class="lang">compref</span> 
+pointers is similar to plain pointers, except that they perform additional actions 
+when assigning new values to them.</p>
+<p><span class="def">virtual component::~component()</span> destroys the component 
+and calls <span class="lang">freenotify()</span> for each object in the notification 
+list.</p>
+<p><span class="def">component::addnotification(component* c)</span> adds object 
+<span class="lang">c</span> to the notification list of this object. This object's 
+destructor will then call <span class="lang">c-&gt;freenotify()</span>.</p>
+<p><span class="def">component::delnotification(component* c)</span> deletes object 
+<span class="lang">c</span> from this object's notification list.</p>
+<p><span class="def">virtual component::freenotify(component* caller)</span> is 
+being called by the <span class="lang">caller</span>'s destructor for each object 
+in the notification list. This method should be overriden in classes which add 
+themselves to other objects' notification lists. The overridden method usually 
+invalidates (assigns NULL) all references to <span class="lang">caller</span>.</p>
+<p class="seealso">See also: <a href="lists.html">Lists</a>, <a href="variant.html">variant</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

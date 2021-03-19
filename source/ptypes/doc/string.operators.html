@@ -1,0 +1,77 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: string: operators</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="string.html">string</a>: Operators</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptypes.h&gt;
+
+class string {
+<span class="comment">    // assignment</span>
+    string& operator =(const char*);
+    string& operator =(char);
+    string& operator =(const string&);
+    friend void assign(string&, const char* buf, int len);
+
+<span class="comment">    // concatenation</span>
+    string& operator +=(const char*);
+    string& operator +=(char);
+    string& operator +=(const string&);
+    string  operator +(const char*) const;
+    string  operator +(char) const;
+    string  operator +(const string&) const;
+    friend  string operator +(const char*, const string&);
+    friend  string operator +(char c, const string&);
+
+<span class="comment">    // comparison</span>
+    bool operator ==(const char*) const;
+    bool operator ==(char) const;
+    bool operator ==(const string&) const;
+    bool operator !=(const char*) const;
+    bool operator !=(char c) const;
+    bool operator !=(const string&) const;
+
+<span class="comment">    // indexed character access, 0-based</span>
+    char& string::operator[] (int index);
+    const char& string::operator[] (int index) const;
+}</pre>
+</blockquote>
+<p>The string class defines the following binary operators: assignment (<span class="lang">=</span>), 
+concatenation (<span class="lang">+</span>), concatenation with assignment (<span class="lang">+=</span>) 
+and comparison (<span class="lang">==</span>,<span class="lang"> !=</span>). At 
+least one of the operands (either left or right) must be of type <span class="lang">string</span>. 
+Another operand can be one of the following: <span class="lang">char</span>, <span class="lang">char*</span> 
+or <span class="lang">string</span>.</p>
+<p>Indexed access operator allows to store or retrieve a value of an individual 
+character. The index is 0-based. When compiled with either <span class="lang">DEBUG</span> 
+or <span class="lang">CHECK_BOUNDS</span> conditional symbol, bounds checking 
+is performed for the indexed access; if the index is out of bounds (i.e. less 
+than 0 or equals to or greater than the length of the string), an unrecoverable 
+error is raised. The non-debugging version of the library never checks for index 
+overlfows, thus making your program somewhat faster but less safe.</p>
+<p><b>Examples</b></p>
+<blockquote> 
+<pre>string s1 = &quot;abc&quot;, s2 = 'd', s3;
+
+s3 = s1 + s2;
+s2 += &quot;ef&quot;;
+s3[2] = 'B';
+</pre>
+</blockquote>
+<p class="seealso">See also: <a href="string.constructors.html">Constructors/destructors</a>, 
+<a href="string.typecasts.html">Typecasts</a>, <a href="string.manipulation.html">Manipulation</a>, 
+<a href="string.conversion.html">Conversion</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

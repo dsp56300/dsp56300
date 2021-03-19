@@ -1,0 +1,76 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: outmd5</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+outmd5 </p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+class outmd5: outstm {
+    outmd5();
+    outmd5(outstm* outthru);
+    string get_digest();
+    const unsigned char* get_bindigest();
+}
+</pre>
+</blockquote>
+<p>MD5, the message digest algorithm described in RFC 1321, computes a 128-bit 
+sequence (sometimes called 'message digest', 'fingerprint' or 'MD5 checksum') 
+from arbitrary data. As stated in RFC 1321, it is conjectured that it is computationally 
+infeasible to produce two messages having the same message digest, or to produce 
+any message having a given prespecified target message digest. MD5 can be viewed 
+as a one-way encryption system and can be used, for example, to encrypt passwords 
+in a password database.</p>
+<p>The MD5 fingerprint is more often converted to so-called ASCII-64 form in order 
+to conveniently store it in plain text environments and protocols. Thus, the 128-bit 
+binary sequence becomes a 22-character text string consisting of letters, digits 
+and two special symbols '.' and '/'. (Note that this is not the same as Base64 
+encoding in MIME).</p>
+<p>In order to compute a MD5 fingerprint you first create a stream object of type 
+<span class="lang">outmd5</span> and then send data to it as if it was an ordinary 
+output file or a socket stream. After you close the stream, you can obtain the 
+fingerprint in ASCII-64 form using the object's <span class="lang">get_digest()</span> 
+method.</p>
+<p>The implementation of MD5 is derived from L. Peter Deutsch's work.</p>
+<p>This class derives all public methods and properties from <a href="streams.iobase.html">iobase</a> 
+and <a href="streams.outstm.html">outstm</a>, and in addition defines the following:</p>
+<p><span class="def">outmd5::outmd5()</span> creates a bufferless MD5 stream.</p>
+<p><span class="def">outmd5::outmd5(outstm* outthru)</span> creates a MD5 stream 
+and attaches an output stream <span class="lang">outthru</span> to it. Everything 
+sent to the MD5 stream will also be duplicated to <span class="lang">outthru</span>. 
+You may want, for example, to attach <span class="lang">perr</span> to your MD5 
+stream for debugging purposes.</p>
+<p><span class="def">string outmd5::get_digest()</span> closes the stream and 
+returns the computed fingerprint in text form (ASCII-64).</p>
+<p><span class="def">const unsigned char* outmd5::get_bindigest()</span> closes 
+the stream and returns a pointer to a 16-byte buffer with the binary MD5 fingerprint.</p>
+<p><b>Example:</b></p>
+<blockquote> 
+<pre>
+string cryptpw(string username, string password)
+{
+    outmd5 m;
+    m.open();
+    m.put(username);
+    m.put(password);
+    m.put(&quot;Banana with ketchup&quot;);
+    return m.get_digest();
+}
+</pre>
+</blockquote>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.outstm.html">outstm</a> 
+</p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

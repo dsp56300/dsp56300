@@ -1,0 +1,89 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: cset: operators</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="cset.html">cset</a>: Operators</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptypes.h&gt;
+
+class cset {
+<span class="comment">    // assignment</span>
+    cset& operator =(const cset& s);
+
+<span class="comment">    // union</span>
+    cset& operator +=(const cset& s);
+    cset& operator +=(char b);
+    cset  operator +(const cset& s) const;
+    cset  operator +(char b) const;
+    friend cset operator +(char b, const cset& s);
+
+<span class="comment">    // difference</span>
+    cset& operator -=(const cset& s);
+    cset& operator -=(char b);
+    cset  operator -(const cset& s) const;
+    cset  operator -(char b) const;
+
+<span class="comment">    // intersection</span>
+    cset& operator *=(const cset& s);
+    cset  operator *(const cset& s) const;
+
+<span class="comment">    // comparison</span>
+    bool operator ==(const cset& s) const;
+    bool operator !=(const cset& s) const;
+    bool operator <=(const cset& s) const;
+    bool operator >=(const cset& s) const;
+
+<span class="comment">    // membership</span>
+    friend bool operator&amp; (char b, const cset& s);
+}
+</pre>
+</blockquote>
+<p>The following rules apply to +, –, and *:</p>
+<ul>
+<li> 
+<p>An ordinal O is in X + Y if and only if O is in X or Y (or both). Equivalent 
+of bitwise <b>OR</b>.</p>
+</li>
+<li> 
+<p> O is in X – Y if and only if O is in X but not in Y. Equivalent of bitwise 
+<b>AND NOT</b>.</p>
+</li>
+<li> 
+<p>O is in X * Y if and only if O is in both X and Y. Equivalent of bitwise <b>AND</b>.</p>
+</li>
+</ul>
+<p>The following rules apply to comparison operations <=, >=, ==, !=:</p>
+<ul>
+<li> 
+<p> X <= Y is true just in case every member of X is a member of Y; Z >= W is 
+equivalent to W <= Z.</p>
+</li>
+<li> 
+<p>U == V is true just in case U and V contain exactly the same members; otherwise, 
+U != V is true.</p>
+</li>
+</ul>
+<p> For an ordinal O and a set S, O &amp; S is true just in case O is a member 
+of S. Unlike the Pascal language, where membership operator is <b>in</b>, PTypes 
+uses ampersand &quot;&amp;&quot; as a membership test operator.</p>
+<p><b>Note</b>: regardless of whether default char is signed or unsigned (usually 
+set through compiler options) <span class="lang">cset</span> always treats char 
+arguments as unsigned. This means, if the value of an argument is -1, e.g. in 
+call to <span class="lang">operator &amp;</span> or <span class="lang">operator 
++</span>, the value will be converted to 255, -2 will be treated as 254, etc.</p>
+<p class="seealso">See also: <a href="cset.constructors.html">Constructors</a>, 
+<a href="cset.manipulation.html">Manipulation</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

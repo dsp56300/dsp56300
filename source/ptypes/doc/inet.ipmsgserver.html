@@ -1,0 +1,95 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: networking: ipstmserver</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="inet.html">Networking</a>: 
+ipmsgserver</p>
+<blockquote> 
+<pre class="lang">#include &lt;pinet.h&gt;
+
+class ipmsgserver {
+    ipmsgserver();
+
+    int bind(ipaddress ip, int port);
+    int bindall(int port);
+
+    bool   poll(int bindnum = -1, int timeout = 0);
+    int    receive(char* buf, int count);
+    string receive(int max);
+    void   send(const char* buf, int count);
+    void   send(string s);
+
+    ipaddress get_ip();
+    string    get_host();
+}
+</pre>
+</blockquote>
+<p>The <span class="lang">ipmsgserver</span> class is used on the server side 
+of a client-server application. It bounds itself to a specified port/address and 
+waits until a packet is received from a client host. Once a packet is read with 
+<span class="lang">receive()</span>, subsequent calls to <span class="lang">send()</span> 
+will post data back to the client that sent the last request. Each request must 
+be fulfilled immediately; unlike the stream-oriented server class, <span class="lang">ipmsgserver</span> 
+can not handle requests concurrently.</p>
+<p><span class="lang">ipmsgserver</span> can generate exceptions of type <span class="lang">(estream*)</span> 
+with a corresponding error code and a message string.</p>
+<p>Please, see also the introduction to <a href="inet.ipmessage.html">ipmessage</a>.</p>
+<p><span class="def">ipmsgserver::ipmsgserver()</span> constructs an <span class="lang">ipmsgserver</span> 
+object.</p>
+<p><span class="def">int ipmsgserver::bind(ipaddress ip, int port)</span> binds 
+the server to the specified local IP address and port number. This function can 
+be called multiple times for different local addresses and port numbers. <span class="lang">Bind()</span> 
+returns a value that can be used later in call to <span class="lang">poll()</span> 
+as the parameter <span class="lang">bindnum</span>.</p>
+<p><span class="def">int ipmsgserver::bindall(int port)</span> binds the server 
+to all local IP address on the specified port number. Can be called multiple times 
+for different port numbers. <span class="lang">Bindall()</span> returns a value 
+that can be used later in call to <span class="lang">poll()</span> as the parameter 
+<span class="lang">bindnum</span>.</p>
+<p><span class="def">bool ipmsgserver::poll(int bindnum = -1, int timeout = 0)</span> 
+polls the listening sockets for data available for reading. <span class="lang">Bindnum</span> 
+specifies the socket number reutrned by <span class="lang">bind()</span> or <span class="lang">bindall()</span>. 
+If this parameter is -1 <span class="lang">poll()</span> tests all sockets. The 
+second parameter <span class="lang">timeout</span> specifies the amount of time 
+in milliseconds to wait for data. If <span class="lang">timeout</span> is 0 <span class="lang">poll()</span> 
+returns immediately; if it's -1 <span class="lang">poll()</span> waits infinitely. 
+This function returns <span class="lang">true</span> if there is data available 
+for reading.</p>
+<p><span class="def">int ipmsgserver::receive(char* buf, int count)</span> reads 
+data from the socket. <span class="lang">Receive()</span> may hang if no data 
+is available for reading. This function returns the actual number of bytes read. 
+If the packet received exceeds the size of the supplied buffer, an exception is 
+raised with code EMSGSIZE. You may check if there is data available for reading 
+without 'hanging' using <span class="lang">poll()</span> described above.</p>
+<p><span class="def">string ipmsgserver::receive(int max)</span> works like the 
+previous version of <span class="lang">receive()</span> except that it returns 
+data in a dynamic string. The parameter <span class="lang">max</span> specifies 
+the limit which may not be exceeded when reading data from the network, like with 
+the previous version of <span class="lang">receive()</span>.</p>
+<p><span class="def">void ipmsgserver::send(const char* buf, int count)</span> 
+sends data to the peer. The destination address is determined from the last packet 
+read using <span class="lang">receive()</span>.</p>
+<p><span class="def">void ipmsgserver::send(string s)</span> works like the previous 
+version of <span class="lang">send()</span> except that it sends the string <span class="lang">s</span> 
+(not including the terminating null-symbol).</p>
+<p><span class="def">ipaddress ipmsgserver::get_ip()</span> returns the IP address 
+of the peer. The information about the peer is determined during a successful 
+call to <span class="lang">receive()</span>.</p>
+<p><span class="def">string ipmsgserver::get_host()</span> returns the peer host 
+name. A reverse DNS lookup may be performed if necessary. The information about 
+the peer is determined during a successful call to <span class="lang">receive()</span>.</p>
+<p class="seealso">See also: <a href="inet.ipmessage.html">ipmessage</a>, <a href="inet.utils.html">Utilities</a>, 
+<a href="inet.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

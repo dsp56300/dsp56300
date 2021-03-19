@@ -1,0 +1,82 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: multithreading: rwlock</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="async.html">Multithreading</a>: 
+rwlock</p>
+<blockquote> 
+<pre class="lang">#include &lt;pasync.h&gt;
+
+class rwlock {
+    rwlock();
+    void rdlock();
+    void wrlock();
+    void unlock();
+}
+
+class scoperead {
+    scoperead(rwlock&amp;);
+    ~scoperead();
+}
+
+class scopewrite {
+    scopewrite(rwlock&amp;);
+    ~scopewrite();
+}</pre>
+</blockquote>
+<p><span class="lang">Rwlock</span> (read/write lock) is a variation of <span class="lang">mutex</span> 
+with a possibility to control critical sections more efficiently. Unlike the simple 
+mutex, <span class="lang">rwlock</span> allows multiple <i>reader</i> threads 
+to enter the critical section, and only one <i>writer</i> thread at a time. Reading 
+and writing in this context means access to a resource or compound data shared 
+between threads. Reader threads must lock the critical section with <span class="lang">rdlock()</span> 
+and the writers must lock it with <span class="lang">wrlock()</span>. Both leave 
+the critical section with <span class="lang">unlock()</span>.</p>
+<p>This class incorporates POSIX rwlock interface on UNIX and library's own implementation 
+on Windows and MacOS X. When using the <span class="lang">rwlock</span> class 
+on Linux, you need to define a symbol <span class="lang">_GNU_SOURCE</span> either 
+in the command line, or anywhere in your source before including any system headers.</p>
+<p>Analogously to <span class="lang">scopelock</span> (see <a href="async.mutex.html">mutex</a>), 
+<span class="lang">scoperead</span> and <span class="lang">scopewrite</span> are 
+fully-inline'd utility classes provided for exception-safe locking of operator 
+blocks.</p>
+<p>Please, see <a href="portability.html">Portability and performance issues</a> 
+for additional notes on rwlock implementation. </p>
+<p><span class="def">rwlock::rwlock()</span> creates a <span class="lang">rwlock</span> 
+object.</p>
+<p><span class="def">void rwlock::rdlock()</span> locks the object for reading. 
+Multiple threads can enter the critical section through <span class="lang">rdlock()</span>, 
+however, if the object is already locked for writing, all reader threads wait 
+until the writer leaves the critical section.</p>
+<p><span class="def">void rwlock::wrlock()</span> locks the object for writing. 
+If there are readers inside the critical section, the writer waits until all threads 
+leave and unlock the object. Only one writer at a time can enter the critical 
+section.</p>
+<p><span class="def">void rwlock::unlock()</span> unlocks the object. Both readers 
+and writers must use this method when leaving the critical section.</p>
+<p><span class="def">scoperead::scoperead(rwlock&amp; rw)</span> creates a <span class="lang">scoperead</span> 
+object and calls <span class="lang">rdlock()</span> for the object <span class="lang">rw</span>.</p>
+<p><span class="def">scoperead::~scoperead()</span> calls <span class="lang">unlock()</span> 
+for the <span class="lang">rwlock</span> object specified during construction 
+and destroys the <span class="lang">scoperead</span> object.</p>
+<p><span class="def">scopewrite::scopewrite(rwlock&amp; rw)</span> creates a <span class="def">scopewrite</span> 
+object and calls <span class="lang">wrlock()</span> for the object <span class="lang">rw</span>.</p>
+<p><span class="def">scopewrite::~scopewrite()</span> calls <span class="lang">unlock()</span> 
+for the <span class="lang">rwlock</span> object specified during construction 
+and destroys the <span class="def">scopewrite</span> object.</p>
+<p class="seealso">See also: <a href="async.thread.html">thread</a>, <a href="async.mutex.html">mutex</a>, 
+<a href="async.trigger.html">trigger</a>, <a href="async.semaphore.html">semaphore</a>, 
+<a href="async.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

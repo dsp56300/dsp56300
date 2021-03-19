@@ -1,0 +1,105 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: string: manipulation</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="string.html">string</a>: Manipulation</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptypes.h&gt;
+
+<span class="comment">// get/set length and misc.</span>
+int    length(const string& s);
+char*  setlength(string&, int);
+char*  unique(string&);
+void   clear(string& s);
+bool   isempty(const string& s);
+
+<span class="comment">// concatenate</span>
+void   concat(string& s, const char* sc, int catlen);
+
+<span class="comment">// copy (get substring by position and length)</span>
+string copy(const string& s, int from [, int cnt ] );
+
+<span class="comment">// insert string or character</span>
+void   ins(const char* s1, string& s, int at);
+void   ins(char s1, string& s, int at);
+void   ins(const string& s1, string& s, int at);
+void   ins(const char* s1, int s1len, string& s, int at);
+
+<span class="comment">// delete substring</span>
+void   del(string& s, int at [, int cnt ] );
+
+<span class="comment">// find substring or character</span>
+int    pos(const char* s1, const string& s);
+int    pos(char s1, const string& s);
+int    pos(const string& s1, const string& s);
+int    rpos(char s1, const string& s);
+
+<span class="comment">// compare substring</span>
+bool   contains(const char* s1, const string& s, int at);
+bool   contains(char s1, const string& s, int at);
+bool   contains(const string& s1, const string& s, int at);
+bool   contains(const char* s1, int s1len, const string& s, int at);
+</pre>
+</blockquote>
+<p><span class="def">int length(const string& s)</span> returns the actual length 
+of the string, not counting the terminating null-symbol.</p>
+<p><span class="def">char* setlength(string&, int)</span> changes the actual length 
+of the string. The content of the original string is preserved, however the content 
+of extra characters added during reallocation is undefined. This function returns 
+a pointer to a unique buffer (i.e. refcount is 1), like function <span class="lang">unique()</span> 
+below. Even if the length of the string is not changing, <span class="lang">setlength()</span> 
+guarantees to make the string unique.</p>
+<p><span class="def">char* unique(string&)</span> makes the string buffer unique, 
+i.e. a new buffer is allocated and data is copied if necessary, so that the reference 
+count after calling this function is guaranteed to be 1. All string manipulation 
+functions call <span class="lang">unique()</span> whenever a modification is made 
+on the string buffer. You may need to call this function explicitly to obtain 
+a character pointer to the buffer; in all other cases reference counting mechanism 
+works transparently.</p>
+<p><span class="def">bool isempty(string&amp;)</span> returns true if the given 
+string is empty. Using this function is preferable to comparing the string with 
+empty string literal &quot;&quot;.</p>
+<p><span class="def">clear(string&amp;)</span> makes the given string empty. Using 
+this function is preferable to assigning an empty string literal &quot;&quot;.</p>
+<p><span class="def">concat(string& s, const char* sc, int catlen)</span> adds 
+the given buffer <span class="lang">sc</span> of length <span class="lang">catlen</span> 
+to the string object <span class="lang">s</span>. Use operators + and += instead 
+to concatenate characters, null-terminated strings and string objects.</p>
+<p><span class="def">string copy(const string& s, int from [, int cnt ] )</span> 
+returns a substring of <span class="lang">s</span> starting from position <span class="lang">from</span> 
+and containing <span class="lang">cnt</span> characters. If <span class="lang">cnt</span> 
+is omitted, the rest of the string <span class="lang">s</span> starting from position 
+<span class="lang">from</span> is returned.</p>
+<p><span class="def">ins(..., string& s, int at)</span> inserts a character, a 
+null-terminated string, a string object or a buffer with specified length into 
+string object <span class="lang">s</span> at the given position <span class="lang">at</span>. 
+If the position is out of bounds, <span class="lang">ins()</span> does nothing.</p>
+<p><span class="def">del(string& s, int at [, int cnt ] )</span> deletes <span class="lang">cnt</span> 
+characters starting from position <span class="lang">at</span> of the string <span class="lang">s</span>. 
+If <span class="lang">cnt</span> is omitted, the rest of the string starting from 
+<span class="lang">at</span> is deleted.</p>
+<p><span class="def">int pos(..., const string& s)</span> returns the position 
+of the first occurrence of a character, a null-terminated string or a string object 
+(first parameter) in the source string <span class="lang">s</span>, or returns 
+-1 if the substring is not found. Function <span class="lang">rpos()</span> performs 
+reverse-search.</p>
+<p><span class="def">bool contains(..., const string& s, int at)</span> returns 
+true if the given character, null-terminated string or string object (first parameter) 
+equals the substring of <span class="lang">s</span> at the given position <span class="lang">at</span>.</p>
+<p class="seealso">See also: <a href="string.constructors.html">Constructors/destructors</a>, 
+<a href="string.operators.html">Operators</a>, <a href="string.typecasts.html">Typecasts</a>, 
+<a href="string.conversion.html">Conversion</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

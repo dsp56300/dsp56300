@@ -1,0 +1,460 @@
+#
+#
+#  C++ Portable Types Library (PTypes)
+#  Version 2.0.2  Released 17-May-2004
+#
+#  Copyright (C) 2001-2004 Hovik Melikyan
+#
+#  http://www.melikyan.com/ptypes/
+#
+#
+#
+# Makefile for all platforms, called automatically from
+# Makefile.<platform>
+#
+
+.SUFFIXES:	.cxx .o
+
+AR              = ar cru
+RANLIB          = ranlib
+
+DDEBUG          = -DDEBUG -g
+INCDIR          = ../include
+CXXOPTS         = $(OS_CXXOPTS) $(DDEBUG) -I$(INCDIR) -Wall -O2
+LDLIBS          = $(OS_LDLIBS)
+
+CXXOPTS_ST      = -DPTYPES_ST $(OS_CXXOPTS_ST) $(DDEBUG) -I$(INCDIR) -Wall -O2
+LDLIBS_ST       = $(OS_LDLIBS_ST)
+
+LIBNAME         = libptypes.a
+LIBNAME_ST      = libptypesn.a
+LIBDEST         = ../lib
+
+SOBASENAME      = libptypes
+SONAME          = $(SOBASENAME).$(SOEXT)
+SOVER           = 20
+SODEST          = ../so
+
+
+LIBOBJS       = mt/pversion.o mt/pmem.o mt/pfatal.o mt/pstring.o mt/pcset.o mt/pcsetdbg.o \
+		mt/pstrmanip.o mt/pstrutils.o mt/pstrconv.o mt/pstrtoi.o mt/pstrcase.o mt/ptime.o \
+		mt/punknown.o mt/pcomponent.o mt/pexcept.o mt/ppodlist.o mt/pobjlist.o mt/pstrlist.o mt/ptextmap.o \
+		mt/patomic.o mt/pasync.o mt/psemaphore.o mt/pthread.o mt/pmsgq.o mt/ptimedsem.o \
+		mt/prwlock.o mt/ptrigger.o mt/pmtxtable.o mt/pvariant.o \
+		mt/piobase.o mt/pinstm.o mt/pinfile.o mt/ppipe.o mt/pinmem.o mt/poutmem.o \
+		mt/pintee.o mt/poutstm.o mt/poutfile.o mt/pinfilter.o mt/poutfilter.o mt/pmd5.o \
+		mt/pputf.o mt/pstdio.o mt/pfdxstm.o mt/pnpipe.o mt/pnpserver.o \
+		mt/pipbase.o mt/pipsvbase.o mt/pipstm.o mt/pipstmsv.o mt/pipmsg.o mt/pipmsgsv.o \
+		mt/punit.o
+
+LIBOBJS_ST    = st/pversion.o st/pmem.o st/pfatal.o st/pstring.o st/pcset.o st/pcsetdbg.o \
+		st/pstrmanip.o st/pstrutils.o st/pstrconv.o st/pstrtoi.o st/pstrcase.o st/ptime.o \
+		st/punknown.o st/pcomponent.o st/pexcept.o st/ppodlist.o st/pobjlist.o st/pstrlist.o st/ptextmap.o \
+		st/patomic.o st/pvariant.o \
+		st/piobase.o st/pinstm.o st/pinfile.o st/ppipe.o st/pinmem.o st/poutmem.o \
+		st/pintee.o st/poutstm.o st/poutfile.o st/pinfilter.o st/poutfilter.o st/pmd5.o \
+		st/pputf.o st/pstdio.o st/pfdxstm.o st/pnpipe.o st/pnpserver.o \
+		st/pipbase.o st/pipsvbase.o st/pipstm.o st/pipstmsv.o st/pipmsg.o st/pipmsgsv.o
+
+HLEVEL1		= $(INCDIR)/pport.h
+
+HLEVEL2		= $(HLEVEL1) $(INCDIR)/ptypes.h $(INCDIR)/pasync.h $(INCDIR)/ptime.h
+
+HLEVEL3		= $(HLEVEL2) $(INCDIR)/pstreams.h
+
+HLEVEL4		= $(HLEVEL3) $(INCDIR)/pinet.h
+
+HALL		= $(HLEVEL4)
+
+
+all: mtlib shlib stlib ptypes_test ptypesn_test
+
+mtlib: mt $(LIBNAME)
+
+shlib: mt $(SOREALNAME)
+
+stlib: st $(LIBNAME_ST)
+
+
+#
+# libptypes
+#
+
+$(LIBNAME): $(LIBOBJS)
+	$(AR) $@ $(LIBOBJS)
+	$(RANLIB) $@
+	mkdir -p $(LIBDEST) ; cp $@ $(LIBDEST)/
+
+$(SOREALNAME): $(LIBOBJS)
+	$(LIBTOOL) $(LIBOBJS) $(LDLIBS) $(SOINSTOPT) $(SOINSTNAME) -o $@
+	rm -f $(SONAME) ; ln -s $@ $(SONAME)
+	mkdir -p $(SODEST) ; cp $@ $(SODEST)/
+	cd $(SODEST) ; rm -f $(SONAME) ; ln -s $@ $(SONAME) ; $(SOSTRIP) $@
+
+$(LIBNAME_ST): $(LIBOBJS_ST)
+	$(AR) $@ $(LIBOBJS_ST)
+	$(RANLIB) $@
+	mkdir -p $(LIBDEST) ; cp $@ $(LIBDEST)/
+
+mt:
+	if [ ! -d mt ] ; then mkdir mt ; fi
+
+st:
+	if [ ! -d st ] ; then mkdir st ; fi
+
+#
+# multithreaded compilation
+#
+
+mt/pversion.o: pversion.cxx $(HLEVEL1)
+	$(CXX) -c $(CXXOPTS) -o $@ pversion.cxx
+
+mt/pmem.o: pmem.cxx $(HLEVEL1)
+	$(CXX) -c $(CXXOPTS) -o $@ pmem.cxx
+
+mt/pfatal.o: pfatal.cxx $(HLEVEL1)
+	$(CXX) -c $(CXXOPTS) -o $@ pfatal.cxx
+
+mt/pstring.o: pstring.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pstring.cxx
+
+mt/pcset.o: pcset.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pcset.cxx
+
+mt/pcsetdbg.o: pcsetdbg.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pcsetdbg.cxx
+
+mt/pstrmanip.o: pstrmanip.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pstrmanip.cxx
+
+mt/pstrutils.o: pstrutils.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pstrutils.cxx
+
+mt/pstrconv.o: pstrconv.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pstrconv.cxx
+
+mt/pstrtoi.o: pstrtoi.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pstrtoi.cxx
+
+mt/pstrcase.o: pstrcase.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pstrcase.cxx
+
+mt/ptime.o: ptime.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ ptime.cxx
+
+mt/punknown.o: punknown.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ punknown.cxx
+
+mt/pcomponent.o: pcomponent.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pcomponent.cxx
+
+mt/pexcept.o: pexcept.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pexcept.cxx
+
+mt/ppodlist.o: ppodlist.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ ppodlist.cxx
+
+mt/pobjlist.o: pobjlist.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pobjlist.cxx
+
+mt/pstrlist.o: pstrlist.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pstrlist.cxx
+
+mt/ptextmap.o: ptextmap.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ ptextmap.cxx
+
+mt/patomic.o: patomic.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ patomic.cxx
+
+mt/pasync.o: pasync.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pasync.cxx
+
+mt/psemaphore.o: psemaphore.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ psemaphore.cxx
+
+mt/pthread.o: pthread.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pthread.cxx
+
+mt/pmsgq.o: pmsgq.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pmsgq.cxx
+
+mt/ptimedsem.o: ptimedsem.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ ptimedsem.cxx
+
+mt/prwlock.o: prwlock.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ prwlock.cxx
+
+mt/ptrigger.o: ptrigger.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ ptrigger.cxx
+
+mt/pmtxtable.o: pmtxtable.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pmtxtable.cxx
+
+mt/pvariant.o: pvariant.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS) -o $@ pvariant.cxx
+
+mt/piobase.o: piobase.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ piobase.cxx
+
+mt/pinstm.o: pinstm.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pinstm.cxx
+
+mt/pinfile.o: pinfile.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pinfile.cxx
+
+mt/ppipe.o: ppipe.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ ppipe.cxx
+
+mt/pintee.o: pintee.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pintee.cxx
+
+mt/pinmem.o: pinmem.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pinmem.cxx
+
+mt/poutmem.o: poutmem.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ poutmem.cxx
+
+mt/poutstm.o: poutstm.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ poutstm.cxx
+
+mt/poutfile.o: poutfile.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ poutfile.cxx
+
+mt/pinfilter.o: pinfilter.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pinfilter.cxx
+
+mt/poutfilter.o: poutfilter.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ poutfilter.cxx
+
+mt/pmd5.o: pmd5.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pmd5.cxx
+
+mt/pputf.o: pputf.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pputf.cxx
+
+mt/pstdio.o: pstdio.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pstdio.cxx
+
+mt/pfdxstm.o: pfdxstm.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pfdxstm.cxx
+
+mt/pnpipe.o: pnpipe.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pnpipe.cxx
+
+mt/pnpserver.o: pnpserver.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ pnpserver.cxx
+
+mt/pipbase.o: pipbase.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS) -o $@ pipbase.cxx
+
+mt/pipsvbase.o: pipsvbase.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS) -o $@ pipsvbase.cxx
+
+mt/pipstm.o: pipstm.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS) -o $@ pipstm.cxx
+
+mt/pipstmsv.o: pipstmsv.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS) -o $@ pipstmsv.cxx
+
+mt/pipmsg.o: pipmsg.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS) -o $@ pipmsg.cxx
+
+mt/pipmsgsv.o: pipmsgsv.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS) -o $@ pipmsgsv.cxx
+
+mt/punit.o: punit.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS) -o $@ punit.cxx
+
+
+#
+# single-threaded compilation
+#
+
+st/pversion.o: pversion.cxx $(HLEVEL1)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pversion.cxx
+
+st/pmem.o: pmem.cxx $(HLEVEL1)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pmem.cxx
+
+st/pfatal.o: pfatal.cxx $(HLEVEL1)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pfatal.cxx
+
+st/pstring.o: pstring.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pstring.cxx
+
+st/pcset.o: pcset.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pcset.cxx
+
+st/pcsetdbg.o: pcsetdbg.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pcsetdbg.cxx
+
+st/pstrmanip.o: pstrmanip.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pstrmanip.cxx
+
+st/pstrutils.o: pstrutils.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pstrutils.cxx
+
+st/pstrconv.o: pstrconv.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pstrconv.cxx
+
+st/pstrtoi.o: pstrtoi.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pstrtoi.cxx
+
+st/pstrcase.o: pstrcase.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pstrcase.cxx
+
+st/ptime.o: ptime.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ ptime.cxx
+
+st/punknown.o: punknown.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ punknown.cxx
+
+st/pcomponent.o: pcomponent.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pcomponent.cxx
+
+st/pexcept.o: pexcept.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pexcept.cxx
+
+st/ppodlist.o: ppodlist.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ ppodlist.cxx
+
+st/pobjlist.o: pobjlist.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pobjlist.cxx
+
+st/pstrlist.o: pstrlist.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pstrlist.cxx
+
+st/ptextmap.o: ptextmap.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ ptextmap.cxx
+
+st/patomic.o: patomic.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ patomic.cxx
+
+st/pvariant.o: pvariant.cxx $(HLEVEL2)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pvariant.cxx
+
+st/piobase.o: piobase.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ piobase.cxx
+
+st/pinstm.o: pinstm.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pinstm.cxx
+
+st/pinfile.o: pinfile.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pinfile.cxx
+
+st/ppipe.o: ppipe.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ ppipe.cxx
+
+st/pintee.o: pintee.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pintee.cxx
+
+st/pinmem.o: pinmem.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pinmem.cxx
+
+st/poutmem.o: poutmem.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ poutmem.cxx
+
+st/poutstm.o: poutstm.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ poutstm.cxx
+
+st/poutfile.o: poutfile.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ poutfile.cxx
+
+st/pinfilter.o: pinfilter.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pinfilter.cxx
+
+st/poutfilter.o: poutfilter.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ poutfilter.cxx
+
+st/pmd5.o: pmd5.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pmd5.cxx
+
+st/pputf.o: pputf.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pputf.cxx
+
+st/pstdio.o: pstdio.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pstdio.cxx
+
+st/pfdxstm.o: pfdxstm.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pfdxstm.cxx
+
+st/pnpipe.o: pnpipe.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pnpipe.cxx
+
+st/pnpserver.o: pnpserver.cxx $(HLEVEL3)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pnpserver.cxx
+
+st/pipbase.o: pipbase.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pipbase.cxx
+
+st/pipsvbase.o: pipsvbase.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pipsvbase.cxx
+
+st/pipstm.o: pipstm.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pipstm.cxx
+
+st/pipstmsv.o: pipstmsv.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pipstmsv.cxx
+
+st/pipmsg.o: pipmsg.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pipmsg.cxx
+
+st/pipmsgsv.o: pipmsgsv.cxx $(HLEVEL4)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ pipmsgsv.cxx
+
+
+
+#
+# libptypes test program
+#
+
+mt/ptypes_test.o: ptypes_test.cxx $(HALL)
+	$(CXX) -c $(CXXOPTS) -o $@ ptypes_test.cxx
+
+ptypes_test: mt/ptypes_test.o $(LIBNAME)
+	$(CXX) $(CXXOPTS) mt/ptypes_test.o -L./ libptypes.a $(LDLIBS) -o $@
+
+st/ptypes_test.o: ptypes_test.cxx $(HALL)
+	$(CXX) -c $(CXXOPTS_ST) -o $@ ptypes_test.cxx
+
+ptypesn_test: st/ptypes_test.o $(LIBNAME)
+	$(CXX) $(CXXOPTS_ST) st/ptypes_test.o -L./ libptypesn.a $(LDLIBS_ST) -o $@
+
+
+#
+# clean
+#
+
+clean: clean-src
+	rm -f $(LIBDEST)/$(LIBNAME) $(LIBDEST)/$(LIBNAME_ST)
+	rm -f $(SODEST)/$(SONAME) $(SODEST)/$(SOREALNAME)
+
+clean-src:
+	rm -rf mt st
+	rm -f $(LIBNAME) $(LIBNAME_ST) $(SONAME) $(SOREALNAME)
+	rm -f core *.core core.*
+	rm -f ptypes_test ptypesn_test ptypes_test.exe ptypesn_test.exe
+	rm -f stmtest.txt
+
+#
+# install
+#
+
+install: $(LIBNAME) $(SOREALNAME) ${LIBNAME_ST}
+	@echo ; echo "#####  Installing header files in ${PREFIX}/include/ptypes"
+	mkdir -p ${PREFIX}/include/ptypes
+	install -m 444 ${INCDIR}/*.h ${PREFIX}/include/ptypes
+	@echo ; echo "#####  Installing libraries (libptypes*) in ${PREFIX}/lib"
+	mkdir -p ${PREFIX}/lib
+	install -m 444 $(LIBDEST)/$(LIBNAME) $(LIBDEST)/$(LIBNAME_ST) ${PREFIX}/lib
+	install -m 444 $(SODEST)/$(SOREALNAME) ${PREFIX}/lib
+	cd ${PREFIX}/lib ; rm -f ${SONAME} ; ln -s ${SOREALNAME} ${SONAME}
+	@echo ; echo "#####  Installing documentation in ${PREFIX}/share/doc/ptypes/doc"
+	mkdir -p ${PREFIX}/share/doc/ptypes/doc
+	cd .. ; install -m 444 LICENSE index.html ${PREFIX}/share/doc/ptypes
+	cd ../doc ; tar cf - * | tar xf - -C ${PREFIX}/share/doc/ptypes/doc
+
+uninstall:
+	rm -rf ${PREFIX}/include/ptypes
+	cd ${PREFIX}/lib ; rm -f $(LIBNAME) $(LIBNAME_ST) $(SONAME) $(SOREALNAME)
+	rm -rf ${PREFIX}/share/doc/ptypes

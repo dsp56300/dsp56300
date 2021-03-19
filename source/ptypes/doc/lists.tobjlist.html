@@ -1,0 +1,107 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: lists: tobjlist</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="lists.html">Lists</a>: tobjlist</p>
+<blockquote> 
+<pre class="lang">template &lt;class X&gt; class tobjlist {
+    tobjlist(bool ownobjects = false);
+    ~tobjlist();
+
+    int   get/set_count(int);
+    int   get/set_capacity(int);
+    bool  get/set_ownobjects(bool);
+
+    void  ins(int index, X* obj);
+    void  add(X* obj);
+    X*    operator [](int index) const;
+    X*    top() const;
+    void  put(int index, X* obj);
+    void  del(int index);
+    X*    pop();
+
+    void  clear();
+    void  pack();
+
+    bool  search(const void* key, int&amp; index) const;
+    virtual int compare(const void* key, const void* obj) const;
+}</pre>
+</blockquote>
+<p><br>
+The <span class="lang">tobjlist</span> template implements a dynamic array of 
+pointers to objects of an arbitrary type <span class="lang">X</span>. Since the 
+list itself only holds pointers to objects, the element type can be any structure, 
+including a class with constructors and destructors. The element type is not required 
+to have a copy constructor. A list can contain objects of any derivative class 
+of <span class="lang">X</span> as well.</p>
+<p><span class="lang">Tobjlist</span> can optionally (with <span class="lang">ownobjects</span> 
+= <span class="lang">true</span>) be responsible for freeing objects whenever 
+they are removed from a list, in which case the objects are required to be dynamically 
+allocated with operator <span class="lang">new</span>. Objects can be automatically 
+freed by the following methods: <span class="lang">set_count()</span> if the new 
+value is less than the old one, also <span class="lang">del()</span>, <span class="lang">clear()</span>, 
+<span class="lang">put()</span> and <span class="lang">~tobjlist()</span>.</p>
+<p><span class="def">tobjlist::tobjlist(bool ownobjects = false)</span> constructs 
+a <span class="lang">tobjlist</span> object. See note for the parameter <span class="lang">ownobjects</span> 
+above.</p>
+<p><span class="def">tobjlist::~tobjlist()</span> calls <span class="lang">clear()</span> 
+and destroys the list object.</p>
+<p><span class="def">int tobjlist::get/set_count(int)</span> gets or sets the 
+number of items in a list. If the new value for <span class="lang">count</span> 
+is greater than the old one, all new slots are filled with NULL pointers. If it's 
+smaller and if <span class="lang">ownobjects</span> is true, extra objects are 
+freed.</p>
+<p><span class="def">int tobjlist::get/set_capacity(int)</span> gets or sets the 
+capacity of a list. The <span class="lang">capacity</span> property reflects the 
+number of slots actually allocated for a list and is set automatically by other 
+methods whenever necessary. Like <span class="lang">tpodlist</span>, <span class="lang">tobjlist</span> 
+uses a 'lazy allocation' technique (see also <a href="lists.tpodlist.html">tpodlist::get/set_capacity</a>).</p>
+<p><span class="def">bool tobjlist::get/set_ownobjects(bool)</span> returns or 
+sets the <span class="lang">ownobjects</span> flag.</p>
+<p><span class="def">void tobjlist::ins(int index, X* obj)</span> inserts the 
+object <span class="lang">obj</span> into a list at the position <span class="lang">index</span>. 
+All pointers with greater indexes are moved up to make room for the new pointer.</p>
+<p><span class="def">void tobjlist::add(X* obj)</span> adds the object <span class="lang">obj</span> 
+to the end of a list.</p>
+<p><span class="def">X* tobjlist::operator [](int index)</span> returns the pointer 
+to an object at the position <span class="lang">index</span>. </p>
+<p><span class="def">X* tobjlist::top()</span> returns the last pointer in a list.</p>
+<p><span class="def">void tobjlist::put(int index, X* obj)</span> replaces the 
+pointer at the position <span class="lang">index</span> with <span class="lang">obj</span>. 
+Can free the old object if <span class="lang">ownobjects</span> is <span class="lang">true</span>.</p>
+<p><span class="def">void tobjlist::del(int index)</span> deletes the pointer 
+at the position <span class="lang">index</span> and moves all pointers with greater 
+indexes down. Can also free the object if <span class="lang">ownobjects</span> 
+is <span class="lang">true</span>.</p>
+<p><span class="def">X* tobjlist::pop()</span> returns the last pointer in a list 
+and deletes it from a list.</p>
+<p><span class="def">void tobjlist::clear()</span> deletes all pointers from a 
+list. Can also free all objects if <span class="lang">ownobjects</span> is <span class="lang">true</span>.</p>
+<p><span class="def">void tobjlist::pack()</span> sets <span class="lang">capacity</span> 
+equal to <span class="lang">count</span>. You can call <span class="lang">pack()</span> 
+after deleting multiple pointers from a list to optimize memory usage.</p>
+<p><span class="def">bool tobjlist::search(const void* key, int&amp; index)</span> 
+performs binary search on a list. The virtual method <span class="lang">compare()</span> 
+(below) must be overridden in order for <span class="lang">search()</span> to 
+work.</p>
+<p><span class="def">virtual int tobjlist::compare(const void* key, const void* 
+obj)</span> override this method in a descendant class to be able to perform binary 
+search on a list. The value of <span class="lang">key</span> is the same as in 
+the call to <span class="lang">search()</span>. <span class="lang">Obj</span> 
+is a pointer to an object that must be compared against <span class="lang">key</span>. 
+The return value must be -1, 0 or 1, similarly to the function <span class="lang">strcmp()</span>.</p>
+<p class="seealso">See also: <a href="lists.tpodlist.html">tpodlist</a>, <a href="lists.tstrlist.html">tstrlist</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

@@ -1,0 +1,31 @@
+#
+#
+#  C++ Portable Types Library (PTypes)
+#  Version 2.0.2  Released 17-May-2004
+#
+#  Copyright (C) 2001-2004 Hovik Melikyan
+#
+#  http://www.melikyan.com/ptypes/
+#
+#
+#
+# Makefile for FreeBSD, called from ../Makefile
+#
+
+CXX = g++
+
+OS_CXXOPTS = -pthread -fPIC
+OS_LDLIBS = -lc_r
+
+LIBTOOL = $(CXX) -shared -pthread
+SOSTRIP = strip
+
+SOEXT = so
+SOREALNAME = $(SOBASENAME).$(SOEXT).$(SOVER)
+SOINSTOPT = -h
+SOINSTNAME = $(SOREALNAME)
+
+PREFIX = /usr/local
+
+include Makefile.common
+

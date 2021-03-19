@@ -1,0 +1,48 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: logfile</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+logfile </p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+class logfile: outfile {
+    logfile( [ const string& filename, bool append = true ] );
+    void putf(const char* fmt, ...);
+}
+</pre>
+</blockquote>
+<p> The <span class="lang">lofgile</span> class inherits all public methods and 
+properties from <a href="streams.outfile.html">outfile</a>, but differs in the 
+following:</p>
+<ul>
+<li>The <span class="lang">append</span> property is set to <span class="lang">true</span> 
+by default.</li>
+<li>The buffer size is set to 0 by default.</li>
+<li>The <span class="lang">logfile::putf()</span> function is thread-safe: you 
+can call this function for the same logfile object from concurrent threads.</li>
+</ul>
+<p><span class="def">logfile::logfile( [ const string&amp; filename, bool append 
+= true ] )</span> creates an output file stream, but does not open the file. When 
+opening a file with <span class="lang">open()</span>, the file pointer is positioned 
+at the end of the file, unless <span class="lang">append</span> is set to <span class="lang">false</span>. 
+<span class="lang">Filename</span> and <span class="lang">append</span> parameters 
+are optional.</p>
+<p><span class="def">void logfile::putf(const char* fmt, ...)</span> is a thread-safe 
+version of <span class="lang">outstm::putf()</span>.</p>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.outstm.html">outstm</a>, 
+<a href="streams.outfile.html">outfile</a>, <a href="streams.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

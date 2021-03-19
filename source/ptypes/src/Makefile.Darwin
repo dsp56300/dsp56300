@@ -1,0 +1,31 @@
+#
+#
+#  C++ Portable Types Library (PTypes)
+#  Version 2.0.2  Released 17-May-2004
+#
+#  Copyright (C) 2001-2004 Hovik Melikyan
+#
+#  http://www.melikyan.com/ptypes/
+#
+#
+#
+# Makefile for MacOS X (Darwin), called from ../Makefile
+#
+
+CXX = c++
+
+OS_CXXOPTS=-Wno-long-double -fno-common -fPIC
+OS_CXXOPTS_ST=-Wno-long-double -fno-common
+
+LIBTOOL = libtool -dynamic -lcc_dynamic -lc -lstdc++
+SOSTRIP = test
+
+SOEXT = dylib
+SOREALNAME = $(SOBASENAME).$(SOVER).$(SOEXT)
+SOINSTOPT = -install_name
+SOINSTNAME = /usr/lib/$(SOREALNAME)
+
+PREFIX = /usr
+
+include Makefile.common
+

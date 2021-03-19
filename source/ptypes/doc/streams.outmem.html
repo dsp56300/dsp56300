@@ -1,0 +1,38 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: outmemory</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+outmemory </p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+class outmemory: outstm {
+    outmemory(int limit = -1);
+    string get_strdata();
+}</pre>
+</blockquote>
+<p>Use <span class="lang">outmemory</span> to write data to a dynamic memory buffer 
+by means of the streaming interface. <span class="lang">Outmemory</span> is derived 
+from <a href="streams.outstm.html">outstm</a>.</p>
+<p><span class="def">outmemory::outmemory(int limit = -1)</span> creates an <span class="lang">outmemory</span> 
+object. The memory buffer grows as data is written to the stream. You can optionally 
+limit the size of the memory buffer to <span class="lang">limit</span> (-1 means 
+unlimited).</p>
+<p><span class="def">string outmemory::get_strdata()</span> returns data written 
+to the stream as a dynamic string and closes the stream.</p>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.outstm.html">outstm</a> 
+</p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

@@ -1,0 +1,92 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: date/time: datetime</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="time.html">Date/time</a>: Datetime type</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptime.h&gt;
+
+typedef large datetime;
+
+datetime  now(bool utc = true);
+int       days(datetime d);
+int       msecs(datetime d);
+datetime  mkdt(int days, int msecs);
+bool      isvalid(datetime d);
+void      tzupdate();
+int       tzoffset();
+string    dttostring(datetime d, const char* fmt);
+string    nowstring(const char* fmt, bool utc = true);
+datetime  utodatetime(time_t u);</pre>
+</blockquote>
+<p><span class="def">datetime now(bool utc = true)</span> returns the current 
+date/time. The returned value can be either the local time or the Universal Coordinated 
+Time (UTC, aka GMT), depending on the parameter <span class="lang">utc</span>. 
+It is recommended to manipulate with the UTC time internally in your application 
+whenever possible (f.ex. when it's not needed to display the time to the user), 
+since in many countries the local time may be automatically adjusted when entering 
+or leaving the daylight saving period, which may confuse your application. On 
+the contrary, the UTC time never changes. That's why all modern operating systems 
+rely on the UTC time internally. (See also <span class="lang">tzupdate()</span> 
+below for additional notes).</p>
+<p><span class="def">int days(datetime d)</span> returns the number of days since 
+the beginning of the calendar contained in the <span class="lang">datetime</span> 
+value <span class="lang">d</span>.</p>
+<p><span class="def">int msecs(datetime d)</span> returns the number of milliseconds 
+since midnight contained in the <span class="lang">datetime</span> value <span class="lang">d</span>.</p>
+<p><span class="def">datetime mkdt(int days, int msecs)</span> calculates the 
+datetime value from <span class="lang">days</span> and <span class="lang">msecs</span> 
+parameters. <span class="lang">Days</span> is the number of days since the beginning 
+of the calendar, and <span class="lang">msecs</span> is the number of milliseconds 
+since midnight. No checks are made for validity of these values. There exists 
+an easier way to build a datetime value using <span class="lang">encodedate()</span> 
+and <span class="lang">encodetime()</span> functions having the year, month and 
+day numbers, as well as (not necessarily) the hour, minute, second and millisecond 
+values.</p>
+<p><span class="def">bool isvalid(datetime d)</span> checks a <span class="lang">datetime</span> 
+value for validity. The value of <span class="lang">d</span> is valid if it holds 
+a time stamp between 01/01/0001 and 12/31/9999.</p>
+<p><span class="def">void tzupdate()</span> updates the internal timezone information, 
+which affects the value of local time returned by <span class="lang">now()</span> 
+and <span class="lang">nowstring()</span>. If your application is supposed to 
+be running infinitely (e.g. if it's a network daemon), you might want to update 
+the internal timezone information from time to time in order to return correct 
+local time to the user on DST adjustment days. Depending on the precision of local 
+time you wish to show to the user, you can call this function, for example, every 
+minute or every hour. Without this, the local time may become incorrect at the 
+moment of DST adjustment, which occurs twice a year in most countries.</p>
+<p><span class="def">int tzoffset()</span> returns the time zone offset in minutes. 
+This value is negative in the West. Multiplying this value by 60000 (i.e. the 
+offset in milliseconds) and adding it to the UTC <span class="lang">datetime</span> 
+value will give the local time.</p>
+<p><span class="def">string dttostring(datetime d, const char* fmt)</span> converts 
+a <span class="lang">datetime</span> value to string representation as specified 
+by <span class="lang">fmt</span>. The syntax of the format specifier is the same 
+as for <span class="lang">strftime()</span> (please, refer to the corresponding 
+manual pages in your programming environment). Note that there might be slight 
+incompatibilities between different implementations of <span class="lang">strftime()</span>. 
+</p>
+<p><span class="def">string nowstring(const char* fmt, bool utc = true)</span> 
+returns a string representing the current time in a format specified by <span class="lang">fmt</span>. 
+<span class="lang">Utc</span> specifies whether the local time or the UTC time 
+is required. Like for <span class="lang">dttostring()</span>, the syntax of the 
+format specifier <span class="lang">fmt</span> is the same as for the system function 
+<span class="lang">strftime()</span>.</p>
+<p><span class="def">datetime utodatetime(time_t u)</span> converts UNIX <span class="lang">time_t</span> 
+value to PTypes <span class="lang">datetime</span>.</p>
+<p class="seealso">See also: <a href="time.calendar.html">Date/calendar manipulation</a>, 
+<a href="time.time.html">Time manipulation</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

@@ -1,0 +1,103 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: networking: ipstream</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="inet.html">Networking</a>: 
+ipstream</p>
+<blockquote> 
+<pre class="lang">#include &lt;pinet.h&gt;
+
+class ipstream: instm, outstm {
+    ipstream();
+    ipstream(ipaddress ip, int port);
+    ipstream(string host, int port);
+    ~ipstream();
+
+    void open();
+    void close();
+    void cancel();
+    bool waitfor(int milliseconds);
+
+    ipaddress get/set_ip();
+    string    get/set_host();
+    int       get/set_port();
+    ipaddress get_myip();
+    int       get_myport();
+}</pre>
+</blockquote>
+<p>The <span class="lang">ipstream</span> class implements full-duplex streaming 
+communication between IP hosts. <span class="lang">Ipstream</span> incorporates 
+<a href="streams.iobase.html">iobase</a>, <a href="streams.instm.html">instm</a> 
+and <a href="streams.outstm.html">outstm</a> interfaces and adds two more properties: 
+peer IP address and peer port number. This means, you can work with <span class="lang">ipstream</span> 
+the same way you work with <span class="lang">infile</span> and <span class="lang">outfile</span>, 
+except that you specify the target IP address or the symbolic hostname along with 
+the port number instead of the filename when constructing an object. Besides, 
+the rules of object-oriented inheritance allow you to manipulate <span class="lang">ipstream</span> 
+objects in those parts of your code which are only 'familiar' with the basic <span class="lang">instm</span> 
+and <span class="lang">outstm</span> interfaces.</p>
+<p>In order to open a connection and exchange data you need to set target (peer 
+host) address and the port number. The peer address can be either a symbolic DNS 
+name or a numeric IPv4 address. Regardless of which one of these two properties 
+you set first, the <span class="lang">ipstream</span> object can perform DNS resolving 
+as necessary and return both properties on your request.</p>
+<p><span class="lang">Ipstream</span> adds the following status codes: IO_RESOLVING, 
+IO_RESOLVED, IO_CONNECTING, IO_CONNECTED (see also <a href="streams.iobase.html">iobase</a> 
+for the status codes common to all streams).</p>
+<p>On UNIX the library startup code blocks <span class="lang">SIGPIPE</span>, 
+so that all error conditions on sockets always raise exceptions of type <span class="lang">(estream*)</span>.</p>
+<p><span class="def">ipstream::ipstream()</span> is the default constructor.</p>
+<p><span class="def">ipstream::ipstream(ipaddress ip, int port)</span> constructs 
+an <span class="lang">ipstream</span> object and assigns the peer <span class="lang">ip</span>/<span class="lang">port</span> 
+values.</p>
+<p><span class="def">ipstream::ipstream(string host, int port)</span> constructs 
+an <span class="lang">ipstream</span> object and assigns the peer host name and 
+port values. Before actually opening the stream <span class="lang">ipstream</span> 
+resolves the host name to a numeric IP address. <span class="lang">Host</span> 
+can be either a symbolic DNS name or even a numeric address in a string form (e.g. 
+&quot;somehost.com&quot; or &quot;192.168.1.1&quot;).</p>
+<p><span class="def">ipstream::~ipstream()</span> cancels the connection immediately 
+and destroys the object. To shut down the connection 'gracefully' you should call 
+<span class="lang">close()</span> before destroying the object or before the program 
+goes beyond the scope of a static/local <span class="lang">ipstream</span> object.</p>
+<p><span class="def">void ipstream::open()</span> opens a connection with the 
+peer. <span class="lang">host</span> or <span class="lang">ip</span> along with 
+<span class="lang">port</span> properties must be set before opening the stream.</p>
+<p><span class="def">void ipstream::close()</span> closes the stream 'gracefully', 
+and in some situations may be time-consuming. Although all stream objects in PTypes 
+are being closed by the destructors automatically, it is recommended to explicitly 
+call <span class="lang">close()</span> for socket objects.</p>
+<p><span class="def">void ipstream::cancel()</span> closes the stream immediately. 
+If the connection was successful, calling <span class="lang">cancel()</span> may 
+leave the peer host in a waiting state for a long time.</p>
+<p><span class="def">bool ipstream::waitfor(int milliseconds)</span> waits on 
+the socket until either data is available for reading (returns <span class="lang">true</span>) 
+or the time specified in the parameter has elapsed, in which case it returns <span class="lang">false</span>.</p>
+<p><span class="def">ipaddress ipstream::get/set_ip()</span> sets/retrieves the 
+peer address in a numerical form. If the object was constructed using a symbolic 
+name, <span class="lang">get_ip()</span> may perform a DNS lookup (only once).</p>
+<p><span class="def">string ipstream::get/set_host()</span> sets/retrieves the 
+peer address in a symbolic form. If the object was constructed using a numeric 
+IP address, <span class="lang">get_host()</span> may perform a reverse DNS lookup.</p>
+<p><span class="def">int ipstream::get/set_port()</span> sets/retrieves the peer 
+port number.</p>
+<p><span class="def">ipaddress ipstream::get_myip()</span> returns the local address 
+associated with the socket.</p>
+<p><span class="def">int ipstream::get_myport()</span> returns the local port 
+number associated with the socket.</p>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.instm.html">instm</a>, 
+<a href="streams.outstm.html">outstm</a>, <a href="inet.ipstmserver.html">ipstmserver</a>, 
+<a href="inet.utils.html">Utilities</a>, <a href="inet.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

@@ -1,0 +1,82 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: string: conversion</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="string.html">string</a>: Conversion</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptypes.h&gt;
+
+string itostring(<i>&lt;ordinal</i>&gt; value);
+string itostring(<i>&lt;ordinal</i>&gt; value, int base, int width = 0, char pad = ' ');
+large  stringtoi(const string&amp; s);
+large  stringtoie(const string&amp; s);
+ularge stringtoue(const string&amp; s, int base);
+string lowercase(const string&amp; s);
+</pre>
+</blockquote>
+<p><br>
+PTypes provides 3 different string-to-int conversion functions: <span class="lang">stringtoi()</span>, 
+<span class="lang">stringtoie()</span> and <span class="lang">stringtoue()</span>. 
+The first function <span class="lang">stringtoi()</span> is for non-negative decimal 
+numbers; it returns -1 on error. The other two functions with a suffix 'e' in 
+their names ('e' is for 'exception') may throw exceptions, but they accept the 
+full range of 64-bit values.</p>
+<p>These functions replace the CRTL functions <span class="lang">atoll()</span> 
+and <span class="lang">strtoll()</span> which are not implemented on all systems.</p>
+<p>Both function families, string-to-int and int-to-string, accept numeration 
+bases in the range 2 to 64. The 64-digit numeration uses all digits, letters and 
+also '.' and '/'. It may be useful for representing, for example, MD5 checksums 
+in a compact printable form (see function <span class="lang">outmd5::get_digest()</span> 
+in src/pmd5.cxx).<br>
+</p>
+<p><span class="def">string itostring(<i>&lt;ordinal&gt;</i> value)</span> converts 
+the given ordinal <span class="lang">value</span> to a string. Various overloaded 
+versions of this function accept ordinal values of different sizes and signness.</p>
+<p><span class="def">string itostring(<i>&lt;ordinal</i>&gt; value, int base, 
+int width = 0, char pad = ' ')</span> converts an integer value to a string with 
+the numeration base specified by <span class="lang">base</span>, which can be 
+in the range 2 - 64. To right-justify the resulting string you can specify <span class="lang">width</span> 
+and <span class="lang">pad</span> parameters. If the numeration base is greater 
+than 36 in addition to digits and letters <span class="lang">itostring()</span> 
+uses '.' and '/' characters and also lowercase letters. For numeration bases other 
+than 10 the parameter <span class="lang">value</span> is always treated as unsigned.</p>
+<p><span class="def">large stringtoi(const string&amp; s)</span> converts a string 
+to a 64-bit integer. This function accepts only <b>positive decimal large numbers</b> 
+and 0. It returns -1 if the string does not represent a valid positive number 
+or an overflow occurred.</p>
+<p><span class="def">large stringtoie(const string&amp; s)</span> converts a string 
+to a 64-bit integer. This function accepts <b>signed decimal large numbers</b>. 
+Unlike <span class="lang">stringtoi()</span>, this function may throw an exception 
+of type <span class="lang">(econv*)</span> if the string does not represent a 
+valid number or an overflow occurred.</p>
+<p><span class="def">unsigned large stringtoue(const string&amp; s, int base)</span> 
+converts a string to an unsigned 64-bit integer using the numeration base specified 
+by <span class="lang">base</span>. This function accepts <b>unsigned large numbers</b>. 
+It may throw an exception of type <span class="lang">(econv*)</span> if the string 
+does not represent a valid number or an overflow occurred. <span class="lang">Base</span> 
+can be in the range 2 - 64. For numeration bases from 2 to 36 this function uses 
+digits and letters, and the letter case is insignificant. For numeration bases 
+grater than 36, '.', '/' and lowercase letters are used additionaly.</p>
+<p><span class="def">string lowercase(const string&amp; s)</span> converts all 
+characters of the given string <span class="lang">s</span> to lower case. The 
+current version of the library &quot;understands&quot; only lower ASCII characters; 
+all other characters remain unchanged. This function can effectively detect if 
+all characters in the string are already in lower-case to avoid unnecessary string 
+allocations. </p>
+<p class="seealso">See also: <a href="string.constructors.html">Constructors/destructors</a>, 
+<a href="string.operators.html">Operators</a>, <a href="string.typecasts.html">Typecasts</a>, 
+<a href="string.manipulation.html">Manipulation</a> </p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

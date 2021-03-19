@@ -1,0 +1,267 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// German (Germany) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_DEU)
+#ifdef _WIN32
+LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_DEU)\r\n"
+    "LANGUAGE 7, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#include ""res\\dspEmuTester.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""     // Standard components\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\dspEmuTester.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DSPEMUTESTER_DIALOG DIALOGEX 0, 0, 448, 219
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "DSP 56300 Emulation Test Program"
+MENU IDR_MENU1
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "Execution",IDC_STATIC,6,6,276,36
+    PUSHBUTTON      "Run until PC =",IDC_RUNUNTIL,174,18,54,14
+    PUSHBUTTON      "Run",IDC_RUN,12,18,24,14
+    PUSHBUTTON      "Stop",IDC_STOP,42,18,24,14
+    PUSHBUTTON      "Step",IDC_STEP,72,18,24,14
+    EDITTEXT        IDC_RUNUNTILPC,234,18,40,14,ES_AUTOHSCROLL
+    GROUPBOX        "Registers",IDC_STATIC,6,48,276,162
+    EDITTEXT        IDC_R_M0,24,60,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "M0",IDC_STATIC,12,60,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_M1,24,72,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "M1",IDC_STATIC,12,72,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_M2,24,84,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "M2",IDC_STATIC,12,84,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_M3,24,96,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "M3",IDC_STATIC,12,96,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_M4,24,108,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "M4",IDC_STATIC,12,108,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_M5,24,120,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "M5",IDC_STATIC,12,120,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_M6,24,132,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "M6",IDC_STATIC,12,132,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_M7,24,144,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "M7",IDC_STATIC,12,144,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_N0,84,60,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "N0",IDC_STATIC,72,60,12,12,SS_CENTERIMAGE
+    LTEXT           "N1",IDC_STATIC,72,72,12,12,SS_CENTERIMAGE
+    LTEXT           "N2",IDC_STATIC,72,84,12,12,SS_CENTERIMAGE
+    LTEXT           "N3",IDC_STATIC,72,96,12,12,SS_CENTERIMAGE
+    LTEXT           "N4",IDC_STATIC,72,108,12,12,SS_CENTERIMAGE
+    LTEXT           "N5",IDC_STATIC,72,120,12,12,SS_CENTERIMAGE
+    LTEXT           "N6",IDC_STATIC,72,132,12,12,SS_CENTERIMAGE
+    LTEXT           "N7",IDC_STATIC,72,144,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_N1,84,72,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_N2,84,84,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_N3,84,96,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_N4,84,108,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_N5,84,120,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_N6,84,132,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_N7,84,144,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "R0",IDC_STATIC,126,60,12,12,SS_CENTERIMAGE
+    LTEXT           "R1",IDC_STATIC,126,72,12,12,SS_CENTERIMAGE
+    LTEXT           "R2",IDC_STATIC,126,84,12,12,SS_CENTERIMAGE
+    LTEXT           "R3",IDC_STATIC,126,96,12,12,SS_CENTERIMAGE
+    LTEXT           "R4",IDC_STATIC,126,108,12,12,SS_CENTERIMAGE
+    LTEXT           "R5",IDC_STATIC,126,120,12,12,SS_CENTERIMAGE
+    LTEXT           "R6",IDC_STATIC,126,132,12,12,SS_CENTERIMAGE
+    LTEXT           "R7",IDC_STATIC,126,144,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_R0,138,60,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_R1,138,72,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_R2,138,84,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_R3,138,96,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_R4,138,108,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_R5,138,120,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_R6,138,132,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_R7,138,144,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "A",IDC_STATIC,180,60,12,12,SS_CENTERIMAGE
+    LTEXT           "B",IDC_STATIC,180,72,12,12,SS_CENTERIMAGE
+    LTEXT           "X",IDC_STATIC,180,84,12,12,SS_CENTERIMAGE
+    LTEXT           "Y",IDC_STATIC,180,96,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_A1,204,60,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_A0,240,60,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_A2,192,60,12,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_B1,204,72,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_B0,240,72,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_B2,192,72,12,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_X1,204,84,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_X0,240,84,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_Y0,240,96,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_Y1,204,96,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "PC",IDC_STATIC,180,108,12,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_PC,240,108,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "SR",IDC_STATIC,180,120,12,12,SS_CENTERIMAGE
+    LTEXT           "OMR",IDC_STATIC,180,132,18,12,SS_CENTERIMAGE
+    CONTROL         "Always Update",IDC_ALWAYSUPDATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,48,48,60,10
+    EDITTEXT        IDC_R_SR,240,120,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_OMR,240,132,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "SC",IDC_STATIC,180,144,18,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_SC,240,144,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "LC",IDC_STATIC,180,156,18,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_LC,240,156,36,12,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "LA",IDC_STATIC,180,168,18,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_LA,240,168,36,12,ES_AUTOHSCROLL | ES_READONLY
+    PUSHBUTTON      "Reset",IDC_RESET,102,18,24,14
+    PUSHBUTTON      "Refresh",IDC_REFRESHREGS,114,192,50,14
+    LTEXT           "ICTR",IDC_STATIC,12,168,18,12,SS_CENTERIMAGE
+    EDITTEXT        IDC_R_ICTR,42,168,66,12,ES_AUTOHSCROLL | ES_READONLY
+    GROUPBOX        "Disassembly",IDC_STATIC,288,6,150,204
+    LISTBOX         IDC_LISTASM,294,18,138,186,LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904e4"
+        BEGIN
+            VALUE "CompanyName", "TODO: <Company name>"
+            VALUE "FileDescription", "TODO: <File description>"
+            VALUE "FileVersion", "1.0.0.1"
+            VALUE "InternalName", "dspEmuTester.exe"
+            VALUE "LegalCopyright", "TODO: (c) <Company name>.  All rights reserved."
+            VALUE "OriginalFilename", "dspEmuTester.exe"
+            VALUE "ProductName", "TODO: <Product name>"
+            VALUE "ProductVersion", "1.0.0.1"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_DSPEMUTESTER_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 441
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 212
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU 
+BEGIN
+    POPUP "File"
+    BEGIN
+        MENUITEM "Load OMF...",                 ID_FILE_LOADOMF
+    END
+END
+
+#endif    // German (Germany) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_DEU)
+LANGUAGE 7, 1
+#pragma code_page(1252)
+#include "res\dspEmuTester.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"     // Standard components
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

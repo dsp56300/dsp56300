@@ -1,0 +1,14 @@
+Motorola/Freescale DSP 56300 family emulator work-in-progress
+
+Some intructions are still missing, some may not work.
+I mainly focus the DSP 56362. I have no time at the
+moment, contributions are welcome. If you find this one
+useful, please let me know.
+
+There are a lot of places that can be optimized, it runs
+quite slow at the moment, but I wanted it to be quite
+stable first before beginning to optimize it.
+
+The test-application is windows-only but the emulator itself
+should run on linux aswell, if anyone wants to create a makefile,
+feel free to do.

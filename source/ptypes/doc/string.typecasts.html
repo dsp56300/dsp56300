@@ -1,0 +1,67 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: string: typecasts</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="string.html">string</a>: Typecasts </p>
+<blockquote> 
+<pre class="lang">#include &lt;ptypes.h&gt;
+
+class string {
+    operator (const char*)() const;
+}</pre>
+</blockquote>
+<p>A string object can be assigned to a variable or passed as an actual parameter 
+of type <span class="lang">const char*</span> implicitly (by default). Such assignments 
+should be used carefully, since the library does not keep track of whether a char 
+pointer refers to the given string buffer. To make sure that a char pointer refers 
+to a valid string buffer, always make the scope of a char pointer variable smaller 
+than or equal to the scope of a string object. In most cases passing a string 
+object to a system or API call is safe (see examples below). This typecast operator 
+does not perform any actions and simply returns a pointer to the string buffer.</p>
+<p>The value of the char pointer is guaranteed to be non-NULL. Even if the string 
+is empty, the char pointer will refer to a null-symbol.</p>
+<p>A string buffer can not be modified through a constant char pointer. If you 
+want to modify the string buffer through a char pointer, use <span class="lang">unique(string&amp;)</span> 
+function instead. This function always returns a reference to a unique string 
+buffer (i.e. when the reference count is 1).</p>
+<p><b>Compatibility note</b>: MSVC and GCC may treat type casts in different ways 
+when passing a string object to a function that takes (...) parameters, e.g. <span class="lang">printf()</span> 
+or <span class="lang">outstm::putf()</span>. You should explicitly instruct the 
+compiler to cast the string object to <span class="lang">(const char*)</span> 
+to avoid this problem. PTypes provides a shorter typedef <span class="lang">pconst</span> 
+for this.</p>
+<p><b>Examples</b></p>
+<blockquote> 
+<pre>
+void assignment_example()
+{
+   string s = &quot;abcdef&quot;;
+   const char* p = s;
+   <span class="comment">// do string manipulation here...</span>
+}
+
+void function_call_example()
+{
+   string s = &quot;abcdef&quot;;
+   puts(s);
+   printf(&quot;%s\n&quot;, pconst(s));
+}
+</pre>
+</blockquote>
+<p class="seealso">See also: <a href="string.constructors.html">Constructors/destructors</a>, 
+<a href="string.operators.html">Operators</a>, <a href="string.manipulation.html">Manipulation</a>, 
+<a href="string.conversion.html">Conversion</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

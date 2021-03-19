@@ -1,0 +1,298 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: networking: examples</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="inet.html">Networking</a>: 
+Examples</p>
+<p> <b>Example 1</b>. This example demonstrates the basic usage of streaming network 
+interfaces <span class="lang">ipstream</span> and <span class="lang">ipstmserver</span>. 
+It consists of two separate programs: the test client and the test server. The 
+server handles requests containing a single word &quot;Hello&quot; by sending 
+a response greeting back to the client. This example would work for named pipes 
+as well, i.e. if you replace the class names <span class="lang">ipstream</span> 
+and <span class="lang">ipstmserver</span> with <span class="lang">namedpipe</span> 
+and <span class="lang">npserver</span> and fix the construction parameters.</p>
+<p><u>Client:</u></p>
+<blockquote> 
+<pre>
+#include &lt;pinet.h&gt;
+
+USING_PTYPES
+
+const int testport = 8085;
+const int maxtoken = 4096;
+
+int main()
+{
+    <span class="comment">// create a client socket and send a greeting to the server
+    // assuming that the server is on the same host (127.0.0.1)</span>
+
+    ipstream client(ipaddress(127, 0, 0, 1), testport);
+
+    try
+    {
+        client.open();
+
+        pout.put("Sending a request to the server...\n");
+        client.putline("Hello");
+        client.flush();
+
+        <span class="comment">// receive the response</span>
+        string rsp = client.line(maxtoken);
+        pout.putf("Received: %s\n", pconst(rsp));
+
+        <span class="comment">// need to close the socket explicitly to gracefully shutdown 
+        // the peer host too. otherwise, ~ipstream() will call cancel()
+        // and leave the peer in a waiting state (not forever though)</span>.
+        client.close();
+    }
+    catch(estream* e)
+    {
+        perr.putf("Error: %s\n", pconst(e->get_message()));
+        delete e;
+    }
+
+    return 0;
+}</pre>
+</blockquote>
+<p>&nbsp;</p>
+<p><u>Server:</u></p>
+<blockquote> 
+<pre>
+#include &lt;ptime.h&gt;
+#include &lt;pinet.h&gt;
+
+USING_PTYPES
+
+const int testport = 8085;
+const int maxtoken = 4096;
+
+void servermain(ipstmserver&amp; svr)
+{
+    ipstream client;
+
+    pout.putf("Ready to answer queries on port %d\n", testport);
+
+    while(true)
+    {
+        <span class="comment">// serve() will wait for a connection request and will prepare
+        // the supplied ipstream object for talking to the peer.
+        // note that (unlikely) exceptions thrown in serve() will be 
+        // caught in main()</span>
+        svr.serve(client);
+        
+        <span class="comment">// for better performance the server would start a new thread
+        // for each client request. for simplicity, we serve the request
+        // in-place. see multithreading examples for the full multithreaded
+        // server template.</span>
+        if (client.get_active())
+        {
+            try
+            {
+                <span class="comment">// read the request line:
+                // real-world network applications should limit input data
+                // to prevent potential denial-of-service attacks</span>
+                string req = lowercase(client.line(maxtoken));
+                if (req == "hello")
+                {
+                    <span class="comment">// try to reverse-lookup the client's IP</span>
+                    string host = phostbyaddr(client.get_ip());
+                    if (isempty(host))
+                        host = iptostring(client.get_ip());
+                    
+                    <span class="comment">// now send our greeting to the client</span>
+                    client.putline("Hello, " + host + " ("
+                        + iptostring(client.get_ip()) + "), nice to see you!");
+                    client.flush();
+
+                    <span class="comment">// log this request</span>
+                    pout.putf("%t  greeting received from %s (%a)\n",
+                        now(), pconst(host), long(client.get_ip()));
+                }
+
+                client.close();
+            }
+            catch(estream* e)
+            {
+                perr.putf("Error: %s\n", pconst(e->get_message()));
+                delete e;
+            }
+        }
+    }
+}
+
+int main()
+{
+    ipstmserver svr;
+
+    try
+    {
+        <span class="comment">// bind to all local addresses on port 8085</span>
+        svr.bindall(testport);
+
+<span class="comment">        // enter an infinite loop of serving requests</span>
+        servermain(svr);
+    }
+    catch(estream* e)
+    {
+        perr.putf("FATAL: %s\n", pconst(e->get_message()));
+        delete e;
+    }
+
+    return 0;
+}
+</pre>
+</blockquote>
+<p>&nbsp;</p>
+<p><b>Example 2</b>. This example demonstrates the use of message-oriented networking 
+interfaces <span class="lang">ipmessage</span> and <span class="lang">ipmsgserver</span>. 
+The client sends a broadcast message to the local network and waits for a response. 
+It may retry the request several times.</p>
+<p><u>Client:</u></p>
+<blockquote> 
+<pre>
+#include &lt;pinet.h&gt;
+
+USING_PTYPES
+
+const int testport = 8085;
+const int maxtoken = 4096;
+
+const int tries = 3;
+const int firsttimeout = 2000;
+
+
+bool dorequest(int timeout)
+{
+    ipmessage msg(ipbcast, testport);
+
+    try
+    {
+        pout.put("Broadcasting a request...\n");
+        msg.send("Hello");
+
+        <span class="comment">// wait for a response the specified amount of time</span>
+        if (!msg.waitfor(timeout))
+            return false;
+        
+        ipaddress src;
+        string rsp = msg.receive(maxtoken, src);
+        pout.putf(&quot;Received: '%s' (from %a)\n&quot;, pconst(rsp), long(src));
+    }
+    catch(estream* e)
+    {
+        perr.putf("Error: %s\n", pconst(e->get_message()));
+        delete e;
+    }
+    
+    return true;
+}
+
+
+int main()
+{
+    int timeout = firsttimeout;
+    for (int i = 0; i < tries; i++)
+    {
+        if (dorequest(timeout))
+            break;
+        <span class="comment">// double the timeout value</span>
+        timeout *= 2;
+    }
+
+    return 0;
+}
+</pre>
+</blockquote>
+<p>&nbsp;</p>
+<p><u>Server:</u></p>
+<blockquote>
+<pre>
+#include &lt;ptime.h&gt;
+#include &lt;pinet.h&gt;
+
+USING_PTYPES
+
+const int testport = 8085;
+const int maxtoken = 4096;
+
+
+void servermain(ipmsgserver& svr)
+{
+    pout.putf("Ready to answer queries on port %d\n", testport);
+
+    bool quit = false;
+    do
+    {
+        try
+        {
+            <span class="comment">// receive the "hello" request and send a simple answer
+            // back to the client</span>
+            string req = lowercase(svr.receive(maxtoken));
+            if (req == "hello")
+            {
+                string host = svr.get_host();
+                if (isempty(host))
+                    host = iptostring(svr.get_ip());
+
+                svr.send("Hello, " + host + " ("
+                    + iptostring(svr.get_ip()) + "), nice to see you!");
+
+                <span class="comment">// log this request</span>
+                pout.putf("%t  greeting received from %s (%a)\n",
+                    now(), pconst(host), long(svr.get_ip()));
+            }
+        }
+        catch(estream* e)
+        {
+            perr.putf("Server error: %s\n", pconst(e->get_message()));
+            delete e;
+        }
+        
+    } while (!quit);
+}
+
+
+int main()
+{
+    ipmsgserver svr;
+
+    try
+    {
+        svr.bindall(testport);
+
+        <span class="comment">// try to listen on socket once to generate an error right away,
+        // before entering the main server loop</span>
+        svr.poll();
+
+        <span class="comment">// enter an infinite loop of serving requests</span>
+        servermain(svr);
+    }
+    catch(estream* e)
+    {
+        perr.putf("FATAL: %s\n", pconst(e->get_message()));
+        delete e;
+    }
+
+
+    return 0;
+}
+</pre>
+</blockquote>
+<p class="seealso">See also: <a href="inet.ipstream.html">ipstream</a>, <a href="inet.ipstmserver.html">ipstmserver</a>, 
+<a href="inet.ipmessage.html">ipmessage</a>, <a href="inet.ipmsgserver.html">ipmsgserver</a>, 
+<a href="inet.utils.html">Utilities</a>, <a href="async.examples.html">Multithreading 
+examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

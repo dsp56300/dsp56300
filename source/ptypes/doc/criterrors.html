@@ -1,0 +1,41 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: critical errors</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: Exceptions and critical errors</p>
+<p>Some of the components in PTypes may produce unrecoverable error conditions, 
+such like a list index is out of bounds, a stream object is constructed with inconsistent 
+parameters, an operation on a stream is requested which requires buffering, etc. 
+These errors are mainly caused by wrong usage of objects or functions of the library.</p>
+<p>Whenever an unrecoverable error condition is raised, PTypes calls <span class="lang">fatal()</span> 
+with a message describing the error condition and terminates the program. On most 
+platforms this message is being sent to <span class="lang">stderr</span>, and 
+on Windows the message is shown in a simple message box.</p>
+<p>The function <span class="lang">fatal()</span> is declared in <a href="include/pport.h.html">&lt;pport.h&gt;</a>.</p>
+<p>Some library components also raise recoverable error conditions (exceptions). 
+PTypes only generates exception of type <span class="lang">(exception*)</span> 
+defined in <a href="include/ptypes.h.html">&lt;ptypes.h&gt;</a>, or, in some cases, 
+a derivative class, e.g. <span class="lang">(estream*)</span>. An exception object 
+at least contains an error message which can be retrieved through <span class="lang">get_message()</span> 
+method.</p>
+<p> <b>NOTE</b>: Exception objects in PTypes are allocated dynamically and therefore, 
+they should be freed by the catch block if it does not pass the exception farther. 
+The exception class is derived from <a href="unknown.html">unknown</a> to help 
+you to detect memory leaks in your program. If a thread in a multithreaded application 
+is created using PTypes <span class="lang">thread</span> class, then all PTypes 
+exceptions thrown in each thread are being caught and freed automatically (unless 
+caught in the user code).</p>
+<p>See also streams <a href="streams.errors.html">Error handling</a> and <a href="streams.examples.html">Examples</a>.</p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

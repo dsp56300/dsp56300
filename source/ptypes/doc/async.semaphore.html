@@ -1,0 +1,117 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: multithreading: semaphore</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="async.html">Multithreading</a>: 
+semaphore &amp; timedsem</p>
+<blockquote> 
+<pre class="lang">#include &lt;pasync.h&gt;
+
+class semaphore {
+    semaphore(int initvalue);
+    void wait();
+    void post();
+    void signal();    <span class="comment">// alias for post()</span>
+}
+
+class timedsem {
+    timedsem(int initvalue);
+    bool wait( [ int milliseconds ] );
+    void post();
+    void signal();
+}
+</pre>
+</blockquote>
+<p>Semaphore is a special helper object with very simple logic which is typically 
+used to synchronize the execution of concurrent threads. A semaphore object can 
+be considered as an integer value which has one additional feature: if its value 
+is 0, an attempt to decrement this value will cause the calling thread to &quot;hang&quot; 
+until some other thread increments it. &quot;Hanging&quot; on the semaphore means 
+entering effective wait state and consuming no or little CPU time, depending on 
+the operating system.</p>
+<p>One example showing the use of semaphores is when one thread needs to send 
+data (e.g. through a buffer) to another thread. In multithreading environments 
+there is no guarantee in which order two threads will come to the point where 
+the first thread is filling the data buffer and the other thread is reading it. 
+Therefore, these two threads need to synchronize execution at the exchange point. 
+Semaphore's logic for this case is fairly simple: the reader thread calls wait() 
+<i>before</i> reading the buffer and &quot;hangs&quot; if the semaphore is not 
+yet signaled. The writer thread calls post() <i>after</i> filling the buffer with 
+data and thus signals the reader thread that the data buffer is ready. This schema 
+ensures that the data buffer will be read by the second thread only when the data 
+is actually ready.</p>
+<p>If the data exchange cycle is iterative you will have to make sure also that 
+the buffer is not filled twice before the reading thread takes the first data 
+chunk. In this situation another semaphore should be created with reverse logic: 
+the semaphore is set to signaled state when the reading thread has taken the first 
+data chunk and is ready to take the second chunk. The writing thread, in its turn, 
+waits on this semaphore to make sure the buffer is ready for the successive data 
+chunk.</p>
+<p>In more complex applications when many threads need to exchange data with each 
+other or with the main application thread, message queues can be used instead 
+of semaphores. The message queue object itself is another example of using semaphores 
+(please see <span class="lang">pmsgq.cxx</span> source file).</p>
+<p>You can use semaphores when your application needs to limit the number of concurrently 
+running threads of the same type. A typical web robot application, for example, 
+creates a new thread for each download process. To limit the number of threads 
+the application creates a semaphore with the initial value equal to the maximum 
+allowed number of threads. Each new thread decrements the semaphore by calling 
+<span class="lang">wait()</span> and then increments it with <span class="lang">post()</span> 
+upon termination. If the maximum allowed number of threads is reached, the next 
+thread calling <span class="lang">wait()</span> will &quot;hang&quot; until one 
+of the running threads terminates and calls <span class="lang">post()</span>.</p>
+<p>PTypes' <span class="lang">semaphore</span> object encapsulates either Windows 
+semaphore or an implementation based on POSIX synchronization primitives. This 
+object implements the minimal set of features common to both Windows and POSIX 
+semaphores. Besides, semaphores can not be shared between processes on some operating 
+systems, thus limiting the use of PTypes' semaphores to one process.</p>
+<p>PTypes' <span class="lang">timedsem</span> adds timed waiting feature to 
+the simple semaphore. This class has an interface compatible with the simple <span class="lang">semaphore</span> 
+with one additional function - <span class="lang">wait(int)</span> with timer. 
+The reason this feature is implemented in a separate class is that not all platforms 
+support timed waiting. Wherever possible, PTypes uses the system's native sync 
+objects, or otherwise uses its own implementation based on other primitives. Note 
+that <span class="lang">timedsem</span> can be used both for infinitely waiting 
+and timed waiting; it is, however, recommended to use simple <span class="lang">semaphore</span> 
+if you are not going to use timed waiting.</p>
+<p>As an example of using <span class="lang">timedsem</span> see implementation 
+of <span class="lang">thread</span> 'relaxing' mechanism in <span class="lang">include/pasync.h</span> 
+and <span class="lang">src/pthread.cxx</span>.</p>
+<p><span class="def">semaphore::semaphore(int initvalue)</span> constructs a 
+semaphore object with the initial value <span class="lang">initvalue</span>.</p>
+<p><span class="def">void semaphore::wait()</span> decrements the semaphore's 
+value by 1. <span class="lang">wait()</span> can enter effective wait state if 
+the value becomes -1, in which case the thread will &quot;hang&quot; until some 
+other thread increments the value by calling <span class="lang">post()</span>.</p>
+<p><span class="def">void semaphore::post()</span> increments the semaphore's 
+value by 1. <span class="lang">post()</span> can release some other thread waiting 
+for the same semaphore if its value was -1.</p>
+<p><span class="def">void semaphore::signal()</span> is an alias for <span class="lang">post()</span>.</p>
+<p><span class="def">timedsem::timedsem(int initvalue)</span> constructs a 
+semaphore object with an interface fully compatible with (but not inherited from) 
+<span class="lang">semaphore</span>. This class has one additional method for 
+timed waiting (see below).</p>
+<p><span class="def">bool timedsem::wait( [ int milliseconds ] )</span> decrements 
+the semaphore's value by 1 and enters effective wait state if the value becomes 
+-1. Unlike simple <span class="lang">wait()</span> this function will 'wake' and 
+return if the time specified in <span class="lang">milliseconds</span> has elapsed, 
+in which case the function returns false. If the semaphore was signaled with <span class="lang">post()</span> 
+or <span class="lang">signal()</span> before the time elapses this function returns 
+true. If <span class="lang">milliseconds</span> is omitted or is -1 the function 
+will wait infinitely, like simple <span class="lang">wait()</span>.</p>
+<p class="seealso">See also: <a href="async.thread.html">thread</a>, <a href="async.mutex.html">mutex</a>, 
+<a href="async.rwlock.html">rwlock</a>, <a href="async.trigger.html">trigger</a>, 
+<a href="async.msgqueue.html">msgqueue</a>, <a href="async.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

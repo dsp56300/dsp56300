@@ -1,0 +1,83 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: iobase</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+iobase </p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+typedef void (*iostatusevent)(iobase* sender, int code);
+
+class iobase {
+    void   open();
+    void   close();
+    void   cancel();
+    int    tell();
+    int    seek(int newpos, ioseekmode mode = IO_BEGIN);
+    string get_streamname();
+    bool   get/set_active(bool);
+    bool   get/set_cancelled(bool);
+    int    get/set_bufsize(int);
+    int    get_status();
+    iostatusevent get/set_onstatus(<span class="def">iostatusevent</span>);
+}
+</pre>
+</blockquote>
+<p>The methods and properties of this abstract class are common to all stream 
+interfaces in PTypes.</p>
+<p><span class="def">void iobase::open()</span> opens (activates) the stream.</p>
+<p><span class="def">void iobase::close()</span> closes (deactivates) the stream. 
+This method is called automatically during destruction of an object. <span class="lang">Close()</span> 
+calls <span class="lang">flush()</span> for output streams. To simplify error 
+handling in user programs, this method never throws exceptions. If you want to 
+check for errors during the last write operation, call <span class="lang">flush()</span> 
+explicitly before closing the stream.</p>
+<p><span class="def">void iobase::cancel()</span> closes the stream and sets the 
+<span class="lang">cancelled</span> property to true. In communication streams 
+this method may close the connection immediately, unlike <span class="lang">close()</span>, 
+which always tries to flush data buffers and then close the stream gracefully.</p>
+<p><span class="def">int iobase::tell()</span> returns either the current position 
+in the target media (usually file) or, for communication channels, the number 
+of bytes transfered from the beginning of the session.</p>
+<p><span class="def">int iobase::seek(int newpos, ioseekmode mode = IO_BEGIN)</span> 
+changes the media pointer (e.g. file pointer). Possible values for <span class="lang">mode</span> 
+are: IO_BEGIN, IO_CURRENT and IO_END. This function first tries to position the 
+stream pointer within the scope of the I/O buffer. If the new pointer is out of 
+buffer's range, <span class="lang">seek()</span> then tries to change the physical 
+pointer of the target media. Note that physical positioning is not supported by 
+some stream types, e.g. by <span class="lang">ipstream</span>.</p>
+<p><span class="def"> string iobase::get_streamname()</span> returns a string 
+containing either a file name, an URL, or some other string describing the underlying 
+media or object. Useful for diagnostics messages.</p>
+<p><span class="def"> bool iobase::get/set_active(bool)</span> indicates whether 
+the stream is active. Setting this property to <span class="lang">true</span> 
+or <span class="lang">false</span> opens or closes the stream respectively.</p>
+<p><span class="def"> bool iobase::get/set_cancelled(bool)</span> returns <span class="lang">true</span> 
+if the stream was closed using <span class="lang">cancel()</span>.</p>
+<p><span class="def"> int iobase::get/set_bufsize(int)</span> sets the buffer 
+size for the stream. Setting this property to -1 will assign some reasonable default 
+value, which may vary depending on the operating environment, available memory, 
+etc. Note: text input routines require buffering (see <a href="streams.instm.html">instm</a>).</p>
+<p><span class="def"> int iobase::get_status(int)</span> returns the current status 
+of the stream. The value of this property can be one of the following: IO_CREATED, 
+IO_OPENING, IO_OPENED, IO_READING, IO_WRITING, IO_EOF, IO_CLOSING, IO_CLOSED. 
+Derivative classes may add other status codes, e.g. see <a href="inet.ipstream.html">ipstream</a>.</p>
+<p> <span class="def"> iostatusevent iobase::get/set_onstatus(iostatusevent)</span> 
+-- sets or returns user-defined callback function. The callback function is called 
+whenever the status of the stream is being changed (see also <span class="lang">get_status()</span>).</p>
+<p class="seealso">See also: <a href="streams.instm.html">instm</a>, <a href="streams.outstm.html">outstm</a>, 
+<a href="streams.errors.html">Error handling</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

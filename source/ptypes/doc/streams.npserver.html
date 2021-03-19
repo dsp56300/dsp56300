@@ -1,0 +1,49 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: npserver</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+npserver</p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+class npserver {
+    npserver(string pipename);
+    bool serve(namedpipe&amp; client, int timeout = -1);
+}</pre>
+</blockquote>
+<p>The <span class="lang">npserver</span> class is used on the server side of 
+an interprocess communication channel. It listens to connections on the specified 
+named pipe or a local UNIX socket and for each connection provides a <span class="lang">namedpipe</span> 
+object for exchanging data with the peer.</p>
+<p>Please, read the introduction to <a href="streams.namedpipe.html">namedpipe</a> 
+first.</p>
+<p><span class="def">npserver::npserver(string pipename)</span> creates a named 
+pipe server object. The named pipe or a local socket is actually created during 
+the first call to <span class="lang">serve()</span> for this object.</p>
+<p><span class="def">bool npserver::serve(namedpipe&amp; client, int timeout = 
+-1)</span> polls the pipe for connection requests. If there is a connection request 
+from a client, <span class="lang">serve()</span> opens and prepares the supplied 
+namedpipe object for communicating with the client, i.e. <span class="lang">client</span> 
+will be active upon return from <span class="lang">serve()</span>. The second 
+optional parameter <span class="lang">timeout</span> specifies the amount of time 
+in milliseconds to wait for a connection request. If timeout is 0 <span class="lang">serve()</span> 
+will return immediately; if it's -1 <span class="lang">serve()</span> will wait 
+infinitely. This function returns <span class="lang">true</span> if there is a 
+connection request and the <span class="lang">client</span> object is active, 
+or <span class="lang">false</span> if the call has timed out.</p>
+<p class="seealso">See also: <a href="streams.namedpipe.html">namedpipe</a>, <a href="inet.examples.html">Networking 
+examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

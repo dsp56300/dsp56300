@@ -1,0 +1,45 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: date/time: time</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="time.html">Date/time</a>: Time manipulation</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptime.h&gt;
+
+typedef large datetime;
+
+bool     istimevalid(int hour, int min, int sec, int msec = 0);
+datetime encodetime(int hour, int min, int sec, int msec = 0);
+bool     decodetime(datetime d, int& hour, int& min, int& sec [, int& msec] );
+</pre>
+</blockquote>
+<p><span class="def">bool istimevalid(int hour, int min, int sec, int msec = 
+0)</span> checks whether <span class="lang">hour</span>, <span class="lang">min</span>, 
+<span class="lang">sec</span> and <span class="lang">msec</span> (millisecond) 
+contain correct values in their respective ranges. The last parameter is optional.</p>
+<p><span class="def">datetime encodetime(int hour, int min, int sec, int msec 
+= 0)</span> returns a <span class="lang">datetime</span> value, i.e. the number 
+of milliseconds since midnight. This function does NOT check the input parameters 
+for validity. The value returned by this function can be added to the return value 
+of <span class="lang">encodedate()</span> to form the exact time stamp for the 
+given year, month, day, hour, minute, second and (optionally) millisecond.</p>
+<p><span class="def">bool decodetime(datetime d, int& hour, int& min, int& sec 
+[, int& msec] )</span> splits the value of <span class="lang">d</span> into <span class="lang">hour</span>, 
+<span class="lang">minute</span>, <span class="lang">sec</span> and <span class="lang">msec</span> 
+(millisecond) passed since midnight. The last parameter is optional.</p>
+<p class="seealso">See also: <a href="time.datetime.html">Datetime type</a>, <a href="time.calendar.html">Date/calendar 
+manipulation</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

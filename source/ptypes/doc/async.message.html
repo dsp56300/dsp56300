@@ -1,0 +1,51 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: multithreading: message</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="async.html">Multithreading</a>: 
+message</p>
+<blockquote> 
+<pre class="lang">#include &lt;pasync.h&gt;
+
+struct message {
+    int id;
+    pintptr param;
+    pintptr result;
+
+    message(int id, pintptr param = 0);
+}</pre>
+</blockquote>
+<p>A <span class="lang">message</span> object or an object of a derived class 
+can be used to post data to message queues (<a href="async.msgqueue.html">msgqueue</a>) 
+or job queues (<a href="async.jobqueue.html">jobqueue</a>). Messages are distinguished 
+by a ID that are defined in your application. The user message IDs can be in the 
+range <span class="lang">0</span> through <span class="lang">INT_MAX</span>. Negative 
+values are reserved for internal use by the library.</p>
+<p>A simple message can also contain an additional parameter of type <span class="lang">pintptr</span>, 
+which is an integer with a size equal to the size of a pointer on the given platform. 
+For more complex message structures you can define classes derived from <span class="lang">message 
+</span> - the message queue manager can work with any descendant class as well.</p>
+<p><span class="def">message::message(int id, pintptr param = 0)</span> constructs 
+a message object and assigns <span class="lang">id</span> and <span class="lang">param</span> 
+fields. <span class="lang">param</span> is an additional field that can be used 
+in your application at your own discretion.</p>
+<p><span class="def">int message::id</span> -- this field contains a message ID 
+assigned through the constructor.</p>
+<p><span class="def">pintptr message::param</span> contains the optional parameter.</p>
+<p><span class="def">pintptr message::result</span> -- through this field a message 
+handler can return some simple answer to the sender of this message.</p>
+<p class="seealso">See also: <a href="async.msgqueue.html">msgqueue</a>, <a href="async.jobqueue.html">jobqueue</a>, 
+<a href="async.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

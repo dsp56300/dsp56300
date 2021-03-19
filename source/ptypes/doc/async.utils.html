@@ -1,0 +1,68 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: multithreading: utils</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="async.html">Multithreading</a>: 
+Atomic functions, utilities</p>
+<blockquote> 
+<pre class="lang">#include &lt;pasync.h&gt;
+
+int pexchange(int* target, int value);
+void* pexchange(void** target, void* value);
+int pincrement(int* target);
+int pdecrement(int* target);
+
+template &lt;class T&gt; T* tpexchange(T** target, T* value);
+
+void psleep(unsigned milliseconds);
+pthread_id_t pthrself();
+bool pthrequal(pthread_id_t id);
+</pre>
+</blockquote>
+<p>The atomic functions <span class="lang">pexchange()</span>, <span class="lang">pincrement()</span> 
+and <span class="lang">pdecrement()</span> can be used in place of mutex locking 
+in some simple situations. A typical usage of <span class="lang">pexchange()</span> 
+in a multithreaded environment could be, for example, freeing a dynamic object 
+and assigning NULL to the pointer <b>atomically</b> to prevent concurrent threads 
+from freeing the same object more than once.</p>
+<p>It is sometimes necessary to increment or decrement some shared counter and 
+atomically compare it with some value. For example, you have a shared resource 
+and you keep track of its usage by maintaining a reference counter. When this 
+counter reaches 0 you want to free the shared resource. To avoid conflicts between 
+concurrent threads you need to decrement the counter and atomically compare it 
+with 0. In this situation you can use <span class="lang">pdecrement()</span> instead 
+of time-consuming mutex locking. (For additional notes, see <a href="portability.html">Portability 
+and performance issues</a>.)</p>
+<p><span class="def">int pexchange(int* target, int value)</span> -- atomically 
+exchanges two int values.</p>
+<p><span class="def">void* pexchange(void** target, void* value)</span> -- atomically 
+exchanges two pointers.</p>
+<p><span class="def">int pincrement(int* target)</span> -- atomically increments 
+the value of <span class="lang">*target</span> and returns the new value.</p>
+<p><span class="def">int pdecrement(int* target)</span> -- atomically decrements 
+the value of <span class="lang">*target</span> and returns the new value.</p>
+<p><span class="def">template &lt;class T&gt; T* tpexchange(T** target, T* value)</span> 
+-- is equivalent to <span class="lang">pexchange()</span> that adds compile-time 
+type checking. Use this template to check the correspondence of pointer types 
+of <span class="lang">target</span> and the returning value.</p>
+<p><span class="def">void psleep(unsigned milliseconds)</span> -- suspends execution 
+for the specified amount of time in milliseconds.</p>
+<p><span class="def">pthread_id_t pthrself()</span> -- returns the thread ID of 
+the calling thread.</p>
+<p><span class="def">bool pthrequal(pthread_id_t id)</span> -- checks whether 
+the calling thread has the given thread <span class="lang">id</span>.</p>
+<p class="seealso">See also: <a href="async.semaphore.html">semaphore</a>, <a href="async.examples.html">mutex</a>, 
+<a href="async.thread.html">thread</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

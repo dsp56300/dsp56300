@@ -1,0 +1,184 @@
+<html><!-- #BeginTemplate "../Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: deploying</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: Deploying the shared (dynamic) 
+library</p>
+<p><b><br>
+Static vs. dynamic linking</b></p>
+<p>PTypes builds two separate versions of the library: static and shared (DLL 
+on Windows), giving you a choice, and at the same time putting into a dilemma.</p>
+<p>Both static and dynamic linking have their advantages and disadvantages. While 
+small applications consisting of a single executable would prefer to link the 
+library directly, more complex projects with multiple dynamic components and executables 
+would greatly benefit from going 'totally dynamic', including generic low-level 
+libraries, such like CRTL and PTypes. Before making a decision, consider the following:</p>
+<p>Advantages of static linking in general:</p>
+<ul>
+<li>Faster run-time loading (in return for slower compilation).</li>
+<li>The installation process is simpler: the end-user doesn't have to deal with 
+package dependencies, DLL/so versioning conflicts with other applications, etc. 
+A simple application may run even without any special installation procedures.</li>
+<li>Windows-specific: turning a static library into a DLL on Windows is not as 
+simple as on UNIX systems. You should at least put special compiler directives 
+against every public symbol in the library and thus make your header files less 
+readable.</li>
+<li>UNIX-specific: for security reasons, UNIX has strict policies with regard 
+to finding shared libraries and managing allowed source paths. In most cases you 
+will have to provide an automated installation procedure and require root privileges 
+in order to place all shared libraries in the right place. Remember, UNIX is a 
+true multiuser system, and often the user that downloaded/purchased your program 
+does not have root access on his computer, and he doesn't want to bother the system 
+administrator either. You may, of course, override LD_LIBRARY_PATH, but then shared 
+libraries won't be truly shared if they are installed somewhere under user's home 
+directory.</li>
+</ul>
+<p>Advantages of dynamic linking in general:</p>
+<ul>
+<li>Faster compilation and better modularization in big projects with distributed 
+development (in return for slower run-time loading).</li>
+<li>Bug fixes and improvements in library's implementation do not affect your 
+application and do not require you to recompile everything. What's more, adding 
+new features without changing the existing interfaces in the dynamic library, 
+again, won't affect the other modules.</li>
+<li>Smaller executables; dynamic libraries may be shared not only between the 
+components of your project, but even between applications from different vendors. 
+(The installation package should offer all dependent libraries anyway.) Freeware 
+libraries perfectly suit for sharing between vendors, since they usually don't 
+put any limitation on their usage, at least when linked dynamically.</li>
+<li>Dynamic libraries can be loaded and bound to the main application at run-time 
+allowing you to maintain functional 'drivers' (e.g. an application that extracts 
+plain text from various text formats can support a generic text extraction interface; 
+drivers for each format can be developed and shipped independently).</li>
+</ul>
+<p>In summary, dynamic linking is good (1) for big projects, (2) if the library 
+is widely used by many software vendors in its dynamic (shared) form or (3) to 
+take advantage of run-time binding.</p>
+<p><b><br>
+Using and deploying UNIX shared object</b></p>
+<p>PTypes builds a shared object named <span class="lang">libptypes.so.20</span> 
+(<span class="lang">libptypes.20.dylib</span> on MacOS X), creates a 'default' 
+symbolic link to this library and finally places them both in <span class="lang">so/</span>.</p>
+<p>If you decided to link your program against PTypes shared object instead of 
+the static library, then all you'd have to do is to change the library path in 
+your makefile from <span class="lang">-L../ptypes/lib</span> to <span class="lang">-L../ptypes/so</span>. 
+When running the program, it will require the shared library to be either in one 
+of the default locations (usually <span class="lang">/usr/lib</span> and <span class="lang">/usr/local/lib</span>), 
+or you will have to override the LD_LIBRARY_PATH environment variable and point 
+to the directory where the shared object resides, e.g. <span class="lang">~/ptypes/so</span>.</p>
+<p>The shared object <span class="lang">libptypes.so.20</span> should be deployed 
+and installed along with your application. The version number '20' will change 
+when PTypes adds a number of new features and becomes bigger and/or if incompatible 
+changes take place which make it impossible for older programs to use the new 
+shared object.</p>
+<p><b><br>
+Using and deploying Windows DLL</b></p>
+<p>The PTypes MSVC project is configured so that the 'release' version of <span class="lang">ptypes20.dll</span> 
+along with its import library is copied into <span class="lang">so\</span> as 
+the final step of the build process. This module does not contain any debugging 
+information and is ready to be deployed. Note that the library itself is linked 
+against the multithreaded DLL version of CRTL.</p>
+<p>PTypes places a VERSION resource in the DLL, allowing the system or the setup 
+program to automatically compare the existing <span class="lang">ptypes20.dll</span> 
+the user may have in the system with the one that comes with your program. This 
+is usually done from within the installation script.</p>
+<p>The DLL version of the library built with Dev-C++/MinGW is called <span class="lang">ptypes20g.dll</span>. 
+The reason this name is different is that each C++ compiler uses its own `name 
+mangling' scheme for exported symbols, so that applications built by one compiler 
+can't use dynamic libraries built by another one.</p>
+<p><b><br>
+Version checking sample code</b></p>
+<p>If, for some reason, you wish to check the version of the shared library you 
+linked with dynamically, you may check the global variable <span class="lang">__ptypes_version</span>, 
+which is declared in <span class="lang"><a href="include/pport.h.html">&lt;pport.h&gt;</a></span>. 
+This variable holds the version number encoded as a single integer, e.g. <span class="lang">0x010902</span> 
+designates version 1.9.2. In this form the version numbers (required and actual) 
+can be easily compared as integers.</p>
+<p>Note, the name of the library itself reflects major and minor version numbers, 
+so that only the third component of the version number can vary in the file.</p>
+<p>If you need to check the version of PTypes before loading the library (for 
+example, during the installation on UNIX), you may write a program that loads 
+the shared object and reads the global symbol <span class="lang">__ptypes_version</span> 
+at run-time, using the system dynamic loading interface. Note that this program 
+itself is not using PTypes. Some UNIX systems require to link the program with 
+<span class="lang">-ldl</span>.</p>
+<blockquote> 
+<pre>
+
+<span class="cdir">#ifdef</span> WIN32
+<span class="cdir">#  include</span> &lt;windows.h&gt;
+<span class="cdir">#else</span><br><span class="cdir">#  include</span> &lt;dlfcn.h&gt;<br><span class="cdir">#endif</span>
+
+<span class="cdir">#include</span> &lt;stdio.h&gt;
+
+
+const unsigned long required = 0x020001;
+<br>
+int main()
+{
+    void* handle;
+    unsigned long* pversion;
+    int exitcode = 0;
+
+<span class="cdir">#ifdef</span> WIN32
+    const char* libname = "ptypes20.dll";
+    handle = LoadLibrary(libname);
+    if (handle == 0)
+    {
+        printf("ptypes20.DLL not found\n");
+        return 3;
+    }
+    pversion = (unsigned long*)GetProcAddress(HMODULE(handle), "__ptypes_version");
+<span class="cdir">#else</span>
+    const char* libname = "libptypes.so.20";
+    handle = dlopen(libname, RTLD_LAZY);
+    if (handle == 0)
+    {
+        printf("%s\n", dlerror());
+        return 3;
+    }
+    pversion = (unsigned long*)dlsym(handle, "__ptypes_version");
+<span class="cdir">#endif</span>
+
+    if (pversion == NULL)
+    {
+        printf("Couldn't determine the version number of %s\n", libname);
+        exitcode = 1;
+    }
+    else
+    {
+        printf("Found %s, version: %ld.%ld.%ld\n", libname,
+            (*pversion) >> 16, ((*pversion) >> 8) & 0xff, (*pversion) & 0xff);
+        if (*pversion &lt; required)
+        {
+            printf(&quot;Need version %ld.%ld.%ld or later\n&quot;,
+                required >> 16, (required >> 8) & 0xff, required & 0xff);
+            exitcode = 2;
+        }
+    }
+
+<span class="cdir">#ifdef</span> WIN32
+    FreeLibrary(HMODULE(handle));
+<span class="cdir">#else</span>
+    dlclose(handle);
+<span class="cdir">#endif</span>
+
+    return exitcode;
+}
+
+</pre>
+</blockquote>
+<p class="seealso">See also: <a href="compiling.html">Compiling and Porting</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

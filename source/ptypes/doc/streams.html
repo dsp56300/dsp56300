@@ -1,0 +1,91 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: Streams</p>
+<ul>
+<li> 
+<h5><a href="streams.iobase.html">iobase</a> - common input/output interface</h5>
+</li>
+<li> 
+<h5><a href="streams.instm.html">instm</a> - basic input stream</h5>
+</li>
+<li> 
+<h5><a href="streams.outstm.html">outstm</a> - basic output stream</h5>
+</li>
+<li> 
+<h5><a href="streams.infile.html">infile</a> - file input</h5>
+</li>
+<li> 
+<h5><a href="streams.outfile.html">outfile</a> - file output</h5>
+</li>
+<li> 
+<h5><a href="streams.logfile.html">logfile</a> - file output with thread-safe 
+formatting functions</h5>
+</li>
+<li> 
+<h5><a href="streams.namedpipe.html">namedpipe</a> - named pipe/UNIX local socket</h5>
+</li>
+<li>
+<h5><a href="streams.npserver.html">npserver</a> - named pipe server</h5>
+</li>
+<li> 
+<h5><a href="streams.stdio.html">Standard input, output and error devices</a></h5>
+</li>
+<li> 
+<h5><a href="streams.md5.html">outmd5</a> - MD5 message digest computation</h5>
+</li>
+<li> 
+<h5><a href="streams.inmem.html">inmemory</a> - memory input</h5>
+</li>
+<li> 
+<h5><a href="streams.outmem.html">outmemory</a> - memory output</h5>
+</li>
+<li> 
+<h5><a href="streams.errors.html">Error handling</a></h5>
+</li>
+<li> 
+<h5><a href="streams.examples.html">Examples</a></h5>
+</li>
+</ul>
+<p>The stream input/output module, which is an integral part of PTypes, declares 
+a family of classes that implement abstract functionality of stream-oriented data 
+processing. The main features of this module include:</p>
+<ul>
+<li> Text processing utilities, such like token extraction using character sets.</li>
+<li> Buffering: both input and output streams can be buffered to speed up operation.</li>
+<li> Scalability: the functionality of either input or output streams can be overridden 
+by providing several low-level routines for the given device or communication 
+protocol.</li>
+<li> System-independent error handling: regardless of the system on which the 
+library is compiled, the error codes are presented in UNIX &quot;errno&quot; semantics.</li>
+</ul>
+<p>The basic class <a href="streams.iobase.html">iobase</a> encapsulates features 
+common to both input and output, such like buffering, event and error handling, 
+etc. This class is derived from <a href="unknown.html">component</a>. Two descendant 
+classes -- <a href="streams.instm.html">instm</a> and <a href="streams.outstm.html">outstm</a> 
+-- specialize in data input and output respectively, as well as provide simple 
+and powerful text processing utility methods.</p>
+<p>PTypes declares three built-in objects for <a href="streams.stdio.html">standard 
+input, output and error devices</a>. </p>
+<p>All recoverable error conditions generate exceptions of class <span class="lang">(estream*)</span>. 
+See <a href="streams.errors.html">Error handling</a> for details.</p>
+<p>Some encapsulated structure fields in this module are accessed through <span class="lang">get_X()</span> 
+and <span class="lang">set_X()</span> function pairs. To simplify documentation, 
+we use a single description in the form <span class="lang">get/set_X()</span> 
+for such fields, and sometimes we refer to them as <i>properties</i>.</p>
+<p>The stream i/o class family is declared in <a href="include/pstreams.h.html">&lt;pstreams.h&gt;</a>.</p>
+<p class="seealso">See also: <a href="inet.html">Networking</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

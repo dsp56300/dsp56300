@@ -1,0 +1,73 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: string: constructors/destructors</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="string.html">string</a>: Constructors/destructors</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptypes.h&gt;
+
+class string {
+    string();
+    string(const string&amp;);
+    string(char);
+    string(const char*);
+    string(const char*, int);
+    ~string();
+}
+</pre>
+</blockquote>
+<p>A string object can be constructed in 5 different ways:</p>
+<ul>
+<li> 
+<p> default constructor <span class="lang">string()</span> creates an empty string.</p>
+</li>
+<li> 
+<p>copy constructor <span class="lang">string(const string&amp; s)</span> creates 
+a copy of the given string <span class="lang">s</span>. Actually this constructor 
+only increments the reference count by 1 and no memory allocation takes place.</p>
+</li>
+<li> 
+<p><span class="def">string(char c)</span> constructs a new string consisting 
+of one character <span class="lang">c</span>.</p>
+</li>
+<li> 
+<p><span class="def">string(const char* s)</span> constructs a new string object 
+from a null-terminated string. If <span class="lang">s</span> is either <span class="lang">NULL</span> 
+or is a pointer to a null character, an empty string object is created. This constructor 
+can be used to assign a string literal to a string object (see examples below).</p>
+</li>
+<li> 
+<p><span class="def">string(const char* s, int len)</span> copies <span class="lang">len</span> 
+bytes of data from buffer <span class="lang">s</span> to the newly allocated string 
+buffer.</p>
+</li>
+</ul>
+<p>Destructor <span class="lang">~string()</span> decrements the reference count 
+for the given string buffer and removes it from the dynamic memory if necessary.</p>
+<p><b>Examples:</b></p>
+<blockquote> 
+<pre>string s1;             <span class="comment">// empty string</span>
+string s2 = s1;        <span class="comment">// copy</span>
+string s3 = 'A';       <span class="comment">// single character</span>
+string s4 = &quot;ABCabc&quot;;  <span class="comment">// string literal</span>
+char* p = &quot;ABCabc&quot;;
+string s5 = p;         <span class="comment">// null-terminated string</span>
+string s6(p, 3);       <span class="comment">// buffer/length</span>
+</pre>
+</blockquote>
+<p class="seealso">See also: <a href="string.operators.html">Operators</a>, <a href="string.typecasts.html">Typecasts</a>, 
+<a href="string.manipulation.html">Manipulation</a>, <a href="string.conversion.html">Conversion</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

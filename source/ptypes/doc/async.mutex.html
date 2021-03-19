@@ -1,0 +1,87 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: multithreading: mutex</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="async.html">Multithreading</a>: 
+mutex</p>
+<blockquote> 
+<pre class="lang">#include &lt;pasync.h&gt;
+
+class mutex {
+    mutex();
+
+    void enter();
+    void leave();
+
+    void lock();      <span class="comment">// alias for enter()</span>
+    void unlock();    <span class="comment">// alias for leave()</span>
+}
+
+class scopelock {
+    scopelock(mutex&amp;);
+    ~scopelock();
+}
+</pre>
+</blockquote>
+<p><span class="lang">Mutex</span> (mutual exclusion) is another synchronization 
+object which helps to protect shared data structures from being concurrently accessed 
+and modified.</p>
+<p>Accessing and changing simple variables like <span class="lang">int</span> 
+concurrently can be considered safe provided that the variable is aligned on a 
+boundary &quot;native&quot; to the given CPU (32 bits on most systems). More often, 
+however, applications use more complex shared data structures which can not be 
+modified and accessed at the same time. Otherwise, the logical integrity of the 
+structure might be corrupt from the &quot;reader's&quot; point of view when some 
+other process sequentially modifies the fields of a shared structure.</p>
+<p>To logically lock the part of code which modifies such complex structures the 
+thread creates a mutex object and embraces the critical code with calls to <span class="lang">enter()</span> 
+and <span class="lang">leave()</span>. Reading threads should also mark their 
+transactions with <span class="lang">enter()</span> and <span class="lang">leave()</span> 
+for the same mutex object. When either a reader or a writer enters the critical 
+section, any attempt to enter the same section concurrently causes the thread 
+to &quot;hang&quot; until the first thread leaves the critical section.</p>
+<p>If more than two threads are trying to lock the same critical section, <span class="lang">mutex</span> 
+builds a queue for them and allows threads to enter the section only one by one. 
+The order of entering the section is platform dependent.</p>
+<p>To avoid infinite locks on a mutex object, applications usually put the critical 
+section into <span class="lang">try {}</span> block and call <span class="lang">leave()</span> 
+from within <span class="lang">catch {}</span> in case an exception is raised 
+during the transaction. The <span class="lang">scopelock</span> class provides 
+a shortcut for this construct: it automatically locks the specified mutex object 
+in its constructor and unlocks it in the destructor, so that even if an exception 
+is raised inside the scope of the <span class="lang">scopelock</span> object <span class="lang">leave()</span> 
+is guaranteed to be called.</p>
+<p>More often applications use a smarter mutual exclusion object called read/write 
+lock -- <a href="async.rwlock.html">rwlock</a>.</p>
+<p> PTypes' <span class="lang">mutex</span> object encapsulates either Windows 
+CRITICAL_SECTION structure or POSIX mutex object and implements the minimal set 
+of features common to both platforms. <b>Note</b>: mutex may not be reentrant 
+on POSIX systems, i.e. a recursive lock from one thread may cause deadlock.</p>
+<p><span class="def">mutex::mutex()</span> creates a mutex object.</p>
+<p><span class="def">void mutex::enter()</span> marks the start of an indivisible 
+transaction.</p>
+<p><span class="def">void mutex::leave()</span> marks the end of an indivisible 
+transaction.</p>
+<p><span class="def">void mutex::lock()</span> is an alias for <span class="lang">enter()</span>.</p>
+<p><span class="def">void mutex::unlock()</span> is an alias for <span class="lang">leave()</span>.</p>
+<p><span class="def">scopelock::scopelock(mutex&amp; m)</span> creates a <span class="lang">scopelock</span> 
+object and calls <span class="lang">enter()</span> for the mutex object <span class="lang">m</span>.</p>
+<p><span class="def">scopelock::~scopelock()</span> calls <span class="lang">leave()</span> 
+for the mutex object specified during construction and destroys the <span class="lang">scopelock</span> 
+object.</p>
+<p class="seealso">See also: <a href="async.thread.html">thread</a>, <a href="async.rwlock.html">rwlock</a>, 
+<a href="async.trigger.html">trigger</a>, <a href="async.semaphore.html">semaphore</a>, 
+<a href="async.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

@@ -1,0 +1,49 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: variant: utilities</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="variant.html">variant</a>: Utilities</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptypes.h&gt;
+ 
+enum { VAR_NULL, VAR_INT, VAR_BOOL, VAR_FLOAT,
+       VAR_STRING, VAR_ARRAY, VAR_OBJECT };
+ 
+void clear(variant&amp;);
+int  vartype(const variant&amp;);
+
+bool isnull(const variant&amp;);
+bool isint(const variant&amp;);
+bool isbool(const variant&amp;);
+bool isfloat(const variant&amp;);
+bool isstring(const variant&amp;);
+bool isarray(const variant&amp;);
+bool isobject(const variant&amp;);
+
+const variant nullvar;
+</pre>
+</blockquote>
+<p><span class="def">void clear(variant&amp;)</span> clears the variant and sets 
+its state to unassigned (null).</p>
+<p><span class="def">int vartype(const variant&amp;)</span> returns the type of 
+a variant, which can be compared with one of the <span class="lang">VAR_XXX</span> 
+constants.</p>
+<p><span class="def">bool isXXX(const variant&amp;)</span> this group of inlined 
+functions is provided to check whether the variant is of particular type.</p>
+<p class="seealso">See also: <a href="variant.typecasts.html">Assignments and 
+typecasts</a>, <a href="variant.arrays.html">Arrays</a>, <a href="variant.objrefs.html">Object 
+references</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

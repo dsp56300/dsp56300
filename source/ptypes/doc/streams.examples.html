@@ -1,0 +1,114 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: examples</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+Examples </p>
+<p><b>Example 1.</b> This simple program creates a new file and writes a string 
+to it.</p>
+<blockquote> 
+<pre>#include &lt;pstreams.h&gt;
+
+USING_PTYPES
+
+int main() 
+{
+    <span class="comment">// the outfile object is declared and constructed outside 
+    // the try...catch clause, since the exception object
+    // contains a reference to the stream that caused the error.
+    // besides, stream constructors and destructors in PTypes 
+    // never throw exceptions.</span>
+    outfile f(fname);
+
+    f.set_bufsize(1024);             <span class="comment">// the default value in this version is 8192</span>
+
+    try 
+    {
+        f.open();
+        f.put(&quot;This is a test file.&quot;);
+        f.close();
+    }
+    catch (estream* e) 
+    {
+        perr.putf(&quot;File error: %s\n&quot;, e->get_message());
+        delete e;
+    }
+    return 0;
+}
+
+</pre>
+</blockquote>
+<p><b>Example 2.</b> This program reads a C source, extracts identifiers and builds 
+a usage dictionary. It does not understand C comments and string literals though, 
+but can be easily improved to understand them too.</p>
+<blockquote> 
+<pre>#include &lt;ptypes.h&gt;
+#include &lt;pstreams.h&gt;
+
+USING_PTYPES
+
+const cset letters(&quot;_A-Za-z&quot;);
+const cset digits(&quot;0-9&quot;);
+const cset identchars = letters + digits;
+const cset otherchars = !letters;
+
+void main(int argc, char* argv[]) 
+{
+    tstrlist&lt;void*&gt; dic(SL_SORTED | SL_CASESENS);
+
+    infile f(argv[1]);
+
+    try 
+    {
+        f.open();
+
+        while (!f.get_eof()) 
+        {
+            char c = f.preview();
+
+            <span class="comment">// a C identifier begins with a letter</span>
+            if (c &amp; letters)
+            {
+                <span class="comment">// ... and may contain letters and digits</span>
+                string ident = f.token(identchars);
+                int i;
+                if (!dic.search(ident, i))
+                    dic.ins(i, ident, 0);
+            }
+
+            else
+                <span class="comment">// ignore everything else</span>
+                f.skiptoken(otherchars);
+        }
+
+    }
+
+    catch (estream* e) 
+    {
+        pout.putf(&quot;Error: %s\n&quot;, e->get_message());
+        delete e;
+    }
+
+    <span class="comment">// now print the dictionary</span>
+    for (int i = 0; i < dic.get_count(); i++)
+        pout.putline(dic.getkey(i));
+}
+</pre>
+</blockquote>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.instm.html">instm</a>, 
+<a href="streams.infile.html">infile</a>, <a href="streams.outstm.html">outstm</a>, 
+<a href="streams.outfile.html">outfile</a>, <a href="streams.errors.html">Error 
+handling</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

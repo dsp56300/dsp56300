@@ -1,0 +1,55 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: cset: constructors</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="cset.html">cset</a>: Constructors</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptypes.h&gt;
+
+class cset {
+    cset();
+    cset(const cset& s);
+    cset(const char* setinit);
+}
+</pre>
+</blockquote>
+<p><span class="def">cset::cset()</span> -- default constructor, initializes 
+the set object to an empty set.</p>
+<p><span class="def">cset::cset(const cset& s)</span> -- copy constructor.</p>
+<p><span class="def">cset::cset(const char* setinit)</span> constructs a character 
+set from a string. The <span class="lang">setinit</span> parameter is a sequence 
+of characters, range specifiers and escape sequences. Range specifier consists 
+of: lower boundary, dash &quot;-&quot; and higher boundary, e.g. &quot;A-Z&quot;. 
+Escape sequence begins with tilde &quot;~&quot; and can be followed by a two-digit 
+hexadecimal number. Escape sequences are also used to include special characters 
+tilde &quot;~&quot; and dash &quot;-&quot; (see examples below).</p>
+<p>Constructing character sets using this interpreter can be a time-consuming 
+operation. A better practice is to declare all constant character sets as static 
+variables, so that the interpretation of all set constructing strings will be 
+done only once during program startup.</p>
+<p>An initializer string can also be passed to a <span class="lang">cset</span> 
+object through <span class="lang">assign()</span>.</p>
+<p><b>Note</b>: this constructor does not generate errors if the syntax is violated.</p>
+<p><b>Examples:</b></p>
+<blockquote> 
+<pre>cset s1 = &quot;135A-CZ&quot;;            <span class="comment">// digits 1, 3, 5, letters A through C, and also Z</span>
+cset wspace1 = &quot;~09~0d~0a &quot;;    <span class="comment">// tab, CR, LF and space</span>
+cset wspace2 = &quot;~00-~20&quot;;       <span class="comment">// all control and whitespace chars</span>
+cset s2 = &quot;:@~~&quot;;               <span class="comment">// colon, at and tilde (must be escaped with another tilde)</span>
+</pre>
+</blockquote>
+<p class="seealso">See also: <a href="cset.operators.html">Operators</a>, <a href="cset.manipulation.html">Manipulation</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

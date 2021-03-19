@@ -1,0 +1,70 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: date/time: calendar</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="time.html">Date/time</a>: Date/calendar manipulation</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptime.h&gt;
+
+typedef large datetime;
+
+bool     isleapyear(int year);
+int      daysinmonth(int year, int month);
+int      daysinyear(int year, int month);
+int      dayofweek(datetime d);
+bool     isdatevalid(int year, int month, int day);
+datetime encodedate(int year, int month, int day);
+bool     decodedate(datetime d, int& year, int& month, int& day);
+</pre>
+</blockquote>
+<p><span class="def">bool isleapyear(int year)</span> determines whether <span class="lang">year</span> 
+is a leap year.</p>
+<p><span class="def">int daysinmonth(int year, int month)</span> returns the 
+number of days in <span class="lang">month</span> (1 - 12). The parameter <span class="lang">year</span> 
+is needed to determine whether it's a leap year in order to return the correct 
+number of days for February. The returned value can be in the range 28 - 31. If 
+<span class="lang">month</span> is out of the allowed range (1 - 12) this function 
+returns 0.</p>
+<p><span class="def">int daysinyear(int year, int month)</span> returns the number 
+of days since the beginning of the <span class="lang">year</span> up to the <span class="lang">month</span> 
+(1 - 12), inclusive. If <span class="lang">month</span> is 12 the function will 
+return the total number of days in the <span class="lang">year</span>. If <span class="lang">month</span> 
+is out of the allowed range (1 - 12) this function returns 0.</p>
+<p><span class="def">int dayofweek(datetime d)</span> returns the day of the 
+week (0 - 6) for the given date <span class="lang">d</span>. 0 corresponds to 
+Sunday, 1 - Monday etc. This function does not check the value of <span class="lang">d</span> 
+for validity, it always returns some result in the range 0 - 6.</p>
+<p><span class="def">bool isdatevalid(int year, int month, int day)</span> checks 
+the values of <span class="lang">year</span>, <span class="lang">month</span> 
+and <span class="lang">day</span> for validity. This function takes into account 
+that <span class="lang">day</span> must be in the correct range depending on <span class="lang">year</span> 
+and <span class="lang">month</span>. Also, it checks whether <span class="lang">year</span> 
+is in the allowed range 1 - 9999.</p>
+<p><span class="def">datetime encodedate(int year, int month, int day)</span> 
+returns a <span class="lang">datetime</span> value, i.e. the number of milliseconds 
+since the beginning of the calendar up to the midnight of <span class="lang">month</span>/<span class="lang">day</span>/<span class="lang">year</span>. 
+This value can then be added to the value returned by <span class="lang">encodetime()</span> 
+to form the exact time stamp with millisecond precision, or it can be used alone 
+as a calendar date value without the time correction.</p>
+<p><span class="def">bool decodedate(datetime d, int& year, int& month, int& 
+day)</span> is the inverse version of <span class="lang">encodedate()</span>: 
+it breaks the value of <span class="lang">d</span> into its <span class="lang">year</span>, 
+<span class="lang">month</span> and <span class="lang">day</span>. This function 
+returns <span class="lang">false</span> if the value of <span class="lang">d</span> 
+is invalid.</p>
+<p class="seealso">See also: <a href="time.datetime.html">Datetime type</a>, <a href="time.time.html">Time 
+manipulation</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

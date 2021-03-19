@@ -1,0 +1,94 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: lists</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+Lists</p>
+<ul>
+<li> 
+<h5><a href="lists.tpodlist.html">tpodlist</a> - dynamic array of POD objects</h5>
+</li>
+<li> 
+<h5><a href="lists.tobjlist.html">tobjlist</a> - dynamic array of pointers to 
+arbitrary objects</h5>
+</li>
+<li> 
+<h5><a href="lists.tstrlist.html">tstrlist</a> - dynamic list and associative 
+array of string/object pairs</h5>
+</li>
+<li> 
+<h5><a href="lists.textmap.html">textmap</a> - associative array of textual key/value 
+pairs</h5>
+</li>
+</ul>
+<p><br>
+PTypes offers a set of list templates/classes that were designed to eliminate 
+the template 'code bloat' problem and also to allow reallocating of dynamic arrays 
+in the most efficient way.</p>
+<p><b>Why not STL containers?</b> Or, why there is no universal container for 
+arbitrary types, like std::vector, in PTypes? There are 3 main reasons for this:</p>
+<ul>
+<li> A universal container template would require the item type to be either a 
+POD-type or a copyable class, since it copies items during reallocation of the 
+dynamic array. Otherwise, if its implementation would use fragmentation to avoid 
+copying, the indexed access would become a costly operation. As a result, you 
+are forced to provide copy constructors (often bulky, non-trivial code) for many 
+classes in your program, even though it wouldn't be necessary otherwise.</li>
+</ul>
+<ul>
+<li>Such container would be (and in real world it is) very inefficient for the 
+same reason: each reallocation of the dynamic array requires items to be copied 
+instead of just moved. Possibly a built-in reallocation operator in C++ would 
+solve this problem.</li>
+</ul>
+<ul>
+<li>The 'code bloat' problem: containers like std:vector usually produce enormous 
+amount of automatically generated code (sometimes duplicate code) during instantiation 
+of templates.</li>
+</ul>
+<p><br>
+<b>Overview of PTypes list templates.</b> As a replacement of a universal vector-like 
+container PTypes offers two separate templates: <span class="lang">tpodlist</span> 
+and <span class="lang">tobjlist</span>. Each of them have certain limitations 
+in return for the following advantages: reallocation of the dynamic array is being 
+done in the most efficient way, templates produce no or very little code during 
+instantiation.</p>
+<p>The <span class="lang">tpodlist</span> template is intended for use with small 
+POD (plain-old-data) objects. For bigger structures or for arbitrary non-POD types 
+in general the library offers a list of pointers, <span class="lang">tobjlist</span>, 
+that has the ability to automatically destroy objects when they are removed from 
+the list. <span class="lang">Tobjlist</span> never reallocates items themselves, 
+instead, it only deals with pointers.</p>
+<p>As a universal way of holding string/object pairs in an indexed list the library 
+offers the <span class="lang">tstrlist</span> template. When constructed as a 
+sorted list, this template can also serve as a map indexed by textual keys. And 
+finally, the <span class="lang">textmap</span> class provides a simple interface 
+for mapping strings to strings, i.e. textual keys to values.</p>
+<p>Historically, PTypes was using list classes that required the list item to 
+be derived from <span class="lang">unknown</span>. These list classes (objlist, 
+strlist and strmap) are still present in the library for backward compatibility. 
+There is no such limitation in the newer versions of the library, however, deriving 
+your classes from <span class="lang">unknown</span> can still give you an advantage 
+of automatically detecting memory leaks in your program.</p>
+<p><b>Bounds checking</b>. All list operations that involve indexes can be checked 
+for validity at run-time. If an index value is invalid, the library generates 
+an unrecoverable (fatal) error. Bounds checking is done when compiling your code 
+in debug mode (i.e. if macro <span class="lang">DEBUG</span> is defined). You 
+may also enable it explicitly for your release builds by defining <span class="lang">CHECK_BOUNDS</span>. 
+Note that the bounds checking code is fully inlined and the library itself is 
+not affected by these macros.</p>
+<p>The list class family is declared in <a href="include/ptypes.h.html">&lt;ptypes.h&gt;</a>.</p>
+<p class="seealso">See also: <a href="unknown.html">unknown</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

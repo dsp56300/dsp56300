@@ -1,0 +1,427 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: Changes</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="intro.html">Introduction</a>: 
+Changes </p>
+<p><br>
+<b>Version 2.0.2</b></p>
+<ul>
+<li>The memory corruption problem with the LinuxThreads library fixed (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=687425&group_id=56008&atid=493273">Problem 
+report</a>).</li>
+<li>Added versions of <span class="lang">ipmessage::receive()</span> that also 
+return the source IP address.</li>
+<li>Added new properties and methods to <span class="lang">inmemory</span> and 
+<span class="lang">outmemory</span> classes to allow reusability of objects of 
+these types. Also cleaned up implementation of <span class="lang">outmemory</span> 
+so that the <span class="lang">increment</span> property is no longer needed.</li>
+<li>Added <span class="lang">textmap::getkey()</span> method.</li>
+<li>Added const versions of <span class="lang">operator[]</span> for <span class="lang">string</span> 
+and <span class="lang">tpodlist</span>.</li>
+<li>Bug fixed in <span class="lang">pexchange()</span> on PowerPC with gcc 3.3 
+(<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=947699&group_id=56008&atid=479024">Bug 
+report</a>) </li>
+<li>Bug fixed in the <span class="lang">string</span> class (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=926569&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>Bugs fixed in the memory stream classes (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=947709&group_id=56008&atid=479024">Bug 
+report1</a>, <a href="http://sourceforge.net/tracker/index.php?func=detail&aid=949025&group_id=56008&atid=479024">Bug 
+report 2</a>)</li>
+</ul>
+<p><b>Version 2.0.1</b></p>
+<ul>
+<li>Bugs fixed in 1.9-compatibility interfaces. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=922470&group_id=56008&atid=479024">Bug 
+report 1</a>, <a href="http://sourceforge.net/tracker/index.php?func=detail&aid=924161&group_id=56008&atid=479024">Bug 
+report 2</a>)</li>
+<li>Bug fixed in wshare. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=923830&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>Some minor fixes in the documentation.</li>
+</ul>
+<p><b>Version 2.0.0</b></p>
+<ul>
+<li>The list class/template family has been redesigned and expanded with new, 
+more flexible interfaces. An overview is given in the <a href="lists.html">Introduction 
+to lists</a>. The old interfaces are preserved in the headers for backward compatibility.</li>
+<li>Ported the library to Cygwin.</li>
+<li>'<span class="lang">make install</span>' copies the header files and the binaries 
+to default system locations.</li>
+<li><span class="lang">Jobqueue</span> and <span class="lang">msgqueue</span> 
+are now protected from overflows by an extra semaphore. If the number of unhandled 
+messages in a queue reaches <span class="lang">limit</span> (a parameter set through 
+the constructor) the post/send operation waits on a semaphore until the queue 
+becomes available again.</li>
+<li>Windows DLLs now called: ptypes20.dll and ptypes20g.dll, generted by MSVC 
+and GCC respectively.</li>
+<li>Added <span class="lang">__stdcall</span> (<span class="lang">ptdecl</span> 
+macro) modifiers for all public functions in the library to be independent from 
+the compiler command-line options on Windows.</li>
+<li>Variant arrays have been optimized for memory usage.</li>
+<li>All classes in the library are now either copyable or non-copyable explicitly.</li>
+<li>The last parameter of <span class="lang">copy()</span> and <span class="lang">del()</span> 
+for strings is now optional.</li>
+<li>Fixed a bug in <span class="lang">instm::seek()</span>. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=910890&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+</ul>
+<p><b>Version 1.9.0</b></p>
+<ul>
+<li>A new class <a href="async.jobqueue.html">jobqueue</a> has been added. As 
+shown in the multithreading examples, it helps to easily implement a thread-pool 
+model.</li>
+<li><a href="async.examples.html">Multithreading examples</a> have been re-written. 
+Example 2 is now a full-featured multithreaded server template with a thread pool.</li>
+<li>Atomic functions for PowerPC have been implemented in the assembly language.</li>
+<li>UNIX shared object naming style has been changed. The shared library is now 
+named libptypes.so.19 (libptypes.19.dylib on MacOS). The shared object now 'remembers' 
+its real name (with the -soname option) for correct linking of user applications. 
+(<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=881525&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>Windows/MSVC DLL has been renamed to ptypes19.dll because of incompatible 
+changes in the library structures. The DLL built by Dev-C++ has been renamed to 
+ptypes19dc.dll for the same reason and also to avoid clashing with MSVC-generated 
+DLL.</li>
+<li>The multithreaded version of the dynamic string class has been improved.</li>
+<li>A minor performance fixup in <span class="lang">msgqueue::send()</span> - 
+the semaphore is no longer being allocated dynamically.</li>
+<li>The <span class="lang">exceptobj</span> class has been renamed to <span class="lang">exception</span>, 
+<span class="lang">tsemaphore</span> - to <span class="lang">timedsem</span>. 
+The old names are typedef'ed for compatibility with older versions of the library.</li>
+<li>The <span class="lang">message</span> class now uses a portable typedef <span class="lang">pinptr</span> 
+for the <span class="lang">param</span> and <span class="lang">result</span> fields. 
+This allows to use these fields both as integers and pointers when necessary. 
+The <span class="lang">id</span> field can now be in the range <span class="lang">0</span> 
+to <span class="lang">INT_MAX</span>; the internal value <span class="lang">MSG_QUIT</span> 
+is now a negative value.</li>
+<li><span class="lang">Bind()</span> and <span class="lang">bindall()</span> now 
+return values that can be used in call to <span class="lang">poll()</span> and 
+<span class="lang">serve()</span> for <span class="lang">ipserver</span> objects.</li>
+<li><span class="lang">setlength(string&amp;)</span> now returns a <span class="lang">char*</span> 
+value.</li>
+<li>A bug has been fixed in the <span class="lang">trigger</span> class. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=804108&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>The <span class="lang">contains()</span> family of functions has been fixed 
+to correctly handle empty test strings. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=821458&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>The <span class="lang">ins()</span> family of functions has been fixed to 
+correctly handle values of <span class="lang">at</span> beyond the last character 
+of a string. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=834876&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>A bug has been fixed in the internal function <span class="lang">psockname()</span> 
+that caused <span class="lang">get_myport()</span> methods (<span class="lang">ipstream</span> 
+and <span class="lang">ipmessage</span> classes) to return an incorrect value. 
+(<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=838823&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>Compiler warning (and a potential problem) has been fixed on 64-bit systems. 
+(<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=782336&group_id=56008&atid=493273">Problem 
+report</a>)</li>
+</ul>
+<p><b>Version 1.8.3</b></p>
+<ul>
+<li>Public header files are now included in the documentation in browsable form 
+(see <a href="htsrc.html">Header files</a>).</li>
+<li>Delete notification mechanism for components, previously undocumented, now 
+described in section <a href="unknown.html">Unknown &amp; Component</a>.</li>
+<li>Variant-to-string typecast problem has been fixed that caused compilation 
+errors with GCC 3.3 (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=782334&group_id=56008&atid=493273">Problem 
+report</a>)</li>
+<li>A problem has been solved that allowed template lists to accept any class 
+type, even if it's not derived from <span class="lang">unknown</span>. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=715928&group_id=56008&atid=493273">Problem 
+report</a>)</li>
+<li>A better explanation of the librarie's policies and philosophy is given in 
+section 'Why use PTypes?' (see <a href="intro.html">Introduction</a>).</li>
+</ul>
+<p><b>Version 1.8.2</b></p>
+<ul>
+<li>The library has been ported to BSD/OS (BSDI). There is also limited support 
+for OpenBSD and NetBSD without makefiles.</li>
+<li>The library now compiles with Visual C/C++ 7.1 (.NET) after considerable changes 
+in <span class="lang">&lt;ptypes.h&gt;</span></li>
+<li>A bug has been fixed in <span class="lang">instm::token()</span> that caused 
+segfaults. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=769428&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>A problem has been fixed in <span class="lang">phost*()</span> functions that 
+caused segfaults on SuSE Linux. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=782329&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>A bug has been fixed in wshare: the plus sign '+' should not be decoded as 
+space in URL components other than query. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=777682&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+</ul>
+<p><b>Version 1.8.1</b></p>
+<ul>
+<li>The following functions have been fixed to be thread-safe on UNIX systems: 
+<span class="lang">phostbyname()</span>, <span class="lang">phostbyaddr()</span>, 
+<span class="lang">phostcname()</span>, <span class="lang">nowstring()</span>, 
+and also <span class="lang">now()</span> and <span class="lang">tzoffset()</span> 
+on MacOS X. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=762224&group_id=56008&atid=479024">Bug 
+report 1</a>, <a href="http://sourceforge.net/tracker/index.php?func=detail&aid=763891&group_id=56008&atid=479024">Bug 
+report 2</a>)</li>
+</ul>
+<p><b>Version 1.8.0</b></p>
+<ul>
+<li>The library now compiles in 3 versions: static single-threaded, static multithreaded 
+and dynamic (shared) multithreaded (see <a href="compiling.html">Compiling</a>). 
+On some platforms single-threaded dynamic strings can be twice as faster than 
+multithreaded. </li>
+<li>New format specifiers for <a href="streams.outstm.html">outstm::putf()</a> 
+introduced: <span class="lang">%a</span> for IP addresses and <span class="lang">%t</span> 
+for timestamps. </li>
+<li>New classes <a href="async.mutex.html">scopelock</a>, <a href="async.rwlock.html">scoperead</a> 
+and <a href="async.rwlock.html">scopewrite</a> added in <span class="lang">pasync.h</span>.</li>
+<li>New conversion functions added <span class="lang">stringtoie()</span> and 
+<span class="lang">stringtoue()</span> (see <a href="string.conversion.html">String 
+conversion</a>).</li>
+<li>A bug has been fixed in <span class="lang">tsemaphore::wait()</span>. This 
+bug affected all platforms except Windows. (<a href="https://sourceforge.net/tracker/index.php?func=detail&aid=755242&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>SO_REUSEADDR problem fixed on Windows. (<a href="https://sourceforge.net/tracker/index.php?func=detail&aid=738829&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>A bug has been fixed in <span class="lang">stringtoi()</span>. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=757188&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+</ul>
+<p><b>Version 1.7.6</b></p>
+<ul>
+<li>The library now compiles with Dev-C++/MinGW on Windows. Dev-C++ project files 
+have been created for building the static and shared libraries, as well as the 
+demo and testing programs.</li>
+<li>A new file output class called <a href="streams.logfile.html">logfile</a> 
+has been created as a result of a discussion around this <a href="http://sourceforge.net/tracker/index.php?func=detail&aid=712307&group_id=56008&atid=479024">bug 
+report</a>.</li>
+<li><span class="lang">Wshare</span> can now downgrade process privileges (setuid/setgid) 
+on UNIX. Also, file handling and server status report has moved to separate optional 
+modules mod_file.cxx and mod_wstat.cxx.</li>
+<li>A new section has been added in the documentation: <a href="http://www.melikyan.com/ptypes/doc/ext/">Resources</a>. 
+This page can be accessed only on-line on the master server, since changes here 
+may appear more frequently than in the library documentation.</li>
+<li>Bugs have been fixed in <span class="lang">tzoffset()</span> for Windows and 
+Solaris (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=705957&group_id=56008&atid=479024">Bug 
+report 1</a>, <a href="http://sourceforge.net/tracker/index.php?func=detail&aid=709146&group_id=56008&atid=479024">Bug 
+report 2</a>).</li>
+<li>A bug has been fixed in <span class="lang">strmap::strmap()</span> constructor 
+(<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=716000&group_id=56008&atid=479024">Bug 
+report</a>).</li>
+<li>Thread creation routine has been changed on Windows to ensure thread-safety 
+of system static variables (<a href="https://sourceforge.net/tracker/index.php?func=detail&aid=706041&group_id=56008&atid=479024">Bug 
+report</a>).</li>
+</ul>
+<p><b>Version 1.7.5</b></p>
+<ul>
+<li>A <span class="lang">tv_usec</span>-related bug fixed in all socket/pipe waiting 
+and polling routines. Non-integral timeout values were treated incorrectly in 
+the previous versions of the library. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=652513&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li>Fixed return type for <span class="lang">tstrmap::operator[]</span>. (<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=661312&group_id=56008&atid=479024">Bug 
+report</a>)</li>
+<li><span class="lang">instm::putback()</span> added.</li>
+</ul>
+<p><b>Version 1.7.4</b></p>
+<ul>
+<li>A new class <a href="unit.html">unit</a> has been added. Unit is a mini-process 
+with its own <span class="lang">main()</span> and input/output 'plugs'; several 
+unit objects within the framework of one application can be connected to form 
+pipes, like processes in the UNIX shell.</li>
+<li>A new method for creating local pipes, <a href="streams.infile.html">infile::pipe()</a>, 
+has been added.</li>
+<li>Null output stream object has been added as a static variable <a href="streams.stdio.html">pnull</a>.</li>
+<li><span class="lang">__ptypes_version</span> and the DLL version resource were 
+not incremented in the previous release. Now they both show 1.7.4.</li>
+<li><span class="lang">outmemory::get_strdata()</span> added.</li>
+</ul>
+<p><b>Version 1.7.3</b></p>
+<ul>
+<li>Wrapper templates for <span class="lang">objlist</span>, <span class="lang">strlist</span> 
+and <span class="lang">strmap</span> have been created. These templates help to 
+avoid extra (dangerous) pointer typecasts and provide better compile-time type 
+checking when using lists with objects derived from <span class="lang">unknown</span>. 
+See introduction to <a href="lists.html">Lists</a>.</li>
+<li>A new class template <a href="unknown.html">compref</a> has been added that 
+implements a 'smart' pointer to a reference-counted <span class="lang">component</span> 
+object.</li>
+<li>Function template <a href="async.utils.html">tpexchange()</a> has been added 
+as a type-safe wrapper for <span class="lang">pexchange()</span>.</li>
+<li>New methods <a href="inet.ipstream.html">ipstream::get_myport()</a> and <a href="inet.ipmessage.html">ipmessage::get_myport()</a> 
+have been added.</li>
+</ul>
+<p><b>Version 1.7.2</b></p>
+<ul>
+<li>Fixed compilation and linking parameters for Linux and FreeBSD to build the 
+shared library correctly (thanks to Alan Eldridge).</li>
+<li>Bug fixed in wshare/urlutils.cxx: the URL parameters (protocol parameters, 
+query string and fragment) were treated incorrectly in previous versions.</li>
+</ul>
+<p><b>Version 1.7.1</b></p>
+<ul>
+<li>A new section called &quot;<a href="deploying.html">Deploying the shared (dynamic) 
+library</a>&quot; is now included in the documentation. It describes in detail 
+the procedure of using and deploying the shared (dynamic) library, discusses advantages 
+and disadvantages of dynamic linking vs. static linking.</li>
+<li>PTypes.DLL now contains a version resource. In addition, the library declares 
+a global variable __ptypes_version, which can be checked at run-time or during 
+installation on UNIX.</li>
+<li><span class="lang">strlist::compare()</span> is declared as virtual to allow 
+alternate sorting algorithms in descendant classes.</li>
+</ul>
+<p> <b>Version 1.7.0</b></p>
+<ul>
+<li><a href="variant.html">Variant</a> class implemented. A <span class="lang">variant</span> 
+variable can hold values of many fundamental types (int, bool, datetime, float, 
+string) plus associative arrays of variants and reference-counted pointers to 
+objects. Variants can be used for designing interpreters for higher-level languages, 
+designing or working with databases and spreadsheets, etc.</li>
+<li>Message-oriented networking classes (<a href="inet.ipmessage.html">ipmessage</a> 
+and <a href="inet.ipmsgserver.html">ipmsgserver</a>) implemented based on the 
+UDP protocol.</li>
+<li>The library now compiles both as a shared object (DLL on Windows) and a static 
+library. The shared object (or DLL) is placed in <span class="lang">so/</span> 
+when building the library.</li>
+<li><span class="lang">outstm::putf()</span> is now atomic with respect to multithreading.</li>
+<li><span class="lang">Ipsocket</span> renamed to <span class="lang">ipstream</span>, 
+<span class="lang">ipserver</span> renamed to <span class="lang">ipstmserver</span>. 
+The old names are available as typedef's for compatibility.</li>
+</ul>
+<p><b>Version 1.6.1</b></p>
+<ul>
+<li>Read/write lock (<a href="async.rwlock.html">rwlock</a>) algorithm improved 
+to be &quot;fairer&quot; with respect to both readers and writers.</li>
+<li><a href="async.trigger.html">Trigger</a> algorithm fixed to be fully compatible 
+with Windows event interface.</li>
+<li><span class="lang">psleep()</span> fixed on Solaris to be reentrant (multithreaded).</li>
+</ul>
+<p><b>Version 1.6.0</b></p>
+<ul>
+<li>Portable named pipes added - <a href="streams.namedpipe.html">namedpipe</a> 
+and <a href="streams.npserver.html">npserver</a>.</li>
+<li>Read/write lock class <a href="async.rwlock.html">rwlock</a> (a smarter mutex) 
+added.</li>
+<li><a href="async.trigger.html">Trigger</a> (a simplified semaphore) class added.</li>
+<li>Memory stream classes <a href="streams.inmem.html">inmemory</a> and <a href="streams.outmem.html">outmemory</a>, 
+previously undocumented, now described in section Streams.</li>
+<li> Windows InterlockedXXX calls replaced with internal assembly code to work 
+as expected even on Win95.</li>
+<li>A string-to-int (64-bit) conversion routine added - <span class="lang">stringtoi()</span>.</li>
+<li><span class="lang">ipsocket::get_myip()</span> added.</li>
+<li>Dynamic string assignment and <span class="lang">itostring()</span> optimized.</li>
+<li>Better diagnostics messages for <span class="lang">ipserver</span>.</li>
+</ul>
+<p><b>Version 1.5.3</b></p>
+<ul>
+<li>Token extraction methods can now optionally limit input and throw en exception 
+if the token exceeds the limit. This new feature is targeted to real-world networking 
+applications.</li>
+<li>A new section &quot;<a href="portability.html">Portability and Performance 
+Issues</a>&quot; and an <a href="ref.html">alphabetical reference</a> of all public 
+symbols added in the documentation.</li>
+<li>Examples for the sockets interface and some other modules rewritten to be 
+cleaner and more educational.</li>
+<li> GCC 3.x compilation problem solved in pinet.h (friend class declaration).</li>
+</ul>
+<p><b>Version 1.5.2</b></p>
+<ul>
+<li> Dynamic strings have been optimized and thoroughly tested. Compared to MFC 
+CString class, PTypes dynamic strings now show much better performance.</li>
+<li> Bug fixed in <span class="lang">decodedate()</span>. This function worked 
+incorrectly for the last day (12/31) of each leap year.</li>
+</ul>
+<p><b></b><b>Version 1.5.1</b></p>
+<ul>
+<li> Documentation cleanup.</li>
+<li> A sample compile-time module for wshare, which responds to http://hostname/.about 
+requests. Code cleanup in wshare.</li>
+</ul>
+<p><b>Version 1.5.0</b></p>
+<ul>
+<li> Wshare is becoming modular/scalable. Custom handlers for a new HTTP method, 
+file extension or a nonexistent path can be easily incorporated into wshare at 
+compile time. Currently this feature is documented only in the source files.</li>
+<li> Wshare can show the server status report through http://localhost/.wstat</li>
+<li> Standard input, output and error devices are declared in &lt;pstreams.h&gt; 
+as pin, pout and perr stream objects respectively.</li>
+<li> New printf-style formatted output method <span class="lang">outstm::putf()</span>. 
+Accepts only a subset of format specifiers common to all platforms.</li>
+<li> Bug fix in <span class="lang">outstm::put()</span>.</li>
+<li> Handle leak on Windows fixed.</li>
+<li> realloc-related memory leak on UNIX fixed.</li>
+<li> Bug in string class fixed: <span class="lang">s += s</span> was working incorrectly 
+in previous versions.</li>
+</ul>
+<p><b></b><b>Version 1.4.1</b></p>
+<ul>
+<li> The MD5 module is replaced with L. Peter Deutsch's implementation. Please, 
+see comments in <span class="lang">src/pmd5.cxx</span>.</li>
+<li> Wshare: code cleanup in various modules; Borland C++ port (<span class="lang">wshare/wshare.mak</span>); 
+a new option <span class="lang">-x</span> to ignore default index files and always 
+show directory indexes.</li>
+<li> Include directives in <span class="lang">src/pipserver.cxx</span> and <span class="lang">src/pipsocket.cxx</span> 
+have been reordered to avoid compiler errors on some Linux systems.</li>
+</ul>
+<p><b>Version 1.4.0</b></p>
+<ul>
+<li> A big sample program called wshare is now included in the project. Wshare 
+is a simple and fast HTTP/1.1 web server; it demonstrates the full power of PTypes. 
+Currently wshare lacks server-side scripting functionality, however, it can be 
+used to quickly share local files over the web.</li>
+<li> Waiting for data with timeout on a socket object is implemented (<span class="lang">ipsocket::waitfor()</span>).</li>
+<li> <span class="lang">SIGPIPE</span> is now blocked on UNIX when using PTypes' 
+sockets.</li>
+<li> A new utility function <span class="lang">utodatetime()</span> for converting 
+UNIX <span class="lang">time_t</span> values to PTypes datetime.</li>
+<li> Atomic exchange for pointers is implemented separately, since on 64-bit platforms 
+the size of a void pointer differs from the size of int.</li>
+<li> A bug fix for autofree threads. Please note that semantics of <span class="lang">thread::waitfor()</span> 
+has changed (see documentation for details).</li>
+</ul>
+<p><b></b><b>Version 1.3.2</b></p>
+<ul>
+<li> Ported to MacOS X (Darwin).</li>
+<li> Important fixes in the thread module (<span class="lang">src/pthread.cxx</span>): 
+PTypes now ensures proper operation and memory cleanup on all platforms, even 
+with buggy implementation of the POSIX threads specs.</li>
+<li> Compiled under Linux/Alpha, Linux/PowerPC and Linux/Sparc with minor fixes: 
+<span class="lang">ipaddress</span> type is now castable to unsigned long instead 
+of signed long; variables of type ipaddress must be compared with ipnone instead 
+of -1.</li>
+</ul>
+<p><b>Version 1.3.1</b></p>
+<ul>
+<li> CVS repository setup at SourceForge.net (see the main page for details).</li>
+<li> Various fixes in the documentation.</li>
+<li> Fixes in the BCC makefile <span class="lang">src/ptypes.mak</span>.</li>
+</ul>
+<p><b></b><b>Version 1.3</b></p>
+<ul>
+<li> <a href="inet.html">IP socket</a> manipulation classes and utilities, finally!</li>
+<li> The new <a href="time.html">datetime</a> type along with time/calendar manipulation 
+utilities.</li>
+<li> Timed semaphore class <a href="async.semaphore.html">tsemaphore</a>.</li>
+<li> The library now compiles within a namespace &quot;pt&quot; by default.</li>
+<li> <span class="lang">semaphore::post()</span> and <span class="lang">semaphore::wait()</span> 
+now do not return any values. If these functions fail, a fatal non-recoverable 
+error is raised instead of returning an error code to the caller. It is senseless 
+to run a multithreaded application if the system fails to operate semaphores.</li>
+<li> Bug fixed in non-Intel version of <span class="lang">pexchange()</span>.</li>
+</ul>
+<p><b>Version 1.2</b></p>
+<ul>
+<li> The entire library can now be conditionally enclosed within a namespace to 
+avoid name conflicts in large projects. By default the library does NOT compile 
+within a namespace.</li>
+<li> Several fixes to improve performance of the dynamic string class, as well 
+as to make it thread safe (see introduction to <a href="string.html">string class</a>).</li>
+<li> Ported to SunOS. (The library should now compile virtually on any UNIX platform. 
+Need some time and access to different computers.)</li>
+<li> Compiled with Borland C++ 5.5 (aka C++ Builder) under Windows. The makefile 
+is <span class="lang">src/ptypes.mak</span>.</li>
+<li> MD5 (message digest) algorithm is implemented as an output stream class <a href="streams.md5.html">outmd5</a>.</li>
+<li> Bug fixes in <span class="lang">src/pinstm.cxx</span> and <span class="lang">src/poutstm.cxx</span>.</li>
+</ul>
+<p><b>Version 1.1 was the first public release</b></p>
+<!-- #EndEditable --> 
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

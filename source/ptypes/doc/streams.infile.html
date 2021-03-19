@@ -1,0 +1,47 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: infile</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+infile </p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+class infile: instm {
+    infile( [ const string&amp; filename ] );
+    void pipe(outfile&amp; peer);
+    string get/set_filename(string);
+}
+</pre>
+</blockquote>
+<p>This class derives all public methods and properties from <a href="streams.iobase.html">iobase</a> 
+and <a href="streams.instm.html">instm</a>, and in addition, defines the following:</p>
+<p><span class="def">infile::infile( [ const string&amp; filename ] )</span> creates 
+an input file stream, but does not open the file. <span class="lang">Filename</span> 
+is optional and can be set later, using <span class="lang">set_filename()</span>.</p>
+<p><span class="def">void infile::pipe(outfile&amp; peer)</span> creates a local 
+pipe. This function sets up and opens the <span class="lang">infile</span> and 
+<span class="lang">outfile</span> objects so that a thread can asynchronously 
+pass data to another thread within one process. Note that <span class="lang">pipe()</span> 
+opens both streams; subsequent calls to <span class="lang">open()</span>, <span class="lang">close()</span> 
+or <span class="lang">cancel()</span> shuts down the pipe. Local pipe is a slower 
+alternative to the message queue. The only advantage of local pipes is that they 
+provide a standard streaming interface.</p>
+<p><span class="def"> string infile::get/set_filename(string)</span> sets the 
+file name. <span class="lang">set_filename()</span> closes the stream prior to 
+assigning the new value.</p>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.instm.html">instm</a>, 
+<a href="streams.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

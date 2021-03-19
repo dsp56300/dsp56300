@@ -1,0 +1,105 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: lists: tpodlist</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="lists.html">Lists</a>: tpodlist</p>
+<blockquote> 
+<pre class="lang">template &lt;class X, bool initzero = false&gt; class tpodlist {
+    tpodlist();
+
+    tpodlist&amp; operator =(const tpodlist&amp; t);
+
+    int  get/set_count(int);
+    int  get/set_capacity(int);
+
+    X&amp;   ins(int index);
+    void ins(int index, const X&amp; item);
+    void ins(int index, const tpodlist&amp; t);
+    X&amp;   add();
+    void add(const X&amp; item);
+    void add(const tpodlist&amp; t);
+    X&amp;   operator [](int index);
+    const X&amp; operator [](int index) const;
+    X&amp;   top();
+    void del(int index, int count = 1);
+    void pop();
+
+    void clear();
+    void pack();
+}</pre>
+</blockquote>
+<p><br>
+The <span class="lang">tpodlist</span> template implements a dynamic array of 
+so-called POD (plain-old-data) objects. POD types in C++ are: all integral types, 
+pointers, floating point types, and also compound types (i.e. arrays and structures) 
+that contain only POD items. With optimizing compilation, the instantiation of 
+this template produces no extra code.</p>
+<p>The parameter <span class="lang">X</span> of this template specifies the element 
+type for the list. The optional parameter <span class="lang">initzero</span> indicates 
+whether the memory allocated for new elements should be initialized to zero in 
+methods <span class="lang">ins(int)</span>, <span class="lang">add()</span> and 
+<span class="lang">set_count(int)</span>.</p>
+<p><span class="def">tpodlist::tpodlist()</span> is the default constructor.</p>
+<p><span class="def">tpodlist&amp; tpodlist::operator =(const tpodlist&amp; t)</span> 
+is an assignment operator that clears a list and then copies all items from <span class="lang">t</span>.</p>
+<p><span class="def">int tpodlist::get/set_count(int)</span> gets or sets the 
+number of items in a list.</p>
+<p><span class="def">int tpodlist::get/set_capacity(int)</span> gets or sets the 
+capacity of a list. The <span class="lang">capacity</span> property reflects the 
+number of items actually allocated for a list and is set automatically by other 
+methods whenever necessary. <span class="lang">Tpodlist</span> uses a 'lazy allocation' 
+technique for better performance: when items are being added with <span class="lang">add()</span> 
+or <span class="lang">ins()</span>, the capacity grows in bigger increments. This 
+property, however, does not change when you delete items from a list, with only 
+exception when <span class="lang">count</span> becomes 0, in which case <span class="lang">capacity</span> 
+is also set to 0. You can call <span class="lang">pack()</span> to optimize memory 
+usage after deleting multiple items. Setting <span class="lang">capacity</span> 
+to a value less than <span class="lang">count</span> is an error.</p>
+<p><span class="def">X&amp; tpodlist::ins(int index)</span> allocates a slot for 
+a new item at the position <span class="lang">index</span> and returns a reference 
+to the slot. All items with greater indexes are moved up to make room for the 
+new item. The slot can be initialized to zero if the template parameter <span class="lang">initzero</span> 
+was <span class="lang">true</span>. Calling <span class="lang">ins()</span> with 
+<span class="lang">index</span> equal to <span class="lang">count</span> is equivalent 
+to calling <span class="lang">add()</span>.</p>
+<p><span class="def">void tpodlist::ins(int index, const X&amp; item)</span> inserts 
+<span class="lang">item</span> at <span class="lang">index</span>.</p>
+<p><span class="def">void tpodlist::ins(int index, const tpodlist&amp; t)</span> 
+inserts all items of the list <span class="lang">t</span> at the position <span class="lang">index</span>.</p>
+<p><span class="def">X&amp; tpodlist::add()</span> allocates a slot for a new 
+item at the end of a list and returns a reference to the slot.</p>
+<p><span class="def">void tpodlist::add(const X&amp; item)</span> appends <span class="lang">item</span> 
+to a list.</p>
+<p><span class="def">void tpodlist::add(const tpodlist&amp; t)</span> appends 
+the list <span class="lang">t</span> to a given list.</p>
+<p><span class="def">X&amp; tpodlist::operator [](int index)</span> returns a 
+reference to an item at the position <span class="lang">index</span>. A const 
+version of this operator also exists.</p>
+<p><span class="def">X&amp; tpodlist::top()</span> returns a reference to the 
+last item (one that has the greatest index) in a list.</p>
+<p><span class="def">void tpodlist::del(int index, int count = 1)</span> deletes 
+<span class="lang">count</span> items from a list and moves all items with greater 
+indexes down. The parameter <span class="lang">count</span> is optional and defaults 
+to 1.</p>
+<p><span class="def">void tpodlist::pop()</span> deletes the last item from a 
+list.</p>
+<p><span class="def">void tpodlist::clear()</span> deletes all items from a list 
+and also sets <span class="lang">capacity</span> to 0.</p>
+<p><span class="def">void tpodlist::pack()</span> sets <span class="lang">capacity</span> 
+equal to <span class="lang">count</span>. You can call <span class="lang">pack()</span> 
+after deleting multiple items from a list to optimize memory usage.</p>
+<p class="seealso">See also: <a href="lists.tobjlist.html">tobjlist</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

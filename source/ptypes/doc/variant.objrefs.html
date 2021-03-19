@@ -1,0 +1,39 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: variant: object references</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="variant.html">variant</a>: Object references</p>
+<p><br>
+Variants can hold references to objects derived from <span class="lang">component</span>. 
+PTypes performs reference counting, so that assigning variants containing object 
+references can be considered safe: an object will only be destroyed when there 
+are no more references left to it. If you want to control the destruction of an 
+object 'manually', you can increment the reference count with <span class="lang">addref()</span> 
+before assigning a reference to a variant (see <a href="unknown.html">unknown 
+&amp; component</a>). In this case, each call to <span class="lang">addref()</span> 
+should be balanced with a call to <span class="lang">release()</span>.</p>
+<p>It should be noted that the reference counting mechanism has a potential flaw 
+which may lead to memory leaks. Consider two objects containing variants with 
+cross-referencing pointers to each other. The library can not keep track of such 
+circular references, and an attempt to free one of the objects will result in 
+destroying only one of them and leaving the other in the memory without any references 
+to it. This is a known problem and can be solved by either eliminating circular 
+references when designing data structures or by providing a complex memory 'garbage 
+collector' which keeps track of all object references in the program.</p>
+<p class="seealso">See also: <a href="unknown.html">unknown &amp; component</a>, 
+<a href="variant.typecasts.html">Assignments and typecasts</a>, <a href="variant.arrays.html">Arrays</a>, 
+<a href="variant.utils.html">Utilities</a> </p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

@@ -1,0 +1,37 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: Standard input, output and error devices</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+Standard input, output and error devices </p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+instm  pin;
+outstm pout;
+outstm perr;
+outstm pnull;</pre>
+</blockquote>
+<p>PTypes declares four static stream objects for standard input, output, error 
+and null devices - <span class="lang">pin</span>, <span class="lang">pout</span>, 
+<span class="lang">perr</span> and <span class="lang">pnull </span>respectively. 
+These objects can be used in place of the standard C or C++ input/output interfaces. 
+<span class="lang">Pnull</span> is an output stream that discards any data written 
+to it. The <span class="lang">putf()</span> method in standard output objects 
+<span class="lang">pout</span> and <span class="lang">perr</span> is atomic with 
+respect to multithreading.</p>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.instm.html">instm</a>, 
+<a href="streams.outstm.html">outstm</a>, <a href="streams.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

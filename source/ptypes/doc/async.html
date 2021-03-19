@@ -1,0 +1,67 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: multithreading</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: Multithreading</p>
+<ul>
+<li> 
+<h5><a href="async.thread.html">thread</a></h5>
+</li>
+<li> 
+<h5><a href="async.semaphore.html">semaphore &amp; timedsem</a></h5>
+</li>
+<li> 
+<h5><a href="async.mutex.html">mutex</a></h5>
+</li>
+<li> 
+<h5><a href="async.rwlock.html">rwlock</a></h5>
+</li>
+<li>
+<h5><a href="async.trigger.html">trigger</a></h5>
+</li>
+<li> 
+<h5><a href="async.msgqueue.html">msgqueue</a></h5>
+</li>
+<li> 
+<h5><a href="async.jobqueue.html">jobqueue</a></h5>
+</li>
+<li> 
+<h5><a href="async.message.html">message</a></h5>
+</li>
+<li> 
+<h5><a href="async.utils.html">Atomic functions, utilities</a></h5>
+</li>
+<li> 
+<h5><a href="async.examples.html">Examples</a></h5>
+</li>
+</ul>
+<p>PTypes provides a minimal set of utility objects for creating complex multithreaded 
+and event-driven applications. In addition to <a href="async.thread.html">threads</a> 
+and inter-thread synchronization primitives <a href="async.semaphore.html">semaphore</a>, 
+<a href="async.mutex.html">mutex</a>, <a href="async.rwlock.html">rwlock</a> and 
+<a href="async.trigger.html">trigger</a> the library also allows you to create 
+message queues (<a href="async.msgqueue.html">msgqueue</a>) typically used in 
+windowed or other event-driven environments. The <a href="async.jobqueue.html">jobqueue</a> 
+class helps to build multithreaded server and robot applications with a pool of 
+reusable thread objects.</p>
+<p>The implementation and interfaces of threads and synchronization objects vary 
+on platforms supported by the library. If an operating system lacks one of the 
+features, PTypes implements it using the other primitives present in that OS. 
+Please, see <a href="include/pasync.h.html">&lt;pasync.h&gt;</a> for the implementation 
+cross-reference of the synchronization primitives.</p>
+<p>These interfaces except the atomic functions are available only in multithreaded 
+versions of the library.</p>
+<p>The multithreading classes are declared in <a href="include/pasync.h.html">&lt;pasync.h&gt;</a>.</p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

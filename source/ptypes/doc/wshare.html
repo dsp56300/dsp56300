@@ -1,0 +1,149 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: wshare</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: PTypes demo program -- wshare</p>
+<p><b><br>
+Overview</b></p>
+<blockquote> 
+<p><span class="lang">Wshare</span> is a simple multithreaded web server (HTTP 
+daemon) that uses almost all functional parts of the library and serves as an 
+example of using PTypes. <span class="lang">Wshare</span> supports protocol versions 
+up to HTTP/1.1. It provides simple means of sharing files over the web, but it 
+lacks server-side scripting and authentication functionality.</p>
+<blockquote>
+<p><i> The program is covered by the same license as PTypes. The authors can not 
+be responsible for any data loss or accidental disclosure of confidential information 
+caused by this software. It is provided `as is' with the hope that it can be useful 
+both as a library demo program and a simple web server.</i></p>
+</blockquote>
+<p>The sources are in <span class="lang">./wshare</span>. On UNIX, this application 
+is being built along with the library and is being copied to <span class="lang">./bin</span>. 
+For MSVC, a separate project is provided as a part of the PTypes workspace. For 
+BCC on Windows, the makefile is <span class="lang">wshare/wshare.mak</span>.</p>
+<p><span class="lang">Wshare</span> does not require any special installation 
+or configuration procedures and can be easily run from the command line with at 
+least one parameter: the directory you wish to share over the web. Note that <span class="lang">wshare</span> 
+does not understand <span class="lang">.htaccess</span> or any other configuration 
+files in your directories, so the web site you might previously have will run 
+with <span class="lang">wshare</span>'s default configuration and access rights.</p>
+<p><span class="lang">Wshare</span> is scalable: you can write your own handlers 
+for new HTTP methods, virtual paths and for specific file extensions. Currently 
+custom modules can be incorporated into <span class="lang">wshare</span> only 
+at compile-time. Please, see <span class="lang">wshare/modules.h</span> and <span class="lang">wshare/request.h</span> 
+for details. Also take a look at the sample compile-time module <span class="lang">wshare/mod_about.cxx.</span></p>
+<p>Please, run the program to see the summary of the command-line options.</p>
+<blockquote> 
+<pre class="lang">
+usage: wshare [options] document-root
+
+  -D              daemonize, UNIX only
+  -d              allow directory indexes
+  -g group        group ID to run as, UNIX only
+  -n num          maximum number of simultaneous connections (default: 30)
+  -o file-name    write HTTP access log to file-name
+  -p port-num     port number to listen to
+  -u user         user ID to run as, UNIX only
+  -x              always show directory indexes (ignore default index files)
+</pre>
+</blockquote>
+</blockquote>
+<p><b><br>
+Running on UNIX</b></p>
+<blockquote> 
+<p>By default the daemon is trying to bind to port 80, which is a privileged port 
+on UNIX. You will have to either run it as root, or to specify a port number higher 
+than 1024 with the option <span class="lang">-p&nbsp;<i>port-number</i></span>, 
+e.g. <span class="lang">-p 8080</span>.</p>
+<p><span class="lang">Wshare</span> uses UNIX's syslog to log error messages. 
+The HTTP access log goes to stderr, which can be overridden with <span class="lang">-o&nbsp;<i>logfile</i></span>.</p>
+<p><span class="lang">Wshare</span> can also daemonize itself, i.e. detach from 
+the console and remain active after the user logs out. Use option <span class="lang">-D</span> 
+to daemonize the program. After that, the only way to stop the server is to send 
+a SIGKILL signal, i.e. determine the process ID with <span class="lang">ps</span> 
+and then invoke <span class="lang">kill&nbsp;-KILL&nbsp;<i>PID</i></span>. On 
+some systems you will need to use <span class="lang">ps</span> with the option 
+that specifies your user ID.</p>
+<p>For better security, <span class="lang">wshare</span> can downgrade process 
+privileges to the user/group specified through <span class="lang">-u <i>user</i></span> 
+and <span class="lang">-g <i>group</i></span> command-line options. This is done 
+after binding to the socket and opening the log file. If <span class="lang">-g</span> 
+is omitted and only <span class="lang">-u</span> is specified, <span class="lang">wshare</span> 
+downgrades the process to the primary group of that user. For example, if you 
+specify <span class="lang">-u nobody</span>, the group will be automatically assigned 
+to a group <span class="lang">nobody</span>.</p>
+</blockquote>
+<p><b><br>
+Running on Windows</b></p>
+<blockquote> 
+<p>On Windows <span class="lang">wshare</span> runs as a simple console application. 
+All you can do with <span class="lang">wshare</span> on Windows is to specify 
+a different port to bind to with option <span class="lang">-p&nbsp;<i>port-number</i></span> 
+and to redirect the HTTP access log to some file with option <span class="lang">-o&nbsp;<i>logfile</i></span>. 
+Redirecting the access log to a file instead of writing it to the console window 
+can speed up the server.</p>
+</blockquote>
+<p><b><br>
+Common features</b></p>
+<blockquote> 
+<p>By default <span class="lang">wshare</span> does not generate directory indexes 
+(analogue of `Option Indexes' in Apache's configuration), which means the directory 
+must have a default index file named as either of: <span class="lang">index.html</span>, 
+<span class="lang">Index.html</span> or <span class="lang">default.htm</span>. 
+Directory indexes can be allowed by specifying option <span class="lang">-d</span>. 
+In this case, if the directory does not have any of the default index files listed 
+above, <span class="lang">wshare</span> will generate a page with the list of 
+files the directory contains.</p>
+<p>If you don't want default index files at all, use option <span class="lang">-x</span> 
+in the command line: the server will then show the directory indexes, like if 
+you specified an empty &quot;DirectoryIndex&quot; directive with Apache.</p>
+<p>You can limit the number of simultaneous connections with option <span class="lang">-n 
+<i>num</i></span>, which is 30 by default. When the number of connections reaches 
+<span class="lang">num/2</span> , the server stops supporting persistent connections. 
+When it reaches <span class="lang">num</span>, the server sends &quot;503 Service 
+unavailable&quot; to the client. And finally, when the number of connection requests 
+reaches <span class="lang">num * 2</span>, wshare simply aborts the connection 
+by closing the socket.</p>
+<p>You can get the current status of the server by requesting <span class="lang">http://localhost/.wstat</span> 
+in your browser. <span class="lang">Wshare</span> responds to this request only 
+if the client is on the same host as the server, i.e. <span class="lang">localhost</span> 
+or 127.0.0.1.</p>
+<p>Some other features are hardcoded into <span class="lang">wshare</span> and 
+can be changed only by recompiling it. The list of default index files can be 
+found in <span class="lang">wshare/config.cxx</span>, and the file extension-to-MIME 
+translation table is in <span class="lang">wshare/mimetable.cxx</span>. An awk 
+script <span class="lang">wshare/mimetable.awk</span> is provided to translate 
+an apache-style <span class="lang">mime.conf</span> file into C++ code that can 
+be linked with <span class="lang">wshare</span>.</p>
+</blockquote>
+<p><b><br>
+Examples (UNIX)</b></p>
+<blockquote> 
+<p>The simplest usage:</p>
+<blockquote> 
+<p class="lang">wshare ./</p>
+</blockquote>
+<p>Quickly share your files through port 8080 and ignore any index.html files 
+in the directories:</p>
+<blockquote> 
+<p class="lang">wshare -x -p 8080 ~/mydocs</p>
+</blockquote>
+<p>Run a real server for real users (must be root on UNIX):</p>
+<blockquote> 
+<p class="lang">wshare -D -n 100 -u nobody -o /var/log/wshare-access.log /usr/local/www</p>
+</blockquote>
+<p>BE CAREFUL and double check the directory you are opening to the world.</p>
+</blockquote>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

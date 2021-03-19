@@ -1,0 +1,16 @@
+p {font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px}
+td {font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px}
+h5 {font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 13px}
+a:link { }
+a:visited {color: #0066CC}
+a:hover {color: #FF0033; text-decoration: underline}
+a:active {color: #FF0033}
+.seealso {font-weight: bold; background-color: #dddddd; padding-left: 10px; padding-right: 10px; padding-top: 3px; padding-bottom: 4px}
+.lang {color: #557799; font-weight: bold }
+.def {color: #557799; font-weight: bold }
+.hpath {font-size: 16px; font-weight: bold; padding-top: 3px; padding-right: 3px; padding-bottom: 3px; padding-left: 3px; font-family: Arial, Helvetica, sans-serif; font-style: italic}
+.comment { color: #009900; font-weight: normal;}
+.menu {font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 13px ; font-weight: bold}
+.ns {  font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px}
+li { font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 12px }
+.cdir { color: #0000FF; font-weight: normal; }

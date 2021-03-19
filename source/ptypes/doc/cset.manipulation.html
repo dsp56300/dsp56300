@@ -1,0 +1,51 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: cset: manipulation</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="cset.html">cset</a>: Manipulation</p>
+<blockquote> 
+<pre class="lang">#include &lt;ptypes.h&gt;
+
+void   assign(cset& s, const char* setinit);
+string asstring(const cset&amp; s);
+void   clear(cset& s);
+void   fill(cset& s);
+void   include(cset& s, char b);
+void   include(cset& s, char min, char max);
+void   exclude(cset& s, char b);
+</pre>
+</blockquote>
+<p><span class="def">assign(cset& s, const char* setinit)</span> works the same 
+way as <span class="lang">cset(const char*)</span> constructor (see <a href="cset.constructors.html">constructors</a>).</p>
+<p><span class="def">string asstring(const cset&amp; s)</span> returns a string 
+representing the given set <span class="lang">s</span> using <span class="lang">cset(const 
+char*)</span> syntax. Typically used for debugging.</p>
+<p><span class="def">clear(cset& s)</span> assigns an empty set (removes all 
+members) to the set <span class="lang">s</span>.</p>
+<p><span class="def">fill(cset& s)</span> assigns all 1s to the set - all elements 
+become members of this set.</p>
+<p><span class="def">include(cset& s, char b)</span> adds the element <span class="lang">b</span> 
+to the set <span class="lang">s</span>. Equivalent to <span class="lang">s += 
+b</span>.</p>
+<p><span class="def"> include(cset& s, char min, char max)</span> adds a range 
+of elements <span class="lang">min</span> through <span class="lang">max</span> 
+to the set <span class="lang">s</span>.</p>
+<p> <span class="def">exclude(cset& s, char b)</span> removes the element <span class="lang">b</span> 
+from the set <span class="lang">s</span>. Equivalent to <span class="lang">s -= 
+b</span>.</p>
+<p class="seealso">See also: <a href="cset.constructors.html">Constructors</a>, 
+<a href="cset.operators.html">Operators</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

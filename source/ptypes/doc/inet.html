@@ -1,0 +1,55 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: networking</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: Networking</p>
+<ul>
+<li> 
+<h5><a href="inet.ipstream.html">ipstream</a> - stream-oriented client</h5>
+</li>
+<li> 
+<h5><a href="inet.ipstmserver.html">ipstmserver</a> - stream-oriented server</h5>
+</li>
+<li> 
+<h5><a href="inet.ipmessage.html">ipmessage</a> - message-oriented client</h5>
+</li>
+<li>
+<h5><a href="inet.ipmsgserver.html">ipmsgserver</a> - message-oriented server</h5>
+</li>
+<li> 
+<h5><a href="inet.utils.html">Utilities</a></h5>
+</li>
+<li> 
+<h5><a href="inet.examples.html">Examples</a></h5>
+</li>
+</ul>
+<p>PTypes' networking module provides simple means of creating both client and 
+server applications communicating over a IP network. The networking classes and 
+utilities are built on top of BSD sockets and WinSock2 frameworks. PTypes not 
+only solves and hides all incompatibility issues between these two API's, but 
+also makes the task of creating networking applications even simpler.</p>
+<p>Building client/server applications requires you to either use an existing 
+protocol (such like HTTP, FTP, SMTP) or develop your own high-level communication 
+protocol for your specific needs. Since the latter may be a nontrivial task, to 
+avoid logical mistakes in the communication process we recommend you, first of 
+all, to study some of the widely used protocols, and second, use one of the existing 
+protocols with possible modifications instead of creating new ones. For example, 
+HTTP (Hypertext Transfer Protocol) used by web servers and browsers was designed 
+to be as generic as possible, so that it can be used virtually for any task with 
+simple request-response logic.</p>
+<p>A real-world example of using PTypes networking is included in the source code 
+(See <a href="wshare.html">wshare</a>).</p>
+<p>The networking classes and utilities are declared in <a href="include/pinet.h.html">&lt;pinet.h&gt;</a>.</p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

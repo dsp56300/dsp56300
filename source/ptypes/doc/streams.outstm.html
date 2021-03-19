@@ -1,0 +1,68 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: outstm</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+outstm </p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+class outstm: iobase {
+    void putf(const char* fmt, ...);
+    void put(char c);
+    void put(const string& str);
+    void puteol();
+    int  write(const char* buf, int count);
+    void flush();
+    bool get/set_flusheol(bool);
+}
+</pre>
+</blockquote>
+<p>This class implements the basic functionality of output streams. <span class="lang">Outstm</span> 
+is derived from <a href="streams.iobase.html">iobase</a> and inherits all its 
+public methods and properties.</p>
+<p>End-of-line sequences are not translated when you send data through the output 
+methods. To write an end-of-line sequence appropriate to the given operating environment 
+use <span class="lang">puteol()</span> instead.</p>
+<p><span class="def">void outstm::putf(const char* fmt, ...)</span> is a printf-style 
+output method. PTypes supports a subset of format specifiers common to all platforms: 
+&lt;blank&gt;, '#', '+' and '-' formatting flags, 'L', 'h', 'l' and 'll' format 
+modifiers, and the following standard format specifiers: <span class="lang">cdiouxXeEfgGps</span>. 
+In addition, PTypes supports a format specifier <span class="lang">a</span> for 
+IP addresses (<span class="lang">ipaddress</span> type) and also <span class="lang">t</span> 
+and <span class="lang">T</span> for timestamps (<span class="lang">datetime</span> 
+type). Note that some compilers require to explicitly cast <span class="lang">ipaddress</span> 
+arguments to <span class="lang">long</span> type, and also <span class="lang">string</span> 
+arguments to <span class="lang">const char*</span> (or <span class="lang">pconst</span>).</p>
+<p><span class="def">void outstm::put(char c)</span> writes the character <span class="lang">c</span> 
+to the stream.</p>
+<p><span class="def">void outstm::put(const string&amp; str)</span> writes the 
+string <span class="lang">str</span> to the stream.</p>
+<p><span class="def">void outstm::puteol()</span> writes an end-of-line sequence 
+to the stream. The actual sequence depends on the platform the library was compiled 
+on. May flush data if the property <span class="lang">flusheol</span> is set to 
+<span class="lang">true</span>.</p>
+<p><span class="def">int outstm::write(const char* buf, int count)</span> writes 
+<span class="lang">count</span> bytes from the buffer <span class="lang">buf</span> 
+to the stream.</p>
+<p><span class="def">void outstm::flush()</span> writes the remaining data in 
+the buffer to the media, if any. This method is called automatically when the 
+stream is being closed.</p>
+<p><span class="def"> bool outstm::get/set_flusheol(bool)</span> -- set this property 
+to true if you want each line to be written to the media or communication stream 
+immediately. Default is <span class="lang">false</span>.</p>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.instm.html">instm</a>, 
+<a href="streams.errors.html">Error handling</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

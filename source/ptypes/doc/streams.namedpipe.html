@@ -1,0 +1,96 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: namedpipe</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+namedpipe </p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+class namedpipe: instm, outstm {
+    namedpipe( [ string pipename ] );
+    string get/set_pipename(string);
+}
+</pre>
+</blockquote>
+<p>The <span class="lang">namedpipe</span> class implements full-duplex streaming 
+communication between processes, typically on one computer. It is built on top 
+of Windows named pipes and local UNIX sockets. <span class="lang">Namedpipe</span> 
+incorporates <a href="streams.iobase.html">iobase</a>, <a href="streams.instm.html">instm</a> 
+and <a href="streams.outstm.html">outstm</a> interfaces and adds one more property: 
+the pipe name to connect to. PTypes named pipes are session-oriented.</p>
+<p><b>Naming</b>. Local sockets on UNIX can be created anywhere in the file system 
+and generally behave like ordinary files, except that the input and output streams 
+for a socket file is handled by the server process that created the socket. In 
+contrast to UNIX, Windows allocates named pipes in a special directory (actually 
+a share name) <span class="lang">\\.\pipe</span>, which is not visible to the 
+end-user. </p>
+<p>PTypes can accept both a file name and an absolute path name when creating 
+a named pipe object, however, absolute paths have effect only on UNIX. If you 
+specify a single file name on UNIX, PTypes will place the socket file in <span class="lang">/tmp</span>. 
+That is, if you are writing a portable application, and you want the socket file 
+to be placed in a directory other than <span class="lang">/tmp</span> on UNIX 
+(e.g. some daemons running as root place their sockets in <span class="lang">/var/run</span>), 
+you can specify the full path in both Windows and UNIX versions of your program: 
+the library will ignore the path on Windows, since it can not place it other than 
+in <span class="lang">\\.\pipe</span>, and will use it on UNIX.</p>
+<p><b>Usage</b>. Named pipes provide efficient means of interprocess communication. 
+Many networking applications, typically SQL servers, offer both network sockets 
+and local sockets as alternate ways of connecting to the service. For security 
+reasons, a system administrator may choose to configure the service such that 
+it will use only the local socket, or the service can be open to the network too 
+if it provides strong authentication at application level.</p>
+<p>N<span class="lang">amedpipe</span> and <a href="inet.ipstream.html">ipstream</a> 
+classes are compatible: both are full-duplex streams and are derived from <span class="lang">instm</span> 
+and <span class="lang">outstm</span> simultaneously. Thus, PTypes allows you to 
+easily combine both methods of communication in one application. Each thread serving 
+connections on server-side of your application can accept two parameters of basic 
+types <span class="lang">instm</span> and <span class="lang">outsm</span>; you 
+can then pass either an <span class="lang">ipstream</span> or a <span class="lang">namedpipe</span> 
+object (or any other compatible stream object) to the newly instantiated thread 
+to serve the request coming from the client. Note that it is sometimes necessary 
+to provide explicit typecast when assigning <span class="lang">namedpipe</span> 
+or <span class="lang">ipstream</span> to <span class="lang">outstm</span> or <span class="lang">instm</span>.</p>
+<p><b>Windows security note</b>. Named pipes on Windows are open to the network, 
+i.e. any computer can connect to a pipe through \\<i>computer-name</i>\pipe\..., 
+where<i> computer-name</i> can be a NetBIOS name or even an IP address. Even though 
+PTypes' interfaces do not allow you to connect to a remote named pipe for the 
+sake of compatibility with UNIX, still, you should consider a situation when someone 
+knowing the pipe name and the protocol you use, writes his own program to 'illegally' 
+access your service on a Windows machine from a remote computer. Hence, for better 
+security, your service should provide user authentication at application level 
+(of course, unless it's a public service and is open anyway). Aside from security, 
+network named pipes are much slower than any other networking protocol, such like 
+TCP/IP, so we do not encourage using named pipes remotely in any case.</p>
+<p>Unlike Windows, UNIX local sockets can never be accessed from a remote computer 
+even through a NFS-mounted directory. Note that remote access to named pipes on 
+Windows can be disabled by stopping all Windows networking services and leaving 
+only the transport-level protocol stacks.</p>
+<p>Local unnamed pipes for exchanging data within one process can be created using 
+<a href="streams.infile.html">infile::pipe()</a>.</p>
+<p><b>Interface</b>. <span class="lang">Namedpipe</span> is compatible with <a href="streams.iobase.html">iobase</a>, 
+<a href="streams.instm.html">instm</a> and <a href="streams.outstm.html">outstm</a> 
+and in addition, defines the following:</p>
+<p><span class="def">namedpipe::namedpipe( [ string pipename ] )</span> creates 
+a named pipe object and optionally assigns the pipe name. When creating a <span class="lang">namedpipe</span> 
+object that will be passed to <span class="lang">npserver::serve()</span>, it 
+is not necessary to assign a pipe name.</p>
+<p><span class="def">string namedpipe::get/set_pipename(string)</span> gets or 
+sets the pipe name. When assigning a new pipe name, <span class="lang">set_pipename()</span> 
+first closes the stream.</p>
+<p class="seealso">See also: <a href="streams.npserver.html">npserver</a>, <a href="streams.iobase.html">iobase</a>, 
+<a href="streams.instm.html">instm</a>, <a href="streams.outstm.html">outstm</a>, 
+<a href="inet.examples.html">Networking examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

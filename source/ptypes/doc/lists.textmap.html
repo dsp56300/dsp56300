@@ -1,0 +1,57 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: lists: textmap</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+<a href="lists.html">Lists</a>: textmap</p>
+<blockquote> 
+<pre class="lang">
+class textmap {
+    textmap(bool casesens = false);
+    int    get_count() const;
+    void   pack();
+    void   clear();
+    int    put(string key, string value);
+    string operator [](int index) const;
+    string operator [](string key) const;
+    string getkey(int index) const;
+}
+</pre>
+</blockquote>
+<p><br>
+The <span class="lang">textmap</span> class implements an associative array of 
+strings, i.e. textual key/value pairs. Items in a <span class="lang">textmap</span> 
+object can be accessed both via integral indexes and textual keys. Internally, 
+<span class="lang">textmap</span> keeps the list sorted in alphabetical order 
+and uses binary search to find keys in a list.</p>
+<p>The methods <span class="lang">get_count()</span>, <span class="lang">clear()</span> 
+and <span class="lang">pack()</span> work as for <a href="lists.tobjlist.html">tobjlist</a> 
+and are not described in this section.</p>
+<p><span class="def">textmap::textmap(bool casesens = false)</span> constructs 
+a textmap object, optionally with case-sensitive key search.</p>
+<p><span class="def">int textmap::put(string key, string value)</span> associates 
+<span class="lang">value</span> with <span class="lang">key</span>. This method 
+can either insert or replace an existing value, as well as remove it from a textmap 
+if <span class="lang">value</span> is an empty string.</p>
+<p><span class="def">string textmap::operator [](string key)</span> returns a 
+value associated with the <span class="lang">key</span>, or an empty string if 
+<span class="lang">key</span> does not exist in a textmap.</p>
+<p><span class="def">string textmap::operator [](int index)</span> returns a value 
+at the position <span class="lang">index</span>. This method along with <span class="lang">get_count()</span> 
+can be used to iterate through a textmap.</p>
+<p><span class="def">string textmap::getkey(int index)</span> returns the key 
+value at the position <span class="lang">index</span>.</p>
+<p class="seealso">See also: <a href="lists.tstrlist.html">tstrlist</a></p>
+<!-- #EndEditable --> 
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

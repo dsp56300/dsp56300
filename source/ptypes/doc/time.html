@@ -1,0 +1,80 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: date/time: </title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="basic.html">Basic types</a>: 
+Date/time: </p>
+<ul>
+<li> 
+<h5><a href="time.datetime.html">Datetime type</a></h5>
+</li>
+<li> 
+<h5><a href="time.calendar.html">Date/calendar manipulation</a></h5>
+</li>
+<li> 
+<h5><a href="time.time.html">Time manipulation</a></h5>
+</li>
+</ul>
+<p>The <span class="lang">datetime</span> data type and the accompanying utilities 
+provide portable (system-independent) means of calendar and time manipulation. 
+<span class="lang">Datetime</span> is equivalent to signed 64-bit integer type 
+(<span class="lang">large</span> type in PTypes) which holds a time value with 
+a millisecond precision in the range of dates 01/01/0001 through 12/31/9999. The 
+value of a datetime variable represents the number of milliseconds since the beginning 
+of the calendar, i.e. midnight January 1st, year 1. The upper limit is caused 
+by the fact that the leap year rule may (and most likely will) change after the 
+year 10000.</p>
+<p>Variables of type <span class="lang">datetime</span> can be used in various 
+ways: as a date/time stamp, as a difference between two events in the range from 
+1 millisecond up to 10,000 years, as a date alone without the time (e.g. for calendar 
+manipulation), and as a time value alone.</p>
+<p>The date/time manipulation functions are divided into 3 groups in this documentation: 
+<a href="time.datetime.html">general</a>, <a href="time.calendar.html">date/calendar</a> 
+and <a href="time.time.html">time</a>. Most of these functions work with parameters 
+of type <span class="lang">datetime</span>. The prototypes and other declarations 
+are in the header file <a href="include/ptime.h.html">&lt;ptime.h&gt;</a>. </p>
+<p>Here are some examples of using <span class="lang">datetime</span> and the 
+accompanying utilities:</p>
+<blockquote> 
+<pre>#include &lt;pasync.h&gt;    <span class="comment">// for psleep()</span>
+#include &lt;ptime.h&gt;
+#include &lt;pstreams.h&gt;
+
+USING_PTYPES
+
+int main()
+{
+    <span class="comment">// PTypes' birthday (birth moment, if you wish)</span>
+    datetime d = encodedate(2000, 3, 30) + encodetime(13, 24, 58, 995);
+    <span class="comment">// The format specifier %t is for timestamps</span>
+    pout.putf("PTypes' birth moment: %t\n", d);
+    
+    <span class="comment">// now see how old is PTypes in milliseconds</span>
+    datetime diff = now() - d;
+    int hours, mins, secs, msecs;
+    decodetime(diff, hours, mins, secs, msecs);
+    pout.putf("PTypes' life time: %d hours %d minutes %d seconds and %d milliseconds\n",
+        days(diff) * 24 + hours, mins, secs, msecs);
+    
+    <span class="comment">// measure the difference in milliseconds between two calls to now()</span>
+    datetime m = now();
+    psleep(17);  <span class="comment">// sleep 17 milliseconds</span>
+    pout.putf("A 17 millisecond dream lasted actually %d milliseconds\n", now() - m);
+    <span class="comment">// this will show the actual precision of the clock on the given platform;
+    // Windows, f.ex., always shows the difference in 10 msec increments</span>
+}
+</pre>
+</blockquote>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

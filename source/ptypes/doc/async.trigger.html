@@ -1,0 +1,60 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: multithreading: trigger</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="async.html">Multithreading</a>: 
+trigger</p>
+<blockquote> 
+<pre class="lang">#include &lt;pasync.h&gt;
+
+class trigger {
+    trigger(bool autoreset, bool initstate);
+    void wait();
+    void post();
+    void signal();      <span class="comment">// alias for post()</span>
+    void reset();
+}
+</pre>
+</blockquote>
+<p><span class="lang">Trigger</span> is a simple synchronization object typically 
+used to notify one or more threads about some event. <span class="lang">Trigger</span> 
+can be viewed as a simplified semaphore, which has only two states and does not 
+count the number of wait's and post's. Multiple threads can wait for an event 
+to occur; either one thread or all threads waiting on a trigger are being released 
+as soon as some other thread signals the <span class="lang">trigger</span> object. 
+Auto-reset triggers release only one thread each time <span class="lang">post()</span> 
+is called, and manual-reset triggers release all waiting threads at once. <span class="lang">Trigger</span> 
+mimics the Win32 Event object.</p>
+<p><span class="def">trigger::trigger(bool autoreset, bool initstate)</span> creates 
+a trigger object with the initial state <span class="lang">initstate</span>. The 
+<span class="lang">autoreset</span> feature defines whether the trigger object 
+will automatically reset its state back to non-signaled when <span class="lang">post()</span> 
+is called.</p>
+<p><span class="def">void trigger::wait()</span> waits until the state of the 
+trigger object becomes signaled, or returns immediately if the object is in signaled 
+state already.</p>
+<p><span class="def">void trigger::post()</span> signals the trigger object. If 
+this is an auto-reset trigger, only one thread will be released and the state 
+of the object will be set to non-signaled. If this is a manual-reset trigger, 
+the state of the object is set to signaled and all threads waiting on the object 
+are being released. Subsequent calls to <span class="lang">wait()</span> from 
+any number of concurrent threads will return immediately.</p>
+<p> <span class="def">void trigger::signal()</span> is an alias for <span class="lang">post()</span>.</p>
+<p><span class="def">void trigger::reset()</span> resets the state of the trigger 
+object to non-signaled.</p>
+<p class="seealso">See also: <a href="async.thread.html">thread</a>, <a href="async.mutex.html">mutex</a>, 
+<a href="async.rwlock.html">rwlock</a>, <a href="async.semaphore.html">semaphore</a>, 
+<a href="async.examples.html">Examples</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

@@ -1,0 +1,105 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: streams: instm</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="streams.html">Streams</a>: 
+instm </p>
+<blockquote> 
+<pre class="lang">#include &lt;pstreams.h&gt;
+
+class instm: iobase {
+    bool   get_eof();
+    bool   get_eol();
+    char   preview();
+    char   get();
+    void   putback();
+    string token(const cset& chars [, int limit ] );
+    int    token(const cset& chars, char* buf, int size);
+    string line();
+    string line( [ int limit ] );
+    int    line(char* buf, int size);
+    void   skipline();
+    void   skiptoken(const cset& chars);
+    int    skip(int numbytes);
+    int    read(char* buf, int count);
+}
+</pre>
+</blockquote>
+<p>This class implements the basic functionality of input streams. <span class="lang">Instm</span> 
+is derived from <a href="streams.iobase.html">iobase</a> and inherits all its 
+public methods and properties. All methods of <span class="lang">instm</span> 
+except <span class="lang">read()</span> and <span class="lang">get_eof()</span> 
+require buffering.</p>
+<p><span class="def">bool instm::get_eof()</span> returns <span class="lang">true</span> 
+if the end of file is reached.</p>
+<p><span class="def">bool instm::get_eol()</span> returns <span class="lang">true</span> 
+if the file pointer is currently at the end of a line. Since operating systems 
+use different end-of-line codes or combinations of codes, it is recommended to 
+check the end-of-line status using this property and skip the end-of-line sequence 
+by calling <span class="lang">skipline()</span> method.</p>
+<p> <span class="def">char instm::preview()</span> returns the next character 
+from the stream but does not advance the file pointer. If the pointer is at the 
+end of file, <span class="lang">preview()</span> returns <span class="lang">eofchar</span> 
+(null character).</p>
+<p><span class="def">char instm::get()</span> returns the next character from 
+the stream. If an attempt is made to read beyond the file (i.e. if the property 
+<span class="lang">eof</span> is set), this method returns <span class="lang">eofchar</span> 
+(null character).</p>
+<p><span class="def">void instm::putback()</span> puts the last retrieved character 
+back to the stream; a faster equivalent to <span class="lang">seek(-1, IO_CURRENT)</span>. 
+This function can be called only after a call to <span class="lang">get()</span> 
+if the latter did not return an <span class="lang">eof</span> character.</p>
+<p><span class="def">string instm::token(const cset& chars [, int limit ] )</span> 
+reads the next token that only contains characters of the given set <span class="lang">chars</span>. 
+The optional parameter <span class="lang">limit</span> specifies the maximum number 
+of bytes to read. If the token exceeds the limit, an exception <span class="lang">(estream*)</span> 
+is thrown with error number ERANGE.</p>
+<p><span class="def">int instm::token(const cset& chars, char* buf, int size)</span> 
+-- this version of <span class="lang">token()</span> reads the next token to the 
+given buffer <span class="lang">buf</span>. The number of characters is limited 
+to <span class="lang">size</span>. This method returns the actual number of characters 
+read from the stream which can not be greater than <span class="lang">size</span>. 
+Unlike the other version of <span class="lang">token()</span>, does not throw 
+exceptions if the token exceeds the limit, but rather truncates it to <span class="lang">size</span>. 
+Note: this function does not put a terminating null symbol in the buffer.</p>
+<p><span class="def">string instm::line( [ int limit ] )</span> reads the current 
+line from the stream. The end-of-line code(s) are not included in the returning 
+value, however, <span class="lang">line()</span> skips them and sets the file 
+pointer at the beginning of the next line. The optional parameter <span class="lang">limit</span> 
+specifies the maximum number of bytes to read. If the token exceeds the limit, 
+an exception <span class="lang">(estream*)</span> is thrown with error number 
+ERANGE.</p>
+<p><span class="def">int instm::line(char* buf, int size)</span> -- this version 
+of <span class="lang">line()</span> reads the next line from the stream to the 
+buffer <span class="lang">buf</span>. The number of characters is limited to <span class="lang">size</span>. 
+This method returns the actual number of characters read from the stream which 
+can not be greater than <span class="lang">size</span>. Unlike the other version 
+of <span class="lang">line()</span>, does not throw exceptions if the token exceeds 
+the limit, but rather truncates it to <span class="lang">size</span>. Note: this 
+function does not put a terminating null symbol in the buffer.</p>
+<p><span class="def">void instm::skiptoken(const cset& chars)</span> works like 
+previous versions of <span class="lang">token()</span> except that the token string 
+is not returned. Can be safely used to skip very large tokens.</p>
+<p><span class="def">void instm::skipline()</span> skips the current line and 
+sets the file pointer at the beginning of the next line.</p>
+<p><span class="lang">int instm::skip(int numbytes)</span> skips the specified 
+number of bytes from the input stream.</p>
+<p><span class="def">int instm::read(char* buf, int count)</span> reads <span class="lang">count</span> 
+bytes from the stream and stores them in the buffer <span class="lang">buf</span>. 
+This method does not require buffering.</p>
+<p class="seealso">See also: <a href="streams.iobase.html">iobase</a>, <a href="streams.outstm.html">outstm</a>, 
+<a href="string.html">string</a>, <a href="cset.html">cset</a>, <a href="streams.errors.html">Error 
+handling</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

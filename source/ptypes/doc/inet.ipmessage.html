@@ -1,0 +1,135 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: networking: ipmessage</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: <a href="inet.html">Networking</a>: 
+ipmessage</p>
+<blockquote> 
+<pre class="lang">#include &lt;pinet.h&gt;
+
+class ipmessage {
+    ipmessage();
+    ipmessage(ipaddress ip, int port);
+    ipmessage(string host, int port);
+
+    bool   waitfor(int timeout);
+    void   send(const char* buf, int count);
+    void   send(string s);<br>    int    receive(char* buf, int count [, ipaddress&amp; src ] );
+    string receive(int max [, ipaddress&amp; src ] );
+
+    ipaddress get/set_ip();
+    string    get/set_host();
+    int       get/set_port();
+    ipaddress get_myip();
+    int       get_myport();
+}</pre>
+</blockquote>
+<p>The <span class="lang">ipmessage</span> class implements connectionless, unreliable 
+datagram communication between IP hosts. The underlying protocol (UDP) never guarantees 
+that a message will be delivered to the destination, however, in return, it has 
+the ability to send broadcast messages on a local network. Unlike the stream-oriented 
+protocols which have some traffic overhead because of the control packets (for 
+opening/closing connections and for confirming each delivery), the message-oriented 
+protocols always send a single packet, sometimes fragmented if it exceeds the 
+size of a physical frame.</p>
+<p>In summary, message-oriented communication is useful in the following situations:</p>
+<ul>
+<li>For sending streaming data (as a rule, sound or video) when losing packets 
+is not crucial. An application may measure the bandwidth and the reliability of 
+a connection before starting a streaming session, to estimate the optimal frequency 
+of packets and adjust the quality of multimedia data (e.g. frames per second, 
+resolution, etc).</li>
+<li>For finding hosts of a specific type on a local network using broadcast/multicast 
+messages. You may want your client application to find its services on a network 
+automatically to free the user from entering the addresses manually.</li>
+<li>For sending very short messages or request/reply cycles, possibly with confirmation/retry 
+mechanism. In most cases developing such applications may be costly compared to 
+using stream-oriented protocols instead.</li>
+</ul>
+<p>The maximum message size is limited to 64 KBytes on most systems. Note however, 
+that sending large messages may result in fragmentation and hence a lesser probability 
+that the whole message will be delivered. You may assume that a maximum data size 
+for a UDP message is 1472 bytes, even though such message may still be fragmented 
+when transferred over a non-Ethernet medium. The size of a guaranteed indivisible 
+UDP packet is 512 bytes on all physical media types.</p>
+<p>For larger data chunks you may consider using streaming protocols, since the 
+TCP control traffic overhead is insignificant compared to data in such cases.</p>
+<p>The <span class="lang">ipmessage</span> and <span class="lang">ipmsgserver</span> 
+classes are not compatible with PTypes streaming interfaces due to unreliable 
+and connectionless nature of the underlying protocol. These classes provide a 
+pair of low-level methods <span class="lang">receive()</span> and <span class="lang">send()</span> 
+and require that the client (<span class="lang">ipmessage</span>) first call <span class="lang">send()</span> 
+prior to receiving, and the server (<span class="lang">ipmsgserver</span>) must 
+first receive data prior to sending. In addition, the server object can be polled 
+for pending data (optionally with timed waiting) using <span class="lang">poll()</span>.</p>
+<p>The <span class="lang">ipmessage</span> class is reusable, i.e. you may use 
+one object to send data to multiple destinations by changing the <span class="lang">ip</span> 
+(or <span class="lang">host</span>) and <span class="lang">port</span> properties.</p>
+<p><span class="lang">Ipmessage</span> can generate exceptions of type <span class="lang">(estream*)</span> 
+with a corresponding error code and a message string.</p>
+<p>(See also Example 2 in <a href="inet.examples.html">Examples</a>)</p>
+<p><span class="def">ipmessage::ipmessage()</span> is the default constructor.</p>
+<p><span class="def">ipmessage::ipmessage(ipaddress ip, int port)</span> constructs 
+an <span class="lang">ipmessage</span> object and assigns the peer <span class="lang">ip</span>/<span class="lang">port</span> 
+values. To send a broadcast message to all hosts on a local network, assign a 
+predefined constant <span class="lang">ipbcast</span> to <span class="lang">ip</span>.</p>
+<p><span class="def">ipmessage::ipmessage(string host, int port)</span> constructs 
+an <span class="lang">ipmessage</span> object and assigns the peer host name and 
+port values. Before actually sending data first time, the object resolves the 
+host name to a numeric IP address. <span class="lang">Host</span> can be either 
+a symbolic DNS name or a numeric address in a string form (e.g. &quot;somehost.com&quot; 
+or &quot;192.168.1.1&quot;).</p>
+<p><span class="def">bool ipmessage::waitfor(int milliseconds)</span> waits on 
+a socket until data is available for reading (returns <span class="lang">true</span>) 
+or the time specified has elapsed, in which case it returns <span class="lang">false</span>.</p>
+<p><span class="def">ipmessage::send(const char* buf, int count)</span> sends 
+data to the peer. <span class="lang">Ip</span>/<span class="lang">host</span> 
+and <span class="lang">port</span> properties must be assigned prior to calling 
+<span class="lang">send()</span>. A client must first call <span class="lang">send()</span> 
+before receiving data from the peer.</p>
+<p> <span class="def">ipmessage::send(string s)</span> works like the previous 
+version of <span class="lang">send()</span> except that it sends the string <span class="lang">s</span> 
+(not including the terminating null-symbol).</p>
+<p><span class="def">int ipmessage::receive(char* buf, int count [, ipaddress&amp; 
+src ] )</span> reads data from the socket. <span class="lang">Receive()</span> 
+may hang if no data is available for reading. This function returns the actual 
+number of bytes read. If the packet received exceeds the size of the supplied 
+buffer, an exception is raised with code EMSGSIZE. You may check if there is data 
+available for reading without 'hanging' using <span class="lang">waitfor()</span> 
+described above. The last optional parameter <span class="lang">src</span> receives 
+the IP address of the host that sent this packet: it may be useful if the packet 
+is received in response to a broadcast request.</p>
+<p><span class="def">string ipmessage::receive(int max [, ipaddress&amp; src ] 
+)</span> works like the previous version of <span class="lang">receive()</span> 
+except that it returns data in a dynamic string. The parameter <span class="lang">max</span> 
+specifies the limit which may not be exceeded when reading data from the network, 
+like with the previous version of <span class="lang">receive()</span>.</p>
+<p><span class="def">ipaddress ipmessage::get/set_ip()</span> sets/retrieves the 
+peer address in a numerical form. If the object was constructed using a symbolic 
+name, <span class="lang">get_ip()</span> may perform a DNS lookup (only once). 
+To send a broadcast message to all hosts on a local network, assign a predefined 
+constant <span class="lang">ipbcast</span> to this property.</p>
+<p><span class="def">string ipmessage::get/set_host()</span> sets/retrieves the 
+peer address in a symbolic form. If the object was constructed using a numeric 
+IP address, <span class="lang">get_host()</span> may perform a reverse DNS lookup.</p>
+<p><span class="def">int ipmessage::get/set_port()</span> sets/retrieves the peer 
+port number.</p>
+<p><span class="def">ipaddress ipmessage::get_myip()</span> returns the local 
+address associated with the socket.</p>
+<p><span class="def">int ipmessage::get_myport()</span> returns the local port 
+number associated with the socket.</p>
+<p class="seealso">See also: <a href="inet.ipmsgserver.html">ipmsgserver</a>, 
+<a href="inet.utils.html">Utilities</a>, <a href="inet.examples.html">Examples</a></p>
+<!-- #EndEditable --> 
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>

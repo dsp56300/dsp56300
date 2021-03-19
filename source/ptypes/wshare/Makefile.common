@@ -1,0 +1,77 @@
+#
+#
+#  C++ Portable Types Library (PTypes)
+#  Version 2.0.2  Released 17-May-2004
+#
+#  Copyright (C) 2001-2004 Hovik Melikyan
+#
+#  http://www.melikyan.com/ptypes/
+#
+#
+#
+# Makefile for all platforms, called automatically from
+# Makefile.<platform>
+#
+
+.SUFFIXES:	.cxx .o
+
+DDEBUG      = -DDEBUG
+INCDIR      = ../include
+CXXOPTS     = $(OS_CXXOPTS) $(DDEBUG) -I$(INCDIR) -Wall -O2
+LDLIBS      = $(OS_LDLIBS)
+
+BINDEST     = ../bin
+
+OBJS        = wshare.o request.o clients.o sysutils.o urlutils.o log.o \
+	    mimetable.o config.o utils.o modules.o \
+	    mod_file.o mod_wstat.o mod_about.o
+
+
+.cxx.o:
+	$(CXX) -c $(CXXOPTS) $<
+
+
+all: wshare$(OS_BINEXT)
+
+
+wshare$(OS_BINEXT): $(OBJS) ../lib/libptypes.a
+	$(CXX) $(CXXOPTS) $(OBJS) ../lib/libptypes.a $(LDLIBS) -o $@
+	mkdir -p $(BINDEST) ; cp $@ $(BINDEST)/
+	strip $(BINDEST)/$@
+
+
+wshare.o: wshare.cxx clients.h request.h sysutils.h urlutils.h log.h config.h
+
+request.o: request.cxx request.h modules.h clients.h sysutils.h urlutils.h log.h config.h
+
+clients.o: clients.cxx clients.h log.h config.h
+
+sysutils.o: sysutils.cxx sysutils.h utils.h
+
+urlutils.o: urlutils.cxx urlutils.h
+
+utils.o: utils.cxx utils.h sysutils.h urlutils.h config.h
+
+log.o: log.cxx log.h config.h
+
+config.o: config.cxx config.h sysutils.h
+
+mimetable.o: mimetable.cxx config.h
+
+modules.o: modules.cxx modules.h request.h
+
+mod_file.o: mod_file.cxx config.h sysutils.h utils.h request.h clients.h
+
+mod_wstat.o: mod_wstat.cxx config.h utils.h request.h clients.h
+
+mod_about.o: mod_about.cxx config.h utils.h request.h
+
+
+clean: clean-src
+	rm -f $(BINDEST)/wshare$(OS_BINEXT)
+
+clean-src:
+	rm -f *.o
+	rm -f core *.core
+	rm -f wshare$(OS_BINEXT)
+

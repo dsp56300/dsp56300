@@ -1,0 +1,90 @@
+<html><!-- #BeginTemplate "/Templates/tmpl.dwt" --><!-- DW6 -->
+<head>
+<!-- #BeginEditable "doctitle" --> 
+<title>PTypes: Portability and Performance Issues</title>
+<!-- #EndEditable --> 
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body bgcolor="#FFFFFF" leftmargin="40" marginwidth="40">
+<p><a href="../index.html"><img src="title-20.png" width="253" height="39" alt="C++ Portable Types Library (PTypes) Version 2.0" border="0"></a> 
+<hr size="1" noshade>
+<!-- #BeginEditable "body" --> 
+<p class="hpath"><a href="index.html">Top</a>: Portability and performance issues</p>
+<p><br>
+<b> 64-bit integers</b>: most compilers provide <span class="lang">long long</span> 
+type modifier for declaring 64-bit integers, but at least two of them, Microsoft 
+C/C++ and Borland C/C++, use quite unaesthetic keyword <span class="lang">__int64</span>. 
+PTypes offers its own wrapper type <span class="lang">large</span> (in <a href="include/pport.h.html">&lt;pport.h&gt;</a>), 
+which is a portable signed 64-bit integer. <span class="lang">Unsigned large</span> 
+or <span class="lang">ularge</span> are also available. For portable 64-bit string 
+conversions use <span class="lang">itostring()</span> and <span class="lang">stringto*()</span> 
+declared in <a href="include/ptypes.h.html">&lt;ptypes.h&gt;</a>.</p>
+<p>Another incompatibility exists for printf-style formatted output routines: 
+Windows uses &quot;I64&quot; type modifier for 64-bit integers, whereas standard-compliant 
+libraries recognize &quot;ll&quot; (ell-ell). PTypes solves this problem in its 
+<span class="lang">outstm::putf()</span> method: you can safely use &quot;ll&quot; 
+modifier on all platforms.</p>
+<p><b>End-of-line sequences</b>: PTypes input stream routines automatically recognize 
+three types of EOL sequences: LF (UNIX), CR (Mac) and CR-LF (DOS/Win) and set 
+<span class="lang">instm::eol</span> property accordingly.</p>
+<p>As for output streams, unlike many Windows-based C run-time libraries, PTypes 
+does NOT make any translations and always sends your data as is. In order to generate 
+an EOL sequence appropriate to the target platform (i.e. the system your application 
+is running on), use <span class="lang">outstm::puteol()</span> and <span class="lang">outstm::putline(string)</span>. 
+Some protocols and data formats, however, require some predetermined EOL sequence 
+regardless of the target platform, e.g. HTTP always uses CR-LF, PostScript uses 
+CR, etc. In such cases you can use standard C escape sequences to send appropriate 
+codes to the output stream, e.g. &quot;\r\n&quot; or &quot;\r&quot;.</p>
+<p><b>File names</b>: you can always use UNIX-style path names (with slash '/') 
+when working with files through PTypes streaming classes. Since drive specifiers 
+in path names are specific only to Windows, try to use relative paths in your 
+program whenever possible. For additional notes on pipe naming, please see introduction 
+for the <a href="streams.namedpipe.html">namedpipe</a> class.</p>
+<p><b>Arithmetic operations and multithreading</b>: a simple increment and decrement 
+operation (i++ and i--) in a multithreaded application may NOT be thread-safe 
+on most RISC CPU's and on i386-based multiprocessor systems. Even if you are not 
+interested in the resulting value of an increment/decrement operation, still use 
+PTypes <span class="lang">pincrement()</span> and <span class="lang">pdecrement()</span> 
+on variables shared between threads.</p>
+<p><b>Performance of dynamic strings</b>: most of the string operations rely on 
+dynamic memory reallocation. PTypes tries to avoid frequent use of physical reallocation 
+by aligning the dynamic string buffers on 16, 32, 64 ... 4096-byte boundaries, 
+depending on the logical size of a string. Physical reallocation highly depends 
+on the performance of the standard <span class="lang">realloc()</span> function, 
+which may vary from OS to OS. Linux, for example, performs reallocations up to 
+30 times faster than Windows on a similar computer. PTypes dynamic strings also 
+depend on the performance of the atomic increment and decrement functions (see 
+below).</p>
+<p><b>Performance of atomic increment/decrement/exchange operations</b>: on PowerPC 
+and i386-based platforms PTypes implements atomic operations through short assembly 
+language code. On other platforms, however, these operations use slower mutex 
+locking (see <span class="lang">src/patomic.cxx</span>). PTypes is in desperate 
+need of developers who can write SMP-safe atomic increment, decrement and exchange 
+for Sparc, Alpha and other processors in assembly language. This would speed up 
+dynamic strings and other parts of the library on these platforms.</p>
+<p><b>Reentrancy of synchronization objects</b>: the POSIX standard does not specify 
+whether synchronization objects should be reentrant or not. For instance, if you 
+use recursive locks on a mutex object the behaviour of your application may vary 
+on different systems. Most POSIX systems, such like Linux, provide a faster but 
+non-reentrant implementation of synchronization primitives.</p>
+<p><b>Read/write lock portability issues</b>: the <span class="lang">rwlock</span> 
+class is built on top of the POSIX rwlock interface, wherever available, or uses 
+the internal implementation (see <span class="lang">src/rwlock.cxx</span>). Various 
+system-level implementations use different prioritization schemes: they may be 
+'fair' with respect to both reader and writer threads, or a higher priority may 
+be given to one of them. Unfortunately the behaviour of rwlock is not standardized 
+yet. PTypes' internal implementation uses the 'fair' scheme which we believe is 
+the best and the only DoS-proof (denial-of-service) among other algorithms. On 
+the other hand, replacing the system-level rwlock with our own implementation 
+on all systems would lead to a preformance penalty compared to using 'native' 
+objects. We set this issue aside for some time and we are open to discuss it with 
+interested/experienced developers.</p>
+<p class="seealso">See also: <a href="string.conversion.html">String Conversion</a>, 
+<a href="async.utils.html"></a><a href="streams.outstm.html">outstm</a>, <a href="streams.namedpipe.html">namedpipe</a>, 
+<a href="string.html">string</a>, <a href="async.utils.html">Multithreading Utilities</a></p>
+<!-- #EndEditable -->
+<hr size="1">
+<a href="../index.html" class="ns">PTypes home</a>
+</body>
+<!-- #EndTemplate --></html>
