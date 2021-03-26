@@ -4,7 +4,6 @@
 #include "memory.h"
 #include "error.h"
 
-#include <istream>
 #include <fstream>
 
 static const std::string g_tagStart  ("_START ");
@@ -17,7 +16,7 @@ namespace dsp56k
 // _____________________________________________________________________________
 // load
 //
-bool dsp56k::OMFLoader::load( const char* _filename, Memory& _dst )
+bool OMFLoader::load( const char* _filename, Memory& _dst )
 {
 	std::ifstream i;
 	i.open( _filename, std::ios_base::in );
@@ -55,7 +54,7 @@ bool OMFLoader::load( const std::list<std::string>& _lines, Memory& _dst )
 	m_currentTargetAddress = 0;
 	m_currentBitSize = m_currentByteSize = 0;
 
-	for( std::list<std::string>::const_iterator it = _lines.begin(); it != _lines.end(); ++it )
+	for(auto it = _lines.begin(); it != _lines.end(); ++it )
 	{
 		const std::string& line = *it;
 
@@ -79,7 +78,7 @@ void OMFLoader::parseLine( const std::string& _line, Memory& _dst )
 
 		if( _line.substr( 0, g_tagData.size() ) == g_tagData )
 		{
-			char memoryLocation = _line[6];
+			const char memoryLocation = _line[6];
 
 			m_currentArea = MemArea_COUNT;
 
@@ -104,21 +103,25 @@ void OMFLoader::parseLine( const std::string& _line, Memory& _dst )
 			m_currentBitSize = m_currentByteSize = 0;
 			m_currentTargetAddress = 0;
 		}
+
+		if(_line.substr( 0, g_tagSymbol.size() ) == g_tagSymbol)
+		{
+			m_currentSymbolArea = _line[8];
+		}
 	}
 	else
 	{
 		if( m_currentArea != MemArea_COUNT )
 		{
 			// read data into one of our memory targets
-			const size_t len = _line.size();
 			const char* src = _line.c_str();
 
 			if( m_currentBitSize == 24 )
 			{
-				int remaining = int(_line.size());
+				int remaining = static_cast<int>(_line.size());
 				while( remaining >= 6 )
 				{
-					uint result = parse24Bit( src );				
+					const uint result = parse24Bit( src );				
 
 					_dst.set( m_currentArea, m_currentTargetAddress, result );
 
@@ -131,7 +134,7 @@ void OMFLoader::parseLine( const std::string& _line, Memory& _dst )
 			}
 			else if( m_currentBitSize == 48 )
 			{
-				int remaining = int(_line.size());
+				int remaining = static_cast<int>(_line.size());
 
 				while( remaining >= 13 )
 				{
@@ -148,6 +151,25 @@ void OMFLoader::parseLine( const std::string& _line, Memory& _dst )
 					remaining -= 14;
 				}
 				assert( remaining == 0 );
+			}
+		}
+		else if(m_currentSymbolArea)
+		{
+			const auto firstSpace = _line.find(' ');
+			const auto lastSpace = _line.find_last_of(' ');
+
+			if(firstSpace != std::string::npos && lastSpace != std::string::npos)
+			{
+				const auto name = _line.substr(0, firstSpace);
+				const auto value = _line.substr(lastSpace + 1);
+				const auto type = _line[lastSpace-1];
+
+				if(type != 'F')
+				{
+					int intValue;
+					sscanf(value.c_str(), "%x", &intValue);
+					_dst.setSymbol(m_currentSymbolArea, intValue, name);					
+				}
 			}
 		}
 	}
@@ -174,26 +196,6 @@ uint OMFLoader::parse24Bit( const char* _src )
 		result |= (r<<shift);
 	}
 	return result;
-}
-// _____________________________________________________________________________
-// parse24Bit
-//
-void OMFLoader::parse24Bit( const char* _src, uchar* _dst )
-{
-	char temp[3] = {0,0,0};
-
-	uint offset = 0;
-
-	for( size_t i=0; i<6; i+=2, ++offset )
-	{
-		temp[0] = _src[i];
-		temp[1] = _src[i+1];
-
-		uint r;
-		sscanf_s( temp, "%02x", &r );
-
-		_dst[offset] = (r&0xff);
-	}
 }
 
 }

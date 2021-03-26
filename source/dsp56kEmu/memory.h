@@ -1,5 +1,9 @@
 #pragma once
 
+#include <map>
+#include <set>
+
+
 #include "peripherals.h"
 
 namespace dsp56k
@@ -21,6 +25,8 @@ namespace dsp56k
 	#define MemArea_X_IOInternal_Begin			0xFFFF80
 	#define MemArea_X_IOInternal_End			0xFFFFFF
 
+	class DSP;
+
 	class Memory
 	{
 		// _____________________________________________________________________________
@@ -36,7 +42,28 @@ namespace dsp56k
 		const std::vector<TWord>&							p;
 #endif
 
-		Peripherals											m_perif[2];
+		StaticArray< Peripherals, 2>						m_perif;
+
+		struct STransaction
+		{
+			unsigned int ictr;
+			EMemArea area;
+			TWord offset;
+			TWord oldVal;
+			TWord newVal;
+		};
+
+		struct SSymbol
+		{
+			std::set<std::string> names;
+			TWord address;
+			char area;
+		};
+
+		DSP*						m_dsp;
+		std::vector<STransaction>	m_transactionHistory;
+
+		std::map<char, std::map<TWord, SSymbol>> m_symbols;
 
 		// _____________________________________________________________________________
 		// implementation
@@ -53,6 +80,13 @@ namespace dsp56k
 		TWord	get					( EMemArea _area, TWord _offset ) const;
 
 		bool	translateAddress	( EMemArea& _area, TWord& _offset ) const;
+
+		bool	save				( FILE* _file ) const;
+		bool	load				( FILE* _file );
+
+		void	setDSP				( DSP* _dsp )	{ m_dsp = _dsp; }
+
+		void	setSymbol			(char _area, TWord _address, const std::string& _name);
 
 	private:
 		void	fillWithInitPattern();

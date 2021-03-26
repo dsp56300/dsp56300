@@ -12,10 +12,12 @@ namespace dsp56k
 		// members
 		//
 	private:
-		EMemArea	m_currentArea;
-		TWord		m_currentTargetAddress;
-		size_t		m_currentBitSize;
-		size_t		m_currentByteSize;
+		EMemArea	m_currentArea = MemArea_COUNT;
+		TWord		m_currentTargetAddress = 0;
+		size_t		m_currentBitSize = 0;
+		size_t		m_currentByteSize = 0;
+
+		char		m_currentSymbolArea = 0;
 
 		// _____________________________________________________________________________
 		// implementation
@@ -30,8 +32,7 @@ namespace dsp56k
 		// helpers
 		//
 	private:
-		void			parseLine	( const std::string& _line, Memory& _dst );
-		unsigned int	parse24Bit	( const char* _src );
-		void			parse24Bit	( const char* _src, unsigned char* _dst );
+		void				parseLine	( const std::string& _line, Memory& _dst );
+		static unsigned int	parse24Bit	( const char* _src );
 	};
 };

@@ -35,6 +35,8 @@ namespace dsp56k
 		, essi(*this,_memory)
 		, repRunning(false)
 	{
+		mem.setDSP(this);
+
 		m_asm[0] = 0;
 
 		resetHW();
