@@ -29,7 +29,7 @@ namespace dsp56k
 
 			StaticArray< TReg48, 16> ss;	// system stack
 
-			//		TReg24	ssh, ssl;				// system stack high, system stack low
+			//TReg24	ssh, ssl;			// system stack high, system stack low
 			TReg24	sp;						// stack pointer
 			TReg5	sc;						// stack counter
 

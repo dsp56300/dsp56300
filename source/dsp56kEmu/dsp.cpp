@@ -95,6 +95,12 @@ namespace dsp56k
 
 	void DSP::exec()
 	{
+		if( reg.pc.var == 0x04b07a )
+		{
+			int d=0;
+		}
+
+		// we do not support 16-bit compatibility mode
 		assert( (reg.sr.var & SR_SC) == 0 );
 
 		essi.exec();
@@ -108,16 +114,6 @@ namespace dsp56k
 #else
 		m_asm[0] = 0;
 #endif
-
-		if( reg.pc.var == 0x0004b160 )
-		{
-			int d=0;
-		}
-
-		if( reg.ictr.var == 0x153479 )
-		{
-			int d=0;
-		}
 
 		pcLastExec = reg.pc.toWord();
 
@@ -644,10 +640,6 @@ namespace dsp56k
 		// LUA/LEA (Rn + aa),D - 00000100 00aaaRRR aaaadddd
 		else if( (dbmf&0xffc000) == 0x040000 )
 		{
-			if( pcLastExec == 0x49625 )
-			{
-				int d=0;
-			}
 			const TWord dddd	= (dbmfop&0x00000f);
 			const TWord a		= ((dbmfop&0x003800)>>7) | ((dbmfop&0x0000f0)>>4);
 			const TWord rrr		= (dbmfop&0x000700)>>8;
@@ -1310,10 +1302,6 @@ namespace dsp56k
 		// BRA xxx - 00000101 000011aa aa0aaaaa
 		else if( (dbmf&0xfffc00) == 0x050c00 && (op&0x20) == 0x00 )
 		{
-			if( pcLastExec == 0x47fe3 )
-			{
-				int d=0;
-			}
 			const TWord addr = (dbmfop & 0x1f) | ((dbmfop & 0x3c0)>>1);
 
 			const int signedAddr = signextend<int,9>(addr);
