@@ -130,6 +130,9 @@ namespace dsp56k
 
 		void			logSC							( const char* _func );
 
+		bool			save							( FILE* _file ) const;
+		bool			load							( FILE* _file );
+
 	private:
 
 		// -- execution 

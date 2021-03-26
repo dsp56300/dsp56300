@@ -4320,4 +4320,35 @@ void DSP::alu_abs( bool ab )
 //	sr_v_update(d);
 	sr_l_update_by_v();
 }
+
+// _____________________________________________________________________________
+// save
+//
+bool DSP::save( FILE* _file ) const
+{
+	fwrite( &reg, sizeof(reg), 1, _file );
+	fwrite( &repRunning, 1, 1, _file );
+	fwrite( &tempLCforRep, 1, 1, _file );
+	fwrite( &pcLastExec, 1, 1, _file );
+	fwrite( m_asm, sizeof(m_asm), 1, _file );
+	fwrite( &cache, sizeof(cache), 1, _file );
+
+	return true;
+}
+
+// _____________________________________________________________________________
+// load
+//
+bool DSP::load( FILE* _file )
+{
+	fread( &reg, sizeof(reg), 1, _file );
+	fread( &repRunning, 1, 1, _file );
+	fread( &tempLCforRep, 1, 1, _file );
+	fread( &pcLastExec, 1, 1, _file );
+	fread( m_asm, sizeof(m_asm), 1, _file );
+	fread( &cache, sizeof(cache), 1, _file );
+
+	return true;
+}
+
 }
