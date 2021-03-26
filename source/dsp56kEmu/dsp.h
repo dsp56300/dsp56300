@@ -629,41 +629,41 @@ namespace dsp56k
 
 		TReg24	x0				() const							{ return loword(reg.x); }
 		TReg24	x1				() const							{ return hiword(reg.x); }
-		void	x0				( TReg24 _val )						{ loword(reg.x,_val); }
-		void	x0				( TWord _val )						{ loword(reg.x,TReg24(_val)); }
-		void	x1				( TReg24 _val )						{ hiword(reg.x,_val); }
-		void	x1				( TWord _val )						{ hiword(reg.x,TReg24(_val)); }
+		void	x0				(const TReg24& _val)				{ loword(reg.x,_val); }
+		void	x0				(const TWord _val)					{ loword(reg.x,TReg24(_val)); }
+		void	x1				(const TReg24& _val)				{ hiword(reg.x,_val); }
+		void	x1				(const TWord _val)					{ hiword(reg.x,TReg24(_val)); }
 
 		// set signed fraction (store 8 bit data in the MSB of the register)
-		void	x0				( TReg8 _val )						{ x0(TReg24(_val.toWord()<<16)); }
-		void	x1				( TReg8 _val )						{ x1(TReg24(_val.toWord()<<16)); }
+		void	x0				(TReg8 _val)						{ x0(TReg24(_val.toWord()<<16)); }
+		void	x1				(TReg8 _val)						{ x1(TReg24(_val.toWord()<<16)); }
 
 		TReg24	y0				() const							{ return loword(reg.y); }
 		TReg24	y1				() const							{ return hiword(reg.y); }
-		void	y0				( TReg24 _val )						{ loword(reg.y,_val); }
-		void	y0				( TWord _val )						{ loword(reg.y,TReg24(_val)); }
-		void	y1				( TReg24 _val )						{ hiword(reg.y,_val); }
-		void	y1				( TWord _val )						{ hiword(reg.y,TReg24(_val)); }
+		void	y0				(const TReg24& _val)				{ loword(reg.y,_val); }
+		void	y0				(const TWord& _val)					{ loword(reg.y,TReg24(_val)); }
+		void	y1				(const TReg24& _val)				{ hiword(reg.y,_val); }
+		void	y1				(const TWord& _val)					{ hiword(reg.y,TReg24(_val)); }
 
 		// set signed fraction (store 8 bit data in the MSB of the register)
-		void	y0				( TReg8 _val )						{ y0(TReg24(_val.toWord()<<16)); }
-		void	y1				( TReg8 _val )						{ y1(TReg24(_val.toWord()<<16)); }
+		void	y0				(const TReg8& _val)					{ y0(TReg24(_val.toWord()<<16)); }
+		void	y1				(const TReg8& _val)					{ y1(TReg24(_val.toWord()<<16)); }
 
 		TReg24	a0				() const							{ return loword(reg.a); }
 		TReg24	a1				() const							{ return hiword(reg.a); }
 		TReg8	a2				() const							{ return extword(reg.a); }
 
-		void	a0				( TReg24 _val )						{ loword(reg.a,_val); }
-		void	a1				( TReg24 _val )						{ hiword(reg.a,_val); }
-		void	a2				( TReg8 _val )						{ extword(reg.a,_val); }
+		void	a0				(const TReg24& _val)				{ loword(reg.a,_val); }
+		void	a1				(const TReg24& _val)				{ hiword(reg.a,_val); }
+		void	a2				(const TReg8& _val)					{ extword(reg.a,_val); }
 
 		TReg24	b0				() const							{ return loword(reg.b); }
 		TReg24	b1				() const							{ return hiword(reg.b); }
 		TReg8	b2				() const							{ return extword(reg.b); }
 
-		void	b0				( TReg24 _val )						{ loword(reg.b,_val); }
-		void	b1				( TReg24 _val )						{ hiword(reg.b,_val); }
-		void	b2				( TReg8 _val )						{ extword(reg.b,_val); }
+		void	b0				(const TReg24& _val)				{ loword(reg.b,_val); }
+		void	b1				(const TReg24& _val)				{ hiword(reg.b,_val); }
+		void	b2				(const TReg8& _val)					{ extword(reg.b,_val); }
 
 		template<typename T> T getA()
 		{
