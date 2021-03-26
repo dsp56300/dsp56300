@@ -291,8 +291,8 @@ namespace dsp56k
 		void	decode_ddddd_pcr_write	( TWord _ddddd, TReg24 _val );
 
 		// Six-Bit Encoding for all on-chip registers
-		TReg24	decode_eeeeee_read		(TWord _eeeeee);
-		void	decode_eeeeee_write		(TWord _eeeeee, TReg24 _val);
+		TReg24	decode_dddddd_read		(TWord _dddddd);
+		void	decode_dddddd_write		(TWord _dddddd, TReg24 _val);
 
 		TReg24	decode_JJ_read			( TWord jj )
 		{
@@ -307,7 +307,7 @@ namespace dsp56k
 			return TReg24(0xbadbad);
 		}
 
-		TReg56 decode_JJJ_read( TWord jjj, bool _b ) const
+		TReg56 decode_JJJ_read_56( TWord jjj, bool _b ) const
 		{
 			TReg56 res;
 			switch( jjj )
@@ -327,18 +327,34 @@ namespace dsp56k
 			return res;
 		}
 
+		TReg24 decode_JJJ_read_24( TWord jjj, bool _b ) const
+		{
+			switch( jjj )
+			{
+			case 4: return x0();
+			case 5: return y0();
+			case 6: return x1();
+			case 7: return y1();
+			default:
+				assert( 0 && "unreachable, invalid JJJ value" );
+				return TReg24(0xbadbad);
+			}
+		}
+
 		void decode_JJJ_readwrite( TReg56& alu, TWord jjj, bool _b )
 		{
 			switch( jjj )
 			{
 			case 0:
 			case 1:	alu = _b ? reg.b : reg.a;	return;
-			case 2:	convert(alu,reg.x);			return;
-			case 3:	convert(alu,reg.y);			return;
-			case 4: convert(alu,x0());			return;
-			case 5: convert(alu,y0());			return;
-			case 6: convert(alu,x1());			return;
-			case 7: convert(alu,y1());			return;
+			case 2:	convert(alu,reg.x);		return;
+			case 3:	convert(alu,reg.y);		return;
+			case 4: convert(alu,x0());	return;
+			case 5: convert(alu,y0());	return;
+			case 6: convert(alu,x1());	return;
+			case 7: convert(alu,y1());	return;
+			default:
+				assert( 0 && "unreachable, invalid JJJ value" );
 			}
 		}
 

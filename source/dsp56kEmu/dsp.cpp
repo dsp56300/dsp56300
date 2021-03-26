@@ -279,7 +279,7 @@ namespace dsp56k
 			const TWord bit		= dbmfop&0x00001f;
 			const TWord dddddd	= (dbmfop&0x003f00)>>8;
 
-			const TReg24 tst = decode_eeeeee_read( dddddd );
+			const TReg24 tst = decode_dddddd_read( dddddd );
 
 			const int displacement = signextend<int,24>( fetchPC() );
 
@@ -340,7 +340,7 @@ namespace dsp56k
 			const TWord bit		= dbmfop&0x00001f;
 			const TWord dddddd	= (dbmfop&0x003f00)>>8;
 
-			TReg24 r = decode_eeeeee_read( dddddd );
+			TReg24 r = decode_dddddd_read( dddddd );
 
 			const int displacement = signextend<int,24>( fetchPC() );
 
@@ -545,7 +545,7 @@ namespace dsp56k
 
 			const TWord dddddd = ((dbmfop&0x003f00)>>8);
 
-			const TReg24 loopcount = decode_eeeeee_read( dddddd );
+			const TReg24 loopcount = decode_dddddd_read( dddddd );
 
 			exec_do( loopcount, addr );
 		}
@@ -582,7 +582,7 @@ namespace dsp56k
 		else if( (dbmf&0xffc000) == 0x06c000 && op == 0x10 )
 		{
 			const TWord dddddd	= (dbmfop&0x003f00)>>8;
-			const TReg24 lc		= decode_eeeeee_read( dddddd );
+			const TReg24 lc		= decode_dddddd_read( dddddd );
 			
 			const int displacement = signextend<int,24>(fetchPC());
 			exec_do( lc, reg.pc.var + displacement - 2 );
@@ -1562,7 +1562,7 @@ namespace dsp56k
 
 			const TWord addr = fetchPC();
 
-			if( !bittest( decode_eeeeee_read(dddddd), bit ) )
+			if( !bittest( decode_dddddd_read(dddddd), bit ) )
 				reg.pc.var = addr;
 		}
 
@@ -1627,7 +1627,7 @@ namespace dsp56k
 
 			const TWord addr	= fetchPC();
 
-			const TReg24 var	= decode_eeeeee_read( dddddd );
+			const TReg24 var	= decode_dddddd_read( dddddd );
 
 			if( bittest(var,bit) )
 			{
@@ -2250,7 +2250,7 @@ bool DSP::exec_move( TWord dbmfop, TWord dbmf, TWord op )
 	// MOVE S,X:(Rn + xxxx)
 	if( (dbmf&0xfff800) == 0x0a7000 && (op&0x80) == 0x80 )
 	{
-		const TWord ddddd	= (dbmfop&0x00003f);
+		const TWord DDDDDD	= (dbmfop&0x00003f);
 		const bool	write	= (dbmfop&0x000040) != 0;
 		const TWord rrr		= (dbmfop&0x000700)>>8;
 
@@ -2259,11 +2259,11 @@ bool DSP::exec_move( TWord dbmfop, TWord dbmf, TWord op )
 
 		if( write )
 		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( MemArea_X, ea )) );
+			decode_dddddd_write( DDDDDD, TReg24(memRead( MemArea_X, ea )) );
 		}
 		else
 		{
-			memWrite( MemArea_X, ea, decode_ddddd_read<TWord>( ddddd ) );
+			memWrite( MemArea_X, ea, decode_dddddd_read( DDDDDD ).var );
 		}
 	}
 
@@ -2383,9 +2383,9 @@ bool DSP::exec_move( TWord dbmfop, TWord dbmf, TWord op )
 		const TWord ddddd	= (dbmfop & 0x00001f);
 
 		if( write )
-			decode_ddddd_pcr_write( ddddd, decode_eeeeee_read( eeeeee ) );
+			decode_ddddd_pcr_write( ddddd, decode_dddddd_read( eeeeee ) );
 		else
-			decode_eeeeee_write( eeeeee, decode_ddddd_pcr_read( ddddd ) );
+			decode_dddddd_write( eeeeee, decode_ddddd_pcr_read( ddddd ) );
 	}
 
 	// MOVE(C) #xx,D1 - 0 0 0 0 0 1 0 1 i i i i i i i i 1 0 1 d d d d d
@@ -2412,11 +2412,11 @@ bool DSP::exec_move( TWord dbmfop, TWord dbmf, TWord op )
 		if( write )
 		{
 			assert( mmmrrr != 0x34 && "immediate data should not be allowed here" );
-			decode_eeeeee_write( dddddd, TReg24(memRead( MemArea_P, ea )) );
+			decode_dddddd_write( dddddd, TReg24(memRead( MemArea_P, ea )) );
 		}
 		else
 		{
-			memWrite( MemArea_P, ea, decode_eeeeee_read(dddddd).toWord() );
+			memWrite( MemArea_P, ea, decode_dddddd_read(dddddd).toWord() );
 		}
 	}
 
@@ -2507,9 +2507,9 @@ bool DSP::exec_move( TWord dbmfop, TWord dbmf, TWord op )
 		const bool	write	= (dbmfop & 0x008000) != 0;
 
 		if( write )
-			decode_eeeeee_write( dddddd, TReg24(memRead( area, addr )) );
+			decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
 		else
-			memWrite( area, addr, decode_eeeeee_read( dddddd ).toWord() );
+			memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
 	}
 
 	// MOVEP S,X:qq - 0 0 0 0 0 1 0 0 W 1 d d d d d d 1 q 0 q q q q q
@@ -2587,9 +2587,9 @@ void DSP::decode_ddddd_pcr_write( TWord _ddddd, TReg24 _val )
 // _____________________________________________________________________________
 // decode_eeeeee_read
 //
-dsp56k::TReg24 DSP::decode_eeeeee_read( TWord _eeeeee )
+dsp56k::TReg24 DSP::decode_dddddd_read( TWord _dddddd )
 {
-	switch( _eeeeee & 0x3f )
+	switch( _dddddd & 0x3f )
 	{
 		// 0001DD - 4 registers in data ALU
 	case 0x04:	return x0();
@@ -2661,11 +2661,11 @@ dsp56k::TReg24 DSP::decode_eeeeee_read( TWord _eeeeee )
 // _____________________________________________________________________________
 // decode_eeeeee_write
 //
-void DSP::decode_eeeeee_write( TWord _eeeeee, TReg24 _val )
+void DSP::decode_dddddd_write( TWord _dddddd, TReg24 _val )
 {
 	assert( (_val.var & 0xff000000) == 0 );
 
-	switch( _eeeeee & 0x3f )
+	switch( _dddddd & 0x3f )
 	{
 		// 0001DD - 4 registers in data ALU
 	case 0x04:	x0(_val);	return;
@@ -3017,7 +3017,7 @@ bool DSP::exec_bitmanip( TWord dbmfop, TWord dbmf, TWord op )
 		const TWord bit = (dbmfop&0x1f);
 		const TWord d = ((dbmfop&0x003f00) >> 8);
 
-		TReg24 val = decode_eeeeee_read(d);
+		TReg24 val = decode_dddddd_read(d);
 
 		if( (d & 0x3f) == 0x39 )	// is SR the destination?	
 		{
@@ -3028,7 +3028,7 @@ bool DSP::exec_bitmanip( TWord dbmfop, TWord dbmf, TWord op )
 			sr_toggle( SR_C, bittestandset( val, bit ) );
 		}
 
-		decode_eeeeee_write( d, val );
+		decode_dddddd_write( d, val );
 
 		sr_s_update();
 		sr_l_update_by_v();
@@ -3062,11 +3062,11 @@ bool DSP::exec_bitmanip( TWord dbmfop, TWord dbmf, TWord op )
 		const TWord		dddddd	= ((dbmfop&0x003f00)>>8);
 		const TWord		bit		= dbmfop&0x00001f;
 
-		TReg24			val		= decode_eeeeee_read( dddddd );
+		TReg24			val		= decode_dddddd_read( dddddd );
 
 		sr_toggle( SR_C, bittestandchange( val, bit ) );
 
-		decode_eeeeee_write( dddddd, val );
+		decode_dddddd_write( dddddd, val );
 
 		sr_s_update();
 		sr_l_update_by_v();
@@ -3112,10 +3112,10 @@ bool DSP::exec_bitmanip( TWord dbmfop, TWord dbmf, TWord op )
 		const TWord dddddd	= (dbmfop&0x003f00)>>8;
 
 		TWord val;
-		convert( val, decode_eeeeee_read( dddddd ) );
+		convert( val, decode_dddddd_read( dddddd ) );
 
 		const TWord newVal = alu_bclr( bit, val );
-		decode_eeeeee_write( dddddd, TReg24(newVal) );
+		decode_dddddd_write( dddddd, TReg24(newVal) );
 	}
 
 	// Bit Test
@@ -3169,7 +3169,7 @@ bool DSP::exec_bitmanip( TWord dbmfop, TWord dbmf, TWord op )
 		const TWord dddddd	= (dbmfop&0x003f00)>>8;
 		const TWord bit		= dbmfop&0x00001f;
 
-		TReg24 val = decode_eeeeee_read( dddddd );
+		TReg24 val = decode_dddddd_read( dddddd );
 
 		sr_toggle( SR_C, bittest( val.var, bit ) );
 	}
