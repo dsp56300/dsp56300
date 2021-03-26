@@ -2,15 +2,15 @@
 
 namespace dsp56k
 {
-	typedef unsigned char		TUInt8;
-	typedef unsigned short		TUInt16;
-	typedef unsigned int		TUInt32;
-	typedef int					TInt32;
-	typedef unsigned __int64	TUInt64;
-	typedef __int64				TInt64;
+	typedef uint8_t				TUInt8;
+	typedef uint16_t			TUInt16;
+	typedef uint32_t			TUInt32;
+	typedef int32_t				TInt32;
+	typedef uint64_t			TUInt64;
+	typedef int64_t				TInt64;
 
-	typedef unsigned int		TWord;
-	typedef unsigned __int64	TDWord;
+	typedef uint32_t			TWord;
+	typedef uint32_t			TDWord;
 
 	template<typename T,unsigned int B> struct RegType
 	{
@@ -23,8 +23,12 @@ namespace dsp56k
 
 		RegType() : var(0)													{}
 		RegType( const RegType<T,B>& _other ) : var(_other.var)				{}
+		RegType( RegType<T,B>&& _other ) noexcept : var(_other.var)			{}
 		template<typename TYPE> explicit RegType( const TYPE& _var )		{ convert(*this,_var); }
+//		template<typename TYPE> explicit RegType( const TYPE _var )			{ convert(*this,_var); }
 
+		~RegType() = default;
+		
 		bool operator ==			( const RegType<T,B>& _ref ) const		{ return var == _ref.var; }
 		bool operator ==			( const T& _ref ) const					{ return var == _ref; }
 
@@ -38,7 +42,19 @@ namespace dsp56k
 
 //		void operator &=			( const T& _ref )						{ var &= _ref; }
 
-		RegType<T,B>	operator - () const									{ return RegType<T,B>(-var); }
+//		RegType<T,B>	operator - () const									{ return RegType<T,B>(-var); }
+
+		RegType& operator = (const RegType& other)
+		{
+			var = other.var;
+			return *this;
+		}
+
+		RegType& operator = (RegType&& other) noexcept
+		{
+			var = other.var;
+			return *this;
+		}
 
 		template<typename D> D signextend() const
 		{
@@ -49,74 +65,74 @@ namespace dsp56k
 
 		TWord toWord() const
 		{
-			return TWord(var);
+			return static_cast<TWord>(var);
 		}
 
 		void doMasking()		{ var &= bitMask; }
 	};
 
-	typedef RegType<unsigned char,5>			TReg5;
-	typedef RegType<unsigned char,8>			TReg8;
-	typedef RegType<signed int,24>				TReg24;
-	typedef RegType<signed __int64,48>			TReg48;
-	typedef RegType<signed __int64,56>			TReg56;
+	typedef RegType<uint8_t,5>		TReg5;
+	typedef RegType<uint8_t,8>		TReg8;
+	typedef RegType<int32_t,24>		TReg24;
+	typedef RegType<int64_t,48>		TReg48;
+	typedef RegType<int64_t,56>		TReg56;
 
 	// required for stack
 // 	static void operator |=	( TReg24& _val, const TWord _mask )	{ _val.var |= _mask; }
 // 	static void operator &=	( TReg24& _val, const TWord _mask )	{ _val.var &= _mask; }
 
 	// 48 bit conversion (X/Y)
-	static TReg24 loword( const TReg48& _src ) 					{ return TReg24(int(_src.var & 0xffffff)); }
-	static TReg24 hiword( const TReg48& _src )					{ return TReg24(int((_src.var & 0xffffff000000) >> 24)); }
+	static TReg24 loword( const TReg48& _src ) 					{ return TReg24(static_cast<int32_t>(_src.var & 0xffffff)); }
+	static TReg24 hiword( const TReg48& _src )					{ return TReg24(static_cast<int32_t>((_src.var & 0xffffff000000) >> 24)); }
 
 	static void loword( TReg48& _dst, const TReg24& _src )		{ _dst.var = (_dst.var & 0xffffff000000) | _src.var; }
-	static void hiword( TReg48& _dst, const TReg24& _src )		{ _dst.var = (_dst.var & 0x000000ffffff) | (TReg48::MyType(_src.var&0xffffff)<<24); }
+	static void hiword( TReg48& _dst, const TReg24& _src )		{ _dst.var = (_dst.var & 0x000000ffffff) | (static_cast<TReg48::MyType>(_src.var & 0xffffff)<<24); }
 
 	// 56 bit conversion (accumulators A/B)
-	static TReg24 loword( const TReg56& _src ) 					{ return TReg24(int(_src.var & 0xffffff)); }
-	static TReg24 hiword( const TReg56& _src )					{ return TReg24(int((_src.var & 0xffffff000000) >> 24)); }
+	static TReg24 loword( const TReg56& _src ) 					{ return TReg24(static_cast<int32_t>(_src.var & 0xffffff)); }
+	static TReg24 hiword( const TReg56& _src )					{ return TReg24(static_cast<int32_t>((_src.var & 0xffffff000000) >> 24)); }
 
 	static void loword( TReg56& _dst, const TReg24& _src )		{ _dst.var = (_dst.var & 0xffffffff000000) | _src.var; }
-	static void hiword( TReg56& _dst, const TReg24& _src )		{ _dst.var = (_dst.var & 0xff000000ffffff) | (TReg56::MyType(_src.var&0xffffff)<<24); }
+	static void hiword( TReg56& _dst, const TReg24& _src )		{ _dst.var = (_dst.var & 0xff000000ffffff) | (static_cast<TReg56::MyType>(_src.var & 0xffffff)<<24); }
 
-	static TReg8 extword( const TReg56& _src )					{ return TReg8(char((_src.var>>48) & 0xff)); }
-	static void  extword( TReg56& _dst, const TReg8& _src )		{ _dst.var = (_dst.var & 0x00ffffffffffff) | (TReg56::MyType(_src.var&0xff)<<48); }
+	static TReg8 extword( const TReg56& _src )					{ return TReg8(static_cast<uint8_t>((_src.var >> 48) & 0xff)); }
+	static void  extword( TReg56& _dst, const TReg8& _src )		{ _dst.var = (_dst.var & 0x00ffffffffffff) | (static_cast<TReg56::MyType>(_src.var & 0xff)<<48); }
 
 	// SR/OMR conversion
-	static TReg8 byte0( const TReg24& _src )					{ return TReg8( (char)(_src.var & 0xff) ); }
-	static TReg8 byte1( const TReg24& _src )					{ return TReg8( (char)((_src.var & 0xff00)>>8) ); }
-	static TReg8 byte2( const TReg24& _src )					{ return TReg8( (char)((_src.var & 0xff0000)>>16) ); }
+	static TReg8 byte0( const TReg24& _src )					{ return TReg8( static_cast<uint8_t>(_src.var & 0xff) ); }
+	static TReg8 byte1( const TReg24& _src )					{ return TReg8( static_cast<uint8_t>((_src.var & 0xff00) >> 8) ); }
+	static TReg8 byte2( const TReg24& _src )					{ return TReg8( static_cast<uint8_t>((_src.var & 0xff0000) >> 16) ); }
 
-	static void byte0( TReg24& _dst, TReg8 _src )				{ _dst.var = (_dst.var & 0xffff00) | int(_src.var); }
-	static void byte1( TReg24& _dst, TReg8 _src )				{ _dst.var = (_dst.var & 0xff00ff) | (int(_src.var)<<8); }
-	static void byte2( TReg24& _dst, TReg8 _src )				{ _dst.var = (_dst.var & 0x00ffff) | (int(_src.var)<<16); }
+	static void byte0( TReg24& _dst, const TReg8& _src )		{ _dst.var = (_dst.var & 0xffff00) | static_cast<int32_t>(_src.var); }
+	static void byte1( TReg24& _dst, const TReg8& _src )		{ _dst.var = (_dst.var & 0xff00ff) | (static_cast<int32_t>(_src.var)<<8); }
+	static void byte2( TReg24& _dst, const TReg8& _src )		{ _dst.var = (_dst.var & 0x00ffff) | (static_cast<int32_t>(_src.var)<<16); }
 
 	// -----------------------
 
 	// Move to accumulator
-	static void convert( TReg56& _dst, TReg8 _src )				{ _dst.var = _src.signextend<TReg56::MyType>()<<40; }
-	static void convert( TReg56& _dst, TReg24 _src )			{ _dst.var = _src.signextend<TReg56::MyType>()<<24; }
-	static void convert( TReg56& _dst, const TReg48& _src )		{ _dst.var = _src.signextend<TReg56::MyType>(); }
-	static void convert( TReg56& _dst, const TWord& _src )		{ _dst.var = TReg56::MyType(_src)<<24; }
-	static void convert( TReg56& _dst, const TInt32& _src )		{ _dst.var = TReg56::MyType(_src)<<24; }
-	static void convert( TReg56& _dst, const TInt64& _src )		{ _dst.var = _src & TReg56::bitMask; }
-	static void convert( TReg56& _dst, const TUInt64& _src )	{ _dst.var = _src & TReg56::bitMask; }
+	static void convert( TReg56& _dst, const TReg8& _src )			{ _dst.var = _src.signextend<TReg56::MyType>()<<40; }
+	static void convert( TReg56& _dst, const TReg24& _src )			{ _dst.var = _src.signextend<TReg56::MyType>()<<24; }
+	static void convert( TReg56& _dst, const TReg48& _src )			{ _dst.var = _src.signextend<TReg56::MyType>(); }
+	static void convert( TReg56& _dst, const TWord& _src )			{ _dst.var = static_cast<TReg56::MyType>(_src)<<24; }
+	static void convert( TReg56& _dst, const TInt32& _src )			{ _dst.var = static_cast<TReg56::MyType>(_src)<<24; }
+	static void convert( TReg56& _dst, const TInt64& _src )			{ _dst.var = _src & TReg56::bitMask; }
+	static void convert( TReg56& _dst, const TUInt64& _src )		{ _dst.var = _src & TReg56::bitMask; }
 
 	// Move to 24-bit register
-	static void convert( TReg24& _dst, TReg8 _src )				{ _dst.var = _src.signextend<int>()&0x00ffffff; }
-	static void convert( TReg24& _dst, TReg24 _src )			{ _dst.var = _src.var; }
-	static void convert( TReg24& _dst, TWord _src )				{ _dst.var = _src; }
+	static void convert( TReg24& _dst, const TReg8& _src )			{ _dst.var = _src.signextend<int32_t>()&0x00ffffff; }
+	static void convert( TReg24& _dst, const TReg24& _src )			{ _dst.var = _src.var; }
+	static void convert( TReg24& _dst, const TWord _src )			{ _dst.var = _src; }
 
 	// Move to accumulator extension register
-	static void convert( TReg8& _dst, TReg8 _src )				{ _dst.var = _src.var; }
-	static void convert( TReg8& _dst, TReg24 _src )				{ _dst.var = (TReg8::MyType)(_src.var&TReg8::bitMask); }
-	static void convert( TReg8& _dst, TReg8::MyType _src )		{ _dst.var = _src&TReg8::bitMask; }
+	static void convert( TReg8& _dst, const TReg8& _src )			{ _dst.var = _src.var; }
+	static void convert( TReg8& _dst, const TReg24& _src )			{ _dst.var = static_cast<TReg8::MyType>(_src.var & TReg8::bitMask); }
+	static void convert( TReg8& _dst, const TReg8::MyType& _src )	{ _dst.var = _src & TReg8::bitMask; }
 
 	// Move to memory
-	static void convert( TWord& _dst, TReg24 _src )				{ _dst = _src.var; }
-	static void convert( TWord& _dst, TReg8 _src )				{ _dst = _src.var; }
+	static void convert( TWord& _dst, const TReg24& _src )			{ _dst = _src.var; }
+	static void convert( TWord& _dst, const TReg8& _src )			{ _dst = _src.var; }
 
-	static void convert( TReg5& _dst, TReg5::MyType _src )		{ _dst.var = _src & TReg5::bitMask; }
+	static void convert( TReg5& _dst, TReg5::MyType _src )			{ _dst.var = _src & TReg5::bitMask; }
 
 
 //	TReg56 operator & (const TReg56& a, const TReg56& b )	{ return TReg56(a.var & b.var); }
@@ -128,4 +144,6 @@ namespace dsp56k
 
 		MemArea_COUNT,
 	};
+
+	extern const char g_memAreaNames[MemArea_COUNT];
 }
