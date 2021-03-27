@@ -41,6 +41,9 @@ namespace dsp56k
 		bool saveState				( const char* _filename );
 		bool loadState				( const char* _filename );
 
+		bool saveState				( FILE* _file );
+		bool loadState				( FILE* _file );
+
 		void exec					();
 		void execUntilRTS			();
 

@@ -101,7 +101,32 @@ namespace dsp56k
 	//
 	bool Device::saveState( const char* _filename )
 	{
-		return false;
+		FILE* hFile = fopen( _filename, "wb" );
+		if( !hFile )
+		{
+			LOG( "Failed to save state to file " << _filename );
+			return false;
+		}
+		const bool ret = saveState( hFile );
+		fclose(hFile);
+		return ret;
+	}
+
+	// _____________________________________________________________________________
+	// saveState
+	//
+	bool Device::saveState( FILE* _file )
+	{
+		if( !m_memory->save(_file) )
+		{
+			LOG( "Failed to dump memory to file" );
+			return false;
+		}
+		if( !m_dsp->save(_file) )
+		{
+			LOG( "Failed to dump DSP to file" );
+		}
+		return true;
 	}
 
 	// _____________________________________________________________________________
@@ -162,10 +187,35 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// loadState
 	//
-//	bool Device::loadState( const char* _filename )
-//	{
-//		dsp_load( _filename, m_id, m_id );
-//	}
+	bool Device::loadState( const char* _filename )
+	{
+		FILE* hFile = fopen(_filename, "rb" );
+		if( !hFile )
+			return false;
+
+		loadState(hFile);
+		fclose(hFile);
+
+		return true;
+	}
+
+	// _____________________________________________________________________________
+	// loadState
+	//
+	bool Device::loadState( FILE* _file )
+	{
+		if( !m_memory->load(_file) )
+		{
+			LOG( "Failed to dump memory to file" );
+			return false;
+		}
+		if( !m_dsp->load(_file) )
+		{
+			LOG( "Failed to dump DSP to file" );
+		}
+		return true;
+	}
+
 	// _____________________________________________________________________________
 	// reset
 	//
