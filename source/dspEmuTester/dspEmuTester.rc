@@ -16,10 +16,8 @@
 // German (Germany) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_DEU)
-#ifdef _WIN32
 LANGUAGE LANG_GERMAN, SUBLANG_GERMAN
 #pragma code_page(1252)
-#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -148,7 +146,7 @@ BEGIN
     EDITTEXT        IDC_R_Y0,240,96,36,12,ES_AUTOHSCROLL | ES_READONLY
     EDITTEXT        IDC_R_Y1,204,96,36,12,ES_AUTOHSCROLL | ES_READONLY
     LTEXT           "PC",IDC_STATIC,180,108,12,12,SS_CENTERIMAGE
-    EDITTEXT        IDC_R_PC,240,108,36,12,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_R_PC,240,108,36,12,ES_AUTOHSCROLL
     LTEXT           "SR",IDC_STATIC,180,120,12,12,SS_CENTERIMAGE
     LTEXT           "OMR",IDC_STATIC,180,132,18,12,SS_CENTERIMAGE
     CONTROL         "Always Update",IDC_ALWAYSUPDATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,48,48,60,10
@@ -214,7 +212,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_DSPEMUTESTER_DIALOG, DIALOG
     BEGIN
@@ -232,11 +230,13 @@ END
 // Menu
 //
 
-IDR_MENU1 MENU 
+IDR_MENU1 MENU
 BEGIN
     POPUP "File"
     BEGIN
         MENUITEM "Load OMF...",                 ID_FILE_LOADOMF
+        MENUITEM "Save State...",               ID_FILE_SAVESTATE
+        MENUITEM "Load State...",               ID_FILE_LOADSTATE
     END
 END
 

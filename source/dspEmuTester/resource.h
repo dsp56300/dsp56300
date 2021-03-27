@@ -57,13 +57,15 @@
 #define IDC_R_LA                        1056
 #define IDC_R_ICTR                      1057
 #define ID_FILE_LOADOMF                 32771
+#define ID_FILE_SAVESTATE               32772
+#define ID_FILE_LOADSTATE               32773
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        130
-#define _APS_NEXT_COMMAND_VALUE         32772
+#define _APS_NEXT_COMMAND_VALUE         32774
 #define _APS_NEXT_CONTROL_VALUE         1020
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

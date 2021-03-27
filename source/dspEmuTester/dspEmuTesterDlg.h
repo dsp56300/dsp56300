@@ -2,10 +2,13 @@
 //
 
 #pragma once
+#include <atomic>
+#include <mutex>
+
 #include "afxwin.h"
 
 // CdspEmuTesterDlg dialog
-class CdspEmuTesterDlg : public CDialog, public ptypes::thread
+class CdspEmuTesterDlg : public CDialog
 {
 // Construction
 public:
@@ -94,8 +97,12 @@ public:
 
 	void onPostExecByTimer();
 
-	ptypes::trigger	m_triggerRun;
-	ptypes::trigger m_triggerPost;
+	std::atomic<bool>	m_triggerRun;
+	std::mutex m_triggerMutex;
+	std::condition_variable m_triggerPost;
+
+	std::atomic<bool> m_runThread;
+	std::unique_ptr<std::thread> m_thread;
 
 	afx_msg void OnBnClickedRununtil();
 	CString m_strRunUntilPC;
@@ -112,7 +119,7 @@ public:
 
 	void execOne();
 
-	ptypes::mutex m_lockDSP;
+	std::mutex m_lockDSP;
 	DWORD m_r_ictr;
 
 	SRegs m_regs;
@@ -121,4 +128,7 @@ public:
 	std::vector<std::string>	m_asm;
 
 	void updateListBox();
+	afx_msg void OnChangeRegPC();
+	afx_msg void OnFileLoadstate();
+	afx_msg void OnFileSavestate();
 };

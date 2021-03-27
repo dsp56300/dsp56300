@@ -4,6 +4,8 @@
 
 #pragma once
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #ifndef _SECURE_ATL
 #define _SECURE_ATL 1
 #endif
@@ -86,5 +88,3 @@
 #include "../dsp56kEmu/memory.h"
 
 using namespace dsp56k;	// blame me
-
-#include "../ptypes/include/pasync.h"

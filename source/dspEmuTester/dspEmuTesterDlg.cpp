@@ -6,24 +6,22 @@
 #include "dspEmuTesterDlg.h"
 
 #include "../dsp56kEmu/omfloader.h"
+#include "../dsp56kEmu/unittests.h"
 
 // CdspEmuTesterDlg dialog
 
-#define LOCKDSP		ptypes::scopelock sl(m_lockDSP)
-
+#define LOCKDSP		std::lock_guard<std::mutex> sl(m_lockDSP)
 
 CdspEmuTesterDlg::CdspEmuTesterDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CdspEmuTesterDlg::IDD, pParent)
-	, ptypes::thread(false)
-	, m_mem()
+	: CDialog(IDD, pParent)
 	, m_dsp(m_mem)
-	, m_alwaysUpdateRegs(TRUE)
-	, m_triggerRun(false,false)
-	, m_triggerPost(true,false)
 	, m_runUntilPC(-1)
+	, m_alwaysUpdateRegs(TRUE)
+	, m_triggerRun(false)
 	, m_strRunUntilPC(_T("0x4a7ff"))
 	, m_r_ictr(0)
 {
+	UnitTests tests;
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
@@ -102,6 +100,9 @@ BEGIN_MESSAGE_MAP(CdspEmuTesterDlg, CDialog)
 	ON_BN_CLICKED(IDC_REFRESHREGS, &CdspEmuTesterDlg::OnBnClickedRefreshregs)
 	ON_BN_CLICKED(IDC_ALWAYSUPDATE, &CdspEmuTesterDlg::OnBnClickedAlwaysupdate)
 	ON_BN_CLICKED(IDC_RUNUNTIL, &CdspEmuTesterDlg::OnBnClickedRununtil)
+	ON_EN_CHANGE(IDC_R_PC, &CdspEmuTesterDlg::OnChangeRegPC)
+	ON_COMMAND(ID_FILE_LOADSTATE, &CdspEmuTesterDlg::OnFileLoadstate)
+	ON_COMMAND(ID_FILE_SAVESTATE, &CdspEmuTesterDlg::OnFileSavestate)
 END_MESSAGE_MAP()
 
 
@@ -118,7 +119,11 @@ BOOL CdspEmuTesterDlg::OnInitDialog()
 
 	UpdateData(FALSE);
 
-	start();
+	m_thread.reset(new std::thread([&]
+	{
+		execute();
+	}));
+
 	updateRegs();
 
 //	loadOMF( "...lod" );
@@ -270,22 +275,22 @@ void CdspEmuTesterDlg::OnBnClickedRun()
 	m_runUntilPC.var = -1;
 
 	UpdateData();
-	m_triggerPost.signal();
-	m_triggerRun.signal();
+	m_triggerPost.notify_one();
+	m_triggerRun = true;
 }
 
 void CdspEmuTesterDlg::OnBnClickedRununtil()
 {
 	UpdateData(TRUE);
 
-	OnBnClickedRun();
-
 	parseHex( m_runUntilPC, m_strRunUntilPC );
+
+	OnBnClickedRun();
 }
 
 void CdspEmuTesterDlg::OnBnClickedStop()
 {
-	m_triggerRun.reset();
+	m_triggerRun = false;
 	updateRegs();
 	m_listASM.ResetContent();
 }
@@ -323,15 +328,22 @@ void CdspEmuTesterDlg::execute()
 {
 	::SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
 
-	while( !get_signaled() )
+	while( m_runThread )
 	{
-		m_triggerRun.wait();
-		m_triggerPost.wait();
+		if(!m_triggerRun)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			continue;
+		}
+
+		std::unique_lock<std::mutex> lk(m_triggerMutex);
+		m_triggerPost.wait(lk);
+
 		{
 			LOCKDSP;
 			if( m_runUntilPC == m_dsp.getPC() )
 			{
-				m_triggerRun.reset();
+				m_triggerRun = false;
 				m_dsp.readDebugRegs(m_regs);
 			}
 			else
@@ -356,7 +368,7 @@ BOOL CdspEmuTesterDlg::PreTranslateMessage( MSG* pMsg )
 	{
 	case WM_USER:
 		onPostExecByTimer();
-		m_triggerPost.signal();
+		m_triggerPost.notify_one();
 		break;
 	}
 	return __super::PreTranslateMessage(pMsg);
@@ -392,7 +404,7 @@ void CdspEmuTesterDlg::parseHex( TReg24& _dst, CString _src )
 
 	_src.Replace( "0x", "" );
 
-	sscanf_s( _src, "%x", &_dst );
+	sscanf_s( _src, "%x", &_dst.var );
 }
 // _____________________________________________________________________________
 // OnCancel
@@ -407,10 +419,14 @@ void CdspEmuTesterDlg::OnCancel()
 //
 void CdspEmuTesterDlg::endThread()
 {
-	signal();
-	m_triggerPost.signal();
-	m_triggerRun.signal();
-	waitfor();
+	if(!m_thread)
+		return;
+
+	m_runThread = false;
+	m_triggerPost.notify_one();
+	m_triggerRun = true;
+	m_thread->join();
+	m_thread.reset();
 }
 // _____________________________________________________________________________
 // loadOMF
@@ -420,12 +436,14 @@ void CdspEmuTesterDlg::loadOMF( const CString& _file )
 	CWaitCursor wc;
 
 	OMFLoader l;
-	l.load( _file, m_mem );
+	if( !l.load( _file, m_mem ) )
+		::AfxMessageBox( "Failed to load OMF" );
+
 	{
 		LOCKDSP;
 		m_dsp.resetHW();
-		m_dsp.setPC( TReg24(0x04C4E7) );
-		m_dsp.setPC( TReg24(0x4b16d) );
+			
+		m_dsp.setPC( TReg24(0x10000) );
 		m_dsp.readDebugRegs(m_regs);
 	}
 	m_pcHistory.clear();
@@ -444,7 +462,7 @@ void CdspEmuTesterDlg::execOne()
 	char ass[256];
 	sprintf_s( ass, 255, "%06x: %s", m_dsp.getPC().toWord(), m_dsp.getASM() );
 
-	m_asm.push_back( std::string(ass) );
+	m_asm.emplace_back(ass);
 }
 // _____________________________________________________________________________
 // updateListBox
@@ -461,4 +479,71 @@ void CdspEmuTesterDlg::updateListBox()
 	for( size_t i=0; i<myAsm.size(); ++i )
 		m_listASM.AddString( CString(myAsm[i].c_str()) );
 	m_listASM.SetCurSel( m_listASM.GetCount() - 1 );
+}
+
+void CdspEmuTesterDlg::OnChangeRegPC()
+{
+	UpdateData(TRUE);
+	LOG( "OnChangeRegPC " << m_r_pc );
+
+	TReg24 pcreg;
+
+	parseHex( pcreg, m_r_pc );
+
+	if( pcreg.var > 0 && pcreg.var < 0xffffff )
+	{
+		LOCKDSP;
+		m_dsp.setPC( pcreg );
+	}
+}
+
+
+void CdspEmuTesterDlg::OnFileLoadstate()
+{
+	CFileDialog dlg( FALSE, "dmp", "state.dmp", OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_ENABLESIZING );
+
+	if( dlg.DoModal() == IDOK )
+	{
+		FILE* hFile = fopen( dlg.GetPathName(), "rb" );
+		if( !hFile )
+			AfxMessageBox("Failed to open file");
+		else
+		{
+			{
+				LOCKDSP;
+				m_mem.load(hFile);
+				m_dsp.load(hFile);
+
+				m_dsp.readDebugRegs(m_regs);
+			}
+
+			m_pcHistory.clear();
+			updateRegs();
+
+			fclose(hFile);
+		}
+	}
+}
+
+
+void CdspEmuTesterDlg::OnFileSavestate()
+{
+	CFileDialog dlg( FALSE, "dmp", "state.dmp", OFN_PATHMUSTEXIST | OFN_ENABLESIZING );
+
+	if( dlg.DoModal() == IDOK )
+	{
+		FILE* hFile = fopen( dlg.GetPathName(), "wb" );
+		if( !hFile )
+			AfxMessageBox("Failed to create file");
+		else
+		{
+			{
+				LOCKDSP;
+				m_mem.save(hFile);
+				m_dsp.save(hFile);
+			}
+			
+			fclose(hFile);
+		}
+	}
 }
