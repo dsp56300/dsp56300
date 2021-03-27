@@ -10,9 +10,12 @@
 namespace dsp56k
 {
 	class Memory;
+	class UnitTests;
 
 	class DSP
 	{
+		friend class UnitTests;
+
 		// _____________________________________________________________________________
 		// types
 		//
