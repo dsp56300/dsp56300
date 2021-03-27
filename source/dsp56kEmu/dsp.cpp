@@ -9,8 +9,9 @@
 #include "error.h"
 #include "agu.h"
 #include "disasm.h"
+#include "opcodes.h"
 
-#if 1
+#if 0
 #	define LOGSC(F)	logSC(F)
 #else
 #	define LOGSC(F)	{}
@@ -25,15 +26,16 @@
 namespace dsp56k
 {
 	static bool g_dumpPC = true;
-	static const TWord g_dumpPCictrMin = 0x153000;
+//	static const TWord g_dumpPCictrMin = 0x153000;
+	static const TWord g_dumpPCictrMin = 0xc0000;
 
 	// _____________________________________________________________________________
 	// DSP
 	//
 	DSP::DSP( Memory& _memory ) : mem(_memory)
 		, pcLastExec(0xffffff)
-		, essi(*this,_memory)
 		, repRunning(false)
+		, essi(*this,_memory)
 	{
 		mem.setDSP(this);
 
@@ -62,7 +64,7 @@ namespace dsp56k
 		reg.sp = TReg24(int(0));
 		reg.sc = TReg5(char(0));
 
-		reg.sz.var = 0xbadbad;
+		reg.sz.var = 0xbadbad; // The SZ register is not initialized during hardware reset, and must be set, using a MOVEC instruction, prior to enabling the stack extension.
 
 		const TWord srClear	= SR_RM | SR_SM | SR_CE | SR_SA | SR_FV | SR_LF | SR_DM | SR_SC | SR_S0 | SR_S1 | 0xf;
 		const TWord srSet		= SR_CP0 | SR_CP1 | SR_I0 | SR_I1;
@@ -89,19 +91,10 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// exec
 	//
-
-#define BIN8(B7,B6,B5,B4,B3,B2,B1,B0)									( (B7<<7) | (B6<<6) | (B5<<5) | (B4<<4) | (B3<<3) | (B2<<2) | (B1<<1) | (B0) )
-#define CHECKOP(M7,M6,M5,M4,M3,M2,M1,M0, OP, B7,B6,B5,B4,B3,B2,B1,B0)	((OP & BIN8(M7,M6,M5,M4,M3,M2,M1,M0)) == BIN8(B7,B6,B5,B4,B3,B2,B1,B0))
-
 	void DSP::exec()
 	{
-		if( reg.pc.var == 0x04b07a )
-		{
-			int d=0;
-		}
-
 		// we do not support 16-bit compatibility mode
-		assert( (reg.sr.var & SR_SC) == 0 );
+		assert( (reg.sr.var & SR_SC) == 0 && "16 bit compatibility mode is not supported");
 
 		essi.exec();
 
@@ -109,7 +102,16 @@ namespace dsp56k
 		getASM();
 
 		if( g_dumpPC && pcLastExec != reg.pc.toWord() && reg.ictr.var >= g_dumpPCictrMin )
-			LOG( "EXEC @ " << std::hex << reg.pc.toWord() << " ictr = " << reg.ictr.var << " asm = " << m_asm );
+		{
+			std::stringstream ssout;
+
+			for( int i=0; i<reg.sc.var; ++i )
+				ssout << "\t";
+
+			ssout << "EXEC @ " << std::hex << reg.pc.toWord() << " asm = " << m_asm;
+
+			LOGF( ssout.str() );
+		}
 
 #else
 		m_asm[0] = 0;
@@ -118,23 +120,459 @@ namespace dsp56k
 		pcLastExec = reg.pc.toWord();
 
 		// next instruction word
-		const TWord dbmfop			= fetchPC();
+		const TWord op = fetchPC();
 
-		// opcode
-		const TWord op				= dbmfop & 0x0000ff;
-
-		// data bus movement field
-		const TWord dbmf			= dbmfop & 0xffff00;
-
-		// ---- parallel arithmetic instructions come first ----
-
-		if( !dbmfop )
+		if( !op )
 		{
 #ifdef _DEBUG
 //			LOG( "nop" );
 #endif
 		}
-		else if( exec_operand_8bits(dbmfop,dbmf,op) )
+		// non-parallel instruction
+		else if(Opcodes::isNonParallelOpcode(op))
+		{
+			const auto* oi = m_opcodes.findNonParallelOpcodeInfo(op);
+			if(!oi)
+			{
+				m_opcodes.findNonParallelOpcodeInfo(op);	// retry here to help debugging
+				assert(0 && "illegal instruction");
+			}
+
+			if(!exec_nonParallel(oi, op))
+				assert( 0 && "illegal instruction" );
+		}
+		else if( !exec_parallel(op))
+		{
+			exec_parallel(op);	// retry to debug
+			assert( 0 && "illegal instruction" );
+		}
+
+		if( reg.ictr.var >= g_dumpPCictrMin )
+		{
+			for( size_t i=0; i<Reg_COUNT; ++i )
+			{
+				if( i == Reg_PC || i == Reg_ICTR )
+					continue;
+
+				signed __int64 regVal = 0;
+				const bool r = readRegToInt( (EReg)i, regVal );
+
+				if( !r )
+					continue;
+	//			assert( r && "failed to read register" );
+
+				if( regVal != m_prevRegStates[i].val )
+				{
+					SRegChange regChange;
+					regChange.reg = (EReg)i;
+					regChange.valOld.var = (int)m_prevRegStates[i].val;
+					regChange.valNew.var = (int)regVal;
+					regChange.pc = pcLastExec;
+					regChange.ictr = reg.ictr.var;
+
+					m_regChanges.push_back( regChange );
+
+					LOGF( "Reg " << g_regNames[i] << " changed @ " << std::hex << regChange.pc << ", ictr " << regChange.ictr << ", old " << std::hex << regChange.valOld.var << ", new " << regChange.valNew.var );
+
+					m_prevRegStates[i].val = regVal;
+				}
+			}
+		}
+
+		++reg.ictr.var;
+	}
+
+	bool DSP::exec_parallel(TWord op)
+	{
+		const auto* oi = m_opcodes.findParallelMoveOpcodeInfo(op & 0xffff00);
+
+		switch (oi->getInstruction())
+		{
+		case OpcodeInfo::Ifcc:
+		case OpcodeInfo::Ifcc_U:
+			{
+				const auto cccc = oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
+				if( !decode_cccc( cccc ) )
+					return true;
+
+				const auto backupCCR = ccr();
+				const auto res = exec_parallel_alu(op);
+				if(oi->getInstruction() == OpcodeInfo::Ifcc)
+					ccr(backupCCR);
+				return res;
+			}
+		case OpcodeInfo::Move_Nop:
+			return exec_parallel_alu(op);
+		default:
+			// simulate latches registers for parallel instructions
+			const auto preMoveX = reg.x;
+			const auto preMoveY = reg.y;
+			const auto preMoveA = reg.a;
+			const auto preMoveB = reg.b;
+
+			auto res = exec_parallel_move(oi, op);
+
+			const auto postMoveX = reg.x;
+			const auto postMoveY = reg.y;
+			const auto postMoveA = reg.a;
+			const auto postMoveB = reg.b;
+
+			// restore previous state for the ALU to process them
+			reg.x = preMoveX;
+			reg.y = preMoveY;
+			reg.a = preMoveA;
+			reg.b = preMoveB;
+
+			res |= exec_parallel_alu(op);//(exec_arithmetic_parallel(dbmfop,dbmf,op) || exec_logical_parallel(dbmfop,dbmf,op));
+
+			// now check what has changed and get the final values for all registers
+			if( postMoveX != preMoveX )
+			{
+				assert( preMoveX == reg.x && "ALU changed a register at the same time the MOVE command changed it!" );
+				reg.x = postMoveX;
+			}
+			else if( reg.x != preMoveX )
+			{
+				assert( preMoveX == postMoveX && "ALU changed a register at the same time the MOVE command changed it!" );
+			}
+
+			if( postMoveY != preMoveY )
+			{
+				assert( preMoveY == reg.y && "ALU changed a register at the same time the MOVE command changed it!" );
+				reg.y = postMoveY;
+			}
+			else if( reg.y != preMoveY )
+			{
+				assert( preMoveY == postMoveY && "ALU changed a register at the same time the MOVE command changed it!" );
+			}
+
+			if( postMoveA != preMoveA )
+			{
+				assert( preMoveA == reg.a && "ALU changed a register at the same time the MOVE command changed it!" );
+				reg.a = postMoveA;
+			}
+			else if( reg.a != preMoveA )
+			{
+				assert( preMoveA == postMoveA && "ALU changed a register at the same time the MOVE command changed it!" );
+			}
+
+			if( postMoveB != preMoveB )
+			{
+				assert( preMoveB == reg.b && "ALU changed a register at the same time the MOVE command changed it!" );
+				reg.b = postMoveB;
+			}
+			else if( reg.b != preMoveB )
+			{
+				assert( preMoveB == postMoveB && "ALU changed a register at the same time the MOVE command changed it!" );
+			}
+
+			return res;
+		}
+	}
+
+	bool DSP::exec_parallel_alu(TWord op)
+	{
+		const auto* opInfo = m_opcodes.findParallelAluOpcodeInfo(op);
+
+		op &= 0xff;
+
+		switch(op>>7)
+		{
+		case 0:
+			return exec_parallel_alu_nonMultiply(op);
+		case 1:
+			return exec_parallel_alu_multiply(op);
+		default:
+			assert(0 && "invalid op");
+			return false;
+		}
+	}
+
+	bool DSP::exec_parallel_alu_nonMultiply(TWord op)
+	{
+		const auto kkk = op & 0x7;
+		const auto D = (op>>3) & 0x1;
+		const auto JJJ = (op>>4) & 0x7;
+
+		if(!JJJ && !kkk)
+			return true;	// TODO: docs say "MOVE" does it mean no ALU op?
+
+		if(!kkk)
+		{
+			alu_add(D, decode_JJJ_read_56(JJJ, !D));
+			return true;
+		}
+
+		if(kkk == 4)
+		{
+			alu_sub(D, decode_JJJ_read_56(JJJ, !D));
+			return true;
+		}
+
+		if(JJJ >= 4)
+		{
+			switch (kkk)
+			{
+			case 1:		alu_tfr(D, decode_JJJ_read_56(JJJ, !D));			return true;
+			case 2:		alu_or(D, decode_JJJ_read_24(JJJ, !D).var);			return true;
+			case 3:		LOG_ERR_NOTIMPLEMENTED("eor");						return true;	// alu_eor(D, decode_JJJ_read_24(JJJ, !D).var);
+			case 5:		alu_cmp(D, decode_JJJ_read_56(JJJ, !D), false);		return true;
+			case 6:		alu_and(D, decode_JJJ_read_24(JJJ, !D).var);		return true;
+			case 7:		alu_cmp(D, decode_JJJ_read_56(JJJ, !D), true);		return true;
+			}
+		}
+
+		switch (JJJ)
+		{
+		case 0:
+			switch (kkk)
+			{
+			case 1:		alu_tfr(D, decode_JJJ_read_56(JJJ, !D));			return true;
+			case 2:		alu_addr(D);										return true;
+			case 3:		alu_tst(D);											return true;
+			case 5:		alu_cmp(D, D ? reg.a : reg.b, false);				return true;
+			case 6:		LOG_ERR_NOTIMPLEMENTED("addr");						return true;	// alu_subr
+			case 7:		alu_cmp(D, D ? reg.a : reg.b, true);				return true;
+			}
+		case 1:
+			switch (kkk)
+			{
+			case 1:		alu_rnd(D);								return true;
+			case 2:		alu_addl(D);							return true;
+			case 3:		alu_clr(D);								return true;
+			case 6:		LOG_ERR_NOTIMPLEMENTED("subl");			return true;	// alu_subl
+			case 7:		LOG_ERR_NOTIMPLEMENTED("not");			return true;	// alu_not
+			}
+			break;
+		case 2:
+			switch (kkk)
+			{
+			case 2:		alu_asr(D, !D, 1);						return true;
+			case 3:		alu_lsr(D, 1);							return true;
+			case 6:		alu_abs(D);								return true;
+			case 7:		LOG_ERR_NOTIMPLEMENTED("ror");			return true;	// alu_ror
+			}
+			break;
+		case 3:
+			switch (kkk)
+			{
+			case 2:		alu_asl(D, !D, 1);						return true;
+			case 3:		alu_lsl(D, 1);							return true;
+			case 6:		alu_neg(D);								return true;
+			case 7:		LOG_ERR_NOTIMPLEMENTED("rol");			return true;	// alu_rol
+			}
+			break;
+		case 4:
+		case 5:
+			switch (kkk)
+			{
+			case 1:		LOG_ERR_NOTIMPLEMENTED("adc");			return true;	// alu_adc
+			case 5:		LOG_ERR_NOTIMPLEMENTED("sbc");			return true;	// alu_sbc
+			}
+		}
+		return false;
+	}
+
+	bool DSP::exec_parallel_alu_multiply(TWord op)
+	{
+		const auto round = op & 0x1;			// TODO: rounding
+		const auto mulAcc = (op>>1) & 0x1;
+		const auto negative = (op>>2) & 0x1;
+		const auto ab = (op>>3) & 0x1;
+		const auto qqq = (op>>4) & 0x7;
+
+		TReg24 s1, s2;
+
+		decode_QQQ_read(s1, s2, qqq);
+
+		// TODO: ccr
+		alu_mpy(ab, s1, s2, negative, mulAcc);
+		if(round)
+		{
+			alu_rnd(ab);			
+		}
+
+		return true;
+	}
+
+	// _____________________________________________________________________________
+	// exec_parallel_move
+	//
+	bool DSP::exec_parallel_move(const OpcodeInfo* oi, const TWord op)
+	{
+		switch (oi->m_instruction)
+		{
+		case OpcodeInfo::Ifcc:
+			LOG_ERR_NOTIMPLEMENTED("IFcc");
+			return true;
+		case OpcodeInfo::Ifcc_U: 
+			LOG_ERR_NOTIMPLEMENTED("IFcc.u");
+			return true;
+		case OpcodeInfo::Move_Nop:		// NO parallel data move
+			return true;
+		case OpcodeInfo::Move_xx:		// (...) #xx,D - Immediate Short Data Move - 001dddddiiiiiiii
+			{
+				const TWord ddddd = oi->getFieldValue(OpcodeInfo::Field_ddddd, op);
+				const TReg8 iiiiiiii = TReg8(static_cast<uint8_t>(oi->getFieldValue(OpcodeInfo::Field_iiiiiiii, op)));
+
+				decode_ddddd_write(ddddd, iiiiiiii);
+			}
+			return true;
+		case OpcodeInfo::Mover:
+			{
+				const auto eeeee = oi->getFieldValue(OpcodeInfo::Field_eeeee, op);
+				const auto ddddd = oi->getFieldValue(OpcodeInfo::Field_ddddd, op);
+
+				// TODO: we need to determine the two register types and call different template versions of read and write
+				decode_ddddd_write<TReg24>( ddddd, decode_ddddd_read<TReg24>( eeeee ) );
+			}
+			return true;
+		case OpcodeInfo::Move_ea:						// does not move but updates r[x]
+			{
+				const TWord mmrrr = oi->getFieldValue(OpcodeInfo::Field_MM, OpcodeInfo::Field_RRR, op);
+				decode_MMMRRR_read( mmrrr );
+			}
+			return true;
+		case OpcodeInfo::Movex_ea:		// (...) X:ea<>D - 01dd0ddd W1MMMRRR			X Memory Data Move
+		case OpcodeInfo::Movey_ea:		// (...) Y:ea<>D - 01dd1ddd W1MMMRRR			Y Memory Data Move
+			{
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_dd, OpcodeInfo::Field_ddd, op);
+				const TWord write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+				exec_move_ddddd_MMMRRR( ddddd, mmmrrr, write, oi->getInstruction() == OpcodeInfo::Movex_ea ? MemArea_X : MemArea_Y );
+			}
+			return true;
+		case OpcodeInfo::Movex_aa: 
+			LOG_ERR_NOTIMPLEMENTED("Movex_aa");
+			return true;
+		case OpcodeInfo::Movexr_ea:		// X Memory and Register Data Move		(...) X:ea,D1 S2,D2 - 0001ffdF W0MMMRRR
+			{
+				const TWord F		= oi->getFieldValue(OpcodeInfo::Field_F, op);	// true:Y1, false:Y0
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const TWord ff		= oi->getFieldValue(OpcodeInfo::Field_ff, op);
+				const TWord write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+				const TWord d		= oi->getFieldValue(OpcodeInfo::Field_d, op);
+
+				// S2 D2 move
+				const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
+				if(F)		y1(ab);
+				else		y0(ab);
+
+				// S1/D1 move
+				if( write )
+				{
+					decode_ff_write( ff, TReg24(decode_MMMRRR_read(mmmrrr)) );
+				}
+				else
+				{
+					const auto ea = decode_MMMRRR_read(mmmrrr);
+					memWrite( MemArea_X, ea, decode_ff_read(ff).toWord());
+				}
+			}
+			return true;
+		case OpcodeInfo::Movexr_A: 
+			LOG_ERR_NOTIMPLEMENTED("Movexr_A");
+			return true;
+		case OpcodeInfo::Movey_aa: 
+			LOG_ERR_NOTIMPLEMENTED("Movey_aa");
+			return true;
+		case OpcodeInfo::Moveyr_ea:			// Register and Y Memory Data Move - (...) S1,D1 Y:ea,D2 - 0001deff W1MMMRRR
+			{
+				const bool e		= oi->getFieldValue(OpcodeInfo::Field_e, op);	// true:X1, false:X0
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const TWord ff		= oi->getFieldValue(OpcodeInfo::Field_ff, op);
+				const bool write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+				const bool d		= oi->getFieldValue(OpcodeInfo::Field_d, op);
+
+				// S2 D2 move
+				const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
+				if( e )		x1(ab);
+				else		x0(ab);
+
+				// S1/D1 move
+
+				if( write )
+				{
+					if( mmmrrr == 0x34 )
+						decode_ff_write( ff, TReg24(fetchPC()) );
+					else
+						decode_ff_write( ff, TReg24(decode_MMMRRR_read(mmmrrr)) );
+				}
+				else
+				{
+					const TWord ea = decode_MMMRRR_read(mmmrrr);
+					memWrite( MemArea_Y, ea, decode_ff_read( ff ).toWord() );
+				}
+			}
+			return true;
+		case OpcodeInfo::Moveyr_A:
+			// TODO: take care on ordering for instructions such as "move #>$4cd49,a a,y0", is a moved to y first and THEN overwritten?
+			LOG_ERR_NOTIMPLEMENTED("MOVE YR A");
+			return true;
+		case OpcodeInfo::Movel_ea:				// Long Memory Data Move - 0100L0LLW1MMMRRR
+			{
+				const auto LLL		= oi->getFieldValue(OpcodeInfo::Field_L, OpcodeInfo::Field_LL, op);
+				const auto mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+				const TWord ea = decode_MMMRRR_read(mmmrrr);
+
+				if( write )
+				{
+					const TReg24 x( memRead( MemArea_X, ea ) );
+					const TReg24 y( memRead( MemArea_Y, ea ) );
+
+					decode_LLL_write( LLL, x,y );
+				}
+				else
+				{
+					TWord x,y;
+
+					decode_LLL_read( LLL, x, y );
+
+					memWrite( MemArea_X, ea, x );
+					memWrite( MemArea_Y, ea, y );
+				}
+			}
+			return true;
+		case OpcodeInfo::Movel_aa: 
+			LOG_ERR_NOTIMPLEMENTED("MOVE L aa");
+			return true;
+		case OpcodeInfo::Movexy:					// XY Memory Data Move - 1wmmeeff WrrMMRRR
+			{
+				const TWord mmrrr	= oi->getFieldValue(OpcodeInfo::Field_MM, OpcodeInfo::Field_RRR, op);
+				const TWord mmrr	= oi->getFieldValue(OpcodeInfo::Field_mm, OpcodeInfo::Field_rr, op);
+				const TWord writeX	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+				const TWord	writeY	= oi->getFieldValue(OpcodeInfo::Field_w, op);
+				const TWord	ee		= oi->getFieldValue(OpcodeInfo::Field_ee, op);
+				const TWord ff		= oi->getFieldValue(OpcodeInfo::Field_ff, op);
+
+				// X
+				const TWord eaX = decode_XMove_MMRRR( mmrrr );
+				if( writeX )	decode_ee_write( ee, TReg24(memRead( MemArea_X, eaX )) );
+				else			memWrite( MemArea_X, eaX, decode_ee_read( ee ).toWord() );
+
+				// Y
+				const TWord regIdxOffset = ((mmrrr&0x7) >= 4) ? 0 : 4;
+
+				const TWord eaY = decode_YMove_mmrr( mmrr, regIdxOffset );
+				if( writeY )	decode_ff_write( ff, TReg24(memRead( MemArea_Y, eaY )) );
+				else			memWrite( MemArea_Y, eaY, decode_ff_read( ff ).toWord() );
+			}
+			return true;
+		default:
+			return false;
+		}
+	}
+	
+	inline bool DSP::exec_nonParallel(const OpcodeInfo* oi, TWord op)
+	{
+		const auto dbmfop = op;
+		const auto dbmf = op & 0xffff00;
+		op &= 0xff;
+
+		if( exec_operand_8bits(dbmf,op) )
 		{
 		}
 		else if( exec_move(dbmfop,dbmf,op) )
@@ -901,338 +1339,7 @@ namespace dsp56k
 		{
 			LOG_ERR_NOTIMPLEMENTED("VSL");
 		}
-
 		else
-		{
-			// simulate latches registers for parallel instructions
-			const TReg48 preMoveX = reg.x;
-			const TReg48 preMoveY = reg.y;
-			const TReg56 preMoveA = reg.a;
-			const TReg56 preMoveB = reg.b;
-
-			bool res = exec_parallel_move(dbmfop,dbmf,op);
-
-			const TReg48 postMoveX = reg.x;
-			const TReg48 postMoveY = reg.y;
-			const TReg56 postMoveA = reg.a;
-			const TReg56 postMoveB = reg.b;
-
-			// restore previous state for the ALU to process them
-
-			reg.x = preMoveX;
-			reg.y = preMoveY;
-			reg.a = preMoveA;
-			reg.b = preMoveB;
-
-			res |= (exec_arithmetic_parallel(dbmfop,dbmf,op) || exec_logical_parallel(dbmfop,dbmf,op));
-
-			// now check what has changed and get the final values for all registers
-			if( postMoveX != preMoveX )
-			{
-				assert( preMoveX == reg.x && "ALU changed a register at the same time the MOVE command changed it!" );
-				reg.x = postMoveX;
-			}
-			else if( reg.x != preMoveX )
-			{
-				assert( preMoveX == postMoveX && "ALU changed a register at the same time the MOVE command changed it!" );
-			}
-
-			if( postMoveY != preMoveY )
-			{
-				assert( preMoveY == reg.y && "ALU changed a register at the same time the MOVE command changed it!" );
-				reg.y = postMoveY;
-			}
-			else if( reg.y != preMoveY )
-			{
-				assert( preMoveY == postMoveY && "ALU changed a register at the same time the MOVE command changed it!" );
-			}
-
-			if( postMoveA != preMoveA )
-			{
-				assert( preMoveA == reg.a && "ALU changed a register at the same time the MOVE command changed it!" );
-				reg.a = postMoveA;
-			}
-			else if( reg.a != preMoveA )
-			{
-				assert( preMoveA == postMoveA && "ALU changed a register at the same time the MOVE command changed it!" );
-			}
-
-			if( postMoveB != preMoveB )
-			{
-				assert( preMoveB == reg.b && "ALU changed a register at the same time the MOVE command changed it!" );
-				reg.b = postMoveB;
-			}
-			else if( reg.b != preMoveB )
-			{
-				assert( preMoveB == postMoveB && "ALU changed a register at the same time the MOVE command changed it!" );
-			}
-
-			if( !res )
-			{
-				assert( 0 && "illegal instruction" );
-				return;
-			}
-		}
-		++reg.ictr.var;
-	}
-	// _____________________________________________________________________________
-	// exec_parallel_move
-	//
-	bool DSP::exec_parallel_move( TWord dbmfop, TWord dbmf, TWord op )
-	{
-		// NO Parallel Data Move
-		if( (dbmf&0xffff00) == 0x200000 )
-		{
-			return true;
-		}
-
-		// ( . . . ) ea - Address Register Update - 00100000 010MMRRR
-		if( (dbmf&0xffe000) == 0x204000 )
-		{
-			// does not move but updates r[x]
-			const TWord mmrrr = (dbmfop&0x001f00)>>8;
-			decode_MMMRRR_read( mmrrr );
-		}
-
-		// ( . . . ) S,D - Register-to-Register Data Move - 0 0 1 0 0 0 e e e e e d d d d d
-		else if( (dbmf&0xfc0000) == 0x200000 )
-		{
-			const TWord eeeee = (dbmfop&0x03e000)>>13;
-			const TWord ddddd = (dbmfop&0x01f00)>>8;
-
-			// TODO: determine destination register type first before reading source
-			decode_ddddd_write<TReg24>( ddddd, decode_ddddd_read<TReg24>( eeeee ) );
-		}
-
-		// ( . . . ) #xx,D - Immediate Short Data Move - 0 0 1 d d d d d i i i i i i i i
-		else if( (dbmf&0xe00000) == 0x200000 )
-		{
-			const TWord ddddd = (dbmf&0x1f0000)>>16;
-			const TReg8 s = TReg8(char((dbmf&0x00ff00)>>8));
-
-			switch( ddddd )
-			{
-			case 0x04:	x0(s);									break;	// x0
-			case 0x05:	x1(s);									break;	// x1	
-			case 0x06:	y0(s);									break;	// y0
-			case 0x07:	y1(s);									break;	// y1
-			case 0x08:	{ a0(TReg24(TReg24::MyType(s.var))); }	break;	// a0
-			case 0x09:	{ b0(TReg24(TReg24::MyType(s.var))); }	break;	// b0
-			case 0x0a:	{ a2(s); }								break;	// a2
-			case 0x0b:	{ b2(s); }								break;	// b2
-			case 0x0c:	{ b1(TReg24(TReg24::MyType(s.var))); }	break;	// a1
-			case 0x0d:	{ b1(TReg24(TReg24::MyType(s.var))); }	break;	// b1
-			case 0x0e:	convert(reg.a,s);						break;	// a
-			case 0x0f:	convert(reg.b,s);						break;	// b
-			default:
-				if( (ddddd & 0x18) == 0x10 )									// r0-r7
-				{
-					reg.r[ddddd&0x07].var = s.var;
-				}
-				else if( (ddddd & 0x18) == 0x18 )								// n0-n7
-				{
-					reg.n[ddddd&0x07].var = s.var;
-				}
-				else
-				{
-					assert( 0 && "invalid ddddd value" );
-				}
-			}
-		}
-
-		// Long Memory Data Move
-
-		// ( . . . ) L:ea,D - 0100L0LL W1MMMRRR
-		// ( . . . ) S,L:ea
-		// 
-		else if( (dbmf&0xf44000) == 0x404000 )
-		{
-			const TWord LLL		= ((dbmf&0x080000)>>17) | ((dbmf&0x030000)>>16);
-			const TWord mmmrrr	= (dbmf>>8) & 0x3f;
-
-			const bool write = (dbmf & 0x008000) != 0;
-
-			const TWord ea = decode_MMMRRR_read(mmmrrr);
-
-			if( write )
-			{
-				const TReg24 x( memRead( MemArea_X, ea ) );
-				const TReg24 y( memRead( MemArea_Y, ea ) );
-
-				decode_LLL_write( LLL, x,y );
-			}
-			else
-			{
-				TWord x,y;
-
-				decode_LLL_read( LLL, x, y );
-
-				memWrite( MemArea_X, ea, x );
-				memWrite( MemArea_Y, ea, y );
-			}
-		}
-
-		// X Memory Data Move
-
-		// ( . . . ) X:ea,D - 01dd0ddd W1MMMRRR
-		// ( . . . ) S,X:ea
-		// ( . . . ) #xxxxxx,D
-		else if( (dbmf&0xc84000) == 0x404000 )
-		{
-			const TWord mmmrrr	= (dbmf>>8) & 0x3f;
-			const TWord ddddd	= ((dbmf >> 16) & 0x07) | ((dbmf & 0x300000) >> 17);
-
-			const bool write = (dbmf & 0x008000) != 0;
-
-			exec_move_ddddd_MMMRRR( ddddd, mmmrrr, write, MemArea_X );
-		}
-
-		// ( . . . ) X:aa,D - 0 1 d d 0 d d d W 0 a a a a a a
-		// ( . . . ) S,X:aa
-		else if( (dbmf&0xc84000) == 0x400000 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
-		}
-
-		// X Memory and Register Data Move
-
-		// ( . . . ) X:ea,D1 S2,D2 - 0001ffdF W0MMMRRR
-		// ( . . . ) S1,X:ea S2, D2
-		// ( . . . ) #xxxx,D1 S2,D2
-		else if( (dbmf&0xf04000) == 0x100000 )
-		{
-			const bool F		= (dbmfop&0x010000) != 0;	// true:Y1, false:Y0
-			const TWord mmmrrr	= (dbmfop&0x003f00)>>8;
-			const TWord ff		= (dbmfop&0x0c0000)>>18;
-			const bool write	= (dbmfop&0x008000) != 0;
-			const bool d		= (dbmfop&0x020000) != 0;
-
-			// S2 D2 move
-			const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
-			if( F )		y1(ab);
-			else		y0(ab);
-
-			// S1/D1 move
-
-			if( write )
-			{
-				if( mmmrrr == 0x34 )
-					decode_ff_write( ff, TReg24(fetchPC()) );
-				else
-					decode_ff_write( ff, TReg24(decode_MMMRRR_read(mmmrrr)) );
-			}
-			else
-			{
-				const TWord ea = decode_MMMRRR_read(mmmrrr);
-				memWrite( MemArea_X, ea, decode_ff_read( ff ).toWord() );
-			}
-		}
-
-		// ( . . . ) A ® X:ea X0 ® A - 0 0 0 0 1 0 0 d 0 0 M M M R R R
-		// ( . . . ) B ® X:ea X0 ® B
-		else if( (dbmf&0xfec000) == 0x080000 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
-		}
-
-		// Y Memory Data Move
-
-		// ( . . . ) Y:ea,D  - 0 1 d d 1 d d d W 1 M M M R R R
-		// ( . . . ) S,Y:ea
-		// ( . . . ) #xxxx,D
-		else if( (dbmf&0xc84000) == 0x484000 )
-		{
-			const TWord mmmrrr	= (dbmf>>8) & 0x3f;
-			const TWord ddddd	= ((dbmf >> 16) & 0x07) | ((dbmf & 0x0300000) >> 17);
-
-			const bool write = (dbmf & 0x008000) != 0;
-
-			exec_move_ddddd_MMMRRR( ddddd, mmmrrr, write, MemArea_Y );
-		}
-
-		// ( . . . ) Y:aa,D - 0 1 d d 1 d d d W 0 a a a a a a
-		// ( . . . ) S,Y:aa
-		else if( (dbmf&0xc84000) == 0x480000 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
-		}
-
-		// Register and Y Memory Data Move
-
-		// ( . . . ) S1,D1 Y:ea,D2 - 0001deff W1MMMRRR
-		// ( . . . ) S1,D1 S2,Y:ea
-		// ( . . . ) S1,D1 #xxxx,D2
-		else if( (dbmf&0xf04000) == 0x104000 )
-		{
-			const bool e		= (dbmfop&0x040000) != 0;	// true:X1, false:X0
-			const TWord mmmrrr	= (dbmfop&0x003f00)>>8;
-			const TWord ff		= (dbmfop&0x030000)>>16;
-			const bool write	= (dbmfop&0x008000) != 0;
-			const bool d		= (dbmfop&0x080000) != 0;
-
-			// S2 D2 move
-			const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
-			if( e )		x1(ab);
-			else		x0(ab);
-
-			// S1/D1 move
-
-			if( write )
-			{
-				if( mmmrrr == 0x34 )
-					decode_ff_write( ff, TReg24(fetchPC()) );
-				else
-					decode_ff_write( ff, TReg24(decode_MMMRRR_read(mmmrrr)) );
-			}
-			else
-			{
-				const TWord ea = decode_MMMRRR_read(mmmrrr);
-				memWrite( MemArea_Y, ea, decode_ff_read( ff ).toWord() );
-			}
-		}
-
-		// ( . . . ) Y0 ® A A ® Y:ea - 0 0 0 0 1 0 0 d 1 0 M M M R R R
-		// ( . . . ) Y0 ® B B ® Y:ea
-		else if( (dbmf&0xfec000) == 0x088000 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
-		}
-
-		// ( . . . ) L:aa,D - 0 1 0 0 L 0 L L W 0 a a a a a a
-		// ( . . . ) S,L:aa
-		else if( (dbmf&0xf44000) == 0x400000 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
-		}
-
-		// XY Memory Data Move
-
-		// ( . . . ) X:<eax>,D1 Y:<eay>,D2 - 1wmmeeff WrrMMRRR <<opcode>>
-		// ( . . . ) X:<eax>,D1 S2,Y:<eay>
-		// ( . . . ) S1,X:<eax> Y:<eay>,D2
-		// ( . . . ) S1,X:<eax> S2,Y:<eay>
-		else if( (dbmf&0x800000) == 0x800000 )
-		{
-			const TWord mmrrr	= (dbmfop&0x001f00)>>8;
-			const TWord mmrr	= ((dbmfop&0x300000)>>18) | ((dbmfop&0x006000)>>13);
-			const bool	writeX	= bittest( dbmfop, 15 );
-			const bool	writeY	= bittest( dbmfop, 22 );
-			const TWord	ee		= (dbmfop&0x0c0000)>>18;
-			const TWord ff		= (dbmfop&0x030000)>>16;
-
-			// X
-			const TWord eaX = decode_XMove_MMRRR( mmrrr );
-			if( writeX )	decode_ee_write( ee, TReg24(memRead( MemArea_X, eaX )) );
-			else			memWrite( MemArea_X, eaX, decode_ee_read( ee ).toWord() );
-
-			// Y
-			const TWord regIdxOffset = ((mmrrr&0x7) >= 4) ? 0 : 4;
-
-			const TWord eaY = decode_YMove_mmrr( mmrr, regIdxOffset );
-			if( writeY )	decode_ff_write( ff, TReg24(memRead( MemArea_Y, eaY )) );
-			else			memWrite( MemArea_Y, eaY, decode_ff_read( ff ).toWord() );
-		}
-		else 
 			return false;
 		return true;
 	}
@@ -1242,34 +1349,9 @@ namespace dsp56k
 	//
 	bool DSP::exec_pcu( TWord dbmfop, TWord dbmf, TWord op )
 	{
-		// IFcc - 0 0 1 0 0 0 0 0 0 0 1 0 C C C C Instruction opcode
-		if( (dbmf&0xfff000) == 0x202000 )
-		{
-			const TWord cccc = (dbmfop&0x0000f00)>>8;
-			if( decode_cccc( cccc ) )
-			{
-				TReg8 backupCCR = ccr();
-				if( !exec_arithmetic_parallel(dbmfop,dbmf,op) )
-					exec_logical_parallel(dbmfop,dbmf,op);
-				ccr(backupCCR);
-			}
-		}
-
-		// Execute Conditionally With CCR Update
-
-		// IFcc.U - 00100000 0011CCCC <Instruction opcode>
-		else if( (dbmf&0xfff000) == 0x203000 )
-		{
-			const TWord cccc = (dbmfop&0x0000f00)>>8;
-			if( decode_cccc( cccc ) )
-			{
-				if( !exec_arithmetic_parallel(dbmfop,dbmf,op) )
-					exec_logical_parallel(dbmfop,dbmf,op);
-			}
-		}
 		// Bcc, #xxxx			- 00000101 CCCC01aa aa0aaaaa - branch conditionally
 		// Bcc, #xxx
-		else if( (dbmf&0xff0c00) == 0x050400 && (op&0x20) == 0x00 )
+		if( (dbmf&0xff0c00) == 0x050400 && (op&0x20) == 0x00 )
 		{
 			const TWord cccc	= (dbmfop & 0x00f000) >> 12;
 
@@ -1386,6 +1468,7 @@ namespace dsp56k
 		else if( (dbmf&0xffff00) == 0x000200 && op == 0x00 )
 		{
 			LOG( "Entering DEBUG mode" );
+			LOG_ERR_NOTIMPLEMENTED("DEBUG");
 		}
 
 		// Enter Debug Mode Conditionally
@@ -1398,6 +1481,7 @@ namespace dsp56k
 			{
 				LOG( "Entering DEBUG mode because condition is met" );
 			}
+			LOG_ERR_NOTIMPLEMENTED("DEBUG");
 		}
 
 		// Jump Conditionally
@@ -1733,511 +1817,125 @@ namespace dsp56k
 	}
 
 	// _____________________________________________________________________________
-	// exec_arithmetic_parallel
+	// decode_MMMRRR
 	//
-	bool DSP::exec_arithmetic_parallel( TWord dbmfop, TWord dbmf, TWord op )
+	dsp56k::TWord DSP::decode_MMMRRR_read( TWord _mmmrrr )
 	{
-		if( !op )
-			return false;
-
-		// Absolute Value
-
-		// ABS - 0010d110
-		if( (op&0xf7) == 0x26 )
-		{			
-			const bool ab = bittest(op,3);
-			alu_abs( ab );
-		}
-
-		// Add Long With Carry
-
-		// ADC				- 001Jd001 - add long with carry
-		else if( (op&0xe7) == 0x21 )
-		{			
-			LOG_ERR_NOTIMPLEMENTED("ADC");
-		}
-
-		// Add
-
-		// ADD S, D			- 0JJJd000 - add
-		else if( (op&0x87) == 0x00 )
+		switch( _mmmrrr & 0x3f )
 		{
-			const TWord		jjj = (op&0x70) >> 4;
-			const TReg56	val = decode_JJJ_read( jjj, !(op&0x08) );
-
-			alu_add( (op&0x08) != 0, val );
+		case 0x30:	return fetchPC();		// absolute address
+		case 0x34:	return fetchPC();		// immediate data
 		}
 
-		// Shift Left and Add Accumulators
+		unsigned int regIdx = _mmmrrr & 0x7;
 
-		// ADDL S, D		- 0001d010
-		else if( (op&0xf7) == 0x12 )
+		const TReg24	_n = reg.n[regIdx];
+		TReg24&			_r = reg.r[regIdx];
+		const TReg24	_m = reg.m[regIdx];
+
+		TWord r = _r.toWord();
+
+		TWord a;
+
+		switch( _mmmrrr & 0x38 )
 		{
-			TReg56&			d = bittest(op,3) ? reg.b : reg.a;
-			const TReg56&	s = bittest(op,3) ? reg.a : reg.b;
+		case 0x00:	/* 000 */	a = r;					AGU::updateAddressRegister(r,-_n.var,_m.var);					break;
+		case 0x08:	/* 001 */	a = r;					AGU::updateAddressRegister(r,+_n.var,_m.var);					break;
+		case 0x10:	/* 010 */	a = r;					AGU::updateAddressRegister(r,-1,_m.var);						break;
+		case 0x18:	/* 011 */	a =	r;					AGU::updateAddressRegister(r,+1,_m.var);						break;
+		case 0x20:	/* 100 */	a = r;																					break;
+		case 0x28:	/* 101 */	a = r + _n.toWord();																	break;
+		case 0x38:	/* 111 */							AGU::updateAddressRegister(r,-1,_m.var);		a = _r.var;		break;
 
-			const TReg56 old = d;
-			const TInt64 res = (d.signextend<TInt64>() << 1) + s.signextend<TInt64>();
-			d.var = res;
-			d.doMasking();
-
-			sr_s_update();
-			sr_e_update(d);
-			sr_u_update(d);
-			sr_n_update_arithmetic(d);
-			sr_z_update(d);
-			sr_v_update(res, d);
-			sr_l_update_by_v();
-			sr_c_update_arithmetic(old,d);
+		default:
+			assert(0 && "impossible to happen" );
+			return 0xbadbad;
 		}
 
-		// Shift Right and Add Accumulators
+		_r.var = r;
 
-		// ADDR S, D		- 0000d010
-		else if( (op&0xf7) == 0x02 )
-		{
-			TReg56&			d = bittest(op,3) ? reg.b : reg.a;
-			const TReg56&	s = bittest(op,3) ? reg.a : reg.b;
-
-			const TReg56 old = d;
-			const TInt64 res = (d.signextend<TInt64>() >> 1) + s.signextend<TInt64>();
-			d.var = res;
-			d.doMasking();
-
-			sr_s_update();
-			sr_e_update(d);
-			sr_u_update(d);
-			sr_n_update_arithmetic(d);
-			sr_z_update(d);
-			sr_v_update(res,d);
-			sr_l_update_by_v();
-			sr_c_update_arithmetic(old,d);
-		}
-
-		// Arithmetic Shift Accumulator Left
-
-		// ASL, D			- 0011d010
-		else if( (op&0xf7) == 0x32 )
-		{
-			const bool ab = (op&0x08) != 0;
-
-			alu_asl( ab, ab, 1 );
-		}
-
-		// arithmetic shift accumulator right
-
-		// ASR, D			- 0010d010 - 
-		else if( (op&0xf7) == 0x22 )
-		{
-			const bool ab = (op&0x08) != 0;
-
-			alu_asr( ab, ab, 1 );
-		}
-
-		// Clear Accumulator
-
-		// CLR D - 0 0 0 1 d 0 1 1
-		else if( (op&0xf7) == 0x13 )
-		{
-			TReg56& dst = bittest( dbmfop, 3 ) ? reg.b : reg.a;
-			dst.var = 0;
-		}
-
-		// Compare
-
-		// CMP S1, S2 - 0 J J J d 1 0 1
-		else if( (op&0x87) == 0x05 )
-		{
-			const TWord		jjj = (op&0x70) >> 4;
-			const TReg56	val = decode_JJJ_read( jjj, !(op&0x08) );
-
-			alu_cmp( bittest(op,3), val, false );
-		}
-
-		// Compare Magnitude
-
-		// CMPM S1, S2 - 0 J J J d 1 1 1
-		else if( (op&0x87) == 0x07 )
-		{
-			const TWord		jjj = (op&0x70) >> 4;
-			const TReg56	val = decode_JJJ_read( jjj, !(op&0x08) );
-
-			alu_cmp( bittest(op,3), val, true );
-		}
-
-		// Signed Multiply Accumulate
-
-		// MAC (±)S1,S2,D - 1 Q Q Q d k 1 0
-		else if( (op&0x83) == 0x82 )
-		{
-			const TWord		qqq		= (op&0x70)>>4;
-			const bool		ab		= (op&0x08) != 0;
-			const bool		negate	= (op&0x04) != 0;
-
-			TReg24 s1, s2;
-			decode_QQQ_read( s1,s2, qqq );
-
-			alu_mpy( ab, s1, s2, negate, true );
-		}
-
-		// Signed Multiply Accumulate and Round
-
-		// MACR (±)S1,S2,D - 1 Q Q Q d k 1 1
-		// MACR (±)S2,S1,D
-		else if( (op&0x83) == 0x83 )
-		{
-			const TWord		qqq		= (op&0x70)>>4;
-			const bool		ab		= (op&0x08) != 0;
-			const bool		negate	= (op&0x04) != 0;
-
-			TReg24 s1, s2;
-			decode_QQQ_read( s1,s2, qqq );
-
-			alu_mpy( ab, s1, s2, negate, true );
-			// TODO: may break CCR
-			alu_rnd( ab ? reg.b : reg.a );
-		}
-
-		// Transfer by Signed Value
-
-		// MAX A, B - 0 0 0 1 1 1 0 1
-		else if( op == 0x1d )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MAX");
-		}
-
-		// Transfer by Magnitude
-
-		// MAXM A, B - 0 0 0 1 0 1 0 1
-		else if( op == 0x15 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MAXM");
-		}
-
-		// Signed Multiply
-
-		// MPY (±)S1,S2,D - 1 Q Q Q d k 0 0
-		// MPY (±)S2,S1,D
-		else if( (op&0x83) == 0x80 )
-		{
-			const TWord qqq			= (op&0x70)>>4;
-			const bool signNegative = (op&0x04) != 0;	// 0 = +, 1 = -
-			const bool ab			= (op&0x08) != 0;
-
-			TReg24 s1, s2;
-			decode_QQQ_read( s1, s2, qqq );
-
-			alu_mpy( ab, s1, s2, signNegative, false );
-		}
-
-		// Signed Multiply and Round
-
-		// MPYR (±)S1,S2,D - 1 Q Q Q d k 0 1
-		// MPYR (±)S2,S1,D
-		else if( (op&0x83) == 0x81 )
-		{
-			const TWord qqq			= (op&0x70)>>4;
-			const bool signNegative = (op&0x04) != 0;	// 0 = +, 1 = -
-			const bool ab			= (op&0x08) != 0;
-
-			TReg24 s1, s2;
-			decode_QQQ_read( s1, s2, qqq );
-
-			alu_mpy( ab, s1, s2, signNegative, false );
-			// TODO: will probably break CCR?
-			alu_rnd(ab ? reg.b : reg.a);
-		}
-
-		// Negate Accumulator
-
-		// NEG D - 0 0 1 1 d 1 1 0
-		else if( (op&0xf7) == 0x36 )
-		{
-			TReg56& d = bittest(op,3) ? reg.b : reg.a;
-
-			TInt64 d64 = d.signextend<TInt64>();
-			d64 = -d64;
-			
-			d.var = d64 & 0x00ffffffffffffff;
-
-			sr_s_update();
-			sr_e_update(d);
-			sr_u_update(d);
-			sr_n_update_logical(d);
-			sr_z_update(d);
-//	TODO: how to update v? test in sim		sr_v_update(d);
-			sr_l_update_by_v();
-		}
-
-		// Round Accumulator
-
-		// RND D  - 0 0 0 1 d 0 0 1
-		else if( (op&0xf7) == 0x11 )
-		{
-			const bool ab = ((op&0x08) != 0);
-
-			alu_rnd( ab );
-		}
-
-		// Subtract Long With Carry
-
-		// SBC S,D - 0 0 1 J d 1 0 1
-		else if( (op&0xe7) == 0x25 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("SBC");
-		}
-
-		// Subtract
-
-		// SUB S,D  - 0 J J J d 1 0 0
-		else if( (op&0x87) == 0x04 )
-		{
-			const TWord		jjj = (op&0x70) >> 4;
-			const TReg56	val = decode_JJJ_read( jjj, !(op&0x08) );
-
-			alu_sub( (op&0x08) != 0, val );
-		}
-
-		// Shift Left and Subtract Accumulators
-
-		// SUBL S,D  - 0 0 0 1 d 1 1 0
-		else if( (op&0xf7) == 0x16 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("SUBL");
-		}
-
-		// SUBR S,D - if( (op&0xf7) == 0x06 )
-		else if( (op&0xf7) == 0x06 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("SUBR");
-		}
-
-		// Transfer Data ALU Register
-
-		// TFR S,D  - 0 J J J d 0 0 1
-		else if( (op&0x87) == 0x01 )
-		{
-			const TWord		jjj = (op&0x70) >> 4;
-			decode_JJJ_readwrite( bittest( dbmfop, 3 ) ? reg.b : reg.a, jjj, !(op&0x08) );
-		}
-
-		// Test Accumulator
-
-		// TST S - 0 0 0 0 d 0 1 1
-		else if( (op&0xf7) == 0x03 )
-		{
-			bool c = sr_test(SR_C);
-			alu_cmp( (op&0x08) != 0, TReg56(0), false );
-			sr_clear(SR_V);		// "always cleared"
-			sr_toggle(SR_C,c);	// "unchanged by the instruction"
-		}
-
-		else
-			return false;
-
-		return true;
+		assert( a >= 0x00000000 && a <= 0x00ffffff && "invalid memory address" );
+		return a;
 	}
 
 	// _____________________________________________________________________________
-	// exec_logical_parallel
+	// decode_XMove_MMRRR
 	//
-	bool DSP::exec_logical_parallel( TWord dbmfop, TWord dbmf, TWord op )
+	dsp56k::TWord DSP::decode_XMove_MMRRR( TWord _mmrrr )
 	{
-		if( !op )
-			return false;
+		unsigned int regIdx = _mmrrr & 0x07;
 
-		// Logical AND
+		const TReg24	_n = reg.n[regIdx];
+		TReg24&			_r = reg.r[regIdx];
+		const TReg24	_m = reg.m[regIdx];
 
-		// AND S, D			- 01JJd110
-		if( (op&0xc7) == 0x46 )
+		TWord r = _r.toWord();
+
+		TWord a;
+
+		switch( _mmrrr & 0x18 )
 		{
-			const TWord jj	= (op&0x30)>>4;
-			const TWord val	= decode_JJ_read( jj ).toWord();
-			alu_and( (op&0x08) != 0, val );
+		case 0x08:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var);	break;
+		case 0x10:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var);		break;
+		case 0x18:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var);		break;
+		case 0x00:	/* 00 */	a = r;													break;
+
+		default:
+			assert(0 && "impossible to happen" );
+			return 0xbadbad;
 		}
 
-		// Logical Exclusive OR
+		_r.var = r;
 
-		// EOR S,D - 0 1 J J d 0 1 1
-		else if( (op&0xc7) == 0x43 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("EOR");
-		}
-		// Logical Shift Left
-
-		// LSL D - 0 0 1 1 D 0 1 1
-		else if( (op&0xf7) == 0x33 )
-		{
-			alu_lsl( bittest(op,3), 1 );
-		}
-
-		// Logical Shift Right
-
-		// LSR D - 0 0 1 0 D 0 1 1
-		else if( (op&0xf7) == 0x23 )
-		{
-			alu_lsr( bittest(op,3), 1 );
-		}
-
-		// Logical Complement
-
-		// NOT D - 0 0 0 1 d 1 1 1
-		else if( (op&0xf7) == 0x17 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("NOT");
-		}
-
-		// Logical Inclusive OR
-
-		// OR S,D - 0 1 J J d 0 1 0
-		else if( (op&0xc7) == 0x42 )
-		{
-			const TWord jj	= (op&0x30)>>4;
-			const TWord val	= decode_JJ_read( jj ).toWord();
-			alu_or( bittest(op,3), val );
-		}
-
-		// Rotate Left
-
-		// ROL D - 0 0 1 1 d 1 1 1
-		else if( (op&0xf7) == 0x37 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("ROL");
-		}
-
-		// Rotate Right
-
-		// ROR D - 0 0 1 0 d 1 1 1
-		else if( (op&0xf7) == 0x27 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("ROR");
-		}
-
-		else
-			return false;
-
-		return true;
+		assert( a >= 0x00000000 && a <= 0x00ffffff && "invalid memory address" );
+		return a;
 	}
-// _____________________________________________________________________________
-// decode_MMMRRR
-//
-dsp56k::TWord DSP::decode_MMMRRR_read( TWord _mmmrrr )
-{
-	switch( _mmmrrr & 0x3f )
+	// _____________________________________________________________________________
+	// decode_YMove_mmrr
+	//
+	dsp56k::TWord DSP::decode_YMove_mmrr( TWord _mmrr, TWord _regIdxOffset )
 	{
-	case 0x30:	return fetchPC();		// absolute address
-	case 0x34:	return fetchPC();		// immediate data
+		unsigned int regIdx = _mmrr & 0x3;
+
+		const TReg24	_n = reg.n[regIdx + _regIdxOffset];
+		TReg24&			_r = reg.r[regIdx + _regIdxOffset];
+		const TReg24	_m = reg.m[regIdx + _regIdxOffset];
+
+		TWord r = _r.toWord();
+
+		TWord a;
+
+		switch( _mmrr & 0xc	 )
+		{
+		case 0x4:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var);	break;
+		case 0x8:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var);		break;
+		case 0xc:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var);		break;
+		case 0x0:	/* 00 */	a = r;													break;
+
+		default:
+			assert(0 && "impossible to happen" );
+			return 0xbadbad;
+		}
+
+		_r.var = r;
+
+		assert( a >= 0x00000000 && a <= 0x00ffffff && "invalid memory address" );
+		return a;
 	}
 
-	unsigned int regIdx = _mmmrrr & 0x7;
-
-	const TReg24	_n = reg.n[regIdx];
-	TReg24&			_r = reg.r[regIdx];
-	const TReg24	_m = reg.m[regIdx];
-
-	TWord r = _r.toWord();
-
-	TWord a;
-
-	switch( _mmmrrr & 0x38 )
+	// _____________________________________________________________________________
+	// decode_RRR_read
+	//
+	dsp56k::TWord DSP::decode_RRR_read( TWord _mmmrrr, int _shortDisplacement )
 	{
-	case 0x00:	/* 000 */	a = r;					AGU::updateAddressRegister(r,-_n.var,_m.var);					break;
-	case 0x08:	/* 001 */	a = r;					AGU::updateAddressRegister(r,+_n.var,_m.var);					break;
-	case 0x10:	/* 010 */	a = r;					AGU::updateAddressRegister(r,-1,_m.var);						break;
-	case 0x18:	/* 011 */	a =	r;					AGU::updateAddressRegister(r,+1,_m.var);						break;
-	case 0x20:	/* 100 */	a = r;																					break;
-	case 0x28:	/* 101 */	a = r + _n.toWord();																	break;
-	case 0x38:	/* 111 */							AGU::updateAddressRegister(r,-1,_m.var);		a = _r.var;		break;
+		unsigned int regIdx = _mmmrrr&0x07;
 
-	default:
-		assert(0 && "impossible to happen" );
-		return 0xbadbad;
+		const TReg24& _r = reg.r[regIdx];
+
+		const int ea = _r.var + _shortDisplacement;
+
+		return ea&0x00ffffff;
 	}
-
-	_r.var = r;
-
-	assert( a >= 0x00000000 && a <= 0x00ffffff && "invalid memory address" );
-	return a;
-}
-
-// _____________________________________________________________________________
-// decode_XMove_MMRRR
-//
-dsp56k::TWord DSP::decode_XMove_MMRRR( TWord _mmrrr )
-{
-	unsigned int regIdx = _mmrrr & 0x07;
-
-	const TReg24	_n = reg.n[regIdx];
-	TReg24&			_r = reg.r[regIdx];
-	const TReg24	_m = reg.m[regIdx];
-
-	TWord r = _r.toWord();
-
-	TWord a;
-
-	switch( _mmrrr & 0x18 )
-	{
-	case 0x08:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var);	break;
-	case 0x10:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var);		break;
-	case 0x18:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var);		break;
-	case 0x00:	/* 00 */	a = r;													break;
-
-	default:
-		assert(0 && "impossible to happen" );
-		return 0xbadbad;
-	}
-
-	_r.var = r;
-
-	assert( a >= 0x00000000 && a <= 0x00ffffff && "invalid memory address" );
-	return a;
-}
-// _____________________________________________________________________________
-// decode_YMove_mmrr
-//
-dsp56k::TWord DSP::decode_YMove_mmrr( TWord _mmrr, TWord _regIdxOffset )
-{
-	unsigned int regIdx = _mmrr & 0x3;
-
-	const TReg24	_n = reg.n[regIdx + _regIdxOffset];
-	TReg24&			_r = reg.r[regIdx + _regIdxOffset];
-	const TReg24	_m = reg.m[regIdx + _regIdxOffset];
-
-	TWord r = _r.toWord();
-
-	TWord a;
-
-	switch( _mmrr & 0xc	 )
-	{
-	case 0x4:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var);	break;
-	case 0x8:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var);		break;
-	case 0xc:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var);		break;
-	case 0x0:	/* 00 */	a = r;													break;
-
-	default:
-		assert(0 && "impossible to happen" );
-		return 0xbadbad;
-	}
-
-	_r.var = r;
-
-	assert( a >= 0x00000000 && a <= 0x00ffffff && "invalid memory address" );
-	return a;
-}
-
-// _____________________________________________________________________________
-// decode_RRR_read
-//
-dsp56k::TWord DSP::decode_RRR_read( TWord _mmmrrr, int _shortDisplacement )
-{
-	unsigned int regIdx = _mmmrrr&0x07;
-
-	const TReg24& _r = reg.r[regIdx];
-
-	const int ea = _r.var + _shortDisplacement;
-
-	return ea&0x00ffffff;
-}
 
 // _____________________________________________________________________________
 // exec_move
@@ -2591,6 +2289,11 @@ dsp56k::TReg24 DSP::decode_dddddd_read( TWord _dddddd )
 {
 	switch( _dddddd & 0x3f )
 	{
+		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
+	case 0x00:	return x0();
+	case 0x01:	return x1();
+	case 0x02:	return y0();
+	case 0x03:	return y1();
 		// 0001DD - 4 registers in data ALU
 	case 0x04:	return x0();
 	case 0x05:	return x1();
@@ -2735,7 +2438,7 @@ void DSP::decode_dddddd_write( TWord _dddddd, TReg24 _val )
 // _____________________________________________________________________________
 // logSC
 //
-void DSP::logSC( const char* _func )
+void DSP::logSC( const char* _func ) const
 {
 	if( strstr(_func, "DO" ) )
 		return;
@@ -2752,7 +2455,7 @@ void DSP::logSC( const char* _func )
 // _____________________________________________________________________________
 // exec_operand_8bits
 //
-bool DSP::exec_operand_8bits( TWord dbmfop, TWord dbmf, TWord op )
+bool DSP::exec_operand_8bits(TWord dbmf, TWord op)
 {
 	if( (dbmf&0xffff00) != 0x000000 )
 		return false;
@@ -2919,7 +2622,6 @@ bool DSP::exec_operand_8bits( TWord dbmfop, TWord dbmf, TWord op )
 	{
 		LOG_ERR_NOTIMPLEMENTED("TRAPcc");
 	}
-
 	else
 		return false;
 	return true;
@@ -2930,7 +2632,7 @@ bool DSP::exec_operand_8bits( TWord dbmfop, TWord dbmf, TWord op )
 //
 void DSP::resetSW()
 {
-//	LOG_ERR_NOTIMPLEMENTED("RESET");
+	LOG_ERR_NOTIMPLEMENTED("RESET");
 }
 
 // _____________________________________________________________________________
@@ -3187,25 +2889,25 @@ bool DSP::exec_logical_nonparallel( TWord dbmfop, TWord dbmf, TWord op )
 		// LSL #ii,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 1 0 i i i i i D
 		if( (op&0xc0) == 0x80 )
 		{
-			LOG_ERR_NOTIMPLEMENTED("");
+			LOG_ERR_NOTIMPLEMENTED("LSL");
 		}
 
 		// LSL S,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 0 0 0 1 s s s D
 		else if( (op&0xf0) == 0x10 )
 		{
-			LOG_ERR_NOTIMPLEMENTED("");
+			LOG_ERR_NOTIMPLEMENTED("LSL");
 		}
 
 		// LSR #ii,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 1 1 i i i i i D
 		else if( (op&0xc0) == 0xc0 )
 		{
-			LOG_ERR_NOTIMPLEMENTED("");
+			LOG_ERR_NOTIMPLEMENTED("LSL");
 		}
 
 		// LSR S,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 0 0 1 1 s s s D
 		else if( (op&0xf0) == 0x30 )
 		{
-			LOG_ERR_NOTIMPLEMENTED("");
+			LOG_ERR_NOTIMPLEMENTED("LSL");
 		}
 		else
 			return false;
@@ -3216,11 +2918,13 @@ bool DSP::exec_logical_nonparallel( TWord dbmfop, TWord dbmf, TWord op )
 	// EOR #xx,D - 0 0 0 0 0 0 0 1 0 1 i i i i i i 1 0 0 0 d 0 1 1
 	else if( (dbmf&0xffc000) == 0x014000 && (op&0xf7) == 0x83 )
 	{
+		LOG_ERR_NOTIMPLEMENTED("EOR");
 	}
 
 	// EOR #xxxx,D - 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 1 0 0 d 0 1 1
 	else if( (dbmf&0xffff00) == 0x014000 && (op&0xf7) == 0xc3 )
 	{
+		LOG_ERR_NOTIMPLEMENTED("EOR");
 	}
 
 	// Extract Bit Field
@@ -3228,11 +2932,13 @@ bool DSP::exec_logical_nonparallel( TWord dbmfop, TWord dbmf, TWord op )
 	// EXTRACT S1,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 1 0 0 0 0 s S S S D
 	else if( (dbmf&0xffff00) == 0x0c1a00 && (op&0xe0) == 0x00 )
 	{
+		LOG_ERR_NOTIMPLEMENTED("EXTRACT");
 	}
 
 	// EXTRACT #CO,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 0 0 0 0 0 s 0 0 0 D
 	else if( (dbmf&0xffff00) == 0x0c1800 && (op&0xee) == 0x00 )
 	{
+		LOG_ERR_NOTIMPLEMENTED("EXTRACT");
 	}
 
 	// Extract Unsigned Bit Field
@@ -3240,11 +2946,13 @@ bool DSP::exec_logical_nonparallel( TWord dbmfop, TWord dbmf, TWord op )
 	// EXTRACTU S1,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 1 0 1 0 0 s S S S D
 	else if( (dbmf&0xffff00) == 0x0c1a00 && (op&0xe0) == 0x80 )
 	{
+		LOG_ERR_NOTIMPLEMENTED("EXTRACTU");
 	}
 
 	// EXTRACTU #CO,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 0 0 1 0 0 s 0 0 0 D
 	else if( (dbmf&0xffff00) == 0x0c1800 && (op&0xee) == 0x80 )
 	{
+		LOG_ERR_NOTIMPLEMENTED("EXTRACTU");
 	}
 
 	// Execute Conditionally Without CCR Update
@@ -3254,11 +2962,13 @@ bool DSP::exec_logical_nonparallel( TWord dbmfop, TWord dbmf, TWord op )
 	// INSERT S1,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 1 1 0 q q q S S S D
 	else if( (dbmf&0xffff00) == 0x0c1b00 && (op&0x80) == 0x00 )
 	{
+		LOG_ERR_NOTIMPLEMENTED("INSERT");
 	}
 
 	// INSERT #CO,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 0 1 0 q q q 0 0 0 D
 	else if( (dbmf&0xffff00) == 0x0c1900 && (op&0x8e) == 0x00 )
 	{
+		LOG_ERR_NOTIMPLEMENTED("INSERT");
 	}
 
 	// Merge Two Half Words
@@ -3266,6 +2976,7 @@ bool DSP::exec_logical_nonparallel( TWord dbmfop, TWord dbmf, TWord op )
 	// MERGE S,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 1 1 1 0 0 0 S S S D
 	else if( (dbmf&0xffff00) == 0x0c1b00 && (op&0xf0) == 0x80 )
 	{
+		LOG_ERR_NOTIMPLEMENTED("MERGE");
 	}
 
 	// Logical Inclusive OR
@@ -3273,13 +2984,13 @@ bool DSP::exec_logical_nonparallel( TWord dbmfop, TWord dbmf, TWord op )
 	// OR #xx,D - 0 0 0 0 0 0 0 1 0 1 i i i i i i 1 0 0 0 d 0 1 0
 	else if( (dbmf&0xffc000) == 0x014000 && (op&0xf7) == 0x82 )
 	{
-		LOG_ERR_NOTIMPLEMENTED("");
+		LOG_ERR_NOTIMPLEMENTED("OR");
 	}
 
 	// OR #xxxx,D - 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 1 0 0 d 0 1 0
 	else if( (dbmf&0xffff00) == 0x014000 && (op&0xf7) == 0xc2 )
 	{
-		LOG_ERR_NOTIMPLEMENTED("");
+		LOG_ERR_NOTIMPLEMENTED("OR");
 	}
 
 	// OR Immediate With Control Register
@@ -3303,34 +3014,65 @@ bool DSP::exec_logical_nonparallel( TWord dbmfop, TWord dbmf, TWord op )
 		return false;
 	return true;
 }
+
 // _____________________________________________________________________________
 // decode_cccc
 //
 bool DSP::decode_cccc( TWord cccc ) const
 {
+#define			SRT_C			sr_val(SRB_C)			// carry
+#define 		SRT_V			sr_val(SRB_V)			// overflow
+#define 		SRT_Z			sr_val(SRB_Z)			// zero
+#define 		SRT_N			sr_val(SRB_N)			// negative
+#define 		SRT_U			sr_val(SRB_U)			// unnormalized
+#define 		SRT_E			sr_val(SRB_E)			// extension
+#define 		SRT_L			sr_val(SRB_L)			// limit
+//#define 		SRT_S			sr_val(SRB_S)			// scaling
+
 	switch( cccc )
 	{
-	case 0x0:	return !sr_test( SR_C );												// CC(HS)		Carry Clear (higher or same)
-	case 0x1:	return sr_test( SR_N ) == sr_test( SR_V );								// GE			Greater than or equal
-	case 0x2:	return !sr_test( SR_Z );												// NE			Not Equal
-	case 0x3:	return sr_test( SR_N );													// PL			Plus
-	case 0x4:	return ((sr_test( SR_Z ) + ((!sr_test(SR_U)) | !sr_test(SR_E)))) == 0;	// NN			Not normalized
-	case 0x5:	return !sr_test(SR_E);													// EC			Extension clear
-	case 0x6:	return !sr_test( SR_L );												// LC			Limit clear
-	case 0x7:	return ((sr_test(SR_Z) + (sr_test(SR_N) != sr_test(SR_V))))==0;			// GT			Greater than
-	case 0x8:	return sr_test( SR_C );													// CC(LO)		Carry Set	(lower)
-	case 0x9:	return sr_test( SR_N ) != sr_test(SR_V);								// LT			Less than
-	case 0xa:	return sr_test( SR_Z );													// EQ			Equal
-	case 0xb:	return sr_test( SR_N );													// MI			Minus
-	case 0xc:	return ((sr_test( SR_Z ) + ((!sr_test(SR_U)) | (!sr_test(SR_E))))) == 1;// NR			Normalized
-	case 0xd:	return sr_test( SR_E );													// ES			Extension set
-	case 0xe:	return sr_test( SR_L );													// LS			Limit set
-	case 0xf:	return (sr_test( SR_Z ) + (sr_test(SR_N) != sr_test(SR_V))) == 1;		// LE			Less than or equal
+	case CCCC_CarrySet:			return SRT_C!=0;								// CC(LO)		Carry Set	(lower)
+	case CCCC_CarryClear:		return !SRT_C;									// CC(HS)		Carry Clear (higher or same)
+
+	case CCCC_ExtensionSet:		return SRT_E!=0;								// ES			Extension set
+	case CCCC_ExtensionClear:	return !SRT_E;									// EC			Extension clear
+
+	case CCCC_Equal:			return SRT_Z!=0;								// EQ			Equal
+	case CCCC_NotEqual:			return !SRT_Z;									// NE			Not Equal
+
+	case CCCC_LimitSet:			return SRT_L!=0;								// LS			Limit set
+	case CCCC_LimitClear:		return !SRT_L;									// LC			Limit clear
+
+	case CCCC_Minus:			return SRT_N!=0;								// MI			Minus
+	case CCCC_Plus:				return !SRT_N;									// PL			Plus
+
+	case CCCC_GreaterEqual:		return SRT_N == SRT_V;							// GE			Greater than or equal
+	case CCCC_LessThan:			return SRT_N != SRT_V;							// LT			Less than
+
+	case CCCC_Normalized:		return (SRT_Z + ((!SRT_U) | (!SRT_E))) == 1;	// NR			Normalized
+	case CCCC_NotNormalized:	return (SRT_Z + ((!SRT_U) | !SRT_E)) == 0;		// NN			Not normalized
+
+	case CCCC_GreaterThan:		return (SRT_Z + (SRT_N != SRT_V)) == 0;			// GT			Greater than
+	case CCCC_LessEqual:		return (SRT_Z + (SRT_N != SRT_V)) == 1;			// LE			Less than or equal
 	}
 	assert( 0 && "unreachable" );
 	return false;
 }
-// _____________________________________________________________________________
+
+	void DSP::sr_debug(char* _dst) const
+	{
+		_dst[8] = 0;
+		_dst[7] = sr_test(SR_C) ? 'C' : 'c';
+		_dst[6] = sr_test(SR_V) ? 'V' : 'v';
+		_dst[5] = sr_test(SR_Z) ? 'Z' : 'z';
+		_dst[4] = sr_test(SR_N) ? 'N' : 'n';
+		_dst[3] = sr_test(SR_U) ? 'U' : 'u';
+		_dst[2] = sr_test(SR_E) ? 'E' : 'e';
+		_dst[1] = sr_test(SR_L) ? 'L' : 'l';
+		_dst[0] = sr_test(SR_S) ? 'S' : 's';
+	}
+
+	// _____________________________________________________________________________
 // dumpCCCC
 //
 void DSP::dumpCCCC() const
@@ -3648,6 +3390,57 @@ void DSP::alu_lsr( bool ab, int _shiftAmount )
 	sr_l_update_by_v();
 }
 
+
+void DSP::alu_addr(bool ab)
+{
+	TReg56&			d = ab ? reg.b : reg.a;
+	const TReg56&	s = ab ? reg.a : reg.b;
+
+	const TReg56 old = d;
+	const TInt64 res = (d.signextend<TInt64>() >> 1) + s.signextend<TInt64>();
+	d.var = res;
+	d.doMasking();
+
+	sr_s_update();
+	sr_e_update(d);
+	sr_u_update(d);
+	sr_n_update_arithmetic(d);
+	sr_z_update(d);
+	sr_v_update(res, d);
+	sr_l_update_by_v();
+	sr_c_update_arithmetic(old,d);
+}
+
+void DSP::alu_addl(bool ab)
+{
+	TReg56&			d = ab ? reg.b : reg.a;
+	const TReg56&	s = ab ? reg.a : reg.b;
+
+	const TReg56 old = d;
+	const TInt64 res = (d.signextend<TInt64>() << 1) + s.signextend<TInt64>();
+	d.var = res;
+	d.doMasking();
+
+	sr_s_update();
+	sr_e_update(d);
+	sr_u_update(d);
+	sr_n_update_arithmetic(d);
+	sr_z_update(d);
+	sr_v_update(res, d);
+	sr_l_update_by_v();
+	sr_c_update_arithmetic(old,d);
+}
+
+inline void DSP::alu_clr(bool ab)
+{
+	auto& dst = ab ? reg.b : reg.a;
+	dst.var = 0;
+
+	sr_clear( SR_E | SR_N | SR_V );
+	sr_set( SR_U | SR_Z );
+	// TODO: SR_L and SR_S are changed according to standard definition, but that should mean that no update is required?!
+}
+
 // _____________________________________________________________________________
 // alu_bclr
 //
@@ -3866,8 +3659,9 @@ void DSP::alu_rnd( TReg56& _alu )
 	{
 		_alu.var += 0x1000000;
 	}
-	_alu.var &= 0x00ffffffff000000;
+	_alu.var &= 0x00ffffffff000000;	// TODO: wrong?
 }
+
 // _____________________________________________________________________________
 // readReg
 //
@@ -3976,6 +3770,59 @@ bool DSP::readReg( EReg _reg, TReg5& _res ) const
 		return true;
 	}
 	return false;
+}
+
+// _____________________________________________________________________________
+// readRegToInt
+//
+bool DSP::readRegToInt( EReg _reg, signed __int64& _dst )
+{
+	switch( g_regBitCount[_reg] )
+	{
+	case 56:
+		{
+			TReg56 dst;
+			if( !readReg(_reg, dst) )
+				return false;
+			_dst = dst.var;
+		};
+		break;
+	case 48:
+		{
+			TReg48 dst;
+			if( !readReg(_reg, dst) )
+				return false;
+			_dst = dst.var;
+		};
+		break;
+	case 24:
+		{
+			TReg24 dst;
+			if( !readReg(_reg, dst) )
+				return false;
+			_dst = dst.var;
+		};
+		break;
+	case 8:
+		{
+			TReg8 dst;
+			if( !readReg(_reg, dst) )
+				return false;
+			_dst = dst.var;
+		};
+		break;
+	case 5:
+		{
+			TReg5 dst;
+			if( !readReg(_reg, dst) )
+				return false;
+			_dst = dst.var;
+		};
+		break;
+	default:
+		return false;
+	}
+	return true;
 }
 // _____________________________________________________________________________
 // writeReg
@@ -4165,7 +4012,7 @@ bool DSP::memValidateAccess( EMemArea _area, TWord _addr, bool _write ) const
 
 	// XXX external memory (768k)
 	MEM_VALIDRANGE	( 0x040000, 0x060000 );
-	MEM_INVALIDRANGE( 0x060000, 0x0c0000, "memory access above external memory limit of XXX PCI/Element, only Poco FW has this memory area" );
+	MEM_INVALIDRANGE( 0x060000, 0x0c0000, "memory access above external memory limit of XXX PCI/Element, only XXX FW has this memory area" );
 
 	switch( _area )
 	{
@@ -4175,10 +4022,13 @@ bool DSP::memValidateAccess( EMemArea _area, TWord _addr, bool _write ) const
 
 		MEM_VALIDRANGE( 0x300, 0x2000 );
 
+		// according to XXX sdk 0x200-0x2ff are used by PCI os but my test code accesses this area....
+		MEM_INVALIDRANGE( 0x000, 0x200, "Access to P-memory that's used by XXX FW&PCI OS" );
+
 		if( _write )
 		{
-			// according to pcore sdk 0x200-0x2ff are used by PCI os but my test code accesses this area....
-			MEM_INVALIDRANGE( 0x000, 0x200, "Access to P-memory that's used by XXX FW&PCI OS" );
+			// Bootstram ROM
+			MEM_INVALIDRANGE( 0xff0000, 0xff00c0, "Tried to write to Bootstrap ROM" );
 		}
 	case MemArea_X:
 		MEM_VALIDRANGE( 0x200, 0x1e00 );
@@ -4189,6 +4039,9 @@ bool DSP::memValidateAccess( EMemArea _area, TWord _addr, bool _write ) const
 		// output
 		MEM_VALIDRANGE( 0x1f00, 0x1f08 );
 		
+		// The X memory space at locations $001600 to $001FFF and from $ to $FFEFFF is reserved and should not be accessed.
+		MEM_INVALIDRANGE( 0x001600, 0x002000, "Access to X memory area that shouldn't be used" );
+		MEM_INVALIDRANGE( 0xff0000, 0xffefff, "Access to X memory area that shouldn't be used" );
 
 		if( _write )
 		{
@@ -4204,6 +4057,7 @@ bool DSP::memValidateAccess( EMemArea _area, TWord _addr, bool _write ) const
 		{
 			MEM_INVALIDRANGE( 0, 0x100, "Access to X-memory of XXX PCI-OS used memory" );
 		}
+		MEM_INVALIDRANGE( 0xff0000, 0xffefff, "Access to Y memory area that shouldn't be used" );
 		break;
 	}
 	LOG( "Unknown memory access in area " << _area << ", address " << std::hex << _addr << ", access type " << _write << ", pc " << std::hex << pcLastExec << ", ictr " << std::hex << reg.ictr.var );
@@ -4318,6 +4172,41 @@ void DSP::alu_abs( bool ab )
 	sr_n_update_logical(d);
 	sr_z_update(d);
 //	sr_v_update(d);
+	sr_l_update_by_v();
+}
+
+void DSP::alu_tfr(const bool ab, const TReg56& src)
+{
+	auto& d = ab ? reg.b : reg.a;
+	d = src;
+	sr_s_update();
+	sr_v_update(src.var, d);
+}
+
+void DSP::alu_tst(bool ab)
+{
+	const bool c = sr_test(SR_C);
+	alu_cmp(ab, TReg56(0), false);
+
+	sr_clear(SR_V);		// "always cleared"
+	sr_toggle(SR_C,c);	// "unchanged by the instruction" so reset to previous state
+}
+
+void DSP::alu_neg(bool ab)
+{
+	TReg56& d = ab ? reg.b : reg.a;
+
+	TInt64 d64 = d.signextend<TInt64>();
+	d64 = -d64;
+	
+	d.var = d64 & 0x00ffffffffffffff;
+
+	sr_s_update();
+	sr_e_update(d);
+	sr_u_update(d);
+	sr_n_update_logical(d);
+	sr_z_update(d);
+//	TODO: how to update v? test in sim		sr_v_update(d);
 	sr_l_update_by_v();
 }
 

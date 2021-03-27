@@ -6,6 +6,7 @@
 #include "error.h"
 #include "essi.h"
 #include "instructioncache.h"
+#include "opcodes.h"
 
 namespace dsp56k
 {
@@ -70,7 +71,7 @@ namespace dsp56k
 		// registers
 		//
 	private:
-		SRegs reg;
+		SRegs		reg;
 
 		bool		repRunning;
 
@@ -79,6 +80,8 @@ namespace dsp56k
 		// _____________________________________________________________________________
 		// members
 		//
+		Opcodes m_opcodes;
+
 		Memory& mem;
 		TWord	pcLastExec;
 		
@@ -87,6 +90,26 @@ namespace dsp56k
 		char	m_asm[128];
 
 		InstructionCache	cache;
+
+		// used to monitor ALL register changes during exec
+		struct SRegChange
+		{
+			EReg			reg;
+			TReg24			valOld;
+			TReg24			valNew;
+			unsigned int	pc;
+			unsigned int	ictr;
+		};
+
+		std::vector<SRegChange>		m_regChanges;
+
+		// used to compare registers
+		struct SRegState
+		{
+			int64_t	val;
+		};
+
+		StaticArray<SRegState,Reg_COUNT>	m_prevRegStates;
 
 		// _____________________________________________________________________________
 		// implementation
@@ -97,10 +120,10 @@ namespace dsp56k
 		void 	resetHW							();
 		void 	resetSW							();
 
-		void	jsr								( TReg24 _val )								{ pushPCSR(); setPC(_val); }
-		void	jsr								( TWord _val )								{ jsr(TReg24(_val)); }
+		void	jsr								( const TReg24& _val )						{ pushPCSR(); setPC(_val); }
+		void	jsr								( const TWord _val )						{ jsr(TReg24(_val)); }
 
-		void 	setPC							( TReg24 _val )								{ reg.pc = _val; }
+		void 	setPC							( const TReg24& _val )						{ reg.pc = _val; }
 
 		TReg24	getPC							() const									{ return reg.pc; }
 
@@ -116,11 +139,16 @@ namespace dsp56k
 		bool	readReg							( EReg _reg, TReg56& _res ) const;
 		bool	writeReg						( EReg _reg, const TReg56& _val );
 
+		bool	readRegToInt					( EReg _reg, signed __int64& _dst );
+
+		int		getICTR							() const									{ return reg.ictr.var; }
+
 		const char*	getASM						();
 
 		void	execUntilRTS					()
 		{
-			TReg5 oldSC = reg.sc;
+			LOG( "EXEC UTIL RTS, SC=" << reg.sc.var << " PC=" << reg.pc.var );
+			const TReg5 oldSC = reg.sc;
 			while( reg.sc.var >= oldSC.var )
 				exec();
 		}
@@ -131,7 +159,7 @@ namespace dsp56k
 
 		void			dumpCCCC						() const;
 
-		void			logSC							( const char* _func );
+		void			logSC							( const char* _func ) const;
 
 		bool			save							( FILE* _file ) const;
 		bool			load							( FILE* _file );
@@ -143,11 +171,12 @@ namespace dsp56k
 		{
 			TWord ret;
 
-			if( sr_test(SR_CE) )
-				ret = cache.fetch( mem, reg.pc.toWord(), (reg.omr.var & OMR_BE) != 0 );
-			else
+//			if( sr_test(SR_CE) )
+//				ret = cache.fetch( mem, reg.pc.toWord(), (reg.omr.var & OMR_BE) != 0 );
+//			else
 				ret = memRead( MemArea_P, reg.pc.toWord() );
 
+			// TODO: Check if its correct that these special REP and DO codes are here. It is also executed if fetchPC is called if the register is read as part of an instruction, probably DO and REP shouldn't be updated there
 			// REP
 			if( repRunning )
 			{
@@ -180,18 +209,23 @@ namespace dsp56k
 			return ret;
 		}
 
+		bool	exec_parallel(TWord op);
+
+		bool	exec_parallel_alu(TWord op);
+
+		bool	exec_parallel_alu_nonMultiply(TWord op);
+		bool	exec_parallel_alu_multiply(TWord op);
+
+		bool	exec_nonParallel(const OpcodeInfo* oi, TWord op);
+		
 		bool 	exec_pcu						( TWord dbmfop, TWord dbmf, TWord op );
 
-		bool 	exec_parallel_move				( TWord dbmfop, TWord dbmf, TWord op );
+		bool 	exec_parallel_move				(const OpcodeInfo* oi, TWord op);
 		bool 	exec_move						( TWord dbmfop, TWord dbmf, TWord op );
-
-		bool 	exec_arithmetic_parallel		( TWord dbmfop, TWord dbmf, TWord op );
-
-		bool 	exec_logical_parallel			( TWord dbmfop, TWord dbmf, TWord op );
 
 		bool 	exec_logical_nonparallel		( TWord dbmfop, TWord dbmf, TWord op );
 
-		bool 	exec_operand_8bits				( TWord dbmfop, TWord dbmf, TWord op );
+		bool 	exec_operand_8bits				(TWord dbmf, TWord op);
 
 		bool 	exec_bitmanip					( TWord dbmfop, TWord dbmf, TWord op );
 
@@ -226,10 +260,10 @@ namespace dsp56k
 			case 0x0b:	convert( res, b2() ); 	return res;	// b2
 			case 0x0c:	convert( res, a1() ); 	return res;	// a1
 			case 0x0d:	convert( res, b1() ); 	return res;	// b1
-			case 0x0e:	return getA<T>();		return res;	// a
-			case 0x0f:	return getB<T>();		return res;	// b
+			case 0x0e:	return getA<T>();					// a
+			case 0x0f:	return getB<T>();					// b
 			}
-			if( (_ddddd & 0x18) == 0x10 )				// r0-r7
+			if( (_ddddd & 0x18) == 0x10 )					// r0-r7
 				convert( res, reg.r[_ddddd&0x07] );
 			else if( (_ddddd & 0x18) == 0x18 )				// n0-n7
 				convert( res, reg.n[_ddddd&0x07] );
@@ -259,35 +293,36 @@ namespace dsp56k
 			return res;
 		}
 
-		template<typename T> void	decode_ddddd_write		( TWord _ddddd, const T& _val )
+		template<typename T> bool decode_ddddd_write(const TWord _ddddd, const T& _val )
 		{
 			switch( _ddddd )
 			{
-				case 0x04:	x0(_val);			return;	// x0
-				case 0x05:	x1(_val);			return;	// x1	
-				case 0x06:	y0(_val);			return;	// y0
-				case 0x07:	y1(_val);			return;	// y1
-				case 0x08:	{ TReg24 temp; convert(temp,_val); a0(temp); }	return;	// a0
-				case 0x09:	{ TReg24 temp; convert(temp,_val); b0(temp); }	return;	// b0
-				case 0x0a:	{ TReg8  temp; convert(temp,_val); a2(temp); }	return;	// a2
-				case 0x0b:	{ TReg8  temp; convert(temp,_val); b2(temp); }	return;	// b2
-				case 0x0c:	{ TReg24 temp; convert(temp,_val); a1(temp); }	return;	// a1
-				case 0x0d:	{ TReg24 temp; convert(temp,_val); b1(temp); }	return;	// b1
-				case 0x0e:	convert(reg.a,_val);							return;	// a
-				case 0x0f:	convert(reg.b,_val);							return;	// b
+				case 0x04:	x0(_val);										return true;	// x0
+				case 0x05:	x1(_val);										return true;	// x1	
+				case 0x06:	y0(_val);										return true;	// y0
+				case 0x07:	y1(_val);										return true;	// y1
+				case 0x08:	{ TReg24 temp; convert(temp,_val); a0(temp); }	return true;	// a0
+				case 0x09:	{ TReg24 temp; convert(temp,_val); b0(temp); }	return true;	// b0
+				case 0x0a:	{ TReg8  temp; convert(temp,_val); a2(temp); }	return true;	// a2
+				case 0x0b:	{ TReg8  temp; convert(temp,_val); b2(temp); }	return true;	// b2
+				case 0x0c:	{ TReg24 temp; convert(temp,_val); a1(temp); }	return true;	// a1
+				case 0x0d:	{ TReg24 temp; convert(temp,_val); b1(temp); }	return true;	// b1
+				case 0x0e:	convert(reg.a,_val);							return true;	// a
+				case 0x0f:	convert(reg.b,_val);							return true;	// b
+				default:
+					if( (_ddddd & 0x18) == 0x10 )											// r0-r7
+					{
+						convert(reg.r[_ddddd&0x07],_val);
+						return true;
+					}
+					if( (_ddddd & 0x18) == 0x18 )											// n0-n7
+					{
+						convert(reg.n[_ddddd&0x07],_val);
+						return true;
+					}
+					assert(0 && "invalid ddddd destination register");
+					return false;
 			}
-
-			if( (_ddddd & 0x18) == 0x10 )									// r0-r7
-			{
-				convert(reg.r[_ddddd&0x07],_val);
-				return;
-			}
-			else if( (_ddddd & 0x18) == 0x18 )								// n0-n7
-			{
-				convert(reg.n[_ddddd&0x07],_val);
-				return;
-			}
-			assert( 0 && "unreachable" );
 		}
 
 		TReg24	decode_ddddd_pcr_read 	( TWord _ddddd );
@@ -350,12 +385,12 @@ namespace dsp56k
 			{
 			case 0:
 			case 1:	alu = _b ? reg.b : reg.a;	return;
-			case 2:	convert(alu,reg.x);		return;
-			case 3:	convert(alu,reg.y);		return;
-			case 4: convert(alu,x0());	return;
-			case 5: convert(alu,y0());	return;
-			case 6: convert(alu,x1());	return;
-			case 7: convert(alu,y1());	return;
+			case 2:	convert(alu,reg.x);			return;
+			case 3:	convert(alu,reg.y);			return;
+			case 4: convert(alu,x0());			return;
+			case 5: convert(alu,y0());			return;
+			case 6: convert(alu,x1());			return;
+			case 7: convert(alu,y1());			return;
 			default:
 				assert( 0 && "unreachable, invalid JJJ value" );
 			}
@@ -552,6 +587,7 @@ namespace dsp56k
 		void 	sr_set					( TWord _bits )						{ reg.sr.var |= _bits;	}
 		void 	sr_clear				( TWord _bits )						{ reg.sr.var &= ~_bits; }
 		bool 	sr_test					( TWord _bits ) const				{ return (reg.sr.var & _bits) != 0; }
+		int 	sr_val					( TWord _bitNum ) const				{ return (reg.sr.var >> _bitNum) & 0x01; }
 		void 	sr_toggle				( TWord _bits, bool _set )			{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
 
 		void	sr_s_update				()
@@ -614,7 +650,8 @@ namespace dsp56k
 
 		void	sr_z_update( const TReg56& _ab )
 		{
-			sr_toggle( SR_Z, TReg56( TReg56::MyType(0) ) == _ab );
+			const TReg56 zero(static_cast<TReg56::MyType>(0));
+			sr_toggle( SR_Z, zero == _ab );
 		}
 
  		void	sr_c_update_logical( const TReg56& _ab )
@@ -646,6 +683,8 @@ namespace dsp56k
 				sr_toggle( SR_V, (_notLimitedResult & 0x00ff000000000000) != (_result.var & 0x00ff000000000000) );
 			}
 		}
+
+		void	sr_debug(char* _dst) const;
 
 		// register access helpers
 
@@ -809,7 +848,8 @@ namespace dsp56k
 			assert( reg.sc.var < reg.ss.eSize-1 );
 			++reg.sp.var;
 			++reg.sc.var;
-			assert( reg.sc.var <= 9 );
+
+//			assert( reg.sc.var <= 9 );
 		}
 
 		TReg24	ssh()				{ TReg24 res = hiword(reg.ss[reg.sc.toWord()]); decSP(); return res; }
@@ -834,6 +874,11 @@ namespace dsp56k
 		void	alu_lsl				( bool ab, int _shiftAmount );
 		void	alu_lsr				( bool ab, int _shiftAmount );
 
+		void	alu_addl			(bool ab);
+		void	alu_addr			(bool ab);
+
+		void	alu_clr				(bool ab);
+		
 		TWord	alu_bclr			( TWord _bit, TWord _val );
 		void	alu_mpy				( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _accumulate );
 		void	alu_mpysuuu			( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _accumulate, bool _suuu );
@@ -845,6 +890,12 @@ namespace dsp56k
 		void	alu_rnd				( TReg56& _alu );
 
 		void	alu_abs				( bool ab );
+
+		void	alu_tfr				( bool ab, const TReg56& src);
+
+		void	alu_tst				( bool ab );
+
+		void	alu_neg				(bool ab);
 
 		// -- memory
 

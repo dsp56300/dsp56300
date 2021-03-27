@@ -46,14 +46,23 @@ namespace dsp56k
 	// SR - Status register
 
 	// CCR - bit 0-7
-	#define			SR_C			0x000001	// carry
-	#define 		SR_V			0x000002	// overflow
-	#define 		SR_Z			0x000004	// zero
-	#define 		SR_N			0x000008	// negative
-	#define 		SR_U			0x000010	// unnormalized
-	#define 		SR_E			0x000020	// extension
-	#define 		SR_L			0x000040	// limit
-	#define 		SR_S			0x000080	// scaling
+	#define			SRB_C			0			// carry
+	#define 		SRB_V			1			// overflow
+	#define 		SRB_Z			2			// zero
+	#define 		SRB_N			3			// negative
+	#define 		SRB_U			4			// unnormalized
+	#define 		SRB_E			5			// extension
+	#define 		SRB_L			6			// limit
+	#define 		SRB_S			7			// scaling
+
+	#define			SR_C			(1<<SRB_C)	// carry
+	#define 		SR_V			(1<<SRB_V)	// overflow
+	#define 		SR_Z			(1<<SRB_Z)	// zero
+	#define 		SR_N			(1<<SRB_N)	// negative
+	#define 		SR_U			(1<<SRB_U)	// unnormalized
+	#define 		SR_E			(1<<SRB_E)	// extension
+	#define 		SR_L			(1<<SRB_L)	// limit
+	#define 		SR_S			(1<<SRB_S)	// scaling
 
 	// bit 8-15
 	#define 		SR_I0			0x000100	// interrupt mask bit 0
@@ -142,5 +151,28 @@ namespace dsp56k
 		TReg24 cnt2;		
 		TReg24 cnt3;		
 		TReg24 cnt4;
+	};
+
+	extern const size_t g_regBitCount[Reg_COUNT];
+	extern const char* const g_regNames[Reg_COUNT];
+
+	enum ConditionCode
+	{
+		CCCC_CarrySet		= 0x8,
+		CCCC_CarryClear		= 0x0,
+		CCCC_ExtensionSet	= 0xd,
+		CCCC_ExtensionClear	= 0x5,
+		CCCC_Equal			= 0xa,
+		CCCC_NotEqual		= 0x2,
+		CCCC_LimitSet		= 0xe,
+		CCCC_LimitClear		= 0x6,
+		CCCC_Minus			= 0xb,
+		CCCC_Plus			= 0x3,
+		CCCC_GreaterEqual	= 0x1,
+		CCCC_LessThan		= 0x9,
+		CCCC_Normalized		= 0xc,
+		CCCC_NotNormalized	= 0x4,
+		CCCC_GreaterThan	= 0x7,
+		CCCC_LessEqual		= 0xf
 	};
 };
