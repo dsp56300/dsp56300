@@ -26,10 +26,10 @@ namespace dsp56k
 
 		bool loadOMF				( const char* _filename );
 
-		bool readReg				( EReg _reg, TReg24& _dst );
+		bool readReg				( EReg _reg, TReg24& _dst ) const;
 		bool writeReg				( EReg _reg, TReg24 _src );
 
-		bool readReg				( EReg _reg, TReg56& _dst );
+		bool readReg				( EReg _reg, TReg56& _dst ) const;
 		bool writeReg				( EReg _reg, const TReg56& _src );
 
 		bool readMem				( EMemArea _area, unsigned int _offset, TWord& _dst );

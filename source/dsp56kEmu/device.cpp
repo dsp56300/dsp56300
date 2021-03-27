@@ -14,8 +14,8 @@ namespace dsp56k
 	//
 	Device::Device() : m_dsp(0), m_memory(0), m_execAddr(0)
 	{
-		m_memory	= new dsp56k::Memory();
-		m_dsp		= new dsp56k::DSP(*m_memory);
+		m_memory	= new Memory();
+		m_dsp		= new DSP(*m_memory);
 	}
 	// _____________________________________________________________________________
 	// ~Device
@@ -38,14 +38,14 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// readReg
 	//
-	bool Device::readReg( EReg _reg, TReg24& _dst )
+	bool Device::readReg( EReg _reg, TReg24& _dst ) const
 	{
 		return m_dsp->readReg( _reg, _dst );
 	}
 	// _____________________________________________________________________________
 	// readReg
 	//
-	bool Device::readReg( EReg _reg, TReg56& _dst )
+	bool Device::readReg( EReg _reg, TReg56& _dst ) const
 	{
 		return m_dsp->readReg( _reg, _dst );
 	}
