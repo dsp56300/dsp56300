@@ -1,12 +1,11 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 9.00
-# Visual Studio 2005
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dsp56kEmu", "dsp56kEmu\dsp56kEmu.vcproj", "{A1AF8DA1-878F-498B-BBDD-9921536FCE43}"
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.1340
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dsp56kEmu", "dsp56kEmu\dsp56kEmu.vcxproj", "{A1AF8DA1-878F-498B-BBDD-9921536FCE43}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dspEmuTester", "dspEmuTester\dspEmuTester.vcproj", "{96796AA6-128B-403C-9854-159587EDFEF8}"
-	ProjectSection(ProjectDependencies) = postProject
-		{A1AF8DA1-878F-498B-BBDD-9921536FCE43} = {A1AF8DA1-878F-498B-BBDD-9921536FCE43}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dspEmuTester", "dspEmuTester\dspEmuTester.vcxproj", "{96796AA6-128B-403C-9854-159587EDFEF8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,5 +30,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {24A4AF1E-3B35-4E91-A591-C5B59DF4A557}
 	EndGlobalSection
 EndGlobal
