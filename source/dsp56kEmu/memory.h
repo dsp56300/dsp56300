@@ -36,11 +36,9 @@ namespace dsp56k
 		// 768k words of 24-bit data for 3 banks (XYP)
 		StaticArray< std::vector<TWord>, MemArea_COUNT >	m_mem;
 
-#ifdef _DEBUG
 		const std::vector<TWord>&							x;
 		const std::vector<TWord>&							y;
 		const std::vector<TWord>&							p;
-#endif
 
 		StaticArray< Peripherals, 2>						m_perif;
 

@@ -16,11 +16,9 @@ namespace dsp56k
 	// Memory
 	//
 	Memory::Memory()
-#ifdef _DEBUG
 		: x(m_mem[MemArea_X])
 		, y(m_mem[MemArea_Y])
 		, p(m_mem[MemArea_P])
-#endif
 		, m_dsp(0)
 	{
 		for( size_t i=0; i<MemArea_COUNT; ++i )
@@ -31,11 +29,9 @@ namespace dsp56k
 	// Memory
 	//
 	Memory::Memory( const Memory& _src )
-#ifdef _DEBUG
 		: x(m_mem[MemArea_X])
 		, y(m_mem[MemArea_Y])
 		, p(m_mem[MemArea_P])
-#endif
 		, m_dsp(0)
 	{
 		m_mem = _src.m_mem;
