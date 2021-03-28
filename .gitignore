@@ -1,0 +1,6 @@
+temp/
+source/.vs/
+bin/*.exe
+*.ilk
+*.pdb
+*.user
