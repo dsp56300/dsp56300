@@ -4,6 +4,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <iostream>
 #endif
 
 namespace dsp56k
@@ -22,8 +24,7 @@ namespace dsp56k
 		case IDNO:							break;
 		}
 #else
-		// don't know about linux
-		fputs( stderr, _msg );
+		std::cerr << "DSP 56300 Emulator: ASSERTION FAILED" << _msg << std::endl;
 #endif
 	}
 }

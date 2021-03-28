@@ -154,7 +154,7 @@ namespace dsp56k
 				if( i == Reg_PC || i == Reg_ICTR )
 					continue;
 
-				signed __int64 regVal = 0;
+				int64_t regVal = 0;
 				const bool r = readRegToInt( (EReg)i, regVal );
 
 				if( !r )
@@ -3775,7 +3775,7 @@ bool DSP::readReg( EReg _reg, TReg5& _res ) const
 // _____________________________________________________________________________
 // readRegToInt
 //
-bool DSP::readRegToInt( EReg _reg, signed __int64& _dst )
+bool DSP::readRegToInt( EReg _reg, int64_t& _dst )
 {
 	switch( g_regBitCount[_reg] )
 	{

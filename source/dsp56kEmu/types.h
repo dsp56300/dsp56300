@@ -14,8 +14,8 @@ namespace dsp56k
 
 	template<typename T,unsigned int B> struct RegType
 	{
-		static const T bitCount;
-		static const T bitMask;
+		static constexpr T bitCount = B;
+		static constexpr T bitMask = ((T(1)<<bitCount)-1);
 
 		typedef T		MyType;
 

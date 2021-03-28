@@ -4,7 +4,7 @@
 
 namespace dsp56k
 {
-	static const char* const g_regNames[Reg_COUNT] =
+	const char* const g_regNames[Reg_COUNT] =
 	{
 		"x","y",		
 
@@ -47,7 +47,7 @@ namespace dsp56k
 		"cnt4"
 	};
 
-	static const size_t g_regBitCount[Reg_COUNT] = 
+	const size_t g_regBitCount[Reg_COUNT] = 
 	{
 		48,	48,
 

@@ -139,7 +139,7 @@ namespace dsp56k
 		bool	readReg							( EReg _reg, TReg56& _res ) const;
 		bool	writeReg						( EReg _reg, const TReg56& _val );
 
-		bool	readRegToInt					( EReg _reg, signed __int64& _dst );
+		bool	readRegToInt					( EReg _reg, int64_t& _dst );
 
 		int		getICTR							() const									{ return reg.ictr.var; }
 
@@ -360,7 +360,7 @@ namespace dsp56k
 			case 7: convert( res, y1() );		break;
 			default:
 				assert( 0 && "unreachable, invalid JJJ value" );
-				return TReg56(0xbadbadbadbadbadb);
+				return TReg56(TReg56::MyType(0xbadbadbadbadbadb));
 			}
 			return res;
 		}

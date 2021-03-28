@@ -191,7 +191,7 @@ uint OMFLoader::parse24Bit( const char* _src )
 		temp[1] = _src[i+1];
 
 		uint r;
-		sscanf_s( temp, "%02x", &r );
+		sscanf( temp, "%02x", &r );
 
 		result |= (r<<shift);
 	}
