@@ -668,7 +668,7 @@ namespace dsp56k
 		{
 			// L is never cleared automatically, so only test to set
 			if( sr_test(SR_V) )
-				sr_set( SR_L );
+				sr_set(SR_L);
 		}
 
 		// value needs to fit into 48 or 56 bits
@@ -754,7 +754,8 @@ namespace dsp56k
 
 		void limit_transfer( TReg48& _dst, const TReg56& _src )
 		{
-			__int64 test = _src.signextend<__int64>();
+			const auto test = _src.signextend<int64_t>();
+
 			if( test < -140737488355328 )	// 80000000000
 			{
 				sr_set( SR_L );
@@ -796,7 +797,7 @@ namespace dsp56k
 
 		void limit_transfer( TWord& _dst, const TReg56& _src )
 		{
-			limit_transfer( (int&)_dst, _src );
+			limit_transfer( reinterpret_cast<int&>(_dst), _src );
 		}
 
 		void limit_arithmeticSaturation( TReg56& _dst )

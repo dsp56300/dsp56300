@@ -1,10 +1,12 @@
 #include "pch.h"
 #include "opcodes.h"
 
-#include "disasm.h"
-
 namespace dsp56k
 {
+	/*
+	 * Note: all 'o' bits are '0' in the docs, but according to the Motorola simulator disasm setting them to 1 still
+	 * yields to valid instructions.
+	 */
 	OpcodeInfo g_opcodes[] =
 	{
 		OpcodeInfo(OpcodeInfo::Abs,				"????????????????0010d110",	"ABS D", OpcodeInfo::EffectiveAddress),
