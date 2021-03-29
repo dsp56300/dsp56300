@@ -31,8 +31,8 @@ namespace dsp56k
 		OpcodeInfo(OpcodeInfo::Asr_ii,			"0000110000011100SiiiiiiD",	"ASR #ii,S2,D"),
 		OpcodeInfo(OpcodeInfo::Asr_S1S2D,		"0000110000011110011SsssD",	"ASR S1,S2,D"),
 
-		OpcodeInfo(OpcodeInfo::Bcc_xxxx,		"00000101CCCC01aaaa0aaaaa",	"Bcc xxxx", OpcodeInfo::EffectiveAddress),	// TODO: documentation is a bit weird here, is the address now part of an extension word or part of aaaa...? Lots of typos in there
-//		OpcodeInfo(OpcodeInfo::Bcc_xxx,			"00000101CCCC01aaaa0aaaaa",	"Bcc xxx"),
+//		OpcodeInfo(OpcodeInfo::Bcc_xxxx,		"00000101CCCC01aaaa0aaaaa",	"Bcc xxxx", OpcodeInfo::EffectiveAddress),	// TODO: documentation is a bit weird here, is the address now part of an extension word or part of aaaa...? Lots of typos in there
+		OpcodeInfo(OpcodeInfo::Bcc_xxx,			"00000101CCCC01aaaa0aaaaa",	"Bcc xxx"),
 		OpcodeInfo(OpcodeInfo::Bcc_Rn,			"0000110100011RRR0100CCCC",	"Bcc Rn"),
 
 		OpcodeInfo(OpcodeInfo::Bchg_ea,			"0000101101MMMRRR0S0bbbbb",	"BCHG #n,[X or Y]:ea", OpcodeInfo::EffectiveAddress),	// Note: Doc typo, was ROS not R0S
@@ -113,7 +113,7 @@ namespace dsp56k
 
 		OpcodeInfo(OpcodeInfo::Div,				"0000000110oooooo01JJdooo",	"DIV S,D"),
 
-		OpcodeInfo(OpcodeInfo::Dmac,			"000000010010010s1sdkQQQQ",	"DMAC (+/-)S1,S2,D"),
+		OpcodeInfo(OpcodeInfo::Dmac,			"000000010010010s1SdkQQQQ",	"DMAC (+/-)S1,S2,D"),
 
 		OpcodeInfo(OpcodeInfo::Do_ea,			"0000011001MMMRRR0S000000",	"DO [X or Y]:ea, expr", OpcodeInfo::EffectiveAddress),
 		OpcodeInfo(OpcodeInfo::Do_aa,			"0000011000aaaaaa0S000000",	"DO [X or Y]:aa, expr", OpcodeInfo::EffectiveAddress),
@@ -256,7 +256,7 @@ namespace dsp56k
 
 		OpcodeInfo(OpcodeInfo::Mpy_S1S2D,		"????????????????1QQQdk00",	"MPY (+/-)S1,S2,D / MPY (+/-)S2,S1,D", OpcodeInfo::EffectiveAddress),
 		OpcodeInfo(OpcodeInfo::Mpy_SD,			"00000001000sssss11QQdk00",	"MPY (+/-)S,#n,D"),
-		OpcodeInfo(OpcodeInfo::Mpy_S1S2D,		"00000001001001111sdkQQQQ",	"MPY su (+/-)S1,S2,D / MPY uu (+/-)S1,S2,D"),
+		OpcodeInfo(OpcodeInfo::Mpy_su,			"00000001001001111sdkQQQQ",	"MPY su (+/-)S1,S2,D / MPY uu (+/-)S1,S2,D"),
 
 		OpcodeInfo(OpcodeInfo::Mpyi,			"0000000101ooooo111qqdk00",	"MPYI (+/-)#xxxx,S,D", OpcodeInfo::ImmediateData),
 

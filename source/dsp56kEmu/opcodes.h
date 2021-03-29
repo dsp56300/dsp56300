@@ -93,7 +93,7 @@ namespace dsp56k
 			Andi,
 			Asl_D,		Asl_ii,		Asl_S1S2D,
 			Asr_D,		Asr_ii,		Asr_S1S2D,
-			Bcc_xxxx,	Bcc_Rn,
+			Bcc_xxxx,	Bcc_xxx,	Bcc_Rn,
 			Bchg_ea,	Bchg_aa,	Bchg_pp,		Bchg_qq,	Bchg_D,
 			Bclr_ea,	Bclr_aa,	Bclr_pp,		Bclr_qq,	Bclr_D,
 			Bra_xxxx,	Bra_xxx,	Bra_Rn,

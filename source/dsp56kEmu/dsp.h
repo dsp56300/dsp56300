@@ -218,16 +218,16 @@ namespace dsp56k
 
 		bool	exec_nonParallel(const OpcodeInfo* oi, TWord op);
 		
-		bool 	exec_pcu						( TWord dbmfop, TWord dbmf, TWord op );
+		bool 	exec_pcu						(const OpcodeInfo* oi, TWord op);
 
 		bool 	exec_parallel_move				(const OpcodeInfo* oi, TWord op);
-		bool 	exec_move						( TWord dbmfop, TWord dbmf, TWord op );
+		bool 	exec_move						(const OpcodeInfo* oi, TWord op);
 
-		bool 	exec_logical_nonparallel		( TWord dbmfop, TWord dbmf, TWord op );
+		bool 	exec_logical_nonparallel		(const OpcodeInfo* oi, TWord op);
 
-		bool 	exec_operand_8bits				(TWord dbmf, TWord op);
+		bool 	exec_operand_8bits				(const OpcodeInfo* oi, TWord op);
 
-		bool 	exec_bitmanip					( TWord dbmfop, TWord dbmf, TWord op );
+		bool 	exec_bitmanip					(const OpcodeInfo* oi, TWord op);
 
 		bool	exec_do							( TReg24 _loopcount, TWord _addr );
 		bool	exec_do_end						();
@@ -881,7 +881,7 @@ namespace dsp56k
 		void	alu_clr				(bool ab);
 		
 		TWord	alu_bclr			( TWord _bit, TWord _val );
-		void	alu_mpy				( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _accumulate );
+		void	alu_mpy				( bool ab, const TReg24& _s1, const TReg24& _s2, bool _negate, bool _accumulate );
 		void	alu_mpysuuu			( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _accumulate, bool _suuu );
 		void	alu_dmac			( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool srcUnsigned, bool dstUnsigned );
 		void	alu_mac				( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _uu );

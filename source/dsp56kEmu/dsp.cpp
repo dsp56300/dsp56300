@@ -182,13 +182,13 @@ namespace dsp56k
 		++reg.ictr.var;
 	}
 
-	bool DSP::exec_parallel(TWord op)
+	bool DSP::exec_parallel(const TWord op)
 	{
 		const auto* oi = m_opcodes.findParallelMoveOpcodeInfo(op & 0xffff00);
 
 		switch (oi->getInstruction())
 		{
-		case OpcodeInfo::Ifcc:
+		case OpcodeInfo::Ifcc:		// execute the specified ALU operation of the condition is true
 		case OpcodeInfo::Ifcc_U:
 			{
 				const auto cccc = oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
@@ -223,7 +223,7 @@ namespace dsp56k
 			reg.a = preMoveA;
 			reg.b = preMoveB;
 
-			res |= exec_parallel_alu(op);//(exec_arithmetic_parallel(dbmfop,dbmf,op) || exec_logical_parallel(dbmfop,dbmf,op));
+			res |= exec_parallel_alu(op);
 
 			// now check what has changed and get the final values for all registers
 			if( postMoveX != preMoveX )
@@ -375,7 +375,7 @@ namespace dsp56k
 
 	bool DSP::exec_parallel_alu_multiply(TWord op)
 	{
-		const auto round = op & 0x1;			// TODO: rounding
+		const auto round = op & 0x1;
 		const auto mulAcc = (op>>1) & 0x1;
 		const auto negative = (op>>2) & 0x1;
 		const auto ab = (op>>3) & 0x1;
@@ -389,7 +389,7 @@ namespace dsp56k
 		alu_mpy(ab, s1, s2, negative, mulAcc);
 		if(round)
 		{
-			alu_rnd(ab);			
+			alu_rnd(ab);
 		}
 
 		return true;
@@ -402,14 +402,6 @@ namespace dsp56k
 	{
 		switch (oi->m_instruction)
 		{
-		case OpcodeInfo::Ifcc:
-			LOG_ERR_NOTIMPLEMENTED("IFcc");
-			return true;
-		case OpcodeInfo::Ifcc_U: 
-			LOG_ERR_NOTIMPLEMENTED("IFcc.u");
-			return true;
-		case OpcodeInfo::Move_Nop:		// NO parallel data move
-			return true;
 		case OpcodeInfo::Move_xx:		// (...) #xx,D - Immediate Short Data Move - 001dddddiiiiiiii
 			{
 				const TWord ddddd = oi->getFieldValue(OpcodeInfo::Field_ddddd, op);
@@ -494,7 +486,7 @@ namespace dsp56k
 
 				if( write )
 				{
-					if( mmmrrr == 0x34 )
+					if( mmmrrr == MMM_ImmediateData )
 						decode_ff_write( ff, TReg24(fetchPC()) );
 					else
 						decode_ff_write( ff, TReg24(decode_MMMRRR_read(mmmrrr)) );
@@ -568,1252 +560,828 @@ namespace dsp56k
 	
 	inline bool DSP::exec_nonParallel(const OpcodeInfo* oi, TWord op)
 	{
-		const auto dbmfop = op;
-		const auto dbmf = op & 0xffff00;
-		op &= 0xff;
-
-		if( exec_operand_8bits(dbmf,op) )
+		if( exec_operand_8bits(oi, op&0xff) )	return true;
+		if( exec_move(oi, op) )					return true;
+		if( exec_pcu(oi, op) )					return true;
+		if( exec_bitmanip(oi, op) )				return true;
+		if( exec_logical_nonparallel(oi, op) )	return true;
+		
+		switch (oi->getInstruction())
 		{
-		}
-		else if( exec_move(dbmfop,dbmf,op) )
-		{
-		}
-		else if( exec_pcu(dbmfop,dbmf,op) )
-		{
-		}
-		else if( exec_bitmanip(dbmfop,dbmf,op) )
-		{
-		}
-		else if( exec_logical_nonparallel(dbmfop,dbmf,op) )
-		{
-		}
-
-		// ADD #xx, D		- 00000001 01iiiiii 1000d000
-		else if( (dbmf&0xffc000) == 0x014000 && (op&0xf7) == 0x80 )
-		{
-			const TReg56 iiiiii = TReg56(TInt64((dbmfop&0x003f00) >> 8) << 24);
-
-			alu_add( (op&0x08) != 0, iiiiii );
-		}
-
-		// ADD #xxxx, D		- 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 1 0 0 d 0 0 0
-		else if( (dbmf&0xffff00) == 0x014000 && (op&0xf7) == 0xc0 )
-		{
-			TReg56 r56;
-			convert( r56, TReg24(fetchPC()) );
-
-			alu_add( (op&0x08) != 0, r56 );
-		}
-
-		// Logical AND
-
-		// AND #xx, D		- 0 0 0 0 0 0 0 1 0 1 i i i i i i 1 0 0 0 d 1 1 0
-		else if( (dbmf&0xffc000) == 0x014000 && (op&0xf7) == 0x86 )
-		{
-			TReg56& d = bittest( op, 3 ) ? reg.b : reg.a;
-			const TWord xxxx = (dbmfop&0x003f00)>>8;
-
-			alu_and( bittest( op, 3 ), xxxx );
-		}
-
-		// AND #xxxx, D		- 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 1 0 0 d 1 1 0
-		else if( (dbmf&0xffff00) == 0x014000 && (op&0xf7) == 0xc6 )
-		{
-			const TWord xxxx = fetchPC();
-
-			alu_and( bittest( op, 3 ), xxxx );
-		}
-
-		// Arithmetic Shift Accumulator Left
-
-		// ASL, #ii, S2, D	- 00001100 00011101 SiiiiiiD
-		else if( (dbmf&0xffff00) == 0x0c1d00 )
-		{
-			const TWord shiftAmount	= ((dbmfop&0x00007e)>>1);
-
-			const bool abDst		= bittest(dbmfop,0);
-			const bool abSrc		= bittest(dbmfop,7);
-
-			alu_asl( abDst, abSrc, shiftAmount );
-		}
-
-		// ASL S1,S2,D	- 00001100 00011110 010SsssD - arithmetic shift accumulator left
-		else if( (dbmf&0xffff00) == 0x0c1e00 && (op&0xe0) == 0x40 )
-		{
-			const TWord sss = (dbmfop>>1)&0x7;
-			const bool abDst = bittest(dbmfop,0);
-			const bool abSrc = bittest(dbmfop,4);
-
-			const TWord shiftAmount = decode_sss_read<TWord>( sss );
-
-			alu_asl( abDst, abSrc, shiftAmount );
-		}
-
-		// Arithmetic Shift Accumulator Right
-
-		// ASR, #ii, S2, D	- 00001100 00011100 SiiiiiiD
-		else if( (dbmf&0xffff00) == 0x0c1c00 )
-		{
-			TWord shiftAmount = ((dbmfop&0x00007e)>>1);
-
-			const bool abDst = bittest( dbmfop, 0 );
-			const bool abSrc = bittest( dbmfop, 7 );
-
-			alu_asr( abDst, abSrc, shiftAmount );
-		}
-
-		// ASR S1,S2,D	- 00001100 00011110 011SsssD
-		else if( (dbmf&0xffff00) == 0x0c1e00 && (op&0xe0) == 0x60 )
-		{
-			const TWord sss = (dbmfop>>1)&0x7;
-			const bool abDst = bittest(dbmfop,0);
-			const bool abSrc = bittest(dbmfop,4);
-
-			const TWord shiftAmount = decode_sss_read<TWord>( sss );
-
-			alu_asr( abDst, abSrc, shiftAmount );
-		}
-
-		// Branch if Bit Clear
-
-		// BRCLR #n,[X or Y]:ea,xxxx - 0 0 0 0 1 1 0 0 1 0 M M M R R R 0 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0c8000 && (op&0xa0) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BRCLR");
-		}
-
-		// BRCLR #n,[X or Y]:aa,xxxx - 0 0 0 0 1 1 0 0 1 0 a a a a a a 1 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0c8000 && (op&0xa0) == 0x80 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BRCLR");
-		}
-
-		// BRCLR #n,[X or Y]:pp,xxxx - 0 0 0 0 1 1 0 0 1 1 p p p p p p 0 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0cc000 && (op&0xa0) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BRCLR");
-		}
-
-		// BRCLR #n,[X or Y]:qq,xxxx - 00000100 10qqqqqq 0S0bbbbb
-		else if( (dbmf&0xffc000) == 0x048000 && (op&0xa0) == 0x00 )
-		{
-			const TWord bit		= dbmfop&0x00001f;
-			const TWord qqqqqq	= (dbmfop&0x003f00)>>8;
-			const EMemArea S	= bittest( dbmfop, 6 ) ? MemArea_Y : MemArea_X;
-
-			const TWord ea = 0xffff80 + qqqqqq;
-
-			const int displacement = signextend<int,24>( fetchPC() );
-
-			if( !bittest( memRead( S, ea ), bit ) )
+		case OpcodeInfo::Add_xx:	// 0000000101iiiiii10ood000
 			{
-				reg.pc.var += (displacement-2);
+				const TWord iiiiii = oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
+				const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
+
+				alu_add( ab, TReg56(iiiiii) );
 			}
-		}
-
-		// BRCLR #n,S,xxxx - 0 0 0 0 1 1 0 0 1 1 D D D D D D 1 0 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0cc000 && (op&0xe0) == 0x80 )
-		{
-			const TWord bit		= dbmfop&0x00001f;
-			const TWord dddddd	= (dbmfop&0x003f00)>>8;
-
-			const TReg24 tst = decode_dddddd_read( dddddd );
-
-			const int displacement = signextend<int,24>( fetchPC() );
-
-			if( !bittest( tst, bit ) )
+			return true;
+		case OpcodeInfo::Add_xxxx:
 			{
-				reg.pc.var += (displacement-2);
+				const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
+
+				TReg56 r56;
+				convert( r56, TReg24(fetchPC()) );
+
+				alu_add( ab, r56 );
 			}
-		}
-
-		// Exit Current DO Loop Conditionally
-
-		// BRKcc - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 1 C C C C
-		else if( (dbmf&0xffff00) == 0x000200 && (op&0xf0) == 0x10 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BRKcc");
-		}
-
-		// Branch if Bit Set
-
-		// BRSET #n,[X or Y]:ea,xxxx - 0 0 0 0 1 1 0 0 1 0 M M M R R R 0 S 1 b b b b b
-		else if( (dbmf&0xffc000) == 0x0c8000 && (op&0xa0) == 0x20 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BRSET");
-		}
-
-		// BRSET #n,[X or Y]:aa,xxxx - 0 0 0 0 1 1 0 0 1 0 a a a a a a 1 S 1 b b b b b
-		else if( (dbmf&0xffc000) == 0x0c8000 && (op&0xa0) == 0xa0 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BRSET");
-		}
-
-		// BRSET #n,[X or Y]:pp,xxxx - 
-		else if( (dbmf&0xffc000) == 0x0cc000 && (op&0xa0) == 0x20 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BRSET");
-		}
-
-		// BRSET #n,[X or Y]:qq,xxxx - 00000100 10qqqqqq 0S1bbbbb
-		else if( (dbmf&0xffc000) == 0x048000 && (op&0xa0) == 0x20 )
-		{
-			const TWord bit		= dbmfop&0x00001f;
-			const TWord qqqqqq	= (dbmfop&0x003f00)>>8;
-			const EMemArea S	= bittest( dbmfop, 6 ) ? MemArea_Y : MemArea_X;
-
-			const TWord ea = 0xffff80 + qqqqqq;
-
-			const int displacement = signextend<int,24>( fetchPC() );
-
-			if( bittest( memRead( S, ea ), bit ) )
-			{
-				reg.pc.var += (displacement-2);
-			}
-		}
-
-		// BRSET #n,S,xxxx - 00001100 11DDDDDD 101bbbbb
-		else if( (dbmf&0xffc000) == 0x0cc000 && (op&0xe0) == 0xa0 )
-		{
-			const TWord bit		= dbmfop&0x00001f;
-			const TWord dddddd	= (dbmfop&0x003f00)>>8;
-
-			TReg24 r = decode_dddddd_read( dddddd );
-
-			const int displacement = signextend<int,24>( fetchPC() );
-
-			if( bittest( r.var, bit ) )
-			{
-				reg.pc.var += (displacement-2);
-			}
-		}
-
-		// Branch to Subroutine if Bit Clear
-
-		// BSCLR #n,[X or Y]:ea,xxxx - 0 0 0 0 1 1 0 1 1 0 M M M R R R 0 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0d8000 && (op&0xa0) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSCLR");
-		}
-
-		// BSCLR #n,[X or Y]:aa,xxxx - 0 0 0 0 1 1 0 1 1 0 a a a a a a 1 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0d8000 && (op&0xa0) == 0x80 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSCLR");
-		}
-
-		// BSCLR #n,[X or Y]:qq,xxxx - 0 0 0 0 0 1 0 0 1 0 q q q q q q 1 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x048000 && (op&0xa0) == 0x80 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSCLR");
-		}
-
-		// BSCLR #n,[X or Y]:pp,xxxx - 0 0 0 0 1 1 0 1 1 1 p p p p p p 0 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0dc000 && (op&0xa0) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSCLR");
-		}
-
-		// BSCLR #n,S,xxxx - 0 0 0 0 1 1 0 1 1 1 D D D D D D 1 0 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0dc000 && (op&0xa0) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSCLR");
-		}
-
-		// Branch to Subroutine if Bit Set
-
-		// BSSET #n,[X or Y]:ea,xxxx - 0 0 0 0 1 1 0 1 1 0 M M M R R R 0 S 1 b b b b b
-		else if( (dbmf&0xffc000) == 0x0d8000 && (op&0xa0) == 0x20 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSSET");
-		}
-
-		// BSSET #n,[X or Y]:aa,xxxx - 0 0 0 0 1 1 0 1 1 0 a a a a a a 1 S 1 b b b b b
-		else if( (dbmf&0xffc000) == 0x0d8000 && (op&0xa0) == 0xa0 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSSET");
-		}
-
-		// BSSET #n,[X or Y]:pp,xxxx - 0 0 0 0 1 1 0 1 1 1 p p p p p p 0 S 1 b b b b b
-		else if( (dbmf&0xffc000) == 0x0dc000 && (op&0xa0) == 0x20 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSSET");
-		}
-
-		// BSSET #n,[X or Y]:qq,xxxx - 0 0 0 0 0 1 0 0 1 0 q q q q q q 1 S 1 b b b b b
-		else if( (dbmf&0xffc000) == 0x048000 && (op&0xa0) == 0xa0 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSSET");
-		}
-
-		// BSSET #n,S,xxxx - 0 0 0 0 1 1 0 1 1 1 D D D D D D 1 0 1 b b b b b
-		else if( (dbmf&0xffc000) == 0x0dc000 && (op&0xe0) == 0xa0 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSSET");
-		}
-
-		// Count Leading Bits
-
-		// CLB S,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 0 0 0 0 0 0 S D
-		else if( (dbmf&0xffff00) == 0x0c1e00 && (op&0xfc) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("CLB");
-		}
-
-		// Compare
-
-		// CMP #xx, S2 - 00000001 01iiiiii 1000d101
-		else if( (dbmf&0xffc000) == 0x014000 && (op&0xf7) == 0x85 )
-		{
-			const TWord iiiiii = (dbmfop&0x003f00)>>8;
-			
-			TReg56 r56;
-			convert( r56, TReg24(iiiiii) );
-
-			alu_cmp( bittest(op,3), r56, false );
-		}
-
-		// CMP #xxxx,S2 - 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 1 0 0 d 1 0 1
-		else if( (dbmf&0xffff00) == 0x014000 && (op&0xf7) == 0xc5 )
-		{
-			const TReg24 s( signextend<int,24>( fetchPC() ) );
-
-			TReg56 r56;
-			convert( r56, s );
-
-			alu_cmp( bittest(op,3), r56, false );
-		}
-
-		// Compare Unsigned
-
-		// CMPU S1, S2 - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 1 1 1 1 1 g g g d
-		else if( (dbmf&0xffff00) == 0x0c1f00 && (op&0xf0) == 0xf0 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("CMPU");
-		}
-
-		// Divide Iteration
-
-		// DIV S,D - 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 1 J J d 0 0 0
-		else if( (dbmf&0xffff00) == 0x018000 && (op&0xc7) == 0x40 )
-		{
-			// TODO: i'm not sure if this works as expected...
-
-			const TWord jj = ((dbmfop&0x00003f)>>4);
-
-			TReg56& d = bittest( dbmfop, 3 ) ? reg.b : reg.a;
-
-			TReg24 s24 = decode_JJ_read( jj );
-
-			const TReg56 debugOldD = d;
-			const TReg24 debugOldS = s24;
-
-			bool c = bittest(d,55) != bittest(s24,23);
-
-			bool old47 = bittest(d,47);
-
-			d.var <<= 1;
-
-			bool changed47 = bittest( d, 47 ) != c;
-
-			if( sr_test(SR_C) )
-				bittestandset( d.var, 0 );
-			else
-				bittestandclear( d.var, 0 );
-
-			if( c )
-				d.var = ((d.var + (signextend<TInt64,24>(s24.var) << 24) )&0xffffffffff000000) | (d.var & 0xffffff);
-			else
-				d.var = ((d.var - (signextend<TInt64,24>(s24.var) << 24) )&0xffffffffff000000) | (d.var & 0xffffff);
-
-			sr_toggle( SR_C, bittest(d,55) == 0 );
-			sr_toggle( SR_V, changed47 );
-			sr_l_update_by_v();
-
-			d.var &= 0x00ffffffffffffff;
-
-//			LOG( "DIV: d" << std::hex << debugOldD.var << " s" << std::hex << debugOldS.var << " =>" << std::hex << d.var );
-		}
-
-		// Double-Precision Multiply-Accumulate With Right Shift
-
-		// DMAC (±)S1,S2,D - 00000001 0010010s 1sdkQQQQ
-		else if( (dbmf&0xfffe00) == 0x012400 && (op&0x80) == 0x80 )
-		{
-			const bool dstUnsigned	= bittest(dbmfop,8);
-			const bool srcUnsigned	= bittest(dbmfop,6);
-			const bool ab			= bittest(dbmfop,5);
-			const bool negate		= bittest(dbmfop,4);
-
-			const TWord qqqq		= dbmfop&0x00000f;
-
-			TReg24 s1, s2;
-			decode_QQQQ_read( s1, s2, qqqq );
-
-			alu_dmac( ab, s1, s2, negate, srcUnsigned, dstUnsigned );
-		}
-
-		// Start Hardware Loop
-
-		// DO [X or Y]:ea, expr - 0 0 0 0 0 1 1 0 0 1 M M M R R R 0 S 0 0 0 0 0 0
-		else if( (dbmf&0xffc000) == 0x064000 && (op&0xbf) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("DO");
-		}
-
-		// DO [X or Y]:aa, expr - 0 0 0 0 0 1 1 0 0 0 a a a a a a 0 S 0 0 0 0 0 0
-		else if( (dbmf&0xffc000) == 0x060000 && (op&0xbf) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("DO");
-		}
-
-		// DO #xxx, expr - 0 0 0 0 0 1 1 0 i i i i i i i i 1 0 0 0 h h h h
-		else if( (dbmf&0xff0000) == 0x060000 && (op&0xf0) == 0x80 )
-		{
-			const TWord addr = fetchPC();
-			TWord loopcount = ((dbmfop&0x00000f) << 8) | ((dbmfop&0x00ff00)>>8);
-
-			exec_do( TReg24(loopcount), addr );
-		}
-
-		// DO S, expr - 00000110 11DDDDDD 00000000
-		else if( (dbmf&0xffc000) == 0x06c000 && op == 0x00 )
-		{
-			const TWord addr = fetchPC();
-
-			const TWord dddddd = ((dbmfop&0x003f00)>>8);
-
-			const TReg24 loopcount = decode_dddddd_read( dddddd );
-
-			exec_do( loopcount, addr );
-		}
-
-		// Start Infinite Loop
-
-		// DO FOREVER - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 1 1
-		else if( (dbmf&0xffff00) == 0x000200 && op == 0x03 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("DO FOREVER");
-		}
-
-		// Start PC-Relative Hardware Loop
-
-		// DOR [X or Y]:ea,label - 0 0 0 0 0 1 1 0 0 1 M M M R R R 0 S 0 1 0 0 0 0
-		else if( (dbmf&0xffc000) == 0x064000 && (op&0xbf) == 0x10 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("DOR");
-		}
-
-		// DOR [X or Y]:aa,label - 0 0 0 0 0 1 1 0 0 0 a a a a a a 0 S 0 1 0 0 0 0
-		else if( (dbmf&0xffc000) == 0x060000 && (op&0xbf) == 0x10 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("DOR");
-		}
-
-		// DOR #xxx, label - 0 0 0 0 0 1 1 0 i i i i i i i i 1 0 0 1 h h h h
-		else if( (dbmf&0xff0000) == 0x060000 && (op&0xf0) == 0x90 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("DOR");
-		}
-
-		// DOR S, label - 00000110 11DDDDDD 00010000
-		else if( (dbmf&0xffc000) == 0x06c000 && op == 0x10 )
-		{
-			const TWord dddddd	= (dbmfop&0x003f00)>>8;
-			const TReg24 lc		= decode_dddddd_read( dddddd );
-			
-			const int displacement = signextend<int,24>(fetchPC());
-			exec_do( lc, reg.pc.var + displacement - 2 );
-		}
-
-		// Start PC-Relative Infinite Loops
-
-		// DOR FOREVER - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 1 0
-		else if( (dbmf&0xffff00) == 0x000200 && op == 0x02 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("DOR FOREVER");
-		}
-
-		// Load PC-Relative Address
-
-		// LRA Rn,D - 0 0 0 0 0 1 0 0 1 1 0 0 0 R R R 0 0 0 d d d d d
-		else if( (dbmf&0xfff800) == 0x04c000 && (op&0xe0) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("LRA");
-		}
-
-		// LRA xxxx,D - 0 0 0 0 0 1 0 0 0 1 0 0 0 0 0 0 0 1 0 d d d d d
-		else if( (dbmf&0xffff00) == 0x044000 && (op&0xe0) == 0x40 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("LRA");
-		}
-
-		// Load Updated Address
-
-		// LUA/LEA ea,D - 00000100 010MMRRR 000ddddd
-		else if( (dbmf&0xffe000) == 0x044000 && (op&0xe0) == 0x00 )
-		{
-			const TWord mmrrr	= (dbmfop&0x001f00)>>8;
-			const TWord ddddd	= (dbmfop&0x00001f);
-
-			const unsigned int regIdx = mmrrr & 0x07;
-
-			const TReg24	_n = reg.n[regIdx];
-			TWord			_r = reg.r[regIdx].var;
-			const TReg24	_m = reg.m[regIdx];
-
-			switch( mmrrr & 0x18 )
-			{
-			case 0x00:	/* 00 */	AGU::updateAddressRegister( _r, -_n.var, _m.var );		break;
-			case 0x08:	/* 01 */	AGU::updateAddressRegister( _r, +_n.var, _m.var );		break;
-			case 0x10:	/* 10 */	AGU::updateAddressRegister( _r, -1, _m.var );			break;
-			case 0x18:	/* 11 */	AGU::updateAddressRegister( _r, +1, _m.var );			break;
-			default:
-				assert(0 && "impossible to happen" );
-			}
-
-			decode_ddddd_write<TReg24>( ddddd, TReg24(_r) );
-		}
-
-		// LUA/LEA (Rn + aa),D - 00000100 00aaaRRR aaaadddd
-		else if( (dbmf&0xffc000) == 0x040000 )
-		{
-			const TWord dddd	= (dbmfop&0x00000f);
-			const TWord a		= ((dbmfop&0x003800)>>7) | ((dbmfop&0x0000f0)>>4);
-			const TWord rrr		= (dbmfop&0x000700)>>8;
-
-			const TReg24 _r = reg.r[rrr];
-
-			const int aSigned = signextend<int,7>(a);
-
-			const TReg24 val = TReg24(_r.var + aSigned);
-
-			if( dddd < 8 )									// r0-r7
-			{
-				convert(reg.r[dddd],val);
-			}
-			else
-			{
-				convert(reg.n[dddd&0x07],val);
-			}
-		}
-
-		// Signed Multiply Accumulate
-
-		// MAC (±)S,#n,D - 00000001 000sssss 11QQdk10
-		else if( (dbmf&0xffe000) == 0x010000 && (op&0xc3) == 0xc2 )
-		{
-			const TWord sssss	= (dbmfop&0x001f00)>>8;
-			const TWord qq		= (dbmfop&0x000030)>>4;
-			const bool	ab		= bittest(dbmfop,3);
-			const bool	negate	= bittest(dbmfop,2);
-
-			const TReg24 s1 = decode_QQ_read( qq );
-			const TReg24 s2( decode_sssss(sssss) );
-
-			alu_mac( ab, s1, s2, negate, false );
-		}
-
-		// Signed Multiply Accumulate With Immediate Operand
-
-		// MACI (±)#xxxx,S,D - 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 1 1 1 q q d k 1 0
-		else if( (dbmf&0xffff00) == 0x014100 && (op&0xc3) == 0xc2 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MACI");
-		}
-
-		// Mixed Multiply Accumulate
-
-		// MACsu (±)S1,S2,D - 0 0 0 0 0 0 0 1 0 0 1 0 0 1 1 0 1 s d k Q Q Q Q
-		// MACuu (±)S1,S2,D
-		else if( (dbmf&0xffff00) == 0x012600 && (op&0x80) == 0x80 )
-		{
-			const bool uu			= bittest(dbmfop,6);
-			const bool ab			= bittest(dbmfop,5);
-			const bool negate		= bittest(dbmfop,4);
-
-			const TWord qqqq		= dbmfop&0x00000f;
-
-			TReg24 s1, s2;
-			decode_QQQQ_read( s1, s2, qqqq );
-
-			alu_mac( ab, s1, s2, negate, uu );
-		}
-
-		// Signed Multiply Accumulate and Round
-
-		// MACR (±)S,#n,D - 0 0 0 0 0 0 0 1 0 0 0 0 3 s s s 1 1 Q Q d k 1 1
-		else if( (dbmf&0xfff000) == 0x010000 && (op&0xc3) == 0xc3 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MACR");
-		}
-
-		// Signed MAC and Round With Immediate Operand
-
-		// MACRI (±)#xxxx,S,D - 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 1 1 1 q q d k 1 1
-		else if( (dbmf&0xffff00) == 0x014100 && (op&0xc3) == 0xc3 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MACRI");
-		}
-
-		// Signed Multiply
-
-		// MPY (±)S,#n,D - 00000001 000sssss 11QQdk00
-		else if( (dbmf&0xffe000) == 0x010000 && (op&0xc3) == 0xc0 )
-		{
-			const int sssss		= (dbmfop&0x001f00)>>8;
-			const TWord QQ		= (dbmfop&0x000030)>>4;
-			const bool ab		= bittest( dbmfop, 3 );
-			const bool negate	= bittest( dbmfop, 2 );
-
-			const TReg24 s1 = decode_QQ_read(QQ);
-
-			const TReg24 s2 = TReg24( decode_sssss(sssss) );
-
-			alu_mpy( ab, s1, s2, negate, false );
-		}
-
-		// Mixed Multiply
-
-		// MPY su (±)S1,S2,D - 0 0 0 0 0 0 0 1 0 0 1 0 0 1 1 1 1 s d k Q Q Q Q
-		// MPY uu (±)S1,S2,D
-		else if( (dbmf&0xffff00) == 0x012700 && (op&0x80) == 0x80 )
-		{
-			const bool negate	= bittest(dbmfop,4);
-			const bool ab		= bittest(dbmfop,5);
-			const bool uu		= bittest(dbmfop,6);
-			const TWord qqqq	= dbmfop&0x00000f;
-
-			TReg24 s1, s2;
-			decode_QQQQ_read( s1, s2, qqqq );
-
-			alu_mpysuuu( ab, s1, s2, negate, false, uu );
-		}
-
-		// Signed Multiply With Immediate Operand
-
-		// MPYI (±)#xxxx,S,D - 00000001 01000001 11qqdk00
-		else if( (dbmf&0xffff00) == 0x014100 && (op&0xc3) == 0xc0 )
-		{
-			const TReg24 s		= TReg24(fetchPC());
-			const TWord qq		= (dbmfop&0x000030)>>4;
-			const bool	negate	= bittest(op,2);
-			const bool	ab		= bittest(op,3);
-
-			const TReg24 reg	= decode_qq_read(qq);
-
-			alu_mpy( ab, reg, s, negate, false );
-		}
-
-		// Signed Multiply and Round
-
-		// MPYR (±)S,#n,D - 0 0 0 0 0 0 0 1 0 0 0 s s s s s 1 1 Q Q d k 0 1
-		else if( (dbmf&0xffe000) == 0x010000 && (op&0xc3) == 0xc1 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MPYR");
-		}
-
-		// Signed Multiply and Round With Immediate Operand
-
-		// MPYRI (±)#xxxx,S,D - 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 1 1 1 q q d k 0 1
-		else if( (dbmf&0xffff00) == 0x014100 && (op&0xc3) == 0xc1 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("MPYRI");
-		}
-
-		// Norm Accumulator Iterations
-
-		// NORM Rn,D - 0 0 0 0 0 0 0 1 1 1 0 1 1 R R R 0 0 0 1 d 1 0 1
-		else if( (dbmf&0xfff800) == 0x01d800 && (op&0xf7) == 0x15 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("NORM");
-		}
-
-		// Fast Accumulator Normalization
-
-		// NORMF S,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 0 0 1 0 s s s D
-		else if( (dbmf&0xffff00) == 0x0c1e00 && (op&0xf0) == 0x20 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("NORMF");
-		}
-
-		// AND Immediate With Control Register
-
-		// AND(I) #xx,D		- 00000000 iiiiiiii 101110EE
-		else if( (dbmf&0xff0000) == 0x000000 && (op&0xfc) == 0xb8 )
-		{
-			const TWord ee		= dbmfop&0x000003;
-			const TWord iiiiii	= ((dbmfop&0x00ff00)>>8);
-
-			TReg8 val = decode_EE_read(ee);
-			val.var &= iiiiii;
-			decode_EE_write(ee,val);
-		}
-
-		// Lock Instruction Cache Sector
-
-		// PLOCK ea - 0 0 0 0 1 0 1 1 1 1 M M M R R R 1 0 0 0 0 0 0 1
-		else if( (dbmf&0xffc000) == 0x0bc000 && op == 0x81 )
-		{
-			cache.plock( fetchPC() );
-		}
-
-		// Unlock Instruction Cache Sector
-
-		// PUNLOCK ea - 0 0 0 0 1 0 1 0 1 1 M M M R R R 1 0 0 0 0 0 0 1
-		else if( (dbmf&0xffc000) == 0x0ac000 && op == 0x81 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("PUNLOCK");
-		}
-
+			return true;
 		// Subtract
+		case OpcodeInfo::Sub_xx:
+			{
+				const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
+				const TWord iiiiii = oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
 
-		// SUB #xx,D - 00000001 01iiiiii 1000d100
-		else if( (dbmf&0xffc000) == 0x014000 && (op&0xf7) == 0x84 )
-		{
-			const bool	ab		= bittest( dbmfop, 3 );
-			const TWord	iiiiii	= (dbmfop&0x003f00)>>8;
+				alu_sub( ab, TReg56(iiiiii) );
+			}
+			return true;
+		case OpcodeInfo::Sub_xxxx:	// 0000000101ooooo011ood100
+			{
+				const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
 
-			alu_sub( ab, TReg56(iiiiii) );
-		}
+				TReg56 r56;
+				convert( r56, TReg24(fetchPC()) );
 
-		// SUB #xxxx,D - 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 1 0 0 d 1 0 0
-		else if( (dbmf&0xffff00) == 0x014000 && (op&0xf7) == 0xc4 )
-		{
-			const bool	ab		= bittest( dbmfop, 3 );
+				alu_sub( ab, r56 );
+			}
+			return true;
+		case OpcodeInfo::BRKcc:					// Exit Current DO Loop Conditionally
+			LOG_ERR_NOTIMPLEMENTED("BRKcc");
+			return true;
+		case OpcodeInfo::Clb:					// Count Leading Bits - // CLB S,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 0 0 0 0 0 0 S D
+			LOG_ERR_NOTIMPLEMENTED("CLB");
+			return true;
+		// Compare
+		case OpcodeInfo::Cmp_xxS2:				// CMP #xx, S2 - 00000001 01iiiiii 1000d101
+			{
+				const TWord iiiiii = oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
+				
+				TReg56 r56;
+				convert( r56, TReg24(iiiiii) );
 
-			TReg56 r56;
-			convert( r56, TReg24(fetchPC()) );
+				alu_cmp( bittest(op,3), r56, false );				
+			}
+			return true;
+		case OpcodeInfo::Cmp_xxxxS2:
+			{
+				const TReg24 s( signextend<int,24>( fetchPC() ) );
 
-			alu_sub( ab, r56 );
-		}
+				TReg56 r56;
+				convert( r56, s );
 
+				alu_cmp( bittest(op,3), r56, false );				
+			}
+			return true;
+		// Compare Unsigned
+		case OpcodeInfo::Cmpu_S1S2:
+			LOG_ERR_NOTIMPLEMENTED("CMPU");
+			return true;
+		case OpcodeInfo::Div:	// 0000000110oooooo01JJdooo
+			{
+				// TODO: i'm not sure if this works as expected...
+
+				const TWord jj = oi->getFieldValue(OpcodeInfo::Field_JJ, op);
+				const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
+
+				TReg56& d = ab ? reg.b : reg.a;
+
+				TReg24 s24 = decode_JJ_read( jj );
+
+				const TReg56 debugOldD = d;
+				const TReg24 debugOldS = s24;
+
+				bool c = bittest(d,55) != bittest(s24,23);
+
+				bool old47 = bittest(d,47);
+
+				d.var <<= 1;
+
+				bool changed47 = bittest( d, 47 ) != c;
+
+				if( sr_test(SR_C) )
+					bittestandset( d.var, 0 );
+				else
+					bittestandclear( d.var, 0 );
+
+				if( c )
+					d.var = ((d.var + (signextend<TInt64,24>(s24.var) << 24) )&0xffffffffff000000) | (d.var & 0xffffff);
+				else
+					d.var = ((d.var - (signextend<TInt64,24>(s24.var) << 24) )&0xffffffffff000000) | (d.var & 0xffffff);
+
+				sr_toggle( SR_C, bittest(d,55) == 0 );
+				sr_toggle( SR_V, changed47 );
+				sr_l_update_by_v();
+
+				d.var &= 0x00ffffffffffffff;
+
+	//			LOG( "DIV: d" << std::hex << debugOldD.var << " s" << std::hex << debugOldS.var << " =>" << std::hex << d.var );				
+			}
+			return true;
+		// Double-Precision Multiply-Accumulate With Right Shift
+		case OpcodeInfo::Dmac:	// 000000010010010s1SdkQQQQ
+			{
+				const bool dstUnsigned	= oi->getFieldValue(OpcodeInfo::Field_s, op);
+				const bool srcUnsigned	= oi->getFieldValue(OpcodeInfo::Field_S, op);
+				const bool ab			= oi->getFieldValue(OpcodeInfo::Field_d, op);
+				const bool negate		= oi->getFieldValue(OpcodeInfo::Field_k, op);
+
+				const TWord qqqq		= oi->getFieldValue(OpcodeInfo::Field_QQQQ, op);
+
+				TReg24 s1, s2;
+				decode_QQQQ_read( s1, s2, qqqq );
+
+				alu_dmac( ab, s1, s2, negate, srcUnsigned, dstUnsigned );
+			}
+			return true;
+		// Start Hardware Loop
+		case OpcodeInfo::Do_ea:
+		case OpcodeInfo::Do_aa:
+			LOG_ERR_NOTIMPLEMENTED("DO");
+			return true;
+		case OpcodeInfo::Do_xxx:	// 00000110iiiiiiii1000hhhh
+			{
+				const TWord addr = fetchPC();
+				TWord loopcount = oi->getFieldValue(OpcodeInfo::Field_hhhh, OpcodeInfo::Field_iiiiiiii, op);
+
+				exec_do( TReg24(loopcount), addr );				
+			}
+			return true;
+		case OpcodeInfo::Do_S:		// 0000011011DDDDDD00000000
+			{
+				const TWord addr = fetchPC();
+
+				const TWord dddddd = oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+
+				const TReg24 loopcount = decode_dddddd_read( dddddd );
+
+				exec_do( loopcount, addr );
+			}
+			return true;
+		case OpcodeInfo::DoForever:
+			LOG_ERR_NOTIMPLEMENTED("DO FOREVER");
+			return true;
+		// Start Infinite Loop
+		case OpcodeInfo::Dor_ea:	// 0000011001MMMRRR0S010000
+		case OpcodeInfo::Dor_aa:	// 0000011000aaaaaa0S010000
+		case OpcodeInfo::Dor_xxx:	// 00000110iiiiiiii1001hhhh
+			LOG_ERR_NOTIMPLEMENTED("DOR");
+			return true;
+		case OpcodeInfo::Dor_S:		// 00000110 11DDDDDD 00010000
+			{
+				const TWord dddddd = oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+				const TReg24 lc		= decode_dddddd_read( dddddd );
+				
+				const int displacement = signextend<int,24>(fetchPC());
+				exec_do( lc, reg.pc.var + displacement - 2 );
+			}
+			return true;
+		// Start PC-Relative Infinite Loops
+		case OpcodeInfo::DorForever:
+			LOG_ERR_NOTIMPLEMENTED("DOR FOREVER");
+			return true;
+		// Load PC-Relative Address
+		case OpcodeInfo::Lra_Rn:
+		case OpcodeInfo::Lra_xxxx:
+			LOG_ERR_NOTIMPLEMENTED("LRA");
+			return true;
+		// Load Updated Address
+		case OpcodeInfo::Lua_ea:	// 00000100010MMRRR000ddddd
+			{
+				const TWord mmrrr	= oi->getFieldValue(OpcodeInfo::Field_MM, OpcodeInfo::Field_RRR, op);
+				const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_ddddd, op);
+
+				const unsigned int regIdx = mmrrr & 0x07;
+
+				const TReg24	_n = reg.n[regIdx];
+				TWord			_r = reg.r[regIdx].var;
+				const TReg24	_m = reg.m[regIdx];
+
+				switch( mmrrr & 0x18 )
+				{
+				case 0x00:	/* 00 */	AGU::updateAddressRegister( _r, -_n.var, _m.var );		break;
+				case 0x08:	/* 01 */	AGU::updateAddressRegister( _r, +_n.var, _m.var );		break;
+				case 0x10:	/* 10 */	AGU::updateAddressRegister( _r, -1, _m.var );			break;
+				case 0x18:	/* 11 */	AGU::updateAddressRegister( _r, +1, _m.var );			break;
+				default:
+					assert(0 && "impossible to happen" );
+				}
+
+				decode_ddddd_write<TReg24>( ddddd, TReg24(_r) );
+			}
+			return true;
+		case OpcodeInfo::Lua_Rn:	// 00000100 00aaaRRR aaaadddd
+			{
+				const TWord dddd	= oi->getFieldValue(OpcodeInfo::Field_dddd, op);
+				const TWord a		= oi->getFieldValue(OpcodeInfo::Field_aaa, OpcodeInfo::Field_aaaa, op);
+				const TWord rrr		= oi->getFieldValue(OpcodeInfo::Field_RRR, op);
+
+				const TReg24 _r = reg.r[rrr];
+
+				const int aSigned = signextend<int,7>(a);
+
+				const TReg24 val = TReg24(_r.var + aSigned);
+
+				if( dddd < 8 )									// r0-r7
+				{
+					convert(reg.r[dddd],val);
+				}
+				else
+				{
+					convert(reg.n[dddd&0x07],val);
+				}
+			}
+			return true;
+		// Signed Multiply Accumulate
+		case OpcodeInfo::Mac_S:	// 00000001 000sssss 11QQdk10
+			{
+				const TWord sssss	= oi->getFieldValue(OpcodeInfo::Field_sssss, op);
+				const TWord qq		= oi->getFieldValue(OpcodeInfo::Field_QQ, op);
+				const bool	ab		= oi->getFieldValue(OpcodeInfo::Field_d, op);
+				const bool	negate	= oi->getFieldValue(OpcodeInfo::Field_k, op);
+
+				const TReg24 s1 = decode_QQ_read( qq );
+				const TReg24 s2( decode_sssss(sssss) );
+
+				alu_mac( ab, s1, s2, negate, false );
+			}
+			return true;
+		// Signed Multiply Accumulate With Immediate Operand
+		case OpcodeInfo::Maci_xxxx:
+			LOG_ERR_NOTIMPLEMENTED("MACI");
+			return true;
+		// Mixed Multiply Accumulate
+		case OpcodeInfo::Macsu:	// 0 0 0 0 0 0 0 1 0 0 1 0 0 1 1 0 1 s d k Q Q Q Q
+			{
+				const bool uu			= oi->getFieldValue(OpcodeInfo::Field_s, op);
+				const bool ab			= oi->getFieldValue(OpcodeInfo::Field_d, op);
+				const bool negate		= oi->getFieldValue(OpcodeInfo::Field_k, op);
+				const TWord qqqq		= oi->getFieldValue(OpcodeInfo::Field_QQQQ, op);
+
+				TReg24 s1, s2;
+				decode_QQQQ_read( s1, s2, qqqq );
+
+				alu_mac( ab, s1, s2, negate, uu );
+			}
+			return true;
+		// Signed Multiply Accumulate and Round
+		case OpcodeInfo::Macr_S:
+			LOG_ERR_NOTIMPLEMENTED("MACR");
+			return true;
+		// Signed MAC and Round With Immediate Operand
+		case OpcodeInfo::Macri_xxxx:
+			LOG_ERR_NOTIMPLEMENTED("MACRI");
+			return true;
+		// Signed Multiply
+		case OpcodeInfo::Mpy_SD:	// 00000001000sssss11QQdk00
+			{
+				const int sssss		= oi->getFieldValue(OpcodeInfo::Field_sssss, op);
+				const TWord QQ		= oi->getFieldValue(OpcodeInfo::Field_QQ, op);
+				const bool ab		= oi->getFieldValue(OpcodeInfo::Field_d, op);
+				const bool negate	= oi->getFieldValue(OpcodeInfo::Field_k, op);
+
+				const TReg24 s1 = decode_QQ_read(QQ);
+
+				const TReg24 s2 = TReg24( decode_sssss(sssss) );
+
+				alu_mpy( ab, s1, s2, negate, false );
+			}
+			return true;
+		// Mixed Multiply
+		case OpcodeInfo::Mpy_su:	// 00000001001001111sdkQQQQ
+			{
+				const bool ab		= oi->getFieldValue(OpcodeInfo::Field_d, op);
+				const bool negate	= oi->getFieldValue(OpcodeInfo::Field_k, op);
+				const bool uu		= oi->getFieldValue(OpcodeInfo::Field_s, op);
+				const TWord qqqq	= oi->getFieldValue(OpcodeInfo::Field_QQQQ, op);
+
+				TReg24 s1, s2;
+				decode_QQQQ_read( s1, s2, qqqq );
+
+				alu_mpysuuu( ab, s1, s2, negate, false, uu );
+			}
+			return true;
+		// Signed Multiply With Immediate Operand
+		case OpcodeInfo::Mpyi:		// 00000001 01000001 11qqdk00
+			{
+				const bool	ab		= oi->getFieldValue(OpcodeInfo::Field_d, op);
+				const bool	negate	= oi->getFieldValue(OpcodeInfo::Field_k, op);
+				const TWord qq		= oi->getFieldValue(OpcodeInfo::Field_QQ, op);
+
+				const TReg24 s		= TReg24(fetchPC());
+
+				const TReg24 reg	= decode_qq_read(qq);
+
+				alu_mpy( ab, reg, s, negate, false );
+			}
+			return true;
+		// Signed Multiply and Round
+		case OpcodeInfo::Mpyr_SD:
+			LOG_ERR_NOTIMPLEMENTED("MPYR");
+			return true;
+		// Signed Multiply and Round With Immediate Operand
+		case OpcodeInfo::Mpyri:
+			LOG_ERR_NOTIMPLEMENTED("MPYRI");
+			return true;
+		// Norm Accumulator Iterations
+		case OpcodeInfo::Norm:
+			LOG_ERR_NOTIMPLEMENTED("NORM");
+			return true;
+		// Fast Accumulator Normalization
+		case OpcodeInfo::Normf:
+			LOG_ERR_NOTIMPLEMENTED("NORMF");
+			return true;
+		// Lock Instruction Cache Sector
+		case OpcodeInfo::Plock:
+			cache.plock( fetchPC() );
+			return true;
+		case OpcodeInfo::Punlock:
+			LOG_ERR_NOTIMPLEMENTED("PUNLOCK");
+			return true;
 		// Transfer Conditionally
-
-		// Tcc S1,D1 - 00000010 CCCC0000 0JJJd000
-		else if( (dbmf&0xff0f00) == 0x020000 && (op&0x87) == 0x00 )
-		{
-			const TWord cccc = (dbmfop&0x00f000)>>12;
-
-			if( decode_cccc( cccc ) )
+		case OpcodeInfo::Tcc_S1D1:	// Tcc S1,D1 - 00000010 CCCC0000 0JJJd000
 			{
-				const TWord JJJ = (dbmfop&0x0070)>>4;
-				const bool ab = bittest(dbmfop,3);
+				const TWord cccc = oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
 
-				decode_JJJ_readwrite( ab ? reg.b : reg.a, JJJ, !ab );
+				if( decode_cccc( cccc ) )
+				{
+					const TWord JJJ = oi->getFieldValue(OpcodeInfo::Field_JJJ, op);
+					const bool ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
+
+					decode_JJJ_readwrite( ab ? reg.b : reg.a, JJJ, !ab );
+				}
 			}
-		}
-
-		// Tcc S1,D1 S2,D2 - 00000011 CCCC0ttt 0JJJdTTT
-		else if( (dbmf&0xff0800) == 0x030000 && (op&0x80) == 0x00 )
-		{
-			const TWord CCCC	= (dbmfop&0x00f000)>>12;
-
-			if( decode_cccc( CCCC ) )
+			return true;
+		case OpcodeInfo::Tcc_S1D1S2D2:	// Tcc S1,D1 S2,D2 - 00000011 CCCC0ttt 0JJJdTTT
 			{
-				const TWord TTT		= dbmfop&0x000007;
-				const TWord JJJ		= (dbmfop>>4)&0x7;
-				const TWord ttt		= (dbmfop>>8)&7;
-				const bool	ab		= bittest( dbmfop, 3 );
+				const TWord cccc = oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
 
-				decode_JJJ_readwrite( ab ? reg.b : reg.a, JJJ, !ab );
-				reg.r[TTT] = reg.r[ttt];
+				if( decode_cccc( cccc ) )
+				{
+					const TWord TTT		= oi->getFieldValue(OpcodeInfo::Field_TTT, op);
+					const TWord JJJ		= oi->getFieldValue(OpcodeInfo::Field_JJJ, op);
+					const TWord ttt		= oi->getFieldValue(OpcodeInfo::Field_ttt, op);
+					const bool ab		= oi->getFieldValue(OpcodeInfo::Field_d, op);
+
+					decode_JJJ_readwrite( ab ? reg.b : reg.a, JJJ, !ab );
+					reg.r[TTT] = reg.r[ttt];
+				}
 			}
-		}
+			return true;
+		case OpcodeInfo::Tcc_S2D2:	// Tcc S2,D2 - 00000010 CCCC1ttt 00000TTT
+			{
+				const TWord cccc = oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
 
-		// Tcc S2,D2 - 00000010 CCCC1ttt 00000TTT
-		else if( (dbmf&0xff0800) == 0x020800 && (op&0xf8) == 0x00 )
-		{
-			const TWord ttt		= (dbmfop&0x000700)>>8;
-			const TWord TTT		= (dbmfop&0x000007);
-			const TWord CCCC	= (dbmfop&0x00f000)>>12;
-
-			if( decode_cccc( CCCC ) )
-				reg.r[TTT] = reg.r[ttt];
-		}
-
+				if( decode_cccc( cccc ) )
+				{
+					const TWord TTT		= oi->getFieldValue(OpcodeInfo::Field_TTT, op);
+					const TWord ttt		= oi->getFieldValue(OpcodeInfo::Field_ttt, op);
+					reg.r[TTT] = reg.r[ttt];
+				}
+			}
+			return true;
 		// Viterbi Shift Left
-
-		// VSL S,i,L:ea - 0 0 0 0 1 0 1 S 1 1 M M M R R R 1 1 0 i 0 0 0 0
-		else if( (dbmf&0xfec000) == 0x0ac000 && (op&0xef) == 0xc0 )
-		{
+		case OpcodeInfo::Vsl:	// VSL S,i,L:ea - 0 0 0 0 1 0 1 S 1 1 M M M R R R 1 1 0 i 0 0 0 0
 			LOG_ERR_NOTIMPLEMENTED("VSL");
-		}
-		else
+			return true;
+		default:
 			return false;
-		return true;
+		}
 	}
 
 	// _____________________________________________________________________________
 	// exec_pcu
 	//
-	bool DSP::exec_pcu( TWord dbmfop, TWord dbmf, TWord op )
+	bool DSP::exec_pcu(const OpcodeInfo* oi, TWord op)
 	{
-		// Bcc, #xxxx			- 00000101 CCCC01aa aa0aaaaa - branch conditionally
-		// Bcc, #xxx
-		if( (dbmf&0xff0c00) == 0x050400 && (op&0x20) == 0x00 )
+		switch (oi->getInstruction())
 		{
-			const TWord cccc	= (dbmfop & 0x00f000) >> 12;
-
-			if( decode_cccc( cccc ) )
+		// Branch conditionally
+		case OpcodeInfo::Bcc_xxxx:	// TODO: unclear documentation, opcode that is written there is wrong
+			return false;
+		case OpcodeInfo::Bcc_xxx:	// 00000101 CCCC01aa aa0aaaaa
 			{
-				const TWord a		= (dbmfop & 0x00001f) | ((dbmfop & 0x0003c0)>>1);
+				const TWord cccc	= oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
 
-				const TWord disp	= signextend<int,9>( a );
-				assert( disp >= 0 );
+				if( decode_cccc( cccc ) )
+				{
+					const TWord a		= oi->getFieldValue(OpcodeInfo::Field_aaaa, OpcodeInfo::Field_aaaaa, op);
 
-				reg.pc.var += (disp-1);
+					const TWord disp	= signextend<int,9>( a );
+					assert( disp >= 0 );
+
+					reg.pc.var += (disp-1);
+				}
 			}
-		}
-
-		// Bcc, Rn				- 00001101 00011RRR 0100CCCC - branch conditionally
-		else if( (dbmf&0xfff800) == 0x0d1800 && (op&0xf0) == 0x40 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("Bcc");
-		}
-
+			return true;
+		case OpcodeInfo::Bcc_Rn:		// 00001101 00011RRR 0100CCCC
+			LOG_ERR_NOTIMPLEMENTED("Bcc Rn");
+			return true;
 		// Branch always
+		case OpcodeInfo::Bra_xxxx:
+			{
+				const int displacement = signextend<int,24>( fetchPC() );
+				reg.pc.var += displacement - 2;				
+			}
+			return true;
+		case OpcodeInfo::Bra_xxx:		// 00000101 000011aa aa0aaaaa
+			{
+				const TWord addr = oi->getFieldValue(OpcodeInfo::Field_aaaa, OpcodeInfo::Field_aaaaa, op);
 
-		// BRA xxxx - 0 0 0 0 1 1 0 1 0 0 0 1 0 0 0 0 1 1 0 0 0 0 0 0
-		else if( (dbmf&0xffff00) == 0x0d1000 && op == 0xc0 )
-		{
-			const int displacement = signextend<int,24>( fetchPC() );
-			reg.pc.var += displacement - 2;
-		}
+				const int signedAddr = signextend<int,9>(addr);
 
-		// BRA xxx - 00000101 000011aa aa0aaaaa
-		else if( (dbmf&0xfffc00) == 0x050c00 && (op&0x20) == 0x00 )
-		{
-			const TWord addr = (dbmfop & 0x1f) | ((dbmfop & 0x3c0)>>1);
+				reg.pc.var += (signedAddr-1);	// PC has already been incremented so subtract 1
+			}
+			return true;
+		case OpcodeInfo::Bra_Rn:		// 0000110100011RRR11000000
+			LOG_ERR_NOTIMPLEMENTED("BRA_Rn");
+			return true;
+		// Branch if Bit Clear
+		case OpcodeInfo::Brclr_ea:	// BRCLR #n,[X or Y]:ea,xxxx - 0 0 0 0 1 1 0 0 1 0 M M M R R R 0 S 0 b b b b b
+		case OpcodeInfo::Brclr_aa:	// BRCLR #n,[X or Y]:aa,xxxx - 0 0 0 0 1 1 0 0 1 0 a a a a a a 1 S 0 b b b b b
+		case OpcodeInfo::Brclr_pp:	// BRCLR #n,[X or Y]:pp,xxxx - 0 0 0 0 1 1 0 0 1 1 p p p p p p 0 S 0 b b b b b
+			LOG_ERR_NOTIMPLEMENTED("BRCLR");			
+			return true;
+		case OpcodeInfo::Brclr_qq:
+			{
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-			const int signedAddr = signextend<int,9>(addr);
+				const TWord ea = 0xffff80 + qqqqqq;
 
-			reg.pc.var += (signedAddr-1);	// PC has already been incremented so subtract 1
-		}
+				const int displacement = signextend<int,24>( fetchPC() );
 
-		// BRA Rn - 0 0 0 0 1 1 0 1 0 0 0 1 1 R R R 1 1 0 0 0 0 0 0
-		else if( (dbmf&0xfff800) == 0x0d1800 && op == 0xc0 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BRA");
-		}
+				if( !bittest( memRead( S, ea ), bit ) )
+				{
+					reg.pc.var += (displacement-2);
+				}
+			}
+			return true;
+		case OpcodeInfo::Brclr_S:	// BRCLR #n,S,xxxx - 0 0 0 0 1 1 0 0 1 1 D D D D D D 1 0 0 b b b b b
+			{
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+
+				const TReg24 tst = decode_dddddd_read( dddddd );
+
+				const int displacement = signextend<int,24>( fetchPC() );
+
+				if( !bittest( tst, bit ) )
+				{
+					reg.pc.var += (displacement-2);
+				}
+			}
+			return true;
+		// Branch if Bit Set
+		case OpcodeInfo::Brset_ea:	// BRSET #n,[X or Y]:ea,xxxx - 0 0 0 0 1 1 0 0 1 0 M M M R R R 0 S 1 b b b b b
+		case OpcodeInfo::Brset_aa:	// BRSET #n,[X or Y]:aa,xxxx - 0 0 0 0 1 1 0 0 1 0 a a a a a a 1 S 1 b b b b b
+		case OpcodeInfo::Brset_pp:	// BRSET #n,[X or Y]:pp,xxxx - 
+			LOG_ERR_NOTIMPLEMENTED("BRSET");
+			return true;
+		case OpcodeInfo::Brset_qq:
+			{
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+
+				const TWord ea = 0xffff80 + qqqqqq;
+
+				const int displacement = signextend<int,24>( fetchPC() );
+
+				if( bittest( memRead( S, ea ), bit ) )
+				{
+					reg.pc.var += (displacement-2);
+				}
+			}
+			return true;
+		case OpcodeInfo::Brset_S:
+			{
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+
+				const TReg24 r = decode_dddddd_read( dddddd );
+
+				const int displacement = signextend<int,24>( fetchPC() );
+
+				if( bittest( r.var, bit ) )
+				{
+					reg.pc.var += (displacement-2);
+				}				
+			}
+			return true;
+		// Branch to Subroutine if Bit Clear
+		case OpcodeInfo::Bsclr_ea:
+		case OpcodeInfo::Bsclr_aa:
+		case OpcodeInfo::Bsclr_qq:
+		case OpcodeInfo::Bsclr_pp:
+		case OpcodeInfo::Bsclr_S:
+			LOG_ERR_NOTIMPLEMENTED("BSCLR");
+			return true;
+		// Branch to Subroutine if Bit Set
+		case OpcodeInfo::Bsset_ea:
+		case OpcodeInfo::Bsset_aa:
+		case OpcodeInfo::Bsset_qq:
+		case OpcodeInfo::Bsset_pp:
+		case OpcodeInfo::Bsset_S:
+			LOG_ERR_NOTIMPLEMENTED("BSCLR");
+			return true;
 
 		// Branch to Subroutine Conditionally
-
-		// BScc xxxx - 0 0 0 0 1 1 0 1 0 0 0 1 0 0 0 0 0 0 0 0 C C C C
-		else if( (dbmf&0xffff00) == 0x0d1000 && (op&0xf0) == 0x00 )
-		{
-			const TWord cccc = dbmfop&0x00000f;
-
-			const int displacement = signextend<int,24>(fetchPC());
-
-			if( decode_cccc(cccc) )
+		case OpcodeInfo::BScc_xxxx:		// 00001101000100000000CCCC
 			{
-				jsr( reg.pc.var + displacement - 2 );
-				LOGSC("BScc xxxx");
+				const TWord cccc = oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
+
+				const int displacement = signextend<int,24>(fetchPC());
+
+				if( decode_cccc(cccc) )
+				{
+					jsr( reg.pc.var + displacement - 2 );
+					LOGSC("BScc xxxx");
+				}
 			}
-		}
-
-		// BScc xxx - 00000101 CCCC00aa aa0aaaaa
-		else if( (dbmf&0xff0c00) == 0x050000 && (op&0x20) == 0x00 )
-		{
-			const TWord cccc = (dbmfop&0x00f000)>>12;
-
-			if( decode_cccc(cccc) )
+			return true;
+		case OpcodeInfo::BScc_xxx:		// 00000101CCCC00aaaa0aaaaa
 			{
-				const TWord addr = (dbmfop & 0x1f) | ((dbmfop & 0x1c0)>>1);
+				const TWord cccc = oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
 
-				int signedAddr = signextend<int,9>(addr);
+				if( decode_cccc(cccc) )
+				{
+					const TWord addr = oi->getFieldValue(OpcodeInfo::Field_aaaa, OpcodeInfo::Field_aaaaa, op);
 
-				// PC has already been incremented so subtract 1
-				jsr( reg.pc.var + signedAddr-1 );
-				LOGSC("BScc xxx");
+					int signedAddr = signextend<int,9>(addr);
+
+					// PC has already been incremented so subtract 1
+					jsr( reg.pc.var + signedAddr-1 );
+					LOGSC("BScc xxx");
+				}				
 			}
-		}
-
-		// BScc Rn - 0 0 0 0 1 1 0 1 0 0 0 1 1 R R R 0 0 0 0 C C C C
-		else if( (dbmf&0xfff800) == 0x0d1800 && (op&0xf0) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BScc");
-		}
-
+			return true;
+		case OpcodeInfo::BScc_Rn:
+			LOG_ERR_NOTIMPLEMENTED("BScc Rn");
+			return true;
 		// Branch to Subroutine
+		case OpcodeInfo::Bsr_xxxx:
+			{
+				const int displacement = signextend<int,24>(fetchPC());
+				jsr( reg.pc.var + displacement - 2 );
+			}
+			return true;
+		case OpcodeInfo::Bsr_xxx:		// 00000101000010aaaa0aaaaa
+			{
+				const TWord aaaaaaaaa = oi->getFieldValue(OpcodeInfo::Field_aaaa, OpcodeInfo::Field_aaaaa, op);
 
-		// BSR xxxx - 0 0 0 0 1 1 0 1 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0
-		else if( (dbmf&0xffff00) == 0xd1000 && op == 0x80 )
-		{
-			const int displacement = signextend<int,24>(fetchPC());
-			jsr( reg.pc.var + displacement - 2 );
-		}
+				const int shortDisplacement = signextend<int,9>(aaaaaaaaa);
 
-		// BSR xxx - 0 0 0 0 0 1 0 1 0 0 0 0 1 0 a a a a 0 a a a a a
-		else if( (dbmf&0xfffc00) == 0x50800 && (op&0x20) == 0x00 )
-		{
-			const TWord aaaaaaaaa = (dbmfop&0x00001f) | ((dbmfop&0x0003c0)>>1);
-
-			const int shortDisplacement = signextend<int,9>(aaaaaaaaa);
-
-			jsr( TReg24(reg.pc.var + shortDisplacement - 1) );
-			LOGSC("bsr xxx");
-		}
-
-		// BSR Rn - 0 0 0 0 1 1 0 1 0 0 0 1 1 R R R 1 0 0 0 0 0 0 0
-		else if( (dbmf&0xfff800) == 0xd1800 && op == 0x80 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("BSR");
-		}
-
-		// Enter Debug Mode
-
-		// DEBUG - 
-		else if( (dbmf&0xffff00) == 0x000200 && op == 0x00 )
-		{
+				jsr( TReg24(reg.pc.var + shortDisplacement - 1) );
+				LOGSC("bsr xxx");
+			}
+			return true;
+		case OpcodeInfo::Bsr_Rn:
+			LOG_ERR_NOTIMPLEMENTED("BSR Rn");
+			return true;
+		case OpcodeInfo::Debug:
 			LOG( "Entering DEBUG mode" );
 			LOG_ERR_NOTIMPLEMENTED("DEBUG");
-		}
-
-		// Enter Debug Mode Conditionally
-
-		// DEBUGcc - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 C C C C
-		else if( (dbmf&0xffff00) == 0x000300 && (op&0xf0) == 0x00 )
-		{
-			const TWord cccc = dbmfop&0x0000f;
-			if( decode_cccc( cccc ) )
+			return true;
+		case OpcodeInfo::Debugcc:
 			{
-				LOG( "Entering DEBUG mode because condition is met" );
+				const TWord cccc = oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
+				if( decode_cccc( cccc ) )
+				{
+					LOG( "Entering DEBUG mode because condition is met" );
+				}
+				LOG_ERR_NOTIMPLEMENTED("DEBUGcc");
 			}
-			LOG_ERR_NOTIMPLEMENTED("DEBUG");
-		}
-
+			return true;
 		// Jump Conditionally
-
-		// Jcc xxx - 00001110 CCCCaaaa aaaaaaaa
-		else if( (dbmf&0xff0000) == 0x0e0000 )
-		{
-			const TWord cccc	= (dbmfop&0x00f000)>>12;
-
-			if( decode_cccc( cccc ) )
+		case OpcodeInfo::Jcc_xxx:		// 00001110CCCCaaaaaaaaaaaa
 			{
-				const TWord ea = (dbmfop&0x000fff);
-				reg.pc.var = ea;
+				const TWord cccc = oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
+
+				if( decode_cccc( cccc ) )
+				{
+					const TWord ea = oi->getFieldValue(OpcodeInfo::Field_aaaaaaaaaaaa, op);
+					reg.pc.var = ea;
+				}				
 			}
-		}
-
-		// Jcc ea - 00001010 11MMMRRR 1010CCCC
-		else if( (dbmf&0xffc000) == 0x0ac000 && (op&0xf0) == 0xa0 )
-		{
-			const TWord cccc	= (dbmfop&0x0000f);
-			const TWord mmmrrr	= (dbmfop&0x003f00)>>8;
-
-			const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-			if( decode_cccc( cccc ) )
+			return true;
+		case OpcodeInfo::Jcc_ea:
 			{
-				reg.pc.var = ea;
-			}
-		}
+				const TWord cccc	= oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
 
+				const TWord ea		= decode_MMMRRR_read( mmmrrr );
+
+				if( decode_cccc( cccc ) )
+				{
+					reg.pc.var = ea;
+				}
+			}
+			return true;
 		// Jump
-
-		// JMP ea - 0 0 0 0 1 0 1 0 1 1 M M M R R R 1 0 0 0 0 0 0 0
-		else if( (dbmf&0xffc000) == 0x0ac000 && op == 0x80 )
-		{
-			const TWord mmmrrr = (dbmfop & 0x003f00) >> 8;
-
-			reg.pc.var = decode_MMMRRR_read(mmmrrr);
-		}
-
-		// JMP xxx - 00001100 0000aaaa aaaaaaaa
-		else if( (dbmf&0xfff000) == 0x0c0000 )
-		{
-			TWord addr = dbmfop & 0x000fff;
-			reg.pc.var = addr;
-		}
-
+		case OpcodeInfo::Jmp_ea:
+			{
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				reg.pc.var = decode_MMMRRR_read(mmmrrr);
+			}
+			return true;
+		case OpcodeInfo::Jmp_xxx:	// 00001100 0000aaaa aaaaaaaa
+			reg.pc.var = oi->getFieldValue(OpcodeInfo::Field_aaaaaaaaaaaa, op);
+			return true;
 		// Jump to Subroutine Conditionally
-
-		// JScc xxx - 00001111 CCCCaaaa aaaaaaaa
-		else if( (dbmf&0xff0000) == 0x0f0000 )
-		{
-			const TWord cccc	= (dbmfop&0x00f000)>>12;
-
-			if( decode_cccc( cccc ) )
+		case OpcodeInfo::Jscc_xxx:
 			{
-				const TWord a = dbmfop&0x000fff;
-				jsr(a);
+				const TWord cccc	= oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
+
+				if( decode_cccc( cccc ) )
+				{
+					const TWord a = oi->getFieldValue(OpcodeInfo::Field_aaaaaaaaaaaa, op);
+					jsr(a);
+				}
 			}
-		}
-
-		// JScc ea - 00001011 11MMMRRR 1010CCCC
-		else if( (dbmf&0xffc000) == 0x0bc000 && (op&0xf0) == 0xa0 )
-		{
-			const TWord cccc	= (dbmfop&0x0000f);
-			const TWord mmmrrr	= (dbmfop&0x003f00)>>8;
-			const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-			if( decode_cccc( cccc ) )
+			return true;
+		case OpcodeInfo::Jscc_ea:
 			{
-				jsr(TReg24(ea));
-				LOGSC("JScc ea");
+				const TWord cccc	= oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const TWord ea		= decode_MMMRRR_read( mmmrrr );
+
+				if( decode_cccc( cccc ) )
+				{
+					jsr(TReg24(ea));
+					LOGSC("JScc ea");
+				}
 			}
-		}
-
-		// Jump to Subroutine if Bit Clear
-
-		// JSCLR #n,[X or Y]:ea,xxxx - 0 0 0 0 1 0 1 1 0 1 M M M R R R 1 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0b4000 && (op&0xa0) == 0x80 )
-		{
+			return true;
+		case OpcodeInfo::Jsclr_ea:
+		case OpcodeInfo::Jsclr_aa:
+		case OpcodeInfo::Jsclr_pp:
+		case OpcodeInfo::Jsclr_qq:
+		case OpcodeInfo::Jsclr_S:
 			LOG_ERR_NOTIMPLEMENTED("JSCLR");
-		}
-
-		// JSCLR #n,[X or Y]:aa,xxxx - 0 0 0 0 1 0 1 1 0 0 a a a a a a 1 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0b0000 && (op&0xa0) == 0x80 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("JSCLR");
-		}
-
-		// JSCLR #n,[X or Y]:pp,xxxx - 0 0 0 0 1 0 1 1 1 0 p p p p p p 1 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0b8000 && (op&0xa0) == 0x80 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("JSCLR");
-		}
-
-		// JSCLR #n,[X or Y]:qq,xxxx - 0 0 0 0 0 0 0 1 1 1 q q q q q q 1 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x01c000 && (op&0xa0) == 0x80 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("JSCLR");
-		}
-
-		// JSCLR #n,S,xxxx - 0 0 0 0 1 0 1 1 1 1 D D D D D D 0 0 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0bc000 && (op&0xe0) == 0x00 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("JSCLR");
-		}
-
+			return true;
 		// Jump if Bit Clear
-
-		// WARNING! Documentation seems to be wrong here, we need 5 bits for b, doc says 0bbbb
-
-		// JCLR #n,[X or Y]:ea,xxxx - 00001010 01MMMRRR 1S0bbbbb
-		else if( (dbmf&0xffc000) == 0x0a4000 && (op&0xa0) == 0x80 )
-		{
-			const TWord bit		= (dbmfop&0x00001f);
-			const TWord mmmrrr	= (dbmfop&0x003f00)>>8;
-			const EMemArea S	= bittest(dbmfop,6) ? MemArea_Y : MemArea_X;
-			const TWord addr	= fetchPC();
-
-			const TWord ea		= decode_MMMRRR_read(mmmrrr);
-
-			if( !bittest( ea, bit ) )
+		case OpcodeInfo::Jclr_ea:	// 0000101001MMMRRR1S0bbbbb
 			{
-				reg.pc.var = addr;
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+				const TWord addr	= fetchPC();
+
+				const TWord ea		= decode_MMMRRR_read(mmmrrr);
+
+				if( !bittest( ea, bit ) )	// TODO: S is not used, need to read mem if mmmrrr is not immediate data!
+				{
+					reg.pc.var = addr;
+				}
+
+				LOG_ERR_NOTIMPLEMENTED("JCLR");
 			}
+			return true;
+		case OpcodeInfo::Jclr_aa:
+			LOG_ERR_NOTIMPLEMENTED("JCLR aa");
+			return true;
+		case OpcodeInfo::Jclr_pp:
+			LOG_ERR_NOTIMPLEMENTED("JCLR pp");
+			return true;
+		case OpcodeInfo::Jclr_qq:	// 00000001 10qqqqqq 1S0bbbbb
+			{
+				const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-			LOG_ERR_NOTIMPLEMENTED("JCLR");
-		}
+				const TWord ea		= 0xffff80 + qqqqqq;
 
-		// JCLR #n,[X or Y]:aa,xxxx - 0 0 0 0 1 0 1 0 0 0 a a a a a a 1 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0a0000 && (op&0xa0) == 0x80 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("JCLR");
-		}
+				const TWord addr	= fetchPC();
 
-		// JCLR #n,[X or Y]:pp,xxxx - 0 0 0 0 1 0 1 0 1 0 p p p p p p 1 S 0 b b b b b
-		else if( (dbmf&0xffc000) == 0x0a8000 && (op&0xa0) == 0x80 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("JCLR");
-		}
+				if( !bittest( memRead(S, ea), bit ) )
+					reg.pc.var = addr;				
+			}
+			return true;
+		case OpcodeInfo::Jclr_S:	// 00001010 11DDDDDD 000bbbbb
+			{
+				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
 
-		// JCLR #n,[X or Y]:qq,xxxx - 00000001 10qqqqqq 1S0bbbbb
-		else if( (dbmf&0xffc000) == 0x018000 && (op&0xa0) == 0x80 )
-		{
-			const TWord qqqqqq	= (dbmfop&0x003f00)>>8;
-			const TWord bit		= dbmfop & 0x1f;
-			const EMemArea S	= bittest(dbmfop,6) ? MemArea_Y : MemArea_X;
+				const TWord addr = fetchPC();
 
-			const TWord ea		= 0xffff80 + qqqqqq;
-
-			const TWord addr	= fetchPC();
-
-			if( !bittest( memRead(S, ea), bit ) )
-				reg.pc.var = addr;
-		}
-
-		// JCLR #n,S,xxxx - 00001010 11DDDDDD 000bbbbb
-		else if( (dbmf&0xffc000) == 0x0ac000 && (op&0xe0) == 0x00 )
-		{
-			const TWord dddddd	= (dbmfop & 0x003f00) >> 8;
-			const TWord bit		= dbmfop & 0x1f;
-
-			const TWord addr = fetchPC();
-
-			if( !bittest( decode_dddddd_read(dddddd), bit ) )
-				reg.pc.var = addr;
-		}
-
+				if( !bittest( decode_dddddd_read(dddddd), bit ) )
+					reg.pc.var = addr;
+			}
+			return true;
 		// Jump if Bit Set
-
-		// JSET #n,[X or Y]:ea,xxxx - 0 0 0 0 1 0 1 0 0 1 M M M R R R 1 S 1 b b b b b
-		else if( (dbmf&0xffc000) == 0x0a4000 && (op&0xa0) == 0xa0 )
-		{
-			const TWord bit		= dbmfop & 0x1f;
-			const TWord mmmrrr	= (dbmfop&0x003f00)>>8;
-			const EMemArea S	= bittest(dbmfop,6) ? MemArea_Y : MemArea_X;
-
-			const TWord val		= memRead( S, decode_MMMRRR_read( mmmrrr ) );
-
-			if( bittest(val,bit) )
+		case OpcodeInfo::Jset_ea:	// 0000101001MMMRRR1S1bbbbb
 			{
-				reg.pc.var = val;
-			}
-		}
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-		// JSET #n,[X or Y]:aa,xxxx - 0 0 0 0 1 0 1 0 0 0 a a a a a a 1 S 1 b b b b b
-		else if( (dbmf&0xffc000) == 0x0a0000 && (op&0xa0) == 0xa0 )
-		{
+				const TWord val		= memRead( S, decode_MMMRRR_read( mmmrrr ) );
+
+				if( bittest(val,bit) )
+				{
+					reg.pc.var = val;
+				}
+			}
+			return true;
+		case OpcodeInfo::Jset_aa:	// JSET #n,[X or Y]:aa,xxxx - 0 0 0 0 1 0 1 0 0 0 a a a a a a 1 S 1 b b b b b
 			LOG_ERR_NOTIMPLEMENTED("JSET #n,[X or Y]:aa,xxxx");
-		}
-
-		// JSET #n,[X or Y]:pp,xxxx - 0 0 0 0 1 0 1 0 1 0 p p p p p p 1 S 1 b b b b b
-		else if( (dbmf&0xffc000) == 0x0a8000 && (op&0xa0) == 0xa0 )
-		{
-			const TWord qqqqqq	= (dbmfop&0x003f00)>>8;
-			const TWord bit		= dbmfop & 0x1f;
-			const EMemArea S	= bittest(dbmfop,6) ? MemArea_Y : MemArea_X;
-
-			const TWord ea		= 0xFFFFC0 + qqqqqq;
-
-			const TWord addr	= fetchPC();
-
-			if( bittest( memRead(S, ea), bit ) )
-				reg.pc.var = addr;
-		}
-
-		// JSET #n,[X or Y]:qq,xxxx - 00000001 10qqqqqq 1S1bbbbb
-		else if( (dbmf&0xffc000) == 0x018000 && (op&0xa0) == 0xa0 )
-		{
-			const TWord qqqqqq	= (dbmfop&0x003f00)>>8;
-			const TWord bit		= dbmfop & 0x1f;
-			const EMemArea S	= bittest(dbmfop,6) ? MemArea_Y : MemArea_X;
-
-			const TWord ea		= 0xFFFF80 + qqqqqq;
-
-			const TWord addr	= fetchPC();
-
-			if( bittest( memRead(S, ea), bit ) )
-				reg.pc.var = addr;
-		}
-
-		// JSET #n,S,xxxx - 00001010 11DDDDDD 001bbbbb
-		else if( (dbmf&0xffc000) == 0x0ac000 && (op&0xe0) == 0x20 )
-		{
-			const TWord bit		= dbmfop & 0x1f;
-			const TWord dddddd	= (dbmfop&0x003f00)>>8;
-
-			const TWord addr	= fetchPC();
-
-			const TReg24 var	= decode_dddddd_read( dddddd );
-
-			if( bittest(var,bit) )
+			return true;
+		case OpcodeInfo::Jset_pp:	// JSET #n,[X or Y]:pp,xxxx - 0 0 0 0 1 0 1 0 1 0 p p p p p p 1 S 1 b b b b b
 			{
-				reg.pc.var = addr;
+				const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+
+				const TWord ea		= 0xFFFFC0 + qqqqqq;
+
+				const TWord addr	= fetchPC();
+
+				if( bittest( memRead(S, ea), bit ) )
+					reg.pc.var = addr;				
 			}
-		}
+			return true;
+		case OpcodeInfo::Jset_qq:
+			{
+				// TODO: combine code with Jset_pp, only the offset is different
+				const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
+				const TWord ea		= 0xFFFF80 + qqqqqq;
+
+				const TWord addr	= fetchPC();
+
+				if( bittest( memRead(S, ea), bit ) )
+					reg.pc.var = addr;
+			}
+			return true;
+		case OpcodeInfo::Jset_S:	// 0000101011DDDDDD001bbbbb
+			{
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+
+				const TWord addr	= fetchPC();
+
+				const TReg24 var	= decode_dddddd_read( dddddd );
+
+				if( bittest(var,bit) )
+				{
+					reg.pc.var = addr;
+				}				
+			}
+			return true;
 		// Jump to Subroutine
+		case OpcodeInfo::Jsr_ea:
+			{
+				const TWord mmmrrr = oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
 
-		// JSR ea - 0 0 0 0 1 0 1 1 1 1 M M M R R R 1 0 0 0 0 0 0 0
-		else if( (dbmf&0xffc000) == 0x0bc000 && op == 0x80 )
-		{
-			const TWord mmmrrr = ((dbmfop&0x003f00)>>8);
+				const TWord ea = decode_MMMRRR_read( mmmrrr );
 
-			const TWord ea = decode_MMMRRR_read( mmmrrr );
-
-			jsr(TReg24(ea));
-			LOGSC("jsr ea");
-		}
-
-		// JSR xxx - 0 0 0 0 1 1 0 1 0 0 0 0 a a a a a a a a a a a a
-		else if( (dbmf&0xfff000) == 0x0d0000 )
-		{
-			const TWord ea = (dbmfop&0x000fff);
-			jsr(TReg24(ea));
-			LOGSC("jsr xxx");
-		}
-
+				jsr(TReg24(ea));
+				LOGSC("jsr ea");
+			}
+			return true;
+		case OpcodeInfo::Jsr_xxx:
+			{
+				const TWord ea = oi->getFieldValue(OpcodeInfo::Field_aaaaaaaaaaaa, op);
+				jsr(TReg24(ea));
+				LOGSC("jsr xxx");
+			}
+			return true;
 		// Jump to Subroutine if Bit Set
-
-		// JSSET #n,[X or Y]:ea,xxxx - 0 0 0 0 1 0 1 1 0 1 M M M R R R 1 S 1 0 b b b b
-		else if( (dbmf&0xffc000) == 0x0b4000 && (op&0xb0) == 0xa0 )
-		{
+		case OpcodeInfo::Jsset_ea:
+		case OpcodeInfo::Jsset_aa:
+		case OpcodeInfo::Jsset_pp:
+		case OpcodeInfo::Jsset_qq:
+		case OpcodeInfo::Jsset_S:
 			LOG_ERR_NOTIMPLEMENTED("JSSET");
-		}
-
-		// JSSET #n,[X or Y]:aa,xxxx - 0 0 0 0 1 0 1 1 0 0 a a a a a a 1 S 1 0 b b b b
-		else if( (dbmf&0xffc000) == 0x0b0000 && (op&0xb0) == 0xa0 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("JSSET");
-		}
-
-		// JSSET #n,[X or Y]:pp,xxxx - 0 0 0 0 1 0 1 1 1 0 p p p p p p 1 S 1 0 b b b b
-		else if( (dbmf&0xffc000) == 0x0b8000 && (op&0xb0) == 0xa0 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("JSSET");
-		}
-
-		// JSSET #n,[X or Y]:qq,xxxx - 0 0 0 0 0 0 0 1 1 1 q q q q q q 1 S 1 0 b b b b
-		else if( (dbmf&0xffc000) == 0x01c000 && (op&0xb0) == 0xa0 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("JSSET");
-		}
-
-		// JSSET #n,S,xxxx - 0 0 0 0 1 0 1 1 1 1 D D D D D D 0 0 1 0 b b b b
-		else if( (dbmf&0xffc000) == 0x0bc000 && (op&0xf0) == 0x20 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("JSSET");
-		}
-
+			return true;
 		// Repeat Next Instruction
-
-		// REP [X or Y]:ea - 0 0 0 0 0 1 1 0 0 1 M M M R R R 0 S 1 0 0 0 0 0
-		else if( (dbmf&0xffc000) == 0x064000 && (op&0xbf) == 0x20 )
-		{
+		case OpcodeInfo::Rep_ea:
+		case OpcodeInfo::Rep_aa:
 			LOG_ERR_NOTIMPLEMENTED("REP");
-		}
+			return true;
+		case OpcodeInfo::Rep_xxx:	// 00000110 iiiiiiii 1010hhhh
+			{
+				const TWord loopcount = oi->getFieldValue(OpcodeInfo::Field_hhhh, OpcodeInfo::Field_iiiiiiii, op);
 
-		// REP [X or Y]:aa - 0 0 0 0 0 1 1 0 0 0 a a a a a a 0 S 1 0 0 0 0 0
-		else if( (dbmf&0xffc000) == 0x060000 && (op&0xbf) == 0x20 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("REP");
-		}
+				repRunning = true;
+				tempLCforRep = reg.lc;
 
-		// REP #xxx - 00000110 iiiiiiii 1010hhhh
-		else if( (dbmf&0xff0000) == 0x060000 && (op&0xf0) == 0xa0 )
-		{
-			const TWord loopcount = ((dbmfop&0x00000f) << 8) | ((dbmfop&0x00ff00)>>8);
-
-			repRunning = true;
-			tempLCforRep = reg.lc;
-
-			reg.lc.var = loopcount;
-		}
-
-		// REP S - 0000011011dddddd00100000
-		else if( (dbmf&0xffc000) == 0x06c000 && op == 0x20 )
-		{
-			LOG_ERR_NOTIMPLEMENTED("REP");
-		}
-
+				reg.lc.var = loopcount;				
+			}
+			return true;
+		case OpcodeInfo::Rep_S:
+			LOG_ERR_NOTIMPLEMENTED("REP S");
+			return true;
 		// Reset On-Chip Peripheral Devices
-
-		// RESET - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 1 0 0
-		else if( dbmfop == 0x84 )
-		{
+		case OpcodeInfo::Reset:
 			resetSW();
-		}
-
-		else
+			return true;
+		default:
 			return false;
-		return true;
+		}
 	}
 
 	// _____________________________________________________________________________
@@ -1823,8 +1391,8 @@ namespace dsp56k
 	{
 		switch( _mmmrrr & 0x3f )
 		{
-		case 0x30:	return fetchPC();		// absolute address
-		case 0x34:	return fetchPC();		// immediate data
+		case MMM_AbsAddr:		return fetchPC();		// absolute address
+		case MMM_ImmediateData:	return fetchPC();		// immediate data
 		}
 
 		unsigned int regIdx = _mmmrrr & 0x7;
@@ -1940,292 +1508,199 @@ namespace dsp56k
 // _____________________________________________________________________________
 // exec_move
 //
-bool DSP::exec_move( TWord dbmfop, TWord dbmf, TWord op )
+bool DSP::exec_move(const OpcodeInfo* oi, TWord op)
 {
-	// X Memory Data Move
-
-	// MOVE X:(Rn + xxxx),D - 00001010 01110RRR 1WDDDDDD
-	// MOVE S,X:(Rn + xxxx)
-	if( (dbmf&0xfff800) == 0x0a7000 && (op&0x80) == 0x80 )
+	switch (oi->getInstruction())
 	{
-		const TWord DDDDDD	= (dbmfop&0x00003f);
-		const bool	write	= (dbmfop&0x000040) != 0;
-		const TWord rrr		= (dbmfop&0x000700)>>8;
+		// X or Y Memory Data Move with immediate displacement
+		case OpcodeInfo::Movex_Rnxxxx:	// 0000101001110RRR1WDDDDDD
+		case OpcodeInfo::Movey_Rnxxxx:	// 0000101101110RRR1WDDDDDD
+			{
+				const TWord DDDDDD	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+				const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+				const TWord rrr		= oi->getFieldValue(OpcodeInfo::Field_RRR, op);
 
-		const int shortDisplacement = signextend<int,24>(fetchPC());
-		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
+				const int shortDisplacement = signextend<int,24>(fetchPC());
+				const TWord ea = decode_RRR_read( rrr, shortDisplacement );
 
-		if( write )
-		{
-			decode_dddddd_write( DDDDDD, TReg24(memRead( MemArea_X, ea )) );
-		}
-		else
-		{
-			memWrite( MemArea_X, ea, decode_dddddd_read( DDDDDD ).var );
-		}
+				const auto area = oi->getInstruction() == OpcodeInfo::Movey_Rnxxxx ? MemArea_Y : MemArea_X;
+
+				if( write )
+				{
+					decode_dddddd_write( DDDDDD, TReg24(memRead( area, ea )) );
+				}
+				else
+				{
+					memWrite( area, ea, decode_dddddd_read( DDDDDD ).var );
+				}
+			}
+			return true;
+		case OpcodeInfo::Movex_Rnxxx:	// 0000001aaaaaaRRR1a0WDDDD
+		case OpcodeInfo::Movey_Rnxxx:	// 0000001aaaaaaRRR1a1WDDDD
+			{
+				const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDD, op);
+				const TWord aaaaaaa	= oi->getFieldValue(OpcodeInfo::Field_aaaaaa, OpcodeInfo::Field_a, op);
+				const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+				const TWord rrr		= oi->getFieldValue(OpcodeInfo::Field_RRR, op);
+
+				const int shortDisplacement = signextend<int,7>(aaaaaaa);
+				const TWord ea = decode_RRR_read( rrr, shortDisplacement );
+
+				const auto area = oi->getInstruction() == OpcodeInfo::Movey_Rnxxx ? MemArea_Y : MemArea_X;
+
+				if( write )
+				{
+					decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( area, ea )) );
+				}
+				else
+				{
+					memWrite( area, ea, decode_ddddd_read<TWord>( ddddd ) );
+				}
+			}
+			return true;
+		// Move Control Register
+		case OpcodeInfo::Movec_ea:		// 00000101W1MMMRRR0S1DDDDD
+			{
+				const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDD, op);
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+				const TWord addr = decode_MMMRRR_read( mmmrrr );
+
+				const EMemArea area = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+					
+				if( write )
+				{
+					if( mmmrrr == MMM_ImmediateData )	decode_ddddd_pcr_write( ddddd, TReg24(addr) );		
+					else								decode_ddddd_pcr_write( ddddd, TReg24(memRead( area, addr )) );
+				}
+				else
+				{
+					const TReg24 regVal = decode_ddddd_pcr_read(op&0x1f);
+					assert( (mmmrrr != MMM_ImmediateData) && "register move to immediate data? not possible" );
+					memWrite( area, addr, regVal.toWord() );
+				}
+			}
+			return true;
+		case OpcodeInfo::Movec_aa:
+			LOG_ERR_NOTIMPLEMENTED("MOVE(C)_aa");
+			return true;
+		case OpcodeInfo::Movec_S1D2:	// 00000100W1eeeeee101ddddd
+			{
+				const auto write = oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+				const TWord eeeeee	= oi->getFieldValue(OpcodeInfo::Field_eeeeee, op);
+				const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDD, op);
+
+				if( write )
+					decode_ddddd_pcr_write( ddddd, decode_dddddd_read( eeeeee ) );
+				else
+					decode_dddddd_write( eeeeee, decode_ddddd_pcr_read( ddddd ) );				
+			}
+			return true;
+		case OpcodeInfo::Movec_xx:		// 00000101iiiiiiii101ddddd
+			{
+				const TWord iiiiiiii	= oi->getFieldValue(OpcodeInfo::Field_iiiiiiii, op);
+				const TWord ddddd		= oi->getFieldValue(OpcodeInfo::Field_DDDDD, op);
+				decode_ddddd_pcr_write( ddddd, TReg24(iiiiiiii) );
+			}
+			return true;
+		// Move Program Memory
+		case OpcodeInfo::Movem_ea:		// 00000111W1MMMRRR10dddddd
+			{
+				const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+
+				const TWord ea		= decode_MMMRRR_read( mmmrrr );
+
+				if( write )
+				{
+					assert( mmmrrr != MMM_ImmediateData && "immediate data should not be allowed here" );
+					decode_dddddd_write( dddddd, TReg24(memRead( MemArea_P, ea )) );
+				}
+				else
+				{
+					memWrite( MemArea_P, ea, decode_dddddd_read(dddddd).toWord() );
+				}
+			}
+			return true;
+		case OpcodeInfo::Movem_aa:		// 00000111W0aaaaaa00dddddd
+			LOG_ERR_NOTIMPLEMENTED("MOVE(M) S,P:aa");
+			return true;
+		// Move Peripheral Data
+		case OpcodeInfo::Movep_ppea:	// 0000100sW1MMMRRR1Spppppp
+			{
+				const TWord pp		= 0xffffc0 + oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+				const EMemArea s	= oi->getFieldValue(OpcodeInfo::Field_s, op) ? MemArea_Y : MemArea_X;
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+
+				const TWord ea		= decode_MMMRRR_read( mmmrrr );
+
+				if( write )
+				{
+					if( mmmrrr == MMM_ImmediateData )
+						memWrite( S, pp, ea );
+					else
+						memWrite( S, pp, memRead( s, ea ) );
+				}
+				else
+					memWrite( s, ea, memRead( S, pp ) );
+			}
+			return true;
+		case OpcodeInfo::Movep_Xqqea:	// 00000111W1MMMRRR0Sqqqqqq
+		case OpcodeInfo::Movep_Yqqea:	// 00000111W0MMMRRR1Sqqqqqq
+			{
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+				const TWord qAddr	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
+				const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+				const TWord ea		= decode_MMMRRR_read( mmmrrr );
+
+				const auto area = oi->getInstruction() == OpcodeInfo::Movep_Yqqea ? MemArea_Y : MemArea_X;
+
+				if( write )
+				{
+					if( mmmrrr == MMM_ImmediateData )
+						memWrite( area, qAddr, ea );
+					else
+						memWrite( area, qAddr, memRead( S, ea ) );
+				}
+				else
+					memWrite( S, ea, memRead( area, qAddr ) );				
+			}
+			return true;
+		case OpcodeInfo::Movep_eapp:	// 0000100sW1MMMRRR01pppppp
+			LOG_ERR_NOTIMPLEMENTED("MOVE");
+			return true;
+
+		case OpcodeInfo::Movep_eaqq:	// 000000001WMMMRRR0Sqqqqqq
+			LOG_ERR_NOTIMPLEMENTED("MOVE");
+			return true;
+		case OpcodeInfo::Movep_Spp:		// 0000100sW1dddddd00pppppp
+			{
+				const TWord addr	= 0xffffc0 + oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
+				const EMemArea area = oi->getFieldValue(OpcodeInfo::Field_s, op) ? MemArea_Y : MemArea_X;
+				const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+				if( write )
+					decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
+				else
+					memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
+			}
+		case OpcodeInfo::Movep_SXqq:	// 00000100W1dddddd1q0qqqqq
+			LOG_ERR_NOTIMPLEMENTED("MOVE");
+			return true;
+		case OpcodeInfo::Movep_SYqq:	// 00000100W1dddddd0q1qqqqq
+			LOG_ERR_NOTIMPLEMENTED("MOVE");
+			return true;
+		default:
+			return false;
 	}
-
-	// MOVE X:(Rn + xxx),D - 0000001a aaaaaRRR 1a0WDDDD
-	// MOVE S,X:(Rn + xxx)
-	else if( (dbmf&0xfe0000) == 0x020000 && (op&0xa0) == 0x80 )
-	{
-		const TWord ddddd	= (dbmfop&0x00000f);
-		const TWord aaaaaaa	= ((dbmfop&0x01f800)>>10) | ((dbmfop&0x000040)>>6);
-		const bool	write	= (dbmfop&0x000010) != 0;
-		const TWord rrr		= (dbmfop&0x000700)>>8;
-
-		const int shortDisplacement = signextend<int,7>(aaaaaaa);
-		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-		if( write )
-		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( MemArea_X, ea )) );
-		}
-		else
-		{
-			memWrite( MemArea_X, ea, decode_ddddd_read<TWord>( ddddd ) );
-		}
-	}
-
-	// Y Memory Data Move
-
-	// MOVE Y:(Rn + xxxx),D - 00001011 01110RRR 1WDDDDDD
-	// MOVE D,Y:(Rn + xxxx)
-	else if( (dbmf&0xfff800) == 0x0b7000 && (op&0x80) == 0x80 )
-	{
-		const TWord ddddd	= (dbmfop&0x00003f);
-		const bool	write	= (dbmfop&0x000040) != 0;
-		const TWord rrr		= (dbmfop&0x000700)>>8;
-
-		const int shortDisplacement = signextend<int,24>(fetchPC());
-		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-		if( write )
-		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( MemArea_Y, ea )) );
-		}
-		else
-		{
-			memWrite( MemArea_Y, ea, decode_ddddd_read<TWord>( ddddd ) );
-		}
-	}
-
-	// MOVE Y:(Rn + xxx),D - 0000001a aaaaaRRR 1a1WDDDD
-	// MOVE D,Y:(Rn + xxx)
-	else if( (dbmf&0xfe0000) == 0x020000 && (op&0xa0) == 0xa0 )
-	{
-		const TWord ddddd	= (dbmfop&0x00000f);
-		const TWord aaaaaaa	= ((dbmfop&0x01f800)>>10) | ((dbmfop&0x000040)>>6);
-		const bool	write	= (dbmfop&0x000010) != 0;
-		const TWord rrr		= (dbmfop&0x000700)>>8;
-
-		const int shortDisplacement = signextend<int,7>(aaaaaaa);
-		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-		if( write )
-		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( MemArea_Y, ea )) );
-		}
-		else
-		{
-			memWrite( MemArea_Y, ea, decode_ddddd_read<TWord>( ddddd ) );
-		}
-	}
-
-	// Move Control Register
-
-	// MOVE(C) [X or Y]:ea,D1 - 0 0 0 0 0 1 0 1 W 1 M M M R R R O S 1 d d d d d
-	// MOVE(C) S1,[X or Y]:ea
-	// MOVE(C) #xxxx,D1
-	else if( (dbmf&0xff4000) == 0x054000 && (op&0xa0) == 0x20 )//if( (dbmf&0xff4000) == 0x054000 && (op&0x20) == 0x20 )
-	{
-		const TWord mmmrrr = (dbmf>>8) & 0x3f;
-
-		const TWord addr = decode_MMMRRR_read( mmmrrr );
-
-		const bool write = (dbmf & 0x8000) != 0;
-
-		const EMemArea area = ((op&40) != 0) ? MemArea_Y : MemArea_X;
-
-		// TODO: what is 'O' good for? isn't mentioned in the docs at MOVEC?! I assume it's a typo and it should be a zero bit
-		const bool o = (op&0x80) != 0;
-		assert( o == false );
-
-		if( write )
-		{
-			if( mmmrrr == 0x34 )	decode_ddddd_pcr_write( op&0x1f, TReg24(addr) );		
-			else					decode_ddddd_pcr_write( op&0x1f, TReg24(memRead( area, addr )) );
-		}
-		else
-		{
-			const TReg24 regVal = decode_ddddd_pcr_read(op&0x1f);
-			assert( (mmmrrr != 0x34) && "register move to immediate data? not possible" );
-			memWrite( area, addr, regVal.toWord() );
-		}
-	}
-
-	// MOVE(C) [X or Y]:aa,D1 - 0 0 0 0 0 1 0 1 W 0 a a a a a a 0 S 1 d d d d d
-	// MOVE(C) S1,[X or Y]:aa
-	else if( (dbmf&0xff4000) == 0x050000 && (op&0xa0) == 0x20 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE");
-	}
-
-	// MOVE(C) S1,D2 - 0 0 0 0 0 1 0 0 W 1 e e e e e e 1 0 1 d d d d d
-	// MOVE(C) S2,D1
-	else if( (dbmf&0xff4000) == 0x044000 && (op&0xe0) == 0xa0 )
-	{
-		const bool write = (dbmf & 0x8000) != 0;
-
-		const TWord eeeeee	= (dbmfop & 0x003f00) >> 8;
-		const TWord ddddd	= (dbmfop & 0x00001f);
-
-		if( write )
-			decode_ddddd_pcr_write( ddddd, decode_dddddd_read( eeeeee ) );
-		else
-			decode_dddddd_write( eeeeee, decode_ddddd_pcr_read( ddddd ) );
-	}
-
-	// MOVE(C) #xx,D1 - 0 0 0 0 0 1 0 1 i i i i i i i i 1 0 1 d d d d d
-	else if( (dbmf&0xff0000) == 0x050000 && (op&0xe0) == 0xa0 )
-	{
-		const TWord data  = (dbmfop&0x00ff00) >> 8;
-		const TWord ddddd = dbmfop&0x00001f;
-
-		decode_ddddd_pcr_write( ddddd, TReg24(data) );
-	}
-
-	// Move Program Memory
-
-	// MOVE(M) S,P:ea - 0 0 0 0 0 1 1 1 W 1 M M M R R R 1 0 d d d d d d
-	// MOVE(M) P:ea,D
-	else if( (dbmf&0xff4000) == 0x074000 && (op&0xc0) == 0x80 )
-	{
-		const bool	write	= (dbmfop&0x008000) != 0;
-		const TWord dddddd	= (dbmfop&0x00003f);
-		const TWord mmmrrr	= (dbmfop&0x003f00)>>8;
-
-		const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-		if( write )
-		{
-			assert( mmmrrr != 0x34 && "immediate data should not be allowed here" );
-			decode_dddddd_write( dddddd, TReg24(memRead( MemArea_P, ea )) );
-		}
-		else
-		{
-			memWrite( MemArea_P, ea, decode_dddddd_read(dddddd).toWord() );
-		}
-	}
-
-	// MOVE(M) S,P:aa - 0 0 0 0 0 1 1 1 W 0 a a a a a a 0 0 d d d d d d
-	// MOVE(M) P:aa,D
-	else if( (dbmf&0xff4000) == 0x070000 && (op&0xc0) == 0x00 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE(M) S,P:aa");
-	}
-
-	// Move Peripheral Data
-
-	// MOVEP [X or Y]:pp,[X or Y]:ea - 0 0 0 0 1 0 0 s W 1 M M M R R R 1 S p p p p p p
-	// MOVEP [X or Y]:ea,[X or Y]:pp
-	else if( (dbmf&0xfe4000) == 0x084000 && (op&0x80) == 0x80 )
-	{
-		const TWord pp		= 0xFFFFC0 + (dbmfop & 0x00003f);
-		
-		const TWord mmmrrr	= (dbmfop & 0x003f00) >> 8;
-		const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-		const bool write	= (dbmfop & 0x008000) != 0;
-		const EMemArea s	= (dbmfop & 0x010000) ? MemArea_Y : MemArea_X;
-		const EMemArea S	= (dbmfop & 0x000040) ? MemArea_Y : MemArea_X;
-
-		if( write )
-		{
-			if( mmmrrr == 0x34 )
-				memWrite( S, pp, ea );
-			else
-				memWrite( S, pp, memRead( s, ea ) );
-		}
-		else
-			memWrite( s, ea, memRead( S, pp ) );
-	}
-
-	// MOVEP X:qq,[X or Y]:ea - 0 0 0 0 0 1 1 1 W 1 M M M R R R 0 S q q q q q q
-	// MOVEP [X or Y]:ea,X:qq
-	else if( (dbmf&0xff4000) == 0x074000 && (op&0x80) == 0x00 )
-	{
-		const TWord mmmrrr	= (dbmfop & 0x003f00) >> 8;
-		const EMemArea S	= (dbmfop & 0x000040) ? MemArea_Y : MemArea_X;
-		const TWord qAddr	= (dbmfop & 0x00003f) + 0xffff80;
-		const bool write	= (dbmfop & 0x008000) != 0;
-
-		const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-		if( write )
-		{
-			if( mmmrrr == 0x34 )
-				memWrite( MemArea_X, qAddr, ea );
-			else
-				memWrite( MemArea_X, qAddr, memRead( S, ea ) );
-		}
-		else
-			memWrite( S, ea, memRead( MemArea_X, qAddr ) );
-	}
-
-	// MOVEP Y:qq,[X or Y]:ea - 0 0 0 0 0 1 1 1 W 0 M M M R R R 1 S q q q q q q
-	// MOVEP [X or Y]:ea,Y:qq
-	else if( (dbmf&0xff4000) == 0x070000 && (op&0x80) == 0x80 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE");
-	}
-
-	// MOVEP P:ea,[X or Y]:pp - 0 0 0 0 1 0 0 s W 1 M M M R R R 0 1 p p p p p p
-	// MOVEP [X or Y]:pp,P:ea
-	else if( (dbmf&0xfe4000) == 0x084000 && (op&0xc0) == 0x40 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE");
-	}
-
-	// MOVEP P:ea,[X or Y]:qq - 0 0 0 0 0 0 0 0 1 W M M M R R R 0 S q q q q q q
-	// MOVEP [X or Y]:qq,P:ea
-	else if( (dbmf&0xff8000) == 0x008000 && (op&0x80) == 0x00 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE");
-	}
-
-	// MOVEP S,[X or Y]:pp - 0 0 0 0 1 0 0 s W 1 d d d d d d 0 0 p p p p p p
-	// MOVEP [X or Y]:pp,D
-	else if( (dbmf&0xfe4000) == 0x084000 && (op&0xc0) == 0x00 )
-	{
-		const TWord addr	= 0xffffc0 + (dbmfop & 0x3f);
-		const TWord dddddd	= (dbmfop & 0x003f00) >> 8;
-
-		const EMemArea area = (dbmfop & 0x010000) ? MemArea_Y : MemArea_X;
-		const bool	write	= (dbmfop & 0x008000) != 0;
-
-		if( write )
-			decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
-		else
-			memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
-	}
-
-	// MOVEP S,X:qq - 0 0 0 0 0 1 0 0 W 1 d d d d d d 1 q 0 q q q q q
-	// MOVEP X:qq,D
-	else if( (dbmf&0xff4000) == 0x044000 && (op&0xa0) == 0x80 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE");
-	}
-
-	// MOVEP S,Y:qq - 0 0 0 0 0 1 0 0 W 1 d d d d d d 0 q 1 q q q q q
-	// MOVEP Y:qq,D
-	else if( (dbmf&0xff4000) == 0x044000 && (op&0xa0) == 0x20 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE");
-	}
-	else
-		return false;
-	return true;
 }
 // _____________________________________________________________________________
 // decode_ddddd_pcr
@@ -2455,25 +1930,15 @@ void DSP::logSC( const char* _func ) const
 // _____________________________________________________________________________
 // exec_operand_8bits
 //
-bool DSP::exec_operand_8bits(TWord dbmf, TWord op)
+bool DSP::exec_operand_8bits(const OpcodeInfo* oi, TWord op)
 {
-	if( (dbmf&0xffff00) != 0x000000 )
-		return false;
-
-	// Return From Interrupt
-
-	// RTI - 000000000000000000000100
-	if( op == 0x04 )
+	switch (oi->getInstruction())
 	{
+	case OpcodeInfo::Rti:			// Return From Interrupt
 		popPCSR();
 		LOGSC("rti");
-	}
-
-	// End Current DO Loop
-
-	// ENDDO - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 1 1 0 0
-	else if( op == 0x8c )
-	{
+		return true;
+	case OpcodeInfo::Enddo:			// End Current DO Loop
 		// restore previous loop flag
 		sr_toggle( SR_LF, (ssl().var & SR_LF) != 0 );
 
@@ -2484,147 +1949,84 @@ bool DSP::exec_operand_8bits(TWord dbmf, TWord op)
 		reg.la = ssh();
 
 		return true;
-	}
+	case OpcodeInfo::Dec:			// Decrement by One
+		{
+			auto& d = oi->getFieldValue(OpcodeInfo::Field_d, op) ? reg.b : reg.a;
 
-	// Decrement by One
+			const auto old = d;
+			const auto res = --d.var;
 
-	// DEC D - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 d
-	else if( (op&0xfe) == 0x0a )
-	{
-		TReg56& d = bittest(op,0) ? reg.b : reg.a;
+			d.doMasking();
 
-		const TReg56 old = d;
+			sr_s_update();
+			sr_e_update(d);
+			sr_u_update(d);
+			sr_n_update_arithmetic(d);
+			sr_z_update(d);
+			sr_v_update(res,d);
+			sr_l_update_by_v();
+			sr_c_update_arithmetic(old,d);
+			sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
+		}
+		return true;
+	case OpcodeInfo::Inc:			// Increment by One	
+		{
+			auto& d = oi->getFieldValue(OpcodeInfo::Field_d, op) ? reg.b : reg.a;
 
-		const TInt64 res = --d.var;
+			const auto old = d;
 
-		d.doMasking();
+			const auto res = ++d.var;
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update_arithmetic(d);
-		sr_z_update(d);
-		sr_v_update(res,d);
-		sr_l_update_by_v();
-		sr_c_update_arithmetic(old,d);
-		sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
-	}
+			d.doMasking();
 
-	// Increment by One
-
-	// INC D - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 d
-	else if( (op&0xfe) == 0x08 )
-	{
-		TReg56& d = bittest(op,0) ? reg.b : reg.a;
-
-		const TReg56 old = d;
-
-		const TInt64 res = ++d.var;
-
-		d.doMasking();
-
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update_arithmetic(d);
-		sr_z_update(d);
-		sr_v_update(res,d);
-		sr_l_update_by_v();
-		sr_c_update_arithmetic(old,d);
-		sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
-	}
-
-	// Unlock Instruction Cache Relative Sector
-
-	// PUNLOCKR xxxx - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0
-	else if( op == 0x0e )
-	{
+			sr_s_update();
+			sr_e_update(d);
+			sr_u_update(d);
+			sr_n_update_arithmetic(d);
+			sr_z_update(d);
+			sr_v_update(res,d);
+			sr_l_update_by_v();
+			sr_c_update_arithmetic(old,d);
+			sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
+		}
+		return true;
+	case OpcodeInfo::Punlockr:
 		LOG_ERR_NOTIMPLEMENTED("PUNLOCKR");
-	}
-
-	// Program Cache Flush
-
-	// PFLUSH - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1
-	else if( op == 0x03 )
-	{
+		return true;
+	case OpcodeInfo::Pflush:
 		LOG_ERR_NOTIMPLEMENTED("PFLUSH");
-	}
-
-	// Program Cache Flush Unlocked Sections
-
-	// PFLUSHUN - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
-	else if( op == 0x01 )
-	{
+		return true;
+	case OpcodeInfo::Pflushun:		// Program Cache Flush Unlocked Sections
 		cache.pflushun();
-	}
-
-	// Program Cache Global Unlock
-
-	// PFREE - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0
-	else if( op == 0x02 )
-	{
+		return true;
+	case OpcodeInfo::Pfree:			// Program Cache Global Unlock
 		cache.pfree();
-	}
-
-	// Lock Instruction Cache Relative Sector
-
-	// PLOCKR xxxx - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1
-	else if( op == 0x0f )
-	{
+		return true;
+	case OpcodeInfo::Plockr:
 		LOG_ERR_NOTIMPLEMENTED("PLOCKR");
-	}
-
-	// Illegal Instruction Interrupt
-
-	// ILLEGAL - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1
-	else if( op == 0x05 )
-	{
+		return true;
+	case OpcodeInfo::Illegal:
 		LOG_ERR_NOTIMPLEMENTED("ILLEGAL");
-	}
-
-	// Return From Subroutine
-
-	// RTS - 000000000000000000001100
-	else if( op == 0x0c )
-	{
+		return true;
+	case OpcodeInfo::Rts:			// Return From Subroutine
 		popPC();
 		LOGSC( "RTS" );
-	}
-
-	// Stop Instruction Processing
-
-	// STOP - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 1 1 1
-	else if( op == 0x87 )
-	{
+		return true;
+	case OpcodeInfo::Stop:
 		LOG_ERR_NOTIMPLEMENTED("STOP");
-	}
-
-	// Software Interrupt
-
-	// TRAP - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0
-	else if( op == 0x06 )
-	{
+		return true;
+	case OpcodeInfo::Trap:
 		LOG_ERR_NOTIMPLEMENTED("TRAP");
-	}
-
-	// Wait for Interrupt or DMA Request
-
-	// WAIT - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 1 1 0
-	else if( op == 0x86 )
-	{
+		return true;
+	case OpcodeInfo::Wait:
 		LOG_ERR_NOTIMPLEMENTED("WAIT");
-	}
-
-	// Conditional Software Interrupt
-
-	// TRAPcc - 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 C C C C
-	else if( (op&0xf0) == 0x10 )
-	{
+		return true;
+	case OpcodeInfo::Trapcc:
 		LOG_ERR_NOTIMPLEMENTED("TRAPcc");
-	}
-	else
+		return true;
+	default:
 		return false;
-	return true;
+	}
 }
 
 // _____________________________________________________________________________
@@ -2640,7 +2042,7 @@ void DSP::resetSW()
 //
 void DSP::exec_move_ddddd_MMMRRR( TWord ddddd, TWord mmmrrr, bool write, EMemArea memArea )
 {
-	if( write && mmmrrr == 0x34 )
+	if( write && mmmrrr == MMM_ImmediateData )
 	{
 		decode_ddddd_write<TReg24>( ddddd, TReg24(fetchPC()) );
 		return;
@@ -2661,358 +2063,296 @@ void DSP::exec_move_ddddd_MMMRRR( TWord ddddd, TWord mmmrrr, bool write, EMemAre
 // _____________________________________________________________________________
 // exec_bitmanip
 //
-bool DSP::exec_bitmanip( TWord dbmfop, TWord dbmf, TWord op )
+bool DSP::exec_bitmanip(const OpcodeInfo* oi, TWord op)
 {
-	// Bit Set and Test
-
-	// BSET #n,[X or Y]:ea - 0 0 0 0 1 0 1 0 0 1 M M M R R R 0 S 1 b b b b b
-	if( (dbmf&0xffc000) == 0x0a4000 && (op&0xa0) == 0x20 )
+	switch (oi->getInstruction())
 	{
-		const TWord bit		= dbmfop&0x00001f;
-
-		const TWord mmmrrr	= (dbmfop&0x003f00)>>8;
-
-		const TWord ea		= decode_MMMRRR_read(mmmrrr);
-
-		const EMemArea S	= bittest(dbmfop,6) ? MemArea_Y : MemArea_Y;
-
-		TWord val = memRead( S, ea );
-
-		sr_toggle( SR_C, bittestandset( val, bit ) );
-
-		memWrite( S, ea, val );
-	}
-
-	// BSET #n,[X or Y]:aa - 0 0 0 0 1 0 1 0 0 0 a a a a a a 0 S 1 b b b b b
-	else if( (dbmf&0xffc000) == 0x0a0000 && (op&0xa0) == 0x20 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("BSET");
-	}
-
-	// BSET #n,[X or Y]:pp - 0 0 0 0 1 0 1 0 1 0 p p p p p p 0 S 1 b b b b b
-	else if( (dbmf&0xffc000) == 0x0a8000 && (op&0xa0) == 0x20 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("BSET");
-	}
-
-	// BSET #n,[X or Y]:qq - 0 0 0 0 0 0 0 1 0 0 q q q q q q 0 S 1 b b b b b
-	else if( (dbmf&0xffc000) == 0x010000 && (op&0xa0) == 0x20 )
-	{
-		const TWord bit		= dbmfop&0x00001f;
-
-		const TWord qqqqqq	= (dbmfop&0x003f00)>>8;
-
-		const TWord ea		= 0xffff80 + qqqqqq;
-
-		const EMemArea S	= bittest(dbmfop,6) ? MemArea_Y : MemArea_Y;
-
-		TWord val = memRead( S, ea );
-
-		sr_toggle( SR_C, bittestandset( val, bit ) );
-
-		memWrite( S, ea, val );
-	}
-
-	// BSET #n,D - 0 0 0 0 1 0 1 0 1 1 D D D D D D 0 1 1 b b b b b
-	else if( (dbmf&0xffc000) == 0x0ac000 && (op&0xe0) == 0x60 )
-	{
-		const TWord bit = (dbmfop&0x1f);
-		const TWord d = ((dbmfop&0x003f00) >> 8);
-
-		TReg24 val = decode_dddddd_read(d);
-
-		if( (d & 0x3f) == 0x39 )	// is SR the destination?	
+	case OpcodeInfo::Bset_ea:	// 0000101001MMMRRR0S1bbbbb
+		// Bit Set and Test
 		{
-			bittestandset( val.var, bit );
-		}
-		else
-		{
+			const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+			const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+			const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+
+			const TWord ea		= decode_MMMRRR_read(mmmrrr);
+
+			TWord val = memRead( S, ea );
+
 			sr_toggle( SR_C, bittestandset( val, bit ) );
+
+			memWrite( S, ea, val );
 		}
+		return true;
+	case OpcodeInfo::Bset_aa:
+	case OpcodeInfo::Bset_pp:
+		LOG_ERR_NOTIMPLEMENTED("BSET");
+		return true;
+	case OpcodeInfo::Bset_qq:
+		{
+			const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+			const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
+			const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-		decode_dddddd_write( d, val );
+			const TWord ea		= 0xffff80 + qqqqqq;
 
-		sr_s_update();
-		sr_l_update_by_v();
-	}
+			TWord val = memRead( S, ea );
 
+			sr_toggle( SR_C, bittestandset( val, bit ) );
+
+			memWrite( S, ea, val );			
+		}
+		return true;
+	case OpcodeInfo::Bset_D:	// 0000101011DDDDDD011bbbbb
+		{
+			const TWord bit = oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+			const TWord d = oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+
+			TReg24 val = decode_dddddd_read(d);
+
+			if( (d & 0x3f) == 0x39 )	// is SR the destination?	TODO: magic value
+			{
+				bittestandset( val.var, bit );
+			}
+			else
+			{
+				sr_toggle( SR_C, bittestandset( val, bit ) );
+			}
+
+			decode_dddddd_write( d, val );
+
+			sr_s_update();
+			sr_l_update_by_v();
+		}
+		return true;
 	// Bit test and change
-
-	// BCHG #n,[X or Y]:ea	- 00001101 00011RRR 0100CCCC
-	else if( (dbmf&0xffc000) == 0x0b4000 && (op&0x30) == 0x00 )
-	{
+	case OpcodeInfo::Bchg_ea:
+	case OpcodeInfo::Bchg_aa:
+	case OpcodeInfo::Bchg_pp:
+	case OpcodeInfo::Bchg_qq:
 		LOG_ERR_NOTIMPLEMENTED("BCHG");
-	}
+		return true;
+	case OpcodeInfo::Bchg_D:	// 00001011 11DDDDDD 010bbbbb
+		{
+			const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+			const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
 
-	// BCHG #n,[X or Y]:aa	- bit test and change
-	// BCHG #n,[X or Y]:pp
-	else if( (dbmf&0xffc000) == 0x0b0000 && (op&0xb0) == 0x00 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("BCHG");
-	}
+			TReg24 val = decode_dddddd_read( dddddd );
 
-	// BCHG #n,[X or Y]:qq	- bit test and change
-	else if( (dbmf&0xffc000) == 0x014000 && (op&0xa0) == 0x00 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("BCHG");
-	}
+			sr_toggle( SR_C, bittestandchange( val, bit ) );
 
-	// BCHG #n,D			- 00001011 11DDDDDD 010bbbbb
-	// 
-	else if( (dbmf&0xffc000) == 0x0bc000 && (op&0xe0) == 0x40 )
-	{
-		const TWord		dddddd	= ((dbmfop&0x003f00)>>8);
-		const TWord		bit		= dbmfop&0x00001f;
+			decode_dddddd_write( dddddd, val );
 
-		TReg24			val		= decode_dddddd_read( dddddd );
-
-		sr_toggle( SR_C, bittestandchange( val, bit ) );
-
-		decode_dddddd_write( dddddd, val );
-
-		sr_s_update();
-		sr_l_update_by_v();
-	}
-
+			sr_s_update();
+			sr_l_update_by_v();
+		}
+		return true;
 	// Bit test and clear
-
-	// BCLR #n,[X or Y]:ea - 0 0 0 0 1 0 1 0 0 1 M M M R R R 0 S 0 b b b b b
-	else if( (dbmf&0xffc000) == 0x0a4000 && (op&0xa0) == 0x00 )
-	{
+	case OpcodeInfo::Bclr_ea:
+	case OpcodeInfo::Bclr_aa:
+	case OpcodeInfo::Bclr_pp:
 		LOG_ERR_NOTIMPLEMENTED("BCLR");
-	}
+		return true;
+	case OpcodeInfo::Bclr_qq:	// 0 0 0 0 0 0 0 1 0 0 q q q q q q 0 S 0 b b b b b
+		{
+			const TWord bit = oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+			const TWord ea	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
 
-	// BCLR #n,[X or Y]:aa - 0 0 0 0 1 0 1 0 0 0 a a a a a a 0 S 0 b b b b b
-	else if( (dbmf&0xffc000) == 0x0a0000 && (op&0xa0) == 0x00 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("BCLR");
-	}
+			const EMemArea S = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-	// BCLR #n,[X or Y]:pp - 0 0 0 0 1 0 1 0 1 0 p p p p p p 0 S 0 b b b b b
-	else if( (dbmf&0xffc000) == 0x0a8000 && (op&0xa0) == 0x00 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("BCLR");
-	}
+			const TWord res = alu_bclr( bit, memRead( S, ea ) );
 
-	// BCLR #n,[X or Y]:qq - 0 0 0 0 0 0 0 1 0 0 q q q q q q 0 S 0 b b b b b
-	else if( (dbmf&0xffc000) == 0x010000 && (op&0xa0) == 0x00 )
-	{
-		const TWord bit = (dbmfop&0x1f);
-		const TWord ea	= 0xffff80 + ((dbmfop&0x003f00)>>8);
+			memWrite( S, ea, res );			
+		}
+		return true;
+	case OpcodeInfo::Bclr_D:	// 0000101011DDDDDD010bbbbb
+		{
+			const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+			const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
 
-		const EMemArea S = (dbmfop&0x000040) ? MemArea_Y : MemArea_X;
+			TWord val;
+			convert( val, decode_dddddd_read( dddddd ) );
 
-		const TWord res = alu_bclr( bit, memRead( S, ea ) );
-
-		memWrite( S, ea, res );
-	}
-
-	// BCLR #n,D - 0 0 0 0 1 0 1 0 1 1 D D D D D D 0 1 0 b b b b b
-	else if( (dbmf&0xffc000) == 0x0ac000 && (op&0xe0) == 0x40 )
-	{
-		const TWord bit		= (dbmfop&0x1f);
-		const TWord dddddd	= (dbmfop&0x003f00)>>8;
-
-		TWord val;
-		convert( val, decode_dddddd_read( dddddd ) );
-
-		const TWord newVal = alu_bclr( bit, val );
-		decode_dddddd_write( dddddd, TReg24(newVal) );
-	}
-
+			const TWord newVal = alu_bclr( bit, val );
+			decode_dddddd_write( dddddd, TReg24(newVal) );			
+		}
+		return true;
 	// Bit Test
+	case OpcodeInfo::Btst_ea:
+		{
+			const TWord bit = oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+			const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+			const TWord ea = decode_MMMRRR_read( mmmrrr );
+			const EMemArea S = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-	// BTST #n,[X or Y]:ea - 00001011 01MMMRRR OS1bbbbb
-	else if( (dbmf&0xffc000) == 0x0b4000 && (op&0x20) == 0x20 )
-	{
-		const TWord bit = (dbmfop&0x00001f);
-		const TWord mmmrrr = (dbmfop&0x003f00)>>8;
-		const TWord ea = decode_MMMRRR_read( mmmrrr );
-		const EMemArea S = bittest( dbmfop, 6 ) ? MemArea_Y : MemArea_X;
+			const TWord val = memRead( S, ea );
 
-		const TWord val = memRead( S, ea );
+			sr_toggle( SR_C, bittest( val, bit ) );
 
-		sr_toggle( SR_C, bittest( val, bit ) );
+			sr_s_update();
+			sr_l_update_by_v();
+		}
+		return true;
+	case OpcodeInfo::Btst_aa:
+		LOG_ERR_NOTIMPLEMENTED("BTST aa");
+		return true;
+	case OpcodeInfo::Btst_pp:	// 0 0 0 0 1 0 1 1 1 0 p p p p p p 0 S 1 b b b b b
+		{
+			const TWord bitNum	= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+			const TWord pppppp	= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+			const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-		sr_s_update();
-		sr_l_update_by_v();
-	}
+			const TWord memVal	= memRead( S, pppppp + 0xffffc0 );
 
-	// BTST #n,[X or Y]:aa - 0 0 0 0 1 0 1 1 0 0 a a a a a a 0 S 1 b b b b b
-	else if( (dbmf&0xffc000) == 0x0b0000 && (op&0xa0) == 0x20 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("BTST");
-	}
+			const bool bitSet	= ( memVal & (1<<bitNum)) != 0;
 
-	// BTST #n,[X or Y]:pp - 0 0 0 0 1 0 1 1 1 0 p p p p p p 0 S 1 b b b b b
-	else if( (dbmf&0xffc000) == 0x0b8000 && (op&0xa0) == 0x20 )
-	{
-		const TWord bitNum	= dbmfop&0x00000f;
-		const TWord pppppp	= (dbmfop&0x003f00) >> 8;
+			sr_toggle( SR_C, bitSet );
+		}
+		return true;
+	case OpcodeInfo::Btst_qq:	// 0 0 0 0 0 0 0 1 0 1 q q q q q q 0 S 1 b b b b b
+		LOG_ERR_NOTIMPLEMENTED("BTST qq");
+		return true;
+	case OpcodeInfo::Btst_D:	// 0000101111DDDDDD011bbbbb
+		{
+			const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+			const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
 
-		const EMemArea S	= (dbmfop&0x000040) ? MemArea_Y : MemArea_X;
+			TReg24 val = decode_dddddd_read( dddddd );
 
-		const TWord memVal	= memRead( S, pppppp + 0xffffc0 );
-
-		const bool bitSet	= ( memVal & (1<<bitNum)) != 0;
-
-		sr_toggle( SR_C, bitSet );
-	}
-
-	// BTST #n,[X or Y]:qq - 0 0 0 0 0 0 0 1 0 1 q q q q q q 0 S 1 b b b b b
-	else if( (dbmf&0xffc000) == 0x014000 && (op&0xa0) == 0x20 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("BTST");
-	}
-
-	// BTST #n,D - 00001011 11DDDDDD 011bbbbb
-	else if( (dbmf&0xffc000) == 0x0bc000 && (op&0xe0) == 0x60 )
-	{
-		const TWord dddddd	= (dbmfop&0x003f00)>>8;
-		const TWord bit		= dbmfop&0x00001f;
-
-		TReg24 val = decode_dddddd_read( dddddd );
-
-		sr_toggle( SR_C, bittest( val.var, bit ) );
-	}
-	else
+			sr_toggle( SR_C, bittest( val.var, bit ) );
+		}
+		return true;
+	default:
 		return false;
-	return true;
+	}
 }
+
 // _____________________________________________________________________________
 // exec_logical_nonparallel
 //
-bool DSP::exec_logical_nonparallel( TWord dbmfop, TWord dbmf, TWord op )
+bool DSP::exec_logical_nonparallel(const OpcodeInfo* oi, TWord op)
 {
-	if( (dbmf&0xffff00) == 0x0c1e00 )
+	switch (oi->getInstruction())
 	{
-		// LSL #ii,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 1 0 i i i i i D
-		if( (op&0xc0) == 0x80 )
+	// Logical AND
+	case OpcodeInfo::And_xx:	// 0000000101iiiiii10ood110
 		{
-			LOG_ERR_NOTIMPLEMENTED("LSL");
-		}
+			const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
+			const TWord xxxx = oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
 
-		// LSL S,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 0 0 0 1 s s s D
-		else if( (op&0xf0) == 0x10 )
+			alu_and(ab, xxxx );
+		}
+		return true;
+	case OpcodeInfo::And_xxxx:
 		{
-			LOG_ERR_NOTIMPLEMENTED("LSL");
-		}
+			const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
+			const TWord xxxx = fetchPC();
 
-		// LSR #ii,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 1 1 i i i i i D
-		else if( (op&0xc0) == 0xc0 )
+			alu_and( ab, xxxx );
+		}
+		return true;
+	// AND Immediate With Control Register
+	case OpcodeInfo::Andi:	// AND(I) #xx,D		- 00000000 iiiiiiii 101110EE
 		{
-			LOG_ERR_NOTIMPLEMENTED("LSL");
-		}
+			const TWord ee		= oi->getFieldValue(OpcodeInfo::Field_EE, op);
+			const TWord iiiiii	= oi->getFieldValue(OpcodeInfo::Field_iiiiiiii, op);
 
-		// LSR S,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 0 0 1 1 s s s D
-		else if( (op&0xf0) == 0x30 )
+			TReg8 val = decode_EE_read(ee);
+			val.var &= iiiiii;
+			decode_EE_write(ee,val);			
+		}
+		return true;
+	// Arithmetic Shift Accumulator Left
+	case OpcodeInfo::Asl_ii:	// 00001100 00011101 SiiiiiiD
 		{
-			LOG_ERR_NOTIMPLEMENTED("LSL");
+			const TWord shiftAmount	= oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
+
+			const bool abDst		= oi->getFieldValue(OpcodeInfo::Field_D, op);
+			const bool abSrc		= oi->getFieldValue(OpcodeInfo::Field_S, op);
+
+			alu_asl( abDst, abSrc, shiftAmount );			
 		}
-		else
-			return false;
-	}
+		return true;
+	case OpcodeInfo::Asl_S1S2D:	// 00001100 00011110 010SsssD
+		{
+			const TWord sss = oi->getFieldValue(OpcodeInfo::Field_sss, op);
+			const bool abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
+			const bool abSrc = oi->getFieldValue(OpcodeInfo::Field_S, op);
 
-	// Logical Exclusive OR
+			const TWord shiftAmount = decode_sss_read<TWord>( sss );
 
-	// EOR #xx,D - 0 0 0 0 0 0 0 1 0 1 i i i i i i 1 0 0 0 d 0 1 1
-	else if( (dbmf&0xffc000) == 0x014000 && (op&0xf7) == 0x83 )
-	{
+			alu_asl( abDst, abSrc, shiftAmount );			
+		}
+		return true;
+	// Arithmetic Shift Accumulator Right
+	case OpcodeInfo::Asr_ii:	// 00001100 00011100 SiiiiiiD
+		{
+			const TWord shiftAmount	= oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
+
+			const bool abDst		= oi->getFieldValue(OpcodeInfo::Field_D, op);
+			const bool abSrc		= oi->getFieldValue(OpcodeInfo::Field_S, op);
+
+			alu_asr( abDst, abSrc, shiftAmount );
+		}
+		return true;
+	case OpcodeInfo::Asr_S1S2D:
+		{
+			const TWord sss = oi->getFieldValue(OpcodeInfo::Field_sss, op);
+			const bool abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
+			const bool abSrc = oi->getFieldValue(OpcodeInfo::Field_S, op);
+
+			const TWord shiftAmount = decode_sss_read<TWord>( sss );
+
+			alu_asr( abDst, abSrc, shiftAmount );			
+		}
+		return true;		
+	case OpcodeInfo::Lsl_ii:				// Logical Shift Left
+	case OpcodeInfo::Lsl_SD:
+		LOG_ERR_NOTIMPLEMENTED("LSL");
+		return true;
+	case OpcodeInfo::Lsr_ii:				// Logical Shift Right
+	case OpcodeInfo::Lsr_SD:
+		LOG_ERR_NOTIMPLEMENTED("LSR");
+		return true;
+	case OpcodeInfo::Eor_xx:				// Logical Exclusive OR
+	case OpcodeInfo::Eor_xxxx:
 		LOG_ERR_NOTIMPLEMENTED("EOR");
-	}
-
-	// EOR #xxxx,D - 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 1 0 0 d 0 1 1
-	else if( (dbmf&0xffff00) == 0x014000 && (op&0xf7) == 0xc3 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("EOR");
-	}
-
-	// Extract Bit Field
-
-	// EXTRACT S1,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 1 0 0 0 0 s S S S D
-	else if( (dbmf&0xffff00) == 0x0c1a00 && (op&0xe0) == 0x00 )
-	{
+		return true;
+	case OpcodeInfo::Extract_S1S2:			// Extract Bit Field
+	case OpcodeInfo::Extract_CoS2:
 		LOG_ERR_NOTIMPLEMENTED("EXTRACT");
-	}
-
-	// EXTRACT #CO,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 0 0 0 0 0 s 0 0 0 D
-	else if( (dbmf&0xffff00) == 0x0c1800 && (op&0xee) == 0x00 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("EXTRACT");
-	}
-
-	// Extract Unsigned Bit Field
-
-	// EXTRACTU S1,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 1 0 1 0 0 s S S S D
-	else if( (dbmf&0xffff00) == 0x0c1a00 && (op&0xe0) == 0x80 )
-	{
+		return true;
+	case OpcodeInfo::Extractu_S1S2:			// Extract Unsigned Bit Field
+	case OpcodeInfo::Extractu_CoS2:
 		LOG_ERR_NOTIMPLEMENTED("EXTRACTU");
-	}
-
-	// EXTRACTU #CO,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 0 0 1 0 0 s 0 0 0 D
-	else if( (dbmf&0xffff00) == 0x0c1800 && (op&0xee) == 0x80 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("EXTRACTU");
-	}
-
-	// Execute Conditionally Without CCR Update
-
-	// Insert Bit Field
-
-	// INSERT S1,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 1 1 0 q q q S S S D
-	else if( (dbmf&0xffff00) == 0x0c1b00 && (op&0x80) == 0x00 )
-	{
+		return true;
+	case OpcodeInfo::Insert_S1S2:			// Insert Bit Field
+	case OpcodeInfo::Insert_CoS2:
 		LOG_ERR_NOTIMPLEMENTED("INSERT");
-	}
-
-	// INSERT #CO,S2,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 0 1 0 q q q 0 0 0 D
-	else if( (dbmf&0xffff00) == 0x0c1900 && (op&0x8e) == 0x00 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("INSERT");
-	}
-
-	// Merge Two Half Words
-
-	// MERGE S,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 0 1 1 1 0 0 0 S S S D
-	else if( (dbmf&0xffff00) == 0x0c1b00 && (op&0xf0) == 0x80 )
-	{
+		return true;
+	case OpcodeInfo::Merge:					// Merge Two Half Words
 		LOG_ERR_NOTIMPLEMENTED("MERGE");
-	}
-
-	// Logical Inclusive OR
-
-	// OR #xx,D - 0 0 0 0 0 0 0 1 0 1 i i i i i i 1 0 0 0 d 0 1 0
-	else if( (dbmf&0xffc000) == 0x014000 && (op&0xf7) == 0x82 )
-	{
+		return true;
+	case OpcodeInfo::Or_xx:					// Logical Inclusive OR
+	case OpcodeInfo::Or_xxxx:
 		LOG_ERR_NOTIMPLEMENTED("OR");
-	}
-
-	// OR #xxxx,D - 0 0 0 0 0 0 0 1 0 1 0 0 0 0 0 0 1 1 0 0 d 0 1 0
-	else if( (dbmf&0xffff00) == 0x014000 && (op&0xf7) == 0xc2 )
-	{
-		LOG_ERR_NOTIMPLEMENTED("OR");
-	}
-
-	// OR Immediate With Control Register
-
-	// OR(I) #xx,D - 0 0 0 0 0 0 0 0 i i i i i i i i 1 1 1 1 1 0 E E
-
-	else if( (dbmf&0xff0000) == 0x000000 && (op&0xfc) == 0xf8 )
-	{
-		const TWord iiiiiiii = (dbmfop & 0x00ff00) >> 8;
-		const TWord ee = dbmfop&0x3;
-
-		switch( ee )
+		return true;
+	case OpcodeInfo::Ori:					// OR Immediate With Control Register - 00000000iiiiiiii111110EE
 		{
-		case 0:	mr ( TReg8( mr().var | iiiiiiii) );	break;
-		case 1:	ccr( TReg8(ccr().var | iiiiiiii) );	break;
-		case 2:	com( TReg8(com().var | iiiiiiii) );	break;
-		case 3:	eom( TReg8(eom().var | iiiiiiii) );	break;
+			const TWord iiiiiiii = oi->getFieldValue(OpcodeInfo::Field_iiiiiiii, op);
+			const TWord ee = oi->getFieldValue(OpcodeInfo::Field_EE, op);
+
+			switch( ee )
+			{
+			case 0:	mr ( TReg8( mr().var | iiiiiiii) );	break;
+			case 1:	ccr( TReg8(ccr().var | iiiiiiii) );	break;
+			case 2:	com( TReg8(com().var | iiiiiiii) );	break;
+			case 3:	eom( TReg8(eom().var | iiiiiiii) );	break;
+			}
 		}
-	}
-	else
+		return true;
+	default:
 		return false;
-	return true;
+	}
 }
 
 // _____________________________________________________________________________
@@ -3459,13 +2799,14 @@ TWord DSP::alu_bclr( TWord _bit, TWord _val )
 // _____________________________________________________________________________
 // alu_mpy
 //
-void DSP::alu_mpy( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _accumulate )
+void DSP::alu_mpy( bool ab, const TReg24& _s1, const TReg24& _s2, bool _negate, bool _accumulate )
 {
 //	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
 
 	const TInt64 s1 = _s1.signextend<TInt64>();
 	const TInt64 s2 = _s2.signextend<TInt64>();
 
+	// TODO: revisit signed fraction multiplies
 	TInt64 res = s1 * s2;
 
 	// needs one shift ("signed fraction")
