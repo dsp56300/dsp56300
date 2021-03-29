@@ -5,7 +5,7 @@
 
 #include "dsp.h"
 #include "memory.h"
-#include "OMFLoader.h"
+#include "omfloader.h"
 
 namespace dsp56k
 {
