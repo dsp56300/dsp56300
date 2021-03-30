@@ -1,6 +1,6 @@
 #include "pch.h"
 
-//#define SUPPORT_DISASSEMBLER
+#define SUPPORT_DISASSEMBLER
 
 #ifdef SUPPORT_DISASSEMBLER
 #ifdef _DEBUG
