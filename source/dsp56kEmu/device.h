@@ -1,5 +1,8 @@
 #pragma once
 
+#include <array>
+
+#include "peripherals.h"
 #include "registers.h"
 
 namespace dsp56k
@@ -13,8 +16,9 @@ namespace dsp56k
 		// members
 		//
 	private:
-		DSP*		m_dsp;
-		Memory*		m_memory;
+		std::array<PeripheralsDefault,2>	m_peripherals;
+		DSP*								m_dsp;
+		Memory*								m_memory;
 		TWord		m_execAddr;
 
 		// _____________________________________________________________________________

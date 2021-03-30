@@ -14,7 +14,7 @@ namespace dsp56k
 	//
 	Device::Device() : m_dsp(0), m_memory(0), m_execAddr(0)
 	{
-		m_memory	= new Memory();
+		m_memory	= new Memory(&m_peripherals[0], &m_peripherals[1]);
 		m_dsp		= new DSP(*m_memory);
 	}
 	// _____________________________________________________________________________

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <map>
 #include <set>
 
@@ -40,7 +41,7 @@ namespace dsp56k
 		const std::vector<TWord>&							y;
 		const std::vector<TWord>&							p;
 
-		StaticArray< Peripherals, 2>						m_perif;
+		std::array<IPeripherals* const, 2>					m_perif;
 
 		struct STransaction
 		{
@@ -67,25 +68,26 @@ namespace dsp56k
 		// implementation
 		//
 	public:
-		Memory();
-		Memory( const Memory& _src );
+		Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY);
+		Memory(const Memory&) = delete;
+		Memory& operator = (const Memory&) = delete;
 
 		virtual ~Memory();
 
-		bool	loadOMF				( const std::string& _filename );
+		bool				loadOMF				( const std::string& _filename );
 
-		bool	set					( EMemArea _area, TWord _offset, TWord _value );
-		TWord	get					( EMemArea _area, TWord _offset ) const;
+		bool				set					( EMemArea _area, TWord _offset, TWord _value );
+		TWord				get					( EMemArea _area, TWord _offset ) const;
 
-		bool	translateAddress	( EMemArea& _area, TWord& _offset ) const;
+		bool				translateAddress	( EMemArea& _area, TWord& _offset ) const;
 
-		bool	save				( FILE* _file ) const;
-		bool	load				( FILE* _file );
+		bool				save				( FILE* _file ) const;
+		bool				load				( FILE* _file );
 
-		void	setDSP				( DSP* _dsp )	{ m_dsp = _dsp; }
+		void				setDSP				( DSP* _dsp )	{ m_dsp = _dsp; }
 
-		void	setSymbol			(char _area, TWord _address, const std::string& _name);
-		const std::string&	getSymbol(EMemArea _memArea, TWord addr);
+		void				setSymbol			(char _area, TWord _address, const std::string& _name);
+		const std::string&	getSymbol			(EMemArea _memArea, TWord addr);
 
 	private:
 		void	fillWithInitPattern();

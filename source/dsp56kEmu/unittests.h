@@ -19,6 +19,7 @@ namespace dsp56k
 		void testCCCC(int64_t _val, int64_t _compareValue, bool _lt, bool _le, bool _eq, bool _ge, bool _gt, bool _neq);
 		void execOpcode(uint32_t _op0, uint32_t _op1 = 0, bool _reset=false);
 
+		PeripheralsDefault peripherals;
 		Memory mem;
 		DSP dsp;
 	};

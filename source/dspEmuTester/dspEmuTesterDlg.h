@@ -76,6 +76,7 @@ public:
 	void updateRegs( const SRegs& _regs );
 	void updateRegs();
 
+	PeripheralsDefault m_periphA, m_periphB;
 	Memory	m_mem;
 	DSP		m_dsp;
 

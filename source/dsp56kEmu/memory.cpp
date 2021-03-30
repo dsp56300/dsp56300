@@ -15,29 +15,15 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// Memory
 	//
-	Memory::Memory()
+	Memory::Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY)
 		: x(m_mem[MemArea_X])
 		, y(m_mem[MemArea_Y])
 		, p(m_mem[MemArea_P])
 		, m_dsp(0)
+		, m_perif({_peripheralsX, _peripheralsY})
 	{
 		for( size_t i=0; i<MemArea_COUNT; ++i )
 			m_mem[i].resize( 0xC0000, 0 );
-	}
-
-	// _____________________________________________________________________________
-	// Memory
-	//
-	Memory::Memory( const Memory& _src )
-		: x(m_mem[MemArea_X])
-		, y(m_mem[MemArea_Y])
-		, p(m_mem[MemArea_P])
-		, m_dsp(0)
-	{
-		m_mem = _src.m_mem;
-
-		m_perif[MemArea_X] = _src.m_perif[MemArea_X];
-		m_perif[MemArea_Y] = _src.m_perif[MemArea_Y];
 	}
 
 	// _____________________________________________________________________________
@@ -54,9 +40,9 @@ namespace dsp56k
 	{
 		translateAddress( _area, _offset );
 
-		if( (_area <= MemArea_Y) && m_perif[_area].isValidAddress(_offset) )
+		if( _area <= static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
 		{
-			m_perif[_area].write( _offset, _value );
+			m_perif[_area]->write( _offset, _value );
 			return true;
 		}
 
@@ -84,7 +70,7 @@ namespace dsp56k
 			}
 		}
 */
-		m_mem[_area][_offset] = (_value & 0x00ffffff);
+		m_mem[_area][_offset] = _value & 0x00ffffff;
 
 		return true;
 	}
@@ -96,9 +82,9 @@ namespace dsp56k
 	{
 		translateAddress( _area, _offset );
 
-		if( (_area <= MemArea_Y) && m_perif[_area].isValidAddress(_offset) )
+		if( _area <= static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
 		{
-			return m_perif[_area].read(_offset);
+			return m_perif[_area]->read(_offset);
 		}
 
 		if( _offset >= m_mem[_area].size() )
@@ -151,9 +137,6 @@ namespace dsp56k
 			fwrite( &data[0], sizeof( data[0] ), data.size(), _file );
 		}
 
-		// some kind of dirty for sure...
-		fwrite( &m_perif[0], sizeof(m_perif[0]), m_perif.size(), _file );
-
 		return true;
 	}
 
@@ -167,9 +150,6 @@ namespace dsp56k
 			std::vector<TWord>& data = m_mem[i];
 			fread( &data[0], sizeof( data[0] ), data.size(), _file );
 		}
-
-		// some kind of dirty for sure...
-		fread( &m_perif[0], sizeof(m_perif[0]), m_perif.size(), _file );
 
 		return true;
 	}

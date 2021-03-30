@@ -13,7 +13,7 @@ namespace dsp56k
 		XIO_Reserved_Low_Last	= 0x00ffff,
 
 		// DMA
-		XIO_DCR5			= 0xffffd8,
+		XIO_DCR5				= 0xffffd8,
 		XIO_DCO5,
 		XIO_DDR5,
 		XIO_DSR5,
@@ -67,7 +67,16 @@ namespace dsp56k
 		XIO_IPRC
 	};
 
-	class Peripherals
+	class IPeripherals
+	{
+	public:
+		virtual bool isValidAddress( TWord _addr ) const = 0;
+		virtual TWord read(TWord _addr) = 0;
+		virtual void write(TWord _addr, TWord _value) = 0;
+	};
+
+	// dummy implementation that just stores writes and returns them in subsequent reads
+	class PeripheralsDefault : public IPeripherals
 	{
 		// _____________________________________________________________________________
 		// members
@@ -78,16 +87,17 @@ namespace dsp56k
 		// implementation
 		//
 	public:
-		Peripherals();
+		PeripheralsDefault();
+		virtual ~PeripheralsDefault() = default;
 
-		bool	isValidAddress( TWord _addr ) const
+		bool isValidAddress( TWord _addr ) const override
 		{
 			if( _addr >= XIO_Reserved_High_First && _addr <= XIO_Reserved_High_Last )	return true;
 			if( _addr >= XIO_Reserved_Low_First && _addr <= XIO_Reserved_Low_Last )		return true;
 			return false;
 		}
 
-		TWord read( TWord _addr ) const
+		TWord read( TWord _addr ) override
 		{
 //			LOG( "Periph read @ " << std::hex << _addr );
 

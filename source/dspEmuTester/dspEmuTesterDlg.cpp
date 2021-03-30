@@ -14,6 +14,7 @@
 
 CdspEmuTesterDlg::CdspEmuTesterDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(IDD, pParent)
+	, m_mem(&m_periphA, &m_periphB)
 	, m_dsp(m_mem)
 	, m_runUntilPC(-1)
 	, m_alwaysUpdateRegs(TRUE)

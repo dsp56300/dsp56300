@@ -10,7 +10,7 @@ namespace dsp56k
 #define T true
 #define F false
 
-	UnitTests::UnitTests() : dsp(mem)
+	UnitTests::UnitTests() : mem(&peripherals, &peripherals), dsp(mem)
 	{
 		testMoveImmediateToRegister();
 		testCCCC();
