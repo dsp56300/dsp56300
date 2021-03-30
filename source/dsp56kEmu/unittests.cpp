@@ -15,6 +15,7 @@ namespace dsp56k
 		testMoveImmediateToRegister();
 		testCCCC();
 		testMultiply();
+		testAdd();
 	}
 
 	void UnitTests::testMultiply()
@@ -59,6 +60,24 @@ namespace dsp56k
 
 		// move a,b
 		execOpcode(0x21cf00);				assert(dsp.reg.b.var == 0x00007fffff000000);
+	}
+
+	void UnitTests::testAdd()
+	{
+		testAdd(0, 0, 0);
+		testAdd(0x00000000123456, 0x000abc, 0x00000abc123456);
+		testAdd(0x00000000123456, 0xabcdef, 0xffabcdef123456);	// TODO: test CCR
+	}
+
+	void UnitTests::testAdd(int64_t a, int y0, int64_t expectedResult)
+	{
+		dsp.reg.a.var = a;
+		dsp.reg.y.var = y0;
+
+		// add y0,a
+		execOpcode(0x200050);
+
+		assert(dsp.reg.a.var == expectedResult);
 	}
 
 	void UnitTests::testCCCC()
