@@ -1158,8 +1158,8 @@ namespace dsp56k
 				if( decode_cccc( cccc ) )
 				{
 					LOG( "Entering DEBUG mode because condition is met" );
+					LOG_ERR_NOTIMPLEMENTED("DEBUGcc");
 				}
-				LOG_ERR_NOTIMPLEMENTED("DEBUGcc");
 			}
 			return true;
 		// Jump Conditionally
