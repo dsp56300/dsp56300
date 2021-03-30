@@ -222,7 +222,7 @@ namespace dsp56k
 		OpcodeInfo(OpcodeInfo::Movex_Rnxxxx,	"0000101001110RRR1WDDDDDD",	"MOVE X:(Rn + xxxx),D / MOVE S,X:(Rn + xxxx)", OpcodeInfo::ImmediateData),											// ImData = Rn Relative Displacement
 		OpcodeInfo(OpcodeInfo::Movex_Rnxxx,		"0000001aaaaaaRRR1a0WDDDD",	"MOVE X:(Rn + xxx),D / MOVE S,X:(Rn + xxx)"),
 		OpcodeInfo(OpcodeInfo::Movexr_ea,		"0001ffdFW0MMMRRR????????",	"(...) X:ea,D1 S2,D2 / (...) S1,X:ea S2, D2 / (...) #xxxx,D1 S2,D2", OpcodeInfo::EAandID),							// X Memory and Register Data Move
-		OpcodeInfo(OpcodeInfo::Movexr_A,		"0000100d00MMMRRR????????",	"(...) A -> X:ea X0 -> A / (...) B -> X:ea X0 -> B", OpcodeInfo::EffectiveAddress),
+		OpcodeInfo(OpcodeInfo::Movexr_A,		"0000100d00MMMRRR????????",	"(...) A -> X:ea X0 -> A / (...) B -> X:ea X0 -> B", OpcodeInfo::EAandID),
 
 		// Y Memory Data Move
 		OpcodeInfo(OpcodeInfo::Movey_ea,		"01dd1dddW1MMMRRR????????",	"(...) Y:ea,D / (...) S,Y:ea / (...) #xxxx,D", OpcodeInfo::EAandID),
@@ -230,14 +230,14 @@ namespace dsp56k
 		OpcodeInfo(OpcodeInfo::Movey_Rnxxxx,	"0000101101110RRR1WDDDDDD",	"MOVE Y:(Rn + xxxx),D / MOVE D,Y:(Rn + xxxx)", OpcodeInfo::ImmediateData),											// ImData = Rn Relative Displacement
 		OpcodeInfo(OpcodeInfo::Movey_Rnxxx,		"0000001aaaaaaRRR1a1WDDDD",	"MOVE Y:(Rn + xxx),D / MOVE D,Y:(Rn + xxx)"),
 		OpcodeInfo(OpcodeInfo::Moveyr_ea,		"0001deffW1MMMRRR????????",	"(...) S1,D1 Y:ea,D2 / (...) S1,D1 S2,Y:ea / (...) S1,D1 #xxxx,D2", OpcodeInfo::EAandID),							// Register and Y Memory Data Move
-		OpcodeInfo(OpcodeInfo::Moveyr_A,		"0000100d10MMMRRR????????",	"(...) Y0 -> A A -> Y:ea / (...) Y0 -> B B -> Y:ea", OpcodeInfo::EffectiveAddress),
+		OpcodeInfo(OpcodeInfo::Moveyr_A,		"0000100d10MMMRRR????????",	"(...) Y0 -> A A -> Y:ea / (...) Y0 -> B B -> Y:ea", OpcodeInfo::EAandID),
 
-		OpcodeInfo(OpcodeInfo::Movel_ea,		"0100L0LLW1MMMRRR????????",	"(...) L:ea,D / (...) S,L:ea", OpcodeInfo::EffectiveAddress),														// Long Memory Data Move
+		OpcodeInfo(OpcodeInfo::Movel_ea,		"0100L0LLW1MMMRRR????????",	"(...) L:ea,D / (...) S,L:ea", OpcodeInfo::EAandID),																// Long Memory Data Move
 		OpcodeInfo(OpcodeInfo::Movel_aa,		"0100L0LLW0aaaaaa????????",	"(...) L:aa,D / (...) S,L:aa"),
 
 		OpcodeInfo(OpcodeInfo::Movexy,			"1wmmeeffWrrMMRRR????????",	"(...) X:<eax>,D1 Y:<eay>,D2 / (...) X:<eax>,D1 S2,Y:<eay> / (...) S1,X:<eax> Y:<eay>,D2 / (...) S1,X:<eax> S2,Y:<eay>"),		//	XY Memory Data Move
 
-		OpcodeInfo(OpcodeInfo::Movec_ea,		"00000101W1MMMRRR0S1DDDDD",	"MOVE(C) [X or Y]:ea,D1 / MOVE(C) S1,[X or Y]:ea / MOVE(C) #xxxx,D1", OpcodeInfo::ImmediateData),					// Move Control Register, Note: Doc typo, was ROS not R0S. Doc says its "effective address extension" but it is immediate data
+		OpcodeInfo(OpcodeInfo::Movec_ea,		"00000101W1MMMRRR0S1DDDDD",	"MOVE(C) [X or Y]:ea,D1 / MOVE(C) S1,[X or Y]:ea / MOVE(C) #xxxx,D1", OpcodeInfo::EAandID),							// Move Control Register, Note: Doc typo, was ROS not R0S. Doc says its "effective address extension" but it is immediate data
 		OpcodeInfo(OpcodeInfo::Movec_aa,		"00000101W0aaaaaa0S1DDDDD",	"MOVE(C) [X or Y]:aa,D1 / MOVE(C) S1,[X or Y]:aa"),
 		OpcodeInfo(OpcodeInfo::Movec_S1D2,		"00000100W1eeeeee1o1DDDDD",	"MOVE(C) S1,D2 / MOVE(C) S2,D1"),
 		OpcodeInfo(OpcodeInfo::Movec_xx,		"00000101iiiiiiii101DDDDD",	"MOVE(C) #xx,D1"),
@@ -246,10 +246,10 @@ namespace dsp56k
 		OpcodeInfo(OpcodeInfo::Movem_aa,		"00000111W0aaaaaa00dddddd",	"MOVE(M) S,P:aa / MOVE(M) P:aa,D"),
 
 		OpcodeInfo(OpcodeInfo::Movep_ppea,		"0000100sW1MMMRRR1Spppppp",	"MOVEP [X or Y]:pp,[X or Y]:ea / MOVEP [X or Y]:ea,[X or Y]:pp", OpcodeInfo::EAandID),
-		OpcodeInfo(OpcodeInfo::Movep_Xqqea,		"00000111W1MMMRRR0Sqqqqqq",	"MOVEP X:qq,[X or Y]:ea / MOVEP [X or Y]:ea,X:qq", OpcodeInfo::EffectiveAddress),
-		OpcodeInfo(OpcodeInfo::Movep_Yqqea,		"00000111W0MMMRRR1Sqqqqqq",	"MOVEP Y:qq,[X or Y]:ea / MOVEP [X or Y]:ea,Y:qq", OpcodeInfo::EffectiveAddress),
-		OpcodeInfo(OpcodeInfo::Movep_eapp,		"0000100sW1MMMRRR01pppppp",	"MOVEP P:ea,[X or Y]:pp / MOVEP [X or Y]:pp,P:ea", OpcodeInfo::EffectiveAddress),		// another doc issue? These two opcodes are NOT mentioned with an optional extension word. But they have MMMRRR so this is needed
-		OpcodeInfo(OpcodeInfo::Movep_eaqq,		"000000001WMMMRRR0Sqqqqqq",	"MOVEP P:ea,[X or Y]:qq / MOVEP [X or Y]:qq,P:ea", static_cast<OpcodeInfo::ExtensionWordTypes>(OpcodeInfo::EffectiveAddress | OpcodeInfo::ImmediateData)),
+		OpcodeInfo(OpcodeInfo::Movep_Xqqea,		"00000111W1MMMRRR0Sqqqqqq",	"MOVEP X:qq,[X or Y]:ea / MOVEP [X or Y]:ea,X:qq", OpcodeInfo::EAandID),
+		OpcodeInfo(OpcodeInfo::Movep_Yqqea,		"00000111W0MMMRRR1Sqqqqqq",	"MOVEP Y:qq,[X or Y]:ea / MOVEP [X or Y]:ea,Y:qq", OpcodeInfo::EAandID),
+		OpcodeInfo(OpcodeInfo::Movep_eapp,		"0000100sW1MMMRRR01pppppp",	"MOVEP P:ea,[X or Y]:pp / MOVEP [X or Y]:pp,P:ea", OpcodeInfo::EAandID),		// another doc issue? These two opcodes are NOT mentioned with an optional extension word. But they have MMMRRR so this is needed
+		OpcodeInfo(OpcodeInfo::Movep_eaqq,		"000000001WMMMRRR0Sqqqqqq",	"MOVEP P:ea,[X or Y]:qq / MOVEP [X or Y]:qq,P:ea", OpcodeInfo::EAandID),
 		OpcodeInfo(OpcodeInfo::Movep_Spp,		"0000100sW1dddddd00pppppp",	"MOVEP S,[X or Y]:pp / MOVEP [X or Y]:pp,D"),
 		OpcodeInfo(OpcodeInfo::Movep_SXqq,		"00000100W1dddddd1q0qqqqq",	"MOVEP S,X:qq / MOVEP X:qq,D"),
 		OpcodeInfo(OpcodeInfo::Movep_SYqq,		"00000100W1dddddd0q1qqqqq",	"MOVEP S,Y:qq / MOVEP Y:qq,D"),
@@ -281,9 +281,9 @@ namespace dsp56k
 		OpcodeInfo(OpcodeInfo::Pflushun,		"000000000000000000000001",	"PFLUSHUN"),
 		OpcodeInfo(OpcodeInfo::Pfree,			"000000000000000000000010",	"PFREE"),
 
-		OpcodeInfo(OpcodeInfo::Plock,			"0000101111MMMRRR10000001",	"PLOCK ea", OpcodeInfo::EffectiveAddress),
+		OpcodeInfo(OpcodeInfo::Plock,			"0000101111MMMRRR10000001",	"PLOCK ea", OpcodeInfo::EAandID),
 		OpcodeInfo(OpcodeInfo::Plockr,			"000000000000000000001111",	"PLOCKR xxxx", OpcodeInfo::EffectiveAddress),
-		OpcodeInfo(OpcodeInfo::Punlock,			"0000101011MMMRRR10000001",	"PUNLOCK ea", OpcodeInfo::EffectiveAddress),
+		OpcodeInfo(OpcodeInfo::Punlock,			"0000101011MMMRRR10000001",	"PUNLOCK ea", OpcodeInfo::EAandID),
 		OpcodeInfo(OpcodeInfo::Punlockr,		"000000000000000000001110",	"PUNLOCKR xxxx", OpcodeInfo::EffectiveAddress),
 
 		OpcodeInfo(OpcodeInfo::Rep_ea,			"0000011001MMMRRR0S100000",	"REP [X or Y]:ea"),
