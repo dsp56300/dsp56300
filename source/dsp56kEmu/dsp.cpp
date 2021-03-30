@@ -1701,11 +1701,22 @@ bool DSP::exec_move(const OpcodeInfo* oi, TWord op)
 				else
 					memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
 			}
-		case OpcodeInfo::Movep_SXqq:	// 00000100W1dddddd1q0qqqqq
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
 			return true;
+		case OpcodeInfo::Movep_SXqq:	// 00000100W1dddddd1q0qqqqq
 		case OpcodeInfo::Movep_SYqq:	// 00000100W1dddddd0q1qqqqq
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
+			{
+				
+				const TWord addr	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_q, OpcodeInfo::Field_qqqqq, op);
+				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
+				const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+				const auto area = oi->getInstruction() == OpcodeInfo::Movep_SYqq ? MemArea_Y : MemArea_X;
+
+				if( write )
+					decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
+				else
+					memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
+			}
 			return true;
 		default:
 			return false;
@@ -2043,7 +2054,14 @@ bool DSP::exec_operand_8bits(const OpcodeInfo* oi, TWord op)
 //
 void DSP::resetSW()
 {
-	LOG_ERR_NOTIMPLEMENTED("RESET");
+	/*
+	Reset the interrupt priority register and all on-chip peripherals. This is a
+	software reset, which is not equivalent to a hardware RESET since only on-chip peripherals
+	and the interrupt structure are affected. The processor state is not affected, and execution
+	continues with the next instruction. All interrupt sources are disabled except for the stack
+	error, NMI, illegal instruction, Trap, Debug request, and hardware reset interrupts.
+	*/
+//	LOG_ERR_NOTIMPLEMENTED("RESET");
 }
 
 // _____________________________________________________________________________
