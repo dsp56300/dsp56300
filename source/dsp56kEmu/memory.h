@@ -85,6 +85,7 @@ namespace dsp56k
 		void	setDSP				( DSP* _dsp )	{ m_dsp = _dsp; }
 
 		void	setSymbol			(char _area, TWord _address, const std::string& _name);
+		const std::string&	getSymbol(EMemArea _memArea, TWord addr);
 
 	private:
 		void	fillWithInitPattern();

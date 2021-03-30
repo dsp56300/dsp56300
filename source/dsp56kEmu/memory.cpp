@@ -210,6 +210,21 @@ namespace dsp56k
 		}
 	}
 
+	const std::string& Memory::getSymbol(EMemArea _memArea, const TWord addr)
+	{
+		static std::string empty;
+
+		auto c = g_memAreaNames[_memArea];
+
+		const auto it = m_symbols.find(c);
+		if(it == m_symbols.end())
+			return empty;
+		const auto it2 = it->second.find(addr);
+		if(it2 == it->second.end())
+			return empty;
+		return *it2->second.names.begin();
+	}
+
 	// _____________________________________________________________________________
 	// fillWithInitPattern
 	//
