@@ -2325,7 +2325,14 @@ bool DSP::exec_logical_nonparallel(const OpcodeInfo* oi, TWord op)
 	case OpcodeInfo::Lsl_SD:
 		LOG_ERR_NOTIMPLEMENTED("LSL");
 		return true;
-	case OpcodeInfo::Lsr_ii:				// Logical Shift Right
+	case OpcodeInfo::Lsr_ii:				// Logical Shift Right		000011000001111011iiiiiD
+		{
+            const auto shiftAmount = oi->getFieldValue(OpcodeInfo::Field_iiiii, op);
+            const auto abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
+
+            alu_lsr(abDst, shiftAmount);
+        }
+		return true;
 	case OpcodeInfo::Lsr_SD:
 		LOG_ERR_NOTIMPLEMENTED("LSR");
 		return true;
