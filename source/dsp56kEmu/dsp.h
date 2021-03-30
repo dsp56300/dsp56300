@@ -627,13 +627,28 @@ namespace dsp56k
 
 		void	sr_e_update				( const TReg56& _ab )
 		{
+			/*
+			Extension
+			Indicates when the accumulator extension register is in use. This bit is
+			cleared if all the bits of the integer portion of the 56-bit result are all
+			ones or all zeros; otherwise, this bit is set. As shown below, the
+			Scaling mode defines the integer portion. If the E bit is cleared, then
+			the low-order fraction portion contains all the significant bits; the
+			high-order integer portion is sign extension. In this case, the
+			accumulator extension register can be ignored.
+			S1 / S0 / Scaling Mode / Integer Portion
+			0	0	No Scaling	Bits 55,54..............48,47
+			0	1	Scale Down	Bits 55,54..............49,48
+			1	0	Scale Up	Bits 55,54..............47,46
+			*/
+
 			TInt64 mask;
 
 			TInt64 m;
 
-			if( sr_test(SR_S0) )		mask = 0xff000000000000;
-			else if( sr_test(SR_S1) )	mask = 0xffc00000000000;
-			else						mask = 0xff800000000000;
+			if( sr_test(SR_S0) )		mask = 0xff000000000000;	// Scale down
+			else if( sr_test(SR_S1) )	mask = 0xffc00000000000;	// Scale up
+			else						mask = 0xff800000000000;	// nor scaling
 
 			m = _ab.var & mask;
 
@@ -756,25 +771,6 @@ namespace dsp56k
 				_scale.var <<= 1;
 			else if( sr_test(SR_S0) )
 				_scale.var >>= 1;
-		}
-
-		void limit_transfer( TReg48& _dst, const TReg56& _src )
-		{
-			const auto test = _src.signextend<int64_t>();
-
-			if( test < -140737488355328 )	// 80000000000
-			{
-				sr_set( SR_L );
-				_dst.var = -140737488355328;
-			}
-			else if( test > 140737488355327 )
-			{
-				sr_set( SR_L );
-				_dst.var = 140737488355327;
-			}
-			else
-				_dst.var = _src.var;
-			assert( (_dst.var & 0xffff000000000000) == 0 );
 		}
 
 		void limit_transfer( int& _dst, const TReg56& _src )
