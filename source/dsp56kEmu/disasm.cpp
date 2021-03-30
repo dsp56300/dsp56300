@@ -14,10 +14,10 @@ extern "C"
 
 namespace dsp56k
 {
-	int disassemble( char* _dst, unsigned long* _ops, unsigned long _sr, unsigned long _omr )
+	int disassemble( char* _dst, unsigned long* _ops, const unsigned long _sr, const unsigned long _omr )
 	{
 #ifdef SUPPORT_DISASSEMBLER
-		return dspt_unasm_563( _ops, _dst, _sr, _omr, NULL );
+		return dspt_unasm_563( _ops, _dst, _sr, _omr, nullptr );
 #else
 		return 0;
 #endif

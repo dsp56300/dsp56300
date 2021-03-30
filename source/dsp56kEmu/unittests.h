@@ -9,6 +9,7 @@ namespace dsp56k
 	{
 	public:
 		void testMultiply();
+		void testMultiply(int x0, int y0, int64_t expectedResult, TWord opcode);
 		void testMoveImmediateToRegister();
 		UnitTests();
 	private:

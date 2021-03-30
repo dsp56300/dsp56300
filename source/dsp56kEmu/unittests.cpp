@@ -19,11 +19,19 @@ namespace dsp56k
 
 	void UnitTests::testMultiply()
 	{
-		dsp.reg.x.var = 0xeeeeee;
-		dsp.reg.y.var = 0xbbbbbb;
-
 		// mpy x0,y0,a
-		execOpcode(0x2000d0);		assert(dsp.reg.a == 0x00091a2bd4c3b4);
+		testMultiply(0xeeeeee, 0xbbbbbb, 0x00091a2bd4c3b4, 0x2000d0);
+		testMultiply(0xffffff, 0x7fffff, 0xffffffff000002, 0x2000d0);
+		testMultiply(0xffffff, 0xffffff, 0x00000000000002, 0x2000d0);		
+	}
+
+	void UnitTests::testMultiply(int x0, int y0, int64_t expectedResult, TWord opcode)
+	{
+		dsp.reg.x.var = x0;
+		dsp.reg.y.var = y0;
+
+		// a = x0 * y0
+		execOpcode(opcode);		assert(dsp.reg.a == expectedResult);
 	}
 
 	void UnitTests::testMoveImmediateToRegister()
@@ -51,8 +59,6 @@ namespace dsp56k
 
 		// move a,b
 		execOpcode(0x21cf00);				assert(dsp.reg.b.var == 0x00007fffff000000);
-
-		testMultiply();		
 	}
 
 	void UnitTests::testCCCC()
