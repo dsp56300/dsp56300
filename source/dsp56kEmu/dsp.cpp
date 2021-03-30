@@ -438,9 +438,6 @@ namespace dsp56k
 				exec_move_ddddd_MMMRRR( ddddd, mmmrrr, write, oi->getInstruction() == OpcodeInfo::Movex_ea ? MemArea_X : MemArea_Y );
 			}
 			return true;
-		case OpcodeInfo::Movex_aa: 
-			LOG_ERR_NOTIMPLEMENTED("Movex_aa");
-			return true;
 		case OpcodeInfo::Movexr_ea:		// X Memory and Register Data Move		(...) X:ea,D1 S2,D2 - 0001ffdF W0MMMRRR
 			{
 				const TWord F		= oi->getFieldValue(OpcodeInfo::Field_F, op);	// true:Y1, false:Y0
@@ -469,9 +466,24 @@ namespace dsp56k
 		case OpcodeInfo::Movexr_A: 
 			LOG_ERR_NOTIMPLEMENTED("Movexr_A");
 			return true;
-		case OpcodeInfo::Movey_aa: 
-			LOG_ERR_NOTIMPLEMENTED("Movey_aa");
-			return true;
+		case OpcodeInfo::Movex_aa:   // 01dd0ddd W0aaaaaa ????????
+		case OpcodeInfo::Movey_aa:   // 01dd1ddd W0aaaaaa ????????
+		{
+			const bool write = oi->getFieldValue(OpcodeInfo::Field_W, op);
+			const TWord ddddd = oi->getFieldValue(OpcodeInfo::Field_dd, OpcodeInfo::Field_ddd, op);
+			const TWord aaaaaa = oi->getFieldValue(OpcodeInfo::Field_aaaaaa, op);
+			const EMemArea area = oi->getInstruction() == OpcodeInfo::Movex_aa ? MemArea_X : MemArea_Y;
+
+			if (write)
+			{
+				decode_ddddd_write<TReg24>( ddddd, TReg24(memRead(area, aaaaaa)) );
+			}
+			else
+			{
+				memWrite( area, aaaaaa, decode_ddddd_read<TWord>(ddddd) );
+			}
+		}
+		return true;
 		case OpcodeInfo::Moveyr_ea:			// Register and Y Memory Data Move - (...) S1,D1 Y:ea,D2 - 0001deff W1MMMRRR
 			{
 				const bool e		= oi->getFieldValue(OpcodeInfo::Field_e, op);	// true:X1, false:X0
