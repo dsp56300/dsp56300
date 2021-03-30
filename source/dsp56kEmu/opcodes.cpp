@@ -31,7 +31,7 @@ namespace dsp56k
 		OpcodeInfo(OpcodeInfo::Asr_ii,			"0000110000011100SiiiiiiD",	"ASR #ii,S2,D"),
 		OpcodeInfo(OpcodeInfo::Asr_S1S2D,		"0000110000011110011SsssD",	"ASR S1,S2,D"),
 
-//		OpcodeInfo(OpcodeInfo::Bcc_xxxx,		"00000101CCCC01aaaa0aaaaa",	"Bcc xxxx", OpcodeInfo::EffectiveAddress),	// TODO: documentation is a bit weird here, is the address now part of an extension word or part of aaaa...? Lots of typos in there
+		OpcodeInfo(OpcodeInfo::Bcc_xxxx,		"00001101000101000000CCCC",	"Bcc xxxx", OpcodeInfo::EffectiveAddress),	// TODO: documentation is a bit weird here, is the address now part of an extension word or part of aaaa...? Lots of typos in there
 		OpcodeInfo(OpcodeInfo::Bcc_xxx,			"00000101CCCC01aaaa0aaaaa",	"Bcc xxx"),
 		OpcodeInfo(OpcodeInfo::Bcc_Rn,			"0000110100011RRR0100CCCC",	"Bcc Rn"),
 
