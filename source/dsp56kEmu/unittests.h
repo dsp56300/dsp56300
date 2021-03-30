@@ -8,6 +8,7 @@ namespace dsp56k
 	class UnitTests
 	{
 	public:
+		void testMultiply();
 		void testMoveImmediateToRegister();
 		UnitTests();
 	private:

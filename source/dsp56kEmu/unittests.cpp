@@ -13,6 +13,17 @@ namespace dsp56k
 	UnitTests::UnitTests() : dsp(mem)
 	{
 		testMoveImmediateToRegister();
+		testCCCC();
+		testMultiply();
+	}
+
+	void UnitTests::testMultiply()
+	{
+		dsp.reg.x.var = 0xeeeeee;
+		dsp.reg.y.var = 0xbbbbbb;
+
+		// mpy x0,y0,a
+		execOpcode(0x2000d0);		assert(dsp.reg.a == 0x00091a2bd4c3b4);
 	}
 
 	void UnitTests::testMoveImmediateToRegister()
@@ -40,6 +51,8 @@ namespace dsp56k
 
 		// move a,b
 		execOpcode(0x21cf00);				assert(dsp.reg.b.var == 0x00007fffff000000);
+
+		testMultiply();		
 	}
 
 	void UnitTests::testCCCC()

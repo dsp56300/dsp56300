@@ -373,7 +373,7 @@ namespace dsp56k
 		return false;
 	}
 
-	bool DSP::exec_parallel_alu_multiply(TWord op)
+	bool DSP::exec_parallel_alu_multiply(const TWord op)
 	{
 		const auto round = op & 0x1;
 		const auto mulAcc = (op>>1) & 0x1;
@@ -2803,13 +2803,11 @@ void DSP::alu_mpy( bool ab, const TReg24& _s1, const TReg24& _s2, bool _negate, 
 {
 //	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
 
-	const TInt64 s1 = _s1.signextend<TInt64>();
-	const TInt64 s2 = _s2.signextend<TInt64>();
+	const int64_t s1 = _s1.signextend<int64_t>();
+	const int64_t s2 = _s2.signextend<int64_t>();
 
 	// TODO: revisit signed fraction multiplies
-	TInt64 res = s1 * s2;
-
-	// needs one shift ("signed fraction")
+	auto res = s1 * s2;
 
 	if( sr_test(SR_S0) )
 	{
@@ -2827,7 +2825,7 @@ void DSP::alu_mpy( bool ab, const TReg24& _s1, const TReg24& _s2, bool _negate, 
 	const TReg56 old = d;
 
 	if( _accumulate )
-		res += d.signextend<TInt64>();
+		res += d.signextend<int64_t>();
 
 	d.var = res & 0x00ffffffffffffff;
 
