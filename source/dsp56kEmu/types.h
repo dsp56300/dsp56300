@@ -110,18 +110,26 @@ namespace dsp56k
 	// -----------------------
 
 	// Move to accumulator
-	static void convert( TReg56& _dst, const TReg8& _src )			{ _dst.var = _src.signextend<TReg56::MyType>()<<40; }
-	static void convert( TReg56& _dst, const TReg24& _src )			{ _dst.var = _src.signextend<TReg56::MyType>()<<24; }
-	static void convert( TReg56& _dst, const TReg48& _src )			{ _dst.var = _src.signextend<TReg56::MyType>(); }
+	static void convert( TReg56& _dst, const TReg8& _src )			{ _dst.var = _src.signextend<TReg56::MyType>()<<40; _dst.doMasking(); }
+	static void convert( TReg56& _dst, const TReg24& _src )			{ _dst.var = _src.signextend<TReg56::MyType>()<<24; _dst.doMasking(); }
+	static void convert( TReg56& _dst, const TReg48& _src )			{ _dst.var = _src.signextend<TReg56::MyType>(); _dst.doMasking(); }
 	static void convert( TReg56& _dst, const TWord& _src )			{ _dst.var = static_cast<TReg56::MyType>(_src)<<24; }
 	static void convert( TReg56& _dst, const TInt32& _src )			{ _dst.var = static_cast<TReg56::MyType>(_src)<<24; }
 	static void convert( TReg56& _dst, const TInt64& _src )			{ _dst.var = _src & TReg56::bitMask; }
 	static void convert( TReg56& _dst, const TUInt64& _src )		{ _dst.var = _src & TReg56::bitMask; }
 
 	// Move to 24-bit register
-	static void convert( TReg24& _dst, const TReg8& _src )			{ _dst.var = _src.signextend<int32_t>()&0x00ffffff; }
 	static void convert( TReg24& _dst, const TReg24& _src )			{ _dst.var = _src.var; }
 	static void convert( TReg24& _dst, const TWord _src )			{ _dst.var = _src; }
+
+	static void convertS( TWord& _dst, const TReg8& _src )			{ _dst = _src.signextend<int32_t>()&0x00ffffff; }
+	static void convertS( TReg24& _dst, const TReg8& _src )			{ _dst.var = _src.signextend<int32_t>()&0x00ffffff; }
+	static void convertS( TReg24& _dst, const TReg24& _src)			{ _dst.var = _src.var; }
+
+	static void convertU( TReg8& _dst, const TReg8& _src )			{ _dst.var = _src.var; }
+	static void convertU( TReg8& _dst, const TReg24& _src )			{ _dst.var = static_cast<TReg8::MyType>(_src.var & 0xff); }
+	static void convertU( TReg24& _dst, const TReg8& _src )			{ _dst.var = _src.var; }
+	static void convertU( TReg24& _dst, const TReg24& _src)			{ _dst.var = _src.var; }
 
 	// Move to accumulator extension register
 	static void convert( TReg8& _dst, const TReg8& _src )			{ _dst.var = _src.var; }

@@ -12,6 +12,38 @@ namespace dsp56k
 
 	UnitTests::UnitTests() : dsp(mem)
 	{
+		testMoveImmediateToRegister();
+	}
+
+	void UnitTests::testMoveImmediateToRegister()
+	{
+		// move #$ff,a
+		execOpcode(0x2eff00);		assert(dsp.reg.a == 0x00ffff0000000000);
+
+		// move #$0f,a
+		execOpcode(0x2e0f00);		assert(dsp.reg.a == 0x00000f0000000000);
+
+		// move #$ff,x0
+		execOpcode(0x24ff00);		assert(dsp.x0() == 0xff0000);		assert(dsp.reg.x == 0xff0000);
+
+		// move #$0f,r2
+		execOpcode(0x32ff00);		assert(dsp.reg.r[2] == 0x0000ff);
+
+		// move #$12,a2
+		execOpcode(0x2a1200);
+
+		// move #$345678,a1
+		execOpcode(0x54f400, 0x345678);
+
+		// move #$abcdef,a2
+		execOpcode(0x50f400, 0xabcdef);		assert(dsp.reg.a.var == 0x0012345678abcdef);
+
+		// move a,b
+		execOpcode(0x21cf00);				assert(dsp.reg.b.var == 0x00007fffff000000);
+	}
+
+	void UnitTests::testCCCC()
+	{
 		//                            <  <= =  >= >  != 
 		testCCCC(0xff000000000000, 0, T, T, F, F, F, T);
 		testCCCC(0x00ff0000000000, 0, F, F, F, T, T, T);
@@ -31,5 +63,15 @@ namespace dsp56k
 		assert(_ge == dsp.decode_cccc(CCCC_GreaterEqual));
 		assert(_gt == dsp.decode_cccc(CCCC_GreaterThan));
 		assert(_neq == dsp.decode_cccc(CCCC_NotEqual));	
+	}
+
+	void UnitTests::execOpcode(uint32_t _op0, uint32_t _op1, const bool _reset)
+	{
+		if(_reset)
+			dsp.resetHW();
+		dsp.mem.set(MemArea_P, 0, _op0);
+		dsp.mem.set(MemArea_P, 1, _op1);
+		dsp.setPC(0);
+		dsp.exec();
 	}
 }

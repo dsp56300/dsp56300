@@ -123,7 +123,16 @@ namespace dsp56k
 		void	jsr								( const TReg24& _val )						{ pushPCSR(); setPC(_val); }
 		void	jsr								( const TWord _val )						{ jsr(TReg24(_val)); }
 
-		void 	setPC							( const TReg24& _val )						{ reg.pc = _val; }
+		void 	setPC							( const TWord _val )						{ setPC(TReg24(_val)); }
+		void 	setPC							( const TReg24& _val )
+		{
+			reg.pc = _val;
+#if _DEBUG
+			const auto& res = mem.getSymbol(MemArea_P, _val.var);
+			if(!res.empty())
+				LOG( "Jmp to " << res);
+#endif
+		}
 
 		TReg24	getPC							() const									{ return reg.pc; }
 
@@ -256,8 +265,8 @@ namespace dsp56k
 			case 0x07:	convert( res, y1() ); 	return res;	// y1
 			case 0x08:	convert( res, a0() ); 	return res;	// a0
 			case 0x09:	convert( res, b0() ); 	return res;	// b0
-			case 0x0a:	convert( res, a2() ); 	return res;	// a2
-			case 0x0b:	convert( res, b2() ); 	return res;	// b2
+			case 0x0a:	convertS( res, a2() ); 	return res;	// a2
+			case 0x0b:	convertS( res, b2() ); 	return res;	// b2
 			case 0x0c:	convert( res, a1() ); 	return res;	// a1
 			case 0x0d:	convert( res, b1() ); 	return res;	// b1
 			case 0x0e:	return getA<T>();					// a
@@ -301,23 +310,23 @@ namespace dsp56k
 				case 0x05:	x1(_val);										return true;	// x1	
 				case 0x06:	y0(_val);										return true;	// y0
 				case 0x07:	y1(_val);										return true;	// y1
-				case 0x08:	{ TReg24 temp; convert(temp,_val); a0(temp); }	return true;	// a0
-				case 0x09:	{ TReg24 temp; convert(temp,_val); b0(temp); }	return true;	// b0
-				case 0x0a:	{ TReg8  temp; convert(temp,_val); a2(temp); }	return true;	// a2
-				case 0x0b:	{ TReg8  temp; convert(temp,_val); b2(temp); }	return true;	// b2
-				case 0x0c:	{ TReg24 temp; convert(temp,_val); a1(temp); }	return true;	// a1
-				case 0x0d:	{ TReg24 temp; convert(temp,_val); b1(temp); }	return true;	// b1
+				case 0x08:	{ TReg24 temp; convertU(temp,_val); a0(temp); }	return true;	// a0
+				case 0x09:	{ TReg24 temp; convertU(temp,_val); b0(temp); }	return true;	// b0
+				case 0x0a:	{ TReg8  temp; convertU(temp,_val); a2(temp); }	return true;	// a2
+				case 0x0b:	{ TReg8  temp; convertU(temp,_val); b2(temp); }	return true;	// b2
+				case 0x0c:	{ TReg24 temp; convertU(temp,_val); a1(temp); }	return true;	// a1
+				case 0x0d:	{ TReg24 temp; convertU(temp,_val); b1(temp); }	return true;	// b1
 				case 0x0e:	convert(reg.a,_val);							return true;	// a
 				case 0x0f:	convert(reg.b,_val);							return true;	// b
 				default:
 					if( (_ddddd & 0x18) == 0x10 )											// r0-r7
 					{
-						convert(reg.r[_ddddd&0x07],_val);
+						convertU(reg.r[_ddddd&0x07],_val);
 						return true;
 					}
 					if( (_ddddd & 0x18) == 0x18 )											// n0-n7
 					{
-						convert(reg.n[_ddddd&0x07],_val);
+						convertU(reg.n[_ddddd&0x07],_val);
 						return true;
 					}
 					assert(0 && "invalid ddddd destination register");
@@ -351,7 +360,7 @@ namespace dsp56k
 			switch( jjj )
 			{
 			case 0:
-			case 1:	res = _b ? reg.b : reg.a;	break;
+			case 1:	res = _b ? reg.b : reg.a;		break;
 			case 2:	convert( res, reg.x );		break;
 			case 3:	convert( res, reg.y );		break;
 			case 4: convert( res, x0() );		break;
@@ -773,20 +782,20 @@ namespace dsp56k
 
 		void limit_transfer( int& _dst, const TReg56& _src )
 		{
-			int test = signextend<int,24>(int((_src.var & 0x00ffffff000000) >> 24));
+			const int64_t& test = _src.signextend<int64_t>();
 
-			if( test < -8388608 )	// 800000
+			if( test < -140737488355328 )			// ff 800000 000000
 			{
 				sr_set( SR_L );
-				_dst = -8388608;
+				_dst = 0x800000;
 			}
-			else if( test > 8388607 )
+			else if( test > 140737471578112 )		// 00 7fffff 000000
 			{
 				sr_set( SR_L );
-				_dst = 8388607;
+				_dst = 0x7FFFFF;
 			}
 			else
-				_dst = (int)((_src.var & 0x00ffffff000000)>>24);
+				_dst = static_cast<int>(_src.var >> 24) & 0xffffff;
 			assert( (_dst & 0xff000000) == 0 );
 		}
 

@@ -1161,7 +1161,7 @@ namespace dsp56k
 				if( decode_cccc( cccc ) )
 				{
 					const TWord ea = oi->getFieldValue(OpcodeInfo::Field_aaaaaaaaaaaa, op);
-					reg.pc.var = ea;
+					setPC(ea);
 				}				
 			}
 			return true;
@@ -1174,7 +1174,7 @@ namespace dsp56k
 
 				if( decode_cccc( cccc ) )
 				{
-					reg.pc.var = ea;
+					setPC(ea);
 				}
 			}
 			return true;
@@ -1182,11 +1182,11 @@ namespace dsp56k
 		case OpcodeInfo::Jmp_ea:
 			{
 				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
-				reg.pc.var = decode_MMMRRR_read(mmmrrr);
+				setPC(decode_MMMRRR_read(mmmrrr));
 			}
 			return true;
 		case OpcodeInfo::Jmp_xxx:	// 00001100 0000aaaa aaaaaaaa
-			reg.pc.var = oi->getFieldValue(OpcodeInfo::Field_aaaaaaaaaaaa, op);
+			setPC(oi->getFieldValue(OpcodeInfo::Field_aaaaaaaaaaaa, op));
 			return true;
 		// Jump to Subroutine Conditionally
 		case OpcodeInfo::Jscc_xxx:
@@ -1232,7 +1232,7 @@ namespace dsp56k
 
 				if( !bittest( ea, bit ) )	// TODO: S is not used, need to read mem if mmmrrr is not immediate data!
 				{
-					reg.pc.var = addr;
+					setPC(addr);
 				}
 
 				LOG_ERR_NOTIMPLEMENTED("JCLR");
@@ -1255,7 +1255,7 @@ namespace dsp56k
 				const TWord addr	= fetchPC();
 
 				if( !bittest( memRead(S, ea), bit ) )
-					reg.pc.var = addr;				
+					setPC(addr);
 			}
 			return true;
 		case OpcodeInfo::Jclr_S:	// 00001010 11DDDDDD 000bbbbb
@@ -1266,7 +1266,7 @@ namespace dsp56k
 				const TWord addr = fetchPC();
 
 				if( !bittest( decode_dddddd_read(dddddd), bit ) )
-					reg.pc.var = addr;
+					setPC(addr);
 			}
 			return true;
 		// Jump if Bit Set
@@ -1280,7 +1280,7 @@ namespace dsp56k
 
 				if( bittest(val,bit) )
 				{
-					reg.pc.var = val;
+					setPC(val);
 				}
 			}
 			return true;
@@ -1298,7 +1298,7 @@ namespace dsp56k
 				const TWord addr	= fetchPC();
 
 				if( bittest( memRead(S, ea), bit ) )
-					reg.pc.var = addr;				
+					setPC(addr);
 			}
 			return true;
 		case OpcodeInfo::Jset_qq:
@@ -1313,7 +1313,7 @@ namespace dsp56k
 				const TWord addr	= fetchPC();
 
 				if( bittest( memRead(S, ea), bit ) )
-					reg.pc.var = addr;
+					setPC(addr);
 			}
 			return true;
 		case OpcodeInfo::Jset_S:	// 0000101011DDDDDD001bbbbb
@@ -1327,7 +1327,7 @@ namespace dsp56k
 
 				if( bittest(var,bit) )
 				{
-					reg.pc.var = addr;
+					setPC(addr);
 				}				
 			}
 			return true;
@@ -1778,8 +1778,8 @@ dsp56k::TReg24 DSP::decode_dddddd_read( TWord _dddddd )
 		// 001DDD - 8 accumulators in data ALU
 	case 0x08:	return a0();
 	case 0x09:	return b0();
-	case 0x0a:	{ TReg24 res; convert(res,a2()); return res; }
-	case 0x0b:	{ TReg24 res; convert(res,b2()); return res; }
+	case 0x0a:	{ TReg24 res; convertS(res,a2()); return res; }
+	case 0x0b:	{ TReg24 res; convertS(res,b2()); return res; }
 	case 0x0c:	return a1();
 	case 0x0d:	return b1();
 	case 0x0e:	return getA<TReg24>();
@@ -2447,7 +2447,7 @@ bool DSP::exec_do( TReg24 _loopcount, TWord _addr )
 			_loopcount.var = 65536;
 		else
 		{
-			reg.pc.var = _addr+1;
+			setPC(_addr+1);
 			return true;
 		}
 	}
@@ -2474,7 +2474,7 @@ bool DSP::exec_do( TReg24 _loopcount, TWord _addr )
 bool DSP::exec_do_end()
 {
 	// restore PC to point to the next instruction after the last instruction of the loop
-	reg.pc.var = reg.la.var+1;
+	setPC(reg.la.var+1);
 
 	// restore previous loop flag
 	sr_toggle( SR_LF, (ssl().var & SR_LF) != 0 );
@@ -3212,7 +3212,7 @@ bool DSP::writeReg( EReg _reg, const TReg24& _res )
 	case Reg_Y0:	y0(_res);		break;
 	case Reg_Y1:	y1(_res);		break;
 
-	case Reg_PC:	reg.pc = _res;		break;
+	case Reg_PC:	setPC(_res);	break;
 
 	default:
 		assert( 0 && "unknown register" );
@@ -3414,7 +3414,7 @@ bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
 {
 	memTranslateAddress(_area,_offset);
 
-	memValidateAccess( _area,_offset,true );
+	memValidateAccess( _area,_offset, true );
 
 	return mem.set( _area, _offset, _value );
 }

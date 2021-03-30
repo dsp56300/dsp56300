@@ -188,4 +188,33 @@ namespace dsp56k
 		MMM_AbsAddr			= 0b110'000,
 		MMM_ImmediateData	= 0b110'100,
 	};
+
+	enum OnChipRegisterType
+	{
+		_i_X0,		_i_X1,		_i_Y0,		_i_Y1,
+		
+		// 0 0 0 1 D D
+		DD_X0,		DD_X1,		DD_Y0,		DD_Y1,
+
+		// 0 0 1 D D D
+		DDD_A0,		DDD_B0,		DDD_A2,		DDD_B2,		DDD_A1,		DDD_B1,		DDD_A,		DDD_B,
+
+		// 0 1 0 T T T
+		TTT_R0,		TTT_R1,		TTT_R2,		TTT_R3,		TTT_R4,		TTT_R5,		TTT_R6,		TTT_R7,
+
+		// 0 1 1 N N N
+		NNN_N0,		NNN_N1,		NNN_N2,		NNN_N3,		NNN_N4,		NNN_N5,		NNN_N6,		NNN_N7,
+
+		// 1 0 0 F F F
+		FFF_M0,		FFF_M1,		FFF_M2,		FFF_M3,		FFF_M4,		FFF_M5,		FFF_M6,		FFF_M7,
+
+		// 1 0 0 E E E
+		_EEE_i0,	_EEE_i1,	EEE_EP,		_EEE_i3,	_EEE_i4,	_EEE_i5,	_EEE_i6,	_EEE_i7,
+
+		// 1 0 0 F F F
+		VVV_VBA,	VVV_SC,		_VVV_i2,	_VVV_i3,	_VVV_i4,	_VVV_i5,	_VVV_i6,	_VVV_i7,
+
+		// 1 0 0 F F F
+		GGG_SZ,		GGG_SR,		GGG_OMR,	GGG_SP,		GGG_SSH,	GGG_SSL,	GGG_LA,		GGG_LC,
+	};
 };
