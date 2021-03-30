@@ -3,6 +3,9 @@
 #include "pch.h"
 
 #include "dsp.h"
+
+#include <iomanip>
+
 #include "registers.h"
 #include "types.h"
 #include "memory.h"
@@ -27,7 +30,7 @@ namespace dsp56k
 {
 	static bool g_dumpPC = true;
 //	static const TWord g_dumpPCictrMin = 0x153000;
-	static const TWord g_dumpPCictrMin = 0xc0000;
+	static const TWord g_dumpPCictrMin = 0xfffff;
 
 	// _____________________________________________________________________________
 	// DSP
@@ -499,7 +502,6 @@ namespace dsp56k
 			}
 			return true;
 		case OpcodeInfo::Moveyr_A:
-			// TODO: take care on ordering for instructions such as "move #>$4cd49,a a,y0", is a moved to y first and THEN overwritten?
 			LOG_ERR_NOTIMPLEMENTED("MOVE YR A");
 			return true;
 		case OpcodeInfo::Movel_ea:				// Long Memory Data Move - 0100L0LLW1MMMRRR
@@ -963,6 +965,7 @@ namespace dsp56k
 		{
 		// Branch conditionally
 		case OpcodeInfo::Bcc_xxxx:	// TODO: unclear documentation, opcode that is written there is wrong
+			LOG_ERR_NOTIMPLEMENTED("BCC xxxx");
 			return false;
 		case OpcodeInfo::Bcc_xxx:	// 00000101 CCCC01aa aa0aaaaa
 			{
@@ -1102,7 +1105,6 @@ namespace dsp56k
 				if( decode_cccc(cccc) )
 				{
 					jsr(pcCurrentInstruction + displacement);
-					LOGSC("BScc xxxx");
 				}
 			}
 			return true;
@@ -1117,7 +1119,6 @@ namespace dsp56k
 					const int displacement = signextend<int,9>(addr);
 
 					jsr(pcCurrentInstruction + displacement);
-					LOGSC("BScc xxx");
 				}				
 			}
 			return true;
@@ -1138,7 +1139,6 @@ namespace dsp56k
 				const int displacement = signextend<int,9>(aaaaaaaaa);
 
 				jsr(pcCurrentInstruction + displacement);
-				LOGSC("bsr xxx");
 			}
 			return true;
 		case OpcodeInfo::Bsr_Rn:  // 0000110100011RRR10000000
@@ -1217,7 +1217,6 @@ namespace dsp56k
 				if( decode_cccc( cccc ) )
 				{
 					jsr(ea);
-					LOGSC("JScc ea");
 				}
 			}
 			return true;
@@ -1347,14 +1346,12 @@ namespace dsp56k
 				const TWord ea = decode_MMMRRR_read( mmmrrr );
 
 				jsr(TReg24(ea));
-				LOGSC("jsr ea");
 			}
 			return true;
 		case OpcodeInfo::Jsr_xxx:
 			{
 				const TWord ea = oi->getFieldValue(OpcodeInfo::Field_aaaaaaaaaaaa, op);
 				jsr(TReg24(ea));
-				LOGSC("jsr xxx");
 			}
 			return true;
 		// Jump to Subroutine if Bit Set
@@ -1944,7 +1941,7 @@ void DSP::logSC( const char* _func ) const
 		scss << "\t";
 	}
 
-	LOG( std::string(scss.str()) << " SC=" << std::hex << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
+	LOG( std::string(scss.str()) << " SC=" << std::hex << std::setw(6) << std::setfill('0') << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
 }
 // _____________________________________________________________________________
 // exec_operand_8bits
@@ -1955,7 +1952,6 @@ bool DSP::exec_operand_8bits(const OpcodeInfo* oi, TWord op)
 	{
 	case OpcodeInfo::Rti:			// Return From Interrupt
 		popPCSR();
-		LOGSC("rti");
 		return true;
 	case OpcodeInfo::Enddo:			// End Current DO Loop
 		// restore previous loop flag
@@ -2029,7 +2025,6 @@ bool DSP::exec_operand_8bits(const OpcodeInfo* oi, TWord op)
 		return true;
 	case OpcodeInfo::Rts:			// Return From Subroutine
 		popPC();
-		LOGSC( "RTS" );
 		return true;
 	case OpcodeInfo::Stop:
 		LOG_ERR_NOTIMPLEMENTED("STOP");
@@ -2495,14 +2490,10 @@ bool DSP::exec_do( TReg24 _loopcount, TWord _addr )
 	ssh(reg.la);
 	ssl(reg.lc);
 
-	LOGSC("DO #1");
-
 	reg.la.var = _addr;
 	reg.lc = _loopcount;
 
 	pushPCSR();
-
-	LOGSC( "DO #2");
 
 	sr_set( SR_LF );
 
@@ -2521,15 +2512,34 @@ bool DSP::exec_do_end()
 
 	// decrement SP twice, restoring old loop settings
 	decSP();
-	LOGSC("DO end#1");
 
 	reg.lc = ssl();
 	reg.la = ssh();
 
-	LOGSC("DO end#2");
 //	LOG( "DO END: loop flag = " << sr_test(SR_LF) << " sc=" << (int)sc.var << " lc:" << std::hex << lc.var << " la:" << std::hex << la.var );
 
 	return true;
+}
+
+void DSP::decSP()
+{
+	LOGSC("return");
+
+	assert(reg.sc.var > 0);
+	--reg.sp.var;
+	--reg.sc.var;
+}
+
+void DSP::incSP()
+{
+	assert(reg.sc.var < reg.ss.eSize-1);
+	++reg.sp.var;
+	++reg.sc.var;
+
+	const std::string sym = mem.getSymbol(MemArea_P, reg.pc.var);
+		
+	LOGSC((std::string(m_asm) + " - " + sym).c_str());
+//	assert( reg.sc.var <= 9 );
 }
 
 // _____________________________________________________________________________

@@ -124,15 +124,7 @@ namespace dsp56k
 		void	jsr								( const TWord _val )						{ jsr(TReg24(_val)); }
 
 		void 	setPC							( const TWord _val )						{ setPC(TReg24(_val)); }
-		void 	setPC							( const TReg24& _val )
-		{
-			reg.pc = _val;
-#if _DEBUG
-			const auto& res = mem.getSymbol(MemArea_P, _val.var);
-			if(!res.empty())
-				LOG( "Jmp to " << res);
-#endif
-		}
+		void 	setPC							( const TReg24& _val )						{ reg.pc = _val; }
 
 		TReg24	getPC							() const									{ return reg.pc; }
 
@@ -837,20 +829,9 @@ namespace dsp56k
 		void	setB			( const TReg56& _src )				{ reg.b = _src; }
 
 		// STACK
-		void	decSP			()
-		{
-			assert( reg.sc.var > 0 );
-			--reg.sp.var;
-			--reg.sc.var;
-		}
-		void	incSP			()
-		{
-			assert( reg.sc.var < reg.ss.eSize-1 );
-			++reg.sp.var;
-			++reg.sc.var;
+		void decSP();
 
-//			assert( reg.sc.var <= 9 );
-		}
+		void incSP();
 
 		TReg24	ssh()				{ TReg24 res = hiword(reg.ss[reg.sc.toWord()]); decSP(); return res; }
 		TReg24	ssl() const			{ return loword(reg.ss[reg.sc.toWord()]); }
