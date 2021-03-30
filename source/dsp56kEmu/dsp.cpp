@@ -33,7 +33,7 @@ namespace dsp56k
 	// DSP
 	//
 	DSP::DSP( Memory& _memory ) : mem(_memory)
-		, pcLastExec(0xffffff)
+		, pcCurrentInstruction(0xffffff)
 		, repRunning(false)
 		, essi(*this,_memory)
 	{
@@ -101,7 +101,7 @@ namespace dsp56k
 #ifdef _DEBUG
 		getASM();
 
-		if( g_dumpPC && pcLastExec != reg.pc.toWord() && reg.ictr.var >= g_dumpPCictrMin )
+		if( g_dumpPC && pcCurrentInstruction != reg.pc.toWord() && reg.ictr.var >= g_dumpPCictrMin )
 		{
 			std::stringstream ssout;
 
@@ -117,7 +117,7 @@ namespace dsp56k
 		m_asm[0] = 0;
 #endif
 
-		pcLastExec = reg.pc.toWord();
+		pcCurrentInstruction = reg.pc.toWord();
 
 		// next instruction word
 		const TWord op = fetchPC();
@@ -167,7 +167,7 @@ namespace dsp56k
 					regChange.reg = (EReg)i;
 					regChange.valOld.var = (int)m_prevRegStates[i].val;
 					regChange.valNew.var = (int)regVal;
-					regChange.pc = pcLastExec;
+					regChange.pc = pcCurrentInstruction;
 					regChange.ictr = reg.ictr.var;
 
 					m_regChanges.push_back( regChange );
@@ -729,7 +729,7 @@ namespace dsp56k
             {
 	            const auto loopcount = oi->getFieldValue(OpcodeInfo::Field_hhhh, OpcodeInfo::Field_iiiiiiii, op);
                 const auto displacement = signextend<int, 24>(fetchPC());
-                exec_do(TReg24(loopcount), reg.pc.var + displacement - 2);
+                exec_do(TReg24(loopcount), pcCurrentInstruction + displacement);
             }
             return true;
 		case OpcodeInfo::Dor_S:		// 00000110 11DDDDDD 00010000
@@ -738,7 +738,7 @@ namespace dsp56k
 				const TReg24 lc		= decode_dddddd_read( dddddd );
 				
 				const int displacement = signextend<int,24>(fetchPC());
-				exec_do( lc, reg.pc.var + displacement - 2 );
+				exec_do( lc, pcCurrentInstruction + displacement);
 			}
 			return true;
 		// Start PC-Relative Infinite Loops
@@ -975,7 +975,7 @@ namespace dsp56k
 					const TWord disp	= signextend<int,9>( a );
 					assert( disp >= 0 );
 
-					reg.pc.var += (disp-1);
+					setPC(pcCurrentInstruction + disp);
 				}
 			}
 			return true;
@@ -986,16 +986,16 @@ namespace dsp56k
 		case OpcodeInfo::Bra_xxxx:
 			{
 				const int displacement = signextend<int,24>( fetchPC() );
-				reg.pc.var += displacement - 2;				
+				setPC(pcCurrentInstruction + displacement);
 			}
 			return true;
 		case OpcodeInfo::Bra_xxx:		// 00000101 000011aa aa0aaaaa
 			{
 				const TWord addr = oi->getFieldValue(OpcodeInfo::Field_aaaa, OpcodeInfo::Field_aaaaa, op);
 
-				const int signedAddr = signextend<int,9>(addr);
+				const int displacement = signextend<int,9>(addr);
 
-				reg.pc.var += (signedAddr-1);	// PC has already been incremented so subtract 1
+				setPC(pcCurrentInstruction + displacement);
 			}
 			return true;
 		case OpcodeInfo::Bra_Rn:		// 0000110100011RRR11000000
@@ -1019,7 +1019,7 @@ namespace dsp56k
 
 				if( !bittest( memRead( S, ea ), bit ) )
 				{
-					reg.pc.var += (displacement-2);
+					setPC(pcCurrentInstruction + displacement);
 				}
 			}
 			return true;
@@ -1034,7 +1034,7 @@ namespace dsp56k
 
 				if( !bittest( tst, bit ) )
 				{
-					reg.pc.var += (displacement-2);
+					setPC(pcCurrentInstruction + displacement);
 				}
 			}
 			return true;
@@ -1056,7 +1056,7 @@ namespace dsp56k
 
 				if( bittest( memRead( S, ea ), bit ) )
 				{
-					reg.pc.var += (displacement-2);
+					setPC(pcCurrentInstruction + displacement);
 				}
 			}
 			return true;
@@ -1071,7 +1071,7 @@ namespace dsp56k
 
 				if( bittest( r.var, bit ) )
 				{
-					reg.pc.var += (displacement-2);
+					setPC(pcCurrentInstruction + displacement);
 				}				
 			}
 			return true;
@@ -1101,7 +1101,7 @@ namespace dsp56k
 
 				if( decode_cccc(cccc) )
 				{
-					jsr( reg.pc.var + displacement - 2 );
+					jsr(pcCurrentInstruction + displacement);
 					LOGSC("BScc xxxx");
 				}
 			}
@@ -1114,10 +1114,9 @@ namespace dsp56k
 				{
 					const TWord addr = oi->getFieldValue(OpcodeInfo::Field_aaaa, OpcodeInfo::Field_aaaaa, op);
 
-					int signedAddr = signextend<int,9>(addr);
+					const int displacement = signextend<int,9>(addr);
 
-					// PC has already been incremented so subtract 1
-					jsr( reg.pc.var + signedAddr-1 );
+					jsr(pcCurrentInstruction + displacement);
 					LOGSC("BScc xxx");
 				}				
 			}
@@ -1129,23 +1128,23 @@ namespace dsp56k
 		case OpcodeInfo::Bsr_xxxx:
 			{
 				const int displacement = signextend<int,24>(fetchPC());
-				jsr( reg.pc.var + displacement - 2 );
+				jsr(pcCurrentInstruction + displacement);
 			}
 			return true;
 		case OpcodeInfo::Bsr_xxx:		// 00000101000010aaaa0aaaaa
 			{
 				const TWord aaaaaaaaa = oi->getFieldValue(OpcodeInfo::Field_aaaa, OpcodeInfo::Field_aaaaa, op);
 
-				const int shortDisplacement = signextend<int,9>(aaaaaaaaa);
+				const int displacement = signextend<int,9>(aaaaaaaaa);
 
-				jsr( TReg24(reg.pc.var + shortDisplacement - 1) );
+				jsr(pcCurrentInstruction + displacement);
 				LOGSC("bsr xxx");
 			}
 			return true;
 		case OpcodeInfo::Bsr_Rn:  // 0000110100011RRR10000000
             {
                 const auto rrr = oi->getFieldValue(OpcodeInfo::Field_RRR, op);
-                jsr( TReg24(reg.pc.var + reg.r[rrr].var - 1) );
+                jsr(pcCurrentInstruction + reg.r[rrr].var);
             }
             return true;
 		case OpcodeInfo::Debug:
@@ -1217,7 +1216,7 @@ namespace dsp56k
 
 				if( decode_cccc( cccc ) )
 				{
-					jsr(TReg24(ea));
+					jsr(ea);
 					LOGSC("JScc ea");
 				}
 			}
@@ -1945,7 +1944,7 @@ void DSP::logSC( const char* _func ) const
 		scss << "\t";
 	}
 
-	LOG( std::string(scss.str()) << " SC=" << std::hex << (int)reg.sc.var << " pcOld=" << pcLastExec << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
+	LOG( std::string(scss.str()) << " SC=" << std::hex << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
 }
 // _____________________________________________________________________________
 // exec_operand_8bits
@@ -3480,7 +3479,7 @@ bool DSP::save( FILE* _file ) const
 	fwrite( &reg, sizeof(reg), 1, _file );
 	fwrite( &repRunning, 1, 1, _file );
 	fwrite( &tempLCforRep, 1, 1, _file );
-	fwrite( &pcLastExec, 1, 1, _file );
+	fwrite( &pcCurrentInstruction, 1, 1, _file );
 	fwrite( m_asm, sizeof(m_asm), 1, _file );
 	fwrite( &cache, sizeof(cache), 1, _file );
 
@@ -3495,7 +3494,7 @@ bool DSP::load( FILE* _file )
 	fread( &reg, sizeof(reg), 1, _file );
 	fread( &repRunning, 1, 1, _file );
 	fread( &tempLCforRep, 1, 1, _file );
-	fread( &pcLastExec, 1, 1, _file );
+	fread( &pcCurrentInstruction, 1, 1, _file );
 	fread( m_asm, sizeof(m_asm), 1, _file );
 	fread( &cache, sizeof(cache), 1, _file );
 

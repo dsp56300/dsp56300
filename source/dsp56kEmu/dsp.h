@@ -83,7 +83,7 @@ namespace dsp56k
 		Opcodes m_opcodes;
 
 		Memory& mem;
-		TWord	pcLastExec;
+		TWord	pcCurrentInstruction;
 		
 		Essi	essi;
 
@@ -176,7 +176,7 @@ namespace dsp56k
 	private:
 
 		// -- execution 
-		TWord	fetchPC							()
+		TWord	fetchPC()
 		{
 			TWord ret;
 
@@ -185,7 +185,6 @@ namespace dsp56k
 //			else
 				ret = memRead( MemArea_P, reg.pc.toWord() );
 
-			// TODO: Check if its correct that these special REP and DO codes are here. It is also executed if fetchPC is called if the register is read as part of an instruction, probably DO and REP shouldn't be updated there
 			// REP
 			if( repRunning )
 			{
@@ -194,11 +193,9 @@ namespace dsp56k
 					--reg.lc.var;
 					return ret;
 				}
-				else
-				{
-					reg.lc = tempLCforRep;
-					repRunning = false;
-				}
+
+				reg.lc = tempLCforRep;
+				repRunning = false;
 			}
 			
 			// DO
