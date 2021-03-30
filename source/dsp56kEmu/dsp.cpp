@@ -1970,7 +1970,7 @@ bool DSP::exec_operand_8bits(const OpcodeInfo* oi, TWord op)
 			sr_s_update();
 			sr_e_update(d);
 			sr_u_update(d);
-			sr_n_update_arithmetic(d);
+			sr_n_update(d);
 			sr_z_update(d);
 			sr_v_update(res,d);
 			sr_l_update_by_v();
@@ -1991,7 +1991,7 @@ bool DSP::exec_operand_8bits(const OpcodeInfo* oi, TWord op)
 			sr_s_update();
 			sr_e_update(d);
 			sr_u_update(d);
-			sr_n_update_arithmetic(d);
+			sr_n_update(d);
 			sr_z_update(d);
 			sr_v_update(res,d);
 			sr_l_update_by_v();
@@ -2571,7 +2571,7 @@ void DSP::alu_add( bool ab, const TReg56& _val )
 	sr_s_update();
 	sr_e_update(d);
 	sr_u_update(d);
-	sr_n_update_arithmetic(d);
+	sr_n_update(d);
 	sr_z_update(d);
 	sr_v_update(res,d);
 	sr_l_update_by_v();
@@ -2608,7 +2608,7 @@ void DSP::alu_cmp( bool ab, const TReg56& _val, bool _magnitude )
 	sr_s_update();
 	sr_e_update(d);
 	sr_u_update(d);
-	sr_n_update_arithmetic(d);
+	sr_n_update(d);
 	sr_z_update(d);
 	sr_v_update(res,d);
 	sr_l_update_by_v();
@@ -2637,7 +2637,7 @@ void DSP::alu_sub( bool ab, const TReg56& _val )
 	sr_s_update();
 	sr_e_update(d);
 	sr_u_update(d);
-	sr_n_update_arithmetic(d);
+	sr_n_update(d);
 	sr_z_update(d);
 	sr_v_update(res,d);
 	sr_l_update_by_v();
@@ -2667,7 +2667,7 @@ void DSP::alu_asr( bool abDst, bool abSrc, int _shiftAmount )
 	sr_s_update();
 	sr_e_update(d);
 	sr_u_update(d);
-	sr_n_update_arithmetic(d);
+	sr_n_update(d);
 	sr_z_update(d);
 	sr_clear( SR_V );
 	sr_l_update_by_v();
@@ -2695,7 +2695,7 @@ void DSP::alu_asl( bool abDst, bool abSrc, int _shiftAmount )
 	sr_s_update();
 	sr_e_update(d);
 	sr_u_update(d);
-	sr_n_update_arithmetic(d);
+	sr_n_update(d);
 	sr_z_update(d);
 	sr_clear( SR_V );
 	sr_l_update_by_v();
@@ -2767,7 +2767,7 @@ void DSP::alu_addr(bool ab)
 	sr_s_update();
 	sr_e_update(d);
 	sr_u_update(d);
-	sr_n_update_arithmetic(d);
+	sr_n_update(d);
 	sr_z_update(d);
 	sr_v_update(res, d);
 	sr_l_update_by_v();
@@ -2787,7 +2787,7 @@ void DSP::alu_addl(bool ab)
 	sr_s_update();
 	sr_e_update(d);
 	sr_u_update(d);
-	sr_n_update_arithmetic(d);
+	sr_n_update(d);
 	sr_z_update(d);
 	sr_v_update(res, d);
 	sr_l_update_by_v();
@@ -2856,7 +2856,7 @@ void DSP::alu_mpy( bool ab, const TReg24& _s1, const TReg24& _s2, bool _negate, 
 	sr_s_update();
 	sr_clear( SR_E );	// I don't know how this should happen because both operands are only 24 bits, the doc says "changed by standard definition" which should be okay here
 	sr_u_update( d );
-	sr_n_update_arithmetic( d );
+	sr_n_update( d );
 	sr_z_update( d );
 	sr_v_update(res,d);
 
@@ -2901,7 +2901,7 @@ void DSP::alu_mpysuuu( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _accu
 	// Update SR
 	sr_e_update(d);
 	sr_u_update( d );
-	sr_n_update_arithmetic( d );
+	sr_n_update( d );
 	sr_z_update( d );
 	sr_v_update(res,d);
 
@@ -2949,7 +2949,7 @@ void DSP::alu_dmac( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool srcUnsig
 	// Update SR
 	sr_e_update(d);
 	sr_u_update( d );
-	sr_n_update_arithmetic( d );
+	sr_n_update( d );
 	sr_z_update( d );
 	sr_v_update(res,d);
 
@@ -2996,7 +2996,7 @@ void DSP::alu_mac( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _uu )
 	sr_s_update();
 	sr_e_update(d);
 	sr_u_update( d );
-	sr_n_update_arithmetic( d );
+	sr_n_update( d );
 	sr_z_update( d );
 	sr_v_update(res,d);
 
@@ -3413,7 +3413,7 @@ void DSP::alu_abs( bool ab )
 	sr_s_update();
 	sr_e_update(d);
 	sr_u_update(d);
-	sr_n_update_logical(d);
+	sr_n_update(d);
 	sr_z_update(d);
 //	sr_v_update(d);
 	sr_l_update_by_v();
@@ -3448,7 +3448,7 @@ void DSP::alu_neg(bool ab)
 	sr_s_update();
 	sr_e_update(d);
 	sr_u_update(d);
-	sr_n_update_logical(d);
+	sr_n_update(d);
 	sr_z_update(d);
 //	TODO: how to update v? test in sim		sr_v_update(d);
 	sr_l_update_by_v();

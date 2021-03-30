@@ -647,14 +647,11 @@ namespace dsp56k
 			else							sr_toggle( SR_U, bittest( _ab, 47 ) != bittest( _ab, 46 ) );
 		}
 
-		void	sr_n_update_arithmetic( const TReg56& _ab )
+		void	sr_n_update( const TReg56& _ab )
 		{
+			// Negative
+			// Set if the MSB of the result is set; otherwise, this bit is cleared.	
 			sr_toggle( SR_N, bittest( _ab, 55 ) );
-		}
-
-		void	sr_n_update_logical( const TReg56& _ab )
-		{
-			sr_toggle( SR_N, bittest( _ab, 47 ) );
 		}
 
 		void	sr_z_update( const TReg56& _ab )
