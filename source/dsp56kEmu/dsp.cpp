@@ -723,9 +723,15 @@ namespace dsp56k
 		// Start Infinite Loop
 		case OpcodeInfo::Dor_ea:	// 0000011001MMMRRR0S010000
 		case OpcodeInfo::Dor_aa:	// 0000011000aaaaaa0S010000
-		case OpcodeInfo::Dor_xxx:	// 00000110iiiiiiii1001hhhh
 			LOG_ERR_NOTIMPLEMENTED("DOR");
 			return true;
+		case OpcodeInfo::Dor_xxx:	// 00000110iiiiiiii1001hhhh
+            {
+	            const auto loopcount = oi->getFieldValue(OpcodeInfo::Field_hhhh, OpcodeInfo::Field_iiiiiiii, op);
+                const auto displacement = signextend<int, 24>(fetchPC());
+                exec_do(TReg24(loopcount), reg.pc.var + displacement - 2);
+            }
+            return true;
 		case OpcodeInfo::Dor_S:		// 00000110 11DDDDDD 00010000
 			{
 				const TWord dddddd = oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
@@ -1136,9 +1142,12 @@ namespace dsp56k
 				LOGSC("bsr xxx");
 			}
 			return true;
-		case OpcodeInfo::Bsr_Rn:
-			LOG_ERR_NOTIMPLEMENTED("BSR Rn");
-			return true;
+		case OpcodeInfo::Bsr_Rn:  // 0000110100011RRR10000000
+            {
+                const auto rrr = oi->getFieldValue(OpcodeInfo::Field_RRR, op);
+                jsr( TReg24(reg.pc.var + reg.r[rrr].var - 1) );
+            }
+            return true;
 		case OpcodeInfo::Debug:
 			LOG( "Entering DEBUG mode" );
 			LOG_ERR_NOTIMPLEMENTED("DEBUG");
@@ -2305,7 +2314,14 @@ bool DSP::exec_logical_nonparallel(const OpcodeInfo* oi, TWord op)
 			alu_asr( abDst, abSrc, shiftAmount );			
 		}
 		return true;		
-	case OpcodeInfo::Lsl_ii:				// Logical Shift Left
+	case OpcodeInfo::Lsl_ii:				// Logical Shift Left		000011000001111010iiiiiD
+		{
+            const auto shiftAmount = oi->getFieldValue(OpcodeInfo::Field_iiiii, op);
+            const auto abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
+
+            alu_lsl(abDst, shiftAmount);
+        }
+		return true;
 	case OpcodeInfo::Lsl_SD:
 		LOG_ERR_NOTIMPLEMENTED("LSL");
 		return true;
