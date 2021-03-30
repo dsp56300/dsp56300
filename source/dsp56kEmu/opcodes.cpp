@@ -245,7 +245,7 @@ namespace dsp56k
 		OpcodeInfo(OpcodeInfo::Movem_ea,		"00000111W1MMMRRR10dddddd",	"MOVE(M) S,P:ea / MOVE(M) P:ea,D", OpcodeInfo::EffectiveAddress),													// Move Program Memory
 		OpcodeInfo(OpcodeInfo::Movem_aa,		"00000111W0aaaaaa00dddddd",	"MOVE(M) S,P:aa / MOVE(M) P:aa,D"),
 
-		OpcodeInfo(OpcodeInfo::Movep_ppea,		"0000100sW1MMMRRR1Spppppp",	"MOVEP [X or Y]:pp,[X or Y]:ea / MOVEP [X or Y]:ea,[X or Y]:pp", OpcodeInfo::EffectiveAddress),
+		OpcodeInfo(OpcodeInfo::Movep_ppea,		"0000100sW1MMMRRR1Spppppp",	"MOVEP [X or Y]:pp,[X or Y]:ea / MOVEP [X or Y]:ea,[X or Y]:pp", OpcodeInfo::EAandID),
 		OpcodeInfo(OpcodeInfo::Movep_Xqqea,		"00000111W1MMMRRR0Sqqqqqq",	"MOVEP X:qq,[X or Y]:ea / MOVEP [X or Y]:ea,X:qq", OpcodeInfo::EffectiveAddress),
 		OpcodeInfo(OpcodeInfo::Movep_Yqqea,		"00000111W0MMMRRR1Sqqqqqq",	"MOVEP Y:qq,[X or Y]:ea / MOVEP [X or Y]:ea,Y:qq", OpcodeInfo::EffectiveAddress),
 		OpcodeInfo(OpcodeInfo::Movep_eapp,		"0000100sW1MMMRRR01pppppp",	"MOVEP P:ea,[X or Y]:pp / MOVEP [X or Y]:pp,P:ea", OpcodeInfo::EffectiveAddress),		// another doc issue? These two opcodes are NOT mentioned with an optional extension word. But they have MMMRRR so this is needed
