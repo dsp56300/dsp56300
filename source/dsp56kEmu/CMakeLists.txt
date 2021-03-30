@@ -4,7 +4,6 @@ project(dsp56kEmu)
 set(SOURCES
 agu.cpp agu.h
 assert.cpp assert.h
-device.cpp device.h
 disasm.cpp disasm.h
 dsp.cpp dsp.h
 error.cpp error.h

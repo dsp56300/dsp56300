@@ -6,21 +6,23 @@
 
 #include "error.h"
 #include "omfloader.h"
-#include "dsp.h"
 
 namespace dsp56k
 {
 	static const TWord g_initPattern = 0xabcabcab;
 
+	static DefaultMemoryMap g_defaultMemoryMap;
+	
 	// _____________________________________________________________________________
 	// Memory
 	//
-	Memory::Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY)
-		: x(m_mem[MemArea_X])
+	Memory::Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY, const IMemoryMap* _memoryMap)
+		: m_memoryMap(_memoryMap ? _memoryMap : &g_defaultMemoryMap)
+		, x(m_mem[MemArea_X])
 		, y(m_mem[MemArea_Y])
 		, p(m_mem[MemArea_P])
-		, m_dsp(0)
 		, m_perif({_peripheralsX, _peripheralsY})
+		, m_dsp(nullptr)
 	{
 		for( size_t i=0; i<MemArea_COUNT; ++i )
 			m_mem[i].resize( 0xC0000, 0 );
@@ -38,7 +40,10 @@ namespace dsp56k
 	//
 	bool Memory::set( EMemArea _area, TWord _offset, TWord _value )
 	{
-		translateAddress( _area, _offset );
+		m_memoryMap->memTranslateAddress(_area, _offset);
+
+		if(!m_memoryMap->memValidateAccess(_area, _offset, true))
+			return false;
 
 		if( _area < static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
 		{
@@ -80,7 +85,10 @@ namespace dsp56k
 	//
 	TWord Memory::get( EMemArea _area, TWord _offset ) const
 	{
-		translateAddress( _area, _offset );
+		m_memoryMap->memTranslateAddress(_area, _offset);
+
+		if(!m_memoryMap->memValidateAccess(_area, _offset, true))
+			return false;
 
 		if( _area < static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
 		{
@@ -108,22 +116,6 @@ namespace dsp56k
 	{
 		OMFLoader loader;
 		return loader.load( _filename, *this );
-	}
-
-	// _____________________________________________________________________________
-	// translateAddress
-	//
-	bool Memory::translateAddress( EMemArea& _area, TWord& _offset ) const
-	{
-		// XXX maps external memory to XYP areas at once
-		if( _offset >= 0x040000 && _offset < 0x0c0000 && (_area == MemArea_Y || _area == MemArea_P) )
-		{
-			_area = MemArea_X;
-			return true;
-		}
-
-		// address not modified
-		return false;
 	}
 
 	// _____________________________________________________________________________

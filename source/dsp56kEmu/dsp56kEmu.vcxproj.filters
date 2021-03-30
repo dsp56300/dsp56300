@@ -13,9 +13,6 @@
     <ClCompile Include="assert.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="device.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="disasm.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -67,9 +64,6 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="assert.h">
-      <Filter>Source</Filter>
-    </ClInclude>
-    <ClInclude Include="device.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="disasm.h">

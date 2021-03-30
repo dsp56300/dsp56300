@@ -82,7 +82,6 @@
   <ItemGroup>
     <ClCompile Include="agu.cpp" />
     <ClCompile Include="assert.cpp" />
-    <ClCompile Include="device.cpp" />
     <ClCompile Include="disasm.cpp" />
     <ClCompile Include="dsp.cpp" />
     <ClCompile Include="error.cpp" />
@@ -105,7 +104,6 @@
   <ItemGroup>
     <ClInclude Include="agu.h" />
     <ClInclude Include="assert.h" />
-    <ClInclude Include="device.h" />
     <ClInclude Include="disasm.h" />
     <ClInclude Include="dsp.h" />
     <ClInclude Include="error.h" />

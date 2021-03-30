@@ -28,12 +28,29 @@ namespace dsp56k
 
 	class DSP;
 
+	class IMemoryMap
+	{
+	public:
+		virtual ~IMemoryMap() = default;
+		virtual bool memTranslateAddress( EMemArea& _area, TWord& _offset ) const = 0;
+		virtual bool memValidateAccess	( EMemArea _area, TWord _addr, bool _write ) const = 0;
+	};
+
+	class DefaultMemoryMap final : public IMemoryMap
+	{
+	public:
+		bool memTranslateAddress(EMemArea& _area, TWord& _offset) const override		{ return false; }
+		bool memValidateAccess(EMemArea _area, TWord _addr, bool _write) const override	{ return true; }
+	};
+
 	class Memory
 	{
 		// _____________________________________________________________________________
 		// members
 		//
 
+		const IMemoryMap*	const							m_memoryMap;
+		
 		// 768k words of 24-bit data for 3 banks (XYP)
 		StaticArray< std::vector<TWord>, MemArea_COUNT >	m_mem;
 
@@ -68,7 +85,7 @@ namespace dsp56k
 		// implementation
 		//
 	public:
-		Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY);
+		Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY, const IMemoryMap* _memoryMap = nullptr);
 		Memory(const Memory&) = delete;
 		Memory& operator = (const Memory&) = delete;
 
@@ -78,8 +95,6 @@ namespace dsp56k
 
 		bool				set					( EMemArea _area, TWord _offset, TWord _value );
 		TWord				get					( EMemArea _area, TWord _offset ) const;
-
-		bool				translateAddress	( EMemArea& _area, TWord& _offset ) const;
 
 		bool				save				( FILE* _file ) const;
 		bool				load				( FILE* _file );

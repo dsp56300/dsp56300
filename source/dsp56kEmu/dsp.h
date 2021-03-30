@@ -911,7 +911,5 @@ namespace dsp56k
 
 		bool	memWrite			( EMemArea _area, TWord _offset, TWord _value );
 		TWord	memRead				( EMemArea _area, TWord _offset ) const;
-		bool	memTranslateAddress	( EMemArea& _area, TWord& _offset ) const;
-		bool	memValidateAccess	( EMemArea _area, TWord _addr, bool _write ) const;
 	};
 }

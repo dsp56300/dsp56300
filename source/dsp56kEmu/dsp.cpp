@@ -3361,82 +3361,11 @@ const char* DSP::getASM()
 	return m_asm;
 }
 
-#define MEM_VALIDRANGE( ADDR0, ADDR1 )			if( _addr >= ADDR0 && _addr < ADDR1 ) { return true; }
-#define MEM_INVALIDRANGE( ADDR0, ADDR1, MSG )	if( _addr >= ADDR0 && _addr < ADDR1 ) { assert( 0 && MSG ); return false; }
-
-
-// _____________________________________________________________________________
-// memValidateAccess
-//
-bool DSP::memValidateAccess( EMemArea _area, TWord _addr, bool _write ) const
-{
-	// XXX stuff goes first
-
-	// XXX external memory (768k)
-	MEM_VALIDRANGE	( 0x040000, 0x060000 );
-	MEM_INVALIDRANGE( 0x060000, 0x0c0000, "memory access above external memory limit of XXX PCI/Element, only XXX FW has this memory area" );
-
-	switch( _area )
-	{
-	case MemArea_P:
-		if( !_write )
-			MEM_VALIDRANGE( 0x000, 0x300 );
-
-		MEM_VALIDRANGE( 0x300, 0x2000 );
-
-		// according to XXX sdk 0x200-0x2ff are used by PCI os but my test code accesses this area....
-		MEM_INVALIDRANGE( 0x000, 0x200, "Access to P-memory that's used by XXX FW&PCI OS" );
-
-		if( _write )
-		{
-			// Bootstram ROM
-			MEM_INVALIDRANGE( 0xff0000, 0xff00c0, "Tried to write to Bootstrap ROM" );
-		}
-	case MemArea_X:
-		MEM_VALIDRANGE( 0x200, 0x1e00 );
-
-		// input
-		MEM_VALIDRANGE( 0x1e00, 0x1e02 );
-
-		// output
-		MEM_VALIDRANGE( 0x1f00, 0x1f08 );
-		
-		// The X memory space at locations $001600 to $001FFF and from $ to $FFEFFF is reserved and should not be accessed.
-		MEM_INVALIDRANGE( 0x001600, 0x002000, "Access to X memory area that shouldn't be used" );
-		MEM_INVALIDRANGE( 0xff0000, 0xffefff, "Access to X memory area that shouldn't be used" );
-
-		if( _write )
-		{
-			MEM_INVALIDRANGE( 0, 0x200, "Access to X-memory of XXX PCI-OS used memory" );
-		}
-		MEM_VALIDRANGE( 0xffff80, 0x1000000 );	// peripherals
-		break;
-	case MemArea_Y:
-
-		MEM_VALIDRANGE( 0x100, 0x2000 );
-
-		if( _write )
-		{
-			MEM_INVALIDRANGE( 0, 0x100, "Access to X-memory of XXX PCI-OS used memory" );
-		}
-		MEM_INVALIDRANGE( 0xff0000, 0xffefff, "Access to Y memory area that shouldn't be used" );
-		break;
-	}
-	LOG( "Unknown memory access in area " << _area << ", address " << std::hex << _addr << ", access type " << _write << ", pc " << std::hex << pcLastExec << ", ictr " << std::hex << reg.ictr.var );
-
-	assert( 0 && "unknown memory access" );
-	return false;
-}
-
 // _____________________________________________________________________________
 // memWrite
 //
 bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
 {
-	memTranslateAddress(_area,_offset);
-
-	memValidateAccess( _area,_offset, true );
-
 	return mem.set( _area, _offset, _value );
 }
 
@@ -3465,56 +3394,9 @@ dsp56k::TWord DSP::memRead( EMemArea _area, TWord _offset ) const
 // 		}
 // 	}
 
-	memTranslateAddress(_area,_offset);
-
-	memValidateAccess(_area,_offset,false);
-
-	return mem.get( _area, _offset );
+		return mem.get( _area, _offset );
 }
 
-// _____________________________________________________________________________
-// memTranslateAddress
-//
-bool DSP::memTranslateAddress( EMemArea& _area, TWord& _offset ) const
-{
-	// XXX maps external memory to XYP areas at once
-	if( _offset >= 0x040000 && _offset < 0x0c0000 && (_area == MemArea_Y || _area == MemArea_P) )
-	{
-		_area = MemArea_X;
-		return true;
-	}
-
-	// map Y-memory to P-memory on DSP 56362
-	if( _area == MemArea_P )
-	{
-		const bool ms = (reg.omr.var & OMR_MS) != 0;
-		const bool ce = sr_test(SR_CE);
-
-		if( ms )
-		{
-			if( ce )
-			{
-				assert( (_offset < 0x1000 || _offset >= 0x1400) && "illegal access to instruction cache" );
-			}
-
-			if( _offset >= 0xc00 && _offset < 0x1400 )
-			{
-				LOG( "Remap address P " << std::hex << _offset << " to Y " << (_offset-0xc00 + 0xe00) );
-				_offset -= 0xc00;
-				_offset += 0xe00;
-				_area = MemArea_Y;
-				return true;
-			}
-		}
-		else if( ce )
-		{
-			assert( (_offset < 0x800 || _offset >= 0xc00) && "illegal access to instruction cache" );
-		}
-	}
-
-	// address not modified
-	return false;
-}
 // _____________________________________________________________________________
 // alu_abs
 //
