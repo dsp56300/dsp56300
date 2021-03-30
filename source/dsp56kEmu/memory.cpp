@@ -40,7 +40,7 @@ namespace dsp56k
 	{
 		translateAddress( _area, _offset );
 
-		if( _area <= static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
+		if( _area < static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
 		{
 			m_perif[_area]->write( _offset, _value );
 			return true;
@@ -82,7 +82,7 @@ namespace dsp56k
 	{
 		translateAddress( _area, _offset );
 
-		if( _area <= static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
+		if( _area < static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
 		{
 			return m_perif[_area]->read(_offset);
 		}
