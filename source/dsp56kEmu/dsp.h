@@ -120,7 +120,7 @@ namespace dsp56k
 		void 	resetHW							();
 		void 	resetSW							();
 
-		void	jsr								( const TReg24& _val )						{ pushPCSR(); setPC(_val); }
+		void	jsr								(const TReg24& _val);
 		void	jsr								( const TWord _val )						{ jsr(TReg24(_val)); }
 
 		void 	setPC							( const TWord _val )						{ setPC(TReg24(_val)); }

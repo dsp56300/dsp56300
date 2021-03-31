@@ -1522,450 +1522,1009 @@ namespace dsp56k
 		return ea&0x00ffffff;
 	}
 
-// _____________________________________________________________________________
-// exec_move
-//
-bool DSP::exec_move(const OpcodeInfo* oi, TWord op)
-{
-	switch (oi->getInstruction())
+	// _____________________________________________________________________________
+	// exec_move
+	//
+	bool DSP::exec_move(const OpcodeInfo* oi, TWord op)
 	{
-		// X or Y Memory Data Move with immediate displacement
-		case OpcodeInfo::Movex_Rnxxxx:	// 0000101001110RRR1WDDDDDD
-		case OpcodeInfo::Movey_Rnxxxx:	// 0000101101110RRR1WDDDDDD
-			{
-				const TWord DDDDDD	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
-				const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
-				const TWord rrr		= oi->getFieldValue(OpcodeInfo::Field_RRR, op);
-
-				const int shortDisplacement = signextend<int,24>(fetchPC());
-				const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-				const auto area = oi->getInstruction() == OpcodeInfo::Movey_Rnxxxx ? MemArea_Y : MemArea_X;
-
-				if( write )
+		switch (oi->getInstruction())
+		{
+			// X or Y Memory Data Move with immediate displacement
+			case OpcodeInfo::Movex_Rnxxxx:	// 0000101001110RRR1WDDDDDD
+			case OpcodeInfo::Movey_Rnxxxx:	// 0000101101110RRR1WDDDDDD
 				{
-					decode_dddddd_write( DDDDDD, TReg24(memRead( area, ea )) );
+					const TWord DDDDDD	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+					const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+					const TWord rrr		= oi->getFieldValue(OpcodeInfo::Field_RRR, op);
+
+					const int shortDisplacement = signextend<int,24>(fetchPC());
+					const TWord ea = decode_RRR_read( rrr, shortDisplacement );
+
+					const auto area = oi->getInstruction() == OpcodeInfo::Movey_Rnxxxx ? MemArea_Y : MemArea_X;
+
+					if( write )
+					{
+						decode_dddddd_write( DDDDDD, TReg24(memRead( area, ea )) );
+					}
+					else
+					{
+						memWrite( area, ea, decode_dddddd_read( DDDDDD ).var );
+					}
 				}
-				else
+				return true;
+			case OpcodeInfo::Movex_Rnxxx:	// 0000001aaaaaaRRR1a0WDDDD
+			case OpcodeInfo::Movey_Rnxxx:	// 0000001aaaaaaRRR1a1WDDDD
 				{
-					memWrite( area, ea, decode_dddddd_read( DDDDDD ).var );
+					const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDD, op);
+					const TWord aaaaaaa	= oi->getFieldValue(OpcodeInfo::Field_aaaaaa, OpcodeInfo::Field_a, op);
+					const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+					const TWord rrr		= oi->getFieldValue(OpcodeInfo::Field_RRR, op);
+
+					const int shortDisplacement = signextend<int,7>(aaaaaaa);
+					const TWord ea = decode_RRR_read( rrr, shortDisplacement );
+
+					const auto area = oi->getInstruction() == OpcodeInfo::Movey_Rnxxx ? MemArea_Y : MemArea_X;
+
+					if( write )
+					{
+						decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( area, ea )) );
+					}
+					else
+					{
+						memWrite( area, ea, decode_ddddd_read<TWord>( ddddd ) );
+					}
 				}
-			}
-			return true;
-		case OpcodeInfo::Movex_Rnxxx:	// 0000001aaaaaaRRR1a0WDDDD
-		case OpcodeInfo::Movey_Rnxxx:	// 0000001aaaaaaRRR1a1WDDDD
-			{
-				const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDD, op);
-				const TWord aaaaaaa	= oi->getFieldValue(OpcodeInfo::Field_aaaaaa, OpcodeInfo::Field_a, op);
-				const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
-				const TWord rrr		= oi->getFieldValue(OpcodeInfo::Field_RRR, op);
-
-				const int shortDisplacement = signextend<int,7>(aaaaaaa);
-				const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-				const auto area = oi->getInstruction() == OpcodeInfo::Movey_Rnxxx ? MemArea_Y : MemArea_X;
-
-				if( write )
+				return true;
+			// Move Control Register
+			case OpcodeInfo::Movec_ea:		// 00000101W1MMMRRR0S1DDDDD
 				{
-					decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( area, ea )) );
+					const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDD, op);
+					const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+					const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+					const TWord addr = decode_MMMRRR_read( mmmrrr );
+
+					const EMemArea area = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+						
+					if( write )
+					{
+						if( mmmrrr == MMM_ImmediateData )	decode_ddddd_pcr_write( ddddd, TReg24(addr) );		
+						else								decode_ddddd_pcr_write( ddddd, TReg24(memRead( area, addr )) );
+					}
+					else
+					{
+						const TReg24 regVal = decode_ddddd_pcr_read(op&0x1f);
+						assert( (mmmrrr != MMM_ImmediateData) && "register move to immediate data? not possible" );
+						memWrite( area, addr, regVal.toWord() );
+					}
 				}
-				else
+				return true;
+			case OpcodeInfo::Movec_aa:
+				LOG_ERR_NOTIMPLEMENTED("MOVE(C)_aa");
+				return true;
+			case OpcodeInfo::Movec_S1D2:	// 00000100W1eeeeee101ddddd
 				{
-					memWrite( area, ea, decode_ddddd_read<TWord>( ddddd ) );
+					const auto write = oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+					const TWord eeeeee	= oi->getFieldValue(OpcodeInfo::Field_eeeeee, op);
+					const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDD, op);
+
+					if( write )
+						decode_ddddd_pcr_write( ddddd, decode_dddddd_read( eeeeee ) );
+					else
+						decode_dddddd_write( eeeeee, decode_ddddd_pcr_read( ddddd ) );				
 				}
-			}
-			return true;
-		// Move Control Register
-		case OpcodeInfo::Movec_ea:		// 00000101W1MMMRRR0S1DDDDD
-			{
-				const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDD, op);
-				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
-				const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+				return true;
+			case OpcodeInfo::Movec_xx:		// 00000101iiiiiiii101ddddd
+				{
+					const TWord iiiiiiii	= oi->getFieldValue(OpcodeInfo::Field_iiiiiiii, op);
+					const TWord ddddd		= oi->getFieldValue(OpcodeInfo::Field_DDDDD, op);
+					decode_ddddd_pcr_write( ddddd, TReg24(iiiiiiii) );
+				}
+				return true;
+			// Move Program Memory
+			case OpcodeInfo::Movem_ea:		// 00000111W1MMMRRR10dddddd
+				{
+					const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+					const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
+					const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
 
-				const TWord addr = decode_MMMRRR_read( mmmrrr );
+					const TWord ea		= decode_MMMRRR_read( mmmrrr );
 
-				const EMemArea area = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+					if( write )
+					{
+						assert( mmmrrr != MMM_ImmediateData && "immediate data should not be allowed here" );
+						decode_dddddd_write( dddddd, TReg24(memRead( MemArea_P, ea )) );
+					}
+					else
+					{
+						memWrite( MemArea_P, ea, decode_dddddd_read(dddddd).toWord() );
+					}
+				}
+				return true;
+			case OpcodeInfo::Movem_aa:		// 00000111W0aaaaaa00dddddd
+				LOG_ERR_NOTIMPLEMENTED("MOVE(M) S,P:aa");
+				return true;
+			// Move Peripheral Data
+			case OpcodeInfo::Movep_ppea:	// 0000100sW1MMMRRR1Spppppp
+				{
+					const TWord pp		= 0xffffc0 + oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+					const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+					const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+					const EMemArea s	= oi->getFieldValue(OpcodeInfo::Field_s, op) ? MemArea_Y : MemArea_X;
+					const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+
+					const TWord ea		= decode_MMMRRR_read( mmmrrr );
+
+					if( write )
+					{
+						if( mmmrrr == MMM_ImmediateData )
+							memWrite( S, pp, ea );
+						else
+							memWrite( S, pp, memRead( s, ea ) );
+					}
+					else
+						memWrite( s, ea, memRead( S, pp ) );
+				}
+				return true;
+			case OpcodeInfo::Movep_Xqqea:	// 00000111W1MMMRRR0Sqqqqqq
+			case OpcodeInfo::Movep_Yqqea:	// 00000111W0MMMRRR1Sqqqqqq
+				{
+					const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+					const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+					const TWord qAddr	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
+					const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+					const TWord ea		= decode_MMMRRR_read( mmmrrr );
+
+					const auto area = oi->getInstruction() == OpcodeInfo::Movep_Yqqea ? MemArea_Y : MemArea_X;
+
+					if( write )
+					{
+						if( mmmrrr == MMM_ImmediateData )
+							memWrite( area, qAddr, ea );
+						else
+							memWrite( area, qAddr, memRead( S, ea ) );
+					}
+					else
+						memWrite( S, ea, memRead( area, qAddr ) );				
+				}
+				return true;
+			case OpcodeInfo::Movep_eapp:	// 0000100sW1MMMRRR01pppppp
+				LOG_ERR_NOTIMPLEMENTED("MOVE");
+				return true;
+
+			case OpcodeInfo::Movep_eaqq:	// 000000001WMMMRRR0Sqqqqqq
+				LOG_ERR_NOTIMPLEMENTED("MOVE");
+				return true;
+			case OpcodeInfo::Movep_Spp:		// 0000100sW1dddddd00pppppp
+				{
+					const TWord addr	= 0xffffc0 + oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+					const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
+					const EMemArea area = oi->getFieldValue(OpcodeInfo::Field_s, op) ? MemArea_Y : MemArea_X;
+					const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+					if( write )
+						decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
+					else
+						memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
+				}
+				return true;
+			case OpcodeInfo::Movep_SXqq:	// 00000100W1dddddd1q0qqqqq
+			case OpcodeInfo::Movep_SYqq:	// 00000100W1dddddd0q1qqqqq
+				{
 					
-				if( write )
-				{
-					if( mmmrrr == MMM_ImmediateData )	decode_ddddd_pcr_write( ddddd, TReg24(addr) );		
-					else								decode_ddddd_pcr_write( ddddd, TReg24(memRead( area, addr )) );
-				}
-				else
-				{
-					const TReg24 regVal = decode_ddddd_pcr_read(op&0x1f);
-					assert( (mmmrrr != MMM_ImmediateData) && "register move to immediate data? not possible" );
-					memWrite( area, addr, regVal.toWord() );
-				}
-			}
-			return true;
-		case OpcodeInfo::Movec_aa:
-			LOG_ERR_NOTIMPLEMENTED("MOVE(C)_aa");
-			return true;
-		case OpcodeInfo::Movec_S1D2:	// 00000100W1eeeeee101ddddd
-			{
-				const auto write = oi->getFieldValue(OpcodeInfo::Field_W, op);
+					const TWord addr	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_q, OpcodeInfo::Field_qqqqq, op);
+					const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
+					const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
 
-				const TWord eeeeee	= oi->getFieldValue(OpcodeInfo::Field_eeeeee, op);
-				const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDD, op);
+					const auto area = oi->getInstruction() == OpcodeInfo::Movep_SYqq ? MemArea_Y : MemArea_X;
 
-				if( write )
-					decode_ddddd_pcr_write( ddddd, decode_dddddd_read( eeeeee ) );
-				else
-					decode_dddddd_write( eeeeee, decode_ddddd_pcr_read( ddddd ) );				
+					if( write )
+						decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
+					else
+						memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
+				}
+				return true;
+			default:
+				return false;
+		}
+	}
+	// _____________________________________________________________________________
+	// decode_ddddd_pcr
+	//
+	dsp56k::TReg24 DSP::decode_ddddd_pcr_read( TWord _ddddd )
+	{
+		if( (_ddddd & 0x18) == 0x00 )
+		{
+			return reg.m[_ddddd&0x07];
+		}
+
+		switch( _ddddd )
+		{
+		case 0xa:	return reg.ep;
+		case 0x10:	return reg.vba;
+		case 0x11:	return TReg24(reg.sc.var);
+		case 0x18:	return reg.sz;
+		case 0x19:	return reg.sr;
+		case 0x1a:	return reg.omr;
+		case 0x1b:	return reg.sp;
+		case 0x1c:	return ssh();
+		case 0x1d:	return ssl();
+		case 0x1e:	return reg.la;
+		case 0x1f:	return reg.lc;
+		}
+		assert( 0 && "invalid ddddd value" );
+		return TReg24(0xbadbad);
+	}
+	// _____________________________________________________________________________
+	// decode_ddddd_pcr_write
+	//
+	void DSP::decode_ddddd_pcr_write( TWord _ddddd, TReg24 _val )
+	{
+		if( (_ddddd & 0x18) == 0x00 )
+		{
+			reg.m[_ddddd&0x07] = _val;
+			return;
+		}
+
+		switch( _ddddd )
+		{
+		case 0xa:	reg.ep = _val;				return;
+		case 0x10:	reg.vba = _val;				return;
+		case 0x11:	reg.sc.var = _val.var&0x1f;	return;
+		case 0x18:	reg.sz = _val;				return;
+		case 0x19:	reg.sr = _val;				return;
+		case 0x1a:	reg.omr = _val;				return;
+		case 0x1b:	reg.sp = _val;				return;
+		case 0x1c:	ssh(_val);					return;
+		case 0x1d:	ssl(_val);					return;
+		case 0x1e:	reg.la = _val;				return;
+		case 0x1f:	reg.lc = _val;				return;
+		}
+		assert( 0 && "unreachable" );
+	}
+
+	// _____________________________________________________________________________
+	// decode_eeeeee_read
+	//
+	dsp56k::TReg24 DSP::decode_dddddd_read( TWord _dddddd )
+	{
+		switch( _dddddd & 0x3f )
+		{
+			// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
+		case 0x00:	return x0();
+		case 0x01:	return x1();
+		case 0x02:	return y0();
+		case 0x03:	return y1();
+			// 0001DD - 4 registers in data ALU
+		case 0x04:	return x0();
+		case 0x05:	return x1();
+		case 0x06:	return y0();
+		case 0x07:	return y1();
+
+			// 001DDD - 8 accumulators in data ALU
+		case 0x08:	return a0();
+		case 0x09:	return b0();
+		case 0x0a:	{ TReg24 res; convertS(res,a2()); return res; }
+		case 0x0b:	{ TReg24 res; convertS(res,b2()); return res; }
+		case 0x0c:	return a1();
+		case 0x0d:	return b1();
+		case 0x0e:	return getA<TReg24>();
+		case 0x0f:	return getA<TReg24>();
+
+			// 010TTT - 8 address registers in AGU
+		case 0x10:	return reg.r[0];
+		case 0x11:	return reg.r[1];
+		case 0x12:	return reg.r[2];
+		case 0x13:	return reg.r[3];
+		case 0x14:	return reg.r[4];
+		case 0x15:	return reg.r[5];
+		case 0x16:	return reg.r[6];
+		case 0x17:	return reg.r[7];
+
+			// 011NNN - 8 address offset registers in AGU
+		case 0x18:	return reg.n[0];
+		case 0x19:	return reg.n[1];
+		case 0x1a:	return reg.n[2];
+		case 0x1b:	return reg.n[3];
+		case 0x1c:	return reg.n[4];
+		case 0x1d:	return reg.n[5];
+		case 0x1e:	return reg.n[6];
+		case 0x1f:	return reg.n[7];
+
+			// 100FFF - 8 address modifier registers in AGU
+		case 0x20:	return reg.m[0];
+		case 0x21:	return reg.m[1];
+		case 0x22:	return reg.m[2];
+		case 0x23:	return reg.m[3];
+		case 0x24:	return reg.m[4];
+		case 0x25:	return reg.m[5];
+		case 0x26:	return reg.m[6];
+		case 0x27:	return reg.m[7];
+
+			// 101EEE - 1 adress register in AGU
+		case 0x2a:	return reg.ep;
+
+			// 110VVV - 2 program controller registers
+		case 0x30:	return reg.vba;
+		case 0x31:	return TReg24(reg.sc.var);
+
+			// 111GGG - 8 program controller registers
+		case 0x38:	return reg.sz;
+		case 0x39:	return reg.sr;
+		case 0x3a:	return reg.omr;
+		case 0x3b:	return reg.sp;
+		case 0x3c:	return ssh();
+		case 0x3d:	return ssl();
+		case 0x3e:	return reg.la;
+		case 0x3f:	return reg.lc;
+		}
+		assert(0 && "invalid eeeeee value");
+		return TReg24(0xbadbad);
+	}
+
+	// _____________________________________________________________________________
+	// decode_eeeeee_write
+	//
+	void DSP::decode_dddddd_write( TWord _dddddd, TReg24 _val )
+	{
+		assert( (_val.var & 0xff000000) == 0 );
+
+		switch( _dddddd & 0x3f )
+		{
+			// 0001DD - 4 registers in data ALU
+		case 0x04:	x0(_val);	return;
+		case 0x05:	x1(_val);	return;
+		case 0x06:	y0(_val);	return;
+		case 0x07:	y1(_val);	return;
+
+			// 001DDD - 8 accumulators in data ALU
+		case 0x08:	a0(_val);	return;
+		case 0x09:	b0(_val);	return;
+		case 0x0a:	{ TReg8 temp; convert(temp,_val); a2(temp);	return; }
+		case 0x0b:	{ TReg8 temp; convert(temp,_val); b2(temp);	return; }
+		case 0x0c:	a1(_val);	return;
+		case 0x0d:	b1(_val);	return;
+		case 0x0e:	setA(_val);	return;
+		case 0x0f:	setB(_val);	return;
+
+			// 010TTT - 8 address registers in AGU
+		case 0x10:	reg.r[0] = _val;	return;
+		case 0x11:	reg.r[1] = _val;	return;
+		case 0x12:	reg.r[2] = _val;	return;
+		case 0x13:	reg.r[3] = _val;	return;
+		case 0x14:	reg.r[4] = _val;	return;
+		case 0x15:	reg.r[5] = _val;	return;
+		case 0x16:	reg.r[6] = _val;	return;
+		case 0x17:	reg.r[7] = _val;	return;
+
+			// 011NNN - 8 address offset registers in AGU
+		case 0x18:	reg.n[0] = _val;	return;
+		case 0x19:	reg.n[1] = _val;	return;
+		case 0x1a:	reg.n[2] = _val;	return;
+		case 0x1b:	reg.n[3] = _val;	return;
+		case 0x1c:	reg.n[4] = _val;	return;
+		case 0x1d:	reg.n[5] = _val;	return;
+		case 0x1e:	reg.n[6] = _val;	return;
+		case 0x1f:	reg.n[7] = _val;	return;
+
+			// 100FFF - 8 address modifier registers in AGU
+		case 0x20:	reg.m[0] = _val;	return;
+		case 0x21:	reg.m[1] = _val;	return;
+		case 0x22:	reg.m[2] = _val;	return;
+		case 0x23:	reg.m[3] = _val;	return;
+		case 0x24:	reg.m[4] = _val;	return;
+		case 0x25:	reg.m[5] = _val;	return;
+		case 0x26:	reg.m[6] = _val;	return;
+		case 0x27:	reg.m[7] = _val;	return;
+
+			// 101EEE - 1 adress register in AGU
+		case 0x2a:	reg.ep = _val;		return;
+
+			// 110VVV - 2 program controller registers
+		case 0x30:	reg.vba = _val;			return;
+		case 0x31:	reg.sc.var = _val.var & 0x1f;	return;
+
+			// 111GGG - 8 program controller registers
+		case 0x38:	reg.sz = _val;	return;
+		case 0x39:	reg.sr = _val;	return;
+		case 0x3a:	reg.omr = _val;	return;
+		case 0x3b:	reg.sp = _val;	return;
+		case 0x3c:	ssh(_val);	return;
+		case 0x3d:	ssl(_val);	return;
+		case 0x3e:	reg.la = _val;	return;
+		case 0x3f:	reg.lc = _val;	return;
+		}
+		assert(0 && "unknown register");
+	}
+	// _____________________________________________________________________________
+	// logSC
+	//
+	void DSP::logSC( const char* _func ) const
+	{
+		if( strstr(_func, "DO" ) )
+			return;
+
+		std::stringstream scss;
+		
+		for( int i=0; i<reg.sc.var; ++i )
+		{
+			scss << "\t";
+		}
+
+		LOG( std::string(scss.str()) << " SC=" << std::hex << std::setw(6) << std::setfill('0') << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
+	}
+	// _____________________________________________________________________________
+	// exec_operand_8bits
+	//
+	bool DSP::exec_operand_8bits(const OpcodeInfo* oi, TWord op)
+	{
+		switch (oi->getInstruction())
+		{
+		case OpcodeInfo::Rti:			// Return From Interrupt
+			popPCSR();
+			return true;
+		case OpcodeInfo::Enddo:			// End Current DO Loop
+			// restore previous loop flag
+			sr_toggle( SR_LF, (ssl().var & SR_LF) != 0 );
+
+			// decrement SP twice, restoring old loop settings
+			decSP();
+
+			reg.lc = ssl();
+			reg.la = ssh();
+
+			return true;
+		case OpcodeInfo::Dec:			// Decrement by One
+			{
+				auto& d = oi->getFieldValue(OpcodeInfo::Field_d, op) ? reg.b : reg.a;
+
+				const auto old = d;
+				const auto res = --d.var;
+
+				d.doMasking();
+
+				sr_s_update();
+				sr_e_update(d);
+				sr_u_update(d);
+				sr_n_update(d);
+				sr_z_update(d);
+				sr_v_update(res,d);
+				sr_l_update_by_v();
+				sr_c_update_arithmetic(old,d);
+				sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
 			}
 			return true;
-		case OpcodeInfo::Movec_xx:		// 00000101iiiiiiii101ddddd
+		case OpcodeInfo::Inc:			// Increment by One	
 			{
-				const TWord iiiiiiii	= oi->getFieldValue(OpcodeInfo::Field_iiiiiiii, op);
-				const TWord ddddd		= oi->getFieldValue(OpcodeInfo::Field_DDDDD, op);
-				decode_ddddd_pcr_write( ddddd, TReg24(iiiiiiii) );
+				auto& d = oi->getFieldValue(OpcodeInfo::Field_d, op) ? reg.b : reg.a;
+
+				const auto old = d;
+
+				const auto res = ++d.var;
+
+				d.doMasking();
+
+				sr_s_update();
+				sr_e_update(d);
+				sr_u_update(d);
+				sr_n_update(d);
+				sr_z_update(d);
+				sr_v_update(res,d);
+				sr_l_update_by_v();
+				sr_c_update_arithmetic(old,d);
+				sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
 			}
 			return true;
-		// Move Program Memory
-		case OpcodeInfo::Movem_ea:		// 00000111W1MMMRRR10dddddd
+		case OpcodeInfo::Punlockr:
+			LOG_ERR_NOTIMPLEMENTED("PUNLOCKR");
+			return true;
+		case OpcodeInfo::Pflush:
+			LOG_ERR_NOTIMPLEMENTED("PFLUSH");
+			return true;
+		case OpcodeInfo::Pflushun:		// Program Cache Flush Unlocked Sections
+			cache.pflushun();
+			return true;
+		case OpcodeInfo::Pfree:			// Program Cache Global Unlock
+			cache.pfree();
+			return true;
+		case OpcodeInfo::Plockr:
+			LOG_ERR_NOTIMPLEMENTED("PLOCKR");
+			return true;
+		case OpcodeInfo::Illegal:
+			LOG_ERR_NOTIMPLEMENTED("ILLEGAL");
+			return true;
+		case OpcodeInfo::Rts:			// Return From Subroutine
+			popPC();
+			return true;
+		case OpcodeInfo::Stop:
+			LOG_ERR_NOTIMPLEMENTED("STOP");
+			return true;
+		case OpcodeInfo::Trap:
+			LOG_ERR_NOTIMPLEMENTED("TRAP");
+			return true;
+		case OpcodeInfo::Wait:
+			LOG_ERR_NOTIMPLEMENTED("WAIT");
+			return true;
+		case OpcodeInfo::Trapcc:
+			LOG_ERR_NOTIMPLEMENTED("TRAPcc");
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	// _____________________________________________________________________________
+	// resetSW
+	//
+	void DSP::resetSW()
+	{
+		/*
+		Reset the interrupt priority register and all on-chip peripherals. This is a
+		software reset, which is not equivalent to a hardware RESET since only on-chip peripherals
+		and the interrupt structure are affected. The processor state is not affected, and execution
+		continues with the next instruction. All interrupt sources are disabled except for the stack
+		error, NMI, illegal instruction, Trap, Debug request, and hardware reset interrupts.
+		*/
+	//	LOG_ERR_NOTIMPLEMENTED("RESET");
+	}
+
+	void DSP::jsr(const TReg24& _val)
+	{
+		pushPCSR();
+		setPC(_val);
+	}
+
+	// _____________________________________________________________________________
+	// exec_move_ddddd_MMMRRR
+	//
+	void DSP::exec_move_ddddd_MMMRRR( TWord ddddd, TWord mmmrrr, bool write, EMemArea memArea )
+	{
+		if( write && mmmrrr == MMM_ImmediateData )
+		{
+			decode_ddddd_write<TReg24>( ddddd, TReg24(fetchPC()) );
+			return;
+		}
+
+		const TWord addr = decode_MMMRRR_read( mmmrrr );
+
+		if( write )
+		{
+			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( memArea, addr )) );
+		}
+		else
+		{
+			memWrite( memArea, addr, decode_ddddd_read<TWord>( ddddd ) );
+		}
+	}
+
+	// _____________________________________________________________________________
+	// exec_bitmanip
+	//
+	bool DSP::exec_bitmanip(const OpcodeInfo* oi, TWord op)
+	{
+		switch (oi->getInstruction())
+		{
+		case OpcodeInfo::Bset_ea:	// 0000101001MMMRRR0S1bbbbb
+			// Bit Set and Test
 			{
-				const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
-				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
 				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
-
-				const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-				if( write )
-				{
-					assert( mmmrrr != MMM_ImmediateData && "immediate data should not be allowed here" );
-					decode_dddddd_write( dddddd, TReg24(memRead( MemArea_P, ea )) );
-				}
-				else
-				{
-					memWrite( MemArea_P, ea, decode_dddddd_read(dddddd).toWord() );
-				}
-			}
-			return true;
-		case OpcodeInfo::Movem_aa:		// 00000111W0aaaaaa00dddddd
-			LOG_ERR_NOTIMPLEMENTED("MOVE(M) S,P:aa");
-			return true;
-		// Move Peripheral Data
-		case OpcodeInfo::Movep_ppea:	// 0000100sW1MMMRRR1Spppppp
-			{
-				const TWord pp		= 0xffffc0 + oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
-				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
-				const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
-				const EMemArea s	= oi->getFieldValue(OpcodeInfo::Field_s, op) ? MemArea_Y : MemArea_X;
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-				const TWord ea		= decode_MMMRRR_read( mmmrrr );
+				const TWord ea		= decode_MMMRRR_read(mmmrrr);
 
-				if( write )
-				{
-					if( mmmrrr == MMM_ImmediateData )
-						memWrite( S, pp, ea );
-					else
-						memWrite( S, pp, memRead( s, ea ) );
-				}
-				else
-					memWrite( s, ea, memRead( S, pp ) );
+				TWord val = memRead( S, ea );
+
+				sr_toggle( SR_C, bittestandset( val, bit ) );
+
+				memWrite( S, ea, val );
 			}
 			return true;
-		case OpcodeInfo::Movep_Xqqea:	// 00000111W1MMMRRR0Sqqqqqq
-		case OpcodeInfo::Movep_Yqqea:	// 00000111W0MMMRRR1Sqqqqqq
+		case OpcodeInfo::Bset_aa:
+		case OpcodeInfo::Bset_pp:
+			LOG_ERR_NOTIMPLEMENTED("BSET");
+			return true;
+		case OpcodeInfo::Bset_qq:
 			{
-				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
-				const TWord qAddr	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
-				const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
 
-				const TWord ea		= decode_MMMRRR_read( mmmrrr );
+				const TWord ea		= 0xffff80 + qqqqqq;
 
-				const auto area = oi->getInstruction() == OpcodeInfo::Movep_Yqqea ? MemArea_Y : MemArea_X;
+				TWord val = memRead( S, ea );
 
-				if( write )
+				sr_toggle( SR_C, bittestandset( val, bit ) );
+
+				memWrite( S, ea, val );			
+			}
+			return true;
+		case OpcodeInfo::Bset_D:	// 0000101011DDDDDD011bbbbb
+			{
+				const TWord bit = oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord d = oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+
+				TReg24 val = decode_dddddd_read(d);
+
+				if( (d & 0x3f) == 0x39 )	// is SR the destination?	TODO: magic value
 				{
-					if( mmmrrr == MMM_ImmediateData )
-						memWrite( area, qAddr, ea );
-					else
-						memWrite( area, qAddr, memRead( S, ea ) );
+					bittestandset( val.var, bit );
 				}
 				else
-					memWrite( S, ea, memRead( area, qAddr ) );				
+				{
+					sr_toggle( SR_C, bittestandset( val, bit ) );
+				}
+
+				decode_dddddd_write( d, val );
+
+				sr_s_update();
+				sr_l_update_by_v();
 			}
 			return true;
-		case OpcodeInfo::Movep_eapp:	// 0000100sW1MMMRRR01pppppp
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
+		// Bit test and change
+		case OpcodeInfo::Bchg_ea:
+		case OpcodeInfo::Bchg_aa:
+		case OpcodeInfo::Bchg_pp:
+		case OpcodeInfo::Bchg_qq:
+			LOG_ERR_NOTIMPLEMENTED("BCHG");
 			return true;
-
-		case OpcodeInfo::Movep_eaqq:	// 000000001WMMMRRR0Sqqqqqq
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
-			return true;
-		case OpcodeInfo::Movep_Spp:		// 0000100sW1dddddd00pppppp
+		case OpcodeInfo::Bchg_D:	// 00001011 11DDDDDD 010bbbbb
 			{
-				const TWord addr	= 0xffffc0 + oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
-				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
-				const EMemArea area = oi->getFieldValue(OpcodeInfo::Field_s, op) ? MemArea_Y : MemArea_X;
-				const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
 
-				if( write )
-					decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
-				else
-					memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
+				TReg24 val = decode_dddddd_read( dddddd );
+
+				sr_toggle( SR_C, bittestandchange( val, bit ) );
+
+				decode_dddddd_write( dddddd, val );
+
+				sr_s_update();
+				sr_l_update_by_v();
 			}
 			return true;
-		case OpcodeInfo::Movep_SXqq:	// 00000100W1dddddd1q0qqqqq
-		case OpcodeInfo::Movep_SYqq:	// 00000100W1dddddd0q1qqqqq
+		// Bit test and clear
+		case OpcodeInfo::Bclr_ea:
+		case OpcodeInfo::Bclr_aa:
+		case OpcodeInfo::Bclr_pp:
+			LOG_ERR_NOTIMPLEMENTED("BCLR");
+			return true;
+		case OpcodeInfo::Bclr_qq:	// 0 0 0 0 0 0 0 1 0 0 q q q q q q 0 S 0 b b b b b
 			{
-				
-				const TWord addr	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_q, OpcodeInfo::Field_qqqqq, op);
-				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
-				const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+				const TWord bit = oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord ea	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
 
-				const auto area = oi->getInstruction() == OpcodeInfo::Movep_SYqq ? MemArea_Y : MemArea_X;
+				const EMemArea S = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-				if( write )
-					decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
-				else
-					memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
+				const TWord res = alu_bclr( bit, memRead( S, ea ) );
+
+				memWrite( S, ea, res );			
+			}
+			return true;
+		case OpcodeInfo::Bclr_D:	// 0000101011DDDDDD010bbbbb
+			{
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+
+				TWord val;
+				convert( val, decode_dddddd_read( dddddd ) );
+
+				const TWord newVal = alu_bclr( bit, val );
+				decode_dddddd_write( dddddd, TReg24(newVal) );			
+			}
+			return true;
+		// Bit Test
+		case OpcodeInfo::Btst_ea:
+			{
+				const TWord bit = oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
+				const TWord ea = decode_MMMRRR_read( mmmrrr );
+				const EMemArea S = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+
+				const TWord val = memRead( S, ea );
+
+				sr_toggle( SR_C, bittest( val, bit ) );
+
+				sr_s_update();
+				sr_l_update_by_v();
+			}
+			return true;
+		case OpcodeInfo::Btst_aa:
+			LOG_ERR_NOTIMPLEMENTED("BTST aa");
+			return true;
+		case OpcodeInfo::Btst_pp:	// 0 0 0 0 1 0 1 1 1 0 p p p p p p 0 S 1 b b b b b
+			{
+				const TWord bitNum	= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord pppppp	= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+
+				const TWord memVal	= memRead( S, pppppp + 0xffffc0 );
+
+				const bool bitSet	= ( memVal & (1<<bitNum)) != 0;
+
+				sr_toggle( SR_C, bitSet );
+			}
+			return true;
+		case OpcodeInfo::Btst_qq:	// 0 0 0 0 0 0 0 1 0 1 q q q q q q 0 S 1 b b b b b
+			LOG_ERR_NOTIMPLEMENTED("BTST qq");
+			return true;
+		case OpcodeInfo::Btst_D:	// 0000101111DDDDDD011bbbbb
+			{
+				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+
+				TReg24 val = decode_dddddd_read( dddddd );
+
+				sr_toggle( SR_C, bittest( val.var, bit ) );
 			}
 			return true;
 		default:
 			return false;
-	}
-}
-// _____________________________________________________________________________
-// decode_ddddd_pcr
-//
-dsp56k::TReg24 DSP::decode_ddddd_pcr_read( TWord _ddddd )
-{
-	if( (_ddddd & 0x18) == 0x00 )
-	{
-		return reg.m[_ddddd&0x07];
+		}
 	}
 
-	switch( _ddddd )
+	// _____________________________________________________________________________
+	// exec_logical_nonparallel
+	//
+	bool DSP::exec_logical_nonparallel(const OpcodeInfo* oi, TWord op)
 	{
-	case 0xa:	return reg.ep;
-	case 0x10:	return reg.vba;
-	case 0x11:	return TReg24(reg.sc.var);
-	case 0x18:	return reg.sz;
-	case 0x19:	return reg.sr;
-	case 0x1a:	return reg.omr;
-	case 0x1b:	return reg.sp;
-	case 0x1c:	return ssh();
-	case 0x1d:	return ssl();
-	case 0x1e:	return reg.la;
-	case 0x1f:	return reg.lc;
-	}
-	assert( 0 && "invalid ddddd value" );
-	return TReg24(0xbadbad);
-}
-// _____________________________________________________________________________
-// decode_ddddd_pcr_write
-//
-void DSP::decode_ddddd_pcr_write( TWord _ddddd, TReg24 _val )
-{
-	if( (_ddddd & 0x18) == 0x00 )
-	{
-		reg.m[_ddddd&0x07] = _val;
-		return;
-	}
+		switch (oi->getInstruction())
+		{
+		// Logical AND
+		case OpcodeInfo::And_xx:	// 0000000101iiiiii10ood110
+			{
+				const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
+				const TWord xxxx = oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
 
-	switch( _ddddd )
-	{
-	case 0xa:	reg.ep = _val;				return;
-	case 0x10:	reg.vba = _val;				return;
-	case 0x11:	reg.sc.var = _val.var&0x1f;	return;
-	case 0x18:	reg.sz = _val;				return;
-	case 0x19:	reg.sr = _val;				return;
-	case 0x1a:	reg.omr = _val;				return;
-	case 0x1b:	reg.sp = _val;				return;
-	case 0x1c:	ssh(_val);					return;
-	case 0x1d:	ssl(_val);					return;
-	case 0x1e:	reg.la = _val;				return;
-	case 0x1f:	reg.lc = _val;				return;
-	}
-	assert( 0 && "unreachable" );
-}
+				alu_and(ab, xxxx );
+			}
+			return true;
+		case OpcodeInfo::And_xxxx:
+			{
+				const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
+				const TWord xxxx = fetchPC();
 
-// _____________________________________________________________________________
-// decode_eeeeee_read
-//
-dsp56k::TReg24 DSP::decode_dddddd_read( TWord _dddddd )
-{
-	switch( _dddddd & 0x3f )
-	{
-		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-	case 0x00:	return x0();
-	case 0x01:	return x1();
-	case 0x02:	return y0();
-	case 0x03:	return y1();
-		// 0001DD - 4 registers in data ALU
-	case 0x04:	return x0();
-	case 0x05:	return x1();
-	case 0x06:	return y0();
-	case 0x07:	return y1();
+				alu_and( ab, xxxx );
+			}
+			return true;
+		// AND Immediate With Control Register
+		case OpcodeInfo::Andi:	// AND(I) #xx,D		- 00000000 iiiiiiii 101110EE
+			{
+				const TWord ee		= oi->getFieldValue(OpcodeInfo::Field_EE, op);
+				const TWord iiiiii	= oi->getFieldValue(OpcodeInfo::Field_iiiiiiii, op);
 
-		// 001DDD - 8 accumulators in data ALU
-	case 0x08:	return a0();
-	case 0x09:	return b0();
-	case 0x0a:	{ TReg24 res; convertS(res,a2()); return res; }
-	case 0x0b:	{ TReg24 res; convertS(res,b2()); return res; }
-	case 0x0c:	return a1();
-	case 0x0d:	return b1();
-	case 0x0e:	return getA<TReg24>();
-	case 0x0f:	return getA<TReg24>();
+				TReg8 val = decode_EE_read(ee);
+				val.var &= iiiiii;
+				decode_EE_write(ee,val);			
+			}
+			return true;
+		// Arithmetic Shift Accumulator Left
+		case OpcodeInfo::Asl_ii:	// 00001100 00011101 SiiiiiiD
+			{
+				const TWord shiftAmount	= oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
 
-		// 010TTT - 8 address registers in AGU
-	case 0x10:	return reg.r[0];
-	case 0x11:	return reg.r[1];
-	case 0x12:	return reg.r[2];
-	case 0x13:	return reg.r[3];
-	case 0x14:	return reg.r[4];
-	case 0x15:	return reg.r[5];
-	case 0x16:	return reg.r[6];
-	case 0x17:	return reg.r[7];
+				const bool abDst		= oi->getFieldValue(OpcodeInfo::Field_D, op);
+				const bool abSrc		= oi->getFieldValue(OpcodeInfo::Field_S, op);
 
-		// 011NNN - 8 address offset registers in AGU
-	case 0x18:	return reg.n[0];
-	case 0x19:	return reg.n[1];
-	case 0x1a:	return reg.n[2];
-	case 0x1b:	return reg.n[3];
-	case 0x1c:	return reg.n[4];
-	case 0x1d:	return reg.n[5];
-	case 0x1e:	return reg.n[6];
-	case 0x1f:	return reg.n[7];
+				alu_asl( abDst, abSrc, shiftAmount );			
+			}
+			return true;
+		case OpcodeInfo::Asl_S1S2D:	// 00001100 00011110 010SsssD
+			{
+				const TWord sss = oi->getFieldValue(OpcodeInfo::Field_sss, op);
+				const bool abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
+				const bool abSrc = oi->getFieldValue(OpcodeInfo::Field_S, op);
 
-		// 100FFF - 8 address modifier registers in AGU
-	case 0x20:	return reg.m[0];
-	case 0x21:	return reg.m[1];
-	case 0x22:	return reg.m[2];
-	case 0x23:	return reg.m[3];
-	case 0x24:	return reg.m[4];
-	case 0x25:	return reg.m[5];
-	case 0x26:	return reg.m[6];
-	case 0x27:	return reg.m[7];
+				const TWord shiftAmount = decode_sss_read<TWord>( sss );
 
-		// 101EEE - 1 adress register in AGU
-	case 0x2a:	return reg.ep;
+				alu_asl( abDst, abSrc, shiftAmount );			
+			}
+			return true;
+		// Arithmetic Shift Accumulator Right
+		case OpcodeInfo::Asr_ii:	// 00001100 00011100 SiiiiiiD
+			{
+				const TWord shiftAmount	= oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
 
-		// 110VVV - 2 program controller registers
-	case 0x30:	return reg.vba;
-	case 0x31:	return TReg24(reg.sc.var);
+				const bool abDst		= oi->getFieldValue(OpcodeInfo::Field_D, op);
+				const bool abSrc		= oi->getFieldValue(OpcodeInfo::Field_S, op);
 
-		// 111GGG - 8 program controller registers
-	case 0x38:	return reg.sz;
-	case 0x39:	return reg.sr;
-	case 0x3a:	return reg.omr;
-	case 0x3b:	return reg.sp;
-	case 0x3c:	return ssh();
-	case 0x3d:	return ssl();
-	case 0x3e:	return reg.la;
-	case 0x3f:	return reg.lc;
-	}
-	assert(0 && "invalid eeeeee value");
-	return TReg24(0xbadbad);
-}
+				alu_asr( abDst, abSrc, shiftAmount );
+			}
+			return true;
+		case OpcodeInfo::Asr_S1S2D:
+			{
+				const TWord sss = oi->getFieldValue(OpcodeInfo::Field_sss, op);
+				const bool abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
+				const bool abSrc = oi->getFieldValue(OpcodeInfo::Field_S, op);
 
-// _____________________________________________________________________________
-// decode_eeeeee_write
-//
-void DSP::decode_dddddd_write( TWord _dddddd, TReg24 _val )
-{
-	assert( (_val.var & 0xff000000) == 0 );
+				const TWord shiftAmount = decode_sss_read<TWord>( sss );
 
-	switch( _dddddd & 0x3f )
-	{
-		// 0001DD - 4 registers in data ALU
-	case 0x04:	x0(_val);	return;
-	case 0x05:	x1(_val);	return;
-	case 0x06:	y0(_val);	return;
-	case 0x07:	y1(_val);	return;
+				alu_asr( abDst, abSrc, shiftAmount );			
+			}
+			return true;		
+		case OpcodeInfo::Lsl_ii:				// Logical Shift Left		000011000001111010iiiiiD
+			{
+	            const auto shiftAmount = oi->getFieldValue(OpcodeInfo::Field_iiiii, op);
+	            const auto abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
 
-		// 001DDD - 8 accumulators in data ALU
-	case 0x08:	a0(_val);	return;
-	case 0x09:	b0(_val);	return;
-	case 0x0a:	{ TReg8 temp; convert(temp,_val); a2(temp);	return; }
-	case 0x0b:	{ TReg8 temp; convert(temp,_val); b2(temp);	return; }
-	case 0x0c:	a1(_val);	return;
-	case 0x0d:	b1(_val);	return;
-	case 0x0e:	setA(_val);	return;
-	case 0x0f:	setB(_val);	return;
+	            alu_lsl(abDst, shiftAmount);
+	        }
+			return true;
+		case OpcodeInfo::Lsl_SD:
+			LOG_ERR_NOTIMPLEMENTED("LSL");
+			return true;
+		case OpcodeInfo::Lsr_ii:				// Logical Shift Right		000011000001111011iiiiiD
+			{
+	            const auto shiftAmount = oi->getFieldValue(OpcodeInfo::Field_iiiii, op);
+	            const auto abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
 
-		// 010TTT - 8 address registers in AGU
-	case 0x10:	reg.r[0] = _val;	return;
-	case 0x11:	reg.r[1] = _val;	return;
-	case 0x12:	reg.r[2] = _val;	return;
-	case 0x13:	reg.r[3] = _val;	return;
-	case 0x14:	reg.r[4] = _val;	return;
-	case 0x15:	reg.r[5] = _val;	return;
-	case 0x16:	reg.r[6] = _val;	return;
-	case 0x17:	reg.r[7] = _val;	return;
+	            alu_lsr(abDst, shiftAmount);
+	        }
+			return true;
+		case OpcodeInfo::Lsr_SD:
+			LOG_ERR_NOTIMPLEMENTED("LSR");
+			return true;
+		case OpcodeInfo::Eor_xx:				// Logical Exclusive OR
+		case OpcodeInfo::Eor_xxxx:
+			LOG_ERR_NOTIMPLEMENTED("EOR");
+			return true;
+		case OpcodeInfo::Extract_S1S2:			// Extract Bit Field
+		case OpcodeInfo::Extract_CoS2:
+			LOG_ERR_NOTIMPLEMENTED("EXTRACT");
+			return true;
+		case OpcodeInfo::Extractu_S1S2:			// Extract Unsigned Bit Field
+		case OpcodeInfo::Extractu_CoS2:
+			LOG_ERR_NOTIMPLEMENTED("EXTRACTU");
+			return true;
+		case OpcodeInfo::Insert_S1S2:			// Insert Bit Field
+		case OpcodeInfo::Insert_CoS2:
+			LOG_ERR_NOTIMPLEMENTED("INSERT");
+			return true;
+		case OpcodeInfo::Merge:					// Merge Two Half Words
+			LOG_ERR_NOTIMPLEMENTED("MERGE");
+			return true;
+		case OpcodeInfo::Or_xx:					// Logical Inclusive OR
+		case OpcodeInfo::Or_xxxx:
+			LOG_ERR_NOTIMPLEMENTED("OR");
+			return true;
+		case OpcodeInfo::Ori:					// OR Immediate With Control Register - 00000000iiiiiiii111110EE
+			{
+				const TWord iiiiiiii = oi->getFieldValue(OpcodeInfo::Field_iiiiiiii, op);
+				const TWord ee = oi->getFieldValue(OpcodeInfo::Field_EE, op);
 
-		// 011NNN - 8 address offset registers in AGU
-	case 0x18:	reg.n[0] = _val;	return;
-	case 0x19:	reg.n[1] = _val;	return;
-	case 0x1a:	reg.n[2] = _val;	return;
-	case 0x1b:	reg.n[3] = _val;	return;
-	case 0x1c:	reg.n[4] = _val;	return;
-	case 0x1d:	reg.n[5] = _val;	return;
-	case 0x1e:	reg.n[6] = _val;	return;
-	case 0x1f:	reg.n[7] = _val;	return;
-
-		// 100FFF - 8 address modifier registers in AGU
-	case 0x20:	reg.m[0] = _val;	return;
-	case 0x21:	reg.m[1] = _val;	return;
-	case 0x22:	reg.m[2] = _val;	return;
-	case 0x23:	reg.m[3] = _val;	return;
-	case 0x24:	reg.m[4] = _val;	return;
-	case 0x25:	reg.m[5] = _val;	return;
-	case 0x26:	reg.m[6] = _val;	return;
-	case 0x27:	reg.m[7] = _val;	return;
-
-		// 101EEE - 1 adress register in AGU
-	case 0x2a:	reg.ep = _val;		return;
-
-		// 110VVV - 2 program controller registers
-	case 0x30:	reg.vba = _val;			return;
-	case 0x31:	reg.sc.var = _val.var & 0x1f;	return;
-
-		// 111GGG - 8 program controller registers
-	case 0x38:	reg.sz = _val;	return;
-	case 0x39:	reg.sr = _val;	return;
-	case 0x3a:	reg.omr = _val;	return;
-	case 0x3b:	reg.sp = _val;	return;
-	case 0x3c:	ssh(_val);	return;
-	case 0x3d:	ssl(_val);	return;
-	case 0x3e:	reg.la = _val;	return;
-	case 0x3f:	reg.lc = _val;	return;
-	}
-	assert(0 && "unknown register");
-}
-// _____________________________________________________________________________
-// logSC
-//
-void DSP::logSC( const char* _func ) const
-{
-	if( strstr(_func, "DO" ) )
-		return;
-
-	std::stringstream scss;
-	
-	for( int i=0; i<reg.sc.var; ++i )
-	{
-		scss << "\t";
+				switch( ee )
+				{
+				case 0:	mr ( TReg8( mr().var | iiiiiiii) );	break;
+				case 1:	ccr( TReg8(ccr().var | iiiiiiii) );	break;
+				case 2:	com( TReg8(com().var | iiiiiiii) );	break;
+				case 3:	eom( TReg8(eom().var | iiiiiiii) );	break;
+				}
+			}
+			return true;
+		default:
+			return false;
+		}
 	}
 
-	LOG( std::string(scss.str()) << " SC=" << std::hex << std::setw(6) << std::setfill('0') << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
-}
-// _____________________________________________________________________________
-// exec_operand_8bits
-//
-bool DSP::exec_operand_8bits(const OpcodeInfo* oi, TWord op)
-{
-	switch (oi->getInstruction())
+	// _____________________________________________________________________________
+	// decode_cccc
+	//
+	bool DSP::decode_cccc( TWord cccc ) const
 	{
-	case OpcodeInfo::Rti:			// Return From Interrupt
-		popPCSR();
+	#define			SRT_C			sr_val(SRB_C)			// carry
+	#define 		SRT_V			sr_val(SRB_V)			// overflow
+	#define 		SRT_Z			sr_val(SRB_Z)			// zero
+	#define 		SRT_N			sr_val(SRB_N)			// negative
+	#define 		SRT_U			sr_val(SRB_U)			// unnormalized
+	#define 		SRT_E			sr_val(SRB_E)			// extension
+	#define 		SRT_L			sr_val(SRB_L)			// limit
+	//#define 		SRT_S			sr_val(SRB_S)			// scaling
+
+		switch( cccc )
+		{
+		case CCCC_CarrySet:			return SRT_C!=0;								// CC(LO)		Carry Set	(lower)
+		case CCCC_CarryClear:		return !SRT_C;									// CC(HS)		Carry Clear (higher or same)
+
+		case CCCC_ExtensionSet:		return SRT_E!=0;								// ES			Extension set
+		case CCCC_ExtensionClear:	return !SRT_E;									// EC			Extension clear
+
+		case CCCC_Equal:			return SRT_Z!=0;								// EQ			Equal
+		case CCCC_NotEqual:			return !SRT_Z;									// NE			Not Equal
+
+		case CCCC_LimitSet:			return SRT_L!=0;								// LS			Limit set
+		case CCCC_LimitClear:		return !SRT_L;									// LC			Limit clear
+
+		case CCCC_Minus:			return SRT_N!=0;								// MI			Minus
+		case CCCC_Plus:				return !SRT_N;									// PL			Plus
+
+		case CCCC_GreaterEqual:		return SRT_N == SRT_V;							// GE			Greater than or equal
+		case CCCC_LessThan:			return SRT_N != SRT_V;							// LT			Less than
+
+		case CCCC_Normalized:		return (SRT_Z + ((!SRT_U) | (!SRT_E))) == 1;	// NR			Normalized
+		case CCCC_NotNormalized:	return (SRT_Z + ((!SRT_U) | !SRT_E)) == 0;		// NN			Not normalized
+
+		case CCCC_GreaterThan:		return (SRT_Z + (SRT_N != SRT_V)) == 0;			// GT			Greater than
+		case CCCC_LessEqual:		return (SRT_Z + (SRT_N != SRT_V)) == 1;			// LE			Less than or equal
+		}
+		assert( 0 && "unreachable" );
+		return false;
+	}
+
+		void DSP::sr_debug(char* _dst) const
+		{
+			_dst[8] = 0;
+			_dst[7] = sr_test(SR_C) ? 'C' : 'c';
+			_dst[6] = sr_test(SR_V) ? 'V' : 'v';
+			_dst[5] = sr_test(SR_Z) ? 'Z' : 'z';
+			_dst[4] = sr_test(SR_N) ? 'N' : 'n';
+			_dst[3] = sr_test(SR_U) ? 'U' : 'u';
+			_dst[2] = sr_test(SR_E) ? 'E' : 'e';
+			_dst[1] = sr_test(SR_L) ? 'L' : 'l';
+			_dst[0] = sr_test(SR_S) ? 'S' : 's';
+		}
+
+		// _____________________________________________________________________________
+	// dumpCCCC
+	//
+	void DSP::dumpCCCC() const
+	{
+		LOG( "CCCC Carry Clear        " << decode_cccc(0x0) );
+		LOG( "CCCC >=                 " << decode_cccc(0x1) );
+		LOG( "CCCC !=                 " << decode_cccc(0x2) );
+		LOG( "CCCC Plus               " << decode_cccc(0x3) );
+		LOG( "CCCC Not normalized     " << decode_cccc(0x4) );
+		LOG( "CCCC Extension clear    " << decode_cccc(0x5) );
+		LOG( "CCCC Limit clear        " << decode_cccc(0x6) );
+		LOG( "CCCC >                  " << decode_cccc(0x7) );
+		LOG( "CCCC Carry Set (lower)  " << decode_cccc(0x8) );
+		LOG( "CCCC <                  " << decode_cccc(0x9) );
+		LOG( "CCCC ==                 " << decode_cccc(0xa) );
+		LOG( "CCCC Minus              " << decode_cccc(0xb) );
+		LOG( "CCCC Normalized         " << decode_cccc(0xc) );
+		LOG( "CCCC Extension Set      " << decode_cccc(0xd) );
+		LOG( "CCCC Limit Set          " << decode_cccc(0xe) );
+		LOG( "CCCC <=                 " << decode_cccc(0xf) );
+	}
+	// _____________________________________________________________________________
+	// exec_do
+	//
+	bool DSP::exec_do( TReg24 _loopcount, TWord _addr )
+	{
+	//	LOG( "DO BEGIN: " << (int)sc.var << ", loop flag = " << sr_test(SR_LF) );
+
+		if( !_loopcount.var )
+		{
+			if( sr_test( SR_SC ) )
+				_loopcount.var = 65536;
+			else
+			{
+				setPC(_addr+1);
+				return true;
+			}
+		}
+
+		ssh(reg.la);
+		ssl(reg.lc);
+
+		reg.la.var = _addr;
+		reg.lc = _loopcount;
+
+		pushPCSR();
+
+		sr_set( SR_LF );
+
 		return true;
-	case OpcodeInfo::Enddo:			// End Current DO Loop
+	}
+	// _____________________________________________________________________________
+	// exec_do_end
+	//
+	bool DSP::exec_do_end()
+	{
+		// restore PC to point to the next instruction after the last instruction of the loop
+		setPC(reg.la.var+1);
+
 		// restore previous loop flag
 		sr_toggle( SR_LF, (ssl().var & SR_LF) != 0 );
 
@@ -1975,1552 +2534,999 @@ bool DSP::exec_operand_8bits(const OpcodeInfo* oi, TWord op)
 		reg.lc = ssl();
 		reg.la = ssh();
 
-		return true;
-	case OpcodeInfo::Dec:			// Decrement by One
-		{
-			auto& d = oi->getFieldValue(OpcodeInfo::Field_d, op) ? reg.b : reg.a;
+	//	LOG( "DO END: loop flag = " << sr_test(SR_LF) << " sc=" << (int)sc.var << " lc:" << std::hex << lc.var << " la:" << std::hex << la.var );
 
-			const auto old = d;
-			const auto res = --d.var;
-
-			d.doMasking();
-
-			sr_s_update();
-			sr_e_update(d);
-			sr_u_update(d);
-			sr_n_update(d);
-			sr_z_update(d);
-			sr_v_update(res,d);
-			sr_l_update_by_v();
-			sr_c_update_arithmetic(old,d);
-			sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
-		}
 		return true;
-	case OpcodeInfo::Inc:			// Increment by One	
-		{
-			auto& d = oi->getFieldValue(OpcodeInfo::Field_d, op) ? reg.b : reg.a;
-
-			const auto old = d;
-
-			const auto res = ++d.var;
-
-			d.doMasking();
-
-			sr_s_update();
-			sr_e_update(d);
-			sr_u_update(d);
-			sr_n_update(d);
-			sr_z_update(d);
-			sr_v_update(res,d);
-			sr_l_update_by_v();
-			sr_c_update_arithmetic(old,d);
-			sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
-		}
-		return true;
-	case OpcodeInfo::Punlockr:
-		LOG_ERR_NOTIMPLEMENTED("PUNLOCKR");
-		return true;
-	case OpcodeInfo::Pflush:
-		LOG_ERR_NOTIMPLEMENTED("PFLUSH");
-		return true;
-	case OpcodeInfo::Pflushun:		// Program Cache Flush Unlocked Sections
-		cache.pflushun();
-		return true;
-	case OpcodeInfo::Pfree:			// Program Cache Global Unlock
-		cache.pfree();
-		return true;
-	case OpcodeInfo::Plockr:
-		LOG_ERR_NOTIMPLEMENTED("PLOCKR");
-		return true;
-	case OpcodeInfo::Illegal:
-		LOG_ERR_NOTIMPLEMENTED("ILLEGAL");
-		return true;
-	case OpcodeInfo::Rts:			// Return From Subroutine
-		popPC();
-		return true;
-	case OpcodeInfo::Stop:
-		LOG_ERR_NOTIMPLEMENTED("STOP");
-		return true;
-	case OpcodeInfo::Trap:
-		LOG_ERR_NOTIMPLEMENTED("TRAP");
-		return true;
-	case OpcodeInfo::Wait:
-		LOG_ERR_NOTIMPLEMENTED("WAIT");
-		return true;
-	case OpcodeInfo::Trapcc:
-		LOG_ERR_NOTIMPLEMENTED("TRAPcc");
-		return true;
-	default:
-		return false;
-	}
-}
-
-// _____________________________________________________________________________
-// resetSW
-//
-void DSP::resetSW()
-{
-	/*
-	Reset the interrupt priority register and all on-chip peripherals. This is a
-	software reset, which is not equivalent to a hardware RESET since only on-chip peripherals
-	and the interrupt structure are affected. The processor state is not affected, and execution
-	continues with the next instruction. All interrupt sources are disabled except for the stack
-	error, NMI, illegal instruction, Trap, Debug request, and hardware reset interrupts.
-	*/
-//	LOG_ERR_NOTIMPLEMENTED("RESET");
-}
-
-// _____________________________________________________________________________
-// exec_move_ddddd_MMMRRR
-//
-void DSP::exec_move_ddddd_MMMRRR( TWord ddddd, TWord mmmrrr, bool write, EMemArea memArea )
-{
-	if( write && mmmrrr == MMM_ImmediateData )
-	{
-		decode_ddddd_write<TReg24>( ddddd, TReg24(fetchPC()) );
-		return;
 	}
 
-	const TWord addr = decode_MMMRRR_read( mmmrrr );
-
-	if( write )
+	void DSP::decSP()
 	{
-		decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( memArea, addr )) );
+		LOGSC("return");
+
+		assert(reg.sc.var > 0);
+		--reg.sp.var;
+		--reg.sc.var;
 	}
-	else
+
+	void DSP::incSP()
 	{
-		memWrite( memArea, addr, decode_ddddd_read<TWord>( ddddd ) );
-	}
-}
+		assert(reg.sc.var < reg.ss.eSize-1);
+		++reg.sp.var;
+		++reg.sc.var;
 
-// _____________________________________________________________________________
-// exec_bitmanip
-//
-bool DSP::exec_bitmanip(const OpcodeInfo* oi, TWord op)
-{
-	switch (oi->getInstruction())
-	{
-	case OpcodeInfo::Bset_ea:	// 0000101001MMMRRR0S1bbbbb
-		// Bit Set and Test
-		{
-			const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
-			const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
-			const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
-
-			const TWord ea		= decode_MMMRRR_read(mmmrrr);
-
-			TWord val = memRead( S, ea );
-
-			sr_toggle( SR_C, bittestandset( val, bit ) );
-
-			memWrite( S, ea, val );
-		}
-		return true;
-	case OpcodeInfo::Bset_aa:
-	case OpcodeInfo::Bset_pp:
-		LOG_ERR_NOTIMPLEMENTED("BSET");
-		return true;
-	case OpcodeInfo::Bset_qq:
-		{
-			const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
-			const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
-			const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
-
-			const TWord ea		= 0xffff80 + qqqqqq;
-
-			TWord val = memRead( S, ea );
-
-			sr_toggle( SR_C, bittestandset( val, bit ) );
-
-			memWrite( S, ea, val );			
-		}
-		return true;
-	case OpcodeInfo::Bset_D:	// 0000101011DDDDDD011bbbbb
-		{
-			const TWord bit = oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
-			const TWord d = oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
-
-			TReg24 val = decode_dddddd_read(d);
-
-			if( (d & 0x3f) == 0x39 )	// is SR the destination?	TODO: magic value
-			{
-				bittestandset( val.var, bit );
-			}
-			else
-			{
-				sr_toggle( SR_C, bittestandset( val, bit ) );
-			}
-
-			decode_dddddd_write( d, val );
-
-			sr_s_update();
-			sr_l_update_by_v();
-		}
-		return true;
-	// Bit test and change
-	case OpcodeInfo::Bchg_ea:
-	case OpcodeInfo::Bchg_aa:
-	case OpcodeInfo::Bchg_pp:
-	case OpcodeInfo::Bchg_qq:
-		LOG_ERR_NOTIMPLEMENTED("BCHG");
-		return true;
-	case OpcodeInfo::Bchg_D:	// 00001011 11DDDDDD 010bbbbb
-		{
-			const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
-			const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
-
-			TReg24 val = decode_dddddd_read( dddddd );
-
-			sr_toggle( SR_C, bittestandchange( val, bit ) );
-
-			decode_dddddd_write( dddddd, val );
-
-			sr_s_update();
-			sr_l_update_by_v();
-		}
-		return true;
-	// Bit test and clear
-	case OpcodeInfo::Bclr_ea:
-	case OpcodeInfo::Bclr_aa:
-	case OpcodeInfo::Bclr_pp:
-		LOG_ERR_NOTIMPLEMENTED("BCLR");
-		return true;
-	case OpcodeInfo::Bclr_qq:	// 0 0 0 0 0 0 0 1 0 0 q q q q q q 0 S 0 b b b b b
-		{
-			const TWord bit = oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
-			const TWord ea	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
-
-			const EMemArea S = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
-
-			const TWord res = alu_bclr( bit, memRead( S, ea ) );
-
-			memWrite( S, ea, res );			
-		}
-		return true;
-	case OpcodeInfo::Bclr_D:	// 0000101011DDDDDD010bbbbb
-		{
-			const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
-			const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
-
-			TWord val;
-			convert( val, decode_dddddd_read( dddddd ) );
-
-			const TWord newVal = alu_bclr( bit, val );
-			decode_dddddd_write( dddddd, TReg24(newVal) );			
-		}
-		return true;
-	// Bit Test
-	case OpcodeInfo::Btst_ea:
-		{
-			const TWord bit = oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
-			const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
-			const TWord ea = decode_MMMRRR_read( mmmrrr );
-			const EMemArea S = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
-
-			const TWord val = memRead( S, ea );
-
-			sr_toggle( SR_C, bittest( val, bit ) );
-
-			sr_s_update();
-			sr_l_update_by_v();
-		}
-		return true;
-	case OpcodeInfo::Btst_aa:
-		LOG_ERR_NOTIMPLEMENTED("BTST aa");
-		return true;
-	case OpcodeInfo::Btst_pp:	// 0 0 0 0 1 0 1 1 1 0 p p p p p p 0 S 1 b b b b b
-		{
-			const TWord bitNum	= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
-			const TWord pppppp	= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
-			const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
-
-			const TWord memVal	= memRead( S, pppppp + 0xffffc0 );
-
-			const bool bitSet	= ( memVal & (1<<bitNum)) != 0;
-
-			sr_toggle( SR_C, bitSet );
-		}
-		return true;
-	case OpcodeInfo::Btst_qq:	// 0 0 0 0 0 0 0 1 0 1 q q q q q q 0 S 1 b b b b b
-		LOG_ERR_NOTIMPLEMENTED("BTST qq");
-		return true;
-	case OpcodeInfo::Btst_D:	// 0000101111DDDDDD011bbbbb
-		{
-			const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
-			const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
-
-			TReg24 val = decode_dddddd_read( dddddd );
-
-			sr_toggle( SR_C, bittest( val.var, bit ) );
-		}
-		return true;
-	default:
-		return false;
-	}
-}
-
-// _____________________________________________________________________________
-// exec_logical_nonparallel
-//
-bool DSP::exec_logical_nonparallel(const OpcodeInfo* oi, TWord op)
-{
-	switch (oi->getInstruction())
-	{
-	// Logical AND
-	case OpcodeInfo::And_xx:	// 0000000101iiiiii10ood110
-		{
-			const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
-			const TWord xxxx = oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
-
-			alu_and(ab, xxxx );
-		}
-		return true;
-	case OpcodeInfo::And_xxxx:
-		{
-			const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
-			const TWord xxxx = fetchPC();
-
-			alu_and( ab, xxxx );
-		}
-		return true;
-	// AND Immediate With Control Register
-	case OpcodeInfo::Andi:	// AND(I) #xx,D		- 00000000 iiiiiiii 101110EE
-		{
-			const TWord ee		= oi->getFieldValue(OpcodeInfo::Field_EE, op);
-			const TWord iiiiii	= oi->getFieldValue(OpcodeInfo::Field_iiiiiiii, op);
-
-			TReg8 val = decode_EE_read(ee);
-			val.var &= iiiiii;
-			decode_EE_write(ee,val);			
-		}
-		return true;
-	// Arithmetic Shift Accumulator Left
-	case OpcodeInfo::Asl_ii:	// 00001100 00011101 SiiiiiiD
-		{
-			const TWord shiftAmount	= oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
-
-			const bool abDst		= oi->getFieldValue(OpcodeInfo::Field_D, op);
-			const bool abSrc		= oi->getFieldValue(OpcodeInfo::Field_S, op);
-
-			alu_asl( abDst, abSrc, shiftAmount );			
-		}
-		return true;
-	case OpcodeInfo::Asl_S1S2D:	// 00001100 00011110 010SsssD
-		{
-			const TWord sss = oi->getFieldValue(OpcodeInfo::Field_sss, op);
-			const bool abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
-			const bool abSrc = oi->getFieldValue(OpcodeInfo::Field_S, op);
-
-			const TWord shiftAmount = decode_sss_read<TWord>( sss );
-
-			alu_asl( abDst, abSrc, shiftAmount );			
-		}
-		return true;
-	// Arithmetic Shift Accumulator Right
-	case OpcodeInfo::Asr_ii:	// 00001100 00011100 SiiiiiiD
-		{
-			const TWord shiftAmount	= oi->getFieldValue(OpcodeInfo::Field_iiiiii, op);
-
-			const bool abDst		= oi->getFieldValue(OpcodeInfo::Field_D, op);
-			const bool abSrc		= oi->getFieldValue(OpcodeInfo::Field_S, op);
-
-			alu_asr( abDst, abSrc, shiftAmount );
-		}
-		return true;
-	case OpcodeInfo::Asr_S1S2D:
-		{
-			const TWord sss = oi->getFieldValue(OpcodeInfo::Field_sss, op);
-			const bool abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
-			const bool abSrc = oi->getFieldValue(OpcodeInfo::Field_S, op);
-
-			const TWord shiftAmount = decode_sss_read<TWord>( sss );
-
-			alu_asr( abDst, abSrc, shiftAmount );			
-		}
-		return true;		
-	case OpcodeInfo::Lsl_ii:				// Logical Shift Left		000011000001111010iiiiiD
-		{
-            const auto shiftAmount = oi->getFieldValue(OpcodeInfo::Field_iiiii, op);
-            const auto abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
-
-            alu_lsl(abDst, shiftAmount);
-        }
-		return true;
-	case OpcodeInfo::Lsl_SD:
-		LOG_ERR_NOTIMPLEMENTED("LSL");
-		return true;
-	case OpcodeInfo::Lsr_ii:				// Logical Shift Right		000011000001111011iiiiiD
-		{
-            const auto shiftAmount = oi->getFieldValue(OpcodeInfo::Field_iiiii, op);
-            const auto abDst = oi->getFieldValue(OpcodeInfo::Field_D, op);
-
-            alu_lsr(abDst, shiftAmount);
-        }
-		return true;
-	case OpcodeInfo::Lsr_SD:
-		LOG_ERR_NOTIMPLEMENTED("LSR");
-		return true;
-	case OpcodeInfo::Eor_xx:				// Logical Exclusive OR
-	case OpcodeInfo::Eor_xxxx:
-		LOG_ERR_NOTIMPLEMENTED("EOR");
-		return true;
-	case OpcodeInfo::Extract_S1S2:			// Extract Bit Field
-	case OpcodeInfo::Extract_CoS2:
-		LOG_ERR_NOTIMPLEMENTED("EXTRACT");
-		return true;
-	case OpcodeInfo::Extractu_S1S2:			// Extract Unsigned Bit Field
-	case OpcodeInfo::Extractu_CoS2:
-		LOG_ERR_NOTIMPLEMENTED("EXTRACTU");
-		return true;
-	case OpcodeInfo::Insert_S1S2:			// Insert Bit Field
-	case OpcodeInfo::Insert_CoS2:
-		LOG_ERR_NOTIMPLEMENTED("INSERT");
-		return true;
-	case OpcodeInfo::Merge:					// Merge Two Half Words
-		LOG_ERR_NOTIMPLEMENTED("MERGE");
-		return true;
-	case OpcodeInfo::Or_xx:					// Logical Inclusive OR
-	case OpcodeInfo::Or_xxxx:
-		LOG_ERR_NOTIMPLEMENTED("OR");
-		return true;
-	case OpcodeInfo::Ori:					// OR Immediate With Control Register - 00000000iiiiiiii111110EE
-		{
-			const TWord iiiiiiii = oi->getFieldValue(OpcodeInfo::Field_iiiiiiii, op);
-			const TWord ee = oi->getFieldValue(OpcodeInfo::Field_EE, op);
-
-			switch( ee )
-			{
-			case 0:	mr ( TReg8( mr().var | iiiiiiii) );	break;
-			case 1:	ccr( TReg8(ccr().var | iiiiiiii) );	break;
-			case 2:	com( TReg8(com().var | iiiiiiii) );	break;
-			case 3:	eom( TReg8(eom().var | iiiiiiii) );	break;
-			}
-		}
-		return true;
-	default:
-		return false;
-	}
-}
-
-// _____________________________________________________________________________
-// decode_cccc
-//
-bool DSP::decode_cccc( TWord cccc ) const
-{
-#define			SRT_C			sr_val(SRB_C)			// carry
-#define 		SRT_V			sr_val(SRB_V)			// overflow
-#define 		SRT_Z			sr_val(SRB_Z)			// zero
-#define 		SRT_N			sr_val(SRB_N)			// negative
-#define 		SRT_U			sr_val(SRB_U)			// unnormalized
-#define 		SRT_E			sr_val(SRB_E)			// extension
-#define 		SRT_L			sr_val(SRB_L)			// limit
-//#define 		SRT_S			sr_val(SRB_S)			// scaling
-
-	switch( cccc )
-	{
-	case CCCC_CarrySet:			return SRT_C!=0;								// CC(LO)		Carry Set	(lower)
-	case CCCC_CarryClear:		return !SRT_C;									// CC(HS)		Carry Clear (higher or same)
-
-	case CCCC_ExtensionSet:		return SRT_E!=0;								// ES			Extension set
-	case CCCC_ExtensionClear:	return !SRT_E;									// EC			Extension clear
-
-	case CCCC_Equal:			return SRT_Z!=0;								// EQ			Equal
-	case CCCC_NotEqual:			return !SRT_Z;									// NE			Not Equal
-
-	case CCCC_LimitSet:			return SRT_L!=0;								// LS			Limit set
-	case CCCC_LimitClear:		return !SRT_L;									// LC			Limit clear
-
-	case CCCC_Minus:			return SRT_N!=0;								// MI			Minus
-	case CCCC_Plus:				return !SRT_N;									// PL			Plus
-
-	case CCCC_GreaterEqual:		return SRT_N == SRT_V;							// GE			Greater than or equal
-	case CCCC_LessThan:			return SRT_N != SRT_V;							// LT			Less than
-
-	case CCCC_Normalized:		return (SRT_Z + ((!SRT_U) | (!SRT_E))) == 1;	// NR			Normalized
-	case CCCC_NotNormalized:	return (SRT_Z + ((!SRT_U) | !SRT_E)) == 0;		// NN			Not normalized
-
-	case CCCC_GreaterThan:		return (SRT_Z + (SRT_N != SRT_V)) == 0;			// GT			Greater than
-	case CCCC_LessEqual:		return (SRT_Z + (SRT_N != SRT_V)) == 1;			// LE			Less than or equal
-	}
-	assert( 0 && "unreachable" );
-	return false;
-}
-
-	void DSP::sr_debug(char* _dst) const
-	{
-		_dst[8] = 0;
-		_dst[7] = sr_test(SR_C) ? 'C' : 'c';
-		_dst[6] = sr_test(SR_V) ? 'V' : 'v';
-		_dst[5] = sr_test(SR_Z) ? 'Z' : 'z';
-		_dst[4] = sr_test(SR_N) ? 'N' : 'n';
-		_dst[3] = sr_test(SR_U) ? 'U' : 'u';
-		_dst[2] = sr_test(SR_E) ? 'E' : 'e';
-		_dst[1] = sr_test(SR_L) ? 'L' : 'l';
-		_dst[0] = sr_test(SR_S) ? 'S' : 's';
+		const std::string sym = mem.getSymbol(MemArea_P, reg.pc.var);
+			
+		LOGSC((std::string(m_asm) + " - " + sym).c_str());
+	//	assert( reg.sc.var <= 9 );
 	}
 
 	// _____________________________________________________________________________
-// dumpCCCC
-//
-void DSP::dumpCCCC() const
-{
-	LOG( "CCCC Carry Clear        " << decode_cccc(0x0) );
-	LOG( "CCCC >=                 " << decode_cccc(0x1) );
-	LOG( "CCCC !=                 " << decode_cccc(0x2) );
-	LOG( "CCCC Plus               " << decode_cccc(0x3) );
-	LOG( "CCCC Not normalized     " << decode_cccc(0x4) );
-	LOG( "CCCC Extension clear    " << decode_cccc(0x5) );
-	LOG( "CCCC Limit clear        " << decode_cccc(0x6) );
-	LOG( "CCCC >                  " << decode_cccc(0x7) );
-	LOG( "CCCC Carry Set (lower)  " << decode_cccc(0x8) );
-	LOG( "CCCC <                  " << decode_cccc(0x9) );
-	LOG( "CCCC ==                 " << decode_cccc(0xa) );
-	LOG( "CCCC Minus              " << decode_cccc(0xb) );
-	LOG( "CCCC Normalized         " << decode_cccc(0xc) );
-	LOG( "CCCC Extension Set      " << decode_cccc(0xd) );
-	LOG( "CCCC Limit Set          " << decode_cccc(0xe) );
-	LOG( "CCCC <=                 " << decode_cccc(0xf) );
-}
-// _____________________________________________________________________________
-// exec_do
-//
-bool DSP::exec_do( TReg24 _loopcount, TWord _addr )
-{
-//	LOG( "DO BEGIN: " << (int)sc.var << ", loop flag = " << sr_test(SR_LF) );
-
-	if( !_loopcount.var )
+	// alu_and
+	//
+	void DSP::alu_and( bool ab, TWord _val )
 	{
-		if( sr_test( SR_SC ) )
-			_loopcount.var = 65536;
-		else
+		TReg56& d = ab ? reg.b : reg.a;
+
+		d.var &= (TInt64(_val)<<24);
+
+		// S L E U N Z V C
+		// v - - - * * * -
+		sr_toggle( SR_N, bittest( d, 47 ) );
+		sr_toggle( SR_Z, (d.var & 0xffffff000000) == 0 );
+		sr_clear( SR_V );
+		sr_s_update();
+	}
+
+
+	// _____________________________________________________________________________
+	// alu_or
+	//
+	void DSP::alu_or( bool ab, TWord _val )
+	{
+		TReg56& d = ab ? reg.b : reg.a;
+
+		d.var |= (TInt64(_val)<<24);
+
+		// S L E U N Z V C
+		// v - - - * * * -
+		sr_toggle( SR_N, bittest( d, 47 ) );
+		sr_toggle( SR_Z, (d.var & 0xffffff000000) == 0 );
+		sr_clear( SR_V );
+		sr_s_update();
+	}
+
+	// _____________________________________________________________________________
+	// alu_add
+	//
+	void DSP::alu_add( bool ab, const TReg56& _val )
+	{
+		TReg56& d = ab ? reg.b : reg.a;
+
+		const TReg56 old = d;
+
+		const TInt64 d64 = d.signextend<TInt64>();
+
+		const TInt64 res = d64 + _val.signextend<TInt64>();
+
+		d.var = res;
+		d.doMasking();
+
+		// S L E U N Z V C
+
+		sr_s_update();
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
+		sr_z_update(d);
+		sr_v_update(res,d);
+		sr_l_update_by_v();
+		sr_c_update_arithmetic(old, d);
+	//	sr_c_update_logical(d);
+
+	//	dumpCCCC();
+	}
+
+	// _____________________________________________________________________________
+	// alu_cmp
+	//
+	void DSP::alu_cmp( bool ab, const TReg56& _val, bool _magnitude )
+	{
+		TReg56& d = ab ? reg.b : reg.a;
+
+		const TReg56 oldD = d;
+
+		TInt64 d64 = d.signextend<TInt64>();
+
+		TInt64 val = _val.signextend<TInt64>();
+
+		if( _magnitude )
 		{
-			setPC(_addr+1);
-			return true;
+			d64 = d64 < 0 ? -d64 : d64;
+			val = val < 0 ? -val : val;
 		}
+
+		const TInt64 res = d64 - val;
+
+		d.var = res;
+		d.doMasking();
+
+		sr_s_update();
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
+		sr_z_update(d);
+		sr_v_update(res,d);
+		sr_l_update_by_v();
+		sr_c_update_arithmetic(oldD,d);
+
+		d = oldD;
+	}
+	// _____________________________________________________________________________
+	// alu_sub
+	//
+	void DSP::alu_sub( bool ab, const TReg56& _val )
+	{
+		TReg56& d = ab ? reg.b : reg.a;
+
+		const TReg56 old = d;
+
+		const TInt64 d64 = d.signextend<TInt64>();
+
+		const TInt64 res = d64 - _val.signextend<TInt64>();
+
+		d.var = res;
+		d.doMasking();
+
+		// S L E U N Z V C
+
+		sr_s_update();
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
+		sr_z_update(d);
+		sr_v_update(res,d);
+		sr_l_update_by_v();
+		sr_c_update_arithmetic( old, d );
+	//	sr_c_update_logical( d );
 	}
 
-	ssh(reg.la);
-	ssl(reg.lc);
-
-	reg.la.var = _addr;
-	reg.lc = _loopcount;
-
-	pushPCSR();
-
-	sr_set( SR_LF );
-
-	return true;
-}
-// _____________________________________________________________________________
-// exec_do_end
-//
-bool DSP::exec_do_end()
-{
-	// restore PC to point to the next instruction after the last instruction of the loop
-	setPC(reg.la.var+1);
-
-	// restore previous loop flag
-	sr_toggle( SR_LF, (ssl().var & SR_LF) != 0 );
-
-	// decrement SP twice, restoring old loop settings
-	decSP();
-
-	reg.lc = ssl();
-	reg.la = ssh();
-
-//	LOG( "DO END: loop flag = " << sr_test(SR_LF) << " sc=" << (int)sc.var << " lc:" << std::hex << lc.var << " la:" << std::hex << la.var );
-
-	return true;
-}
-
-void DSP::decSP()
-{
-	LOGSC("return");
-
-	assert(reg.sc.var > 0);
-	--reg.sp.var;
-	--reg.sc.var;
-}
-
-void DSP::incSP()
-{
-	assert(reg.sc.var < reg.ss.eSize-1);
-	++reg.sp.var;
-	++reg.sc.var;
-
-	const std::string sym = mem.getSymbol(MemArea_P, reg.pc.var);
-		
-	LOGSC((std::string(m_asm) + " - " + sym).c_str());
-//	assert( reg.sc.var <= 9 );
-}
-
-// _____________________________________________________________________________
-// alu_and
-//
-void DSP::alu_and( bool ab, TWord _val )
-{
-	TReg56& d = ab ? reg.b : reg.a;
-
-	d.var &= (TInt64(_val)<<24);
-
-	// S L E U N Z V C
-	// v - - - * * * -
-	sr_toggle( SR_N, bittest( d, 47 ) );
-	sr_toggle( SR_Z, (d.var & 0xffffff000000) == 0 );
-	sr_clear( SR_V );
-	sr_s_update();
-}
-
-
-// _____________________________________________________________________________
-// alu_or
-//
-void DSP::alu_or( bool ab, TWord _val )
-{
-	TReg56& d = ab ? reg.b : reg.a;
-
-	d.var |= (TInt64(_val)<<24);
-
-	// S L E U N Z V C
-	// v - - - * * * -
-	sr_toggle( SR_N, bittest( d, 47 ) );
-	sr_toggle( SR_Z, (d.var & 0xffffff000000) == 0 );
-	sr_clear( SR_V );
-	sr_s_update();
-}
-
-// _____________________________________________________________________________
-// alu_add
-//
-void DSP::alu_add( bool ab, const TReg56& _val )
-{
-	TReg56& d = ab ? reg.b : reg.a;
-
-	const TReg56 old = d;
-
-	const TInt64 d64 = d.signextend<TInt64>();
-
-	const TInt64 res = d64 + _val.signextend<TInt64>();
-
-	d.var = res;
-	d.doMasking();
-
-	// S L E U N Z V C
-
-	sr_s_update();
-	sr_e_update(d);
-	sr_u_update(d);
-	sr_n_update(d);
-	sr_z_update(d);
-	sr_v_update(res,d);
-	sr_l_update_by_v();
-	sr_c_update_arithmetic(old, d);
-//	sr_c_update_logical(d);
-
-//	dumpCCCC();
-}
-
-// _____________________________________________________________________________
-// alu_cmp
-//
-void DSP::alu_cmp( bool ab, const TReg56& _val, bool _magnitude )
-{
-	TReg56& d = ab ? reg.b : reg.a;
-
-	const TReg56 oldD = d;
-
-	TInt64 d64 = d.signextend<TInt64>();
-
-	TInt64 val = _val.signextend<TInt64>();
-
-	if( _magnitude )
+	// _____________________________________________________________________________
+	// alu_asr
+	//
+	void DSP::alu_asr( bool abDst, bool abSrc, int _shiftAmount )
 	{
-		d64 = d64 < 0 ? -d64 : d64;
-		val = val < 0 ? -val : val;
+		const TReg56& dSrc = abSrc ? reg.b : reg.a;
+
+		const TInt64 d64 = dSrc.signextend<TInt64>();
+
+		sr_toggle( SR_C, _shiftAmount && bittest(d64,_shiftAmount-1) );
+
+		const TInt64 res = d64 >> _shiftAmount;
+
+		TReg56& d = abDst ? reg.b : reg.a;
+
+		d.var = res & 0x00ffffffffffffff;
+
+		// S L E U N Z V C
+
+		sr_s_update();
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
+		sr_z_update(d);
+		sr_clear( SR_V );
+		sr_l_update_by_v();
 	}
 
-	const TInt64 res = d64 - val;
-
-	d.var = res;
-	d.doMasking();
-
-	sr_s_update();
-	sr_e_update(d);
-	sr_u_update(d);
-	sr_n_update(d);
-	sr_z_update(d);
-	sr_v_update(res,d);
-	sr_l_update_by_v();
-	sr_c_update_arithmetic(oldD,d);
-
-	d = oldD;
-}
-// _____________________________________________________________________________
-// alu_sub
-//
-void DSP::alu_sub( bool ab, const TReg56& _val )
-{
-	TReg56& d = ab ? reg.b : reg.a;
-
-	const TReg56 old = d;
-
-	const TInt64 d64 = d.signextend<TInt64>();
-
-	const TInt64 res = d64 - _val.signextend<TInt64>();
-
-	d.var = res;
-	d.doMasking();
-
-	// S L E U N Z V C
-
-	sr_s_update();
-	sr_e_update(d);
-	sr_u_update(d);
-	sr_n_update(d);
-	sr_z_update(d);
-	sr_v_update(res,d);
-	sr_l_update_by_v();
-	sr_c_update_arithmetic( old, d );
-//	sr_c_update_logical( d );
-}
-
-// _____________________________________________________________________________
-// alu_asr
-//
-void DSP::alu_asr( bool abDst, bool abSrc, int _shiftAmount )
-{
-	const TReg56& dSrc = abSrc ? reg.b : reg.a;
-
-	const TInt64 d64 = dSrc.signextend<TInt64>();
-
-	sr_toggle( SR_C, _shiftAmount && bittest(d64,_shiftAmount-1) );
-
-	const TInt64 res = d64 >> _shiftAmount;
-
-	TReg56& d = abDst ? reg.b : reg.a;
-
-	d.var = res & 0x00ffffffffffffff;
-
-	// S L E U N Z V C
-
-	sr_s_update();
-	sr_e_update(d);
-	sr_u_update(d);
-	sr_n_update(d);
-	sr_z_update(d);
-	sr_clear( SR_V );
-	sr_l_update_by_v();
-}
-
-// _____________________________________________________________________________
-// alu_asl
-//
-void DSP::alu_asl( bool abDst, bool abSrc, int _shiftAmount )
-{
-	const TReg56& dSrc = abSrc ? reg.b : reg.a;
-
-	const TInt64 d64 = dSrc.signextend<TInt64>();
-
-	sr_toggle( SR_C, _shiftAmount && ((d64 & (TInt64(1)<<(56-_shiftAmount))) != 0) );
-
-	const TInt64 res = d64 << _shiftAmount;
-
-	TReg56& d = abDst ? reg.b : reg.a;
-
-	d.var = res & 0x00ffffffffffffff;
-
-	// S L E U N Z V C
-
-	sr_s_update();
-	sr_e_update(d);
-	sr_u_update(d);
-	sr_n_update(d);
-	sr_z_update(d);
-	sr_clear( SR_V );
-	sr_l_update_by_v();
-}
-
-// _____________________________________________________________________________
-// alu_lsl
-//
-void DSP::alu_lsl( bool ab, int _shiftAmount )
-{
-	TReg24 d = ab ? b1() : a1();
-
-	sr_toggle( SR_C, _shiftAmount && bittest( d, 23-_shiftAmount+1) );
-
-	const int res = (d.var << _shiftAmount) & 0x00ffffff;
-
-	if( ab )
-		b1(TReg24(res));
-	else
-		a1(TReg24(res));
-
-	// S L E U N Z V C
-
-	sr_toggle( SR_N, bittest(res,23) );
-	sr_toggle( SR_Z, res == 0 );
-	sr_clear( SR_V );
-
-	sr_s_update();
-	sr_l_update_by_v();
-}
-
-// _____________________________________________________________________________
-// alu_lsr
-//
-void DSP::alu_lsr( bool ab, int _shiftAmount )
-{
-	TReg24 d = ab ? b1() : a1();
-
-	sr_toggle( SR_C, _shiftAmount && bittest( d, _shiftAmount-1) );
-
-	const unsigned int res = ((unsigned int)d.var >> _shiftAmount);
-
-	if( ab )
-		b1(TReg24(res));
-	else
-		a1(TReg24(res));
-
-	// S L E U N Z V C
-
-	sr_toggle( SR_N, bittest(res,23) );
-	sr_toggle( SR_Z, res == 0 );
-	sr_clear( SR_V );
-
-	sr_s_update();
-	sr_l_update_by_v();
-}
-
-
-void DSP::alu_addr(bool ab)
-{
-	TReg56&			d = ab ? reg.b : reg.a;
-	const TReg56&	s = ab ? reg.a : reg.b;
-
-	const TReg56 old = d;
-	const TInt64 res = (d.signextend<TInt64>() >> 1) + s.signextend<TInt64>();
-	d.var = res;
-	d.doMasking();
-
-	sr_s_update();
-	sr_e_update(d);
-	sr_u_update(d);
-	sr_n_update(d);
-	sr_z_update(d);
-	sr_v_update(res, d);
-	sr_l_update_by_v();
-	sr_c_update_arithmetic(old,d);
-}
-
-void DSP::alu_addl(bool ab)
-{
-	TReg56&			d = ab ? reg.b : reg.a;
-	const TReg56&	s = ab ? reg.a : reg.b;
-
-	const TReg56 old = d;
-	const TInt64 res = (d.signextend<TInt64>() << 1) + s.signextend<TInt64>();
-	d.var = res;
-	d.doMasking();
-
-	sr_s_update();
-	sr_e_update(d);
-	sr_u_update(d);
-	sr_n_update(d);
-	sr_z_update(d);
-	sr_v_update(res, d);
-	sr_l_update_by_v();
-	sr_c_update_arithmetic(old,d);
-}
-
-inline void DSP::alu_clr(bool ab)
-{
-	auto& dst = ab ? reg.b : reg.a;
-	dst.var = 0;
-
-	sr_clear( SR_E | SR_N | SR_V );
-	sr_set( SR_U | SR_Z );
-	// TODO: SR_L and SR_S are changed according to standard definition, but that should mean that no update is required?!
-}
-
-// _____________________________________________________________________________
-// alu_bclr
-//
-TWord DSP::alu_bclr( TWord _bit, TWord _val )
-{
-	sr_toggle( SR_C, bittest(_val,_bit) );
-
-	_val &= ~(1<<_bit);
-
-	sr_l_update_by_v();
-	sr_s_update();
-
-	return _val;
-}
-
-// _____________________________________________________________________________
-// alu_mpy
-//
-void DSP::alu_mpy( bool ab, const TReg24& _s1, const TReg24& _s2, bool _negate, bool _accumulate )
-{
-//	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
-
-	const int64_t s1 = _s1.signextend<int64_t>();
-	const int64_t s2 = _s2.signextend<int64_t>();
-
-	// TODO: revisit signed fraction multiplies
-	auto res = s1 * s2;
-
-	if( sr_test(SR_S0) )
+	// _____________________________________________________________________________
+	// alu_asl
+	//
+	void DSP::alu_asl( bool abDst, bool abSrc, int _shiftAmount )
 	{
-	}
-	else if( sr_test(SR_S1) )
-		res <<= 2;
-	else
-		res <<= 1;
+		const TReg56& dSrc = abSrc ? reg.b : reg.a;
 
-	if( _negate )
-		res = -res;
+		const TInt64 d64 = dSrc.signextend<TInt64>();
 
-	TReg56& d = ab ? reg.b : reg.a;
+		sr_toggle( SR_C, _shiftAmount && ((d64 & (TInt64(1)<<(56-_shiftAmount))) != 0) );
 
-	const TReg56 old = d;
+		const TInt64 res = d64 << _shiftAmount;
 
-	if( _accumulate )
-		res += d.signextend<int64_t>();
+		TReg56& d = abDst ? reg.b : reg.a;
 
-	d.var = res & 0x00ffffffffffffff;
+		d.var = res & 0x00ffffffffffffff;
 
-	// Update SR
-	sr_s_update();
-	sr_clear( SR_E );	// I don't know how this should happen because both operands are only 24 bits, the doc says "changed by standard definition" which should be okay here
-	sr_u_update( d );
-	sr_n_update( d );
-	sr_z_update( d );
-	sr_v_update(res,d);
+		// S L E U N Z V C
 
-	sr_l_update_by_v();
-}
-// _____________________________________________________________________________
-// alu_mpysuuu
-//
-void DSP::alu_mpysuuu( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _accumulate, bool _suuu )
-{
-//	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
-
-	TInt64 res;
-
-	if( _suuu )
-		res = TInt64( TUInt64(_s1.var) * TUInt64(_s2.var) );
-	else
-		res = _s1.signextend<TInt64>() * TUInt64(_s2.var);
-
-	// fractional multiplication requires one post-shift to be correct
-	if( sr_test(SR_S0) )
-	{
-	}
-	else if( sr_test(SR_S1) )
-		res <<= 2;
-	else
-		res <<= 1;
-
-	if( _negate )
-		res = -res;
-
-	TReg56& d = ab ? reg.b : reg.a;
-
-	const TReg56 old = d;
-
-	if( _accumulate )
-		res += d.signextend<TInt64>();
-
-	d.var = res;
-	d.doMasking();
-
-	// Update SR
-	sr_e_update(d);
-	sr_u_update( d );
-	sr_n_update( d );
-	sr_z_update( d );
-	sr_v_update(res,d);
-
-	sr_l_update_by_v();
-}
-// _____________________________________________________________________________
-// alu_dmac
-//
-void DSP::alu_dmac( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool srcUnsigned, bool dstUnsigned )
-{
-	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
-
-	TInt64 res;
-
-	if( srcUnsigned && dstUnsigned )	res = TInt64( TUInt64(_s1.var) * TUInt64(_s2.var) );
-	else if( srcUnsigned )				res = TUInt64(_s1.var) * _s2.signextend<TInt64>();
-	else if( dstUnsigned )				res = TUInt64(_s2.var) * _s1.signextend<TInt64>();
-	else								res = _s2.signextend<TInt64>() * _s1.signextend<TInt64>();
-
-	// fractional multiplication requires one post-shift to be correct
-	if( sr_test(SR_S0) )
-	{
-	}
-	else if( sr_test(SR_S1) )
-		res <<= 2;
-	else
-		res <<= 1;
-
-	if( _negate )
-		res = -res;
-
-	TReg56& d = ab ? reg.b : reg.a;
-
-	const TReg56 old = d;
-
-	TInt64 dShifted = d.signextend<TInt64>() >> 24;
-
-	res += dShifted;
-
-//	LOG( "DMAC  " << std::hex << old.var << std::hex << " + " << _s1.var << " * " << std::hex << _s2.var << " = " << std::hex << res );
-
-	d.var = res;
-	d.doMasking();
-
-	// Update SR
-	sr_e_update(d);
-	sr_u_update( d );
-	sr_n_update( d );
-	sr_z_update( d );
-	sr_v_update(res,d);
-
-	sr_l_update_by_v();
-}
-
-// _____________________________________________________________________________
-// alu_mac
-//
-void DSP::alu_mac( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _uu )
-{
-	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
-
-	TInt64 res;
-
-	if( _uu )
-		res = TInt64( TUInt64(_s1.var) * TUInt64(_s2.var) );
-	else
-		res = _s1.signextend<TInt64>() * TUInt64(_s2.var);
-
-	// fractional multiplication requires one post-shift to be correct
-	if( sr_test(SR_S0) )
-	{
-	}
-	else if( sr_test(SR_S1) )
-		res <<= 2;
-	else
-		res <<= 1;
-
-	if( _negate )
-		res = -res;
-
-	TReg56& d = ab ? reg.b : reg.a;
-
-	res += d.var;
-
-	const TReg56 old = d;
-
-	d.var = res;
-
-	d.doMasking();
-
-	// Update SR
-	sr_s_update();
-	sr_e_update(d);
-	sr_u_update( d );
-	sr_n_update( d );
-	sr_z_update( d );
-	sr_v_update(res,d);
-
-	sr_l_update_by_v();
-}
-
-// _____________________________________________________________________________
-// alu_rnd
-//
-void DSP::alu_rnd( TReg56& _alu )
-{
-// 	if( sr_test( SR_S0 ) || sr_test( SR_S1 ) )
-// 		LOG_ERR_NOTIMPLEMENTED( "scaling modes" );
-
-	const int lsb = int(_alu.var & 0x000000ffffff);
-
-	if( lsb > 0x800000 )
-	{
-		_alu.var += 0x1000000;
-	}
-	else if( !sr_test(SR_RM) && lsb == 0x800000 && (_alu.var & 0x000001000000) != 0 )
-	{
-		_alu.var += 0x1000000;
-	}
-	_alu.var &= 0x00ffffffff000000;	// TODO: wrong?
-}
-
-// _____________________________________________________________________________
-// readReg
-//
-bool DSP::readReg( EReg _reg, TReg24& _res ) const
-{
-	switch( _reg )
-	{
-	case Reg_N0:	_res = reg.n[0];	break;
-	case Reg_N1:	_res = reg.n[1];	break;
-	case Reg_N2:	_res = reg.n[2];	break;
-	case Reg_N3:	_res = reg.n[3];	break;
-	case Reg_N4:	_res = reg.n[4];	break;
-	case Reg_N5:	_res = reg.n[5];	break;
-	case Reg_N6:	_res = reg.n[6];	break;
-	case Reg_N7:	_res = reg.n[7];	break;
-
-	case Reg_R0:	_res = reg.r[0];	break;
-	case Reg_R1:	_res = reg.r[1];	break;
-	case Reg_R2:	_res = reg.r[2];	break;
-	case Reg_R3:	_res = reg.r[3];	break;
-	case Reg_R4:	_res = reg.r[4];	break;
-	case Reg_R5:	_res = reg.r[5];	break;
-	case Reg_R6:	_res = reg.r[6];	break;
-	case Reg_R7:	_res = reg.r[7];	break;
-
-	case Reg_M0:	_res = reg.m[0];	break;
-	case Reg_M1:	_res = reg.m[1];	break;
-	case Reg_M2:	_res = reg.m[2];	break;
-	case Reg_M3:	_res = reg.m[3];	break;
-	case Reg_M4:	_res = reg.m[4];	break;
-	case Reg_M5:	_res = reg.m[5];	break;
-	case Reg_M6:	_res = reg.m[6];	break;
-	case Reg_M7:	_res = reg.m[7];	break;
-
-	case Reg_A0:	_res = a0();	break;
-	case Reg_A1:	_res = a1();	break;
-	case Reg_B0:	_res = b0();	break;
-	case Reg_B1:	_res = b1();	break;
-
-	case Reg_X0:	_res = x0();	break;
-	case Reg_X1:	_res = x1();	break;
-
-	case Reg_Y0:	_res = y0();	break;
-	case Reg_Y1:	_res = y1();	break;
-
-	case Reg_PC:	_res = reg.pc;		break;
-	case Reg_SR:	_res = reg.sr;		break;
-	case Reg_OMR:	_res = reg.omr;		break;
-	case Reg_SP:	_res = reg.sp;		break;
-
-	case Reg_LA:	_res = reg.la;		break;
-	case Reg_LC:	_res = reg.lc;		break;
-
-	case Reg_ICTR:	_res = reg.ictr;	break;
-
-	default:
-		return false;
+		sr_s_update();
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
+		sr_z_update(d);
+		sr_clear( SR_V );
+		sr_l_update_by_v();
 	}
 
-	return true;
-}
-// _____________________________________________________________________________
-// readReg
-//
-bool DSP::readReg( EReg _reg, TReg56& _res ) const
-{
-	switch( _reg )
+	// _____________________________________________________________________________
+	// alu_lsl
+	//
+	void DSP::alu_lsl( bool ab, int _shiftAmount )
 	{
-	case Reg_A:		_res = reg.a;	return true;
-	case Reg_B:		_res = reg.b;	return true;
+		TReg24 d = ab ? b1() : a1();
+
+		sr_toggle( SR_C, _shiftAmount && bittest( d, 23-_shiftAmount+1) );
+
+		const int res = (d.var << _shiftAmount) & 0x00ffffff;
+
+		if( ab )
+			b1(TReg24(res));
+		else
+			a1(TReg24(res));
+
+		// S L E U N Z V C
+
+		sr_toggle( SR_N, bittest(res,23) );
+		sr_toggle( SR_Z, res == 0 );
+		sr_clear( SR_V );
+
+		sr_s_update();
+		sr_l_update_by_v();
 	}
-	return false;
-}
-// _____________________________________________________________________________
-// readReg
-//
-bool DSP::readReg( EReg _reg, TReg8& _res ) const
-{
-	switch( _reg )
+
+	// _____________________________________________________________________________
+	// alu_lsr
+	//
+	void DSP::alu_lsr( bool ab, int _shiftAmount )
 	{
-	case Reg_A2:	_res = a2();	return true;
-	case Reg_B2:	_res = b2();	return true;
+		TReg24 d = ab ? b1() : a1();
+
+		sr_toggle( SR_C, _shiftAmount && bittest( d, _shiftAmount-1) );
+
+		const unsigned int res = ((unsigned int)d.var >> _shiftAmount);
+
+		if( ab )
+			b1(TReg24(res));
+		else
+			a1(TReg24(res));
+
+		// S L E U N Z V C
+
+		sr_toggle( SR_N, bittest(res,23) );
+		sr_toggle( SR_Z, res == 0 );
+		sr_clear( SR_V );
+
+		sr_s_update();
+		sr_l_update_by_v();
 	}
-	return false;
-}
-// _____________________________________________________________________________
-// readReg
-//
-bool DSP::readReg( EReg _reg, TReg48& _res ) const
-{
-	switch( _reg )
+
+
+	void DSP::alu_addr(bool ab)
 	{
-	case Reg_X:		_res = reg.x;	return true;
-	case Reg_Y:		_res = reg.y;	return true;
+		TReg56&			d = ab ? reg.b : reg.a;
+		const TReg56&	s = ab ? reg.a : reg.b;
+
+		const TReg56 old = d;
+		const TInt64 res = (d.signextend<TInt64>() >> 1) + s.signextend<TInt64>();
+		d.var = res;
+		d.doMasking();
+
+		sr_s_update();
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
+		sr_z_update(d);
+		sr_v_update(res, d);
+		sr_l_update_by_v();
+		sr_c_update_arithmetic(old,d);
 	}
-	return false;
-}
-// _____________________________________________________________________________
-// readReg
-//
-bool DSP::readReg( EReg _reg, TReg5& _res ) const
-{
-	if( _reg == Reg_SC )
+
+	void DSP::alu_addl(bool ab)
 	{
-		_res = reg.sc;
+		TReg56&			d = ab ? reg.b : reg.a;
+		const TReg56&	s = ab ? reg.a : reg.b;
+
+		const TReg56 old = d;
+		const TInt64 res = (d.signextend<TInt64>() << 1) + s.signextend<TInt64>();
+		d.var = res;
+		d.doMasking();
+
+		sr_s_update();
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
+		sr_z_update(d);
+		sr_v_update(res, d);
+		sr_l_update_by_v();
+		sr_c_update_arithmetic(old,d);
+	}
+
+	inline void DSP::alu_clr(bool ab)
+	{
+		auto& dst = ab ? reg.b : reg.a;
+		dst.var = 0;
+
+		sr_clear( SR_E | SR_N | SR_V );
+		sr_set( SR_U | SR_Z );
+		// TODO: SR_L and SR_S are changed according to standard definition, but that should mean that no update is required?!
+	}
+
+	// _____________________________________________________________________________
+	// alu_bclr
+	//
+	TWord DSP::alu_bclr( TWord _bit, TWord _val )
+	{
+		sr_toggle( SR_C, bittest(_val,_bit) );
+
+		_val &= ~(1<<_bit);
+
+		sr_l_update_by_v();
+		sr_s_update();
+
+		return _val;
+	}
+
+	// _____________________________________________________________________________
+	// alu_mpy
+	//
+	void DSP::alu_mpy( bool ab, const TReg24& _s1, const TReg24& _s2, bool _negate, bool _accumulate )
+	{
+	//	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
+
+		const int64_t s1 = _s1.signextend<int64_t>();
+		const int64_t s2 = _s2.signextend<int64_t>();
+
+		// TODO: revisit signed fraction multiplies
+		auto res = s1 * s2;
+
+		if( sr_test(SR_S0) )
+		{
+		}
+		else if( sr_test(SR_S1) )
+			res <<= 2;
+		else
+			res <<= 1;
+
+		if( _negate )
+			res = -res;
+
+		TReg56& d = ab ? reg.b : reg.a;
+
+		const TReg56 old = d;
+
+		if( _accumulate )
+			res += d.signextend<int64_t>();
+
+		d.var = res & 0x00ffffffffffffff;
+
+		// Update SR
+		sr_s_update();
+		sr_clear( SR_E );	// I don't know how this should happen because both operands are only 24 bits, the doc says "changed by standard definition" which should be okay here
+		sr_u_update( d );
+		sr_n_update( d );
+		sr_z_update( d );
+		sr_v_update(res,d);
+
+		sr_l_update_by_v();
+	}
+	// _____________________________________________________________________________
+	// alu_mpysuuu
+	//
+	void DSP::alu_mpysuuu( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _accumulate, bool _suuu )
+	{
+	//	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
+
+		TInt64 res;
+
+		if( _suuu )
+			res = TInt64( TUInt64(_s1.var) * TUInt64(_s2.var) );
+		else
+			res = _s1.signextend<TInt64>() * TUInt64(_s2.var);
+
+		// fractional multiplication requires one post-shift to be correct
+		if( sr_test(SR_S0) )
+		{
+		}
+		else if( sr_test(SR_S1) )
+			res <<= 2;
+		else
+			res <<= 1;
+
+		if( _negate )
+			res = -res;
+
+		TReg56& d = ab ? reg.b : reg.a;
+
+		const TReg56 old = d;
+
+		if( _accumulate )
+			res += d.signextend<TInt64>();
+
+		d.var = res;
+		d.doMasking();
+
+		// Update SR
+		sr_e_update(d);
+		sr_u_update( d );
+		sr_n_update( d );
+		sr_z_update( d );
+		sr_v_update(res,d);
+
+		sr_l_update_by_v();
+	}
+	// _____________________________________________________________________________
+	// alu_dmac
+	//
+	void DSP::alu_dmac( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool srcUnsigned, bool dstUnsigned )
+	{
+		assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
+
+		TInt64 res;
+
+		if( srcUnsigned && dstUnsigned )	res = TInt64( TUInt64(_s1.var) * TUInt64(_s2.var) );
+		else if( srcUnsigned )				res = TUInt64(_s1.var) * _s2.signextend<TInt64>();
+		else if( dstUnsigned )				res = TUInt64(_s2.var) * _s1.signextend<TInt64>();
+		else								res = _s2.signextend<TInt64>() * _s1.signextend<TInt64>();
+
+		// fractional multiplication requires one post-shift to be correct
+		if( sr_test(SR_S0) )
+		{
+		}
+		else if( sr_test(SR_S1) )
+			res <<= 2;
+		else
+			res <<= 1;
+
+		if( _negate )
+			res = -res;
+
+		TReg56& d = ab ? reg.b : reg.a;
+
+		const TReg56 old = d;
+
+		TInt64 dShifted = d.signextend<TInt64>() >> 24;
+
+		res += dShifted;
+
+	//	LOG( "DMAC  " << std::hex << old.var << std::hex << " + " << _s1.var << " * " << std::hex << _s2.var << " = " << std::hex << res );
+
+		d.var = res;
+		d.doMasking();
+
+		// Update SR
+		sr_e_update(d);
+		sr_u_update( d );
+		sr_n_update( d );
+		sr_z_update( d );
+		sr_v_update(res,d);
+
+		sr_l_update_by_v();
+	}
+
+	// _____________________________________________________________________________
+	// alu_mac
+	//
+	void DSP::alu_mac( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _uu )
+	{
+		assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
+
+		TInt64 res;
+
+		if( _uu )
+			res = TInt64( TUInt64(_s1.var) * TUInt64(_s2.var) );
+		else
+			res = _s1.signextend<TInt64>() * TUInt64(_s2.var);
+
+		// fractional multiplication requires one post-shift to be correct
+		if( sr_test(SR_S0) )
+		{
+		}
+		else if( sr_test(SR_S1) )
+			res <<= 2;
+		else
+			res <<= 1;
+
+		if( _negate )
+			res = -res;
+
+		TReg56& d = ab ? reg.b : reg.a;
+
+		res += d.var;
+
+		const TReg56 old = d;
+
+		d.var = res;
+
+		d.doMasking();
+
+		// Update SR
+		sr_s_update();
+		sr_e_update(d);
+		sr_u_update( d );
+		sr_n_update( d );
+		sr_z_update( d );
+		sr_v_update(res,d);
+
+		sr_l_update_by_v();
+	}
+
+	// _____________________________________________________________________________
+	// alu_rnd
+	//
+	void DSP::alu_rnd( TReg56& _alu )
+	{
+	// 	if( sr_test( SR_S0 ) || sr_test( SR_S1 ) )
+	// 		LOG_ERR_NOTIMPLEMENTED( "scaling modes" );
+
+		const int lsb = int(_alu.var & 0x000000ffffff);
+
+		if( lsb > 0x800000 )
+		{
+			_alu.var += 0x1000000;
+		}
+		else if( !sr_test(SR_RM) && lsb == 0x800000 && (_alu.var & 0x000001000000) != 0 )
+		{
+			_alu.var += 0x1000000;
+		}
+		_alu.var &= 0x00ffffffff000000;	// TODO: wrong?
+	}
+
+	// _____________________________________________________________________________
+	// readReg
+	//
+	bool DSP::readReg( EReg _reg, TReg24& _res ) const
+	{
+		switch( _reg )
+		{
+		case Reg_N0:	_res = reg.n[0];	break;
+		case Reg_N1:	_res = reg.n[1];	break;
+		case Reg_N2:	_res = reg.n[2];	break;
+		case Reg_N3:	_res = reg.n[3];	break;
+		case Reg_N4:	_res = reg.n[4];	break;
+		case Reg_N5:	_res = reg.n[5];	break;
+		case Reg_N6:	_res = reg.n[6];	break;
+		case Reg_N7:	_res = reg.n[7];	break;
+
+		case Reg_R0:	_res = reg.r[0];	break;
+		case Reg_R1:	_res = reg.r[1];	break;
+		case Reg_R2:	_res = reg.r[2];	break;
+		case Reg_R3:	_res = reg.r[3];	break;
+		case Reg_R4:	_res = reg.r[4];	break;
+		case Reg_R5:	_res = reg.r[5];	break;
+		case Reg_R6:	_res = reg.r[6];	break;
+		case Reg_R7:	_res = reg.r[7];	break;
+
+		case Reg_M0:	_res = reg.m[0];	break;
+		case Reg_M1:	_res = reg.m[1];	break;
+		case Reg_M2:	_res = reg.m[2];	break;
+		case Reg_M3:	_res = reg.m[3];	break;
+		case Reg_M4:	_res = reg.m[4];	break;
+		case Reg_M5:	_res = reg.m[5];	break;
+		case Reg_M6:	_res = reg.m[6];	break;
+		case Reg_M7:	_res = reg.m[7];	break;
+
+		case Reg_A0:	_res = a0();	break;
+		case Reg_A1:	_res = a1();	break;
+		case Reg_B0:	_res = b0();	break;
+		case Reg_B1:	_res = b1();	break;
+
+		case Reg_X0:	_res = x0();	break;
+		case Reg_X1:	_res = x1();	break;
+
+		case Reg_Y0:	_res = y0();	break;
+		case Reg_Y1:	_res = y1();	break;
+
+		case Reg_PC:	_res = reg.pc;		break;
+		case Reg_SR:	_res = reg.sr;		break;
+		case Reg_OMR:	_res = reg.omr;		break;
+		case Reg_SP:	_res = reg.sp;		break;
+
+		case Reg_LA:	_res = reg.la;		break;
+		case Reg_LC:	_res = reg.lc;		break;
+
+		case Reg_ICTR:	_res = reg.ictr;	break;
+
+		default:
+			return false;
+		}
+
 		return true;
 	}
-	return false;
-}
-
-// _____________________________________________________________________________
-// readRegToInt
-//
-bool DSP::readRegToInt( EReg _reg, int64_t& _dst )
-{
-	switch( g_regBitCount[_reg] )
+	// _____________________________________________________________________________
+	// readReg
+	//
+	bool DSP::readReg( EReg _reg, TReg56& _res ) const
 	{
-	case 56:
+		switch( _reg )
 		{
-			TReg56 dst;
-			if( !readReg(_reg, dst) )
-				return false;
-			_dst = dst.var;
-		};
-		break;
-	case 48:
-		{
-			TReg48 dst;
-			if( !readReg(_reg, dst) )
-				return false;
-			_dst = dst.var;
-		};
-		break;
-	case 24:
-		{
-			TReg24 dst;
-			if( !readReg(_reg, dst) )
-				return false;
-			_dst = dst.var;
-		};
-		break;
-	case 8:
-		{
-			TReg8 dst;
-			if( !readReg(_reg, dst) )
-				return false;
-			_dst = dst.var;
-		};
-		break;
-	case 5:
-		{
-			TReg5 dst;
-			if( !readReg(_reg, dst) )
-				return false;
-			_dst = dst.var;
-		};
-		break;
-	default:
+		case Reg_A:		_res = reg.a;	return true;
+		case Reg_B:		_res = reg.b;	return true;
+		}
 		return false;
 	}
-	return true;
-}
-// _____________________________________________________________________________
-// writeReg
-//
-bool DSP::writeReg( EReg _reg, const TReg24& _res )
-{
-	assert( (_res.var & 0xff000000) == 0 );
-		
-	switch( _reg )
+	// _____________________________________________________________________________
+	// readReg
+	//
+	bool DSP::readReg( EReg _reg, TReg8& _res ) const
 	{
-	case Reg_N0:	reg.n[0] = _res;	break;
-	case Reg_N1:	reg.n[1] = _res;	break;
-	case Reg_N2:	reg.n[2] = _res;	break;
-	case Reg_N3:	reg.n[3] = _res;	break;
-	case Reg_N4:	reg.n[4] = _res;	break;
-	case Reg_N5:	reg.n[5] = _res;	break;
-	case Reg_N6:	reg.n[6] = _res;	break;
-	case Reg_N7:	reg.n[7] = _res;	break;
-						
-	case Reg_R0:	reg.r[0] = _res;	break;
-	case Reg_R1:	reg.r[1] = _res;	break;
-	case Reg_R2:	reg.r[2] = _res;	break;
-	case Reg_R3:	reg.r[3] = _res;	break;
-	case Reg_R4:	reg.r[4] = _res;	break;
-	case Reg_R5:	reg.r[5] = _res;	break;
-	case Reg_R6:	reg.r[6] = _res;	break;
-	case Reg_R7:	reg.r[7] = _res;	break;
-						
-	case Reg_M0:	reg.m[0] = _res;	break;
-	case Reg_M1:	reg.m[1] = _res;	break;
-	case Reg_M2:	reg.m[2] = _res;	break;
-	case Reg_M3:	reg.m[3] = _res;	break;
-	case Reg_M4:	reg.m[4] = _res;	break;
-	case Reg_M5:	reg.m[5] = _res;	break;
-	case Reg_M6:	reg.m[6] = _res;	break;
-	case Reg_M7:	reg.m[7] = _res;	break;
-						
-	case Reg_A0:	a0(_res);		break;
-	case Reg_A1:	a1(_res);		break;
-	case Reg_B0:	b0(_res);		break;
-	case Reg_B1:	b1(_res);		break;
-						
-	case Reg_X0:	x0(_res);		break;
-	case Reg_X1:	x1(_res);		break;
-						
-	case Reg_Y0:	y0(_res);		break;
-	case Reg_Y1:	y1(_res);		break;
+		switch( _reg )
+		{
+		case Reg_A2:	_res = a2();	return true;
+		case Reg_B2:	_res = b2();	return true;
+		}
+		return false;
+	}
+	// _____________________________________________________________________________
+	// readReg
+	//
+	bool DSP::readReg( EReg _reg, TReg48& _res ) const
+	{
+		switch( _reg )
+		{
+		case Reg_X:		_res = reg.x;	return true;
+		case Reg_Y:		_res = reg.y;	return true;
+		}
+		return false;
+	}
+	// _____________________________________________________________________________
+	// readReg
+	//
+	bool DSP::readReg( EReg _reg, TReg5& _res ) const
+	{
+		if( _reg == Reg_SC )
+		{
+			_res = reg.sc;
+			return true;
+		}
+		return false;
+	}
 
-	case Reg_PC:	setPC(_res);	break;
+	// _____________________________________________________________________________
+	// readRegToInt
+	//
+	bool DSP::readRegToInt( EReg _reg, int64_t& _dst )
+	{
+		switch( g_regBitCount[_reg] )
+		{
+		case 56:
+			{
+				TReg56 dst;
+				if( !readReg(_reg, dst) )
+					return false;
+				_dst = dst.var;
+			};
+			break;
+		case 48:
+			{
+				TReg48 dst;
+				if( !readReg(_reg, dst) )
+					return false;
+				_dst = dst.var;
+			};
+			break;
+		case 24:
+			{
+				TReg24 dst;
+				if( !readReg(_reg, dst) )
+					return false;
+				_dst = dst.var;
+			};
+			break;
+		case 8:
+			{
+				TReg8 dst;
+				if( !readReg(_reg, dst) )
+					return false;
+				_dst = dst.var;
+			};
+			break;
+		case 5:
+			{
+				TReg5 dst;
+				if( !readReg(_reg, dst) )
+					return false;
+				_dst = dst.var;
+			};
+			break;
+		default:
+			return false;
+		}
+		return true;
+	}
+	// _____________________________________________________________________________
+	// writeReg
+	//
+	bool DSP::writeReg( EReg _reg, const TReg24& _res )
+	{
+		assert( (_res.var & 0xff000000) == 0 );
+			
+		switch( _reg )
+		{
+		case Reg_N0:	reg.n[0] = _res;	break;
+		case Reg_N1:	reg.n[1] = _res;	break;
+		case Reg_N2:	reg.n[2] = _res;	break;
+		case Reg_N3:	reg.n[3] = _res;	break;
+		case Reg_N4:	reg.n[4] = _res;	break;
+		case Reg_N5:	reg.n[5] = _res;	break;
+		case Reg_N6:	reg.n[6] = _res;	break;
+		case Reg_N7:	reg.n[7] = _res;	break;
+							
+		case Reg_R0:	reg.r[0] = _res;	break;
+		case Reg_R1:	reg.r[1] = _res;	break;
+		case Reg_R2:	reg.r[2] = _res;	break;
+		case Reg_R3:	reg.r[3] = _res;	break;
+		case Reg_R4:	reg.r[4] = _res;	break;
+		case Reg_R5:	reg.r[5] = _res;	break;
+		case Reg_R6:	reg.r[6] = _res;	break;
+		case Reg_R7:	reg.r[7] = _res;	break;
+							
+		case Reg_M0:	reg.m[0] = _res;	break;
+		case Reg_M1:	reg.m[1] = _res;	break;
+		case Reg_M2:	reg.m[2] = _res;	break;
+		case Reg_M3:	reg.m[3] = _res;	break;
+		case Reg_M4:	reg.m[4] = _res;	break;
+		case Reg_M5:	reg.m[5] = _res;	break;
+		case Reg_M6:	reg.m[6] = _res;	break;
+		case Reg_M7:	reg.m[7] = _res;	break;
+							
+		case Reg_A0:	a0(_res);		break;
+		case Reg_A1:	a1(_res);		break;
+		case Reg_B0:	b0(_res);		break;
+		case Reg_B1:	b1(_res);		break;
+							
+		case Reg_X0:	x0(_res);		break;
+		case Reg_X1:	x1(_res);		break;
+							
+		case Reg_Y0:	y0(_res);		break;
+		case Reg_Y1:	y1(_res);		break;
 
-	default:
+		case Reg_PC:	setPC(_res);	break;
+
+		default:
+			assert( 0 && "unknown register" );
+			return false;
+		}
+
+		return true;
+	}
+
+	// _____________________________________________________________________________
+	// writeReg
+	//
+	bool DSP::writeReg( EReg _reg, const TReg56& _val )
+	{
+		switch( _reg )
+		{
+		case Reg_A:		reg.a = _val;		return true;
+		case Reg_B:		reg.b = _val;		return true;
+		}
 		assert( 0 && "unknown register" );
 		return false;
 	}
 
-	return true;
-}
-
-// _____________________________________________________________________________
-// writeReg
-//
-bool DSP::writeReg( EReg _reg, const TReg56& _val )
-{
-	switch( _reg )
+	// _____________________________________________________________________________
+	// readDebugRegs
+	//
+	void DSP::readDebugRegs( dsp56k::SRegs& _regs ) const
 	{
-	case Reg_A:		reg.a = _val;		return true;
-	case Reg_B:		reg.b = _val;		return true;
+		readReg( Reg_X, _regs.x);
+		readReg( Reg_Y, _regs.y);
+
+		readReg( Reg_A, _regs.a);
+		readReg( Reg_B, _regs.b);
+
+		readReg( Reg_X0, _regs.x0);		
+		readReg( Reg_X1, _regs.x1);		
+
+		readReg( Reg_Y0, _regs.y0);		
+		readReg( Reg_Y1, _regs.y1);		
+
+		readReg( Reg_A0, _regs.a0);		
+		readReg( Reg_A1, _regs.a1);		
+		readReg( Reg_A2, _regs.a2);		
+
+		readReg( Reg_B0, _regs.b0);		
+		readReg( Reg_B1, _regs.b1);		
+		readReg( Reg_B2, _regs.b2);		
+
+		readReg( Reg_PC, _regs.pc);		
+		readReg( Reg_SR, _regs.sr);		
+		readReg( Reg_OMR, _regs.omr);	
+
+		readReg( Reg_LA, _regs.la);		
+		readReg( Reg_LC, _regs.lc);		
+
+		readReg( Reg_SSH, _regs.ssh);	
+		readReg( Reg_SSL, _regs.ssl);	
+		readReg( Reg_SP, _regs.sp);		
+
+		readReg( Reg_EP, _regs.ep);		
+		readReg( Reg_SZ, _regs.sz);		
+		readReg( Reg_SC, _regs.sc);		
+		readReg( Reg_VBA, _regs.vba);	
+
+		readReg( Reg_IPRC, _regs.iprc);	
+		readReg( Reg_IPRP, _regs.iprp);	
+		readReg( Reg_BCR, _regs.bcr);	
+		readReg( Reg_DCR, _regs.dcr);	
+
+		readReg( Reg_AAR0, _regs.aar0);	
+		readReg( Reg_AAR1, _regs.aar1);	
+		readReg( Reg_AAR2, _regs.aar2);	
+		readReg( Reg_AAR3, _regs.aar3);	
+
+		readReg( Reg_R0, _regs.r0);		
+		readReg( Reg_R1, _regs.r1);		
+		readReg( Reg_R2, _regs.r2);		
+		readReg( Reg_R3, _regs.r3);		
+		readReg( Reg_R4, _regs.r4);		
+		readReg( Reg_R5, _regs.r5);		
+		readReg( Reg_R6, _regs.r6);		
+		readReg( Reg_R7, _regs.r7);		
+
+		readReg( Reg_N0, _regs.n0);		
+		readReg( Reg_N1, _regs.n1);		
+		readReg( Reg_N2, _regs.n2);		
+		readReg( Reg_N3, _regs.n3);		
+		readReg( Reg_N4, _regs.n4);		
+		readReg( Reg_N5, _regs.n5);		
+		readReg( Reg_N6, _regs.n6);		
+		readReg( Reg_N7, _regs.n7);		
+
+		readReg( Reg_M0, _regs.m0);		
+		readReg( Reg_M1, _regs.m1);		
+		readReg( Reg_M2, _regs.m2);		
+		readReg( Reg_M3, _regs.m3);		
+		readReg( Reg_M4, _regs.m4);		
+		readReg( Reg_M5, _regs.m5);		
+		readReg( Reg_M6, _regs.m6);		
+		readReg( Reg_M7, _regs.m7);		
+
+		readReg( Reg_HIT, _regs.hit);		
+		readReg( Reg_MISS, _regs.miss);		
+		readReg( Reg_REPLACE, _regs.replace);	
+		readReg( Reg_CYC, _regs.cyc);		
+		readReg( Reg_ICTR, _regs.ictr);		
+		readReg( Reg_CNT1, _regs.cnt1);		
+		readReg( Reg_CNT2, _regs.cnt2);		
+		readReg( Reg_CNT3, _regs.cnt3);		
+		readReg( Reg_CNT4, _regs.cnt4);
 	}
-	assert( 0 && "unknown register" );
-	return false;
-}
 
-// _____________________________________________________________________________
-// readDebugRegs
-//
-void DSP::readDebugRegs( dsp56k::SRegs& _regs ) const
-{
-	readReg( Reg_X, _regs.x);
-	readReg( Reg_Y, _regs.y);
+	// _____________________________________________________________________________
+	// getASM
+	//
+	const char* DSP::getASM()
+	{
+	#ifdef _DEBUG
+		unsigned long ops[3];
+		ops[0] = memRead( MemArea_P, reg.pc.var );
+		ops[1] = memRead( MemArea_P, reg.pc.var+1 );
+		ops[2] = memRead( MemArea_P, reg.pc.var+2 );
+		disassemble( m_asm, ops, reg.sr.var, reg.omr.var );
+	#endif
+		return m_asm;
+	}
 
-	readReg( Reg_A, _regs.a);
-	readReg( Reg_B, _regs.b);
+	// _____________________________________________________________________________
+	// memWrite
+	//
+	bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
+	{
+		return mem.set( _area, _offset, _value );
+	}
 
-	readReg( Reg_X0, _regs.x0);		
-	readReg( Reg_X1, _regs.x1);		
+	// _____________________________________________________________________________
+	// memRead
+	//
+	dsp56k::TWord DSP::memRead( EMemArea _area, TWord _offset ) const
+	{
+		// app may access the instruction cache on the DSP 56362? not sure about this, not clear for me in the docs
 
-	readReg( Reg_Y0, _regs.y0);		
-	readReg( Reg_Y1, _regs.y1);		
+	// 	if( _area == MemArea_P && sr_test(SR_CE) )
+	// 	{
+	// 		const bool ms = (reg.omr.var & OMR_MS) != 0;
+	// 
+	// 		if( !ms )
+	// 		{
+	// 			if( _offset >= 0x000800 && _offset < 0x000c00 )
+	// 			{
+	// 				return cache.readMemory( _offset - 0x000800 );
+	// 			}
+	// 		}
+	// 		else
+	// 		{
+	// 			if( _offset >= 0x001000 && _offset < 0x001400 )
+	// 				return cache.readMemory( _offset - 0x001000 );
+	// 		}
+	// 	}
 
-	readReg( Reg_A0, _regs.a0);		
-	readReg( Reg_A1, _regs.a1);		
-	readReg( Reg_A2, _regs.a2);		
+			return mem.get( _area, _offset );
+	}
 
-	readReg( Reg_B0, _regs.b0);		
-	readReg( Reg_B1, _regs.b1);		
-	readReg( Reg_B2, _regs.b2);		
+	// _____________________________________________________________________________
+	// alu_abs
+	//
+	void DSP::alu_abs( bool ab )
+	{
+		TReg56& d = ab ? reg.b : reg.a;
 
-	readReg( Reg_PC, _regs.pc);		
-	readReg( Reg_SR, _regs.sr);		
-	readReg( Reg_OMR, _regs.omr);	
+		TInt64 d64 = d.signextend<TInt64>();
 
-	readReg( Reg_LA, _regs.la);		
-	readReg( Reg_LC, _regs.lc);		
+		d64 = d64 < 0 ? -d64 : d64;
 
-	readReg( Reg_SSH, _regs.ssh);	
-	readReg( Reg_SSL, _regs.ssl);	
-	readReg( Reg_SP, _regs.sp);		
+		d.var = d64 & 0xffffffffffffff;
 
-	readReg( Reg_EP, _regs.ep);		
-	readReg( Reg_SZ, _regs.sz);		
-	readReg( Reg_SC, _regs.sc);		
-	readReg( Reg_VBA, _regs.vba);	
+		sr_s_update();
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
+		sr_z_update(d);
+	//	sr_v_update(d);
+		sr_l_update_by_v();
+	}
 
-	readReg( Reg_IPRC, _regs.iprc);	
-	readReg( Reg_IPRP, _regs.iprp);	
-	readReg( Reg_BCR, _regs.bcr);	
-	readReg( Reg_DCR, _regs.dcr);	
+	void DSP::alu_tfr(const bool ab, const TReg56& src)
+	{
+		auto& d = ab ? reg.b : reg.a;
+		d = src;
+		sr_s_update();
+		sr_v_update(src.var, d);
+	}
 
-	readReg( Reg_AAR0, _regs.aar0);	
-	readReg( Reg_AAR1, _regs.aar1);	
-	readReg( Reg_AAR2, _regs.aar2);	
-	readReg( Reg_AAR3, _regs.aar3);	
+	void DSP::alu_tst(bool ab)
+	{
+		const bool c = sr_test(SR_C);
+		alu_cmp(ab, TReg56(0), false);
 
-	readReg( Reg_R0, _regs.r0);		
-	readReg( Reg_R1, _regs.r1);		
-	readReg( Reg_R2, _regs.r2);		
-	readReg( Reg_R3, _regs.r3);		
-	readReg( Reg_R4, _regs.r4);		
-	readReg( Reg_R5, _regs.r5);		
-	readReg( Reg_R6, _regs.r6);		
-	readReg( Reg_R7, _regs.r7);		
+		sr_clear(SR_V);		// "always cleared"
+		sr_toggle(SR_C,c);	// "unchanged by the instruction" so reset to previous state
+	}
 
-	readReg( Reg_N0, _regs.n0);		
-	readReg( Reg_N1, _regs.n1);		
-	readReg( Reg_N2, _regs.n2);		
-	readReg( Reg_N3, _regs.n3);		
-	readReg( Reg_N4, _regs.n4);		
-	readReg( Reg_N5, _regs.n5);		
-	readReg( Reg_N6, _regs.n6);		
-	readReg( Reg_N7, _regs.n7);		
+	void DSP::alu_neg(bool ab)
+	{
+		TReg56& d = ab ? reg.b : reg.a;
 
-	readReg( Reg_M0, _regs.m0);		
-	readReg( Reg_M1, _regs.m1);		
-	readReg( Reg_M2, _regs.m2);		
-	readReg( Reg_M3, _regs.m3);		
-	readReg( Reg_M4, _regs.m4);		
-	readReg( Reg_M5, _regs.m5);		
-	readReg( Reg_M6, _regs.m6);		
-	readReg( Reg_M7, _regs.m7);		
+		TInt64 d64 = d.signextend<TInt64>();
+		d64 = -d64;
+		
+		d.var = d64 & 0x00ffffffffffffff;
 
-	readReg( Reg_HIT, _regs.hit);		
-	readReg( Reg_MISS, _regs.miss);		
-	readReg( Reg_REPLACE, _regs.replace);	
-	readReg( Reg_CYC, _regs.cyc);		
-	readReg( Reg_ICTR, _regs.ictr);		
-	readReg( Reg_CNT1, _regs.cnt1);		
-	readReg( Reg_CNT2, _regs.cnt2);		
-	readReg( Reg_CNT3, _regs.cnt3);		
-	readReg( Reg_CNT4, _regs.cnt4);
-}
+		sr_s_update();
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
+		sr_z_update(d);
+	//	TODO: how to update v? test in sim		sr_v_update(d);
+		sr_l_update_by_v();
+	}
 
-// _____________________________________________________________________________
-// getASM
-//
-const char* DSP::getASM()
-{
-#ifdef _DEBUG
-	unsigned long ops[3];
-	ops[0] = memRead( MemArea_P, reg.pc.var );
-	ops[1] = memRead( MemArea_P, reg.pc.var+1 );
-	ops[2] = memRead( MemArea_P, reg.pc.var+2 );
-	disassemble( m_asm, ops, reg.sr.var, reg.omr.var );
-#endif
-	return m_asm;
-}
+	// _____________________________________________________________________________
+	// save
+	//
+	bool DSP::save( FILE* _file ) const
+	{
+		fwrite( &reg, sizeof(reg), 1, _file );
+		fwrite( &repRunning, 1, 1, _file );
+		fwrite( &tempLCforRep, 1, 1, _file );
+		fwrite( &pcCurrentInstruction, 1, 1, _file );
+		fwrite( m_asm, sizeof(m_asm), 1, _file );
+		fwrite( &cache, sizeof(cache), 1, _file );
 
-// _____________________________________________________________________________
-// memWrite
-//
-bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
-{
-	return mem.set( _area, _offset, _value );
-}
+		return true;
+	}
 
-// _____________________________________________________________________________
-// memRead
-//
-dsp56k::TWord DSP::memRead( EMemArea _area, TWord _offset ) const
-{
-	// app may access the instruction cache on the DSP 56362? not sure about this, not clear for me in the docs
+	// _____________________________________________________________________________
+	// load
+	//
+	bool DSP::load( FILE* _file )
+	{
+		fread( &reg, sizeof(reg), 1, _file );
+		fread( &repRunning, 1, 1, _file );
+		fread( &tempLCforRep, 1, 1, _file );
+		fread( &pcCurrentInstruction, 1, 1, _file );
+		fread( m_asm, sizeof(m_asm), 1, _file );
+		fread( &cache, sizeof(cache), 1, _file );
 
-// 	if( _area == MemArea_P && sr_test(SR_CE) )
-// 	{
-// 		const bool ms = (reg.omr.var & OMR_MS) != 0;
-// 
-// 		if( !ms )
-// 		{
-// 			if( _offset >= 0x000800 && _offset < 0x000c00 )
-// 			{
-// 				return cache.readMemory( _offset - 0x000800 );
-// 			}
-// 		}
-// 		else
-// 		{
-// 			if( _offset >= 0x001000 && _offset < 0x001400 )
-// 				return cache.readMemory( _offset - 0x001000 );
-// 		}
-// 	}
-
-		return mem.get( _area, _offset );
-}
-
-// _____________________________________________________________________________
-// alu_abs
-//
-void DSP::alu_abs( bool ab )
-{
-	TReg56& d = ab ? reg.b : reg.a;
-
-	TInt64 d64 = d.signextend<TInt64>();
-
-	d64 = d64 < 0 ? -d64 : d64;
-
-	d.var = d64 & 0xffffffffffffff;
-
-	sr_s_update();
-	sr_e_update(d);
-	sr_u_update(d);
-	sr_n_update(d);
-	sr_z_update(d);
-//	sr_v_update(d);
-	sr_l_update_by_v();
-}
-
-void DSP::alu_tfr(const bool ab, const TReg56& src)
-{
-	auto& d = ab ? reg.b : reg.a;
-	d = src;
-	sr_s_update();
-	sr_v_update(src.var, d);
-}
-
-void DSP::alu_tst(bool ab)
-{
-	const bool c = sr_test(SR_C);
-	alu_cmp(ab, TReg56(0), false);
-
-	sr_clear(SR_V);		// "always cleared"
-	sr_toggle(SR_C,c);	// "unchanged by the instruction" so reset to previous state
-}
-
-void DSP::alu_neg(bool ab)
-{
-	TReg56& d = ab ? reg.b : reg.a;
-
-	TInt64 d64 = d.signextend<TInt64>();
-	d64 = -d64;
-	
-	d.var = d64 & 0x00ffffffffffffff;
-
-	sr_s_update();
-	sr_e_update(d);
-	sr_u_update(d);
-	sr_n_update(d);
-	sr_z_update(d);
-//	TODO: how to update v? test in sim		sr_v_update(d);
-	sr_l_update_by_v();
-}
-
-// _____________________________________________________________________________
-// save
-//
-bool DSP::save( FILE* _file ) const
-{
-	fwrite( &reg, sizeof(reg), 1, _file );
-	fwrite( &repRunning, 1, 1, _file );
-	fwrite( &tempLCforRep, 1, 1, _file );
-	fwrite( &pcCurrentInstruction, 1, 1, _file );
-	fwrite( m_asm, sizeof(m_asm), 1, _file );
-	fwrite( &cache, sizeof(cache), 1, _file );
-
-	return true;
-}
-
-// _____________________________________________________________________________
-// load
-//
-bool DSP::load( FILE* _file )
-{
-	fread( &reg, sizeof(reg), 1, _file );
-	fread( &repRunning, 1, 1, _file );
-	fread( &tempLCforRep, 1, 1, _file );
-	fread( &pcCurrentInstruction, 1, 1, _file );
-	fread( m_asm, sizeof(m_asm), 1, _file );
-	fread( &cache, sizeof(cache), 1, _file );
-
-	return true;
-}
+		return true;
+	}
 
 }
