@@ -717,7 +717,7 @@ namespace dsp56k
 				const TWord addr = fetchPC();
 				TWord loopcount = oi->getFieldValue(OpcodeInfo::Field_hhhh, OpcodeInfo::Field_iiiiiiii, op);
 
-				exec_do( TReg24(loopcount), addr );				
+				do_start( TReg24(loopcount), addr );				
 			}
 			return true;
 		case OpcodeInfo::Do_S:		// 0000011011DDDDDD00000000
@@ -728,7 +728,7 @@ namespace dsp56k
 
 				const TReg24 loopcount = decode_dddddd_read( dddddd );
 
-				exec_do( loopcount, addr );
+				do_start( loopcount, addr );
 			}
 			return true;
 		case OpcodeInfo::DoForever:
@@ -743,7 +743,7 @@ namespace dsp56k
             {
 	            const auto loopcount = oi->getFieldValue(OpcodeInfo::Field_hhhh, OpcodeInfo::Field_iiiiiiii, op);
                 const auto displacement = signextend<int, 24>(fetchPC());
-                exec_do(TReg24(loopcount), pcCurrentInstruction + displacement);
+                do_start(TReg24(loopcount), pcCurrentInstruction + displacement);
             }
             return true;
 		case OpcodeInfo::Dor_S:		// 00000110 11DDDDDD 00010000
@@ -752,7 +752,7 @@ namespace dsp56k
 				const TReg24 lc		= decode_dddddd_read( dddddd );
 				
 				const int displacement = signextend<int,24>(fetchPC());
-				exec_do( lc, pcCurrentInstruction + displacement);
+				do_start( lc, pcCurrentInstruction + displacement);
 			}
 			return true;
 		// Start PC-Relative Infinite Loops
@@ -2490,7 +2490,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// exec_do
 	//
-	bool DSP::exec_do( TReg24 _loopcount, TWord _addr )
+	bool DSP::do_start( TReg24 _loopcount, TWord _addr )
 	{
 	//	LOG( "DO BEGIN: " << (int)sc.var << ", loop flag = " << sr_test(SR_LF) );
 
@@ -2517,10 +2517,11 @@ namespace dsp56k
 
 		return true;
 	}
+
 	// _____________________________________________________________________________
 	// exec_do_end
 	//
-	bool DSP::exec_do_end()
+	bool DSP::do_end()
 	{
 		// restore PC to point to the next instruction after the last instruction of the loop
 		setPC(reg.la.var+1);
@@ -2536,6 +2537,31 @@ namespace dsp56k
 
 	//	LOG( "DO END: loop flag = " << sr_test(SR_LF) << " sc=" << (int)sc.var << " lc:" << std::hex << lc.var << " la:" << std::hex << la.var );
 
+		return true;
+	}
+
+	bool DSP::do_iterate(const uint32_t _depth)
+	{
+		if(!sr_test(SR_LF))
+			return false;
+
+		// DO
+		if(reg.pc != reg.la )
+			return false;
+
+		if( reg.lc.var > 1 )
+		{
+			--reg.lc.var;
+			reg.pc = hiword(reg.ss[reg.sc.toWord()]);
+		}
+		else
+		{
+			do_end();
+
+			// nested loop update
+			if(sr_test(SR_LF))
+				do_iterate(_depth + 1);
+		}
 		return true;
 	}
 

@@ -24,8 +24,8 @@ namespace dsp56k
 		struct SRegs
 		{
 			// accumulator
-			TReg48 x,y;		// 48 bit
-			TReg56 a,b;		// 56 bit
+			TReg48 x,y;						// 48 bit
+			TReg56 a,b;						// 56 bit
 
 			// ---- PCU ----
 			TReg24 omr;						// operation mode register
@@ -191,17 +191,7 @@ namespace dsp56k
 			}
 			
 			// DO
-			if( sr_test(SR_LF) && reg.pc == reg.la )
-			{
-				if( reg.lc.var > 1 )
-				{
-					--reg.lc.var;
-					reg.pc = hiword(reg.ss[reg.sc.toWord()]);
-				}
-				else
-					exec_do_end();
-			}
-			else
+			if(!do_iterate())
 				++reg.pc.var;
 
 			return ret;
@@ -227,8 +217,9 @@ namespace dsp56k
 
 		bool 	exec_bitmanip					(const OpcodeInfo* oi, TWord op);
 
-		bool	exec_do							( TReg24 _loopcount, TWord _addr );
-		bool	exec_do_end						();
+		bool	do_start						( TReg24 _loopcount, TWord _addr );
+		bool	do_end							();
+		bool	do_iterate						(uint32_t _depth = 0);
 
 		// -- execution helpers
 
