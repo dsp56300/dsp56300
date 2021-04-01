@@ -2740,7 +2740,7 @@ namespace dsp56k
 		sr_u_update(d);
 		sr_n_update(d);
 		sr_z_update(d);
-		sr_clear( SR_V );
+		sr_clear(SR_V);
 		sr_l_update_by_v();
 	}
 
@@ -2761,14 +2761,22 @@ namespace dsp56k
 
 		d.var = res & 0x00ffffffffffffff;
 
-		// S L E U N Z V C
+		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
+		// What that means for us if all bits that are shifted out need to be identical to not overflow
+		int64_t overflowMaskI = 0x8000000000000000;
+		overflowMaskI >>= _shiftAmount;
+		uint64_t overflowMaskU = overflowMaskI;
+		overflowMaskU >>= 8;
+		const uint64_t v = dSrc.var & overflowMaskU;
+		const bool isOverflow = v != overflowMaskU && v != 0;
 
+		// S L E U N Z V C
 		sr_s_update();
 		sr_e_update(d);
 		sr_u_update(d);
 		sr_n_update(d);
 		sr_z_update(d);
-		sr_clear( SR_V );
+		sr_toggle(SR_V, isOverflow);
 		sr_l_update_by_v();
 	}
 
