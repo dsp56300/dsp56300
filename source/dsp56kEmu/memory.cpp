@@ -16,7 +16,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// Memory
 	//
-	Memory::Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY, const IMemoryMap* _memoryMap)
+	Memory::Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY, const IMemoryMap* _memoryMap, size_t _memSize/* = 0xc00000*/)
 		: m_memoryMap(_memoryMap ? _memoryMap : &g_defaultMemoryMap)
 		, x(m_mem[MemArea_X])
 		, y(m_mem[MemArea_Y])
@@ -25,7 +25,7 @@ namespace dsp56k
 		, m_dsp(nullptr)
 	{
 		for( size_t i=0; i<MemArea_COUNT; ++i )
-			m_mem[i].resize( 0xC0000, 0 );
+			m_mem[i].resize( _memSize, 0 );
 	}
 
 	// _____________________________________________________________________________

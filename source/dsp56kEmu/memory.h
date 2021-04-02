@@ -85,7 +85,7 @@ namespace dsp56k
 		// implementation
 		//
 	public:
-		Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY, const IMemoryMap* _memoryMap = nullptr);
+		Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY, const IMemoryMap* _memoryMap = nullptr, size_t _memSize = 0xc00000);
 		Memory(const Memory&) = delete;
 		Memory& operator = (const Memory&) = delete;
 
