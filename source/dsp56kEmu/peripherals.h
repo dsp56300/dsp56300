@@ -71,6 +71,8 @@ namespace dsp56k
 	class IPeripherals
 	{
 	public:
+		virtual ~IPeripherals() = default;
+
 		virtual bool isValidAddress( TWord _addr ) const = 0;
 		virtual TWord read(TWord _addr) = 0;
 		virtual void write(TWord _addr, TWord _value) = 0;
@@ -89,7 +91,6 @@ namespace dsp56k
 		//
 	public:
 		PeripheralsDefault();
-		virtual ~PeripheralsDefault() = default;
 
 		bool isValidAddress( TWord _addr ) const override
 		{
