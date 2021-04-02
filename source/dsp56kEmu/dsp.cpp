@@ -1717,9 +1717,9 @@ namespace dsp56k
 					const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
 
 					if( write )
-						decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
-					else
 						memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
+					else
+						decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
 				}
 				return true;
 			case OpcodeInfo::Movep_SXqq:	// 00000100W1dddddd1q0qqqqq
@@ -1733,9 +1733,9 @@ namespace dsp56k
 					const auto area = oi->getInstruction() == OpcodeInfo::Movep_SYqq ? MemArea_Y : MemArea_X;
 
 					if( write )
-						decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
-					else
 						memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
+					else
+						decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
 				}
 				return true;
 			default:
