@@ -1016,8 +1016,23 @@ namespace dsp56k
 		// Branch if Bit Clear
 		case OpcodeInfo::Brclr_ea:	// BRCLR #n,[X or Y]:ea,xxxx - 0 0 0 0 1 1 0 0 1 0 M M M R R R 0 S 0 b b b b b
 		case OpcodeInfo::Brclr_aa:	// BRCLR #n,[X or Y]:aa,xxxx - 0 0 0 0 1 1 0 0 1 0 a a a a a a 1 S 0 b b b b b
-		case OpcodeInfo::Brclr_pp:	// BRCLR #n,[X or Y]:pp,xxxx - 0 0 0 0 1 1 0 0 1 1 p p p p p p 0 S 0 b b b b b
 			LOG_ERR_NOTIMPLEMENTED("BRCLR");			
+			return true;
+		case OpcodeInfo::Brclr_pp:	// BRCLR #n,[X or Y]:pp,xxxx - 0 0 0 0 1 1 0 0 1 1 p p p p p p 0 S 0 b b b b b
+			{
+				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
+				const TWord pppppp	= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+
+				const TWord ea = 0xffffc0 + pppppp;
+
+				const int displacement = signextend<int,24>( fetchPC() );
+
+				if( !bittest( memRead( S, ea ), bit ) )
+				{
+					setPC(pcCurrentInstruction + displacement);
+				}
+			}
 			return true;
 		case OpcodeInfo::Brclr_qq:
 			{
