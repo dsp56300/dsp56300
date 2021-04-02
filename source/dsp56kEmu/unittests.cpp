@@ -16,6 +16,21 @@ namespace dsp56k
 		testCCCC();
 		testMultiply();
 		testAdd();
+		testCMP();
+		testASL();
+	}
+
+	void UnitTests::testASL()
+	{
+		dsp.reg.a.var = 0xaaabcdef123456;
+
+		// asl #1,a,a
+		execOpcode(0x0c1d02);
+		assert(dsp.reg.a.var == 0x55579bde2468ac);
+
+		// asr #1,a,a
+		execOpcode(0x0c1c02);
+		assert(dsp.reg.a.var == 0x2aabcdef123456);
 	}
 
 	void UnitTests::testMultiply()
@@ -101,6 +116,21 @@ namespace dsp56k
 		assert(_ge == dsp.decode_cccc(CCCC_GreaterEqual));
 		assert(_gt == dsp.decode_cccc(CCCC_GreaterThan));
 		assert(_neq == dsp.decode_cccc(CCCC_NotEqual));	
+	}
+
+	void UnitTests::testCMP()
+	{
+		dsp.reg.b.var = 0;
+		dsp.b1(TReg24(0x123456));
+
+		dsp.reg.x.var = 0;
+		dsp.x0(TReg24(0x123456));
+
+		// cmp x0,b
+		execOpcode(0x20004d);
+
+		assert(dsp.sr_test(SR_Z));
+		assert(!dsp.sr_test(SR_N | SR_E | SR_V | SR_C));
 	}
 
 	void UnitTests::execOpcode(uint32_t _op0, uint32_t _op1, const bool _reset)
