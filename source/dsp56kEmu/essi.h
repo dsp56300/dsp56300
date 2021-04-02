@@ -151,8 +151,12 @@ namespace dsp56k
 		}
 
 		void reset();
-		void exec();
+		void exec() {}
+
 		void setControlRegisters(EssiIndex _essi, TWord cra, TWord crb);
+
+		void toggleStatusRegisterBit(EssiIndex _essi, uint32_t _bit, uint32_t _zeroOrOne);
+		TWord testStatusRegisterBit(EssiIndex _essi0, RegSSISRbits _bit) const;
 
 	private:
 		void reset(EssiIndex _index);

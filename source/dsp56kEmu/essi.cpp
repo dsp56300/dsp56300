@@ -16,14 +16,27 @@ namespace dsp56k
 		reset(Essi1);
 	}
 	
-	void Essi::exec()
+	void Essi::toggleStatusRegisterBit(const EssiIndex _essi, const uint32_t _bit, const uint32_t _zeroOrOne)
 	{
+		const auto mask = 1 << _bit;
+		const auto bit = _zeroOrOne << _bit;
+
+		auto v = get(_essi, ESSI0_SSISR);
+		v &= ~mask;
+		v |= bit;
+		set(_essi, ESSI0_SSISR, v);
 	}
 
 	void Essi::setControlRegisters(const EssiIndex _essi, const TWord _cra, const TWord _crb)
 	{
 		set(_essi, ESSI0_CRA, _cra);
 		set(_essi, ESSI0_CRB, _crb);
+	}
+
+	TWord Essi::testStatusRegisterBit(EssiIndex _essi0, RegSSISRbits _bit) const
+	{
+		const auto res = get(_essi0, ESSI0_SSISR);
+		return res & (1<<_bit);
 	}
 
 	void Essi::reset(EssiIndex _index)
