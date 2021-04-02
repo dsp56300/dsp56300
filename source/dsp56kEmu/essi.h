@@ -1,5 +1,7 @@
 #pragma once
 
+#include "types.h"
+
 namespace dsp56k
 {
 	class DSP;
@@ -7,6 +9,7 @@ namespace dsp56k
 
 	class Essi
 	{
+	public:
 		// ESSI Control Register A (CRA)
 		enum RegCRAbits
 		{
@@ -129,25 +132,43 @@ namespace dsp56k
 			ESSI0_TX0	= 0xffffbc,		// Transmit Data Register 0
 
 			// GPIO Port C
-			ESSI_PDRC	= 0xffffbd,		// Port D GPIO Data Register
-			ESSI_PRRC	= 0xffffbe,		// Port D Direction Register
-			ESSI_PCRC	= 0xffffbf,		// Port D Control Register
+			ESSI_PDRC	= 0xffffbd,		// Port C GPIO Data Register
+			ESSI_PRRC	= 0xffffbe,		// Port C Direction Register
+			ESSI_PCRC	= 0xffffbf,		// Port C Control Register
 		};
+
+		enum EssiIndex
+		{
+			Essi0 = 0x10,
+			Essi1 = 0x00
+		};
+
+		// _____________________________________________________________________________
+		// implementation
+		//
+		Essi( DSP& _dsp, Memory& _memory ) : m_dsp(_dsp), m_memory(_memory)
+		{
+		}
+
+		void reset();
+		void exec();
+		void setControlRegisters(EssiIndex _essi, TWord cra, TWord crb);
+
+	private:
+		void reset(EssiIndex _index);
+
+		static TWord address(EssiIndex _type, EssiRegX addr)
+		{
+			return (addr & (~Essi0)) | _type;
+		}
+
+		void set(EssiIndex _index, EssiRegX _reg, TWord _value);
+		TWord get(EssiIndex _index, EssiRegX _reg) const;
 
 		// _____________________________________________________________________________
 		// members
 		//
 		DSP&		m_dsp;
 		Memory&		m_memory;
-
-		// _____________________________________________________________________________
-		// implementation
-		//
-	public:
-		Essi( DSP& _dsp, Memory& _memory ) : m_dsp(_dsp), m_memory( _memory )
-		{
-		}
-
-		void exec();
 	};
 }

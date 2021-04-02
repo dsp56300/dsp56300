@@ -155,6 +155,8 @@ namespace dsp56k
 				exec();
 		}
 
+		Essi&			getEssi							()				{ return essi; }
+
 		const SRegs&	readRegs						() const		{ return reg; }
 
 		void			readDebugRegs					( dsp56k::SRegs& _dst ) const;

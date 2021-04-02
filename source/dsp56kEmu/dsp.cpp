@@ -51,6 +51,7 @@ namespace dsp56k
 		// 100162AEd01.pdf - page 2-16
 
 		// TODO: internal peripheral devices are reset
+		essi.reset();
 
 		reg.m[0] = reg.m[1] = reg.m[2] = reg.m[3] = reg.m[4] = reg.m[5] = reg.m[6] = reg.m[7] = TReg24(int(0xffffff));
 		reg.r[0] = reg.r[1] = reg.r[2] = reg.r[3] = reg.r[4] = reg.r[5] = reg.r[6] = reg.r[7] = TReg24(int(0));
@@ -2063,7 +2064,8 @@ namespace dsp56k
 		continues with the next instruction. All interrupt sources are disabled except for the stack
 		error, NMI, illegal instruction, Trap, Debug request, and hardware reset interrupts.
 		*/
-	//	LOG_ERR_NOTIMPLEMENTED("RESET");
+
+		essi.reset();
 	}
 
 	void DSP::jsr(const TReg24& _val)
