@@ -9,6 +9,5 @@ namespace dsp56k
 	//
 	void Essi::exec()
 	{
-		return;
 	}
 };
