@@ -7,6 +7,7 @@
 #include "essi.h"
 #include "instructioncache.h"
 #include "opcodes.h"
+#include "logging.h"
 
 namespace dsp56k
 {

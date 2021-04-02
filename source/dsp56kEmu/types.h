@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstdint>
+#include <limits>
+#include "assert.h"
+
 namespace dsp56k
 {
 	typedef uint8_t				TUInt8;

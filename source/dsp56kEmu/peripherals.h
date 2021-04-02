@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "staticArray.h"
 
 namespace dsp56k
 {
