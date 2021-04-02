@@ -23,3 +23,7 @@ utils.cpp utils.h
 )
 
 add_library(dsp56kEmu STATIC ${SOURCES})
+
+if(WIN32)
+	target_link_libraries(dsp56kEmu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../dsp56k/CM56300.lib)
+endif()

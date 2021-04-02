@@ -1,15 +1,14 @@
 #include "pch.h"
 
-#define SUPPORT_DISASSEMBLER
+#if defined(_WIN32) && defined(_DEBUG)
+#	define SUPPORT_DISASSEMBLER
+#endif
 
 #ifdef SUPPORT_DISASSEMBLER
-#ifdef _DEBUG
 extern "C"
 {
-#include "../dsp56k/PROTO563.H"
+	#include "../dsp56k/PROTO563.H"
 }
-#pragma comment(lib, "../dsp56k/CM56300.LIB")
-#endif
 #endif
 
 namespace dsp56k
