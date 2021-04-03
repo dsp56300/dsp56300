@@ -136,7 +136,7 @@ namespace dsp56k
 			Lsl_D,		Lsl_ii,		Lsl_SD,
 			Lsr_D,		Lsr_ii,		Lsr_SD,
 			Lua_ea,		Lua_Rn,
-			Mac_S1S2,	Mac_S,		MAc_xxxx,
+			Mac_S1S2,	Mac_S,
 			Maci_xxxx,
 			Macsu,
 			Macr_S1S2,	Macr_S,

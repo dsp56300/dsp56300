@@ -71,8 +71,8 @@ namespace dsp56k
 
 		OpcodeInfo(OpcodeInfo::Bsclr_ea,		"0000110110MMMRRR0S0bbbbb",	"BSCLR #n,[X or Y]:ea,xxxx", OpcodeInfo::EffectiveAddress),
 		OpcodeInfo(OpcodeInfo::Bsclr_aa,		"0000110110aaaaaa1S0bbbbb",	"BSCLR #n,[X or Y]:aa,xxxx", OpcodeInfo::EffectiveAddress),
-		OpcodeInfo(OpcodeInfo::Bsclr_qq,		"0000010010qqqqqq1S0bbbbb",	"BSCLR #n,[X or Y]:qq,xxxx", OpcodeInfo::EffectiveAddress),
 		OpcodeInfo(OpcodeInfo::Bsclr_pp,		"0000110111pppppp0S0bbbbb",	"BSCLR #n,[X or Y]:pp,xxxx", OpcodeInfo::EffectiveAddress),
+		OpcodeInfo(OpcodeInfo::Bsclr_qq,		"0000010010qqqqqq1S0bbbbb",	"BSCLR #n,[X or Y]:qq,xxxx", OpcodeInfo::EffectiveAddress),
 		OpcodeInfo(OpcodeInfo::Bsclr_S,			"0000110111DDDDDD100bbbbb",	"BSCLR #n,S,xxxx"),
 
 		OpcodeInfo(OpcodeInfo::Bset_ea,			"0000101001MMMRRR0S1bbbbb",	"BSET #n,[X or Y]:ea", OpcodeInfo::EffectiveAddress),
@@ -463,6 +463,8 @@ namespace dsp56k
 		for(size_t i=0; i<len; ++i)
 		{
 			const OpcodeInfo& opcode = g_opcodes[i];
+
+			assert(opcode.getInstruction() == i && "programming error, list sorting is faulty");
 
 			if(opcode.isNonParallelOpcode())
 				m_opcodesNonParallel.push_back(&opcode);
