@@ -1823,7 +1823,7 @@ namespace dsp56k
 		case 0x0c:	return a1();
 		case 0x0d:	return b1();
 		case 0x0e:	return getA<TReg24>();
-		case 0x0f:	return getA<TReg24>();
+		case 0x0f:	return getB<TReg24>();
 
 			// 010TTT - 8 address registers in AGU
 		case 0x10:	return reg.r[0];
