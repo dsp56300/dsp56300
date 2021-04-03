@@ -1676,7 +1676,7 @@ namespace dsp56k
 							memWrite( S, pp, memRead( s, ea ) );
 					}
 					else
-						memWrite( s, ea, memRead( S, pp ) );
+						memWrite( S, ea, memRead( s, pp ) );
 				}
 				return true;
 			case OpcodeInfo::Movep_Xqqea:	// 00000111W1MMMRRR0Sqqqqqq
