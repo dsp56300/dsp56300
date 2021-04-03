@@ -76,6 +76,7 @@ namespace dsp56k
 		virtual bool isValidAddress( TWord _addr ) const = 0;
 		virtual TWord read(TWord _addr) = 0;
 		virtual void write(TWord _addr, TWord _value) = 0;
+		virtual void exec() = 0;
 	};
 
 	// dummy implementation that just stores writes and returns them in subsequent reads
@@ -122,5 +123,7 @@ namespace dsp56k
 
 			m_mem[_addr] = _val;
 		}
+
+		void exec() override {}
 	};
 }

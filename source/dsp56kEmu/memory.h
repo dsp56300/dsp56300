@@ -103,6 +103,12 @@ namespace dsp56k
 
 		void				setSymbol			(char _area, TWord _address, const std::string& _name);
 		const std::string&	getSymbol			(EMemArea _memArea, TWord addr);
+		void exec()
+		{
+			m_perif[0]->exec();
+			if(m_perif[1] != m_perif[0])
+				m_perif[1]->exec();
+		}
 
 	private:
 		void	fillWithInitPattern();

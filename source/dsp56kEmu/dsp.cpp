@@ -97,6 +97,7 @@ namespace dsp56k
 		assert( (reg.sr.var & SR_SC) == 0 && "16 bit compatibility mode is not supported");
 
 		essi.exec();
+		mem.exec();
 
 #ifdef _DEBUG
 		getASM();
