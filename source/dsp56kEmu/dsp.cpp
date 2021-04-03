@@ -24,7 +24,7 @@
 
 namespace dsp56k
 {
-	static bool g_dumpPC = true;
+	static bool g_dumpPC = false;
 //	static const TWord g_dumpPCictrMin = 0x153000;
 	static const TWord g_dumpPCictrMin = 0xfffff;
 
@@ -147,7 +147,7 @@ namespace dsp56k
 			assert( 0 && "illegal instruction" );
 		}
 
-		if( reg.ictr.var >= g_dumpPCictrMin )
+		if( g_dumpPC && reg.ictr.var >= g_dumpPCictrMin )
 		{
 			for( size_t i=0; i<Reg_COUNT; ++i )
 			{
