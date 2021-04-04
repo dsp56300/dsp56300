@@ -64,7 +64,8 @@ namespace dsp56k
 		Vba_HostReceiveDataFull						= 0x60,			// Host receive data full						
 		Vba_HostTransmitDataEmpty					= 0x62,			// Host transmit data empty						
 		Vba_HostCommandDefault						= 0x64,			// Host command (default)						
-		Vba_Reserved66								= 0x66,			// Reserved										
-		Vba_ReservedFE								= 0xFE,			// Reserved										
+		Vba_Reserved66								= 0x66,			// Reserved
+		// ....
+		Vba_ReservedFE								= 0xFE,			// Reserved
 	};
 }

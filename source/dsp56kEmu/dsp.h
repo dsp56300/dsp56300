@@ -875,6 +875,11 @@ namespace dsp56k
 		// -- memory
 
 		bool	memWrite			( EMemArea _area, TWord _offset, TWord _value );
+		bool	memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value  );
+		bool	memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value  );
+
 		TWord	memRead				( EMemArea _area, TWord _offset ) const;
+		TWord	memReadPeriphFFFF80	( EMemArea _area, TWord _offset ) const;
+		TWord	memReadPeriphFFFFC0	( EMemArea _area, TWord _offset ) const;
 	};
 }

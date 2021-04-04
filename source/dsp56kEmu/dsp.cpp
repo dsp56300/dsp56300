@@ -1025,11 +1025,11 @@ namespace dsp56k
 				const TWord pppppp	= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-				const TWord ea = 0xffffc0 + pppppp;
+				const TWord ea = pppppp;
 
 				const int displacement = signextend<int,24>( fetchPC() );
 
-				if( !bittest( memRead( S, ea ), bit ) )
+				if( !bittest( memReadPeriphFFFFC0( S, ea ), bit ) )
 				{
 					setPC(pcCurrentInstruction + displacement);
 				}
@@ -1041,11 +1041,11 @@ namespace dsp56k
 				const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-				const TWord ea = 0xffff80 + qqqqqq;
+				const TWord ea = qqqqqq;
 
 				const int displacement = signextend<int,24>( fetchPC() );
 
-				if( !bittest( memRead( S, ea ), bit ) )
+				if( !bittest( memReadPeriphFFFF80( S, ea ), bit ) )
 				{
 					setPC(pcCurrentInstruction + displacement);
 				}
@@ -1078,11 +1078,11 @@ namespace dsp56k
 				const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-				const TWord ea = 0xffff80 + qqqqqq;
+				const TWord ea = qqqqqq;
 
 				const int displacement = signextend<int,24>( fetchPC() );
 
-				if( bittest( memRead( S, ea ), bit ) )
+				if( bittest( memReadPeriphFFFF80( S, ea ), bit ) )
 				{
 					setPC(pcCurrentInstruction + displacement);
 				}
@@ -1282,11 +1282,11 @@ namespace dsp56k
 				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-				const TWord ea		= 0xffff80 + qqqqqq;
+				const TWord ea		= qqqqqq;
 
 				const TWord addr	= fetchPC();
 
-				if( !bittest( memRead(S, ea), bit ) )
+				if( !bittest( memReadPeriphFFFF80(S, ea), bit ) )
 					setPC(addr);
 			}
 			return true;
@@ -1321,15 +1321,15 @@ namespace dsp56k
 			return true;
 		case OpcodeInfo::Jset_pp:	// JSET #n,[X or Y]:pp,xxxx - 0 0 0 0 1 0 1 0 1 0 p p p p p p 1 S 1 b b b b b
 			{
-				const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+				const TWord pppppp	= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
 				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-				const TWord ea		= 0xFFFFC0 + qqqqqq;
+				const TWord ea		= pppppp;
 
 				const TWord addr	= fetchPC();
 
-				if( bittest( memRead(S, ea), bit ) )
+				if( bittest( memReadPeriphFFFFC0(S, ea), bit ) )
 					setPC(addr);
 			}
 			return true;
@@ -1340,11 +1340,11 @@ namespace dsp56k
 				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-				const TWord ea		= 0xFFFF80 + qqqqqq;
+				const TWord ea		= qqqqqq;
 
 				const TWord addr	= fetchPC();
 
-				if( bittest( memRead(S, ea), bit ) )
+				if( bittest( memReadPeriphFFFF80(S, ea), bit ) )
 					setPC(addr);
 			}
 			return true;
@@ -1661,7 +1661,7 @@ namespace dsp56k
 			// Move Peripheral Data
 			case OpcodeInfo::Movep_ppea:	// 0000100sW1MMMRRR1Spppppp
 				{
-					const TWord pp		= 0xffffc0 + oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+					const TWord pp		= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
 					const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
 					const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
 					const EMemArea s	= oi->getFieldValue(OpcodeInfo::Field_s, op) ? MemArea_Y : MemArea_X;
@@ -1672,12 +1672,12 @@ namespace dsp56k
 					if( write )
 					{
 						if( mmmrrr == MMM_ImmediateData )
-							memWrite( S, pp, ea );
+							memWritePeriphFFFFC0( S, pp, ea );
 						else
-							memWrite( S, pp, memRead( s, ea ) );
+							memWritePeriphFFFFC0( S, pp, memRead( s, ea ) );
 					}
 					else
-						memWrite( S, ea, memRead( s, pp ) );
+						memWrite( S, ea, memReadPeriphFFFFC0( s, pp ) );
 				}
 				return true;
 			case OpcodeInfo::Movep_Xqqea:	// 00000111W1MMMRRR0Sqqqqqq
@@ -1685,7 +1685,7 @@ namespace dsp56k
 				{
 					const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
 					const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
-					const TWord qAddr	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
+					const TWord qAddr	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
 					const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
 
 					const TWord ea		= decode_MMMRRR_read( mmmrrr );
@@ -1695,12 +1695,12 @@ namespace dsp56k
 					if( write )
 					{
 						if( mmmrrr == MMM_ImmediateData )
-							memWrite( area, qAddr, ea );
+							memWritePeriphFFFF80( area, qAddr, ea );
 						else
-							memWrite( area, qAddr, memRead( S, ea ) );
+							memWritePeriphFFFF80( area, qAddr, memRead( S, ea ) );
 					}
 					else
-						memWrite( S, ea, memRead( area, qAddr ) );				
+						memWrite( S, ea, memReadPeriphFFFF80( area, qAddr ) );				
 				}
 				return true;
 			case OpcodeInfo::Movep_eapp:	// 0000100sW1MMMRRR01pppppp
@@ -1712,31 +1712,31 @@ namespace dsp56k
 				return true;
 			case OpcodeInfo::Movep_Spp:		// 0000100sW1dddddd00pppppp
 				{
-					const TWord addr	= 0xffffc0 + oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
+					const TWord pppppp	= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
 					const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
 					const EMemArea area = oi->getFieldValue(OpcodeInfo::Field_s, op) ? MemArea_Y : MemArea_X;
 					const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
 
 					if( write )
-						memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
+						memWritePeriphFFFFC0( area, pppppp, decode_dddddd_read( dddddd ).toWord() );
 					else
-						decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
+						decode_dddddd_write( dddddd, TReg24(memReadPeriphFFFFC0( area, pppppp )) );
 				}
 				return true;
 			case OpcodeInfo::Movep_SXqq:	// 00000100W1dddddd1q0qqqqq
 			case OpcodeInfo::Movep_SYqq:	// 00000100W1dddddd0q1qqqqq
 				{
 					
-					const TWord addr	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_q, OpcodeInfo::Field_qqqqq, op);
+					const TWord addr	= oi->getFieldValue(OpcodeInfo::Field_q, OpcodeInfo::Field_qqqqq, op);
 					const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_dddddd, op);
 					const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
 
 					const auto area = oi->getInstruction() == OpcodeInfo::Movep_SYqq ? MemArea_Y : MemArea_X;
 
 					if( write )
-						memWrite( area, addr, decode_dddddd_read( dddddd ).toWord() );
+						memWritePeriphFFFF80( area, addr, decode_dddddd_read( dddddd ).toWord() );
 					else
-						decode_dddddd_write( dddddd, TReg24(memRead( area, addr )) );
+						decode_dddddd_write( dddddd, TReg24(memReadPeriphFFFF80( area, addr )) );
 				}
 				return true;
 			default:
@@ -2146,9 +2146,9 @@ namespace dsp56k
 				const TWord qqqqqq	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-				const TWord ea		= 0xffff80 + qqqqqq;
+				const TWord ea		= qqqqqq;
 
-				TWord val = memRead( S, ea );
+				TWord val = memReadPeriphFFFF80( S, ea );
 
 				sr_toggle( SR_C, bittestandset( val, bit ) );
 
@@ -2208,13 +2208,13 @@ namespace dsp56k
 		case OpcodeInfo::Bclr_qq:	// 0 0 0 0 0 0 0 1 0 0 q q q q q q 0 S 0 b b b b b
 			{
 				const TWord bit = oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
-				const TWord ea	= 0xffff80 + oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
+				const TWord ea	= oi->getFieldValue(OpcodeInfo::Field_qqqqqq, op);
 
 				const EMemArea S = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
 				const TWord res = alu_bclr( bit, memRead( S, ea ) );
 
-				memWrite( S, ea, res );			
+				memWritePeriphFFFF80( S, ea, res );			
 			}
 			return true;
 		case OpcodeInfo::Bclr_D:	// 0000101011DDDDDD010bbbbb
@@ -2254,7 +2254,7 @@ namespace dsp56k
 				const TWord pppppp	= oi->getFieldValue(OpcodeInfo::Field_pppppp, op);
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
 
-				const TWord memVal	= memRead( S, pppppp + 0xffffc0 );
+				const TWord memVal	= memReadPeriphFFFFC0( S, pppppp );
 
 				const bool bitSet	= ( memVal & (1<<bitNum)) != 0;
 
@@ -3462,6 +3462,16 @@ namespace dsp56k
 		return mem.set( _area, _offset, _value );
 	}
 
+	bool DSP::memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value )
+	{
+		return mem.set( _area, 0xFFFF80 + _offset, _value );
+	}
+
+	bool DSP::memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value )
+	{
+		return mem.set( _area, 0xFFFFC0 + _offset, _value );
+	}
+
 	// _____________________________________________________________________________
 	// memRead
 	//
@@ -3487,7 +3497,16 @@ namespace dsp56k
 	// 		}
 	// 	}
 
-			return mem.get( _area, _offset );
+		return mem.get( _area, _offset );
+	}
+
+	TWord DSP::memReadPeriphFFFF80(EMemArea _area, TWord _offset) const
+	{
+		return mem.get( _area, 0xffff80 + _offset);	
+	}
+	TWord DSP::memReadPeriphFFFFC0(EMemArea _area, TWord _offset) const
+	{
+		return mem.get( _area, 0xffffc0 + _offset);	
 	}
 
 	// _____________________________________________________________________________
