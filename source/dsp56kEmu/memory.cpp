@@ -42,20 +42,23 @@ namespace dsp56k
 	{
 		m_memoryMap->memTranslateAddress(_area, _offset);
 
+#ifdef _DEBUG
 		if(!m_memoryMap->memValidateAccess(_area, _offset, true))
 			return false;
-
+#endif
 		if( _area < static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
 		{
 			m_perif[_area]->write( _offset, _value );
 			return true;
 		}
 
+#ifdef _DEBUG
 		if( _offset >= m_mem[_area].size() )
 		{
 			LOG_ERR_MEM_WRITE( _offset );
 			return false;
 		}
+#endif
 /*
 		if( m_dsp && m_dsp->getICTR() )
 		{
@@ -87,28 +90,36 @@ namespace dsp56k
 	{
 		m_memoryMap->memTranslateAddress(_area, _offset);
 
+#ifdef _DEBUG
 		if(!m_memoryMap->memValidateAccess(_area, _offset, true))
 			return false;
+#endif
 
+		// TODO: performance: Different instructions are used to access peripherals, add a new getPeripherals instruction. No need to have those if's here, they are pretty costly
 		if( _area < static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
 		{
 			return m_perif[_area]->read(_offset);
 		}
 
+#ifdef _DEBUG
 		if( _offset >= m_mem[_area].size() )
 		{
 			LOG_ERR_MEM_READ( _offset );
 			assert( 0 && "invalid memory address" );
 			return 0x00badbad;
 		}
+#endif
 
-		const TWord res = m_mem[_area][_offset];
+		const auto res = m_mem[_area][_offset];
 
+#ifdef _DEBUG
 		if( res == g_initPattern)
 			LOG_ERR_MEM_READ_UNINITIALIZED(_area,_offset);
+#endif
 
 		return res;
 	}
+
 	// _____________________________________________________________________________
 	// loadOMF
 	//
