@@ -9,6 +9,7 @@ dsp.cpp dsp.h
 error.cpp error.h
 essi.cpp essi.h
 instructioncache.cpp instructioncache.h
+interrupts.h
 logging.cpp logging.h
 memory.cpp memory.h
 omfloader.cpp omfloader.h
