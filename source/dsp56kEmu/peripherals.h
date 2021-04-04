@@ -7,65 +7,68 @@ namespace dsp56k
 {
 	enum XIO
 	{
-		XIO_Reserved_High_First	= 0xffff80,
+		XIO_Reserved_High_First	= 0xffff80,	// 24 bit mode
 		XIO_Reserved_High_Last	= 0xffffff,
 
-		XIO_Reserved_Low_First	= 0x00ff80,
-		XIO_Reserved_Low_Last	= 0x00ffff,
-
 		// DMA
-		XIO_DCR5				= 0xffffd8,
-		XIO_DCO5,
-		XIO_DDR5,
-		XIO_DSR5,
+		XIO_DCR5				= 0xffffd8,	// DMA 5 Control Register
+		XIO_DCO5,							// DMA 5 Counter
+		XIO_DDR5,							// DMA 5 Destination Address Register
+		XIO_DSR5,							// DMA 5 Source Address Register
 
-		XIO_DCR4,
-		XIO_DCO4,
-		XIO_DDR4,
-		XIO_DSR4,
+		XIO_DCR4,							// DMA 4 Control Register
+		XIO_DCO4,							// DMA 4 Counter
+		XIO_DDR4,							// DMA 4 Destination Address Register
+		XIO_DSR4,							// DMA 4 Source Address Register
 
-		XIO_DCR3,
-		XIO_DCO3,
-		XIO_DDR3,
-		XIO_DSR3,
+		XIO_DCR3,							// DMA 3 Control Register
+		XIO_DCO3,							// DMA 3 Counter
+		XIO_DDR3,							// DMA 3 Destination Address Register
+		XIO_DSR3,							// DMA 3 Source Address Register
 
-		XIO_DCR2,
-		XIO_DCO2,
-		XIO_DDR2,
-		XIO_DSR2,
+		XIO_DCR2,							// DMA 2 Control Register
+		XIO_DCO2,							// DMA 2 Counter
+		XIO_DDR2,							// DMA 2 Destination Address Register
+		XIO_DSR2,							// DMA 2 Source Address Register
 
-		XIO_DCR1,
-		XIO_DCO1,
-		XIO_DDR1,
-		XIO_DSR1,
+		XIO_DCR1,							// DMA 1 Control Register
+		XIO_DCO1,							// DMA 1 Counter
+		XIO_DDR1,							// DMA 1 Destination Address Register
+		XIO_DSR1,							// DMA 1 Source Address Register
 
-		XIO_DCR0,
-		XIO_DCO0,
-		XIO_DDR0,
-		XIO_DSR0,
+		XIO_DCR0,							// DMA 0 Control Register
+		XIO_DCO0,							// DMA 0 Counter
+		XIO_DDR0,							// DMA 0 Destination Address Register
+		XIO_DSR0,							// DMA 0 Source Address Register
 
-		XIO_DOR3,
-		XIO_DOR2,
-		XIO_DOR1,
-		XIO_DOR0,
+		XIO_DOR3,							// DMA Offset Register 3
+		XIO_DOR2,							// DMA Offset Register 2 
+		XIO_DOR1,							// DMA Offset Register 1
+		XIO_DOR0,							// DMA Offset Register 0
 
-		XIO_DSTR,
+		XIO_DSTR,							// DMA Status Register
 
-		XIO_IDR,
+		XIO_IDR,							// ID Register
 
-		XIO_AAR3,
-		XIO_AAR2,
-		XIO_AAR1,
-		XIO_AAR0,
+		XIO_AAR3,							// Address Attribute Register 3
+		XIO_AAR2,							// Address Attribute Register 2
+		XIO_AAR1,							// Address Attribute Register 1
+		XIO_AAR0,							// Address Attribute Register 0
 
-		XIO_DCR,
-		XIO_BCR,
-		XIO_OGDB,
+		XIO_DCR,							// DRAM Control Register
+		XIO_BCR,							// Bus Control Register
+		XIO_OGDB,							// OnCE GDB Register
 
-		XIO_PCTL,
+		XIO_PCTL,							// PLL Control Register
 
-		XIO_IPRP,
-		XIO_IPRC
+		XIO_IPRP,							// Interrupt Priority Register Peripheral
+		XIO_IPRC							// Interrupt Priority Register Core
+	};
+
+	enum HostIO
+	{
+		HostIO_HSR		= 0xFFFFC3,			// Host Status Register (HSR)
+		HostIO_HRX		= 0xFFFFC6			// Host Receive Register (HRX)
 	};
 
 	class IPeripherals
@@ -96,7 +99,6 @@ namespace dsp56k
 		bool isValidAddress( TWord _addr ) const override
 		{
 			if( _addr >= XIO_Reserved_High_First && _addr <= XIO_Reserved_High_Last )	return true;
-			if( _addr >= XIO_Reserved_Low_First && _addr <= XIO_Reserved_Low_Last )		return true;
 			return false;
 		}
 
@@ -106,8 +108,6 @@ namespace dsp56k
 
 			if( _addr >= XIO_Reserved_High_First )
 				_addr -= XIO_Reserved_High_First;
-			else if( _addr >= XIO_Reserved_Low_First )
-				_addr -= XIO_Reserved_Low_First;
 
 			return m_mem[_addr];
 		}
@@ -118,8 +118,6 @@ namespace dsp56k
 
 			if( _addr >= XIO_Reserved_High_First )
 				_addr -= XIO_Reserved_High_First;
-			else if( _addr >= XIO_Reserved_Low_First )
-				_addr -= XIO_Reserved_Low_First;
 
 			m_mem[_addr] = _val;
 		}
