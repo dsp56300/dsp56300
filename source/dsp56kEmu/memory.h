@@ -110,6 +110,11 @@ namespace dsp56k
 				m_perif[1]->exec();
 		}
 
+		size_t				size				()
+		{
+			return m_mem[MemArea_X].size();
+		}
+
 	private:
 		void	fillWithInitPattern();
 	};
