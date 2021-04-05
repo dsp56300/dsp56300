@@ -1,11 +1,18 @@
 #pragma once
 
+#include "fastmath.h"
 #include "types.h"
+#include "utils.h"
 
 namespace dsp56k
 {
 	class DSP;
 	class Memory;
+
+	constexpr float g_float2dspScale	= 8388608.0f;
+	constexpr float g_dsp2FloatScale	= 0.00000011920928955078125f;
+	constexpr float g_dspFloatMax		= 8388607.0f;
+	constexpr float g_dspFloatMin		= -8388608.0f;
 
 	class Essi
 	{
@@ -157,6 +164,19 @@ namespace dsp56k
 
 		void toggleStatusRegisterBit(EssiIndex _essi, uint32_t _bit, uint32_t _zeroOrOne);
 		TWord testStatusRegisterBit(EssiIndex _essi0, RegSSISRbits _bit) const;
+
+		static TWord float2Dsdp(float f)
+		{
+			f *= g_float2dspScale;
+			f = clamp(f, g_dspFloatMin, g_dspFloatMax);
+
+			return floor_int(f) & 0x00ffffff;
+		}
+
+		static float dsp2Float(TWord d)
+		{
+			return static_cast<float>(signextend<int32_t,24>(d)) * g_dsp2FloatScale;
+		}
 
 	private:
 		void reset(EssiIndex _index);

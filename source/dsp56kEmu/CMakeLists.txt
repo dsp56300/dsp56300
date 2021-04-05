@@ -3,11 +3,13 @@ project(dsp56kEmu)
 
 set(SOURCES
 agu.cpp agu.h
+buildconfig.h
 assert.cpp assert.h
 disasm.cpp disasm.h
 dsp.cpp dsp.h
 error.cpp error.h
 essi.cpp essi.h
+fastmath.h
 instructioncache.cpp instructioncache.h
 interrupts.h
 logging.cpp logging.h
