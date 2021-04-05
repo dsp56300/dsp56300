@@ -32,14 +32,14 @@ namespace dsp56k
 	{
 	public:
 		virtual ~IMemoryMap() = default;
-		virtual bool memTranslateAddress( EMemArea& _area, TWord& _offset ) const = 0;
+		virtual void memTranslateAddress( EMemArea& _area, TWord& _offset ) const = 0;
 		virtual bool memValidateAccess	( EMemArea _area, TWord _addr, bool _write ) const = 0;
 	};
 
 	class DefaultMemoryMap final : public IMemoryMap
 	{
 	public:
-		bool memTranslateAddress(EMemArea& _area, TWord& _offset) const override		{ return false; }
+		void memTranslateAddress(EMemArea& _area, TWord& _offset) const override		{}
 		bool memValidateAccess(EMemArea _area, TWord _addr, bool _write) const override	{ return true; }
 	};
 
