@@ -785,7 +785,7 @@ namespace dsp56k
 
 				d.var <<= 1;
 
-				bool changed47 = bittest( d, 47 ) != c;
+				bool changed47 = (bittest( d, 47 ) != 0) != c;
 
 				if( sr_test(SR_C) )
 					bittestandset( d.var, 0 );

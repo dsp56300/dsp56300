@@ -604,7 +604,7 @@ namespace dsp56k
 
 		void 	sr_set					( TWord _bits )						{ reg.sr.var |= _bits;	}
 		void 	sr_clear				( TWord _bits )						{ reg.sr.var &= ~_bits; }
-		bool 	sr_test					( TWord _bits ) const				{ return (reg.sr.var & _bits) != 0; }
+		int 	sr_test					( TWord _bits ) const				{ return (reg.sr.var & _bits); }
 		int 	sr_val					( TWord _bitNum ) const				{ return (reg.sr.var >> _bitNum) & 0x01; }
 		void 	sr_toggle				( TWord _bits, bool _set )			{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
 

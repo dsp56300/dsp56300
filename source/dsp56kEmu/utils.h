@@ -6,34 +6,34 @@ namespace dsp56k
 {
 	// TODO: optimize for x86 win32, use intrin.h that has those functions in it
 
-	template<typename T> bool bittest( const T& _val, unsigned int _bitNumber )
+	template<typename T> int bittest( const T& _val, unsigned int _bitNumber )
 	{
 		return (_val & (T(1)<<_bitNumber)) != 0;
 	}
 
-	static bool bittest( const TReg56& _val, unsigned int _bitNumber )
+	static int bittest( const TReg56& _val, unsigned int _bitNumber )
 	{
 		return bittest( _val.var, _bitNumber );
 	}
 
-	static bool bittest( const TReg48& _val, unsigned int _bitNumber )
+	static int bittest( const TReg48& _val, unsigned int _bitNumber )
 	{
 		return bittest( _val.var, _bitNumber );
 	}
 
-	static bool bittest( const TReg24& _val, unsigned int _bitNumber )
+	static int bittest( const TReg24& _val, unsigned int _bitNumber )
 	{
 		return bittest( _val.var, _bitNumber );
 	}
 
-	static bool bittest( const TReg8& _val, unsigned int _bitNumber )
+	static int bittest( const TReg8& _val, unsigned int _bitNumber )
 	{
 		return bittest( _val.var, _bitNumber );
 	}
 
-	template<typename T> bool bittestandset( T& _val, unsigned int _bitNumber )
+	template<typename T> int bittestandset( T& _val, unsigned int _bitNumber )
 	{
-		bool res = bittest<T>( _val, _bitNumber );
+		auto res = bittest<T>( _val, _bitNumber );
 		_val |= (T(1)<<_bitNumber);
 		return res;
 	}
@@ -47,21 +47,21 @@ namespace dsp56k
 		_val |= bit;
 	}
 
-	template<typename T,unsigned int B> bool bittestandset( RegType<T,B>& _val, unsigned int _bitNumber )
+	template<typename T,unsigned int B> int bittestandset( RegType<T,B>& _val, unsigned int _bitNumber )
 	{
 		return bittestandset( _val.var, _bitNumber );
 	}
 
-	template<typename T> bool bittestandclear( T& _val, unsigned int _bitNumber )
+	template<typename T> int bittestandclear( T& _val, unsigned int _bitNumber )
 	{
-		bool res = bittest<T>( _val, _bitNumber );
+		auto res = bittest<T>( _val, _bitNumber );
 		_val &= ~ (T(1)<<_bitNumber);
 		return res;
 	}
 
-	template<typename T> bool bittestandchange( T& _val, unsigned int _bitNumber )
+	template<typename T> auto bittestandchange( T& _val, unsigned int _bitNumber )
 	{
-		bool res = bittest<T>( _val, _bitNumber );
+		auto res = bittest<T>( _val, _bitNumber );
 
 		if( res )
 			_val &= ~ (T(1)<<_bitNumber);
@@ -71,7 +71,7 @@ namespace dsp56k
 		return res;
 	}
 
-	static bool bittestandchange( TReg24& _val, unsigned int _bitNumber )
+	static int bittestandchange( TReg24& _val, unsigned int _bitNumber )
 	{
 		return bittestandchange( _val.var, _bitNumber );
 	}
