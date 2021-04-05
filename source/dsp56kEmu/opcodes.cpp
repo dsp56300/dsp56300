@@ -320,7 +320,10 @@ namespace dsp56k
 		OpcodeInfo(OpcodeInfo::Tst,				"????????????????0000d011",	"TST S", OpcodeInfo::EffectiveAddress),
 
 		OpcodeInfo(OpcodeInfo::Vsl,				"0000101S11MMMRRR110i0000",	"VSL S,i,L:ea"),
-		OpcodeInfo(OpcodeInfo::Wait,			"00000000000000001o0o0110",	"WAIT")
+		OpcodeInfo(OpcodeInfo::Wait,			"00000000000000001o0o0110",	"WAIT"),
+
+		// Dummy entry
+		OpcodeInfo(OpcodeInfo::ResolveCache,	"000000000000000000000000",	"ResolveCache")
 	};
 
 	OpcodeInfo::OpcodeInfo(Instruction _inst, const char* _opcode, const char* _assembly, ExtensionWordTypes _extensionWordType): m_instruction(_inst), m_opcode(_opcode), m_assembly(_assembly), m_extensionWordType(_extensionWordType)
@@ -461,7 +464,10 @@ namespace dsp56k
 
 		for(size_t i=0; i<len; ++i)
 		{
-			const OpcodeInfo& opcode = g_opcodes[i];
+			const auto& opcode = g_opcodes[i];
+
+			if(opcode.getInstruction() == OpcodeInfo::ResolveCache)
+				continue;
 
 			assert(opcode.getInstruction() == i && "programming error, list sorting is faulty");
 
@@ -490,6 +496,11 @@ namespace dsp56k
 	{
 		assert(isParallelOpcode(_opcode));
 		return findOpcodeInfo(_opcode, m_opcodesAlu);
+	}
+
+	const OpcodeInfo& Opcodes::getOpcodeInfoAt(size_t _index) const
+	{
+		return g_opcodes[_index];
 	}
 
 	const OpcodeInfo* Opcodes::findOpcodeInfo(TWord _opcode, const std::vector<const OpcodeInfo*>& _opcodes)

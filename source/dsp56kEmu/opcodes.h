@@ -193,7 +193,9 @@ namespace dsp56k
 			Trapcc,
 			Tst,
 			Vsl,
-			Wait
+			Wait,
+
+			ResolveCache
 		};
 
 		enum ExtensionWordTypes
@@ -407,6 +409,8 @@ namespace dsp56k
 		{
 			return !isParallelOpcode(_opcode);
 		}
+
+		const OpcodeInfo& getOpcodeInfoAt(size_t _index) const;
 
 	private:
 		static const OpcodeInfo* findOpcodeInfo(TWord _opcode, const std::vector<const OpcodeInfo*>& _opcodes);

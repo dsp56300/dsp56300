@@ -126,6 +126,8 @@ namespace dsp56k
 		uint32_t m_currentOpLen = 0;
 		ProcessingMode m_processingMode = Default;
 
+		std::vector<uint32_t> m_opcodeCache;
+
 		// _____________________________________________________________________________
 		// implementation
 		//
@@ -224,7 +226,7 @@ namespace dsp56k
 
 		void 	execOp							(TWord op);
 
-		bool	exec_parallel					(TWord op);
+		bool	exec_parallel					(const OpcodeInfo* oi, TWord op);
 
 		bool	exec_parallel_alu				(TWord op);
 
@@ -506,9 +508,9 @@ namespace dsp56k
 			return TReg24(int(0xbadbad));
 		}
 
-		bool	decode_cccc				( TWord cccc ) const;
+		bool decode_cccc( TWord cccc ) const;
 
-		TReg24	decode_ff_read( TWord _ff )
+		TReg24 decode_ff_read( TWord _ff )
 		{
 			switch( _ff )
 			{
@@ -521,7 +523,7 @@ namespace dsp56k
 			return TReg24(int(0xbadbad));
 		}
 
-		void decode_ff_write( TWord _ff, TReg24 _value )
+		void decode_ff_write( TWord _ff, const TReg24& _value)
 		{
 			switch( _ff )
 			{
@@ -533,7 +535,7 @@ namespace dsp56k
 			assert( 0 && "invalid ff value" );
 		}
 
-		TReg24	decode_ee_read( TWord _ff )
+		TReg24 decode_ee_read(const TWord _ff)
 		{
 			switch( _ff )
 			{
@@ -546,7 +548,7 @@ namespace dsp56k
 			return TReg24(int(0xbadbad));
 		}
 
-		void decode_ee_write( TWord _ff, TReg24 _value )
+		void decode_ee_write(const TWord _ff, const TReg24& _value)
 		{
 			switch( _ff )
 			{
@@ -593,9 +595,9 @@ namespace dsp56k
 			assert( 0 && "invalid LLL value" );
 		}
 
-		TWord decode_sssss( TWord _sssss )
+		static TWord decode_sssss(const TWord _sssss)
 		{
-			return (0x800000>>(_sssss));
+			return 0x800000 >> _sssss;
 		}
 
 		// -- status register management

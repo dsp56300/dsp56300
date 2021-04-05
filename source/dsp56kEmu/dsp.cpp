@@ -41,6 +41,8 @@ namespace dsp56k
 
 		m_asm[0] = 0;
 
+		m_opcodeCache.resize(mem.size(), OpcodeInfo::ResolveCache);
+
 		resetHW();
 	}
 
@@ -154,9 +156,9 @@ namespace dsp56k
 		const auto op = fetchPC();
 		m_opWordB = memRead(MemArea_P, reg.pc.var);
 
-#ifdef _DEBUG
 		getASM(op, m_opWordB);
 
+#ifdef _DEBUG
 		if( g_dumpPC && pcCurrentInstruction != reg.pc.toWord() && reg.ictr.var >= g_dumpPCictrMin )
 		{
 			std::stringstream ssout;
@@ -168,9 +170,6 @@ namespace dsp56k
 
 			LOGF( ssout.str() );
 		}
-
-#else
-		m_asm[0] = 0;
 #endif
 
 		execOp(op);
@@ -178,30 +177,17 @@ namespace dsp56k
 
 	void DSP::execOp(const TWord op)
 	{
-		if( !op )
-		{
-#ifdef _DEBUG
-//			LOG( "nop" );
-#endif
-		}
-		// non-parallel instruction
-		else if(Opcodes::isNonParallelOpcode(op))
-		{
-			const auto* oi = m_opcodes.findNonParallelOpcodeInfo(op);
-			if(!oi)
-			{
-				m_opcodes.findNonParallelOpcodeInfo(op);	// retry here to help debugging
-				assert(0 && "illegal instruction");
-			}
+		auto& opCache = m_opcodeCache[pcCurrentInstruction];
 
-			if(!exec_nonParallel(oi, op))
-				assert( 0 && "illegal instruction" );
-		}
-		else if( !exec_parallel(op))
-		{
-			exec_parallel(op);	// retry to debug
-			assert( 0 && "illegal instruction" );
-		}
+		const auto nonParallelOp = opCache & 0xff;
+		const auto& oi = m_opcodes.getOpcodeInfoAt(nonParallelOp);
+
+		exec_nonParallel(&oi, op);
+
+		const auto parallelOp = (opCache>>8) & 0xff;
+		const auto& oiMove = m_opcodes.getOpcodeInfoAt(parallelOp);
+
+		exec_parallel(&oiMove, op);
 
 		if( g_dumpPC && reg.ictr.var >= g_dumpPCictrMin )
 		{
@@ -237,12 +223,12 @@ namespace dsp56k
 		++reg.ictr.var;
 	}
 
-	bool DSP::exec_parallel(const TWord op)
+	bool DSP::exec_parallel(const OpcodeInfo* oi, const TWord op)
 	{
-		const auto* oi = m_opcodes.findParallelMoveOpcodeInfo(op & 0xffff00);
-
 		switch (oi->getInstruction())
 		{
+		case OpcodeInfo::Nop:
+			return true;
 		case OpcodeInfo::Ifcc:		// execute the specified ALU operation of the condition is true
 		case OpcodeInfo::Ifcc_U:
 			{
@@ -257,8 +243,13 @@ namespace dsp56k
 				return res;
 			}
 		case OpcodeInfo::Move_Nop:
+			if(!(op&0xff))
+				return true;
 			return exec_parallel_alu(op);
 		default:
+			if(!(op&0xff))
+				return exec_parallel_move(oi, op);
+
 			// simulate latches registers for parallel instructions
 			const auto preMoveX = reg.x;
 			const auto preMoveY = reg.y;
@@ -327,8 +318,9 @@ namespace dsp56k
 
 	bool DSP::exec_parallel_alu(TWord op)
 	{
+#ifdef _DEBUG
 		const auto* opInfo = m_opcodes.findParallelAluOpcodeInfo(op);
-
+#endif
 		op &= 0xff;
 
 		switch(op>>7)
@@ -656,6 +648,47 @@ namespace dsp56k
 	
 	inline bool DSP::exec_nonParallel(const OpcodeInfo* oi, TWord op)
 	{
+		switch (oi->getInstruction())
+		{
+		case OpcodeInfo::Nop:
+			return true;
+		case OpcodeInfo::ResolveCache:
+			auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
+			cacheEntry = 0;
+
+			if( op )
+			{
+				if(Opcodes::isNonParallelOpcode(op))
+				{
+					const auto* oi = m_opcodes.findNonParallelOpcodeInfo(op);
+
+					if(!oi)
+					{
+						m_opcodes.findNonParallelOpcodeInfo(op);	// retry here to help debugging
+						assert(0 && "illegal instruction");
+					}
+
+					cacheEntry = oi->getInstruction() | (OpcodeInfo::Nop << 8);
+
+					if(!exec_nonParallel(oi, op))
+					{
+						assert( 0 && "illegal instruction" );
+					}
+				}
+				else
+				{
+					const auto* oi = m_opcodes.findParallelMoveOpcodeInfo(op);
+					if(!oi)
+					{
+						m_opcodes.findParallelMoveOpcodeInfo(op);	// retry here to help debugging
+						assert(0 && "illegal instruction");
+					}
+					cacheEntry |= oi->getInstruction() << 8;
+				}
+			}
+			break;
+		}
+
 		if( exec_operand_8bits(oi, op&0xff) )	return true;
 		if( exec_move(oi, op) )					return true;
 		if( exec_pcu(oi, op) )					return true;
@@ -3563,6 +3596,9 @@ namespace dsp56k
 	//
 	bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
 	{
+		if(_area == MemArea_P)
+			m_opcodeCache[_offset] = OpcodeInfo::ResolveCache;
+
 		return mem.set( _area, _offset, _value );
 	}
 
