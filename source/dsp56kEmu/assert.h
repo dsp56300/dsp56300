@@ -13,5 +13,10 @@ namespace dsp56k
 #	undef assert
 #endif
 
+#ifdef _DEBUG
 #define assert( expr )			{ if( !(expr) ) dsp56k::Assert::show( #expr ); }
 #define assertf( expr, msg )	{ if( !(expr) ) dsp56k::Assert::show( msg ); }
+#else
+#define assert( expr )			{}
+#define assertf( expr, msg )	{}
+#endif
