@@ -120,9 +120,12 @@ namespace dsp56k
 
 		pcCurrentInstruction = reg.pc.toWord();
 
-		// next instruction word
-		const TWord op = fetchPC();
+		const auto op = fetchPC();
+		execOp(op);
+	}
 
+	void DSP::execOp(const TWord op)
+	{
 		if( !op )
 		{
 #ifdef _DEBUG
@@ -179,7 +182,6 @@ namespace dsp56k
 				}
 			}
 		}
-
 		++reg.ictr.var;
 	}
 
@@ -500,7 +502,7 @@ namespace dsp56k
 				if( write )
 				{
 					if( mmmrrr == MMM_ImmediateData )
-						decode_ff_write( ff, TReg24(fetchPC()) );
+						decode_ff_write( ff, TReg24(fetchOpWordB()) );
 					else
 						decode_ff_write( ff, TReg24(decode_MMMRRR_read(mmmrrr)) );
 				}
@@ -593,7 +595,7 @@ namespace dsp56k
 				const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
 
 				TReg56 r56;
-				convert( r56, TReg24(fetchPC()) );
+				convert( r56, TReg24(fetchOpWordB()) );
 
 				alu_add( ab, r56 );
 			}
@@ -612,7 +614,7 @@ namespace dsp56k
 				const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
 
 				TReg56 r56;
-				convert( r56, TReg24(fetchPC()) );
+				convert( r56, TReg24(fetchOpWordB()) );
 
 				alu_sub( ab, r56 );
 			}
@@ -636,7 +638,7 @@ namespace dsp56k
 			return true;
 		case OpcodeInfo::Cmp_xxxxS2:
 			{
-				const TReg24 s( signextend<int,24>( fetchPC() ) );
+				const TReg24 s( signextend<int,24>( fetchOpWordB() ) );
 
 				TReg56 r56;
 				convert( r56, s );
@@ -712,7 +714,7 @@ namespace dsp56k
 			return true;
 		case OpcodeInfo::Do_xxx:	// 00000110iiiiiiii1000hhhh
 			{
-				const TWord addr = fetchPC();
+				const TWord addr = fetchOpWordB();
 				TWord loopcount = oi->getFieldValue(OpcodeInfo::Field_hhhh, OpcodeInfo::Field_iiiiiiii, op);
 
 				do_start( TReg24(loopcount), addr );				
@@ -720,7 +722,7 @@ namespace dsp56k
 			return true;
 		case OpcodeInfo::Do_S:		// 0000011011DDDDDD00000000
 			{
-				const TWord addr = fetchPC();
+				const TWord addr = fetchOpWordB();
 
 				const TWord dddddd = oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
 
@@ -740,7 +742,7 @@ namespace dsp56k
 		case OpcodeInfo::Dor_xxx:	// 00000110iiiiiiii1001hhhh
             {
 	            const auto loopcount = oi->getFieldValue(OpcodeInfo::Field_hhhh, OpcodeInfo::Field_iiiiiiii, op);
-                const auto displacement = signextend<int, 24>(fetchPC());
+                const auto displacement = signextend<int, 24>(fetchOpWordB());
                 do_start(TReg24(loopcount), pcCurrentInstruction + displacement);
             }
             return true;
@@ -749,7 +751,7 @@ namespace dsp56k
 				const TWord dddddd = oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
 				const TReg24 lc		= decode_dddddd_read( dddddd );
 				
-				const int displacement = signextend<int,24>(fetchPC());
+				const int displacement = signextend<int,24>(fetchOpWordB());
 				do_start( lc, pcCurrentInstruction + displacement);
 			}
 			return true;
@@ -885,7 +887,7 @@ namespace dsp56k
 				const bool	negate	= oi->getFieldValue(OpcodeInfo::Field_k, op);
 				const TWord qq		= oi->getFieldValue(OpcodeInfo::Field_QQ, op);
 
-				const TReg24 s		= TReg24(fetchPC());
+				const TReg24 s		= TReg24(fetchOpWordB());
 
 				const TReg24 reg	= decode_qq_read(qq);
 
@@ -910,7 +912,7 @@ namespace dsp56k
 			return true;
 		// Lock Instruction Cache Sector
 		case OpcodeInfo::Plock:
-			cache.plock( fetchPC() );
+			cache.plock(fetchOpWordB());
 			return true;
 		case OpcodeInfo::Punlock:
 			LOG_ERR_NOTIMPLEMENTED("PUNLOCK");
@@ -998,7 +1000,7 @@ namespace dsp56k
 		// Branch always
 		case OpcodeInfo::Bra_xxxx:
 			{
-				const int displacement = signextend<int,24>( fetchPC() );
+				const int displacement = signextend<int,24>(fetchOpWordB());
 				setPC(pcCurrentInstruction + displacement);
 			}
 			return true;
@@ -1027,7 +1029,7 @@ namespace dsp56k
 
 				const TWord ea = pppppp;
 
-				const int displacement = signextend<int,24>( fetchPC() );
+				const int displacement = signextend<int,24>(fetchOpWordB());
 
 				if( !bittest( memReadPeriphFFFFC0( S, ea ), bit ) )
 				{
@@ -1043,7 +1045,7 @@ namespace dsp56k
 
 				const TWord ea = qqqqqq;
 
-				const int displacement = signextend<int,24>( fetchPC() );
+				const int displacement = signextend<int,24>(fetchOpWordB());
 
 				if( !bittest( memReadPeriphFFFF80( S, ea ), bit ) )
 				{
@@ -1058,7 +1060,7 @@ namespace dsp56k
 
 				const TReg24 tst = decode_dddddd_read( dddddd );
 
-				const int displacement = signextend<int,24>( fetchPC() );
+				const int displacement = signextend<int,24>(fetchOpWordB());
 
 				if( !bittest( tst, bit ) )
 				{
@@ -1080,7 +1082,7 @@ namespace dsp56k
 
 				const TWord ea = qqqqqq;
 
-				const int displacement = signextend<int,24>( fetchPC() );
+				const int displacement = signextend<int,24>( fetchOpWordB() );
 
 				if( bittest( memReadPeriphFFFF80( S, ea ), bit ) )
 				{
@@ -1095,7 +1097,7 @@ namespace dsp56k
 
 				const TReg24 r = decode_dddddd_read( dddddd );
 
-				const int displacement = signextend<int,24>( fetchPC() );
+				const int displacement = signextend<int,24>( fetchOpWordB() );
 
 				if( bittest( r.var, bit ) )
 				{
@@ -1125,7 +1127,7 @@ namespace dsp56k
 			{
 				const TWord cccc = oi->getFieldValue(OpcodeInfo::Field_CCCC, op);
 
-				const int displacement = signextend<int,24>(fetchPC());
+				const int displacement = signextend<int,24>(fetchOpWordB());
 
 				if( decode_cccc(cccc) )
 				{
@@ -1153,7 +1155,7 @@ namespace dsp56k
 		// Branch to Subroutine
 		case OpcodeInfo::Bsr_xxxx:
 			{
-				const int displacement = signextend<int,24>(fetchPC());
+				const int displacement = signextend<int,24>(fetchOpWordB());
 				jsr(pcCurrentInstruction + displacement);
 			}
 			return true;
@@ -1258,7 +1260,7 @@ namespace dsp56k
 				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
 				const TWord mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
 				const EMemArea S	= oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
-				const TWord addr	= fetchPC();
+				const TWord addr	= fetchOpWordB();
 
 				const TWord ea		= decode_MMMRRR_read(mmmrrr);
 
@@ -1284,7 +1286,7 @@ namespace dsp56k
 
 				const TWord ea		= qqqqqq;
 
-				const TWord addr	= fetchPC();
+				const TWord addr	= fetchOpWordB();
 
 				if( !bittest( memReadPeriphFFFF80(S, ea), bit ) )
 					setPC(addr);
@@ -1295,7 +1297,7 @@ namespace dsp56k
 				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
 				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
 
-				const TWord addr = fetchPC();
+				const TWord addr = fetchOpWordB();
 
 				if( !bittest( decode_dddddd_read(dddddd), bit ) )
 					setPC(addr);
@@ -1327,7 +1329,7 @@ namespace dsp56k
 
 				const TWord ea		= pppppp;
 
-				const TWord addr	= fetchPC();
+				const TWord addr	= fetchOpWordB();
 
 				if( bittest( memReadPeriphFFFFC0(S, ea), bit ) )
 					setPC(addr);
@@ -1342,7 +1344,7 @@ namespace dsp56k
 
 				const TWord ea		= qqqqqq;
 
-				const TWord addr	= fetchPC();
+				const TWord addr	= fetchOpWordB();
 
 				if( bittest( memReadPeriphFFFF80(S, ea), bit ) )
 					setPC(addr);
@@ -1353,7 +1355,7 @@ namespace dsp56k
 				const TWord bit		= oi->getFieldValue(OpcodeInfo::Field_bbbbb, op);
 				const TWord dddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDDD, op);
 
-				const TWord addr	= fetchPC();
+				const TWord addr	= fetchOpWordB();
 
 				const TReg24 var	= decode_dddddd_read( dddddd );
 
@@ -1421,8 +1423,8 @@ namespace dsp56k
 	{
 		switch( _mmmrrr & 0x3f )
 		{
-		case MMM_AbsAddr:		return fetchPC();		// absolute address
-		case MMM_ImmediateData:	return fetchPC();		// immediate data
+		case MMM_AbsAddr:		return fetchOpWordB();		// absolute address
+		case MMM_ImmediateData:	return fetchOpWordB();		// immediate data
 		}
 
 		unsigned int regIdx = _mmmrrr & 0x7;
@@ -1550,7 +1552,7 @@ namespace dsp56k
 					const auto	write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
 					const TWord rrr		= oi->getFieldValue(OpcodeInfo::Field_RRR, op);
 
-					const int shortDisplacement = signextend<int,24>(fetchPC());
+					const int shortDisplacement = signextend<int,24>(fetchOpWordB());
 					const TWord ea = decode_RRR_read( rrr, shortDisplacement );
 
 					const auto area = oi->getInstruction() == OpcodeInfo::Movey_Rnxxxx ? MemArea_Y : MemArea_X;
@@ -2097,7 +2099,7 @@ namespace dsp56k
 	{
 		if( write && mmmrrr == MMM_ImmediateData )
 		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(fetchPC()) );
+			decode_ddddd_write<TReg24>( ddddd, TReg24(fetchOpWordB()) );
 			return;
 		}
 
@@ -2298,7 +2300,7 @@ namespace dsp56k
 		case OpcodeInfo::And_xxxx:
 			{
 				const auto ab = oi->getFieldValue(OpcodeInfo::Field_d, op);
-				const TWord xxxx = fetchPC();
+				const TWord xxxx = fetchOpWordB();
 
 				alu_and( ab, xxxx );
 			}

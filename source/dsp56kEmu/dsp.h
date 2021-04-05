@@ -61,7 +61,7 @@ namespace dsp56k
 			TReg24 miss;		
 			TReg24 replace;	
 			TReg24 cyc;		
-			TReg24 ictr;		
+			TReg24 ictr;
 			TReg24 cnt1;		
 			TReg24 cnt2;		
 			TReg24 cnt3;		
@@ -170,6 +170,11 @@ namespace dsp56k
 
 	private:
 
+		TWord	fetchOpWordB()
+		{
+			return fetchPC();
+		}
+
 		// -- execution 
 		TWord	fetchPC()
 		{
@@ -199,6 +204,8 @@ namespace dsp56k
 
 			return ret;
 		}
+
+		void 	execOp(TWord op);
 
 		bool	exec_parallel(TWord op);
 
