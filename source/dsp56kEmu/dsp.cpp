@@ -57,7 +57,8 @@ namespace dsp56k
 		reg.r[0] = reg.r[1] = reg.r[2] = reg.r[3] = reg.r[4] = reg.r[5] = reg.r[6] = reg.r[7] = TReg24(int(0));
 		reg.n[0] = reg.n[1] = reg.n[2] = reg.n[3] = reg.n[4] = reg.n[5] = reg.n[6] = reg.n[7] = TReg24(int(0));
 
-		reg.iprc = reg.iprp = TReg24(int(0));
+		iprc(0);
+		iprp(0);
 
 		// TODO: The Bus Control Register (BCR), the Address Attribute Registers (AAR3–AAR0) and the DRAM Control Register (DCR) are set to their initial values as described in Chapter 9, External Memory Interface (Port A). The initial value causes a maximum number of wait states to be added to every external memory access.
 
@@ -3464,6 +3465,11 @@ namespace dsp56k
 		return mem.set( _area, _offset, _value );
 	}
 
+	bool DSP::memWritePeriph( EMemArea _area, TWord _offset, TWord _value )
+	{
+		return mem.setPeriph( _area, _offset, _value );
+	}
+
 	bool DSP::memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value )
 	{
 		return mem.setPeriphFFFF80( _area, _offset, _value );
@@ -3500,6 +3506,11 @@ namespace dsp56k
 	// 	}
 
 		return mem.get( _area, _offset );
+	}
+
+	TWord DSP::memReadPeriph(EMemArea _area, TWord _offset) const
+	{
+		return mem.getPeriph( _area, _offset);	
 	}
 
 	TWord DSP::memReadPeriphFFFF80(EMemArea _area, TWord _offset) const

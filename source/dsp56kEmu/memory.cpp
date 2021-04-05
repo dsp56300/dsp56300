@@ -107,26 +107,35 @@ namespace dsp56k
 		return res;
 	}
 
-	bool Memory::setPeriphFFFFC0(EMemArea _area, TWord _offset, TWord _value)
+	bool Memory::setPeriph(EMemArea _area, TWord _offset, TWord _value)
 	{
-		m_perif[_area]->write(_offset + 0xffffc0, _value);
+		m_perif[_area]->write(_offset, _value);
 		return true;
 	}
 
-	TWord Memory::getPeriphFFFFC0(EMemArea _area, TWord _offset) const
+	bool Memory::setPeriphFFFF80(const EMemArea _area, const TWord _offset, const TWord _value)
 	{
-		return m_perif[_area]->read(_offset + 0xffffc0);
+		return setPeriph(_area, _offset + 0xffff80, _value);
 	}
 
-	bool Memory::setPeriphFFFF80(EMemArea _area, TWord _offset, TWord _value)
+	bool Memory::setPeriphFFFFC0(const EMemArea _area, const TWord _offset, const TWord _value)
 	{
-		m_perif[_area]->write(_offset + 0xffff80, _value);
-		return true;
+		return setPeriph(_area, _offset + 0xffffc0, _value);
 	}
 
-	TWord Memory::getPeriphFFFF80(EMemArea _area, TWord _offset) const
+	TWord Memory::getPeriph(const EMemArea _area, const TWord _offset) const
 	{
-		return m_perif[_area]->read(_offset + 0xffff80);
+		return m_perif[_area]->read(_offset);
+	}
+
+	TWord Memory::getPeriphFFFF80(const EMemArea _area, const TWord _offset) const
+	{
+		return getPeriph(_area, _offset + 0xffff80);
+	}
+
+	TWord Memory::getPeriphFFFFC0(const EMemArea _area, const TWord _offset) const
+	{
+		return getPeriph(_area, _offset + 0xffffc0);
 	}
 
 	// _____________________________________________________________________________

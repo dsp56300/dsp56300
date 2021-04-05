@@ -45,7 +45,7 @@ namespace dsp56k
 
 			TReg24 vba;						// vector base address
 
-			TReg24 iprc, iprp, bcr, dcr;
+			TReg24 bcr, dcr;
 
 			TReg24 aar0, aar1, aar2, aar3;
 
@@ -205,16 +205,16 @@ namespace dsp56k
 			return ret;
 		}
 
-		void 	execOp(TWord op);
+		void 	execOp							(TWord op);
 
-		bool	exec_parallel(TWord op);
+		bool	exec_parallel					(TWord op);
 
-		bool	exec_parallel_alu(TWord op);
+		bool	exec_parallel_alu				(TWord op);
 
-		bool	exec_parallel_alu_nonMultiply(TWord op);
-		bool	exec_parallel_alu_multiply(TWord op);
+		bool	exec_parallel_alu_nonMultiply	(TWord op);
+		bool	exec_parallel_alu_multiply		(TWord op);
 
-		bool	exec_nonParallel(const OpcodeInfo* oi, TWord op);
+		bool	exec_nonParallel				(const OpcodeInfo* oi, TWord op);
 		
 		bool 	exec_pcu						(const OpcodeInfo* oi, TWord op);
 
@@ -331,7 +331,7 @@ namespace dsp56k
 		TReg24	decode_dddddd_read		(TWord _dddddd);
 		void	decode_dddddd_write		(TWord _dddddd, TReg24 _val);
 
-		TReg24	decode_JJ_read			( TWord jj )
+		TReg24	decode_JJ_read			( TWord jj ) const
 		{
 			switch( jj )
 			{
@@ -737,6 +737,12 @@ namespace dsp56k
 		void	b1				(const TReg24& _val)				{ hiword(reg.b,_val); }
 		void	b2				(const TReg8& _val)					{ extword(reg.b,_val); }
 
+		void	iprc			(const TWord _value)				{ memWritePeriph(MemArea_X, XIO_IPRC, _value); }
+		void	iprp			(const TWord _value)				{ memWritePeriph(MemArea_X, XIO_IPRP, _value); }
+
+		TWord	iprc			() const							{ return memReadPeriph(MemArea_X, XIO_IPRC); }
+		TWord	iprp			() const							{ return memReadPeriph(MemArea_X, XIO_IPRP); }
+
 		template<typename T> T getA()
 		{
 			TReg56 temp = reg.a;
@@ -882,10 +888,12 @@ namespace dsp56k
 		// -- memory
 
 		bool	memWrite			( EMemArea _area, TWord _offset, TWord _value );
+		bool	memWritePeriph		( EMemArea _area, TWord _offset, TWord _value  );
 		bool	memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value  );
 		bool	memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value  );
 
 		TWord	memRead				( EMemArea _area, TWord _offset ) const;
+		TWord	memReadPeriph		( EMemArea _area, TWord _offset ) const;
 		TWord	memReadPeriphFFFF80	( EMemArea _area, TWord _offset ) const;
 		TWord	memReadPeriphFFFFC0	( EMemArea _area, TWord _offset ) const;
 	};

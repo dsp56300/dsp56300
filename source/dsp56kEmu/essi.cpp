@@ -15,7 +15,7 @@ namespace dsp56k
 		reset(Essi0);
 		reset(Essi1);
 	}
-	
+
 	void Essi::toggleStatusRegisterBit(const EssiIndex _essi, const uint32_t _bit, const uint32_t _zeroOrOne)
 	{
 		const auto mask = 1 << _bit;
@@ -33,13 +33,13 @@ namespace dsp56k
 		set(_essi, ESSI0_CRB, _crb);
 	}
 
-	TWord Essi::testStatusRegisterBit(EssiIndex _essi0, RegSSISRbits _bit) const
+	TWord Essi::testStatusRegisterBit(const EssiIndex _essi0, const RegSSISRbits _bit) const
 	{
 		const auto res = get(_essi0, ESSI0_SSISR);
 		return res & (1<<_bit);
 	}
 
-	void Essi::reset(EssiIndex _index)
+	void Essi::reset(const EssiIndex _index)
 	{
 		set(_index, ESSI_PRRC, 0);
 		set(_index, ESSI_PCRC, 0);
@@ -47,11 +47,11 @@ namespace dsp56k
 
 	void Essi::set(const EssiIndex _index, const EssiRegX _reg, const TWord _value)
 	{
-		m_memory.setPeriphFFFF80(MemArea_X, address(_index, _reg) - 0xffff80, _value);
+		m_memory.setPeriph(MemArea_X, address(_index, _reg), _value);
 	}
 
-	TWord Essi::get(const EssiIndex _index, EssiRegX _reg) const
+	TWord Essi::get(const EssiIndex _index, const EssiRegX _reg) const
 	{
-		return m_memory.getPeriphFFFF80(MemArea_X, address(_index, _reg) - 0xffff80);
+		return m_memory.getPeriph(MemArea_X, address(_index, _reg));
 	}
 };
