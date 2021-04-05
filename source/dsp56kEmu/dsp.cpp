@@ -2202,7 +2202,7 @@ namespace dsp56k
 
 				sr_toggle( SR_C, bittestandset( val, bit ) );
 
-				memWrite( S, ea, val );			
+				memWritePeriphFFFF80( S, ea, val );
 			}
 			return true;
 		case OpcodeInfo::Bset_D:	// 0000101011DDDDDD011bbbbb
