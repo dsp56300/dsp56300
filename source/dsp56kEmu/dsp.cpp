@@ -456,11 +456,16 @@ namespace dsp56k
 				const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
 				if(F)		y1(ab);
 				else		y0(ab);
+				
+				const TWord ea = decode_MMMRRR_read(mmmrrr);
 
 				// S1/D1 move
 				if( write )
 				{
-					decode_ff_write( ff, TReg24(decode_MMMRRR_read(mmmrrr)) );
+					if( mmmrrr == MMM_ImmediateData )
+						decode_ff_write( ff, TReg24(ea) );
+					else
+						decode_ff_write( ff, TReg24(memRead(MemArea_X, ea)) );
 				}
 				else
 				{
@@ -503,14 +508,16 @@ namespace dsp56k
 				if( e )		x1(ab);
 				else		x0(ab);
 
+				const TWord ea = decode_MMMRRR_read(mmmrrr);
+				
 				// S1/D1 move
 
 				if( write )
 				{
 					if( mmmrrr == MMM_ImmediateData )
-						decode_ff_write( ff, TReg24(fetchOpWordB()) );
+						decode_ff_write( ff, TReg24(ea) );
 					else
-						decode_ff_write( ff, TReg24(decode_MMMRRR_read(mmmrrr)) );
+						decode_ff_write( ff, TReg24(memRead(MemArea_Y, ea)) );
 				}
 				else
 				{
