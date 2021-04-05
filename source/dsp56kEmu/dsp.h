@@ -82,10 +82,6 @@ namespace dsp56k
 	private:
 		SRegs		reg;
 
-		bool		repRunning;
-
-		TReg24		tempLCforRep;	// used as backup storage if a rep instruction happens inside a loop
-
 		// _____________________________________________________________________________
 		// members
 		//
@@ -197,26 +193,8 @@ namespace dsp56k
 		// -- execution 
 		TWord	fetchPC()
 		{
-			TWord ret;
+			const auto ret = memRead( MemArea_P, reg.pc.toWord() );
 
-//			if( sr_test(SR_CE) )
-//				ret = cache.fetch( mem, reg.pc.toWord(), (reg.omr.var & OMR_BE) != 0 );
-//			else
-				ret = memRead( MemArea_P, reg.pc.toWord() );
-
-			// REP
-			if( repRunning )
-			{
-				if( reg.lc.var > 1 )
-				{
-					--reg.lc.var;
-					return ret;
-				}
-
-				reg.lc = tempLCforRep;
-				repRunning = false;
-			}
-			
 			// DO
 			if(!do_iterate())
 				++reg.pc.var;
@@ -249,6 +227,8 @@ namespace dsp56k
 		bool	do_start						( TReg24 _loopcount, TWord _addr );
 		bool	do_end							();
 		bool	do_iterate						(uint32_t _depth = 0);
+
+		bool	rep_exec						(TWord loopCount);
 
 		// -- execution helpers
 

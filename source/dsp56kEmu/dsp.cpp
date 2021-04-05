@@ -32,7 +32,6 @@ namespace dsp56k
 	DSP::DSP( Memory& _memory, IPeripherals* _pX, IPeripherals* _pY  )
 		: mem(_memory)
 		, perif({_pX, _pY})
-		, repRunning(false)
 		, pcCurrentInstruction(0xffffff)
 	{
 		mem.setDSP(this);
@@ -1512,11 +1511,7 @@ namespace dsp56k
 		case OpcodeInfo::Rep_xxx:	// 00000110 iiiiiiii 1010hhhh
 			{
 				const TWord loopcount = oi->getFieldValue(OpcodeInfo::Field_hhhh, OpcodeInfo::Field_iiiiiiii, op);
-
-				repRunning = true;
-				tempLCforRep = reg.lc;
-
-				reg.lc.var = loopcount;				
+				rep_exec(loopcount);
 			}
 			return true;
 		case OpcodeInfo::Rep_S:
@@ -2716,6 +2711,26 @@ namespace dsp56k
 		return true;
 	}
 
+	bool DSP::rep_exec(const TWord loopCount)
+	{
+		const auto lcBackup = reg.lc;
+
+		reg.lc.var = loopCount;
+
+		pcCurrentInstruction = reg.pc.var;
+		const auto op = fetchPC();
+
+		while( reg.lc.var > 1 )
+		{
+			--reg.lc.var;
+			execOp(op);
+		}
+
+		reg.lc = lcBackup;
+
+		return true;
+	}
+
 	void DSP::decSP()
 	{
 		LOGSC("return");
@@ -3720,8 +3735,6 @@ namespace dsp56k
 	bool DSP::save( FILE* _file ) const
 	{
 		fwrite( &reg, sizeof(reg), 1, _file );
-		fwrite( &repRunning, 1, 1, _file );
-		fwrite( &tempLCforRep, 1, 1, _file );
 		fwrite( &pcCurrentInstruction, 1, 1, _file );
 		fwrite( m_asm, sizeof(m_asm), 1, _file );
 		fwrite( &cache, sizeof(cache), 1, _file );
@@ -3735,8 +3748,6 @@ namespace dsp56k
 	bool DSP::load( FILE* _file )
 	{
 		fread( &reg, sizeof(reg), 1, _file );
-		fread( &repRunning, 1, 1, _file );
-		fread( &tempLCforRep, 1, 1, _file );
 		fread( &pcCurrentInstruction, 1, 1, _file );
 		fread( m_asm, sizeof(m_asm), 1, _file );
 		fread( &cache, sizeof(cache), 1, _file );
