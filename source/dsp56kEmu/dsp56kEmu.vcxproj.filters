@@ -37,9 +37,6 @@
     <ClCompile Include="omfloader.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="pch.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="peripherals.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -90,9 +87,6 @@
     <ClInclude Include="omfloader.h">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="pch.h">
-      <Filter>Source</Filter>
-    </ClInclude>
     <ClInclude Include="peripherals.h">
       <Filter>Source</Filter>
     </ClInclude>
@@ -112,6 +106,15 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="opcodes.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="buildconfig.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ringbuffer.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="semaphore.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,3 @@
-#include "pch.h"
-
 #include "logging.h"
 
 #ifdef _WIN32

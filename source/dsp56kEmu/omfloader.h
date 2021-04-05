@@ -1,5 +1,8 @@
 #pragma once
 
+#include <list>
+#include <string>
+
 #include "types.h"
 
 namespace dsp56k

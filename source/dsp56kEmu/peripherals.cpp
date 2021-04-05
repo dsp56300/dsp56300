@@ -1,5 +1,3 @@
-#include "pch.h"
-
 #include "peripherals.h"
 
 #include "utils.h"

@@ -1,4 +1,7 @@
 #pragma once
+
+#include <vector>
+
 #include "types.h"
 
 namespace dsp56k

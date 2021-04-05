@@ -1,5 +1,3 @@
-#include "pch.h"
-
 #include "instructioncache.h"
 #include "memory.h"
 

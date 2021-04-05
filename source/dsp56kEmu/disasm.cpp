@@ -1,5 +1,3 @@
-#include "pch.h"
-
 #if defined(_WIN32) && defined(_DEBUG)
 #	define SUPPORT_DISASSEMBLER
 #endif

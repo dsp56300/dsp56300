@@ -1,7 +1,5 @@
 // DSP 56300 family 24-bit DSP emulator
 
-#include "pch.h"
-
 #include "dsp.h"
 
 #include <iomanip>

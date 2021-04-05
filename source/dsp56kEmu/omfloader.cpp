@@ -1,5 +1,3 @@
-#include "pch.h"
-
 #include "omfloader.h"
 #include "memory.h"
 #include "error.h"
@@ -121,7 +119,7 @@ void OMFLoader::parseLine( const std::string& _line, Memory& _dst )
 				int remaining = static_cast<int>(_line.size());
 				while( remaining >= 6 )
 				{
-					const uint result = parse24Bit( src );				
+					const uint32_t result = parse24Bit( src );				
 
 					_dst.set( m_currentArea, m_currentTargetAddress, result );
 
@@ -138,8 +136,8 @@ void OMFLoader::parseLine( const std::string& _line, Memory& _dst )
 
 				while( remaining >= 13 )
 				{
-					const uint res0 = parse24Bit( src );
-					const uint res1 = parse24Bit( src+7 );
+					const uint32_t res0 = parse24Bit( src );
+					const uint32_t res1 = parse24Bit( src+7 );
 
 					// TODO: this might need to get reversed? probably not....
 					_dst.set( MemArea_X, m_currentTargetAddress, res0 );
@@ -177,20 +175,20 @@ void OMFLoader::parseLine( const std::string& _line, Memory& _dst )
 // _____________________________________________________________________________
 // parse24Bit
 //
-uint OMFLoader::parse24Bit( const char* _src )
+uint32_t OMFLoader::parse24Bit( const char* _src )
 {
 	char temp[3] = {0,0,0};
 
-	uint result = 0;
+	uint32_t result = 0;
 
-	uint shift = 16;
+	uint32_t shift = 16;
 
 	for( size_t i=0; i<6; i+=2, shift -= 8 )
 	{
 		temp[0] = _src[i];
 		temp[1] = _src[i+1];
 
-		uint r;
+		uint32_t r;
 		sscanf( temp, "%02x", &r );
 
 		result |= (r<<shift);

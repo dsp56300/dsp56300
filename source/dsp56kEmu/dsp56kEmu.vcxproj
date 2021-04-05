@@ -57,8 +57,9 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
@@ -71,8 +72,9 @@
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
@@ -92,10 +94,6 @@
     <ClCompile Include="memory.cpp" />
     <ClCompile Include="omfloader.cpp" />
     <ClCompile Include="opcodes.cpp" />
-    <ClCompile Include="pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="peripherals.cpp" />
     <ClCompile Include="registers.cpp" />
     <ClCompile Include="types.cpp" />
@@ -105,6 +103,7 @@
   <ItemGroup>
     <ClInclude Include="agu.h" />
     <ClInclude Include="assert.h" />
+    <ClInclude Include="buildconfig.h" />
     <ClInclude Include="disasm.h" />
     <ClInclude Include="dsp.h" />
     <ClInclude Include="error.h" />
@@ -114,9 +113,10 @@
     <ClInclude Include="memory.h" />
     <ClInclude Include="omfloader.h" />
     <ClInclude Include="opcodes.h" />
-    <ClInclude Include="pch.h" />
     <ClInclude Include="peripherals.h" />
     <ClInclude Include="registers.h" />
+    <ClInclude Include="ringbuffer.h" />
+    <ClInclude Include="semaphore.h" />
     <ClInclude Include="staticArray.h" />
     <ClInclude Include="types.h" />
     <ClInclude Include="unittests.h" />

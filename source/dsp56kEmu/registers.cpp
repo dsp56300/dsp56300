@@ -1,5 +1,3 @@
-#include "pch.h"
-
 #include "registers.h"
 
 namespace dsp56k

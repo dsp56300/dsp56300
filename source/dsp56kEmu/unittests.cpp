@@ -1,5 +1,3 @@
-#include "pch.h"
-
 #include "unittests.h"
 
 #include "dsp.h"
