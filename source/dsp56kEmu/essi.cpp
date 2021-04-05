@@ -18,10 +18,11 @@ namespace dsp56k
 
 	void Essi::exec()
 	{
-		const int pendingFXInterrupt = m_pendingRXInterrupts.fetch_sub(-1);
-
-		if(pendingFXInterrupt && bittest(get(Essi0, ESSI0_CRB), CRB_RIE))
-			m_periph.getDSP().injectInterrupt(Vba_ESSI0receivedata);
+		if(m_pendingRXInterrupts > 0 && bittest(get(Essi0, ESSI0_CRB), CRB_RIE))
+		{
+			--m_pendingRXInterrupts;
+			m_periph.getDSP().injectInterrupt(Vba_ESSI0receivedata);			
+		}
 
 		// set Receive Register Full flag if there is input
 		toggleStatusRegisterBit(Essi0, SSISR_RDF, m_audioInput.empty() ? 0 : 1);
