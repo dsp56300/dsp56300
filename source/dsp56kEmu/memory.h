@@ -96,6 +96,12 @@ namespace dsp56k
 		bool				set					( EMemArea _area, TWord _offset, TWord _value );
 		TWord				get					( EMemArea _area, TWord _offset ) const;
 
+		bool				setPeriphFFFFC0		( EMemArea _area, TWord _offset, TWord _value );
+		TWord				getPeriphFFFFC0		( EMemArea _area, TWord _offset ) const;
+
+		bool				setPeriphFFFF80		( EMemArea _area, TWord _offset, TWord _value );
+		TWord				getPeriphFFFF80		( EMemArea _area, TWord _offset ) const;
+
 		bool				save				( FILE* _file ) const;
 		bool				load				( FILE* _file );
 

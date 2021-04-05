@@ -47,11 +47,11 @@ namespace dsp56k
 
 	void Essi::set(const EssiIndex _index, const EssiRegX _reg, const TWord _value)
 	{
-		m_memory.set(MemArea_X, address(_index, _reg), _value);
+		m_memory.setPeriphFFFF80(MemArea_X, address(_index, _reg) - 0xffff80, _value);
 	}
 
 	TWord Essi::get(const EssiIndex _index, EssiRegX _reg) const
 	{
-		return m_memory.get(MemArea_X, address(_index, _reg));
+		return m_memory.getPeriphFFFF80(MemArea_X, address(_index, _reg) - 0xffff80);
 	}
 };

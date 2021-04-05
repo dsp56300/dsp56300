@@ -43,16 +43,10 @@ namespace dsp56k
 		m_memoryMap->memTranslateAddress(_area, _offset);
 
 #ifdef _DEBUG
+		assert(_offset < XIO_Reserved_High_First);
 		if(!m_memoryMap->memValidateAccess(_area, _offset, true))
 			return false;
-#endif
-		if( _area < static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
-		{
-			m_perif[_area]->write( _offset, _value );
-			return true;
-		}
 
-#ifdef _DEBUG
 		if( _offset >= m_mem[_area].size() )
 		{
 			LOG_ERR_MEM_WRITE( _offset );
@@ -91,17 +85,10 @@ namespace dsp56k
 		m_memoryMap->memTranslateAddress(_area, _offset);
 
 #ifdef _DEBUG
+		assert(_offset < XIO_Reserved_High_First);
 		if(!m_memoryMap->memValidateAccess(_area, _offset, true))
 			return false;
-#endif
 
-		// TODO: performance: Different instructions are used to access peripherals, add a new getPeripherals instruction. No need to have those if's here, they are pretty costly
-		if( _area < static_cast<int>(m_perif.size()) && m_perif[_area]->isValidAddress(_offset) )
-		{
-			return m_perif[_area]->read(_offset);
-		}
-
-#ifdef _DEBUG
 		if( _offset >= m_mem[_area].size() )
 		{
 			LOG_ERR_MEM_READ( _offset );
@@ -118,6 +105,28 @@ namespace dsp56k
 #endif
 
 		return res;
+	}
+
+	bool Memory::setPeriphFFFFC0(EMemArea _area, TWord _offset, TWord _value)
+	{
+		m_perif[_area]->write(_offset + 0xffffc0, _value);
+		return true;
+	}
+
+	TWord Memory::getPeriphFFFFC0(EMemArea _area, TWord _offset) const
+	{
+		return m_perif[_area]->read(_offset + 0xffffc0);
+	}
+
+	bool Memory::setPeriphFFFF80(EMemArea _area, TWord _offset, TWord _value)
+	{
+		m_perif[_area]->write(_offset + 0xffff80, _value);
+		return true;
+	}
+
+	TWord Memory::getPeriphFFFF80(EMemArea _area, TWord _offset) const
+	{
+		return m_perif[_area]->read(_offset + 0xffff80);
 	}
 
 	// _____________________________________________________________________________

@@ -3464,12 +3464,12 @@ namespace dsp56k
 
 	bool DSP::memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value )
 	{
-		return mem.set( _area, 0xFFFF80 + _offset, _value );
+		return mem.setPeriphFFFF80( _area, _offset, _value );
 	}
 
 	bool DSP::memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value )
 	{
-		return mem.set( _area, 0xFFFFC0 + _offset, _value );
+		return mem.setPeriphFFFFC0( _area, _offset, _value );
 	}
 
 	// _____________________________________________________________________________
@@ -3502,11 +3502,11 @@ namespace dsp56k
 
 	TWord DSP::memReadPeriphFFFF80(EMemArea _area, TWord _offset) const
 	{
-		return mem.get( _area, 0xffff80 + _offset);	
+		return mem.getPeriphFFFF80( _area, _offset);	
 	}
 	TWord DSP::memReadPeriphFFFFC0(EMemArea _area, TWord _offset) const
 	{
-		return mem.get( _area, 0xffffc0 + _offset);	
+		return mem.getPeriphFFFFC0( _area, _offset);	
 	}
 
 	// _____________________________________________________________________________
