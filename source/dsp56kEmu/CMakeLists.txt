@@ -19,6 +19,8 @@ opcodes.cpp opcodes.h
 ops.cpp ops.h
 peripherals.cpp peripherals.h
 registers.cpp registers.h
+ringbuffer.h
+semaphore.h
 staticArray.h 
 types.cpp types.h
 unittests.cpp unittests.h

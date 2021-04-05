@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "staticArray.h"
+#include "ringbuffer.h"
 
 namespace dsp56k
 {
@@ -96,21 +97,15 @@ namespace dsp56k
 	public:
 		PeripheralsDefault();
 
+		void writeHI8Data(const int32_t* _data, size_t _count);
+		
 		bool isValidAddress( TWord _addr ) const override
 		{
 			if( _addr >= XIO_Reserved_High_First && _addr <= XIO_Reserved_High_Last )	return true;
 			return false;
 		}
 
-		TWord read( TWord _addr ) override
-		{
-//			LOG( "Periph read @ " << std::hex << _addr );
-
-			if( _addr >= XIO_Reserved_High_First )
-				_addr -= XIO_Reserved_High_First;
-
-			return m_mem[_addr];
-		}
+		TWord read(TWord _addr) override;
 
 		void write( TWord _addr, TWord _val )
 		{
@@ -122,6 +117,9 @@ namespace dsp56k
 			m_mem[_addr] = _val;
 		}
 
-		void exec() override {}
+		void exec() override;
+
+	private:
+		RingBuffer<uint32_t, 1024> m_hi8data;
 	};
 }
