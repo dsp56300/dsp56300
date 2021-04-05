@@ -30,6 +30,8 @@ namespace dsp56k
 		{
 		case Essi::ESSI0_RX:
 			return m_essi.readRX();
+		case Essi::ESSI0_SSISR:
+			return m_essi.readSR();
 		case HostIO_HRX:
 			{
 				if(m_hi8data.empty())
@@ -39,9 +41,8 @@ namespace dsp56k
 				write(HostIO_HRX, res);
 				return res;
 			}
-		default:
-			return m_mem[_addr - XIO_Reserved_High_First];
 		}
+		return m_mem[_addr - XIO_Reserved_High_First];
 	}
 
 	void PeripheralsDefault::write(TWord _addr, TWord _val)
@@ -50,6 +51,9 @@ namespace dsp56k
 
 		switch (_addr)
 		{
+		case  Essi::ESSI0_SSISR:
+			m_essi.writeSR(_val);
+			return;
 		case  Essi::ESSI0_TX0:
 			m_essi.writeTX(0, _val);
 			return;

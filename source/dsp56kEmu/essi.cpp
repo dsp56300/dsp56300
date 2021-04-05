@@ -1,6 +1,8 @@
 #include "essi.h"
 
 #include "memory.h"
+#include "interrupts.h"
+#include "dsp.h"
 
 namespace dsp56k
 {
@@ -16,25 +18,21 @@ namespace dsp56k
 
 	void Essi::exec()
 	{
+		const int pendingFXInterrupt = m_pendingRXInterrupts.fetch_sub(-1);
+
+		if(pendingFXInterrupt && bittest(get(Essi0, ESSI0_CRB), CRB_RIE))
+			m_periph.getDSP().injectInterrupt(Vba_ESSI0receivedata);
+
 		// set Receive Register Full flag if there is input
 		toggleStatusRegisterBit(Essi0, SSISR_RDF, m_audioInput.empty() ? 0 : 1);
 
 		// set Transmit Register Empty flag if there is space left in the output
 		toggleStatusRegisterBit(Essi0, SSISR_TDE, m_audioOutputs[0].full() ? 0 : 1);
-
-		// Toggle Frame Sync flag. We do not need it as we ensure proper channel ordering anyway, but the DSP needs it to sync to the left/right channel
-		toggleStatusRegisterBit(Essi0, SSISR_RFS, (++m_frameSync)&1);
 	}
 
 	void Essi::toggleStatusRegisterBit(const EssiIndex _essi, const uint32_t _bit, const uint32_t _zeroOrOne)
 	{
-		const auto mask = 1 << _bit;
-		const auto bit = _zeroOrOne << _bit;
-
-		auto v = get(_essi, ESSI0_SSISR);
-		v &= ~mask;
-		v |= bit;
-		set(_essi, ESSI0_SSISR, v);
+		bitset(m_statusReg, _bit, _zeroOrOne);
 	}
 
 	void Essi::setControlRegisters(const EssiIndex _essi, const TWord _cra, const TWord _crb)
@@ -43,24 +41,35 @@ namespace dsp56k
 		set(_essi, ESSI0_CRB, _crb);
 	}
 
-	TWord Essi::testStatusRegisterBit(const EssiIndex _essi0, const RegSSISRbits _bit) const
-	{
-		const auto res = get(_essi0, ESSI0_SSISR);
-		return res & (1<<_bit);
-	}
-
 	TWord Essi::readRX()
 	{
-		if(m_audioInput.empty())
+		if(!bittest(get(Essi0, ESSI0_CRB), CRB_RE))
 			return 0;
 
+		m_frameSyncDSPStatus = m_frameSyncDSPRead;
+
+		incFrameSync(m_frameSyncDSPRead);
+
 		const auto res = m_audioInput.pop_front();
+
+		toggleStatusRegisterBit(Essi0, SSISR_RFS, m_frameSyncDSPRead);
 
 		return res;
 	}
 
+	TWord Essi::readSR()
+	{
+		toggleStatusRegisterBit(Essi0, SSISR_RFS, m_frameSyncDSPStatus);
+		incFrameSync(m_frameSyncDSPStatus);
+		return m_statusReg;
+	}
+
 	void Essi::writeTX(uint32_t _txIndex, TWord _val)
 	{
+		if(!bittest(get(Essi0, ESSI0_CRB), CRB_TE0 - _txIndex))
+			return;
+
+		incFrameSync(m_frameSyncDSPWrite);
 		m_audioOutputs[_txIndex].push_back(_val);
 	}
 
@@ -75,6 +84,7 @@ namespace dsp56k
 			for(size_t c=0; c<2; ++c)
 			{
 				m_audioInput.push_back(float2Dsdp(_inputs[c][i]));
+				++m_pendingRXInterrupts;
 			}
 		}
 

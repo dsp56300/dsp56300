@@ -84,6 +84,7 @@ namespace dsp56k
 		virtual void write(TWord _addr, TWord _value) = 0;
 		virtual void exec() = 0;
 		virtual void reset() = 0;
+		virtual DSP& getDSP() = 0;
 	};
 
 	// dummy implementation that just stores writes and returns them in subsequent reads
@@ -122,7 +123,7 @@ namespace dsp56k
 			m_dsp = _dsp;
 		}
 
-		DSP& getDSP() { return *m_dsp; }
+		DSP& getDSP() override { return *m_dsp; }
 
 	private:
 		RingBuffer<uint32_t, 1024, false> m_hi8data;
