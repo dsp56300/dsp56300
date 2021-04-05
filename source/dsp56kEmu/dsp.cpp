@@ -517,7 +517,8 @@ namespace dsp56k
 		case OpcodeInfo::Moveyr_A:
 			LOG_ERR_NOTIMPLEMENTED("MOVE YR A");
 			return true;
-		case OpcodeInfo::Movel_ea:				// Long Memory Data Move - 0100L0LLW1MMMRRR
+		// Long Memory Data Move
+		case OpcodeInfo::Movel_ea:				// 0100L0LLW1MMMRRR
 			{
 				const auto LLL		= oi->getFieldValue(OpcodeInfo::Field_L, OpcodeInfo::Field_LL, op);
 				const auto mmmrrr	= oi->getFieldValue(OpcodeInfo::Field_MMM, OpcodeInfo::Field_RRR, op);
@@ -543,8 +544,30 @@ namespace dsp56k
 				}
 			}
 			return true;
-		case OpcodeInfo::Movel_aa: 
-			LOG_ERR_NOTIMPLEMENTED("MOVE L aa");
+		case OpcodeInfo::Movel_aa:				// 0100L0LLW0aaaaaa
+			{
+				const auto LLL		= oi->getFieldValue(OpcodeInfo::Field_L, OpcodeInfo::Field_LL, op);
+				const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+				const TWord ea = oi->getFieldValue(OpcodeInfo::Field_aaaaaa, op);
+
+				if( write )
+				{
+					const TReg24 x( memRead( MemArea_X, ea ) );
+					const TReg24 y( memRead( MemArea_Y, ea ) );
+
+					decode_LLL_write( LLL, x,y );
+				}
+				else
+				{
+					TWord x,y;
+
+					decode_LLL_read( LLL, x, y );
+
+					memWrite( MemArea_X, ea, x );
+					memWrite( MemArea_Y, ea, y );
+				}				
+			}
 			return true;
 		case OpcodeInfo::Movexy:					// XY Memory Data Move - 1wmmeeff WrrMMRRR
 			{
