@@ -37,4 +37,12 @@ namespace ceLib
 	    std::condition_variable m_cv;
 	    int m_count;
 	};
+
+	class NopSemaphore
+	{
+	public:
+		explicit NopSemaphore (const int _count = 0) {}
+	    void notify()	    {}
+		void wait()			{}
+	};
 };

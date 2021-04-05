@@ -120,6 +120,6 @@ namespace dsp56k
 		void exec() override;
 
 	private:
-		RingBuffer<uint32_t, 1024> m_hi8data;
+		RingBuffer<uint32_t, 1024, false> m_hi8data;
 	};
 }

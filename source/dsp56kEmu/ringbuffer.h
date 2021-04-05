@@ -7,10 +7,10 @@
 
 #include "semaphore.h"
 
-template<typename T, size_t C> class RingBuffer
+template<typename T, size_t C, bool Lock> class RingBuffer
 {
 public:
-	RingBuffer() : m_insertPos(0), m_removePos(0), m_usage(0), m_readSem(0), m_writeSem(C)
+	RingBuffer() : m_insertPos(0), m_removePos(0), m_usage(0), m_readSem(0), m_writeSem(static_cast<int>(C))
 	{
 		static_assert(C>0, "C needs to be greater than 1");
 		static_assert((C&(C-1)) == 0, "C needs to be power of two");
@@ -75,7 +75,7 @@ public:
 
 	const T& operator[](size_t i) const
 	{
-		return const_cast< RingBuffer<T,C>* >(this)->get(i);
+		return const_cast< RingBuffer<T,C, Lock>* >(this)->get(i);
 	}
 
 	const T& front() const
@@ -120,13 +120,16 @@ private:
 	size_t				m_insertPos;
 	size_t				m_removePos;
 	std::atomic<size_t>	m_usage;
-	ceLib::Semaphore	m_readSem;
-	ceLib::Semaphore	m_writeSem;
+
+	typedef typename std::conditional<Lock, ceLib::Semaphore, ceLib::NopSemaphore>::type Sem;
+
+	Sem					m_readSem;
+	Sem					m_writeSem;
 
 public:
 	static void test()
 	{
-		RingBuffer<int,10>	rb;
+		RingBuffer<int,10, false> rb;
 
 		assert( rb.size() == 0 );
 		assert( rb.empty() );
