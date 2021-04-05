@@ -509,9 +509,9 @@ namespace dsp56k
 				if( write )
 				{
 					if( mmmrrr == MMM_ImmediateData )
-						decode_ff_write( ff, TReg24(ea) );
+						decode_ee_write( ff, TReg24(ea) );
 					else
-						decode_ff_write( ff, TReg24(memRead(MemArea_X, ea)) );
+						decode_ee_write( ff, TReg24(memRead(MemArea_X, ea)) );
 				}
 				else
 				{
