@@ -1637,14 +1637,31 @@ namespace dsp56k
 					}
 					else
 					{
-						const TReg24 regVal = decode_ddddd_pcr_read(op&0x1f);
+						const TReg24 regVal = decode_ddddd_pcr_read(ddddd);
 						assert( (mmmrrr != MMM_ImmediateData) && "register move to immediate data? not possible" );
 						memWrite( area, addr, regVal.toWord() );
 					}
 				}
 				return true;
-			case OpcodeInfo::Movec_aa:
-				LOG_ERR_NOTIMPLEMENTED("MOVE(C)_aa");
+			case OpcodeInfo::Movec_aa:		// 00000101W0aaaaaa0S1DDDDD
+				{
+					const TWord ddddd	= oi->getFieldValue(OpcodeInfo::Field_DDDDD, op);
+					const TWord aaaaaa	= oi->getFieldValue(OpcodeInfo::Field_aaaaaa, op);
+					const auto write	= oi->getFieldValue(OpcodeInfo::Field_W, op);
+
+					const TWord addr = aaaaaa;
+
+					const EMemArea area = oi->getFieldValue(OpcodeInfo::Field_S, op) ? MemArea_Y : MemArea_X;
+						
+					if( write )
+					{
+						decode_ddddd_pcr_write( ddddd, TReg24(memRead( area, addr )) );
+					}
+					else
+					{
+						memWrite( area, addr, decode_ddddd_pcr_read(ddddd).toWord() );
+					}
+				}
 				return true;
 			case OpcodeInfo::Movec_S1D2:	// 00000100W1eeeeee101ddddd
 				{
