@@ -29,12 +29,15 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// DSP
 	//
-	DSP::DSP( Memory& _memory ) : mem(_memory)
+	DSP::DSP( Memory& _memory, IPeripherals* _pX, IPeripherals* _pY  )
+		: mem(_memory)
+		, perif({_pX, _pY})
 		, repRunning(false)
 		, pcCurrentInstruction(0xffffff)
-		, essi(*this,_memory)
 	{
 		mem.setDSP(this);
+		perif[0]->setDSP(this);
+		perif[1]->setDSP(this);
 
 		m_asm[0] = 0;
 
@@ -49,7 +52,9 @@ namespace dsp56k
 		// 100162AEd01.pdf - page 2-16
 
 		// TODO: internal peripheral devices are reset
-		essi.reset();
+		perif[0]->reset();
+		if(perif[1] != perif[0])
+			perif[1]->reset();
 
 		reg.m[0] = reg.m[1] = reg.m[2] = reg.m[3] = reg.m[4] = reg.m[5] = reg.m[6] = reg.m[7] = TReg24(int(0xffffff));
 		reg.r[0] = reg.r[1] = reg.r[2] = reg.r[3] = reg.r[4] = reg.r[5] = reg.r[6] = reg.r[7] = TReg24(int(0));
@@ -95,8 +100,10 @@ namespace dsp56k
 		// we do not support 16-bit compatibility mode
 		assert( (reg.sr.var & SR_SC) == 0 && "16 bit compatibility mode is not supported");
 
-		essi.exec();
-		mem.exec();
+		perif[0]->exec();
+
+		if(perif[1] != perif[0])
+			perif[1]->exec();
 
 #ifdef _DEBUG
 		getASM();
@@ -2105,7 +2112,9 @@ namespace dsp56k
 		error, NMI, illegal instruction, Trap, Debug request, and hardware reset interrupts.
 		*/
 
-		essi.reset();
+		perif[0]->reset();
+		if(perif[1] != perif[0])
+			perif[1]->reset();
 	}
 
 	void DSP::jsr(const TReg24& _val)
@@ -3488,17 +3497,16 @@ namespace dsp56k
 
 	bool DSP::memWritePeriph( EMemArea _area, TWord _offset, TWord _value )
 	{
-		return mem.setPeriph( _area, _offset, _value );
+		perif[_area]->write(_offset, _value );
+		return true;
 	}
-
 	bool DSP::memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value )
 	{
-		return mem.setPeriphFFFF80( _area, _offset, _value );
+		return memWritePeriph( _area, _offset + 0xffff80, _value );
 	}
-
 	bool DSP::memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value )
 	{
-		return mem.setPeriphFFFFC0( _area, _offset, _value );
+		return memWritePeriph( _area, _offset + 0xffffc0, _value );
 	}
 
 	// _____________________________________________________________________________
@@ -3531,16 +3539,15 @@ namespace dsp56k
 
 	TWord DSP::memReadPeriph(EMemArea _area, TWord _offset) const
 	{
-		return mem.getPeriph( _area, _offset);	
+		return perif[_area]->read(_offset);
 	}
-
 	TWord DSP::memReadPeriphFFFF80(EMemArea _area, TWord _offset) const
 	{
-		return mem.getPeriphFFFF80( _area, _offset);	
+		return memReadPeriph(_area, _offset + 0xffff80);
 	}
 	TWord DSP::memReadPeriphFFFFC0(EMemArea _area, TWord _offset) const
 	{
-		return mem.getPeriphFFFFC0( _area, _offset);	
+		return memReadPeriph(_area, _offset + 0xffffc0);
 	}
 
 	// _____________________________________________________________________________

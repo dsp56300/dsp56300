@@ -1,5 +1,6 @@
 #pragma once
 
+#include "essi.h"
 #include "types.h"
 #include "staticArray.h"
 #include "ringbuffer.h"
@@ -77,10 +78,12 @@ namespace dsp56k
 	public:
 		virtual ~IPeripherals() = default;
 
+		virtual void setDSP(DSP* _dsp) = 0;
 		virtual bool isValidAddress( TWord _addr ) const = 0;
 		virtual TWord read(TWord _addr) = 0;
 		virtual void write(TWord _addr, TWord _value) = 0;
 		virtual void exec() = 0;
+		virtual void reset() = 0;
 	};
 
 	// dummy implementation that just stores writes and returns them in subsequent reads
@@ -107,19 +110,24 @@ namespace dsp56k
 
 		TWord read(TWord _addr) override;
 
-		void write( TWord _addr, TWord _val )
-		{
-//			LOG( "Periph write @ " << std::hex << _addr );
-
-			if( _addr >= XIO_Reserved_High_First )
-				_addr -= XIO_Reserved_High_First;
-
-			m_mem[_addr] = _val;
-		}
+		void write(TWord _addr, TWord _val);
 
 		void exec() override;
+		void reset() override;
+
+		Essi& getEssi()	{ return m_essi; }
+
+		void setDSP(DSP* _dsp) override
+		{
+			m_dsp = _dsp;
+		}
+
+		DSP& getDSP() { return *m_dsp; }
 
 	private:
 		RingBuffer<uint32_t, 1024, false> m_hi8data;
+		Essi m_essi;
+
+		DSP* m_dsp = nullptr;
 	};
 }

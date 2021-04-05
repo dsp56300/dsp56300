@@ -14,6 +14,18 @@ namespace dsp56k
 		reset(Essi1);
 	}
 
+	void Essi::exec()
+	{
+		// set Receive Register Full flag if there is input
+		toggleStatusRegisterBit(Essi0, SSISR_RDF, m_audioInput.empty() ? 0 : 1);
+
+		// set Transmit Register Empty flag if there is space left in the output
+		toggleStatusRegisterBit(Essi0, SSISR_TDE, m_audioOutputs[0].full() ? 0 : 1);
+
+		// Toggle Frame Sync flag. We do not need it as we ensure proper channel ordering anyway, but the DSP needs it to sync to the left/right channel
+		toggleStatusRegisterBit(Essi0, SSISR_RFS, (++m_frameSync)&1);
+	}
+
 	void Essi::toggleStatusRegisterBit(const EssiIndex _essi, const uint32_t _bit, const uint32_t _zeroOrOne)
 	{
 		const auto mask = 1 << _bit;
@@ -37,6 +49,47 @@ namespace dsp56k
 		return res & (1<<_bit);
 	}
 
+	TWord Essi::readRX()
+	{
+		if(m_audioInput.empty())
+			return 0;
+
+		const auto res = m_audioInput.pop_front();
+
+		return res;
+	}
+
+	void Essi::writeTX(uint32_t _txIndex, TWord _val)
+	{
+		m_audioOutputs[_txIndex].push_back(_val);
+	}
+
+	void Essi::processAudioInterleavedTX0(float** _inputs, float** _outputs, size_t _sampleFrames)
+	{
+		if(!_sampleFrames)
+			return;
+
+		// write input data
+		for(size_t i=0; i<_sampleFrames; ++i)
+		{
+			for(size_t c=0; c<2; ++c)
+			{
+				m_audioInput.push_back(float2Dsdp(_inputs[c][i]));
+			}
+		}
+
+		// read output
+		for(size_t i=0; i<_sampleFrames; ++i)
+		{
+			for(size_t c=0; c<2; ++c)
+			{
+				const auto v = m_audioOutputs[0].pop_front();
+
+				_outputs[c][i] = dsp2Float(v);
+			}
+		}
+	}
+
 	void Essi::reset(const EssiIndex _index)
 	{
 		set(_index, ESSI_PRRC, 0);
@@ -45,11 +98,11 @@ namespace dsp56k
 
 	void Essi::set(const EssiIndex _index, const EssiRegX _reg, const TWord _value)
 	{
-		m_memory.setPeriph(MemArea_X, address(_index, _reg), _value);
+		m_periph.write(address(_index, _reg), _value);
 	}
 
 	TWord Essi::get(const EssiIndex _index, const EssiRegX _reg) const
 	{
-		return m_memory.getPeriph(MemArea_X, address(_index, _reg));
+		return m_periph.read(address(_index, _reg));
 	}
 };

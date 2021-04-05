@@ -4,7 +4,6 @@
 #include "memory.h"
 #include "utils.h"
 #include "error.h"
-#include "essi.h"
 #include "instructioncache.h"
 #include "opcodes.h"
 #include "logging.h"
@@ -84,9 +83,9 @@ namespace dsp56k
 		Opcodes m_opcodes;
 
 		Memory& mem;
-		TWord	pcCurrentInstruction;
+		std::array<IPeripherals* const, 2> perif;
 		
-		Essi	essi;
+		TWord	pcCurrentInstruction;
 
 		char	m_asm[128];
 
@@ -112,11 +111,13 @@ namespace dsp56k
 
 		StaticArray<SRegState,Reg_COUNT>	m_prevRegStates;
 
+		RingBuffer<TWord, 512, false>		m_pendingInterrupts;
+
 		// _____________________________________________________________________________
 		// implementation
 		//
 	public:
-				DSP								( Memory& _memory );
+				DSP								( Memory& _memory, IPeripherals* _pX, IPeripherals* _pY );
 
 		void 	resetHW							();
 		void 	resetSW							();
@@ -154,8 +155,6 @@ namespace dsp56k
 			while( reg.sc.var >= oldSC.var )
 				exec();
 		}
-
-		Essi&			getEssi							()				{ return essi; }
 
 		const SRegs&	readRegs						() const		{ return reg; }
 

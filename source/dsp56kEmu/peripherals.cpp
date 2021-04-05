@@ -11,6 +11,7 @@ namespace dsp56k
 	//
 	PeripheralsDefault::PeripheralsDefault()
 		: m_mem(0x0)
+		, m_essi(*this)
 	{
 		m_mem[XIO_IDR - XIO_Reserved_High_First] = 0x001362;
 	}
@@ -25,21 +26,48 @@ namespace dsp56k
 	{
 //		LOG( "Periph read @ " << std::hex << _addr );
 
-		if(_addr == HostIO_HRX)	// Host Receive Register (HRX)
+		switch (_addr)
 		{
-			if(m_hi8data.empty())
-				return 0;
+		case Essi::ESSI0_RX:
+			return m_essi.readRX();
+		case HostIO_HRX:
+			{
+				if(m_hi8data.empty())
+					return 0;
 
-			const auto res = m_hi8data.pop_front();
-			write(HostIO_HRX, res);
-			return res;
+				const auto res = m_hi8data.pop_front();
+				write(HostIO_HRX, res);
+				return res;
+			}
+		default:
+			if (_addr >= XIO_Reserved_High_First)
+				_addr -= XIO_Reserved_High_First;
+
+			return m_mem[_addr];
 		}
+	}
 
+	void PeripheralsDefault::write(TWord _addr, TWord _val)
+	{
+//		LOG( "Periph write @ " << std::hex << _addr );
 
-		if (_addr >= XIO_Reserved_High_First)
-			_addr -= XIO_Reserved_High_First;
+		switch (_addr)
+		{
+		case  Essi::ESSI0_TX0:
+			m_essi.writeTX(0, _val);
+			return;
+		case  Essi::ESSI0_TX1:
+			m_essi.writeTX(1, _val);
+			return;
+		case  Essi::ESSI0_TX2:
+			m_essi.writeTX(2, _val);
+			return;
+		default:
+			if (_addr >= XIO_Reserved_High_First)
+				_addr -= XIO_Reserved_High_First;
 
-		return m_mem[_addr];
+			m_mem[_addr] = _val;
+		}
 	}
 
 	void PeripheralsDefault::exec()
@@ -48,5 +76,12 @@ namespace dsp56k
 		auto hsr = read(HostIO_HSR);
 		dsp56k::bitset<TWord>(hsr, HSR_HRDF, m_hi8data.empty() ? 0 : 1);
 		write(HostIO_HSR, hsr);
+
+		m_essi.exec();
+	}
+
+	void PeripheralsDefault::reset()
+	{
+		m_essi.reset();
 	}
 }

@@ -14,12 +14,11 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// Memory
 	//
-	Memory::Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY, const IMemoryMap* _memoryMap, size_t _memSize/* = 0xc00000*/)
+	Memory::Memory(const IMemoryMap* _memoryMap, size_t _memSize/* = 0xc00000*/)
 		: m_memoryMap(_memoryMap ? _memoryMap : &g_defaultMemoryMap)
 		, x(m_mem[MemArea_X])
 		, y(m_mem[MemArea_Y])
 		, p(m_mem[MemArea_P])
-		, m_perif({_peripheralsX, _peripheralsY})
 		, m_dsp(nullptr)
 	{
 		for( size_t i=0; i<MemArea_COUNT; ++i )
@@ -103,37 +102,6 @@ namespace dsp56k
 #endif
 
 		return res;
-	}
-
-	bool Memory::setPeriph(EMemArea _area, TWord _offset, TWord _value)
-	{
-		m_perif[_area]->write(_offset, _value);
-		return true;
-	}
-
-	bool Memory::setPeriphFFFF80(const EMemArea _area, const TWord _offset, const TWord _value)
-	{
-		return setPeriph(_area, _offset + 0xffff80, _value);
-	}
-
-	bool Memory::setPeriphFFFFC0(const EMemArea _area, const TWord _offset, const TWord _value)
-	{
-		return setPeriph(_area, _offset + 0xffffc0, _value);
-	}
-
-	TWord Memory::getPeriph(const EMemArea _area, const TWord _offset) const
-	{
-		return m_perif[_area]->read(_offset);
-	}
-
-	TWord Memory::getPeriphFFFF80(const EMemArea _area, const TWord _offset) const
-	{
-		return getPeriph(_area, _offset + 0xffff80);
-	}
-
-	TWord Memory::getPeriphFFFFC0(const EMemArea _area, const TWord _offset) const
-	{
-		return getPeriph(_area, _offset + 0xffffc0);
 	}
 
 	// _____________________________________________________________________________

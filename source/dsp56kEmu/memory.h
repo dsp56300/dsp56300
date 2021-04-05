@@ -58,8 +58,6 @@ namespace dsp56k
 		const std::vector<TWord>&							y;
 		const std::vector<TWord>&							p;
 
-		std::array<IPeripherals* const, 2>					m_perif;
-
 		struct STransaction
 		{
 			unsigned int ictr;
@@ -85,7 +83,7 @@ namespace dsp56k
 		// implementation
 		//
 	public:
-		Memory(IPeripherals* _peripheralsX, IPeripherals* _peripheralsY, const IMemoryMap* _memoryMap = nullptr, size_t _memSize = 0xc00000);
+		Memory(const IMemoryMap* _memoryMap = nullptr, size_t _memSize = 0xc00000);
 		Memory(const Memory&) = delete;
 		Memory& operator = (const Memory&) = delete;
 
@@ -96,14 +94,6 @@ namespace dsp56k
 		bool				set					( EMemArea _area, TWord _offset, TWord _value );
 		TWord				get					( EMemArea _area, TWord _offset ) const;
 
-		bool				setPeriph			( EMemArea _area, TWord _offset, TWord _value );
-		bool				setPeriphFFFF80		( EMemArea _area, TWord _offset, TWord _value );
-		bool				setPeriphFFFFC0		( EMemArea _area, TWord _offset, TWord _value );
-
-		TWord				getPeriph			( EMemArea _area, TWord _offset ) const;
-		TWord				getPeriphFFFFC0		( EMemArea _area, TWord _offset ) const;
-		TWord				getPeriphFFFF80		( EMemArea _area, TWord _offset ) const;
-
 		bool				save				( FILE* _file ) const;
 		bool				load				( FILE* _file );
 
@@ -111,12 +101,6 @@ namespace dsp56k
 
 		void				setSymbol			(char _area, TWord _address, const std::string& _name);
 		const std::string&	getSymbol			(EMemArea _memArea, TWord addr);
-		void exec()
-		{
-			m_perif[0]->exec();
-			if(m_perif[1] != m_perif[0])
-				m_perif[1]->exec();
-		}
 
 		size_t				size				()
 		{

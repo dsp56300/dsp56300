@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fastmath.h"
+#include "ringbuffer.h"
 #include "types.h"
 #include "utils.h"
 
@@ -8,6 +9,7 @@ namespace dsp56k
 {
 	class DSP;
 	class Memory;
+	class IPeripherals;
 
 	constexpr float g_float2dspScale	= 8388608.0f;
 	constexpr float g_dsp2FloatScale	= 0.00000011920928955078125f;
@@ -153,17 +155,17 @@ namespace dsp56k
 		// _____________________________________________________________________________
 		// implementation
 		//
-		Essi( DSP& _dsp, Memory& _memory ) : m_dsp(_dsp), m_memory(_memory)
-		{
-		}
+		explicit Essi(IPeripherals& _peripheral) : m_periph(_peripheral)		{}
 
 		void reset();
-		void exec() {}
+		void exec();
 
 		void setControlRegisters(EssiIndex _essi, TWord cra, TWord crb);
 
 		void toggleStatusRegisterBit(EssiIndex _essi, uint32_t _bit, uint32_t _zeroOrOne);
 		TWord testStatusRegisterBit(EssiIndex _essi0, RegSSISRbits _bit) const;
+		TWord readRX();
+		void writeTX(uint32_t _txIndex, TWord _val);
 
 		static TWord float2Dsdp(float f)
 		{
@@ -177,6 +179,8 @@ namespace dsp56k
 		{
 			return static_cast<float>(signextend<int32_t,24>(d)) * g_dsp2FloatScale;
 		}
+
+		void processAudioInterleavedTX0(float** _inputs, float** _outputs, size_t _sampleFrames);
 
 	private:
 		void reset(EssiIndex _index);
@@ -192,7 +196,11 @@ namespace dsp56k
 		// _____________________________________________________________________________
 		// members
 		//
-		DSP&		m_dsp;
-		Memory&		m_memory;
+		IPeripherals& m_periph;
+
+		RingBuffer<uint32_t, 8192, true> m_audioInput;
+		std::array<RingBuffer<uint32_t, 8192, true>, 3> m_audioOutputs;
+
+		uint32_t m_frameSync = 0;
 	};
 }
