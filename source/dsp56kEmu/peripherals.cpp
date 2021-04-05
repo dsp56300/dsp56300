@@ -40,10 +40,7 @@ namespace dsp56k
 				return res;
 			}
 		default:
-			if (_addr >= XIO_Reserved_High_First)
-				_addr -= XIO_Reserved_High_First;
-
-			return m_mem[_addr];
+			return m_mem[_addr - XIO_Reserved_High_First];
 		}
 	}
 
@@ -63,10 +60,7 @@ namespace dsp56k
 			m_essi.writeTX(2, _val);
 			return;
 		default:
-			if (_addr >= XIO_Reserved_High_First)
-				_addr -= XIO_Reserved_High_First;
-
-			m_mem[_addr] = _val;
+			m_mem[_addr - XIO_Reserved_High_First] = _val;
 		}
 	}
 
