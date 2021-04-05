@@ -30,8 +30,8 @@ namespace dsp56k
 	// DSP
 	//
 	DSP::DSP( Memory& _memory ) : mem(_memory)
-		, pcCurrentInstruction(0xffffff)
 		, repRunning(false)
+		, pcCurrentInstruction(0xffffff)
 		, essi(*this,_memory)
 	{
 		mem.setDSP(this);
