@@ -213,8 +213,8 @@ namespace dsp56k
 		//
 		IPeripherals& m_periph;
 
-		RingBuffer<uint32_t, 8192, true> m_audioInput;
-		std::array<RingBuffer<uint32_t, 8192, true>, 3> m_audioOutputs;
+		RingBuffer<uint32_t, 8192, false> m_audioInput;
+		std::array<RingBuffer<uint32_t, 8192, false>, 3> m_audioOutputs;
 		std::atomic<uint32_t> m_pendingRXInterrupts = 0;
 
 		TWord m_statusReg;

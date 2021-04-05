@@ -50,6 +50,7 @@ namespace dsp56k
 
 		incFrameSync(m_frameSyncDSPRead);
 
+		m_audioInput.waitNotEmpty();
 		const auto res = m_audioInput.pop_front();
 
 		toggleStatusRegisterBit(Essi0, SSISR_RFS, m_frameSyncDSPRead);
@@ -70,6 +71,7 @@ namespace dsp56k
 			return;
 
 		incFrameSync(m_frameSyncDSPWrite);
+		m_audioOutputs[_txIndex].waitNotFull();
 		m_audioOutputs[_txIndex].push_back(_val);
 	}
 
@@ -83,6 +85,7 @@ namespace dsp56k
 		{
 			for(size_t c=0; c<2; ++c)
 			{
+				m_audioInput.waitNotFull();
 				m_audioInput.push_back(float2Dsdp(_inputs[c][i]));
 				++m_pendingRXInterrupts;
 			}
@@ -93,6 +96,7 @@ namespace dsp56k
 		{
 			for(size_t c=0; c<2; ++c)
 			{
+				m_audioOutputs[0].waitNotEmpty();
 				const auto v = m_audioOutputs[0].pop_front();
 
 				_outputs[c][i] = dsp2Float(v);

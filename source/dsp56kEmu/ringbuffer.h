@@ -94,6 +94,18 @@ public:
 			pop_front();
 	}
 
+	void waitNotEmpty() const
+	{
+		while(empty())
+			std::this_thread::yield();
+	}
+
+	void waitNotFull() const
+	{
+		while(full())
+			std::this_thread::yield();
+	}
+
 private:
 	static void updateCounter( size_t& _counter )
 	{

@@ -19,7 +19,10 @@ namespace dsp56k
 	void PeripheralsDefault::writeHI8Data(const int32_t* _data, const size_t _count)
 	{
 		for(size_t i=0; i<_count; ++i)
+		{
+			m_hi8data.waitNotFull();
 			m_hi8data.push_back(_data[i] & 0x00ffffff);
+		}
 	}
 
 	TWord PeripheralsDefault::read(TWord _addr)
