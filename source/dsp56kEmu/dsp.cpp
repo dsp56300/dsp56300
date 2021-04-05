@@ -105,8 +105,57 @@ namespace dsp56k
 		if(perif[1] != perif[0])
 			perif[1]->exec();
 
+		m_currentOpLen = 1;
+		
+		if(m_processingMode == Default && !m_pendingInterrupts.empty())
+		{
+			// TODO: priority sorting, masking
+			const auto vba = m_pendingInterrupts.pop_front();
+
+			const auto minPrio = mr().var & 0x3;
+
+			const auto op0 = memRead(MemArea_P, vba);
+			const auto op1 = memRead(MemArea_P, vba+1);
+
+			const auto oldSP = reg.sp.var;
+
+			m_opWordB = op1;
+
+			m_processingMode = FastInterrupt;
+
+			pcCurrentInstruction = vba;
+			getASM(op0, op1);
+			execOp(op0);
+
+			auto jumped = reg.sp.var - oldSP;
+
+			// only exec the second op if the first one was a one-word op and we did not jump into a long interrupt
+			if(m_currentOpLen == 1 && !jumped)
+			{
+				pcCurrentInstruction = vba+1;
+				getASM(op1, 0);
+				execOp(op1);
+
+				m_processingMode = DefaultPreventInterrupt;
+			}
+			else if(jumped)
+			{
+				m_processingMode = LongInterrupt;
+			}
+
+			return;
+		}
+
+		if(m_processingMode == DefaultPreventInterrupt)
+			m_processingMode = Default;
+
+		pcCurrentInstruction = reg.pc.toWord();
+
+		const auto op = fetchPC();
+		m_opWordB = memRead(MemArea_P, reg.pc.var);
+
 #ifdef _DEBUG
-		getASM();
+		getASM(op, m_opWordB);
 
 		if( g_dumpPC && pcCurrentInstruction != reg.pc.toWord() && reg.ictr.var >= g_dumpPCictrMin )
 		{
@@ -124,9 +173,6 @@ namespace dsp56k
 		m_asm[0] = 0;
 #endif
 
-		pcCurrentInstruction = reg.pc.toWord();
-
-		const auto op = fetchPC();
 		execOp(op);
 	}
 
@@ -2032,6 +2078,7 @@ namespace dsp56k
 		{
 		case OpcodeInfo::Rti:			// Return From Interrupt
 			popPCSR();
+			m_processingMode = DefaultPreventInterrupt;
 			return true;
 		case OpcodeInfo::Enddo:			// End Current DO Loop
 			// restore previous loop flag
@@ -3499,13 +3546,13 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// getASM
 	//
-	const char* DSP::getASM()
+	const char* DSP::getASM(const TWord _wordA, const TWord _wordB)
 	{
 	#ifdef _DEBUG
 		unsigned long ops[3];
-		ops[0] = memRead( MemArea_P, reg.pc.var );
-		ops[1] = memRead( MemArea_P, reg.pc.var+1 );
-		ops[2] = memRead( MemArea_P, reg.pc.var+2 );
+		ops[0] = _wordA;
+		ops[1] = _wordB;
+		ops[2] = 0;
 		disassemble( m_asm, ops, reg.sr.var, reg.omr.var );
 	#endif
 		return m_asm;
@@ -3661,4 +3708,8 @@ namespace dsp56k
 		return true;
 	}
 
+	void DSP::injectInterrupt(InterruptVectorAddress _interruptVectorAddress)
+	{
+		m_pendingInterrupts.push_back(_interruptVectorAddress);
+	}
 }

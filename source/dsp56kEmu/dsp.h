@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "error.h"
 #include "instructioncache.h"
+#include "interrupts.h"
 #include "opcodes.h"
 #include "logging.h"
 
@@ -67,6 +68,14 @@ namespace dsp56k
 			TReg24 cnt4;
 		};
 
+		enum ProcessingMode
+		{
+			Default,
+			DefaultPreventInterrupt,	// The only purpose of this state is to give time to regular processing if the emulation is so slow that interrupts are constantly processed, leaving no room for regular processing
+			FastInterrupt,
+			LongInterrupt,
+		};
+
 		// _____________________________________________________________________________
 		// registers
 		//
@@ -111,7 +120,11 @@ namespace dsp56k
 
 		StaticArray<SRegState,Reg_COUNT>	m_prevRegStates;
 
-		RingBuffer<TWord, 512, false>		m_pendingInterrupts;
+		RingBuffer<TWord, 16, false>		m_pendingInterrupts;
+
+		TWord m_opWordB;
+		uint32_t m_currentOpLen = 0;
+		ProcessingMode m_processingMode = Default;
 
 		// _____________________________________________________________________________
 		// implementation
@@ -146,7 +159,7 @@ namespace dsp56k
 
 		int		getICTR							() const									{ return reg.ictr.var; }
 
-		const char*	getASM						();
+		const char*	getASM						(TWord wordA, TWord wordB);
 
 		void	execUntilRTS					()
 		{
@@ -167,11 +180,16 @@ namespace dsp56k
 		bool			save							( FILE* _file ) const;
 		bool			load							( FILE* _file );
 
+		void			injectInterrupt					(InterruptVectorAddress _interruptVectorAddress);
+		
 	private:
 
 		TWord	fetchOpWordB()
 		{
-			return fetchPC();
+			++m_currentOpLen;
+			if(m_processingMode != FastInterrupt)
+				++reg.pc.var;
+			return m_opWordB;
 		}
 
 		// -- execution 
