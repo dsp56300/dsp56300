@@ -110,23 +110,4 @@ namespace dsp56k
 
 		return ((temp & 0xff0000) >> 16) | (temp & 0x00ff00) | ((temp & 0x0000ff) << 16);
 	}
-
-	static TWord floatToDspWord( float _v )
-	{
-		const int res = int(_v * float(0x7fffff) );
-
-		if( res >= 0x7fffff )
-			return int(0x7fffff);
-		else if( res < int(0xff800000) )
-			return int(0x00800000);
-
-		return res & 0x00ffffff;
-	}
-
-	static float dspWordToFloat( TReg24 _v )
-	{
-		int v = _v.signextend<int>();
-
-		return (float)v / float(0x7fffff);
-	}
 }
