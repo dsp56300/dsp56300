@@ -8,7 +8,9 @@ namespace dsp56k
 #define T true
 #define F false
 
-	UnitTests::UnitTests() : dsp(mem, &peripherals, &peripherals)
+	static DefaultMemoryMap g_defaultMemoryMap;
+	
+	UnitTests::UnitTests() : mem(g_defaultMemoryMap), dsp(mem, &peripherals, &peripherals)
 	{
 		testMoveImmediateToRegister();
 		testCCCC();

@@ -49,7 +49,7 @@ namespace dsp56k
 		// members
 		//
 
-		const IMemoryMap*	const							m_memoryMap;
+		const IMemoryMap&									m_memoryMap;
 		
 		// 768k words of 24-bit data for 3 banks (XYP)
 		StaticArray< std::vector<TWord>, MemArea_COUNT >	m_mem;
@@ -83,7 +83,7 @@ namespace dsp56k
 		// implementation
 		//
 	public:
-		Memory(const IMemoryMap* _memoryMap = nullptr, size_t _memSize = 0xc00000);
+		Memory(const IMemoryMap& _memoryMap, size_t _memSize = 0xc00000);
 		Memory(const Memory&) = delete;
 		Memory& operator = (const Memory&) = delete;
 

@@ -9,13 +9,11 @@ namespace dsp56k
 {
 	static const TWord g_initPattern = 0xabcabcab;
 
-	static DefaultMemoryMap g_defaultMemoryMap;
-	
 	// _____________________________________________________________________________
 	// Memory
 	//
-	Memory::Memory(const IMemoryMap* _memoryMap, size_t _memSize/* = 0xc00000*/)
-		: m_memoryMap(_memoryMap ? _memoryMap : &g_defaultMemoryMap)
+	Memory::Memory(const IMemoryMap& _memoryMap, size_t _memSize/* = 0xc00000*/)
+		: m_memoryMap(_memoryMap)
 		, x(m_mem[MemArea_X])
 		, y(m_mem[MemArea_Y])
 		, p(m_mem[MemArea_P])
@@ -37,11 +35,11 @@ namespace dsp56k
 	//
 	bool Memory::set( EMemArea _area, TWord _offset, TWord _value )
 	{
-		m_memoryMap->memTranslateAddress(_area, _offset);
+		m_memoryMap.memTranslateAddress(_area, _offset);
 
 #ifdef _DEBUG
 		assert(_offset < XIO_Reserved_High_First);
-		if(!m_memoryMap->memValidateAccess(_area, _offset, true))
+		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
 			return false;
 
 		if( _offset >= m_mem[_area].size() )
@@ -79,11 +77,11 @@ namespace dsp56k
 	//
 	TWord Memory::get( EMemArea _area, TWord _offset ) const
 	{
-		m_memoryMap->memTranslateAddress(_area, _offset);
+		m_memoryMap.memTranslateAddress(_area, _offset);
 
 #ifdef _DEBUG
 		assert(_offset < XIO_Reserved_High_First);
-		if(!m_memoryMap->memValidateAccess(_area, _offset, true))
+		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
 			return false;
 
 		if( _offset >= m_mem[_area].size() )
