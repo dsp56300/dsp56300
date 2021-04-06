@@ -14,13 +14,21 @@ namespace dsp56k
 	//
 	Memory::Memory(const IMemoryMap& _memoryMap, size_t _memSize/* = 0xc00000*/)
 		: m_memoryMap(_memoryMap)
-		, x(m_mem[MemArea_X])
-		, y(m_mem[MemArea_Y])
-		, p(m_mem[MemArea_P])
+		, m_size(_memSize)
 		, m_dsp(nullptr)
 	{
+		m_buffer.resize(_memSize * MemArea_COUNT, 0);
+
+		TWord* address = &m_buffer[0];
 		for( size_t i=0; i<MemArea_COUNT; ++i )
-			m_mem[i].resize( _memSize, 0 );
+		{			
+			m_mem[i] = address;
+			address += _memSize;
+		}
+
+		x = m_mem[MemArea_X];
+		y = m_mem[MemArea_Y];
+		p = m_mem[MemArea_P];
 	}
 
 	// _____________________________________________________________________________
@@ -116,12 +124,8 @@ namespace dsp56k
 	//
 	bool Memory::save( FILE* _file ) const
 	{
-		for( size_t i=0; i<m_mem.size(); ++i )
-		{
-			const std::vector<TWord>& data = m_mem[i];
-			fwrite( &data[0], sizeof( data[0] ), data.size(), _file );
-		}
-
+		const auto& data = m_buffer;
+		fwrite( &data[0], sizeof( data[0] ), data.size(), _file );
 		return true;
 	}
 
@@ -130,12 +134,8 @@ namespace dsp56k
 	//
 	bool Memory::load( FILE* _file )
 	{
-		for( size_t i=0; i<m_mem.size(); ++i )
-		{
-			std::vector<TWord>& data = m_mem[i];
-			fread( &data[0], sizeof( data[0] ), data.size(), _file );
-		}
-
+		auto& data = m_buffer;
+		fread( &data[0], sizeof( data[0] ), data.size(), _file );
 		return true;
 	}
 
@@ -195,13 +195,8 @@ namespace dsp56k
 	//
 	void Memory::fillWithInitPattern()
 	{
-		for( size_t i=0; i<MemArea_COUNT; ++i )
-		{
-			for (TWord& a : m_mem[i])
-			{
-				a = g_initPattern;
-			}
-		}
+		for(size_t i=0; i<m_buffer.size(); ++i)
+			m_buffer[i] = g_initPattern;
 	}
 
 }

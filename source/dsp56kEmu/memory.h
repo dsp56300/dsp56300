@@ -52,11 +52,13 @@ namespace dsp56k
 		const IMemoryMap&									m_memoryMap;
 		
 		// 768k words of 24-bit data for 3 banks (XYP)
-		StaticArray< std::vector<TWord>, MemArea_COUNT >	m_mem;
+		const size_t										m_size;
+		std::vector<TWord>									m_buffer;
+		StaticArray< TWord*, MemArea_COUNT >				m_mem;
 
-		const std::vector<TWord>&							x;
-		const std::vector<TWord>&							y;
-		const std::vector<TWord>&							p;
+		const TWord*										x;
+		const TWord*										y;
+		const TWord*										p;
 
 		struct STransaction
 		{
@@ -102,10 +104,7 @@ namespace dsp56k
 		void				setSymbol			(char _area, TWord _address, const std::string& _name);
 		const std::string&	getSymbol			(EMemArea _memArea, TWord addr);
 
-		size_t				size				()
-		{
-			return m_mem[MemArea_X].size();
-		}
+		size_t				size				() const	{ return m_size; }
 
 	private:
 		void	fillWithInitPattern();
