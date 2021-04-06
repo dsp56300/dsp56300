@@ -2088,8 +2088,8 @@ namespace dsp56k
 						cacheEntry |= oi->getInstruction() << 8;
 					}
 				}
-				}
-			break;
+			}
+			return true;
 		default:
 			return false;
 		}
