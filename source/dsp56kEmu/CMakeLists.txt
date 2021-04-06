@@ -16,6 +16,9 @@ logging.cpp logging.h
 memory.cpp memory.h
 omfloader.cpp omfloader.h
 opcodes.cpp opcodes.h
+opcodefields.h
+opcodeinfo.cpp opcodeinfo.h
+opcodetypes.h
 ops.cpp ops.h
 peripherals.cpp peripherals.h
 registers.cpp registers.h
