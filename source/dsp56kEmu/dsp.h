@@ -212,17 +212,8 @@ namespace dsp56k
 		bool	exec_parallel_alu_multiply		(TWord op);
 
 		bool	exec_nonParallel				(const OpcodeInfo* oi, TWord op);
-		
-		bool 	exec_pcu						(const OpcodeInfo* oi, TWord op);
 
 		bool 	exec_parallel_move				(const OpcodeInfo* oi, TWord op);
-		bool 	exec_move						(const OpcodeInfo* oi, TWord op);
-
-		bool 	exec_logical_nonparallel		(const OpcodeInfo* oi, TWord op);
-
-		bool 	exec_operand_8bits				(const OpcodeInfo* oi, TWord op);
-
-		bool 	exec_bitmanip					(const OpcodeInfo* oi, TWord op);
 
 		bool	do_start						( TReg24 _loopcount, TWord _addr );
 		bool	do_end							();
