@@ -189,7 +189,10 @@ namespace dsp56k
 		Vsl,
 		Wait,
 
-		ResolveCache
+		ResolveCache,
+		Parallel,
+
+		InstructionCount
 	};
 
 	enum ExtensionWordTypes

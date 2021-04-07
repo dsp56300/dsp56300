@@ -372,7 +372,8 @@ namespace dsp56k
 		OpcodeInfo(Wait,			"00000000000000001o0o0110",	"WAIT"),
 
 		// Dummy entry
-		OpcodeInfo(ResolveCache,	"000000000000000000000000",	"ResolveCache")
+		OpcodeInfo(ResolveCache,	"000000000000000000000000",	"ResolveCache"),
+		OpcodeInfo(Parallel		,	"000000000000000000000000",	"Parallel")
 	};
 
 	constexpr size_t g_opcodeCount = sizeof(g_opcodes) / sizeof(g_opcodes[0]);

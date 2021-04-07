@@ -12,6 +12,8 @@
 #include "disasm.h"
 #include "opcodes.h"
 
+#include "dsp_ops.inl"
+
 #if 0
 #	define LOGSC(F)	logSC(F)
 #else
@@ -25,6 +27,250 @@ namespace dsp56k
 	constexpr bool g_dumpPC = false;
 //	constexpr TWord g_dumpPCictrMin = 0x153000;
 	constexpr TWord g_dumpPCictrMin = 0xfffff;
+
+	using TInstructionFunc = void (DSP::*)(TWord op);
+
+	constexpr TInstructionFunc g_jumpTable[InstructionCount] =
+	{
+		&DSP::op_Abs,							// Abs Abs 
+		&DSP::op_ADC,							// ADC ADC 
+		&DSP::op_Add_SD,						// Add_SD Add_SD 
+		&DSP::op_Add_xx,						// Add_xx Add_xx 
+		&DSP::op_Add_xxxx,						// Add_xxxx 
+		&DSP::op_Addl,							// Addl 
+		&DSP::op_Addr,							// Addr 
+		&DSP::op_And_SD,						// And_SD 
+		&DSP::op_And_xx,						// And_xx 
+		&DSP::op_And_xxxx,						// And_xxxx 
+		&DSP::op_Andi,							// Andi 
+		&DSP::op_Asl_D,							// Asl_D 
+		&DSP::op_Asl_ii,						// Asl_ii 
+		&DSP::op_Asl_S1S2D,						// Asl_S1S2D 
+		&DSP::op_Asr_D,							// Asr_D 
+		&DSP::op_Asr_ii,						// Asr_ii 
+		&DSP::op_Asr_S1S2D,						// Asr_S1S2D 
+		&DSP::op_Bcc_xxxx,						// Bcc_xxxx 
+		&DSP::op_Bcc_xxx,						// Bcc_xxx 
+		&DSP::op_Bcc_Rn,						// Bcc_Rn 
+		&DSP::op_Bchg_ea,						// Bchg_ea 
+		&DSP::op_Bchg_aa,						// Bchg_aa 
+		&DSP::op_Bchg_pp,						// Bchg_pp 
+		&DSP::op_Bchg_qq,						// Bchg_qq 
+		&DSP::op_Bchg_D,						// Bchg_D 
+		&DSP::op_Bclr_ea,						// Bclr_ea 
+		&DSP::op_Bclr_aa,						// Bclr_aa 
+		&DSP::op_Bclr_pp,						// Bclr_pp 
+		&DSP::op_Bclr_qq,						// Bclr_qq 
+		&DSP::op_Bclr_D,						// Bclr_D 
+		&DSP::op_Bra_xxxx,						// Bra_xxxx 
+		&DSP::op_Bra_xxx,						// Bra_xxx 
+		&DSP::op_Bra_Rn,						// Bra_Rn 
+		&DSP::op_Brclr_ea,						// Brclr_ea 
+		&DSP::op_Brclr_aa,						// Brclr_aa 
+		&DSP::op_Brclr_pp,						// Brclr_pp 
+		&DSP::op_Brclr_qq,						// Brclr_qq 
+		&DSP::op_Brclr_S,						// Brclr_S 
+		&DSP::op_BRKcc,							// BRKcc 
+		&DSP::op_Brset_ea,						// Brset_ea 
+		&DSP::op_Brset_aa,						// Brset_aa 
+		&DSP::op_Brset_pp,						// Brset_pp 
+		&DSP::op_Brset_qq,						// Brset_qq 
+		&DSP::op_Brset_S,						// Brset_S 
+		&DSP::op_BScc_xxxx,						// BScc_xxxx 
+		&DSP::op_BScc_xxx,						// BScc_xxx 
+		&DSP::op_BScc_Rn,						// BScc_Rn 
+		&DSP::op_Bsclr_ea,						// Bsclr_ea 
+		&DSP::op_Bsclr_aa,						// Bsclr_aa 
+		&DSP::op_Bsclr_pp,						// Bsclr_pp 
+		&DSP::op_Bsclr_qq,						// Bsclr_qq 
+		&DSP::op_Bsclr_S,						// Bsclr_S 
+		&DSP::op_Bset_ea,						// Bset_ea 
+		&DSP::op_Bset_aa,						// Bset_aa 
+		&DSP::op_Bset_pp,						// Bset_pp 
+		&DSP::op_Bset_qq,						// Bset_qq 
+		&DSP::op_Bset_D,						// Bset_D 
+		&DSP::op_Bsr_xxxx,						// Bsr_xxxx 
+		&DSP::op_Bsr_xxx,						// Bsr_xxx 
+		&DSP::op_Bsr_Rn,						// Bsr_Rn 
+		&DSP::op_Bsset_ea,						// Bsset_ea 
+		&DSP::op_Bsset_aa,						// Bsset_aa 
+		&DSP::op_Bsset_pp,						// Bsset_pp 
+		&DSP::op_Bsset_qq,						// Bsset_qq 
+		&DSP::op_Bsset_S,						// Bsset_S 
+		&DSP::op_Btst_ea,						// Btst_ea 
+		&DSP::op_Btst_aa,						// Btst_aa 
+		&DSP::op_Btst_pp,						// Btst_pp 
+		&DSP::op_Btst_qq,						// Btst_qq 
+		&DSP::op_Btst_D,						// Btst_D 
+		&DSP::op_Clb,							// Clb 
+		&DSP::op_Clr,							// Clr 
+		&DSP::op_Cmp_S1S2,						// Cmp_S1S2 
+		&DSP::op_Cmp_xxS2,						// Cmp_xxS2 
+		&DSP::op_Cmp_xxxxS2,					// Cmp_xxxxS2 
+		&DSP::op_Cmpm_S1S2,						// Cmpm_S1S2 
+		&DSP::op_Cmpu_S1S2,						// Cmpu_S1S2 
+		&DSP::op_Debug,							// Debug 
+		&DSP::op_Debugcc,						// Debugcc 
+		&DSP::op_Dec,							// Dec 
+		&DSP::op_Div,							// Div 
+		&DSP::op_Dmac,							// Dmac 
+		&DSP::op_Do_ea,							// Do_ea 
+		&DSP::op_Do_aa,							// Do_aa 
+		&DSP::op_Do_xxx,						// Do_xxx 
+		&DSP::op_Do_S,							// Do_S 
+		&DSP::op_DoForever,						// DoForever 
+		&DSP::op_Dor_ea,						// Dor_ea 
+		&DSP::op_Dor_aa,						// Dor_aa 
+		&DSP::op_Dor_xxx,						// Dor_xxx 
+		&DSP::op_Dor_S,							// Dor_S 
+		&DSP::op_DorForever,					// DorForever 
+		&DSP::op_Enddo,							// Enddo 
+		&DSP::op_Eor_SD,						// Eor_SD 
+		&DSP::op_Eor_xx,						// Eor_xx 
+		&DSP::op_Eor_xxxx,						// Eor_xxxx 
+		&DSP::op_Extract_S1S2,					// Extract_S1S2 
+		&DSP::op_Extract_CoS2,					// Extract_CoS2 
+		&DSP::op_Extractu_S1S2,					// Extractu_S1S2 
+		&DSP::op_Extractu_CoS2,					// Extractu_CoS2 
+		&DSP::op_Ifcc,							// Ifcc 
+		&DSP::op_Ifcc_U,						// Ifcc_U 
+		&DSP::op_Illegal,						// Illegal 
+		&DSP::op_Inc,							// Inc 
+		&DSP::op_Insert_S1S2,					// Insert_S1S2 
+		&DSP::op_Insert_CoS2,					// Insert_CoS2 
+		&DSP::op_Jcc_xxx,						// Jcc_xxx 
+		&DSP::op_Jcc_ea,						// Jcc_ea 
+		&DSP::op_Jclr_ea,						// Jclr_ea 
+		&DSP::op_Jclr_aa,						// Jclr_aa 
+		&DSP::op_Jclr_pp,						// Jclr_pp 
+		&DSP::op_Jclr_qq,						// Jclr_qq 
+		&DSP::op_Jclr_S,						// Jclr_S 
+		&DSP::op_Jmp_ea,						// Jmp_ea 
+		&DSP::op_Jmp_xxx,						// Jmp_xxx 
+		&DSP::op_Jscc_xxx,						// Jscc_xxx 
+		&DSP::op_Jscc_ea,						// Jscc_ea 
+		&DSP::op_Jsclr_ea,						// Jsclr_ea 
+		&DSP::op_Jsclr_aa,						// Jsclr_aa 
+		&DSP::op_Jsclr_pp,						// Jsclr_pp 
+		&DSP::op_Jsclr_qq,						// Jsclr_qq 
+		&DSP::op_Jsclr_S,						// Jsclr_S 
+		&DSP::op_Jset_ea,						// Jset_ea 
+		&DSP::op_Jset_aa,						// Jset_aa 
+		&DSP::op_Jset_pp,						// Jset_pp 
+		&DSP::op_Jset_qq,						// Jset_qq 
+		&DSP::op_Jset_S,						// Jset_S 
+		&DSP::op_Jsr_ea,						// Jsr_ea 
+		&DSP::op_Jsr_xxx,						// Jsr_xxx 
+		&DSP::op_Jsset_ea,						// Jsset_ea 
+		&DSP::op_Jsset_aa,						// Jsset_aa 
+		&DSP::op_Jsset_pp,						// Jsset_pp 
+		&DSP::op_Jsset_qq,						// Jsset_qq 
+		&DSP::op_Jsset_S,						// Jsset_S 
+		&DSP::op_Lra_Rn,						// Lra_Rn 
+		&DSP::op_Lra_xxxx,						// Lra_xxxx 
+		&DSP::op_Lsl_D,							// Lsl_D 
+		&DSP::op_Lsl_ii,						// Lsl_ii 
+		&DSP::op_Lsl_SD,						// Lsl_SD 
+		&DSP::op_Lsr_D,							// Lsr_D 
+		&DSP::op_Lsr_ii,						// Lsr_ii 
+		&DSP::op_Lsr_SD,						// Lsr_SD 
+		&DSP::op_Lua_ea,						// Lua_ea 
+		&DSP::op_Lua_Rn,						// Lua_Rn 
+		&DSP::op_Mac_S1S2,						// Mac_S1S2 
+		&DSP::op_Mac_S,							// Mac_S 
+		&DSP::op_Maci_xxxx,						// Maci_xxxx 
+		&DSP::op_Macsu,							// Macsu 
+		&DSP::op_Macr_S1S2,						// Macr_S1S2 
+		&DSP::op_Macr_S,						// Macr_S 
+		&DSP::op_Macri_xxxx,					// Macri_xxxx 
+		&DSP::op_Max,							// Max 
+		&DSP::op_Maxm,							// Maxm 
+		&DSP::op_Merge,							// Merge 
+		&DSP::op_Move_Nop,						// Move_Nop 
+		&DSP::op_Move_xx,						// Move_xx 
+		&DSP::op_Mover,							// Mover 
+		&DSP::op_Move_ea,						// Move_ea 
+		&DSP::op_Movex_ea,						// Movex_ea 
+		&DSP::op_Movex_aa,						// Movex_aa 
+		&DSP::op_Movex_Rnxxxx,					// Movex_Rnxxxx 
+		&DSP::op_Movex_Rnxxx,					// Movex_Rnxxx 
+		&DSP::op_Movexr_ea,						// Movexr_ea 
+		&DSP::op_Movexr_A,						// Movexr_A 
+		&DSP::op_Movey_ea,						// Movey_ea 
+		&DSP::op_Movey_aa,						// Movey_aa 
+		&DSP::op_Movey_Rnxxxx,					// Movey_Rnxxxx 
+		&DSP::op_Movey_Rnxxx,					// Movey_Rnxxx 
+		&DSP::op_Moveyr_ea,						// Moveyr_ea 
+		&DSP::op_Moveyr_A,						// Moveyr_A 
+		&DSP::op_Movel_ea,						// Movel_ea 
+		&DSP::op_Movel_aa,						// Movel_aa 
+		&DSP::op_Movexy,						// Movexy 
+		&DSP::op_Movec_ea,						// Movec_ea 
+		&DSP::op_Movec_aa,						// Movec_aa 
+		&DSP::op_Movec_S1D2,					// Movec_S1D2 
+		&DSP::op_Movec_xx,						// Movec_xx 
+		&DSP::op_Movem_ea,						// Movem_ea 
+		&DSP::op_Movem_aa,						// Movem_aa 
+		&DSP::op_Movep_ppea,					// Movep_ppea 
+		&DSP::op_Movep_Xqqea,					// Movep_Xqqea 
+		&DSP::op_Movep_Yqqea,					// Movep_Yqqea 
+		&DSP::op_Movep_eapp,					// Movep_eapp 
+		&DSP::op_Movep_eaqq,					// Movep_eaqq 
+		&DSP::op_Movep_Spp,						// Movep_Spp 
+		&DSP::op_Movep_SXqq,					// Movep_SXqq 
+		&DSP::op_Movep_SYqq,					// Movep_SYqq 
+		&DSP::op_Mpy_S1S2D,						// Mpy_S1S2D 
+		&DSP::op_Mpy_SD,						// Mpy_SD 
+		&DSP::op_Mpy_su,						// Mpy_su 
+		&DSP::op_Mpyi,							// Mpyi 
+		&DSP::op_Mpyr_S1S2D,					// Mpyr_S1S2D 
+		&DSP::op_Mpyr_SD,						// Mpyr_SD 
+		&DSP::op_Mpyri,							// Mpyri 
+		&DSP::op_Neg,							// Neg 
+		&DSP::op_Nop,							// Nop 
+		&DSP::op_Norm,							// Norm 
+		&DSP::op_Normf,							// Normf 
+		&DSP::op_Not,							// Not 
+		&DSP::op_Or_SD,							// Or_SD 
+		&DSP::op_Or_xx,							// Or_xx 
+		&DSP::op_Or_xxxx,						// Or_xxxx 
+		&DSP::op_Ori,							// Ori 
+		&DSP::op_Pflush,						// Pflush 
+		&DSP::op_Pflushun,						// Pflushun 
+		&DSP::op_Pfree,							// Pfree 
+		&DSP::op_Plock,							// Plock 
+		&DSP::op_Plockr,						// Plockr 
+		&DSP::op_Punlock,						// Punlock 
+		&DSP::op_Punlockr,						// Punlockr 
+		&DSP::op_Rep_ea,						// Rep_ea 
+		&DSP::op_Rep_aa,						// Rep_aa 
+		&DSP::op_Rep_xxx,						// Rep_xxx 
+		&DSP::op_Rep_S,							// Rep_S 
+		&DSP::op_Reset,							// Reset 
+		&DSP::op_Rnd,							// Rnd 
+		&DSP::op_Rol,							// Rol 
+		&DSP::op_Ror,							// Ror 
+		&DSP::op_Rti,							// Rti 
+		&DSP::op_Rts,							// Rts 
+		&DSP::op_Sbc,							// Sbc 
+		&DSP::op_Stop,							// Stop 
+		&DSP::op_Sub_SD,						// Sub_SD 
+		&DSP::op_Sub_xx,						// Sub_xx 
+		&DSP::op_Sub_xxxx,						// Sub_xxxx 
+		&DSP::op_Subl,							// Subl 
+		&DSP::op_subr,							// subr 
+		&DSP::op_Tcc_S1D1,						// Tcc_S1D1 
+		&DSP::op_Tcc_S1D1S2D2,					// Tcc_S1D1S2D2 
+		&DSP::op_Tcc_S2D2,						// Tcc_S2D2 
+		&DSP::op_Tfr,							// Tfr 
+		&DSP::op_Trap,							// Trap 
+		&DSP::op_Trapcc,						// Trapcc 
+		&DSP::op_Tst,							// Tst 
+		&DSP::op_Vsl,							// Vsl 
+		&DSP::op_Wait,							// Wait 
+		&DSP::op_ResolveCache,					// ResolveCache
+		&DSP::op_Parallel						// Parallel
+	};
 
 	// _____________________________________________________________________________
 	// DSP
@@ -178,15 +424,7 @@ namespace dsp56k
 	{
 		auto& opCache = m_opcodeCache[pcCurrentInstruction];
 
-		const auto nonParallelOp = opCache & 0xff;
-		const auto& oi = Opcodes::getOpcodeInfoAt(nonParallelOp);
-
-		exec_nonParallel(oi.m_instruction, op);
-
-		const auto parallelOp = (opCache>>8) & 0xff;
-		const auto& oiMove = Opcodes::getOpcodeInfoAt(parallelOp);
-
-		exec_parallel(oiMove.m_instruction, op);
+		exec_jump(static_cast<Instruction>(opCache & 0xff), op);
 
 		if( g_dumpPC && reg.ictr.var >= g_dumpPCictrMin )
 		{
@@ -222,97 +460,76 @@ namespace dsp56k
 		++reg.ictr.var;
 	}
 
-	bool DSP::exec_parallel(const Instruction inst, const TWord op)
+	void DSP::exec_jump(const Instruction inst, const TWord op)
 	{
-		switch (inst)
+		const auto func = g_jumpTable[inst];
+		(this->*func)(op);
+	}
+
+	bool DSP::exec_parallel(const Instruction instMove, const Instruction instAlu, const TWord op)
+	{
+		// simulate latches registers for parallel instructions
+		const auto preMoveX = reg.x;
+		const auto preMoveY = reg.y;
+		const auto preMoveA = reg.a;
+		const auto preMoveB = reg.b;
+
+		exec_jump(instMove, op);
+
+		const auto postMoveX = reg.x;
+		const auto postMoveY = reg.y;
+		const auto postMoveA = reg.a;
+		const auto postMoveB = reg.b;
+
+		// restore previous state for the ALU to process them
+		reg.x = preMoveX;
+		reg.y = preMoveY;
+		reg.a = preMoveA;
+		reg.b = preMoveB;
+
+		exec_jump(instAlu, op);
+
+		// now check what has changed and get the final values for all registers
+		if( postMoveX != preMoveX )
 		{
-		case Nop:
-			return true;
-		case Ifcc:		// execute the specified ALU operation of the condition is true
-		case Ifcc_U:
-			{
-				const auto cccc = getFieldValue<Ifcc_U, Field_CCCC>(op);
-				if( !decode_cccc( cccc ) )
-					return true;
-
-				const auto backupCCR = ccr();
-				const auto res = exec_parallel_alu(op);
-				if(inst == Ifcc)
-					ccr(backupCCR);
-				return res;
-			}
-		case Move_Nop:
-			if(!(op&0xff))
-				return true;
-			return exec_parallel_alu(op);
-		default:
-			if(!(op&0xff))
-				return exec_parallel_move(inst, op);
-
-			// simulate latches registers for parallel instructions
-			const auto preMoveX = reg.x;
-			const auto preMoveY = reg.y;
-			const auto preMoveA = reg.a;
-			const auto preMoveB = reg.b;
-
-			auto res = exec_parallel_move(inst, op);
-
-			const auto postMoveX = reg.x;
-			const auto postMoveY = reg.y;
-			const auto postMoveA = reg.a;
-			const auto postMoveB = reg.b;
-
-			// restore previous state for the ALU to process them
-			reg.x = preMoveX;
-			reg.y = preMoveY;
-			reg.a = preMoveA;
-			reg.b = preMoveB;
-
-			res |= exec_parallel_alu(op);
-
-			// now check what has changed and get the final values for all registers
-			if( postMoveX != preMoveX )
-			{
-				assert( preMoveX == reg.x && "ALU changed a register at the same time the MOVE command changed it!" );
-				reg.x = postMoveX;
-			}
-			else if( reg.x != preMoveX )
-			{
-				assert( preMoveX == postMoveX && "ALU changed a register at the same time the MOVE command changed it!" );
-			}
-
-			if( postMoveY != preMoveY )
-			{
-				assert( preMoveY == reg.y && "ALU changed a register at the same time the MOVE command changed it!" );
-				reg.y = postMoveY;
-			}
-			else if( reg.y != preMoveY )
-			{
-				assert( preMoveY == postMoveY && "ALU changed a register at the same time the MOVE command changed it!" );
-			}
-
-			if( postMoveA != preMoveA )
-			{
-				assert( preMoveA == reg.a && "ALU changed a register at the same time the MOVE command changed it!" );
-				reg.a = postMoveA;
-			}
-			else if( reg.a != preMoveA )
-			{
-				assert( preMoveA == postMoveA && "ALU changed a register at the same time the MOVE command changed it!" );
-			}
-
-			if( postMoveB != preMoveB )
-			{
-				assert( preMoveB == reg.b && "ALU changed a register at the same time the MOVE command changed it!" );
-				reg.b = postMoveB;
-			}
-			else if( reg.b != preMoveB )
-			{
-				assert( preMoveB == postMoveB && "ALU changed a register at the same time the MOVE command changed it!" );
-			}
-
-			return res;
+			assert( preMoveX == reg.x && "ALU changed a register at the same time the MOVE command changed it!" );
+			reg.x = postMoveX;
 		}
+		else if( reg.x != preMoveX )
+		{
+			assert( preMoveX == postMoveX && "ALU changed a register at the same time the MOVE command changed it!" );
+		}
+
+		if( postMoveY != preMoveY )
+		{
+			assert( preMoveY == reg.y && "ALU changed a register at the same time the MOVE command changed it!" );
+			reg.y = postMoveY;
+		}
+		else if( reg.y != preMoveY )
+		{
+			assert( preMoveY == postMoveY && "ALU changed a register at the same time the MOVE command changed it!" );
+		}
+
+		if( postMoveA != preMoveA )
+		{
+			assert( preMoveA == reg.a && "ALU changed a register at the same time the MOVE command changed it!" );
+			reg.a = postMoveA;
+		}
+		else if( reg.a != preMoveA )
+		{
+			assert( preMoveA == postMoveA && "ALU changed a register at the same time the MOVE command changed it!" );
+		}
+
+		if( postMoveB != preMoveB )
+		{
+			assert( preMoveB == reg.b && "ALU changed a register at the same time the MOVE command changed it!" );
+			reg.b = postMoveB;
+		}
+		else if( reg.b != preMoveB )
+		{
+			assert( preMoveB == postMoveB && "ALU changed a register at the same time the MOVE command changed it!" );
+		}
+		return true;
 	}
 
 	bool DSP::exec_parallel_alu(TWord op)
@@ -439,1660 +656,6 @@ namespace dsp56k
 		}
 
 		return true;
-	}
-
-	// _____________________________________________________________________________
-	// exec_parallel_move
-	//
-	bool DSP::exec_parallel_move(const Instruction inst, const TWord op)
-	{
-		switch (inst)
-		{
-		case Move_xx:		// (...) #xx,D - Immediate Short Data Move - 001dddddiiiiiiii
-			{
-				const TWord ddddd = getFieldValue<Move_xx, Field_ddddd>(op);
-				const TReg8 iiiiiiii = TReg8(static_cast<uint8_t>(getFieldValue<Move_xx, Field_iiiiiiii>(op)));
-
-				decode_ddddd_write(ddddd, iiiiiiii);
-			}
-			return true;
-		case Mover:
-			{
-				const auto eeeee = getFieldValue<Mover,Field_eeeee>(op);
-				const auto ddddd = getFieldValue<Mover,Field_ddddd>(op);
-
-				// TODO: we need to determine the two register types and call different template versions of read and write
-				decode_ddddd_write<TReg24>( ddddd, decode_ddddd_read<TReg24>( eeeee ) );
-			}
-			return true;
-		case Move_ea:						// does not move but updates r[x]
-			{
-				const TWord mmrrr = getFieldValue<Move_ea, Field_MM, Field_RRR>(op);
-				decode_MMMRRR_read( mmrrr );
-			}
-			return true;
-		case Movex_ea:		// (...) X:ea<>D - 01dd0ddd W1MMMRRR			X Memory Data Move
-		case Movey_ea:		// (...) Y:ea<>D - 01dd1ddd W1MMMRRR			Y Memory Data Move
-			{
-				const TWord mmmrrr	= getFieldValue<Movex_ea,Field_MMM, Field_RRR>(op);
-				const TWord ddddd	= getFieldValue<Movex_ea,Field_dd, Field_ddd>(op);
-				const TWord write	= getFieldValue<Movex_ea,Field_W>(op);
-
-				exec_move_ddddd_MMMRRR( ddddd, mmmrrr, write, inst == Movex_ea ? MemArea_X : MemArea_Y);
-			}
-			return true;
-		case Movexr_ea:		// X Memory and Register Data Move		(...) X:ea,D1 S2,D2 - 0001ffdF W0MMMRRR
-			{
-				const TWord F		= getFieldValue<Movexr_ea,Field_F>(op);	// true:Y1, false:Y0
-				const TWord mmmrrr	= getFieldValue<Movexr_ea,Field_MMM, Field_RRR>(op);
-				const TWord ff		= getFieldValue<Movexr_ea,Field_ff>(op);
-				const TWord write	= getFieldValue<Movexr_ea,Field_W>(op);
-				const TWord d		= getFieldValue<Movexr_ea,Field_d>(op);
-
-				// S2 D2 move
-				const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
-				if(F)		y1(ab);
-				else		y0(ab);
-				
-				const TWord ea = decode_MMMRRR_read(mmmrrr);
-
-				// S1/D1 move
-				if( write )
-				{
-					if( mmmrrr == MMM_ImmediateData )
-						decode_ee_write( ff, TReg24(ea) );
-					else
-						decode_ee_write( ff, TReg24(memRead(MemArea_X, ea)) );
-				}
-				else
-				{
-					const auto ea = decode_MMMRRR_read(mmmrrr);
-					memWrite( MemArea_X, ea, decode_ff_read(ff).toWord());
-				}
-			}
-			return true;
-		case Movexr_A: 
-			LOG_ERR_NOTIMPLEMENTED("Movexr_A");
-			return true;
-		case Movex_aa:   // 01dd0ddd W0aaaaaa ????????
-		case Movey_aa:   // 01dd1ddd W0aaaaaa ????????
-			{
-				const bool write	= getFieldValue<Movex_aa,Field_W>(op);
-				const TWord ddddd	= getFieldValue<Movex_aa,Field_dd, Field_ddd>(op);
-				const TWord aaaaaa	= getFieldValue<Movex_aa,Field_aaaaaa>(op);
-				const EMemArea area	= inst == Movex_aa ? MemArea_X : MemArea_Y;
-
-				if (write)
-				{
-					decode_ddddd_write<TReg24>( ddddd, TReg24(memRead(area, aaaaaa)) );
-				}
-				else
-				{
-					memWrite( area, aaaaaa, decode_ddddd_read<TWord>(ddddd) );
-				}
-			}
-			return true;
-		case Moveyr_ea:			// Register and Y Memory Data Move - (...) S1,D1 Y:ea,D2 - 0001deff W1MMMRRR
-			{
-				const bool e		= getFieldValue<Moveyr_ea,Field_e>(op);	// true:X1, false:X0
-				const TWord mmmrrr	= getFieldValue<Moveyr_ea,Field_MMM, Field_RRR>(op);
-				const TWord ff		= getFieldValue<Moveyr_ea,Field_ff>(op);
-				const bool write	= getFieldValue<Moveyr_ea,Field_W>(op);
-				const bool d		= getFieldValue<Moveyr_ea,Field_d>(op);
-
-				// S2 D2 move
-				const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
-				if( e )		x1(ab);
-				else		x0(ab);
-
-				const TWord ea = decode_MMMRRR_read(mmmrrr);
-				
-				// S1/D1 move
-
-				if( write )
-				{
-					if( mmmrrr == MMM_ImmediateData )
-						decode_ff_write( ff, TReg24(ea) );
-					else
-						decode_ff_write( ff, TReg24(memRead(MemArea_Y, ea)) );
-				}
-				else
-				{
-					const TWord ea = decode_MMMRRR_read(mmmrrr);
-					memWrite( MemArea_Y, ea, decode_ff_read( ff ).toWord() );
-				}
-			}
-			return true;
-		case Moveyr_A:
-			LOG_ERR_NOTIMPLEMENTED("MOVE YR A");
-			return true;
-		// Long Memory Data Move
-		case Movel_ea:				// 0100L0LLW1MMMRRR
-			{
-				const auto LLL		= getFieldValue<Movel_ea,Field_L, Field_LL>(op);
-				const auto mmmrrr	= getFieldValue<Movel_ea,Field_MMM, Field_RRR>(op);
-				const auto write	= getFieldValue<Movel_ea,Field_W>(op);
-
-				const TWord ea = decode_MMMRRR_read(mmmrrr);
-
-				if( write )
-				{
-					const TReg24 x( memRead( MemArea_X, ea ) );
-					const TReg24 y( memRead( MemArea_Y, ea ) );
-
-					decode_LLL_write( LLL, x,y );
-				}
-				else
-				{
-					TWord x,y;
-
-					decode_LLL_read( LLL, x, y );
-
-					memWrite( MemArea_X, ea, x );
-					memWrite( MemArea_Y, ea, y );
-				}
-			}
-			return true;
-		case Movel_aa:				// 0100L0LLW0aaaaaa
-			{
-				const auto LLL		= getFieldValue<Movel_aa,Field_L, Field_LL>(op);
-				const auto write	= getFieldValue<Movel_aa,Field_W>(op);
-
-				const TWord ea = getFieldValue<Movel_aa,Field_aaaaaa>(op);
-
-				if( write )
-				{
-					const TReg24 x( memRead( MemArea_X, ea ) );
-					const TReg24 y( memRead( MemArea_Y, ea ) );
-
-					decode_LLL_write( LLL, x,y );
-				}
-				else
-				{
-					TWord x,y;
-
-					decode_LLL_read( LLL, x, y );
-
-					memWrite( MemArea_X, ea, x );
-					memWrite( MemArea_Y, ea, y );
-				}				
-			}
-			return true;
-		case Movexy:					// XY Memory Data Move - 1wmmeeff WrrMMRRR
-			{
-				const TWord mmrrr	= getFieldValue<Movexy,Field_MM, Field_RRR>(op);
-				const TWord mmrr	= getFieldValue<Movexy,Field_mm, Field_rr>(op);
-				const TWord writeX	= getFieldValue<Movexy,Field_W>(op);
-				const TWord	writeY	= getFieldValue<Movexy,Field_w>(op);
-				const TWord	ee		= getFieldValue<Movexy,Field_ee>(op);
-				const TWord ff		= getFieldValue<Movexy,Field_ff>(op);
-
-				// X
-				const TWord eaX = decode_XMove_MMRRR( mmrrr );
-				if( writeX )	decode_ee_write( ee, TReg24(memRead( MemArea_X, eaX )) );
-				else			memWrite( MemArea_X, eaX, decode_ee_read( ee ).toWord() );
-
-				// Y
-				const TWord regIdxOffset = ((mmrrr&0x7) >= 4) ? 0 : 4;
-
-				const TWord eaY = decode_YMove_mmrr( mmrr, regIdxOffset );
-				if( writeY )	decode_ff_write( ff, TReg24(memRead( MemArea_Y, eaY )) );
-				else			memWrite( MemArea_Y, eaY, decode_ff_read( ff ).toWord() );
-			}
-			return true;
-		default:
-			return false;
-		}
-	}
-	
-	inline bool DSP::exec_nonParallel(const Instruction inst, const TWord op)
-	{
-		switch (inst)
-		{
-		// Add
-		case Add_xx:	// 0000000101iiiiii10ood000
-			{
-				const TWord iiiiii	= getFieldValue<Add_xx,Field_iiiiii>(op);
-				const auto ab		= getFieldValue<Add_xx,Field_d>(op);
-
-				alu_add( ab, TReg56(iiiiii) );
-			}
-			return true;
-		case Add_xxxx:
-			{
-				const auto ab = getFieldValue<Add_xxxx,Field_d>(op);
-
-				TReg56 r56;
-				convert( r56, TReg24(fetchOpWordB()) );
-
-				alu_add( ab, r56 );
-			}
-			return true;
-		// Logical AND
-		case And_xx:	// 0000000101iiiiii10ood110
-			{
-				const auto ab		= getFieldValue<And_xx,Field_d>(op);
-				const TWord xxxx	= getFieldValue<And_xx,Field_iiiiii>(op);
-
-				alu_and(ab, xxxx );
-			}
-			return true;
-		case And_xxxx:
-			{
-				const auto ab = getFieldValue<And_xxxx,Field_d>(op);
-				const TWord xxxx = fetchOpWordB();
-
-				alu_and( ab, xxxx );
-			}
-			return true;
-		// AND Immediate With Control Register
-		case Andi:	// AND(I) #xx,D		- 00000000 iiiiiiii 101110EE
-			{
-				const TWord ee		= getFieldValue<Andi,Field_EE>(op);
-				const TWord iiiiii	= getFieldValue<Andi,Field_iiiiiiii>(op);
-
-				TReg8 val = decode_EE_read(ee);
-				val.var &= iiiiii;
-				decode_EE_write(ee,val);			
-			}
-			return true;
-		// Arithmetic Shift Accumulator Left
-		case Asl_ii:	// 00001100 00011101 SiiiiiiD
-			{
-				const TWord shiftAmount	= getFieldValue<Asl_ii,Field_iiiiii>(op);
-
-				const bool abDst		= getFieldValue<Asl_ii,Field_D>(op);
-				const bool abSrc		= getFieldValue<Asl_ii,Field_S>(op);
-
-				alu_asl( abDst, abSrc, shiftAmount );			
-			}
-			return true;
-		case Asl_S1S2D:	// 00001100 00011110 010SsssD
-			{
-				const TWord sss = getFieldValue<Asl_S1S2D,Field_sss>(op);
-				const bool abDst = getFieldValue<Asl_S1S2D,Field_D>(op);
-				const bool abSrc = getFieldValue<Asl_S1S2D,Field_S>(op);
-
-				const TWord shiftAmount = decode_sss_read<TWord>( sss );
-
-				alu_asl( abDst, abSrc, shiftAmount );			
-			}
-			return true;
-		// Arithmetic Shift Accumulator Right
-		case Asr_ii:	// 00001100 00011100 SiiiiiiD
-			{
-				const TWord shiftAmount	= getFieldValue<Asr_ii,Field_iiiiii>(op);
-
-				const bool abDst		= getFieldValue<Asr_ii,Field_D>(op);
-				const bool abSrc		= getFieldValue<Asr_ii,Field_S>(op);
-
-				alu_asr( abDst, abSrc, shiftAmount );
-			}
-			return true;
-		case Asr_S1S2D:
-			{
-				const TWord sss = getFieldValue<Asr_S1S2D,Field_sss>(op);
-				const bool abDst = getFieldValue<Asr_S1S2D,Field_D>(op);
-				const bool abSrc = getFieldValue<Asr_S1S2D,Field_S>(op);
-
-				const TWord shiftAmount = decode_sss_read<TWord>( sss );
-
-				alu_asr( abDst, abSrc, shiftAmount );			
-			}
-			return true;
-		// Branch conditionally
-		case Bcc_xxxx:	// TODO: unclear documentation, opcode that is written there is wrong
-			LOG_ERR_NOTIMPLEMENTED("BCC xxxx");
-			return false;
-		case Bcc_xxx:	// 00000101 CCCC01aa aa0aaaaa
-			{
-				const TWord cccc	= getFieldValue<Bcc_xxx,Field_CCCC>(op);
-
-				if( decode_cccc( cccc ) )
-				{
-					const TWord a		= getFieldValue<Bcc_xxx,Field_aaaa, Field_aaaaa>(op);
-
-					const TWord disp	= signextend<int,9>( a );
-					assert( disp >= 0 );
-
-					setPC(pcCurrentInstruction + disp);
-				}
-			}
-			return true;
-		case Bcc_Rn:		// 00001101 00011RRR 0100CCCC
-			LOG_ERR_NOTIMPLEMENTED("Bcc Rn");
-			return true;
-		// Bit test and change
-		case Bchg_ea:
-		case Bchg_aa:
-		case Bchg_pp:
-		case Bchg_qq:
-			LOG_ERR_NOTIMPLEMENTED("BCHG");
-			return true;
-		case Bchg_D:	// 00001011 11DDDDDD 010bbbbb
-			{
-				const TWord bit		= getFieldValue<Bchg_D,Field_bbbbb>(op);
-				const TWord dddddd	= getFieldValue<Bchg_D,Field_DDDDDD>(op);
-
-				TReg24 val = decode_dddddd_read( dddddd );
-
-				sr_toggle( SR_C, bittestandchange( val, bit ) );
-
-				decode_dddddd_write( dddddd, val );
-
-				sr_s_update();
-				sr_l_update_by_v();
-			}
-			return true;
-		// Bit test and clear
-		case Bclr_ea:
-		case Bclr_aa:
-		case Bclr_pp:
-			LOG_ERR_NOTIMPLEMENTED("BCLR");
-			return true;
-		case Bclr_qq:	// 0 0 0 0 0 0 0 1 0 0 q q q q q q 0 S 0 b b b b b
-			{
-				const TWord bit = getFieldValue<Bclr_qq,Field_bbbbb>(op);
-				const TWord ea	= getFieldValue<Bclr_qq,Field_qqqqqq>(op);
-
-				const EMemArea S = getFieldValue<Bclr_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord res = alu_bclr( bit, memRead( S, ea ) );
-
-				memWritePeriphFFFF80( S, ea, res );			
-			}
-			return true;
-		case Bclr_D:	// 0000101011DDDDDD010bbbbb
-			{
-				const TWord bit		= getFieldValue<Bclr_D,Field_bbbbb>(op);
-				const TWord dddddd	= getFieldValue<Bclr_D,Field_DDDDDD>(op);
-
-				TWord val;
-				convert( val, decode_dddddd_read( dddddd ) );
-
-				const TWord newVal = alu_bclr( bit, val );
-				decode_dddddd_write( dddddd, TReg24(newVal) );			
-			}
-			return true;
-		// Branch always
-		case Bra_xxxx:
-			{
-				const int displacement = signextend<int,24>(fetchOpWordB());
-				setPC(pcCurrentInstruction + displacement);
-			}
-			return true;
-		case Bra_xxx:		// 00000101 000011aa aa0aaaaa
-			{
-				const TWord addr = getFieldValue<Bra_xxx,Field_aaaa, Field_aaaaa>(op);
-
-				const int displacement = signextend<int,9>(addr);
-
-				setPC(pcCurrentInstruction + displacement);
-			}
-			return true;
-		case Bra_Rn:		// 0000110100011RRR11000000
-			LOG_ERR_NOTIMPLEMENTED("BRA_Rn");
-			return true;
-		// Branch if Bit Clear
-		case Brclr_ea:	// BRCLR #n,[X or Y]:ea,xxxx - 0 0 0 0 1 1 0 0 1 0 M M M R R R 0 S 0 b b b b b
-		case Brclr_aa:	// BRCLR #n,[X or Y]:aa,xxxx - 0 0 0 0 1 1 0 0 1 0 a a a a a a 1 S 0 b b b b b
-			LOG_ERR_NOTIMPLEMENTED("BRCLR");			
-			return true;
-		case Brclr_pp:	// BRCLR #n,[X or Y]:pp,xxxx - 0 0 0 0 1 1 0 0 1 1 p p p p p p 0 S 0 b b b b b
-			{
-				const TWord bit		= getFieldValue<Brclr_pp,Field_bbbbb>(op);
-				const TWord pppppp	= getFieldValue<Brclr_pp,Field_pppppp>(op);
-				const EMemArea S	= getFieldValue<Brclr_pp,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord ea = pppppp;
-
-				const int displacement = signextend<int,24>(fetchOpWordB());
-
-				if( !bittest( memReadPeriphFFFFC0( S, ea ), bit ) )
-				{
-					setPC(pcCurrentInstruction + displacement);
-				}
-			}
-			return true;
-		case Brclr_qq:
-			{
-				const TWord bit		= getFieldValue<Brclr_qq,Field_bbbbb>(op);
-				const TWord qqqqqq	= getFieldValue<Brclr_qq,Field_qqqqqq>(op);
-				const EMemArea S	= getFieldValue<Brclr_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord ea = qqqqqq;
-
-				const int displacement = signextend<int,24>(fetchOpWordB());
-
-				if( !bittest( memReadPeriphFFFF80( S, ea ), bit ) )
-				{
-					setPC(pcCurrentInstruction + displacement);
-				}
-			}
-			return true;
-		case Brclr_S:	// BRCLR #n,S,xxxx - 0 0 0 0 1 1 0 0 1 1 D D D D D D 1 0 0 b b b b b
-			{
-				const TWord bit		= getFieldValue<Brclr_S,Field_bbbbb>(op);
-				const TWord dddddd	= getFieldValue<Brclr_S,Field_DDDDDD>(op);
-
-				const TReg24 tst = decode_dddddd_read( dddddd );
-
-				const int displacement = signextend<int,24>(fetchOpWordB());
-
-				if( !bittest( tst, bit ) )
-				{
-					setPC(pcCurrentInstruction + displacement);
-				}
-			}
-			return true;
-		case BRKcc:					// Exit Current DO Loop Conditionally
-			LOG_ERR_NOTIMPLEMENTED("BRKcc");
-			return true;
-		// Branch if Bit Set
-		case Brset_ea:	// BRSET #n,[X or Y]:ea,xxxx - 0 0 0 0 1 1 0 0 1 0 M M M R R R 0 S 1 b b b b b
-		case Brset_aa:	// BRSET #n,[X or Y]:aa,xxxx - 0 0 0 0 1 1 0 0 1 0 a a a a a a 1 S 1 b b b b b
-		case Brset_pp:	// BRSET #n,[X or Y]:pp,xxxx - 
-			LOG_ERR_NOTIMPLEMENTED("BRSET");
-			return true;
-		case Brset_qq:
-			{
-				const TWord bit		= getFieldValue<Brset_qq,Field_bbbbb>(op);
-				const TWord qqqqqq	= getFieldValue<Brset_qq,Field_qqqqqq>(op);
-				const EMemArea S	= getFieldValue<Brset_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord ea = qqqqqq;
-
-				const int displacement = signextend<int,24>( fetchOpWordB() );
-
-				if( bittest( memReadPeriphFFFF80( S, ea ), bit ) )
-				{
-					setPC(pcCurrentInstruction + displacement);
-				}
-			}
-			return true;
-		case Brset_S:
-			{
-				const TWord bit		= getFieldValue<Brset_S,Field_bbbbb>(op);
-				const TWord dddddd	= getFieldValue<Brset_S,Field_DDDDDD>(op);
-
-				const TReg24 r = decode_dddddd_read( dddddd );
-
-				const int displacement = signextend<int,24>( fetchOpWordB() );
-
-				if( bittest( r.var, bit ) )
-				{
-					setPC(pcCurrentInstruction + displacement);
-				}				
-			}
-			return true;
-		// Branch to Subroutine Conditionally
-		case BScc_xxxx:		// 00001101000100000000CCCC
-			{
-				const TWord cccc = getFieldValue<BScc_xxxx,Field_CCCC>(op);
-
-				const int displacement = signextend<int,24>(fetchOpWordB());
-
-				if( decode_cccc(cccc) )
-				{
-					jsr(pcCurrentInstruction + displacement);
-				}
-			}
-			return true;
-		case BScc_xxx:		// 00000101CCCC00aaaa0aaaaa
-			{
-				const TWord cccc = getFieldValue<BScc_xxx,Field_CCCC>(op);
-
-				if( decode_cccc(cccc) )
-				{
-					const TWord addr = getFieldValue<BScc_xxx,Field_aaaa, Field_aaaaa>(op);
-
-					const int displacement = signextend<int,9>(addr);
-
-					jsr(pcCurrentInstruction + displacement);
-				}				
-			}
-			return true;
-		case BScc_Rn:
-			LOG_ERR_NOTIMPLEMENTED("BScc Rn");
-			return true;
-		// Branch to Subroutine if Bit Clear
-		case Bsclr_ea:
-		case Bsclr_aa:
-		case Bsclr_qq:
-		case Bsclr_pp:
-		case Bsclr_S:
-			LOG_ERR_NOTIMPLEMENTED("BSCLR");
-			return true;
-		case Bset_ea:	// 0000101001MMMRRR0S1bbbbb
-			// Bit Set and Test
-			{
-				const TWord bit		= getFieldValue<Bset_ea,Field_bbbbb>(op);
-				const TWord mmmrrr	= getFieldValue<Bset_ea,Field_MMM, Field_RRR>(op);
-				const EMemArea S	= getFieldValue<Bset_ea,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord ea		= decode_MMMRRR_read(mmmrrr);
-
-				TWord val = memRead( S, ea );
-
-				sr_toggle( SR_C, bittestandset( val, bit ) );
-
-				memWrite( S, ea, val );
-			}
-			return true;
-		case Bset_aa:
-		case Bset_pp:
-			LOG_ERR_NOTIMPLEMENTED("BSET");
-			return true;
-		case Bset_qq:
-			{
-				const TWord bit		= getFieldValue<Bset_qq,Field_bbbbb>(op);
-				const TWord qqqqqq	= getFieldValue<Bset_qq,Field_qqqqqq>(op);
-				const EMemArea S	= getFieldValue<Bset_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord ea		= qqqqqq;
-
-				TWord val = memReadPeriphFFFF80( S, ea );
-
-				sr_toggle( SR_C, bittestandset( val, bit ) );
-
-				memWritePeriphFFFF80( S, ea, val );
-			}
-			return true;
-		case Bset_D:	// 0000101011DDDDDD011bbbbb
-			{
-				const TWord bit	= getFieldValue<Bset_D,Field_bbbbb>(op);
-				const TWord d	= getFieldValue<Bset_D,Field_DDDDDD>(op);
-
-				TReg24 val = decode_dddddd_read(d);
-
-				if( (d & 0x3f) == 0x39 )	// is SR the destination?	TODO: magic value
-				{
-					bittestandset( val.var, bit );
-				}
-				else
-				{
-					sr_toggle( SR_C, bittestandset( val, bit ) );
-				}
-
-				decode_dddddd_write( d, val );
-
-				sr_s_update();
-				sr_l_update_by_v();
-			}
-			return true;
-		// Branch to Subroutine
-		case Bsr_xxxx:
-			{
-				const int displacement = signextend<int,24>(fetchOpWordB());
-				jsr(pcCurrentInstruction + displacement);
-			}
-			return true;
-		case Bsr_xxx:		// 00000101000010aaaa0aaaaa
-			{
-				const TWord aaaaaaaaa = getFieldValue<Bsr_xxx,Field_aaaa, Field_aaaaa>(op);
-
-				const int displacement = signextend<int,9>(aaaaaaaaa);
-
-				jsr(pcCurrentInstruction + displacement);
-			}
-			return true;
-		case Bsr_Rn:  // 0000110100011RRR10000000
-            {
-                const auto rrr = getFieldValue<Bsr_Rn,Field_RRR>(op);
-                jsr(pcCurrentInstruction + reg.r[rrr].var);
-            }
-            return true;
-		// Branch to Subroutine if Bit Set
-		case Bsset_ea:
-		case Bsset_aa:
-		case Bsset_qq:
-		case Bsset_pp:
-		case Bsset_S:
-			LOG_ERR_NOTIMPLEMENTED("BSCLR");
-			return true;
-		// Bit Test
-		case Btst_ea:
-			{
-				const TWord bit = getFieldValue<Btst_ea,Field_bbbbb>(op);
-				const TWord mmmrrr	= getFieldValue<Btst_ea,Field_MMM, Field_RRR>(op);
-				const TWord ea = decode_MMMRRR_read( mmmrrr );
-				const EMemArea S = getFieldValue<Btst_ea,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord val = memRead( S, ea );
-
-				sr_toggle( SR_C, bittest( val, bit ) );
-
-				sr_s_update();
-				sr_l_update_by_v();
-			}
-			return true;
-		case Btst_aa:
-			LOG_ERR_NOTIMPLEMENTED("BTST aa");
-			return true;
-		case Btst_pp:	// 0 0 0 0 1 0 1 1 1 0 p p p p p p 0 S 1 b b b b b
-			{
-				const TWord bitNum	= getFieldValue<Btst_pp,Field_bbbbb>(op);
-				const TWord pppppp	= getFieldValue<Btst_pp,Field_pppppp>(op);
-				const EMemArea S	= getFieldValue<Btst_pp,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord memVal	= memReadPeriphFFFFC0( S, pppppp );
-
-				const bool bitSet	= ( memVal & (1<<bitNum)) != 0;
-
-				sr_toggle( SR_C, bitSet );
-			}
-			return true;
-		case Btst_qq:	// 0 0 0 0 0 0 0 1 0 1 q q q q q q 0 S 1 b b b b b
-			LOG_ERR_NOTIMPLEMENTED("BTST qq");
-			return true;
-		case Btst_D:	// 0000101111DDDDDD011bbbbb
-			{
-				const TWord dddddd	= getFieldValue<Btst_D,Field_DDDDDD>(op);
-				const TWord bit		= getFieldValue<Btst_D,Field_bbbbb>(op);
-
-				TReg24 val = decode_dddddd_read( dddddd );
-
-				sr_toggle( SR_C, bittest( val.var, bit ) );
-			}
-			return true;
-		case Clb:					// Count Leading Bits - // CLB S,D - 0 0 0 0 1 1 0 0 0 0 0 1 1 1 1 0 0 0 0 0 0 0 S D
-			LOG_ERR_NOTIMPLEMENTED("CLB");
-			return true;
-		// Compare
-		case Cmp_xxS2:				// CMP #xx, S2 - 00000001 01iiiiii 1000d101
-			{
-				const TWord iiiiii = getFieldValue<Cmp_xxS2,Field_iiiiii>(op);
-				
-				TReg56 r56;
-				convert( r56, TReg24(iiiiii) );
-
-				alu_cmp( bittest(op,3), r56, false );				
-			}
-			return true;
-		case Cmp_xxxxS2:
-			{
-				const TReg24 s( signextend<int,24>( fetchOpWordB() ) );
-
-				TReg56 r56;
-				convert( r56, s );
-
-				alu_cmp( bittest(op,3), r56, false );				
-			}
-			return true;
-		// Compare Unsigned
-		case Cmpu_S1S2:
-			LOG_ERR_NOTIMPLEMENTED("CMPU");
-			return true;
-		case Debug:
-			LOG( "Entering DEBUG mode" );
-			LOG_ERR_NOTIMPLEMENTED("DEBUG");
-			return true;
-		case Debugcc:
-			{
-				const TWord cccc = getFieldValue<Debugcc,Field_CCCC>(op);
-				if( decode_cccc( cccc ) )
-				{
-					LOG( "Entering DEBUG mode because condition is met" );
-					LOG_ERR_NOTIMPLEMENTED("DEBUGcc");
-				}
-			}
-			return true;
-		case Dec:			// Decrement by One
-			{
-				auto& d = getFieldValue<Dec,Field_d>(op) ? reg.b : reg.a;
-
-				const auto old = d;
-				const auto res = --d.var;
-
-				d.doMasking();
-
-				sr_s_update();
-				sr_e_update(d);
-				sr_u_update(d);
-				sr_n_update(d);
-				sr_z_update(d);
-				sr_v_update(res,d);
-				sr_l_update_by_v();
-				sr_c_update_arithmetic(old,d);
-				sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
-			}
-			return true;
-		case Div:	// 0000000110oooooo01JJdooo
-			{
-				// TODO: i'm not sure if this works as expected...
-
-				const TWord jj	= getFieldValue<Div,Field_JJ>(op);
-				const auto ab	= getFieldValue<Div,Field_d>(op);
-
-				TReg56& d = ab ? reg.b : reg.a;
-
-				TReg24 s24 = decode_JJ_read( jj );
-
-				const TReg56 debugOldD = d;
-				const TReg24 debugOldS = s24;
-
-				bool c = bittest(d,55) != bittest(s24,23);
-
-				bool old47 = bittest(d,47);
-
-				d.var <<= 1;
-
-				bool changed47 = (bittest( d, 47 ) != 0) != c;
-
-				if( sr_test(SR_C) )
-					bittestandset( d.var, 0 );
-				else
-					bittestandclear( d.var, 0 );
-
-				if( c )
-					d.var = ((d.var + (signextend<TInt64,24>(s24.var) << 24) )&0xffffffffff000000) | (d.var & 0xffffff);
-				else
-					d.var = ((d.var - (signextend<TInt64,24>(s24.var) << 24) )&0xffffffffff000000) | (d.var & 0xffffff);
-
-				sr_toggle( SR_C, bittest(d,55) == 0 );
-				sr_toggle( SR_V, changed47 );
-				sr_l_update_by_v();
-
-				d.var &= 0x00ffffffffffffff;
-
-	//			LOG( "DIV: d" << std::hex << debugOldD.var << " s" << std::hex << debugOldS.var << " =>" << std::hex << d.var );				
-			}
-			return true;
-		// Double-Precision Multiply-Accumulate With Right Shift
-		case Dmac:	// 000000010010010s1SdkQQQQ
-			{
-				const bool dstUnsigned	= getFieldValue<Dmac,Field_s>(op);
-				const bool srcUnsigned	= getFieldValue<Dmac,Field_S>(op);
-				const bool ab			= getFieldValue<Dmac,Field_d>(op);
-				const bool negate		= getFieldValue<Dmac,Field_k>(op);
-
-				const TWord qqqq		= getFieldValue<Dmac,Field_QQQQ>(op);
-
-				TReg24 s1, s2;
-				decode_QQQQ_read( s1, s2, qqqq );
-
-				// TODO: untested
-				alu_dmac( ab, s1, s2, negate, srcUnsigned, dstUnsigned );
-			}
-			return true;
-		// Start Hardware Loop
-		case Do_ea:
-		case Do_aa:
-			LOG_ERR_NOTIMPLEMENTED("DO");
-			return true;
-		case Do_xxx:	// 00000110iiiiiiii1000hhhh
-			{
-				const TWord addr = fetchOpWordB();
-				TWord loopcount = getFieldValue<Do_xxx,Field_hhhh, Field_iiiiiiii>(op);
-
-				do_start( TReg24(loopcount), addr );				
-			}
-			return true;
-		case Do_S:		// 0000011011DDDDDD00000000
-			{
-				const TWord addr = fetchOpWordB();
-
-				const TWord dddddd = getFieldValue<Do_S,Field_DDDDDD>(op);
-
-				const TReg24 loopcount = decode_dddddd_read( dddddd );
-
-				do_start( loopcount, addr );
-			}
-			return true;
-		case DoForever:
-			LOG_ERR_NOTIMPLEMENTED("DO FOREVER");
-			return true;
-		// Start Infinite Loop
-		case Dor_ea:	// 0000011001MMMRRR0S010000
-		case Dor_aa:	// 0000011000aaaaaa0S010000
-			LOG_ERR_NOTIMPLEMENTED("DOR");
-			return true;
-		case Dor_xxx:	// 00000110iiiiiiii1001hhhh
-            {
-	            const auto loopcount = getFieldValue<Dor_xxx,Field_hhhh, Field_iiiiiiii>(op);
-                const auto displacement = signextend<int, 24>(fetchOpWordB());
-                do_start(TReg24(loopcount), pcCurrentInstruction + displacement);
-            }
-            return true;
-		case Dor_S:		// 00000110 11DDDDDD 00010000
-			{
-				const TWord dddddd = getFieldValue<Dor_S,Field_DDDDDD>(op);
-				const TReg24 lc		= decode_dddddd_read( dddddd );
-				
-				const int displacement = signextend<int,24>(fetchOpWordB());
-				do_start( lc, pcCurrentInstruction + displacement);
-			}
-			return true;
-		// Start PC-Relative Infinite Loops
-		case DorForever:
-			LOG_ERR_NOTIMPLEMENTED("DOR FOREVER");
-			return true;
-		case Enddo:			// End Current DO Loop
-			// restore previous loop flag
-			sr_toggle( SR_LF, (ssl().var & SR_LF) != 0 );
-
-			// decrement SP twice, restoring old loop settings
-			decSP();
-
-			reg.lc = ssl();
-			reg.la = ssh();
-
-			return true;
-		case Eor_xx:				// Logical Exclusive OR
-		case Eor_xxxx:
-			LOG_ERR_NOTIMPLEMENTED("EOR");
-			return true;
-		case Extract_S1S2:			// Extract Bit Field
-		case Extract_CoS2:
-			LOG_ERR_NOTIMPLEMENTED("EXTRACT");
-			return true;
-		case Extractu_S1S2:			// Extract Unsigned Bit Field
-		case Extractu_CoS2:
-			LOG_ERR_NOTIMPLEMENTED("EXTRACTU");
-			return true;
-		case Illegal:
-			LOG_ERR_NOTIMPLEMENTED("ILLEGAL");
-			return true;
-		case Inc:			// Increment by One	
-			{
-				auto& d = getFieldValue<Inc,Field_d>(op) ? reg.b : reg.a;
-
-				const auto old = d;
-
-				const auto res = ++d.var;
-
-				d.doMasking();
-
-				sr_s_update();
-				sr_e_update(d);
-				sr_u_update(d);
-				sr_n_update(d);
-				sr_z_update(d);
-				sr_v_update(res,d);
-				sr_l_update_by_v();
-				sr_c_update_arithmetic(old,d);
-				sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
-			}
-			return true;
-		case Insert_S1S2:			// Insert Bit Field
-		case Insert_CoS2:
-			LOG_ERR_NOTIMPLEMENTED("INSERT");
-			return true;
-		// Jump Conditionally
-		case Jcc_xxx:		// 00001110CCCCaaaaaaaaaaaa
-			{
-				const TWord cccc = getFieldValue<Jcc_xxx,Field_CCCC>(op);
-
-				if( decode_cccc( cccc ) )
-				{
-					const TWord ea = getFieldValue<Jcc_xxx,Field_aaaaaaaaaaaa>(op);
-					setPC(ea);
-				}				
-			}
-			return true;
-		case Jcc_ea:
-			{
-				const TWord cccc	= getFieldValue<Jcc_ea,Field_CCCC>(op);
-				const TWord mmmrrr	= getFieldValue<Jcc_ea,Field_MMM, Field_RRR>(op);
-
-				const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-				if( decode_cccc( cccc ) )
-				{
-					setPC(ea);
-				}
-			}
-			return true;
-		// Jump if Bit Clear
-		case Jclr_ea:	// 0000101001MMMRRR1S0bbbbb
-			{
-				const TWord bit		= getFieldValue<Jclr_ea,Field_bbbbb>(op);
-				const TWord mmmrrr	= getFieldValue<Jclr_ea,Field_MMM, Field_RRR>(op);
-				const EMemArea S	= getFieldValue<Jclr_ea,Field_S>(op) ? MemArea_Y : MemArea_X;
-				const TWord addr	= fetchOpWordB();
-
-				const TWord ea		= decode_MMMRRR_read(mmmrrr);
-
-				if( !bittest( ea, bit ) )	// TODO: S is not used, need to read mem if mmmrrr is not immediate data!
-				{
-					setPC(addr);
-				}
-
-				LOG_ERR_NOTIMPLEMENTED("JCLR");
-			}
-			return true;
-		case Jclr_aa:
-			LOG_ERR_NOTIMPLEMENTED("JCLR aa");
-			return true;
-		case Jclr_pp:
-			LOG_ERR_NOTIMPLEMENTED("JCLR pp");
-			return true;
-		case Jclr_qq:	// 00000001 10qqqqqq 1S0bbbbb
-			{
-				const TWord qqqqqq	= getFieldValue<Jclr_qq,Field_qqqqqq>(op);
-				const TWord bit		= getFieldValue<Jclr_qq,Field_bbbbb>(op);
-				const EMemArea S	= getFieldValue<Jclr_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord ea		= qqqqqq;
-
-				const TWord addr	= fetchOpWordB();
-
-				if( !bittest( memReadPeriphFFFF80(S, ea), bit ) )
-					setPC(addr);
-			}
-			return true;
-		case Jclr_S:	// 00001010 11DDDDDD 000bbbbb
-			{
-				const TWord dddddd	= getFieldValue<Jclr_S,Field_DDDDDD>(op);
-				const TWord bit		= getFieldValue<Jclr_S,Field_bbbbb>(op);
-
-				const TWord addr = fetchOpWordB();
-
-				if( !bittest( decode_dddddd_read(dddddd), bit ) )
-					setPC(addr);
-			}
-			return true;
-		// Jump
-		case Jmp_ea:
-			{
-				const TWord mmmrrr	= getFieldValue<Jmp_ea,Field_MMM, Field_RRR>(op);
-				setPC(decode_MMMRRR_read(mmmrrr));
-			}
-			return true;
-		case Jmp_xxx:	// 00001100 0000aaaa aaaaaaaa
-			setPC(getFieldValue<Jmp_xxx,Field_aaaaaaaaaaaa>(op));
-			return true;
-		// Jump to Subroutine Conditionally
-		case Jscc_xxx:
-			{
-				const TWord cccc	= getFieldValue<Jscc_xxx,Field_CCCC>(op);
-
-				if( decode_cccc( cccc ) )
-				{
-					const TWord a = getFieldValue<Jscc_xxx,Field_aaaaaaaaaaaa>(op);
-					jsr(a);
-				}
-			}
-			return true;
-		case Jscc_ea:
-			{
-				const TWord cccc	= getFieldValue<Jscc_ea,Field_CCCC>(op);
-				const TWord mmmrrr	= getFieldValue<Jscc_ea,Field_MMM, Field_RRR>(op);
-				const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-				if( decode_cccc( cccc ) )
-				{
-					jsr(ea);
-				}
-			}
-			return true;
-		case Jsclr_ea:
-		case Jsclr_aa:
-		case Jsclr_pp:
-		case Jsclr_qq:
-		case Jsclr_S:
-			LOG_ERR_NOTIMPLEMENTED("JSCLR");
-			return true;
-		// Jump if Bit Set
-		case Jset_ea:	// 0000101001MMMRRR1S1bbbbb
-			{
-				const TWord bit		= getFieldValue<Jset_ea,Field_bbbbb>(op);
-				const TWord mmmrrr	= getFieldValue<Jset_ea,Field_MMM, Field_RRR>(op);
-				const EMemArea S	= getFieldValue<Jset_ea,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord val		= memRead( S, decode_MMMRRR_read( mmmrrr ) );
-
-				if( bittest(val,bit) )
-				{
-					setPC(val);
-				}
-			}
-			return true;
-		case Jset_aa:	// JSET #n,[X or Y]:aa,xxxx - 0 0 0 0 1 0 1 0 0 0 a a a a a a 1 S 1 b b b b b
-			LOG_ERR_NOTIMPLEMENTED("JSET #n,[X or Y]:aa,xxxx");
-			return true;
-		case Jset_pp:	// JSET #n,[X or Y]:pp,xxxx - 0 0 0 0 1 0 1 0 1 0 p p p p p p 1 S 1 b b b b b
-			{
-				const TWord pppppp	= getFieldValue<Jset_pp,Field_pppppp>(op);
-				const TWord bit		= getFieldValue<Jset_pp,Field_bbbbb>(op);
-				const EMemArea S	= getFieldValue<Jset_pp,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord ea		= pppppp;
-
-				const TWord addr	= fetchOpWordB();
-
-				if( bittest( memReadPeriphFFFFC0(S, ea), bit ) )
-					setPC(addr);
-			}
-			return true;
-		case Jset_qq:
-			{
-				// TODO: combine code with Jset_pp, only the offset is different
-				const TWord qqqqqq	= getFieldValue<Jset_qq,Field_qqqqqq>(op);
-				const TWord bit		= getFieldValue<Jset_qq,Field_bbbbb>(op);
-				const EMemArea S	= getFieldValue<Jset_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord ea		= qqqqqq;
-
-				const TWord addr	= fetchOpWordB();
-
-				if( bittest( memReadPeriphFFFF80(S, ea), bit ) )
-					setPC(addr);
-			}
-			return true;
-		case Jset_S:	// 0000101011DDDDDD001bbbbb
-			{
-				const TWord bit		= getFieldValue<Jset_S,Field_bbbbb>(op);
-				const TWord dddddd	= getFieldValue<Jset_S,Field_DDDDDD>(op);
-
-				const TWord addr	= fetchOpWordB();
-
-				const TReg24 var	= decode_dddddd_read( dddddd );
-
-				if( bittest(var,bit) )
-				{
-					setPC(addr);
-				}				
-			}
-			return true;
-		// Jump to Subroutine
-		case Jsr_ea:
-			{
-				const TWord mmmrrr = getFieldValue<Jsr_ea,Field_MMM, Field_RRR>(op);
-
-				const TWord ea = decode_MMMRRR_read( mmmrrr );
-
-				jsr(TReg24(ea));
-			}
-			return true;
-		case Jsr_xxx:
-			{
-				const TWord ea = getFieldValue<Jsr_xxx,Field_aaaaaaaaaaaa>(op);
-				jsr(TReg24(ea));
-			}
-			return true;
-		// Jump to Subroutine if Bit Set
-		case Jsset_ea:
-		case Jsset_aa:
-		case Jsset_pp:
-		case Jsset_qq:
-		case Jsset_S:
-			LOG_ERR_NOTIMPLEMENTED("JSSET");
-			return true;
-		// Load PC-Relative Address
-		case Lra_Rn:
-		case Lra_xxxx:
-			LOG_ERR_NOTIMPLEMENTED("LRA");
-			return true;
-		case Lsl_ii:				// Logical Shift Left		000011000001111010iiiiiD
-			{
-	            const auto shiftAmount = getFieldValue<Lsl_ii,Field_iiiii>(op);
-	            const auto abDst = getFieldValue<Lsl_ii,Field_D>(op);
-
-	            alu_lsl(abDst, shiftAmount);
-	        }
-			return true;
-		case Lsl_SD:
-			LOG_ERR_NOTIMPLEMENTED("LSL");
-			return true;
-		case Lsr_ii:				// Logical Shift Right		000011000001111011iiiiiD
-			{
-	            const auto shiftAmount = getFieldValue<Lsr_ii,Field_iiiii>(op);
-	            const auto abDst = getFieldValue<Lsr_ii,Field_D>(op);
-
-	            alu_lsr(abDst, shiftAmount);
-	        }
-			return true;
-		case Lsr_SD:
-			LOG_ERR_NOTIMPLEMENTED("LSR");
-			return true;
-		// Load Updated Address
-		case Lua_ea:	// 00000100010MMRRR000ddddd
-			{
-				const TWord mmrrr	= getFieldValue<Lua_ea,Field_MM, Field_RRR>(op);
-				const TWord ddddd	= getFieldValue<Lua_ea,Field_ddddd>(op);
-
-				const unsigned int regIdx = mmrrr & 0x07;
-
-				const TReg24	_n = reg.n[regIdx];
-				TWord			_r = reg.r[regIdx].var;
-				const TReg24	_m = reg.m[regIdx];
-
-				switch( mmrrr & 0x18 )
-				{
-				case 0x00:	/* 00 */	AGU::updateAddressRegister( _r, -_n.var, _m.var );		break;
-				case 0x08:	/* 01 */	AGU::updateAddressRegister( _r, +_n.var, _m.var );		break;
-				case 0x10:	/* 10 */	AGU::updateAddressRegister( _r, -1, _m.var );			break;
-				case 0x18:	/* 11 */	AGU::updateAddressRegister( _r, +1, _m.var );			break;
-				default:
-					assert(0 && "impossible to happen" );
-				}
-
-				decode_ddddd_write<TReg24>( ddddd, TReg24(_r) );
-			}
-			return true;
-		case Lua_Rn:	// 00000100 00aaaRRR aaaadddd
-			{
-				const TWord dddd	= getFieldValue<Lua_Rn,Field_dddd>(op);
-				const TWord a		= getFieldValue<Lua_Rn,Field_aaa, Field_aaaa>(op);
-				const TWord rrr		= getFieldValue<Lua_Rn,Field_RRR>(op);
-
-				const TReg24 _r = reg.r[rrr];
-
-				const int aSigned = signextend<int,7>(a);
-
-				const TReg24 val = TReg24(_r.var + aSigned);
-
-				if( dddd < 8 )									// r0-r7
-				{
-					convert(reg.r[dddd],val);
-				}
-				else
-				{
-					convert(reg.n[dddd&0x07],val);
-				}
-			}
-			return true;
-		// Signed Multiply Accumulate
-		case Mac_S:	// 00000001 000sssss 11QQdk10
-			{
-				const TWord sssss	= getFieldValue<Mac_S,Field_sssss>(op);
-				const TWord qq		= getFieldValue<Mac_S,Field_QQ>(op);
-				const bool	ab		= getFieldValue<Mac_S,Field_d>(op);
-				const bool	negate	= getFieldValue<Mac_S,Field_k>(op);
-
-				const TReg24 s1 = decode_QQ_read( qq );
-				const TReg24 s2( decode_sssss(sssss) );
-
-				alu_mac( ab, s1, s2, negate, false );
-			}
-			return true;
-		// Signed Multiply Accumulate With Immediate Operand
-		case Maci_xxxx:
-			LOG_ERR_NOTIMPLEMENTED("MACI");
-			return true;
-		// Mixed Multiply Accumulate
-		case Macsu:	// 0 0 0 0 0 0 0 1 0 0 1 0 0 1 1 0 1 s d k Q Q Q Q
-			{
-				const bool uu			= getFieldValue<Macsu,Field_s>(op);
-				const bool ab			= getFieldValue<Macsu,Field_d>(op);
-				const bool negate		= getFieldValue<Macsu,Field_k>(op);
-				const TWord qqqq		= getFieldValue<Macsu,Field_QQQQ>(op);
-
-				TReg24 s1, s2;
-				decode_QQQQ_read( s1, s2, qqqq );
-
-				alu_mac( ab, s1, s2, negate, uu );
-			}
-			return true;
-		// Signed Multiply Accumulate and Round
-		case Macr_S:
-			LOG_ERR_NOTIMPLEMENTED("MACR");
-			return true;
-		// Signed MAC and Round With Immediate Operand
-		case Macri_xxxx:
-			LOG_ERR_NOTIMPLEMENTED("MACRI");
-			return true;
-		case Merge:					// Merge Two Half Words
-			LOG_ERR_NOTIMPLEMENTED("MERGE");
-			return true;
-		// X or Y Memory Data Move with immediate displacement
-		case Movex_Rnxxxx:	// 0000101001110RRR1WDDDDDD
-		case Movey_Rnxxxx:	// 0000101101110RRR1WDDDDDD
-			{
-				const TWord DDDDDD	= getFieldValue<Movex_Rnxxxx,Field_DDDDDD>(op);
-				const auto	write	= getFieldValue<Movex_Rnxxxx,Field_W>(op);
-				const TWord rrr		= getFieldValue<Movex_Rnxxxx,Field_RRR>(op);
-
-				const int shortDisplacement = signextend<int,24>(fetchOpWordB());
-				const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-				const auto area = inst == Movey_Rnxxxx ? MemArea_Y : MemArea_X;
-
-				if( write )
-				{
-					decode_dddddd_write( DDDDDD, TReg24(memRead( area, ea )) );
-				}
-				else
-				{
-					memWrite( area, ea, decode_dddddd_read( DDDDDD ).var );
-				}
-			}
-			return true;
-		case Movex_Rnxxx:	// 0000001aaaaaaRRR1a0WDDDD
-		case Movey_Rnxxx:	// 0000001aaaaaaRRR1a1WDDDD
-			{
-				const TWord ddddd	= getFieldValue<Movex_Rnxxx,Field_DDDD>(op);
-				const TWord aaaaaaa	= getFieldValue<Movex_Rnxxx,Field_aaaaaa, Field_a>(op);
-				const auto	write	= getFieldValue<Movex_Rnxxx,Field_W>(op);
-				const TWord rrr		= getFieldValue<Movex_Rnxxx,Field_RRR>(op);
-
-				const int shortDisplacement = signextend<int,7>(aaaaaaa);
-				const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-				const auto area = inst == Movey_Rnxxx ? MemArea_Y : MemArea_X;
-
-				if( write )
-				{
-					decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( area, ea )) );
-				}
-				else
-				{
-					memWrite( area, ea, decode_ddddd_read<TWord>( ddddd ) );
-				}
-			}
-			return true;
-		// Move Control Register
-		case Movec_ea:		// 00000101W1MMMRRR0S1DDDDD
-			{
-				const TWord ddddd	= getFieldValue<Movec_ea,Field_DDDDD>(op);
-				const TWord mmmrrr	= getFieldValue<Movec_ea,Field_MMM, Field_RRR>(op);
-				const auto write	= getFieldValue<Movec_ea,Field_W>(op);
-
-				const TWord addr = decode_MMMRRR_read( mmmrrr );
-
-				const EMemArea area = getFieldValue<Movec_ea,Field_S>(op) ? MemArea_Y : MemArea_X;
-					
-				if( write )
-				{
-					if( mmmrrr == MMM_ImmediateData )	decode_ddddd_pcr_write( ddddd, TReg24(addr) );		
-					else								decode_ddddd_pcr_write( ddddd, TReg24(memRead( area, addr )) );
-				}
-				else
-				{
-					const TReg24 regVal = decode_ddddd_pcr_read(ddddd);
-					assert( (mmmrrr != MMM_ImmediateData) && "register move to immediate data? not possible" );
-					memWrite( area, addr, regVal.toWord() );
-				}
-			}
-			return true;
-		case Movec_aa:		// 00000101W0aaaaaa0S1DDDDD
-			{
-				const TWord ddddd	= getFieldValue<Movec_aa,Field_DDDDD>(op);
-				const TWord aaaaaa	= getFieldValue<Movec_aa,Field_aaaaaa>(op);
-				const auto write	= getFieldValue<Movec_aa,Field_W>(op);
-
-				const TWord addr = aaaaaa;
-
-				const EMemArea area = getFieldValue<Movec_aa,Field_S>(op) ? MemArea_Y : MemArea_X;
-					
-				if( write )
-				{
-					decode_ddddd_pcr_write( ddddd, TReg24(memRead( area, addr )) );
-				}
-				else
-				{
-					memWrite( area, addr, decode_ddddd_pcr_read(ddddd).toWord() );
-				}
-			}
-			return true;
-		case Movec_S1D2:	// 00000100W1eeeeee101ddddd
-			{
-				const auto write = getFieldValue<Movec_S1D2,Field_W>(op);
-
-				const TWord eeeeee	= getFieldValue<Movec_S1D2,Field_eeeeee>(op);
-				const TWord ddddd	= getFieldValue<Movec_S1D2,Field_DDDDD>(op);
-
-				if( write )
-					decode_ddddd_pcr_write( ddddd, decode_dddddd_read( eeeeee ) );
-				else
-					decode_dddddd_write( eeeeee, decode_ddddd_pcr_read( ddddd ) );				
-			}
-			return true;
-		case Movec_xx:		// 00000101iiiiiiii101ddddd
-			{
-				const TWord iiiiiiii	= getFieldValue<Movec_xx, Field_iiiiiiii>(op);
-				const TWord ddddd		= getFieldValue<Movec_xx,Field_DDDDD>(op);
-				decode_ddddd_pcr_write( ddddd, TReg24(iiiiiiii) );
-			}
-			return true;
-		// Move Program Memory
-		case Movem_ea:		// 00000111W1MMMRRR10dddddd
-			{
-				const auto	write	= getFieldValue<Movem_ea,Field_W>(op);
-				const TWord dddddd	= getFieldValue<Movem_ea,Field_dddddd>(op);
-				const TWord mmmrrr	= getFieldValue<Movem_ea,Field_MMM, Field_RRR>(op);
-
-				const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-				if( write )
-				{
-					assert( mmmrrr != MMM_ImmediateData && "immediate data should not be allowed here" );
-					decode_dddddd_write( dddddd, TReg24(memRead( MemArea_P, ea )) );
-				}
-				else
-				{
-					memWrite( MemArea_P, ea, decode_dddddd_read(dddddd).toWord() );
-				}
-			}
-			return true;
-		case Movem_aa:		// 00000111W0aaaaaa00dddddd
-			LOG_ERR_NOTIMPLEMENTED("MOVE(M) S,P:aa");
-			return true;
-		// Move Peripheral Data
-		case Movep_ppea:	// 0000100sW1MMMRRR1Spppppp
-			{
-				const TWord pp		= getFieldValue<Movep_ppea,Field_pppppp>(op);
-				const TWord mmmrrr	= getFieldValue<Movep_ppea,Field_MMM, Field_RRR>(op);
-				const auto write	= getFieldValue<Movep_ppea,Field_W>(op);
-				const EMemArea s	= getFieldValue<Movep_ppea,Field_s>(op) ? MemArea_Y : MemArea_X;
-				const EMemArea S	= getFieldValue<Movep_ppea,Field_S>(op) ? MemArea_Y : MemArea_X;
-
-				const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-				if( write )
-				{
-					if( mmmrrr == MMM_ImmediateData )
-						memWritePeriphFFFFC0( S, pp, ea );
-					else
-						memWritePeriphFFFFC0( S, pp, memRead( s, ea ) );
-				}
-				else
-					memWrite( S, ea, memReadPeriphFFFFC0( s, pp ) );
-			}
-			return true;
-		case Movep_Xqqea:	// 00000111W1MMMRRR0Sqqqqqq
-		case Movep_Yqqea:	// 00000111W0MMMRRR1Sqqqqqq
-			{
-				const TWord mmmrrr	= getFieldValue<Movep_Xqqea,Field_MMM, Field_RRR>(op);
-				const EMemArea S	= getFieldValue<Movep_Xqqea,Field_S>(op) ? MemArea_Y : MemArea_X;
-				const TWord qAddr	= getFieldValue<Movep_Xqqea,Field_qqqqqq>(op);
-				const auto write	= getFieldValue<Movep_Xqqea,Field_W>(op);
-
-				const TWord ea		= decode_MMMRRR_read( mmmrrr );
-
-				const auto area = inst == Movep_Yqqea ? MemArea_Y : MemArea_X;
-
-				if( write )
-				{
-					if( mmmrrr == MMM_ImmediateData )
-						memWritePeriphFFFF80( area, qAddr, ea );
-					else
-						memWritePeriphFFFF80( area, qAddr, memRead( S, ea ) );
-				}
-				else
-					memWrite( S, ea, memReadPeriphFFFF80( area, qAddr ) );				
-			}
-			return true;
-		case Movep_eapp:	// 0000100sW1MMMRRR01pppppp
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
-			return true;
-
-		case Movep_eaqq:	// 000000001WMMMRRR0Sqqqqqq
-			LOG_ERR_NOTIMPLEMENTED("MOVE");
-			return true;
-		case Movep_Spp:		// 0000100sW1dddddd00pppppp
-			{
-				const TWord pppppp	= getFieldValue<Movep_Spp,Field_pppppp>(op);
-				const TWord dddddd	= getFieldValue<Movep_Spp,Field_dddddd>(op);
-				const EMemArea area = getFieldValue<Movep_Spp,Field_s>(op) ? MemArea_Y : MemArea_X;
-				const auto	write	= getFieldValue<Movep_Spp,Field_W>(op);
-
-				if( write )
-					memWritePeriphFFFFC0( area, pppppp, decode_dddddd_read( dddddd ).toWord() );
-				else
-					decode_dddddd_write( dddddd, TReg24(memReadPeriphFFFFC0( area, pppppp )) );
-			}
-			return true;
-		case Movep_SXqq:	// 00000100W1dddddd1q0qqqqq
-		case Movep_SYqq:	// 00000100W1dddddd0q1qqqqq
-			{
-				
-				const TWord addr	= getFieldValue<Movep_SXqq,Field_q, Field_qqqqq>(op);
-				const TWord dddddd	= getFieldValue<Movep_SXqq,Field_dddddd>(op);
-				const auto	write	= getFieldValue<Movep_SXqq,Field_W>(op);
-
-				const auto area = inst == Movep_SYqq ? MemArea_Y : MemArea_X;
-
-				if( write )
-					memWritePeriphFFFF80( area, addr, decode_dddddd_read( dddddd ).toWord() );
-				else
-					decode_dddddd_write( dddddd, TReg24(memReadPeriphFFFF80( area, addr )) );
-			}
-			return true;
-		// Signed Multiply
-		case Mpy_SD:	// 00000001000sssss11QQdk00
-			{
-				const int sssss		= getFieldValue<Mpy_SD,Field_sssss>(op);
-				const TWord QQ		= getFieldValue<Mpy_SD,Field_QQ>(op);
-				const bool ab		= getFieldValue<Mpy_SD,Field_d>(op);
-				const bool negate	= getFieldValue<Mpy_SD,Field_k>(op);
-
-				const TReg24 s1 = decode_QQ_read(QQ);
-
-				const TReg24 s2 = TReg24( decode_sssss(sssss) );
-
-				alu_mpy( ab, s1, s2, negate, false );
-			}
-			return true;
-		// Mixed Multiply
-		case Mpy_su:	// 00000001001001111sdkQQQQ
-			{
-				const bool ab		= getFieldValue<Mpy_su,Field_d>(op);
-				const bool negate	= getFieldValue<Mpy_su,Field_k>(op);
-				const bool uu		= getFieldValue<Mpy_su,Field_s>(op);
-				const TWord qqqq	= getFieldValue<Mpy_su,Field_QQQQ>(op);
-
-				TReg24 s1, s2;
-				decode_QQQQ_read( s1, s2, qqqq );
-
-				alu_mpysuuu( ab, s1, s2, negate, false, uu );
-			}
-			return true;
-		// Signed Multiply With Immediate Operand
-		case Mpyi:		// 00000001 01000001 11qqdk00
-			{
-				const bool	ab		= getFieldValue<Mpyi,Field_d>(op);
-				const bool	negate	= getFieldValue<Mpyi,Field_k>(op);
-				const TWord qq		= getFieldValue<Mpyi,Field_qq>(op);
-
-				const TReg24 s		= TReg24(fetchOpWordB());
-
-				const TReg24 reg	= decode_qq_read(qq);
-
-				alu_mpy( ab, reg, s, negate, false );
-			}
-			return true;
-		// Signed Multiply and Round
-		case Mpyr_SD:
-			LOG_ERR_NOTIMPLEMENTED("MPYR");
-			return true;
-		// Signed Multiply and Round With Immediate Operand
-		case Mpyri:
-			LOG_ERR_NOTIMPLEMENTED("MPYRI");
-			return true;
-		case Nop:
-			return true;
-		// Norm Accumulator Iterations
-		case Norm:
-			LOG_ERR_NOTIMPLEMENTED("NORM");
-			return true;
-		// Fast Accumulator Normalization
-		case Normf:
-			LOG_ERR_NOTIMPLEMENTED("NORMF");
-			return true;
-		case Or_xx:					// Logical Inclusive OR
-		case Or_xxxx:
-			LOG_ERR_NOTIMPLEMENTED("OR");
-			return true;
-		case Ori:					// OR Immediate With Control Register - 00000000iiiiiiii111110EE
-			{
-				const TWord iiiiiiii = getFieldValue<Ori,Field_iiiiiiii>(op);
-				const TWord ee = getFieldValue<Ori,Field_EE>(op);
-
-				switch( ee )
-				{
-				case 0:	mr ( TReg8( mr().var | iiiiiiii) );	break;
-				case 1:	ccr( TReg8(ccr().var | iiiiiiii) );	break;
-				case 2:	com( TReg8(com().var | iiiiiiii) );	break;
-				case 3:	eom( TReg8(eom().var | iiiiiiii) );	break;
-				}
-			}
-			return true;
-		case Pflush:
-			LOG_ERR_NOTIMPLEMENTED("PFLUSH");
-			return true;
-		case Pflushun:		// Program Cache Flush Unlocked Sections
-			cache.pflushun();
-			return true;
-		case Pfree:			// Program Cache Global Unlock
-			cache.pfree();
-			return true;
-		// Lock Instruction Cache Sector
-		case Plock:
-			cache.plock(fetchOpWordB());
-			return true;
-		case Plockr:
-			LOG_ERR_NOTIMPLEMENTED("PLOCKR");
-			return true;
-		case Punlock:
-			LOG_ERR_NOTIMPLEMENTED("PUNLOCK");
-			return true;
-		case Punlockr:
-			LOG_ERR_NOTIMPLEMENTED("PUNLOCKR");
-			return true;
-		// Repeat Next Instruction
-		case Rep_ea:
-		case Rep_aa:
-			LOG_ERR_NOTIMPLEMENTED("REP");
-			return true;
-		case Rep_xxx:	// 00000110 iiiiiiii 1010hhhh
-			{
-				const TWord loopcount = getFieldValue<Rep_xxx,Field_hhhh, Field_iiiiiiii>(op);
-				rep_exec(loopcount);
-			}
-			return true;
-		case Rep_S:
-			LOG_ERR_NOTIMPLEMENTED("REP S");
-			return true;
-		// Reset On-Chip Peripheral Devices
-		case Reset:
-			resetSW();
-			return true;
-		case Rti:			// Return From Interrupt
-			popPCSR();
-			m_processingMode = DefaultPreventInterrupt;
-			return true;
-		case Rts:			// Return From Subroutine
-			popPC();
-			return true;
-		case Stop:
-			LOG_ERR_NOTIMPLEMENTED("STOP");
-			return true;
-		// Subtract
-		case Sub_xx:
-			{
-				const auto ab		= getFieldValue<Sub_xx,Field_d>(op);
-				const TWord iiiiii	= getFieldValue<Sub_xx,Field_iiiiii>(op);
-
-				alu_sub( ab, TReg56(iiiiii) );
-			}
-			return true;
-		case Sub_xxxx:	// 0000000101ooooo011ood100
-			{
-				const auto ab = getFieldValue<Sub_xxxx,Field_d>(op);
-
-				TReg56 r56;
-				convert( r56, TReg24(fetchOpWordB()) );
-
-				alu_sub( ab, r56 );
-			}
-			return true;
-		// Transfer Conditionally
-		case Tcc_S1D1:	// Tcc S1,D1 - 00000010 CCCC0000 0JJJd000
-			{
-				const TWord cccc = getFieldValue<Tcc_S1D1,Field_CCCC>(op);
-
-				if( decode_cccc( cccc ) )
-				{
-					const TWord JJJ = getFieldValue<Tcc_S1D1,Field_JJJ>(op);
-					const bool ab = getFieldValue<Tcc_S1D1,Field_d>(op);
-
-					decode_JJJ_readwrite( ab ? reg.b : reg.a, JJJ, !ab );
-				}
-			}
-			return true;
-		case Tcc_S1D1S2D2:	// Tcc S1,D1 S2,D2 - 00000011 CCCC0ttt 0JJJdTTT
-			{
-				const TWord cccc = getFieldValue<Tcc_S1D1S2D2,Field_CCCC>(op);
-
-				if( decode_cccc( cccc ) )
-				{
-					const TWord TTT		= getFieldValue<Tcc_S1D1S2D2,Field_TTT>(op);
-					const TWord JJJ		= getFieldValue<Tcc_S1D1S2D2,Field_JJJ>(op);
-					const TWord ttt		= getFieldValue<Tcc_S1D1S2D2,Field_ttt>(op);
-					const bool ab		= getFieldValue<Tcc_S1D1S2D2,Field_d>(op);
-
-					decode_JJJ_readwrite( ab ? reg.b : reg.a, JJJ, !ab );
-					reg.r[TTT] = reg.r[ttt];
-				}
-			}
-			return true;
-		case Tcc_S2D2:	// Tcc S2,D2 - 00000010 CCCC1ttt 00000TTT
-			{
-				const TWord cccc = getFieldValue<Tcc_S2D2,Field_CCCC>(op);
-
-				if( decode_cccc( cccc ) )
-				{
-					const TWord TTT		= getFieldValue<Tcc_S2D2,Field_TTT>(op);
-					const TWord ttt		= getFieldValue<Tcc_S2D2,Field_ttt>(op);
-					reg.r[TTT] = reg.r[ttt];
-				}
-			}
-			return true;
-		case Trap:
-			LOG_ERR_NOTIMPLEMENTED("TRAP");
-			return true;
-		case Trapcc:
-			LOG_ERR_NOTIMPLEMENTED("TRAPcc");
-			return true;
-		// Viterbi Shift Left
-		case Vsl:	// VSL S,i,L:ea - 0 0 0 0 1 0 1 S 1 1 M M M R R R 1 1 0 i 0 0 0 0
-			LOG_ERR_NOTIMPLEMENTED("VSL");
-			return true;
-		case Wait:
-			LOG_ERR_NOTIMPLEMENTED("WAIT");
-			return true;
-		case ResolveCache:
-			{
-				auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
-				cacheEntry = 0;
-
-				if( op )
-				{
-					if(Opcodes::isNonParallelOpcode(op))
-					{
-						const auto* oi = m_opcodes.findNonParallelOpcodeInfo(op);
-
-						if(!oi)
-						{
-							m_opcodes.findNonParallelOpcodeInfo(op);	// retry here to help debugging
-							assert(0 && "illegal instruction");
-						}
-
-						cacheEntry = oi->m_instruction | (Nop << 8);
-
-						if(!exec_nonParallel(oi->m_instruction, op))
-						{
-							assert( 0 && "illegal instruction" );
-						}
-					}
-					else
-					{
-						const auto* oi = m_opcodes.findParallelMoveOpcodeInfo(op);
-						if(!oi)
-						{
-							m_opcodes.findParallelMoveOpcodeInfo(op);	// retry here to help debugging
-							assert(0 && "illegal instruction");
-						}
-						cacheEntry |= oi->getInstruction() << 8;
-					}
-				}
-			}
-			return true;
-		default:
-			return false;
-		}
 	}
 
 	// _____________________________________________________________________________
@@ -2274,7 +837,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// decode_eeeeee_read
 	//
-	dsp56k::TReg24 DSP::decode_dddddd_read( TWord _dddddd )
+	TReg24 DSP::decode_dddddd_read( TWord _dddddd )
 	{
 		switch( _dddddd & 0x3f )
 		{
@@ -2654,6 +1217,8 @@ namespace dsp56k
 
 		pcCurrentInstruction = reg.pc.var;
 		const auto op = fetchPC();
+
+		execOp(op);
 
 		while( reg.lc.var > 1 )
 		{

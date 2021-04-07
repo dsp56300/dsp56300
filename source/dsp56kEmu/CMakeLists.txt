@@ -6,7 +6,7 @@ agu.cpp agu.h
 buildconfig.h
 assert.cpp assert.h
 disasm.cpp disasm.h
-dsp.cpp dsp.h
+dsp.cpp dsp.h dsp_ops.inl
 error.cpp error.h
 essi.cpp essi.h
 fastmath.h
