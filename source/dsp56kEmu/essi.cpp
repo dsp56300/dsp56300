@@ -23,12 +23,6 @@ namespace dsp56k
 			--m_pendingRXInterrupts;
 			m_periph.getDSP().injectInterrupt(Vba_ESSI0receivedata);			
 		}
-
-		// set Receive Register Full flag if there is input
-		toggleStatusRegisterBit(Essi0, SSISR_RDF, m_audioInput.empty() ? 0 : 1);
-
-		// set Transmit Register Empty flag if there is space left in the output
-		toggleStatusRegisterBit(Essi0, SSISR_TDE, m_audioOutputs[0].full() ? 0 : 1);
 	}
 
 	void Essi::toggleStatusRegisterBit(const EssiIndex _essi, const uint32_t _bit, const uint32_t _zeroOrOne)
@@ -61,8 +55,16 @@ namespace dsp56k
 
 	TWord Essi::readSR()
 	{
+		// set Receive Register Full flag if there is input
+		toggleStatusRegisterBit(Essi0, SSISR_RDF, m_audioInput.empty() ? 0 : 1);
+
+		// set Transmit Register Empty flag if there is space left in the output
+		toggleStatusRegisterBit(Essi0, SSISR_TDE, m_audioOutputs[0].full() ? 0 : 1);
+
+		// update frame sync status
 		toggleStatusRegisterBit(Essi0, SSISR_RFS, m_frameSyncDSPStatus);
 		incFrameSync(m_frameSyncDSPStatus);
+
 		return m_statusReg;
 	}
 
