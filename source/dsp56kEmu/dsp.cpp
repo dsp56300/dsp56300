@@ -181,12 +181,12 @@ namespace dsp56k
 		const auto nonParallelOp = opCache & 0xff;
 		const auto& oi = Opcodes::getOpcodeInfoAt(nonParallelOp);
 
-		exec_nonParallel(&oi, op);
+		exec_nonParallel(oi.m_instruction, op);
 
 		const auto parallelOp = (opCache>>8) & 0xff;
 		const auto& oiMove = Opcodes::getOpcodeInfoAt(parallelOp);
 
-		exec_parallel(&oiMove, op);
+		exec_parallel(oiMove.m_instruction, op);
 
 		if( g_dumpPC && reg.ictr.var >= g_dumpPCictrMin )
 		{
@@ -222,9 +222,9 @@ namespace dsp56k
 		++reg.ictr.var;
 	}
 
-	bool DSP::exec_parallel(const OpcodeInfo* oi, const TWord op)
+	bool DSP::exec_parallel(const Instruction inst, const TWord op)
 	{
-		switch (oi->getInstruction())
+		switch (inst)
 		{
 		case Nop:
 			return true;
@@ -237,7 +237,7 @@ namespace dsp56k
 
 				const auto backupCCR = ccr();
 				const auto res = exec_parallel_alu(op);
-				if(oi->getInstruction() == Ifcc)
+				if(inst == Ifcc)
 					ccr(backupCCR);
 				return res;
 			}
@@ -247,7 +247,7 @@ namespace dsp56k
 			return exec_parallel_alu(op);
 		default:
 			if(!(op&0xff))
-				return exec_parallel_move(oi, op);
+				return exec_parallel_move(inst, op);
 
 			// simulate latches registers for parallel instructions
 			const auto preMoveX = reg.x;
@@ -255,7 +255,7 @@ namespace dsp56k
 			const auto preMoveA = reg.a;
 			const auto preMoveB = reg.b;
 
-			auto res = exec_parallel_move(oi, op);
+			auto res = exec_parallel_move(inst, op);
 
 			const auto postMoveX = reg.x;
 			const auto postMoveY = reg.y;
@@ -444,9 +444,9 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// exec_parallel_move
 	//
-	bool DSP::exec_parallel_move(const OpcodeInfo* oi, const TWord op)
+	bool DSP::exec_parallel_move(const Instruction inst, const TWord op)
 	{
-		switch (oi->m_instruction)
+		switch (inst)
 		{
 		case Move_xx:		// (...) #xx,D - Immediate Short Data Move - 001dddddiiiiiiii
 			{
@@ -478,7 +478,7 @@ namespace dsp56k
 				const TWord ddddd	= getFieldValue<Movex_ea,Field_dd, Field_ddd>(op);
 				const TWord write	= getFieldValue<Movex_ea,Field_W>(op);
 
-				exec_move_ddddd_MMMRRR( ddddd, mmmrrr, write, oi->getInstruction() == Movex_ea ? MemArea_X : MemArea_Y);
+				exec_move_ddddd_MMMRRR( ddddd, mmmrrr, write, inst == Movex_ea ? MemArea_X : MemArea_Y);
 			}
 			return true;
 		case Movexr_ea:		// X Memory and Register Data Move		(...) X:ea,D1 S2,D2 - 0001ffdF W0MMMRRR
@@ -520,7 +520,7 @@ namespace dsp56k
 				const bool write	= getFieldValue<Movex_aa,Field_W>(op);
 				const TWord ddddd	= getFieldValue<Movex_aa,Field_dd, Field_ddd>(op);
 				const TWord aaaaaa	= getFieldValue<Movex_aa,Field_aaaaaa>(op);
-				const EMemArea area	= oi->getInstruction() == Movex_aa ? MemArea_X : MemArea_Y;
+				const EMemArea area	= inst == Movex_aa ? MemArea_X : MemArea_Y;
 
 				if (write)
 				{
@@ -645,9 +645,9 @@ namespace dsp56k
 		}
 	}
 	
-	inline bool DSP::exec_nonParallel(const OpcodeInfo* oi, TWord op)
+	inline bool DSP::exec_nonParallel(const Instruction inst, const TWord op)
 	{
-		switch (oi->getInstruction())
+		switch (inst)
 		{
 		// Add
 		case Add_xx:	// 0000000101iiiiii10ood000
@@ -1647,7 +1647,7 @@ namespace dsp56k
 				const int shortDisplacement = signextend<int,24>(fetchOpWordB());
 				const TWord ea = decode_RRR_read( rrr, shortDisplacement );
 
-				const auto area = oi->getInstruction() == Movey_Rnxxxx ? MemArea_Y : MemArea_X;
+				const auto area = inst == Movey_Rnxxxx ? MemArea_Y : MemArea_X;
 
 				if( write )
 				{
@@ -1670,7 +1670,7 @@ namespace dsp56k
 				const int shortDisplacement = signextend<int,7>(aaaaaaa);
 				const TWord ea = decode_RRR_read( rrr, shortDisplacement );
 
-				const auto area = oi->getInstruction() == Movey_Rnxxx ? MemArea_Y : MemArea_X;
+				const auto area = inst == Movey_Rnxxx ? MemArea_Y : MemArea_X;
 
 				if( write )
 				{
@@ -1801,7 +1801,7 @@ namespace dsp56k
 
 				const TWord ea		= decode_MMMRRR_read( mmmrrr );
 
-				const auto area = oi->getInstruction() == Movep_Yqqea ? MemArea_Y : MemArea_X;
+				const auto area = inst == Movep_Yqqea ? MemArea_Y : MemArea_X;
 
 				if( write )
 				{
@@ -1842,7 +1842,7 @@ namespace dsp56k
 				const TWord dddddd	= getFieldValue<Movep_SXqq,Field_dddddd>(op);
 				const auto	write	= getFieldValue<Movep_SXqq,Field_W>(op);
 
-				const auto area = oi->getInstruction() == Movep_SYqq ? MemArea_Y : MemArea_X;
+				const auto area = inst == Movep_SYqq ? MemArea_Y : MemArea_X;
 
 				if( write )
 					memWritePeriphFFFF80( area, addr, decode_dddddd_read( dddddd ).toWord() );
@@ -2070,9 +2070,9 @@ namespace dsp56k
 							assert(0 && "illegal instruction");
 						}
 
-						cacheEntry = oi->getInstruction() | (Nop << 8);
+						cacheEntry = oi->m_instruction | (Nop << 8);
 
-						if(!exec_nonParallel(oi, op))
+						if(!exec_nonParallel(oi->m_instruction, op))
 						{
 							assert( 0 && "illegal instruction" );
 						}

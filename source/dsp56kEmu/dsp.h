@@ -204,16 +204,16 @@ namespace dsp56k
 
 		void 	execOp							(TWord op);
 
-		bool	exec_parallel					(const OpcodeInfo* oi, TWord op);
+		bool	exec_parallel					(Instruction inst, TWord op);
 
 		bool	exec_parallel_alu				(TWord op);
 
 		bool	exec_parallel_alu_nonMultiply	(TWord op);
 		bool	exec_parallel_alu_multiply		(TWord op);
 
-		bool	exec_nonParallel				(const OpcodeInfo* oi, TWord op);
+		bool	exec_nonParallel				(Instruction inst, TWord op);
 
-		bool 	exec_parallel_move				(const OpcodeInfo* oi, TWord op);
+		bool 	exec_parallel_move				(Instruction inst, TWord op);
 
 		bool	do_start						( TReg24 _loopcount, TWord _addr );
 		bool	do_end							();
