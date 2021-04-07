@@ -14,7 +14,7 @@ namespace dsp56k
 	class Memory;
 	class UnitTests;
 
-	class DSP
+	class DSP final
 	{
 		friend class UnitTests;
 
