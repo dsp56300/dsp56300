@@ -1,8 +1,8 @@
 # Motorola DSP 56300 family emulator
 
-### Emulation of the Motorola/Freescale/NXP 56300 family DSP. 
+### Emulation of the Motorola/Freescale/NXP 56300 family DSP
 
-This DSP has been used in plenty of virtual analogue synthesizers and other musical gear that was released after around the mid 90s, such as Access Virus A, B, C, TI / Clavia Nord Lead 2,3 / Waldorf Q/Microwave II / Novation Supernova, Nova and many others.
+This DSP has been used in plenty of virtual analogue synthesizers and other musical gear that was released after around the mid 90s, such as Access Virus A, B, C, TI / Clavia Nord Lead 2, 3 / Waldorf Q, Microwave II / Novation Supernova, Nova and many others.
 
 The emulator should compile just fine on any platform that supports C++14, no configure is needed as the code uses C++14 standard data types. For performance reasons, it makes excessive use of C++14 features, for example to parse opcode definitions at compile time, so C++14 is a strong requirement.
 
@@ -16,4 +16,4 @@ It can currently run the dspthru example in polling mode and in interrupt mode. 
 
 ### Performance
 
-Performance goal: Emulating the DSP56362 in real time, which runs at 120MHz, resulting in 120 million instructions per second. The current speed varies and improves daily, on a Core i7 4790K @ 4 GHz is 33 MHz, but there is still a good enough of potential to improve emulation speed.
+Performance goal: Emulating the DSP56362 in real time, which runs at 120MHz, resulting in 120 million instructions/second. The current speed varies and improves daily, on a Core i7 4790K @ 4 GHz the emulated speed at the moment reaches about 33 MHz, i.e. 33 million instructions/second, but there is still enough potential to improve emulation speed.
