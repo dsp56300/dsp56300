@@ -37,6 +37,11 @@ namespace dsp56k
 		return getFieldValue<I,MSB>(_memValue) << fb.len | getFieldValue<I,LSB>(_memValue);
 	}
 
+	template<Instruction I> EMemArea getFieldValueMemArea(const TWord _op)
+	{
+		return static_cast<EMemArea>(getFieldValue<I,Field_S>(_op));
+	}
+	
 	static TWord getFieldValue(Instruction _instruction, const Field _field, TWord _memoryValue)
 	{
 		const auto& fi = getFieldInfo(_instruction, _field);

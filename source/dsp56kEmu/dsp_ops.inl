@@ -180,7 +180,7 @@ namespace dsp56k
 		const TWord bit = getFieldValue<Bclr_qq,Field_bbbbb>(op);
 		const TWord ea	= getFieldValue<Bclr_qq,Field_qqqqqq>(op);
 
-		const EMemArea S = getFieldValue<Bclr_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S = getFieldValueMemArea<Bclr_qq>(op);
 
 		const TWord res = alu_bclr( bit, memRead( S, ea ) );
 
@@ -226,7 +226,7 @@ namespace dsp56k
 	{
 		const TWord bit		= getFieldValue<Brclr_pp,Field_bbbbb>(op);
 		const TWord pppppp	= getFieldValue<Brclr_pp,Field_pppppp>(op);
-		const EMemArea S	= getFieldValue<Brclr_pp,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Brclr_pp>(op);
 
 		const TWord ea = pppppp;
 
@@ -241,7 +241,7 @@ namespace dsp56k
 	{
 		const TWord bit		= getFieldValue<Brclr_qq,Field_bbbbb>(op);
 		const TWord qqqqqq	= getFieldValue<Brclr_qq,Field_qqqqqq>(op);
-		const EMemArea S	= getFieldValue<Brclr_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Brclr_qq>(op);
 
 		const TWord ea = qqqqqq;
 
@@ -286,7 +286,7 @@ namespace dsp56k
 	{
 		const TWord bit		= getFieldValue<Brset_qq,Field_bbbbb>(op);
 		const TWord qqqqqq	= getFieldValue<Brset_qq,Field_qqqqqq>(op);
-		const EMemArea S	= getFieldValue<Brset_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Brset_qq>(op);
 
 		const TWord ea = qqqqqq;
 
@@ -363,7 +363,7 @@ namespace dsp56k
 	{
 		const TWord bit		= getFieldValue<Bset_ea,Field_bbbbb>(op);
 		const TWord mmmrrr	= getFieldValue<Bset_ea,Field_MMM, Field_RRR>(op);
-		const EMemArea S	= getFieldValue<Bset_ea,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Bset_ea>(op);
 
 		const TWord ea		= decode_MMMRRR_read(mmmrrr);
 
@@ -385,7 +385,7 @@ namespace dsp56k
 	{
 		const TWord bit		= getFieldValue<Bset_qq,Field_bbbbb>(op);
 		const TWord qqqqqq	= getFieldValue<Bset_qq,Field_qqqqqq>(op);
-		const EMemArea S	= getFieldValue<Bset_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Bset_qq>(op);
 
 		const TWord ea		= qqqqqq;
 
@@ -457,7 +457,7 @@ namespace dsp56k
 		const TWord bit = getFieldValue<Btst_ea,Field_bbbbb>(op);
 		const TWord mmmrrr	= getFieldValue<Btst_ea,Field_MMM, Field_RRR>(op);
 		const TWord ea = decode_MMMRRR_read( mmmrrr );
-		const EMemArea S = getFieldValue<Btst_ea,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S = getFieldValueMemArea<Btst_ea>(op);
 
 		const TWord val = memRead( S, ea );
 
@@ -474,7 +474,7 @@ namespace dsp56k
 	{
 		const TWord bitNum	= getFieldValue<Btst_pp,Field_bbbbb>(op);
 		const TWord pppppp	= getFieldValue<Btst_pp,Field_pppppp>(op);
-		const EMemArea S	= getFieldValue<Btst_pp,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Btst_pp>(op);
 
 		const TWord memVal	= memReadPeriphFFFFC0( S, pppppp );
 
@@ -790,7 +790,7 @@ namespace dsp56k
 	{
 		const TWord bit		= getFieldValue<Jclr_ea,Field_bbbbb>(op);
 		const TWord mmmrrr	= getFieldValue<Jclr_ea,Field_MMM, Field_RRR>(op);
-		const EMemArea S	= getFieldValue<Jclr_ea,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Jclr_ea>(op);
 		const TWord addr	= fetchOpWordB();
 
 		const TWord ea		= decode_MMMRRR_read(mmmrrr);
@@ -813,7 +813,7 @@ namespace dsp56k
 	{
 		const TWord qqqqqq	= getFieldValue<Jclr_qq,Field_qqqqqq>(op);
 		const TWord bit		= getFieldValue<Jclr_qq,Field_bbbbb>(op);
-		const EMemArea S	= getFieldValue<Jclr_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Jclr_qq>(op);
 
 		const TWord ea		= qqqqqq;
 		const TWord addr	= fetchOpWordB();
@@ -885,7 +885,7 @@ namespace dsp56k
 	{
 		const TWord bit		= getFieldValue<Jset_ea,Field_bbbbb>(op);
 		const TWord mmmrrr	= getFieldValue<Jset_ea,Field_MMM, Field_RRR>(op);
-		const EMemArea S	= getFieldValue<Jset_ea,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Jset_ea>(op);
 
 		const TWord val		= memRead( S, decode_MMMRRR_read( mmmrrr ) );
 
@@ -902,7 +902,7 @@ namespace dsp56k
 	{
 		const TWord pppppp	= getFieldValue<Jset_pp,Field_pppppp>(op);
 		const TWord bit		= getFieldValue<Jset_pp,Field_bbbbb>(op);
-		const EMemArea S	= getFieldValue<Jset_pp,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Jset_pp>(op);
 
 		const TWord ea		= pppppp;
 
@@ -916,7 +916,7 @@ namespace dsp56k
 		// TODO: combine code with Jset_pp, only the offset is different
 		const TWord qqqqqq	= getFieldValue<Jset_qq,Field_qqqqqq>(op);
 		const TWord bit		= getFieldValue<Jset_qq,Field_bbbbb>(op);
-		const EMemArea S	= getFieldValue<Jset_qq,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Jset_qq>(op);
 
 		const TWord ea		= qqqqqq;
 
@@ -1411,7 +1411,7 @@ namespace dsp56k
 
 		const TWord addr = decode_MMMRRR_read( mmmrrr );
 
-		const EMemArea area = getFieldValue<Movec_ea,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea area = getFieldValueMemArea<Movec_ea>(op);
 			
 		if( write )
 		{
@@ -1433,7 +1433,7 @@ namespace dsp56k
 
 		const TWord addr = aaaaaa;
 
-		const EMemArea area = getFieldValue<Movec_aa,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea area = getFieldValueMemArea<Movec_aa>(op);
 			
 		if( write )
 		{
@@ -1490,7 +1490,7 @@ namespace dsp56k
 		const TWord mmmrrr	= getFieldValue<Movep_ppea,Field_MMM, Field_RRR>(op);
 		const auto write	= getFieldValue<Movep_ppea,Field_W>(op);
 		const EMemArea s	= getFieldValue<Movep_ppea,Field_s>(op) ? MemArea_Y : MemArea_X;
-		const EMemArea S	= getFieldValue<Movep_ppea,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Movep_ppea>(op);
 
 		const TWord ea		= decode_MMMRRR_read( mmmrrr );
 
@@ -1507,7 +1507,7 @@ namespace dsp56k
 	inline void DSP::op_Movep_Xqqea(const TWord op)
 	{
 		const TWord mmmrrr	= getFieldValue<Movep_Xqqea,Field_MMM, Field_RRR>(op);
-		const EMemArea S	= getFieldValue<Movep_Xqqea,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Movep_Xqqea>(op);
 		const TWord qAddr	= getFieldValue<Movep_Xqqea,Field_qqqqqq>(op);
 		const auto write	= getFieldValue<Movep_Xqqea,Field_W>(op);
 
@@ -1529,7 +1529,7 @@ namespace dsp56k
 	{
 		// TODO: code dup op_Movep_Xqqea
 		const TWord mmmrrr	= getFieldValue<Movep_Xqqea,Field_MMM, Field_RRR>(op);
-		const EMemArea S	= getFieldValue<Movep_Xqqea,Field_S>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Movep_Xqqea>(op);
 		const TWord qAddr	= getFieldValue<Movep_Xqqea,Field_qqqqqq>(op);
 		const auto write	= getFieldValue<Movep_Xqqea,Field_W>(op);
 
