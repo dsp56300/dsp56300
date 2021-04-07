@@ -1729,7 +1729,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Rep_xxx(const TWord op)
 	{
-		const TWord loopcount = getFieldValue<Rep_xxx,Field_hhhh, Field_iiiiiiii>(op);
+		const auto loopcount = getFieldValue<Rep_xxx,Field_hhhh, Field_iiiiiiii>(op);
 		rep_exec(loopcount);
 	}
 	inline void DSP::op_Rep_S(const TWord op)
@@ -1872,7 +1872,7 @@ namespace dsp56k
 
 				if(!oi)
 				{
-					m_opcodes.findNonParallelOpcodeInfo(op);	// retry here to help debugging
+					m_opcodes.findNonParallelOpcodeInfo(op);		// retry here to help debugging
 					assert(0 && "illegal instruction");
 				}
 
@@ -1883,33 +1883,50 @@ namespace dsp56k
 				const auto* oiMove = m_opcodes.findParallelMoveOpcodeInfo(op);
 				if(!oiMove)
 				{
-					m_opcodes.findParallelMoveOpcodeInfo(op);	// retry here to help debugging
+					m_opcodes.findParallelMoveOpcodeInfo(op);		// retry here to help debugging
 					assert(0 && "illegal instruction");
 				}
 
 				const OpcodeInfo* oiAlu = nullptr;
+
 				if(op & 0xff)
 				{
 					oiAlu = m_opcodes.findParallelAluOpcodeInfo(op);
 					if(!oiAlu)
 					{
-						oiAlu = m_opcodes.findParallelAluOpcodeInfo(op);
+						m_opcodes.findParallelAluOpcodeInfo(op);	// retry here to help debugging
 						assert(0 && "invalid instruction");						
 					}
 				}
-				
-				if(oiMove->m_instruction != Move_Nop && oiAlu)
-					cacheEntry = Parallel | oiMove->m_instruction << 8 | oiAlu->m_instruction << 16;
-				else if(oiMove->m_instruction == Move_Nop && !oiAlu)
-					cacheEntry = Nop;
-				else
-					cacheEntry = oiMove->m_instruction != Move_Nop ? oiMove->m_instruction : oiAlu->m_instruction;
+
+				switch (oiMove->m_instruction)
+				{
+				case Move_Nop:
+					// Only ALU, no parallel move
+					cacheEntry = oiAlu ? oiAlu->m_instruction : Nop;
+					break;
+				case Ifcc:
+				case Ifcc_U:
+					// IFcc executes the ALU instruction if the condition is met, therefore no ALU exec by us
+					cacheEntry = oiAlu ? oiMove->m_instruction : Nop;
+				default:
+					if(!oiAlu)
+					{
+						// if there is no ALU instruction, do only a move
+						cacheEntry = oiMove->m_instruction;
+					}
+					else
+					{
+						// call special function that simulates latch registers for alu op + parallel move
+						cacheEntry = Parallel | oiMove->m_instruction << 8 | oiAlu->m_instruction << 16;
+					}
+				}
 			}
 
 			execOp(op);
 		}
 	}
-	inline void DSP::op_Parallel(TWord op)
+	inline void DSP::op_Parallel(const TWord op)
 	{
 		const auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
 		const auto instMove = static_cast<Instruction>((cacheEntry >> 8) & 0xff);
