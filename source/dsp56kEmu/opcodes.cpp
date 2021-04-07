@@ -167,9 +167,6 @@ namespace dsp56k
 		{
 			const auto* oi = _opcodes[i];
 
-			if(!oi->m_mask1)
-				continue;
-
 			if(match(*oi, _opcode))
 			{
 				if(res != nullptr)

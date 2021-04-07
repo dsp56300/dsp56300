@@ -44,6 +44,11 @@ namespace dsp56k
 		const uint32_t m_mask1;
 
 		Instruction getInstruction() const { return m_instruction; }
+
+		static bool isParallelOpcode(const uint32_t _word)
+		{
+			return _word >= 0x100000;
+		}
 	};
 
 	/*
