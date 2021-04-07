@@ -94,6 +94,7 @@ namespace dsp56k
 		// members
 		//
 		StaticArray<TWord,XIO_Reserved_High_Last - XIO_Reserved_High_First + 1>	m_mem;
+		TWord m_host_hsr = 0;
 
 		// _____________________________________________________________________________
 		// implementation

@@ -31,6 +31,12 @@ namespace dsp56k
 
 		switch (_addr)
 		{
+		case HostIO_HSR:
+			{
+				// Toggle HI8 "Receive Data Full" bit
+				dsp56k::bitset<TWord>(m_host_hsr, HSR_HRDF, m_hi8data.empty() ? 0 : 1);
+			}
+			return m_host_hsr;
 		case Essi::ESSI0_RX:
 			return m_essi.readRX();
 		case Essi::ESSI0_SSISR:
@@ -54,6 +60,9 @@ namespace dsp56k
 
 		switch (_addr)
 		{
+		case HostIO_HSR:
+			m_host_hsr = _val;
+			break;
 		case  Essi::ESSI0_SSISR:
 			m_essi.writeSR(_val);
 			return;
@@ -73,11 +82,6 @@ namespace dsp56k
 
 	void PeripheralsDefault::exec()
 	{
-		// Toggle HI8 "Receive Data Full" bit
-		auto hsr = read(HostIO_HSR);
-		dsp56k::bitset<TWord>(hsr, HSR_HRDF, m_hi8data.empty() ? 0 : 1);
-		write(HostIO_HSR, hsr);
-
 		m_essi.exec();
 	}
 
