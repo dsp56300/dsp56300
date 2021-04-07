@@ -22,9 +22,9 @@
 
 namespace dsp56k
 {
-	static bool g_dumpPC = false;
-//	static const TWord g_dumpPCictrMin = 0x153000;
-	static const TWord g_dumpPCictrMin = 0xfffff;
+	constexpr bool g_dumpPC = false;
+//	constexpr TWord g_dumpPCictrMin = 0x153000;
+	constexpr TWord g_dumpPCictrMin = 0xfffff;
 
 	// _____________________________________________________________________________
 	// DSP
