@@ -50,7 +50,7 @@ namespace dsp56k
 		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
 			return false;
 
-		if( _offset >= m_mem[_area].size() )
+		if( _offset >= size() )
 		{
 			LOG_ERR_MEM_WRITE( _offset );
 			return false;
@@ -92,7 +92,7 @@ namespace dsp56k
 		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
 			return false;
 
-		if( _offset >= m_mem[_area].size() )
+		if( _offset >= size() )
 		{
 			LOG_ERR_MEM_READ( _offset );
 			assert( 0 && "invalid memory address" );
