@@ -1203,8 +1203,7 @@ namespace dsp56k
 			do_end();
 
 			// nested loop update
-			if(sr_test(SR_LF))
-				do_iterate(_depth + 1);
+			do_iterate(_depth + 1);
 		}
 		return true;
 	}
