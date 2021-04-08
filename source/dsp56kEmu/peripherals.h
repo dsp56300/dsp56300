@@ -73,6 +73,11 @@ namespace dsp56k
 		HostIO_HRX		= 0xFFFFC6			// Host Receive Register (HRX)
 	};
 
+	enum HostStatusRegisterBits
+	{
+		HSR_HRDF = 0						// Host Status Register Bit: Receive Data Full
+	};
+
 	class IPeripherals
 	{
 	public:

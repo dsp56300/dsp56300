@@ -4,8 +4,6 @@
 
 namespace dsp56k
 {
-	constexpr uint32_t HSR_HRDF = 0;			// Host Status Register Bit: Receive Data Full
-
 	// _____________________________________________________________________________
 	// Peripherals
 	//
