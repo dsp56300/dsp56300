@@ -106,6 +106,32 @@ namespace dsp56k
 		return res;
 	}
 
+	void Memory::get2(EMemArea _area, TWord _offset, TWord& _wordA, TWord& _wordB)
+	{
+		memTranslateAddress(_area, _offset);
+
+#ifdef _DEBUG
+		assert(_offset < XIO_Reserved_High_First);
+		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
+			return false;
+
+		if( _offset >= size() )
+		{
+			LOG_ERR_MEM_READ( _offset );
+			assert( 0 && "invalid memory address" );
+			return 0x00badbad;
+		}
+#endif
+
+		_wordA = m_mem[_area][_offset];
+		_wordB = m_mem[_area][_offset+1];
+
+#ifdef _DEBUG
+		if( _wordA == g_initPattern || _wordB == g_initPattern)
+			LOG_ERR_MEM_READ_UNINITIALIZED(_area,_offset);
+#endif
+	}
+
 	// _____________________________________________________________________________
 	// loadOMF
 	//
@@ -206,12 +232,12 @@ namespace dsp56k
 
 	void Memory::memTranslateAddress(EMemArea& _area, TWord& _addr) const
 	{
-//		if(_offset >= m_bridgedMemoryAddress)
-//			_area = dsp56k::MemArea_X;
+//		if(_addr >= m_bridgedMemoryAddress)
+//			_area = MemArea_X;
 
 		// It's magic...
 		auto o = static_cast<int32_t>(_addr - m_bridgedMemoryAddress);
 		o >>= 24;
-		_area = static_cast<dsp56k::EMemArea>(_area & o);
+		_area = static_cast<EMemArea>(_area & o);
 	}
 }

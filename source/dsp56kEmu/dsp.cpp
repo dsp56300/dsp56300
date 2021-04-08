@@ -361,8 +361,8 @@ namespace dsp56k
 
 			const auto minPrio = mr().var & 0x3;
 
-			const auto op0 = memRead(MemArea_P, vba);
-			const auto op1 = memRead(MemArea_P, vba+1);
+			TWord op0, op1;
+			memRead2(MemArea_P, vba, op0, op1);
 
 			const auto oldSP = reg.sp.var;
 
@@ -399,7 +399,6 @@ namespace dsp56k
 		pcCurrentInstruction = reg.pc.toWord();
 
 		const auto op = fetchPC();
-		m_opWordB = memRead(MemArea_P, reg.pc.var);
 
 		getASM(op, m_opWordB);
 
@@ -2156,6 +2155,11 @@ namespace dsp56k
 	// 	}
 
 		return mem.get( _area, _offset );
+	}
+
+	void DSP::memRead2(EMemArea _area, TWord _offset, TWord& _wordA, TWord& _wordB) const
+	{
+		mem.get2(_area, _offset, _wordA, _wordB);
 	}
 
 	TWord DSP::memReadPeriph(EMemArea _area, TWord _offset) const
