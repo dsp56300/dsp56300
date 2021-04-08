@@ -377,9 +377,19 @@ namespace dsp56k
 	{
 		LOG_ERR_NOTIMPLEMENTED("BSET");
 	}
-	inline void DSP::op_Bset_pp(const TWord op)
+	inline void DSP::op_Bset_pp(const TWord op)	// 0000101010pppppp0S1bbbbb
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSET");
+		const TWord bit		= getFieldValue<Bset_pp,Field_bbbbb>(op);
+		const TWord pppppp	= getFieldValue<Bset_pp,Field_pppppp>(op);
+		const EMemArea S	= getFieldValueMemArea<Bset_pp>(op);
+
+		const TWord ea		= pppppp;
+
+		TWord val = memReadPeriphFFFFC0( S, ea );
+
+		sr_toggle( SR_C, bittestandset( val, bit ) );
+
+		memWritePeriphFFFFC0( S, ea, val );
 	}
 	inline void DSP::op_Bset_qq(const TWord op)
 	{
