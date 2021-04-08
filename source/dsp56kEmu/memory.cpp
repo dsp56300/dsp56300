@@ -113,13 +113,17 @@ namespace dsp56k
 #ifdef _DEBUG
 		assert(_offset < XIO_Reserved_High_First);
 		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
-			return false;
+		{
+			_wordA = _wordB =  0x00badbad;
+			return;			
+		}
 
 		if( _offset >= size() )
 		{
 			LOG_ERR_MEM_READ( _offset );
 			assert( 0 && "invalid memory address" );
-			return 0x00badbad;
+			_wordA = _wordB =  0x00badbad;
+			return;
 		}
 #endif
 
