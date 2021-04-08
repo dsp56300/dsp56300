@@ -986,9 +986,12 @@ namespace dsp56k
 	{
 		LOG_ERR_NOTIMPLEMENTED("LRA");
 	}
-	inline void DSP::op_Lra_xxxx(const TWord op)
+	inline void DSP::op_Lra_xxxx(const TWord op)	// 0000010001oooooo010ddddd
 	{
-		LOG_ERR_NOTIMPLEMENTED("LRA");
+		const TWord ddddd = getFieldValue<Lra_xxxx, Field_ddddd>(op);
+
+		const auto ea = pcCurrentInstruction + fetchOpWordB();
+		decode_ddddd_write(ddddd, TReg24(ea));
 	}
 	inline void DSP::op_Lsl_D(const TWord op)
 	{
