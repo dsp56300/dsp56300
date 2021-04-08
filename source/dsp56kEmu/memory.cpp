@@ -12,30 +12,26 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// Memory
 	//
-	Memory::Memory(const IMemoryMap& _memoryMap, size_t _memSize/* = 0xc00000*/)
+	Memory::Memory(const IMemoryValidator& _memoryMap, size_t _memSize/* = 0xc00000*/, TWord* _externalBuffer/* = nullptr*/)
 		: m_memoryMap(_memoryMap)
 		, m_size(_memSize)
 		, m_dsp(nullptr)
 	{
-		m_buffer.resize(_memSize * MemArea_COUNT, 0);
+		auto* address = _externalBuffer;
 
-		TWord* address = &m_buffer[0];
-		for( size_t i=0; i<MemArea_COUNT; ++i )
-		{			
-			m_mem[i] = address;
-			address += _memSize;
+		if(!address)
+		{
+			m_buffer.resize(_memSize * MemArea_COUNT, 0);
+			address = &m_buffer[0];
 		}
 
-		x = m_mem[MemArea_X];
-		y = m_mem[MemArea_Y];
-		p = m_mem[MemArea_P];
-	}
+		p = address;	address += size();
+		x = address;	address += size();
+		y = address;
 
-	// _____________________________________________________________________________
-	// ~Memory
-	//
-	Memory::~Memory()
-	{
+		m_mem[MemArea_X] = x;
+		m_mem[MemArea_Y] = y;
+		m_mem[MemArea_P] = p;
 	}
 
 	// _____________________________________________________________________________
@@ -43,7 +39,7 @@ namespace dsp56k
 	//
 	bool Memory::set( EMemArea _area, TWord _offset, TWord _value )
 	{
-		m_memoryMap.memTranslateAddress(_area, _offset);
+		memTranslateAddress(_area, _offset);
 
 #ifdef _DEBUG
 		assert(_offset < XIO_Reserved_High_First);
@@ -85,7 +81,7 @@ namespace dsp56k
 	//
 	TWord Memory::get( EMemArea _area, TWord _offset ) const
 	{
-		m_memoryMap.memTranslateAddress(_area, _offset);
+		memTranslateAddress(_area, _offset);
 
 #ifdef _DEBUG
 		assert(_offset < XIO_Reserved_High_First);
@@ -124,8 +120,11 @@ namespace dsp56k
 	//
 	bool Memory::save( FILE* _file ) const
 	{
-		const auto& data = m_buffer;
-		fwrite( &data[0], sizeof( data[0] ), data.size(), _file );
+		for(size_t a=0; a<m_mem.size(); ++a)
+		{
+			const auto& data = m_mem[a];
+			fwrite( &data[0], sizeof( data[0] ), size(), _file );
+		}
 		return true;
 	}
 
@@ -134,8 +133,11 @@ namespace dsp56k
 	//
 	bool Memory::load( FILE* _file )
 	{
-		auto& data = m_buffer;
-		fread( &data[0], sizeof( data[0] ), data.size(), _file );
+		for(size_t a=0; a<m_mem.size(); ++a)
+		{
+			const auto& data = m_mem[a];
+			fread( &data[0], sizeof( data[0] ), size(), _file );
+		}
 		return true;
 	}
 
@@ -195,8 +197,21 @@ namespace dsp56k
 	//
 	void Memory::fillWithInitPattern()
 	{
-		for(size_t i=0; i<m_buffer.size(); ++i)
-			m_buffer[i] = g_initPattern;
+		for(size_t a=0; a<m_mem.size(); ++a)
+		{
+			for(size_t i=0; i<size(); ++i)
+				m_mem[a][i] = g_initPattern;
+		}
 	}
 
+	void Memory::memTranslateAddress(EMemArea& _area, TWord& _addr) const
+	{
+//		if(_offset >= m_bridgedMemoryAddress)
+//			_area = dsp56k::MemArea_X;
+
+		// It's magic...
+		auto o = static_cast<int32_t>(_addr - m_bridgedMemoryAddress);
+		o >>= 24;
+		_area = static_cast<dsp56k::EMemArea>(_area & o);
+	}
 }

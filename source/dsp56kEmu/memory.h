@@ -28,38 +28,38 @@ namespace dsp56k
 
 	class DSP;
 
-	class IMemoryMap
+	class IMemoryValidator
 	{
 	public:
-		virtual ~IMemoryMap() = default;
-		virtual void memTranslateAddress( EMemArea& _area, TWord& _offset ) const = 0;
+		virtual ~IMemoryValidator() = default;
 		virtual bool memValidateAccess	( EMemArea _area, TWord _addr, bool _write ) const = 0;
 	};
 
-	class DefaultMemoryMap final : public IMemoryMap
+	class DefaultMemoryMap final : public IMemoryValidator
 	{
 	public:
-		void memTranslateAddress(EMemArea& _area, TWord& _offset) const override		{}
 		bool memValidateAccess(EMemArea _area, TWord _addr, bool _write) const override	{ return true; }
 	};
 
-	class Memory
+	class Memory final
 	{
 		// _____________________________________________________________________________
 		// members
 		//
 
-		const IMemoryMap&									m_memoryMap;
+		const IMemoryValidator&									m_memoryMap;
 		
 		// 768k words of 24-bit data for 3 banks (XYP)
 		const size_t										m_size;
 		std::vector<TWord>									m_buffer;
 		StaticArray< TWord*, MemArea_COUNT >				m_mem;
 
-		const TWord*										x;
-		const TWord*										y;
-		const TWord*										p;
+		TWord*												x;
+		TWord*												y;
+		TWord*												p;
 
+		TWord												m_bridgedMemoryAddress;
+		
 		struct STransaction
 		{
 			unsigned int ictr;
@@ -85,11 +85,9 @@ namespace dsp56k
 		// implementation
 		//
 	public:
-		Memory(const IMemoryMap& _memoryMap, size_t _memSize = 0xc00000);
+		Memory(const IMemoryValidator& _memoryMap, size_t _memSize = 0xc00000, TWord* _externalBuffer = nullptr);
 		Memory(const Memory&) = delete;
 		Memory& operator = (const Memory&) = delete;
-
-		virtual ~Memory();
 
 		bool				loadOMF				( const std::string& _filename );
 
@@ -106,7 +104,13 @@ namespace dsp56k
 
 		size_t				size				() const	{ return m_size; }
 
+		void				setExternalMemory	(const TWord _address, bool _isExternalMemoryBridged)
+		{
+			m_bridgedMemoryAddress = _isExternalMemoryBridged ? _address : 0;
+		}
+
 	private:
-		void	fillWithInitPattern();
+		void				fillWithInitPattern	();
+		void				memTranslateAddress	(EMemArea& _area, TWord& _addr) const;
 	};
 }
