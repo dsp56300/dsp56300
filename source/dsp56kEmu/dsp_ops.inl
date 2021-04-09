@@ -1934,6 +1934,7 @@ namespace dsp56k
 				case Ifcc_U:
 					// IFcc executes the ALU instruction if the condition is met, therefore no ALU exec by us
 					cacheEntry = oiAlu ? oiMove->m_instruction : Nop;
+					break;
 				default:
 					if(!oiAlu)
 					{
