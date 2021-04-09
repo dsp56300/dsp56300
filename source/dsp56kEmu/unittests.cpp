@@ -18,6 +18,8 @@ namespace dsp56k
 		testAdd();
 		testCMP();
 		testASL();
+		testMAC();
+		testLongMemoryMoves();
 	}
 
 	void UnitTests::testASL()
@@ -131,6 +133,35 @@ namespace dsp56k
 
 		assert(dsp.sr_test(SR_Z));
 		assert(!dsp.sr_test(SR_N | SR_E | SR_V | SR_C));
+	}
+
+	void UnitTests::testMAC()
+	{
+		dsp.reg.x.var =   0xda7efa5a7efa;
+		dsp.reg.y.var =   0x000000800000;
+		dsp.reg.a.var = 0x005a7efa000000;
+		dsp.reg.b.var = 0x005a7efa000000;
+
+		// mac x1,y0,a
+		execOpcode(0x2000e2);
+		assert(dsp.reg.a == 0x00800000000000);
+
+		// mac y0,x0,b 
+		execOpcode(0x2000da);
+		assert(dsp.reg.b == 0x00000000000000);
+	}
+
+	void UnitTests::testLongMemoryMoves()
+	{
+		mem.set(MemArea_X, 100, 0x123456);
+		mem.set(MemArea_Y, 100, 0x345678);
+
+		dsp.reg.r[0].var = 100;
+
+		// move l:(r0),ab
+		execOpcode(0x4ae000);
+		assert(dsp.reg.a.var == 0x00123456000000);
+		assert(dsp.reg.b.var == 0x00345678000000);
 	}
 
 	void UnitTests::execOpcode(uint32_t _op0, uint32_t _op1, const bool _reset)
