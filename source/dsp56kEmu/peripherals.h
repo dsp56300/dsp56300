@@ -1,9 +1,10 @@
 #pragma once
 
+#include "esai.h"
 #include "essi.h"
+#include "hi08.h"
 #include "types.h"
 #include "staticArray.h"
-#include "ringbuffer.h"
 
 namespace dsp56k
 {
@@ -67,74 +68,80 @@ namespace dsp56k
 		XIO_IPRC							// Interrupt Priority Register Core
 	};
 
-	enum HostIO
-	{
-		HostIO_HSR		= 0xFFFFC3,			// Host Status Register (HSR)
-		HostIO_HRX		= 0xFFFFC6			// Host Receive Register (HRX)
-	};
-
-	enum HostStatusRegisterBits
-	{
-		HSR_HRDF = 0						// Host Status Register Bit: Receive Data Full
-	};
-
 	class IPeripherals
 	{
 	public:
 		virtual ~IPeripherals() = default;
 
-		virtual void setDSP(DSP* _dsp) = 0;
-		virtual bool isValidAddress( TWord _addr ) const = 0;
+		void setDSP(DSP* _dsp)
+		{
+			m_dsp = _dsp;
+		}
+
+		DSP& getDSP()
+		{
+			return *m_dsp;
+		};
+
 		virtual TWord read(TWord _addr) = 0;
 		virtual void write(TWord _addr, TWord _value) = 0;
 		virtual void exec() = 0;
 		virtual void reset() = 0;
-		virtual DSP& getDSP() = 0;
+
+	private:
+		DSP* m_dsp = nullptr;
 	};
 
-	// dummy implementation that just stores writes and returns them in subsequent reads
-	class PeripheralsDefault : public IPeripherals
+	class Peripherals56303 : public IPeripherals
 	{
 		// _____________________________________________________________________________
 		// members
 		//
 		StaticArray<TWord,XIO_Reserved_High_Last - XIO_Reserved_High_First + 1>	m_mem;
-		TWord m_host_hsr = 0;
 
 		// _____________________________________________________________________________
 		// implementation
 		//
 	public:
-		PeripheralsDefault();
-
-		void writeHI8Data(const int32_t* _data, size_t _count);
+		Peripherals56303();
 		
-		bool isValidAddress( TWord _addr ) const override
-		{
-			if( _addr >= XIO_Reserved_High_First && _addr <= XIO_Reserved_High_Last )	return true;
-			return false;
-		}
-
 		TWord read(TWord _addr) override;
-
-		void write(TWord _addr, TWord _val);
+		void write(TWord _addr, TWord _val) override;
 
 		void exec() override;
 		void reset() override;
 
 		Essi& getEssi()	{ return m_essi; }
-
-		void setDSP(DSP* _dsp) override
-		{
-			m_dsp = _dsp;
-		}
-
-		DSP& getDSP() override { return *m_dsp; }
+		HI08& getHI08()	{ return m_hi08; }
 
 	private:
-		RingBuffer<uint32_t, 1024, false> m_hi8data;
 		Essi m_essi;
-
-		DSP* m_dsp = nullptr;
+		HI08 m_hi08;
 	};
-}
+
+	class Peripherals56362 : public IPeripherals
+	{
+		// _____________________________________________________________________________
+		// members
+		//
+		StaticArray<TWord,XIO_Reserved_High_Last - XIO_Reserved_High_First + 1>	m_mem;
+
+		// _____________________________________________________________________________
+		// implementation
+		//
+	public:
+		Peripherals56362();
+		
+		TWord read(TWord _addr) override;
+		void write(TWord _addr, TWord _val) override;
+
+		void exec() override;
+		void reset() override;
+
+		Esai& getEsai()	{ return m_esai; }
+		HI08& getHI08()	{ return m_hi08; }
+
+	private:
+		Esai m_esai;
+		HI08 m_hi08;
+	};}

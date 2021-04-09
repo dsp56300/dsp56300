@@ -14,6 +14,7 @@ error.cpp error.h
 essi.cpp essi.h
 esai.cpp esai.h
 fastmath.h
+hi08.h
 instructioncache.cpp instructioncache.h
 interrupts.h
 logging.cpp logging.h
