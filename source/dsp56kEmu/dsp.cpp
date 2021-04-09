@@ -1210,11 +1210,7 @@ namespace dsp56k
 	bool DSP::rep_exec(const TWord loopCount)
 	{
 		const auto lcBackup = reg.lc;
-
 		reg.lc.var = loopCount;
-
-		pcCurrentInstruction = reg.pc.var;
-		const auto op = fetchPC();
 
 		execOp(op);
 
