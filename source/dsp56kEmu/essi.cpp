@@ -1,5 +1,6 @@
 #include "essi.h"
 
+#include "audio.h"
 #include "memory.h"
 #include "interrupts.h"
 #include "dsp.h"
@@ -78,7 +79,7 @@ namespace dsp56k
 		m_audioOutputs[_txIndex].push_back(_val);
 	}
 
-	void Essi::processAudioInterleavedTX0(float** _inputs, float** _outputs, size_t _sampleFrames)
+	void Essi::processAudioInterleaved(float** _inputs, float** _outputs, size_t _sampleFrames, size_t _numDSPouts)
 	{
 		if(!_sampleFrames)
 			return;
@@ -97,10 +98,11 @@ namespace dsp56k
 		// read output
 		for(size_t i=0; i<_sampleFrames; ++i)
 		{
-			for(size_t c=0; c<2; ++c)
+			for(size_t c=0; c<_numDSPouts; ++c)
 			{
-				m_audioOutputs[0].waitNotEmpty();
-				const auto v = m_audioOutputs[0].pop_front();
+				const auto out = c>>1;
+				m_audioOutputs[out].waitNotEmpty();
+				const auto v = m_audioOutputs[out].pop_front();
 
 				_outputs[c][i] = dsp2Float(v);
 			}

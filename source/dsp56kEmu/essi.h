@@ -1,9 +1,10 @@
+// DSP 56303 ESSI - Enhanced Synchronous Serial Interface
+
 #pragma once
 
-#include "fastmath.h"
+#include "audio.h"
 #include "ringbuffer.h"
 #include "types.h"
-#include "utils.h"
 
 namespace dsp56k
 {
@@ -11,12 +12,7 @@ namespace dsp56k
 	class Memory;
 	class IPeripherals;
 
-	constexpr float g_float2dspScale	= 8388608.0f;
-	constexpr float g_dsp2FloatScale	= 0.00000011920928955078125f;
-	constexpr float g_dspFloatMax		= 8388607.0f;
-	constexpr float g_dspFloatMin		= -8388608.0f;
-
-	class Essi
+	class Essi : Audio<Essi>
 	{
 	public:
 		// ESSI Control Register A (CRA)
@@ -176,20 +172,12 @@ namespace dsp56k
 
 		void writeTX(uint32_t _txIndex, TWord _val);
 
-		static TWord float2Dsdp(float f)
+		void processAudioInterleaved(float** _inputs, float** _outputs, size_t _sampleFrames, size_t _numDSPouts);
+
+		void processAudioInterleavedTX0(float** _inputs, float** _outputs, size_t _sampleFrames)
 		{
-			f *= g_float2dspScale;
-			f = clamp(f, g_dspFloatMin, g_dspFloatMax);
-
-			return floor_int(f) & 0x00ffffff;
+			return processAudioInterleaved(_inputs, _outputs, _sampleFrames, 2);
 		}
-
-		static float dsp2Float(TWord d)
-		{
-			return static_cast<float>(signextend<int32_t,24>(d)) * g_dsp2FloatScale;
-		}
-
-		void processAudioInterleavedTX0(float** _inputs, float** _outputs, size_t _sampleFrames);
 
 	private:
 		void reset(EssiIndex _index);
