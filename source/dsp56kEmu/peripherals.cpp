@@ -87,6 +87,8 @@ namespace dsp56k
 			return m_hi08.read();
 		case Esai::M_SAISR:
 			return m_esai.readStatusRegister();
+		case Esai::M_TCR:
+			return m_esai.readTransmitControlRegister();
 		}
 		return m_mem[_addr - XIO_Reserved_High_First];
 	}
@@ -100,6 +102,9 @@ namespace dsp56k
 		case HI08::HSR:
 			m_hi08.writeStatusRegister(_val);
 			break;
+		case Esai::M_TCR:
+			m_esai.writeTransmitControlRegister(_val);
+			return;
 /*
 		case  Esai::M_TCCR:
 			m_esai.writeSR(_val);

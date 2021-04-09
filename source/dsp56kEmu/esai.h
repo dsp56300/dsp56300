@@ -261,6 +261,9 @@ namespace dsp56k
 
 		TWord readStatusRegister()
 		{
+			// we just use a frame sync toggle dummy as we don't need anything else to sync up with the DSP as this function is called from it
+			incFrameSync(m_transmitFrameSync);
+			bitset<TWord>(m_sr, M_TFS, m_transmitFrameSync);
 			return m_sr;
 		}
 
@@ -268,8 +271,21 @@ namespace dsp56k
 		{
 		}
 
+		TWord readTransmitControlRegister()
+		{
+			return m_tcr;
+		}
+
+		void writeTransmitControlRegister(TWord _val)
+		{
+			m_tcr = _val;
+		}
+
 	private:
 		IPeripherals& m_periph;
-		TWord m_sr = 0;	// status register
+		TWord m_sr = 0;				// status register
+		TWord m_tcr = 0;			// transmit control register
+
+		TWord m_transmitFrameSync;
 	};
 }
