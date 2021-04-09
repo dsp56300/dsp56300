@@ -22,11 +22,14 @@
 
 //
 
+std::string g_trace;
+
 namespace dsp56k
 {
 	constexpr bool g_dumpPC = false;
 //	constexpr TWord g_dumpPCictrMin = 0x153000;
-	constexpr TWord g_dumpPCictrMin = 0xfffff;
+	constexpr TWord g_dumpPCictrMin = 0x0;
+	constexpr TWord g_dumpPCictrMax = 0x10d00;
 
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
@@ -402,21 +405,28 @@ namespace dsp56k
 
 		getASM(op, m_opWordB);
 
-#ifdef _DEBUG
-		if( g_dumpPC && pcCurrentInstruction != reg.pc.toWord() && reg.ictr.var >= g_dumpPCictrMin )
+		if( g_dumpPC && pcCurrentInstruction != reg.pc.toWord() && reg.ictr.var >= g_dumpPCictrMin && reg.ictr.var < g_dumpPCictrMax )
 		{
 			std::stringstream ssout;
 
 			for( int i=0; i<reg.sc.var; ++i )
-				ssout << "\t";
+				ssout << "  ";
 
-			ssout << "EXEC @ " << std::hex << reg.pc.toWord() << " asm = " << m_asm;
+			ssout << "EXEC @ " << std::hex << pcCurrentInstruction << " asm = " << m_asm;
 
-			LOGF( ssout.str() );
+			g_trace = ssout.str();
 		}
-#endif
 
 		execOp(op);
+
+		if(g_dumpPC)
+		{
+			if(g_trace.empty())
+			{
+				LOGF(g_trace);
+				g_trace.clear();
+			}
+		}
 	}
 
 	void DSP::execOp(const TWord op)
@@ -425,7 +435,7 @@ namespace dsp56k
 
 		exec_jump(static_cast<Instruction>(opCache & 0xff), op);
 
-		if( g_dumpPC && reg.ictr.var >= g_dumpPCictrMin )
+		if( g_dumpPC && reg.ictr.var >= g_dumpPCictrMin && reg.ictr.var < g_dumpPCictrMax)
 		{
 			for( size_t i=0; i<Reg_COUNT; ++i )
 			{
@@ -450,9 +460,15 @@ namespace dsp56k
 
 					m_regChanges.push_back( regChange );
 
-					LOGF( "Reg " << g_regNames[i] << " changed @ " << std::hex << regChange.pc << ", ictr " << regChange.ictr << ", old " << std::hex << regChange.valOld.var << ", new " << regChange.valNew.var );
-
 					m_prevRegStates[i].val = regVal;
+
+					std::stringstream ss;
+					ss << ' ' << g_regNames[i] << ' ' << HEX(regChange.valOld.var) << "=>" << HEX(regChange.valNew.var);
+
+					while(g_trace.size() < 50)
+						g_trace += ' ';
+
+					g_trace += ss.str();
 				}
 			}
 		}
