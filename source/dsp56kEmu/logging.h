@@ -34,3 +34,5 @@ namespace Logging
 //#else
 //	#define LOG(S)	{}
 //#endif
+
+#define HEX(S)			std::hex << std::setfill('0') << std::setw(6) << S

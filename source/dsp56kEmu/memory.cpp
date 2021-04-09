@@ -1,7 +1,11 @@
 #include "memory.h"
 
+
+#include <fstream>
 #include <iomanip>
 
+
+#include "disasm.h"
 #include "error.h"
 #include "omfloader.h"
 
@@ -32,6 +36,8 @@ namespace dsp56k
 		m_mem[MemArea_X] = x;
 		m_mem[MemArea_Y] = y;
 		m_mem[MemArea_P] = p;
+
+//		fillWithInitPattern();
 	}
 
 	// _____________________________________________________________________________
@@ -167,6 +173,92 @@ namespace dsp56k
 		{
 			const auto& data = m_mem[a];
 			fread( &data[0], sizeof( data[0] ), size(), _file );
+		}
+		return true;
+	}
+
+	bool Memory::save(const char* _file, EMemArea _area)
+	{
+		FILE* hFile = fopen(_file, "wb");
+		if(!hFile)
+			return false;
+
+		std::vector<uint8_t> buf;
+		buf.resize(size() * 3);
+
+		std::ofstream out(_file, std::ios::binary | std::ios::trunc);
+
+		if(!out.is_open())
+			return false;
+
+		size_t index = 0;
+
+		for(size_t i=0; i<size(); ++i)
+		{
+			const auto w = get(_area, i);
+
+			buf[index++] =(w>>16) & 0xff;;
+			buf[index++] =(w>>8) & 0xff;;
+			buf[index++] =(w) & 0xff;;
+		}
+
+		out.write(reinterpret_cast<const char*>(&buf.front()), size());
+
+		out.close();
+
+		return true;
+	}
+
+	bool Memory::saveAssembly(const char* _file, TWord _offset, const TWord _count, bool _skipNops, bool _skipDC)
+	{
+		std::ofstream out(_file, std::ios::trunc);
+
+		if(!out.is_open())
+			return false;
+
+		for(size_t i=_offset; i<_offset+_count;)
+		{
+			TWord opA, opB;
+			get2(MemArea_P, i, opA, opB);
+
+			if(!opA && _skipNops)
+			{
+				++i;
+				continue;
+			}
+
+			char assembly[128]{};
+			unsigned long ops[3] = {opA, opB, 0};
+			auto usedOps = disassemble(assembly, ops, 0,0);
+
+			if(usedOps == 0)
+			{
+				++usedOps;
+
+				if(_skipDC)
+				{
+					++i;
+					continue;
+				}
+			}
+
+			std::stringstream o;
+			o << HEX(i) << ": " << assembly;
+
+			std::string line(o.str());
+
+			while(line.size() < 60)
+				line += ' ';
+
+			out << line << "; ";
+			out << HEX(opA);
+
+			if(usedOps > 1)
+				out << ' ' << HEX(opB);
+
+			out << std::endl;
+
+			i += usedOps;
 		}
 		return true;
 	}
