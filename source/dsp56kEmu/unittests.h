@@ -21,7 +21,7 @@ namespace dsp56k
 		void testCMP();
 		void execOpcode(uint32_t _op0, uint32_t _op1 = 0, bool _reset=false);
 
-		PeripheralsDefault peripherals;
+		Peripherals56303 peripherals;
 		Memory mem;
 		DSP dsp;
 	};
