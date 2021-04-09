@@ -367,11 +367,23 @@ namespace dsp56k
 
 		const TWord ea		= decode_MMMRRR_read(mmmrrr);
 
-		TWord val = memRead( S, ea );
+		if(ea >= XIO_Reserved_High_First)
+		{
+			// god WHY is this even possible! Bset_pp/qq are for peripherals and even save one word!	TODO: code optimizer? We could rewrite as Bset_qq/pp + one nop
+			auto val = memReadPeriph( S, ea );
 
-		sr_toggle( SR_C, bittestandset( val, bit ) );
+			sr_toggle( SR_C, bittestandset( val, bit ) );
 
-		memWrite( S, ea, val );
+			memWritePeriph( S, ea, val );
+		}
+		else
+		{
+			auto val = memRead( S, ea );
+
+			sr_toggle( SR_C, bittestandset( val, bit ) );
+
+			memWrite( S, ea, val );
+		}
 	}
 	inline void DSP::op_Bset_aa(const TWord op)
 	{
