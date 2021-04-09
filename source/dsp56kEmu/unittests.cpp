@@ -70,7 +70,7 @@ namespace dsp56k
 		// move #$345678,a1
 		execOpcode(0x54f400, 0x345678);
 
-		// move #$abcdef,a2
+		// move #$abcdef,a0
 		execOpcode(0x50f400, 0xabcdef);		assert(dsp.reg.a.var == 0x0012345678abcdef);
 
 		// move a,b
@@ -137,6 +137,7 @@ namespace dsp56k
 	{
 		if(_reset)
 			dsp.resetHW();
+		dsp.clearOpcodeCache();
 		dsp.mem.set(MemArea_P, 0, _op0);
 		dsp.mem.set(MemArea_P, 1, _op1);
 		dsp.setPC(0);

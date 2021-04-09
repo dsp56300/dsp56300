@@ -286,7 +286,7 @@ namespace dsp56k
 
 		m_asm[0] = 0;
 
-		m_opcodeCache.resize(mem.size(), ResolveCache);
+		clearOpcodeCache();
 
 		resetHW();
 	}
@@ -2261,5 +2261,11 @@ namespace dsp56k
 	void DSP::injectInterrupt(InterruptVectorAddress _interruptVectorAddress)
 	{
 		m_pendingInterrupts.push_back(_interruptVectorAddress);
+	}
+
+	void DSP::clearOpcodeCache()
+	{
+		m_opcodeCache.clear();
+		m_opcodeCache.resize(mem.size(), ResolveCache);		
 	}
 }

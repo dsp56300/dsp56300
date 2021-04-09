@@ -178,6 +178,8 @@ namespace dsp56k
 		bool			load							( FILE* _file );
 
 		void			injectInterrupt					(InterruptVectorAddress _interruptVectorAddress);
+
+		void			clearOpcodeCache				();
 		
 	private:
 
