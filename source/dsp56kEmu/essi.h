@@ -12,7 +12,7 @@ namespace dsp56k
 	class Memory;
 	class IPeripherals;
 
-	class Essi : Audio<Essi>
+	class Essi : public Audio
 	{
 	public:
 		// ESSI Control Register A (CRA)
@@ -148,16 +148,10 @@ namespace dsp56k
 			Essi1 = 0x00
 		};
 
-		enum FrameSync
-		{
-			FrameSyncChannelLeft = 1,
-			FrameSyncChannelRight = 0
-		};
-
 		// _____________________________________________________________________________
 		// implementation
 		//
-		explicit Essi(IPeripherals& _peripheral) : m_periph(_peripheral)		{}
+		explicit Essi(IPeripherals& _peripheral) : m_periph(_peripheral), m_statusReg(0)		{}
 
 		void reset();
 		void exec();
@@ -165,20 +159,13 @@ namespace dsp56k
 		void setControlRegisters(EssiIndex _essi, TWord cra, TWord crb);
 
 		void toggleStatusRegisterBit(EssiIndex _essi, uint32_t _bit, uint32_t _zeroOrOne);
-		TWord readRX();
+		TWord readRX(size_t _index);
 
 		TWord readSR();
 		void writeSR(TWord _sr) { m_statusReg = _sr; }
 
 		void writeTX(uint32_t _txIndex, TWord _val);
-
-		void processAudioInterleaved(float** _inputs, float** _outputs, size_t _sampleFrames, size_t _numDSPouts);
-
-		void processAudioInterleavedTX0(float** _inputs, float** _outputs, size_t _sampleFrames)
-		{
-			return processAudioInterleaved(_inputs, _outputs, _sampleFrames, 2);
-		}
-
+		
 	private:
 		void reset(EssiIndex _index);
 
@@ -190,26 +177,11 @@ namespace dsp56k
 		void set(EssiIndex _index, EssiRegX _reg, TWord _value);
 		TWord get(EssiIndex _index, EssiRegX _reg) const;
 
-		static void incFrameSync(uint32_t& _frameSync)
-		{
-			++_frameSync;
-			_frameSync &= 1;
-		}
-
 		// _____________________________________________________________________________
 		// members
 		//
 		IPeripherals& m_periph;
 
-		RingBuffer<uint32_t, 8192, false> m_audioInput;
-		std::array<RingBuffer<uint32_t, 8192, false>, 3> m_audioOutputs;
-		std::atomic<uint32_t> m_pendingRXInterrupts = 0;
-
 		TWord m_statusReg;
-
-		uint32_t m_frameSyncDSPStatus = FrameSyncChannelLeft;
-		uint32_t m_frameSyncDSPRead = FrameSyncChannelLeft;
-		uint32_t m_frameSyncDSPWrite = FrameSyncChannelLeft;
-		uint32_t m_frameSyncAudio = FrameSyncChannelLeft;
 	};
 }

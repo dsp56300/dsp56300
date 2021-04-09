@@ -1,7 +1,9 @@
 #pragma once
+#include <array>
 #include <cstdint>
 
 #include "fastmath.h"
+#include "ringbuffer.h"
 #include "utils.h"
 
 namespace dsp56k
@@ -24,7 +26,70 @@ namespace dsp56k
 		return static_cast<float>(signextend<int32_t,24>(d)) * g_dsp2FloatScale;
 	}
 
-	template<typename T> class Audio
+	class Audio
 	{
+	public:
+		void processAudioInterleaved(float** _inputs, float** _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts)
+		{
+			if (!_sampleFrames)
+				return;
+
+			// write input data
+			for (size_t i = 0; i < _sampleFrames; ++i)
+			{
+				for (size_t c = 0; c < _numDSPins; ++c)
+				{
+					const auto in = c >> 1;
+					m_audioInputs[in].waitNotFull();
+					m_audioInputs[in].push_back(float2Dsdp(_inputs[c][i]));
+				}
+
+				m_pendingRXInterrupts += 2;
+			}
+
+			// read output
+			for (size_t i = 0; i < _sampleFrames; ++i)
+			{
+				for (size_t c = 0; c < _numDSPouts; ++c)
+				{
+					const auto out = c >> 1;
+
+					m_audioOutputs[out].waitNotEmpty();
+					const auto v = m_audioOutputs[out].pop_front();
+
+					_outputs[c][i] = dsp2Float(v);
+				}
+			}		
+		}
+
+		void processAudioInterleavedTX0(float** _inputs, float** _outputs, size_t _sampleFrames)
+		{
+			return processAudioInterleaved(_inputs, _outputs, _sampleFrames, 2, 2);
+		}
+
+	protected:
+		TWord readRXimpl(size_t _index);
+		void writeTXimpl(size_t _index, TWord _val);
+
+		static void incFrameSync(uint32_t& _frameSync)
+		{
+			++_frameSync;
+			_frameSync &= 1;
+		}
+
+		enum FrameSync
+		{
+			FrameSyncChannelLeft = 1,
+			FrameSyncChannelRight = 0
+		};
+
+		std::array<RingBuffer<uint32_t, 8192, false>, 1> m_audioInputs;
+		std::array<RingBuffer<uint32_t, 8192, false>, 3> m_audioOutputs;
+		std::atomic<uint32_t> m_pendingRXInterrupts = 0;
+		
+		uint32_t m_frameSyncDSPStatus = FrameSyncChannelLeft;
+		uint32_t m_frameSyncDSPRead = FrameSyncChannelLeft;
+		uint32_t m_frameSyncDSPWrite = FrameSyncChannelLeft;
+		uint32_t m_frameSyncAudio = FrameSyncChannelLeft;
 	};
 }

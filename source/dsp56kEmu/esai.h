@@ -5,9 +5,12 @@
 #include "audio.h"
 
 namespace dsp56k
-{	
-	class Esai : Audio<Esai>
+{
+	class IPeripherals;
+
+	class Esai : public Audio
 	{
+	public:
 		enum Addresses
 		{
 			M_RSMB	= 0xFFFFBC, // ESAI Receive Slot Mask Register B (RSMB)
@@ -253,5 +256,20 @@ namespace dsp56k
 			M_IF1 = 1,
 			M_IF0 = 0,
 		};
+
+		explicit Esai(IPeripherals& _periph);
+
+		TWord readStatusRegister()
+		{
+			return m_sr;
+		}
+
+		void exec()
+		{
+		}
+
+	private:
+		IPeripherals& m_periph;
+		TWord m_sr = 0;	// status register
 	};
 }

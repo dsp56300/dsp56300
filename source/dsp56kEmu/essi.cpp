@@ -37,17 +37,12 @@ namespace dsp56k
 		set(_essi, ESSI0_CRB, _crb);
 	}
 
-	TWord Essi::readRX()
+	TWord Essi::readRX(size_t _index)
 	{
 		if(!bittest(get(Essi0, ESSI0_CRB), CRB_RE))
 			return 0;
 
-		m_frameSyncDSPStatus = m_frameSyncDSPRead;
-
-		incFrameSync(m_frameSyncDSPRead);
-
-		m_audioInput.waitNotEmpty();
-		const auto res = m_audioInput.pop_front();
+		const auto res = readRXimpl(_index);
 
 		toggleStatusRegisterBit(Essi0, SSISR_RFS, m_frameSyncDSPRead);
 
@@ -57,7 +52,7 @@ namespace dsp56k
 	TWord Essi::readSR()
 	{
 		// set Receive Register Full flag if there is input
-		toggleStatusRegisterBit(Essi0, SSISR_RDF, m_audioInput.empty() ? 0 : 1);
+		toggleStatusRegisterBit(Essi0, SSISR_RDF, m_audioInputs[0].empty() ? 0 : 1);
 
 		// set Transmit Register Empty flag if there is space left in the output
 		toggleStatusRegisterBit(Essi0, SSISR_TDE, m_audioOutputs[0].full() ? 0 : 1);
@@ -74,39 +69,7 @@ namespace dsp56k
 		if(!bittest(get(Essi0, ESSI0_CRB), CRB_TE0 - _txIndex))
 			return;
 
-		incFrameSync(m_frameSyncDSPWrite);
-		m_audioOutputs[_txIndex].waitNotFull();
-		m_audioOutputs[_txIndex].push_back(_val);
-	}
-
-	void Essi::processAudioInterleaved(float** _inputs, float** _outputs, size_t _sampleFrames, size_t _numDSPouts)
-	{
-		if(!_sampleFrames)
-			return;
-
-		// write input data
-		for(size_t i=0; i<_sampleFrames; ++i)
-		{
-			for(size_t c=0; c<2; ++c)
-			{
-				m_audioInput.waitNotFull();
-				m_audioInput.push_back(float2Dsdp(_inputs[c][i]));
-				++m_pendingRXInterrupts;
-			}
-		}
-
-		// read output
-		for(size_t i=0; i<_sampleFrames; ++i)
-		{
-			for(size_t c=0; c<_numDSPouts; ++c)
-			{
-				const auto out = c>>1;
-				m_audioOutputs[out].waitNotEmpty();
-				const auto v = m_audioOutputs[out].pop_front();
-
-				_outputs[c][i] = dsp2Float(v);
-			}
-		}
+		writeTXimpl(_txIndex, _val);
 	}
 
 	void Essi::reset(const EssiIndex _index)
