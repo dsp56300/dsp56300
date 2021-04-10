@@ -87,7 +87,7 @@ namespace dsp56k
 		Opcodes m_opcodes;
 
 		Memory& mem;
-		std::array<IPeripherals* const, 2> perif;
+		std::array<IPeripherals*, 2> perif;
 		
 		TWord	pcCurrentInstruction;
 
@@ -183,8 +183,12 @@ namespace dsp56k
 		void			injectInterrupt					(InterruptVectorAddress _interruptVectorAddress);
 
 		void			clearOpcodeCache				();
+
 		void			dumpRegisters					();
 		void			enableTrace						(bool _trace) { m_trace = _trace; };
+
+		Memory&			memory							()											{ return mem; }
+		void			setPeriph						(size_t _index, IPeripherals* _periph)		{ perif[_index] = _periph; _periph->setDSP(this); }
 		
 	private:
 
