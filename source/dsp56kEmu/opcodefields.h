@@ -3,7 +3,7 @@
 
 namespace dsp56k
 {
-		struct FieldInfo
+	struct FieldInfo
 	{
 		uint32_t bit;
 		uint32_t len;
