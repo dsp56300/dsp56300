@@ -421,7 +421,7 @@ namespace dsp56k
 
 		if(g_dumpPC)
 		{
-			if(g_trace.empty())
+			if(!g_trace.empty())
 			{
 				LOGF(g_trace);
 				g_trace.clear();
