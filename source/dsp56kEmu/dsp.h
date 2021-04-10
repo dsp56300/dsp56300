@@ -94,6 +94,7 @@ namespace dsp56k
 		char	m_asm[128];
 
 		InstructionCache	cache;
+		uint32_t			m_instructions = 0;
 
 		// used to monitor ALL register changes during exec
 		struct SRegChange
@@ -154,7 +155,7 @@ namespace dsp56k
 
 		bool	readRegToInt					( EReg _reg, int64_t& _dst );
 
-		int		getICTR							() const									{ return reg.ictr.var; }
+		uint32_t	getInstructionCounter		() const									{ return m_instructions; }
 
 		const char*	getASM						(TWord wordA, TWord wordB);
 

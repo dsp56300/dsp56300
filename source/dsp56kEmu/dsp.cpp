@@ -473,6 +473,7 @@ namespace dsp56k
 			}
 		}
 		++reg.ictr.var;
+		++m_instructions;
 	}
 
 	void DSP::exec_jump(const Instruction inst, const TWord op)
