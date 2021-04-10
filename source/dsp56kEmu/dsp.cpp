@@ -405,43 +405,34 @@ namespace dsp56k
 
 		getASM(op, m_opWordB);
 
-		if( g_dumpPC && pcCurrentInstruction != reg.pc.toWord() && reg.ictr.var >= g_dumpPCictrMin && reg.ictr.var < g_dumpPCictrMax )
-		{
-			std::stringstream ssout;
-
-			for( int i=0; i<reg.sc.var; ++i )
-				ssout << "  ";
-
-			ssout << "EXEC @ " << std::hex << pcCurrentInstruction << " asm = " << m_asm;
-
-			g_trace = ssout.str();
-		}
-
 		execOp(op);
-
-		if(g_dumpPC)
-		{
-			if(!g_trace.empty())
-			{
-				LOGF(g_trace);
-				g_trace.clear();
-			}
-		}
 	}
 
 	void DSP::execOp(const TWord op)
 	{
-		auto& opCache = m_opcodeCache[pcCurrentInstruction];
+		auto opCache = m_opcodeCache[pcCurrentInstruction];
 
 		exec_jump(static_cast<Instruction>(opCache & 0xff), op);
 
-		if( g_dumpPC && reg.ictr.var >= g_dumpPCictrMin && reg.ictr.var < g_dumpPCictrMax)
+		++reg.ictr.var;
+		++m_instructions;
+		
+		if(g_dumpPC && m_trace && static_cast<Instruction>(opCache & 0xff) != ResolveCache)
 		{
+			std::stringstream ss;
+			ss << "p:$" << HEX(pcCurrentInstruction) << ' ' << HEX(op);
+			if(m_currentOpLen > 1)
+				ss << ' ' << HEX(m_opWordB);
+			else
+				ss << "        ";
+			ss << " = " << m_asm;
+			const std::string str(ss.str());
+			LOGF(str);
+
+			dumpRegisters();
+
 			for( size_t i=0; i<Reg_COUNT; ++i )
 			{
-				if( i == Reg_PC || i == Reg_ICTR )
-					continue;
-
 				int64_t regVal = 0;
 				const bool r = readRegToInt( (EReg)i, regVal );
 
@@ -461,19 +452,9 @@ namespace dsp56k
 					m_regChanges.push_back( regChange );
 
 					m_prevRegStates[i].val = regVal;
-
-					std::stringstream ss;
-					ss << ' ' << g_regNames[i] << ' ' << HEX(regChange.valOld.var) << "=>" << HEX(regChange.valNew.var);
-
-					while(g_trace.size() < 50)
-						g_trace += ' ';
-
-					g_trace += ss.str();
 				}
 			}
 		}
-		++reg.ictr.var;
-		++m_instructions;
 	}
 
 	void DSP::exec_jump(const Instruction inst, const TWord op)

@@ -124,6 +124,8 @@ namespace dsp56k
 
 		std::vector<uint32_t> m_opcodeCache;
 
+		bool m_trace = false;
+
 		// _____________________________________________________________________________
 		// implementation
 		//
@@ -182,6 +184,7 @@ namespace dsp56k
 
 		void			clearOpcodeCache				();
 		void			dumpRegisters					();
+		void			enableTrace						(bool _trace) { m_trace = _trace; };
 		
 	private:
 
