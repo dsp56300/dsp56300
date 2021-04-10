@@ -1838,6 +1838,31 @@ namespace dsp56k
 
 		case Reg_ICTR:	_res = reg.ictr;	break;
 
+		case Reg_SSH:	_res = hiword(reg.ss[reg.sc.toWord()]);	break;
+		case Reg_SSL:	_res = loword(reg.ss[reg.sc.toWord()]);	break;
+
+		case Reg_CNT1:	_res = reg.cnt1;		break;
+		case Reg_CNT2:	_res = reg.cnt2;		break;
+		case Reg_CNT3:	_res = reg.cnt3;		break;
+		case Reg_CNT4:	_res = reg.cnt4;		break;
+
+		case Reg_VBA:	_res = reg.vba;			break;
+		case Reg_SZ:	_res = reg.sz;			break;
+		case Reg_EP:	_res = reg.ep;			break;
+		case Reg_DCR:	_res = reg.dcr;			break;
+		case Reg_BCR:	_res = reg.bcr;			break;
+		case Reg_IPRP:	_res.var = iprp();		break;
+		case Reg_IPRC:	_res.var = iprc();		break;
+
+		case Reg_AAR0:	_res = reg.aar0;		break;
+		case Reg_AAR1:	_res = reg.aar1;		break;
+		case Reg_AAR2:	_res = reg.aar2;		break;
+		case Reg_AAR3:	_res = reg.aar3;		break;
+
+		case Reg_REPLACE:	_res = reg.replace;	break;
+		case Reg_HIT:	_res = reg.hit;			break;
+		case Reg_MISS:	_res = reg.miss;		break;
+		case Reg_CYC:	_res = reg.cyc;			break;
 		default:
 			return false;
 		}
