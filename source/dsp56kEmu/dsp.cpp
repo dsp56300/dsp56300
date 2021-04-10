@@ -625,7 +625,7 @@ namespace dsp56k
 		case 2:
 			switch (kkk)
 			{
-			case 2:		alu_asr(D, !D, 1);						return true;
+			case 2:		alu_asr(D, D, 1);						return true;
 			case 3:		alu_lsr(D, 1);							return true;
 			case 6:		alu_abs(D);								return true;
 			case 7:		LOG_ERR_NOTIMPLEMENTED("ror");			return true;	// alu_ror
@@ -634,7 +634,7 @@ namespace dsp56k
 		case 3:
 			switch (kkk)
 			{
-			case 2:		alu_asl(D, !D, 1);						return true;
+			case 2:		alu_asl(D, D, 1);						return true;
 			case 3:		alu_lsl(D, 1);							return true;
 			case 6:		alu_neg(D);								return true;
 			case 7:		LOG_ERR_NOTIMPLEMENTED("rol");			return true;	// alu_rol

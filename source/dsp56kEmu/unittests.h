@@ -11,6 +11,7 @@ namespace dsp56k
 		UnitTests();
 	private:
 		void testASL();
+		void testASR();
 		void testMultiply();
 		void testMultiply(int x0, int y0, int64_t expectedResult, TWord opcode);
 		void testMoveImmediateToRegister();

@@ -18,6 +18,7 @@ namespace dsp56k
 		testAdd();
 		testCMP();
 		testASL();
+		testASR();
 		testMAC();
 		testLongMemoryMoves();
 	}
@@ -33,6 +34,20 @@ namespace dsp56k
 		// asr #1,a,a
 		execOpcode(0x0c1c02);
 		assert(dsp.reg.a.var == 0x2aabcdef123456);
+
+		// asl b
+		dsp.reg.b.var = 0x000599f2204000;
+		execOpcode(0x20003a);
+		assert(dsp.reg.b.var == 0x000b33e4408000);
+	}
+
+	void UnitTests::testASR()
+	{
+		dsp.reg.a.var = 0x000599f2204000;
+
+		// asr a
+		execOpcode(0x200022);
+		assert(dsp.reg.a.var == 0x0002ccf9102000);		
 	}
 
 	void UnitTests::testMultiply()
