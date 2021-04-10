@@ -181,6 +181,7 @@ namespace dsp56k
 		void			injectInterrupt					(InterruptVectorAddress _interruptVectorAddress);
 
 		void			clearOpcodeCache				();
+		void			dumpRegisters					();
 		
 	private:
 

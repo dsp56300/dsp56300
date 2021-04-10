@@ -2309,4 +2309,61 @@ namespace dsp56k
 		m_opcodeCache.clear();
 		m_opcodeCache.resize(mem.size(), ResolveCache);		
 	}
+
+	void DSP::dumpRegisters()
+	{
+		auto logReg = [this](EReg _reg, int _width)
+		{
+			std::stringstream ss;
+			int64_t v;
+			if(!readRegToInt(_reg, v))
+			{
+				readRegToInt(_reg, v);
+				assert(false);
+			}
+			const bool c = m_prevRegStates[_reg].val != v;
+			if(c)
+				ss << '{';
+			ss << (_width > 0 ? "$" : "") << std::hex << std::setfill('0') << std::setw(std::abs(_width)) << v;
+			if(c)
+				ss << '}';
+			const std::string res(ss.str());
+			return res;
+		};
+
+		LOGF("   x=       " << logReg(Reg_X, 12) << "    y=       " << logReg(Reg_Y, 12));
+		LOGF("   a=     " << logReg(Reg_A, 14) << "    b=     " << logReg(Reg_B, 14));
+		LOGF("               x1=" << logReg(Reg_X1, 6) << "   x0=" << logReg(Reg_X0, 6) << "   r7=" << logReg(Reg_R7,6) << " n7=" << logReg(Reg_N7,6) << " m7=" << logReg(Reg_M7,6));
+		LOGF("               y1=" << logReg(Reg_Y1, 6) << "   y0=" << logReg(Reg_Y0, 6) << "   r6=" << logReg(Reg_R6,6) << " n6=" << logReg(Reg_N6,6) << " m6=" << logReg(Reg_M6,6));
+		LOGF("  a2=    " << logReg(Reg_A2, 2) << "   a1=" << logReg(Reg_A1, 6) << "   a0=" << logReg(Reg_A0,6) << "   r5=" << logReg(Reg_R5,6) << " n5=" << logReg(Reg_N5,6) << " m5=" << logReg(Reg_M5,6));
+		LOGF("  b2=    " << logReg(Reg_B2, 2) << "   b1=" << logReg(Reg_B1, 6) << "   b0=" << logReg(Reg_B0,6) << "   r4=" << logReg(Reg_R4,6) << " n4=" << logReg(Reg_N4,6) << " m4=" << logReg(Reg_M4,6));
+		LOGF("                                         r3=" << logReg(Reg_R3,6) << " n3=" << logReg(Reg_N3,6) << " m3=" << logReg(Reg_M3,6));
+		LOGF("  pc=" << logReg(Reg_PC, 6) << "   sr=" << logReg(Reg_SR, 6) << "  omr=" << logReg(Reg_OMR,6) << "   r2=" << logReg(Reg_R2,6) << " n2=" << logReg(Reg_N2,6) << " m2=" << logReg(Reg_M2,6));
+		LOGF("  la=" << logReg(Reg_LA, 6) << "   lc=" << logReg(Reg_LC, 6) << "                r1=" << logReg(Reg_R1,6) << " n1=" << logReg(Reg_N1,6) << " m1=" << logReg(Reg_M1,6));
+		LOGF(" ssh=" << logReg(Reg_SSH, 6) << "  ssl=" << logReg(Reg_SR, 6) << "   sp=" << logReg(Reg_OMR,6) << "   r0=" << logReg(Reg_R0,6) << " n0=" << logReg(Reg_N0,6) << " m0=" << logReg(Reg_M0,6));
+		LOGF("  ep=" << logReg(Reg_EP, 6) << "   sz=" << logReg(Reg_SZ, 6) << "   sc=" << logReg(Reg_SC,6) << "  vba=" << logReg(Reg_VBA,6));
+		LOGF("iprc=" << logReg(Reg_IPRC, 6) << " iprp=" << logReg(Reg_IPRP, 6) << "  bcr=" << logReg(Reg_BCR,6) << "  dcr=" << logReg(Reg_DCR,6));
+		LOGF("aar0=" << logReg(Reg_AAR0, 6) << " aar1=" << logReg(Reg_AAR1, 6) << " aar2=" << logReg(Reg_AAR2,6) << " aar3=" << logReg(Reg_AAR3,6));
+		LOGF("  hit=   " << logReg(Reg_HIT, -6) << "   miss=   " << logReg(Reg_MISS, -6) << " replace=" << logReg(Reg_REPLACE,-6));
+		LOGF("  cyc=   " << logReg(Reg_CYC, -6) << "   ictr=   " << logReg(Reg_ICTR, -6));
+		LOGF(" cnt1=   " << logReg(Reg_CNT1, -6) << "   cnt2=   " << logReg(Reg_CNT2, -6) << " cnt3=   " << logReg(Reg_CNT2,-6) << "  cnt4=   " << logReg(Reg_CNT3,-6));
+/*
+   x=       $000000000000    y=       $000000000000
+   a=     $00000000000051    b=     $00000000000000
+               x1=$000000   x0=$000000   r7=$000000 n7=$000000 m7=$ffffff
+               y1=$000000   y0=$000000   r6=$000000 n6=$000000 m6=$ffffff
+  a2=    $00   a1=$000000   a0=$000051   r5=$000000 n5=$000000 m5=$ffffff
+  b2=    $00   b1=$000000   b0=$000000   r4=$000000 n4=$000000 m4=$ffffff
+                                         r3=$000000 n3=$000000 m3=$ffffff
+  pc=$000102   sr=$c00300  omr=$00030e   r2=$000000 n2=$000000 m2=$ffffff
+  la=$ffffff   lc=$000000                r1=$000100 n1=$000000 m1=$ffffff
+ ssh=$000000  ssl=$000000   sp=$000000   r0=$000151 n0=$000000 m0=$ffffff
+  ep=$000000   sz=$000000   sc=$000000  vba=$000000
+iprc=$000000 iprp=$000000  bcr=$212421  dcr=$000000
+aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
+  hit=   000000   miss=   000000 replace=000000
+  cyc=   001027   ictr=   000259
+ cnt1=   000000   cnt2=   000000 cnt3=   000000  cnt4=   000000
+*/
+	}
 }
