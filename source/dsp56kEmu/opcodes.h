@@ -101,12 +101,25 @@ namespace dsp56k
 		if(!matchFieldRange(_oi.m_instruction, Field_bbbbb, _word, 0, 23))
 			return false;
 
-		if(!OpcodeInfo::isParallelOpcode(_word) && hasField(_oi, Field_JJJ))
+		if(hasField(_oi, Field_JJJ))
 		{
-			// There are two variants for JJJ, one does not allow 001, 010 and 011 (56 bit regs), only 24 bit are allowed. Only valid for Tcc instruction as there are no others using JJJ in a non-parallel opcode
 			const auto v = getFieldValue(_oi.m_instruction, Field_JJJ, _word);
-			if(v > 0 && v < 4)
-				return false;
+
+			if(!OpcodeInfo::isParallelOpcode(_word))
+			{
+				// There are two variants for JJJ, one does not allow 001, 010 and 011 (56 bit regs), only 24 bit are allowed. For Non-parallel instructions, the only instruction using it is Tcc and there it does not allow all values
+				if(v > 0 && v < 4)
+					return false;
+			}
+			else
+			{
+				if(_oi.m_instruction == Tfr)
+				{
+					// There are two variants for JJJ, one does not allow 001, 010 and 011 (56 bit regs), only 24 bit are allowed.
+					if(v > 0 && v < 4)
+						return false;					
+				}
+			}
 		}
 
 		if(hasField(_oi, Field_DDDD))

@@ -30,7 +30,7 @@ namespace dsp56k
 			, m_opcode(_opcode)
 			, m_assembly(_assembly)
 			, m_extensionWordType(_extensionWordType)
-			, m_mask0(createMask(_opcode, '0', 'o'))
+			, m_mask0(createMask(_opcode, '0', ~0))
 			, m_mask1(createMask(_opcode, '1', ~0))
 		{
 		}

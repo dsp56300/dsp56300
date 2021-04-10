@@ -170,8 +170,11 @@ namespace dsp56k
 			if(match(*oi, _opcode))
 			{
 				if(res != nullptr)
+				{
 					match(*oi, _opcode);
-				assert(res == nullptr)
+					match(*res, _opcode);
+					assert(res == nullptr);
+				}
 				res = oi;
 				resIndex = i;
 			}
