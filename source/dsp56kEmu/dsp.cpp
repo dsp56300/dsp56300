@@ -1002,15 +1002,29 @@ namespace dsp56k
 			return;
 		}
 
-		const TWord addr = decode_MMMRRR_read( mmmrrr );
+		const auto addr = decode_MMMRRR_read( mmmrrr );
 
-		if( write )
+		if(addr >= XIO_Reserved_High_First)
 		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( memArea, addr )) );
+			if( write )
+			{
+				decode_ddddd_write<TReg24>( ddddd, TReg24(memReadPeriph( memArea, addr )) );
+			}
+			else
+			{
+				memWritePeriph( memArea, addr, decode_ddddd_read<TWord>( ddddd ) );
+			}
 		}
 		else
 		{
-			memWrite( memArea, addr, decode_ddddd_read<TWord>( ddddd ) );
+			if( write )
+			{
+				decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( memArea, addr )) );
+			}
+			else
+			{
+				memWrite( memArea, addr, decode_ddddd_read<TWord>( ddddd ) );
+			}			
 		}
 	}
 
