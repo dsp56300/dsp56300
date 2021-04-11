@@ -22,6 +22,7 @@ namespace dsp56k
 		testMAC();
 		testLongMemoryMoves();
 		testDIV();
+		testROL();
 	}
 
 	void UnitTests::testASL()
@@ -221,6 +222,27 @@ namespace dsp56k
 			execOpcode(0x018050);
 			assert(dsp.reg.a.var == expectedValues[i]);
 		}
+	}
+
+	void UnitTests::testROL()
+	{
+		dsp.sr_set(SR_C);
+		dsp.reg.a.var = 0x12abcdef123456;				// 00010010 10101011 11001101 11101111 00010010 00110100 01010110
+
+		// rol a
+		execOpcode(0x200037);
+
+		assert(dsp.reg.a.var == 0x12579BDF123456);		// 00010010 01010111 10011011 11011111 00010010 00110100 01010110
+		assert(dsp.sr_test(SR_C) == 1);
+
+		dsp.sr_set(SR_C);
+		dsp.reg.a.var = 0x12123456abcdef;				// 00010010 00010010 00110100 01010110 10101011 11001101 11101111
+
+		// rol a
+		execOpcode(0x200037);
+
+		assert(dsp.reg.a.var == 0x122468ADABCDEF);		// 00010010 00100100 01101000 10101101 10101011 11001101 11101111
+		assert(dsp.sr_test(SR_C) == 0);
 	}
 
 	void UnitTests::execOpcode(uint32_t _op0, uint32_t _op1, const bool _reset)

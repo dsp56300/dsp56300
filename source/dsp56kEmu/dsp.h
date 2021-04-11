@@ -860,6 +860,8 @@ namespace dsp56k
 		void	alu_addl			(bool ab);
 		void	alu_addr			(bool ab);
 
+		void	alu_rol				(bool ab);
+
 		void	alu_clr				(bool ab);
 		
 		TWord	alu_bclr			( TWord _bit, TWord _val );
