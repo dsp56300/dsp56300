@@ -2131,10 +2131,12 @@ namespace dsp56k
 	//
 	bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
 	{
-		if(_area == MemArea_P)
+		const auto res = mem.dspWrite( _area, _offset, _value );
+
+//		if(_area == MemArea_P)	does not work for external memory
 			m_opcodeCache[_offset] = ResolveCache;
 
-		return mem.set( _area, _offset, _value );
+		return res;
 	}
 
 	bool DSP::memWritePeriph( EMemArea _area, TWord _offset, TWord _value )

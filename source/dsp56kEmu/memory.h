@@ -91,7 +91,9 @@ namespace dsp56k
 
 		bool				loadOMF				( const std::string& _filename );
 
-		bool				set					( EMemArea _area, TWord _offset, TWord _value );
+		bool				set					( EMemArea _area, TWord _offset, TWord _value )	{ return dspWrite(_area, _offset, _value); }
+
+		bool				dspWrite			( EMemArea& _area, TWord& _offset, TWord _value );
 		TWord				get					( EMemArea _area, TWord _offset ) const;
 		void				get2				( EMemArea _area, TWord _offset, TWord& _wordA, TWord& _wordB);
 

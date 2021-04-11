@@ -43,7 +43,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// set
 	//
-	bool Memory::set( EMemArea _area, TWord _offset, TWord _value )
+	bool Memory::dspWrite( EMemArea& _area, TWord& _offset, TWord _value )
 	{
 		memTranslateAddress(_area, _offset);
 
