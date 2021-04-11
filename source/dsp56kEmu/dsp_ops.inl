@@ -1949,6 +1949,10 @@ namespace dsp56k
 
 			execOp(op);
 		}
+		else
+		{
+			execOp(0);
+		}
 	}
 	inline void DSP::op_Parallel(const TWord op)
 	{
