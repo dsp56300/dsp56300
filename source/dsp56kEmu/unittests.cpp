@@ -23,6 +23,7 @@ namespace dsp56k
 		testLongMemoryMoves();
 		testDIV();
 		testROL();
+		testNOT();
 	}
 
 	void UnitTests::testASL()
@@ -243,6 +244,16 @@ namespace dsp56k
 
 		assert(dsp.reg.a.var == 0x122468ADABCDEF);		// 00010010 00100100 01101000 10101101 10101011 11001101 11101111
 		assert(dsp.sr_test(SR_C) == 0);
+	}
+
+	void UnitTests::testNOT()
+	{
+		dsp.reg.a.var = 0x12555555123456;
+
+		// not a
+		execOpcode(0x200017);
+
+		assert(dsp.reg.a.var == 0x12aaaaaa123456);		
 	}
 
 	void UnitTests::execOpcode(uint32_t _op0, uint32_t _op1, const bool _reset)

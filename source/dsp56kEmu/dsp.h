@@ -882,6 +882,8 @@ namespace dsp56k
 
 		void	alu_neg				(bool ab);
 
+		void	alu_not				(bool ab);
+
 		// -- memory
 
 		bool	memWrite			( EMemArea _area, TWord _offset, TWord _value );

@@ -24,6 +24,7 @@ namespace dsp56k
 		void testLongMemoryMoves();
 		void testDIV();
 		void testROL();
+		void testNOT();
 		
 		void execOpcode(uint32_t _op0, uint32_t _op1 = 0, bool _reset=false);
 

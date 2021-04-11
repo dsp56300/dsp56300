@@ -566,7 +566,7 @@ namespace dsp56k
 			case 2:		alu_addl(D);							return true;
 			case 3:		alu_clr(D);								return true;
 			case 6:		LOG_ERR_NOTIMPLEMENTED("subl");			return true;	// alu_subl
-			case 7:		LOG_ERR_NOTIMPLEMENTED("not");			return true;	// alu_not
+			case 7:		alu_not(D);								return true;
 			}
 			break;
 		case 2:
@@ -2273,7 +2273,7 @@ namespace dsp56k
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
-		TInt64 d64 = d.signextend<TInt64>();
+		auto d64 = d.signextend<TInt64>();
 		d64 = -d64;
 		
 		d.var = d64 & 0x00ffffffffffffff;
@@ -2285,6 +2285,22 @@ namespace dsp56k
 		sr_z_update(d);
 	//	TODO: how to update v? test in sim		sr_v_update(d);
 		sr_l_update_by_v();
+	}
+
+	void DSP::alu_not(const bool ab)
+	{
+		auto& d = ab ? reg.b.var : reg.a.var;
+
+		const auto masked = ~d & 0x00ffffff000000;
+
+		d &= 0xff000000ffffff;
+		d |= masked;
+
+		sr_toggle(SR_N, bitvalue<uint64_t, 47>(d));		// Set if bit 47 of the result is set
+		sr_toggle(SR_Z, masked != 0);					// Set if bits 47–24 of the result are 0
+		sr_clear(SR_V);									// Always cleared
+		sr_s_update();									// Changed according to the standard definition
+		sr_l_update_by_v();								// Changed according to the standard definition
 	}
 
 	// _____________________________________________________________________________
