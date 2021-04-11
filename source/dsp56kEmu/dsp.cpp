@@ -1216,6 +1216,7 @@ namespace dsp56k
 		getASM(op, m_opWordB);
 
 		execOp(op);
+		// TODO: remember function pointer and call directly
 
 		while( reg.lc.var > 1 )
 		{
