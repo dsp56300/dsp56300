@@ -21,6 +21,7 @@ namespace dsp56k
 		testASR();
 		testMAC();
 		testLongMemoryMoves();
+		testDIV();
 	}
 
 	void UnitTests::testASL()
@@ -177,6 +178,49 @@ namespace dsp56k
 		execOpcode(0x4ae000);
 		assert(dsp.reg.a.var == 0x00123456000000);
 		assert(dsp.reg.b.var == 0x00345678000000);
+	}
+
+	void UnitTests::testDIV()
+	{
+		dsp.reg.sr.var &= 0xfe;
+
+		constexpr uint64_t expectedValues[24] =
+		{
+			0xffef590e000000,
+			0xffef790e000000,
+			0xffefb90e000000,
+			0xfff0390e000000,
+			0xfff1390e000000,
+			0xfff3390e000000,
+			0xfff7390e000000,
+			0xffff390e000000,
+			0x000f390e000000,
+			0x000dab2a000001,
+			0x000a8f62000003,
+			0x000457d2000007,
+			0xfff7e8b200000f,
+			0x0000985600001e,
+			0xfff069ba00003d,
+			0xfff19a6600007a,
+			0xfff3fbbe0000f4,
+			0xfff8be6e0001e8,
+			0x000243ce0003d0,
+			0xfff3c0aa0007a1,
+			0xfff84846000f42,
+			0x0001577e001e84,
+			0xfff1e80a003d09,
+			0xfff49706007a12
+		};
+
+		dsp.reg.a.var = 0x00001000000000;
+		dsp.reg.y.var =   0x04444410c6f2;
+
+		for(size_t i=0; i<24; ++i)
+		{
+			// div y0,a
+			execOpcode(0x018050);
+			assert(dsp.reg.a.var == expectedValues[i]);
+		}
 	}
 
 	void UnitTests::execOpcode(uint32_t _op0, uint32_t _op1, const bool _reset)

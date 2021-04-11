@@ -590,25 +590,20 @@ namespace dsp56k
 	}
 	inline void DSP::op_Div(const TWord op)
 	{
-		// TODO: i'm not sure if this works as expected...
-
 		const TWord jj	= getFieldValue<Div,Field_JJ>(op);
 		const auto ab	= getFieldValue<Div,Field_d>(op);
 
-		TReg56& d = ab ? reg.b : reg.a;
+		auto& d = ab ? reg.b : reg.a;
 
-		TReg24 s24 = decode_JJ_read( jj );
+		const TReg24 s24 = decode_JJ_read( jj );
 
-		const TReg56 debugOldD = d;
-		const TReg24 debugOldS = s24;
-
-		bool c = bittest(d,55) != bittest(s24,23);
-
-		bool old47 = bittest(d,47);
-
+		const auto msbOld = bittest(d,55);
+		
+		const bool c = msbOld != bittest(s24,23);
+		
 		d.var <<= 1;
 
-		bool changed47 = (bittest( d, 47 ) != 0) != c;
+		const auto msbNew = bittest(d,55);
 
 		if( sr_test(SR_C) )
 			bittestandset( d.var, 0 );
@@ -620,9 +615,9 @@ namespace dsp56k
 		else
 			d.var = ((d.var - (signextend<TInt64,24>(s24.var) << 24) )&0xffffffffff000000) | (d.var & 0xffffff);
 
-		sr_toggle( SR_C, bittest(d,55) == 0 );
-		sr_toggle( SR_V, changed47 );
-		sr_l_update_by_v();
+		sr_toggle( SR_C, bittest(d,55) == 0 );	// Set if bit 55 of the result is cleared.
+		sr_toggle( SR_V, msbNew != msbOld );	// Set if the MSB of the destination operand is changed as a result of the instruction’s left shift operation.
+		sr_toggle( SR_L, msbNew != msbOld );	// Set if the Overflow bit (V) is set.
 
 		d.var &= 0x00ffffffffffffff;
 
