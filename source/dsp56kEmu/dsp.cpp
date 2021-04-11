@@ -1213,6 +1213,8 @@ namespace dsp56k
 		const auto lcBackup = reg.lc;
 		reg.lc.var = loopCount;
 
+		getASM(op, m_opWordB);
+
 		execOp(op);
 
 		while( reg.lc.var > 1 )
