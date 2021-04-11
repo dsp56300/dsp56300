@@ -2,7 +2,7 @@
 
 #include <sstream>
 #include <string>
-
+#include <iomanip>
 
 namespace Logging
 {
