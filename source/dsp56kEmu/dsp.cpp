@@ -1131,7 +1131,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// exec_do
 	//
-	bool DSP::do_start( TReg24 _loopcount, TWord _addr )
+	bool DSP::do_exec( TReg24 _loopcount, TWord _addr )
 	{
 	//	LOG( "DO BEGIN: " << (int)sc.var << ", loop flag = " << sr_test(SR_LF) );
 
@@ -1154,8 +1154,29 @@ namespace dsp56k
 
 		pushPCSR();
 
+		const auto stackCount = reg.sc.var;
+		
 		sr_set( SR_LF );
 
+		// __________________
+		//
+
+		while(sr_test(SR_LF) && reg.sc.var >= stackCount)
+		{
+			exec();
+
+			if(pcCurrentInstruction != reg.la.var )
+				continue;
+
+			if( reg.lc.var <= 1 )
+			{
+				do_end();
+				break;
+			}
+
+			--reg.lc.var;
+			reg.pc = hiword(reg.ss[reg.sc.toWord()]);
+		}
 		return true;
 	}
 
@@ -1178,30 +1199,6 @@ namespace dsp56k
 
 	//	LOG( "DO END: loop flag = " << sr_test(SR_LF) << " sc=" << (int)sc.var << " lc:" << std::hex << lc.var << " la:" << std::hex << la.var );
 
-		return true;
-	}
-
-	bool DSP::do_iterate(const uint32_t _depth)
-	{
-		if(!sr_test(SR_LF))
-			return false;
-
-		// DO
-		if(reg.pc != reg.la )
-			return false;
-
-		if( reg.lc.var > 1 )
-		{
-			--reg.lc.var;
-			reg.pc = hiword(reg.ss[reg.sc.toWord()]);
-		}
-		else
-		{
-			do_end();
-
-			// nested loop update
-			do_iterate(_depth + 1);
-		}
 		return true;
 	}
 

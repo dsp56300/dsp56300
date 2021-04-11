@@ -201,15 +201,11 @@ namespace dsp56k
 		}
 
 		// -- execution 
-		TWord	fetchPC()
+		TWord fetchPC()
 		{
 			TWord ret;
 			memRead2( MemArea_P, reg.pc.toWord(), ret, m_opWordB );
-
-			// DO
-			if(!do_iterate())
-				++reg.pc.var;
-
+			++reg.pc.var;
 			return ret;
 		}
 
@@ -223,9 +219,8 @@ namespace dsp56k
 		bool	exec_parallel_alu_nonMultiply	(TWord op);
 		bool	exec_parallel_alu_multiply		(TWord op);
 
-		bool	do_start						( TReg24 _loopcount, TWord _addr );
+		bool	do_exec							( TReg24 _loopcount, TWord _addr );
 		bool	do_end							();
-		bool	do_iterate						(uint32_t _depth = 0);
 
 		bool	rep_exec						(TWord loopCount);
 
