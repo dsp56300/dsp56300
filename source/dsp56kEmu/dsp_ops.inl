@@ -1883,6 +1883,9 @@ namespace dsp56k
 	{
 		auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
 		cacheEntry = Nop;
+		
+		--reg.ictr.var;
+		--m_instructions;
 
 		if( op )
 		{
