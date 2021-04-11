@@ -424,7 +424,7 @@ namespace dsp56k
 			if(m_currentOpLen > 1)
 				ss << ' ' << HEX(m_opWordB);
 			else
-				ss << "        ";
+				ss << "       ";
 			ss << " = " << m_asm;
 			const std::string str(ss.str());
 			LOGF(str);
@@ -2305,7 +2305,10 @@ namespace dsp56k
 			const bool c = m_prevRegStates[_reg].val != v;
 			if(c)
 				ss << '{';
-			ss << (_width > 0 ? "$" : "") << std::hex << std::setfill('0') << std::setw(std::abs(_width)) << v;
+			if(_width > 0)
+				ss << '$' << std::hex << std::setfill('0') << std::setw(_width) << v;
+			else
+				ss << std::setfill('0') << std::setw(-_width) << v;
 			if(c)
 				ss << '}';
 			const std::string res(ss.str());
