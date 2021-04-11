@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdlib.h>
 #include "assert.h"
 
 template <typename T, size_t C> class StaticArray

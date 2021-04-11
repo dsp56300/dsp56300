@@ -4,6 +4,10 @@
 #include <limits>
 #include "assert.h"
 
+#ifndef CHAR_BIT
+#define CHAR_BIT 8
+#endif
+
 namespace dsp56k
 {
 	typedef uint8_t				TUInt8;

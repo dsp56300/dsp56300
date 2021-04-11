@@ -4,6 +4,7 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <thread>
 
 #include "semaphore.h"
 

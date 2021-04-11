@@ -29,6 +29,7 @@ namespace dsp56k
 	class Audio
 	{
 	public:
+		Audio() : m_pendingRXInterrupts(0) {}
 		void processAudioInterleaved(float** _inputs, float** _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts)
 		{
 			if (!_sampleFrames)
@@ -85,7 +86,7 @@ namespace dsp56k
 
 		std::array<RingBuffer<uint32_t, 8192, false>, 1> m_audioInputs;
 		std::array<RingBuffer<uint32_t, 8192, false>, 3> m_audioOutputs;
-		std::atomic<uint32_t> m_pendingRXInterrupts = 0;
+		std::atomic<uint32_t> m_pendingRXInterrupts;
 		
 		uint32_t m_frameSyncDSPStatus = FrameSyncChannelLeft;
 		uint32_t m_frameSyncDSPRead = FrameSyncChannelLeft;
