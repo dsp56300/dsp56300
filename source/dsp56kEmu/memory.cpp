@@ -37,7 +37,7 @@ namespace dsp56k
 		m_mem[MemArea_Y] = y;
 		m_mem[MemArea_P] = p;
 
-//		fillWithInitPattern();
+		fillWithInitPattern();
 	}
 
 	// _____________________________________________________________________________
