@@ -77,8 +77,6 @@ namespace dsp56k
 
 	TWord Peripherals56362::read(TWord _addr)
 	{
-		LOG( "Periph read @ " << std::hex << _addr );
-
 		switch (_addr)
 		{
 		case HI08::HSR:
@@ -89,14 +87,22 @@ namespace dsp56k
 			return m_esai.readStatusRegister();
 		case Esai::M_TCR:
 			return m_esai.readTransmitControlRegister();
+		case 0xffffff:
+		case 0xfffffe:
+			return m_mem[_addr - XIO_Reserved_High_First];
+		case 0xFFFF93:			// SHI__HTX
+		case 0xFFFF94:			// SHI__HRX
+			assert(false);
+			break;
 		}
+
+		LOG( "Periph read @ " << std::hex << _addr );
+
 		return m_mem[_addr - XIO_Reserved_High_First];
 	}
 
 	void Peripherals56362::write(TWord _addr, TWord _val)
 	{
-		LOG( "Periph write @ " << std::hex << _addr );
-
 		switch (_addr)
 		{
 		case HI08::HSR:
@@ -105,6 +111,10 @@ namespace dsp56k
 		case Esai::M_TCR:
 			m_esai.writeTransmitControlRegister(_val);
 			return;
+		case 0xFFFF93:			// SHI__HTX
+		case 0xFFFF94:			// SHI__HRX
+			assert(false);
+			break;
 /*
 		case  Esai::M_TCCR:
 			m_esai.writeSR(_val);
@@ -121,6 +131,7 @@ namespace dsp56k
 		default:
 */
 		}
+		LOG( "Periph write @ " << std::hex << _addr );
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
 	}
 
