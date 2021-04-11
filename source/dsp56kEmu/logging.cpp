@@ -1,5 +1,7 @@
 #include "logging.h"
 
+#include <fstream>
+
 #ifdef _WIN32
 
 #define WIN32_LEAN_AND_MEAN
@@ -7,7 +9,7 @@
 #define NOMINMAX
 #include <windows.h>
 
-#include <time.h>
+#include <ctime>
 
 namespace Logging
 {
@@ -34,15 +36,10 @@ namespace Logging
 
 	void g_logfWin32( const std::string& _s )
 	{
-		FILE* hFile = 0;
-		fopen_s( &hFile, g_outfilename.c_str(), "a" );
+		std::ofstream o(g_outfilename, std::ios::app);
 
-		if( hFile )
-		{
-			fputs(_s.c_str(),hFile);
-			fputc('\n',hFile);
-			fclose( hFile );
-		}
+		if(o.is_open())
+			o << _s << std::endl;
 	}
 }
 #endif
