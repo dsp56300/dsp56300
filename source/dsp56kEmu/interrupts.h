@@ -2,7 +2,7 @@
 
 namespace dsp56k
 {
-	enum InterruptVectorAddress	// Register VBA + InterruptVectorAddress = effective address
+	enum InterruptVectorAddress		// Register VBA + InterruptVectorAddress = effective address
 	{
 		// Level 3 (non-maskable)
 		Vba_HardwareRESET							= 0x00,			// Hardware RESET							
@@ -26,7 +26,10 @@ namespace dsp56k
 		Vba_DMAchannel3								= 0x1E,			// DMA channel 3								
 		Vba_DMAchannel4								= 0x20,			// DMA channel 4								
 		Vba_DMAchannel5								= 0x22,			// DMA channel 5							
+	};
 
+	enum InterruptVectorAddress56303
+	{
 		Vba_TIMER0compare							= 0x24,			// TIMER 0 compare								
 		Vba_TIMER0overflow							= 0x26,			// TIMER 0 overflow								
 		Vba_TIMER1compare							= 0x28,			// TIMER 1 compare								
@@ -67,5 +70,45 @@ namespace dsp56k
 		Vba_Reserved66								= 0x66,			// Reserved
 		// ....
 		Vba_ReservedFE								= 0xFE,			// Reserved
+	};
+	
+	enum InterruptVectorAddress56362
+	{
+		Vba_Reserved24									= 0x24,		// Reserved
+		Vba_Reserved26									= 0x26,		// Reserved
+		Vba_DAX_Underrun_Error							= 0x28,		// DAX Underrun Error
+		Vba_DAX_Block_Transferred						= 0x2A,		// DAX Block Transferred
+		Vba_Reserved2C									= 0x2C,		// Reserved
+		Vba_DAX_Audio_Data_Empty						= 0x2E,		// DAX Audio Data Empty
+		Vba_ESAI_Receive_Data							= 0x30,		// ESAI Receive Data
+		Vba_ESAI_Receive_Even_Data						= 0x32,		// ESAI Receive Even Data
+		Vba_ESAI_Receive_Data_With_Exception_Status		= 0x34,		// ESAI Receive Data With Exception Status
+		Vba_ESAI_Receive_Last_Slot						= 0x36,		// ESAI Receive Last Slot
+		Vba_ESAI_Transmit_Data							= 0x38,		// ESAI Transmit Data
+		Vba_ESAI_Transmit_Even_Data						= 0x3A,		// ESAI Transmit Even Data
+		Vba_ESAI_Transmit_Data_with_Exception_Status	= 0x3C,		// ESAI Transmit Data with Exception Status
+		Vba_ESAI_Transmit_Last_Slot						= 0x3E,		// ESAI Transmit Last Slot
+		Vba_SHI_Transmit_Data							= 0x40,		// SHI Transmit Data
+		Vba_SHI_Transmit_Underrun_Error					= 0x42,		// SHI Transmit Underrun Error
+		Vba_SHI_Receive_FIFO_Not_Empty					= 0x44,		// SHI Receive FIFO Not Empty
+		Vba_Reserved									= 0x46,		// Reserved
+		Vba_SHI_Receive_FIFO_Full						= 0x48,		// SHI Receive FIFO Full
+		Vba_SHI_Receive_Overrun_Error					= 0x4A,		// SHI Receive Overrun Error
+		Vba_SHI_Bus_Error								= 0x4C,		// SHI Bus Error
+//		Vba_Reserved4E									= 0x4E,		// Reserved
+		Vba_Reserved50									= 0x50,		// Reserved
+		Vba_Reserved52									= 0x52,		// Reserved
+		Vba_TIMER0_Compare								= 0x54,		// TIMER0 Compare
+		Vba_TIMER0_Overflow								= 0x56,		// TIMER0 Overflow
+		Vba_TIMER1_Compare								= 0x58,		// TIMER1 Compare
+		Vba_TIMER1_Overflow								= 0x5A,		// TIMER1 Overflow
+		Vba_TIMER2_Compare								= 0x5C,		// TIMER2 Compare
+		Vba_TIMER2_Overflow								= 0x5E,		// TIMER2 Overflow
+		Vba_Host_Receive_Data_Full						= 0x60,		// Host Receive Data Full
+		Vba_Host_Transmit_Data_Empty					= 0x62,		// Host Transmit Data Empty
+		Vba_Host_Command								= 0x64,		// Host Command (Default)
+		Vba_Reserved_066								= 0x66,		// Reserved
+		// ...
+//		Vba_ReservedFE									= 0xFE,		// Reserved
 	};
 }
