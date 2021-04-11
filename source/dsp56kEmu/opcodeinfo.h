@@ -211,13 +211,13 @@ namespace dsp56k
 		OpcodeInfo(Jscc_xxx,		"00001111CCCCaaaaaaaaaaaa",	"JScc xxx"),
 		OpcodeInfo(Jscc_ea,			"0000101111MMMRRR1010CCCC",	"JScc ea", EffectiveAddress),
 
-		OpcodeInfo(Jsclr_ea,		"0000101101MMMRRR1S0bbbbb",	"JSCLR #n,[X or Y]:ea,xxxx", EffectiveAddress),
+		OpcodeInfo(Jsclr_ea,		"0000101101MMMRRR1S0bbbbb",	"JSCLR #n,[X or Y]:ea,xxxx"),
 		OpcodeInfo(Jsclr_aa,		"0000101100aaaaaa1S0bbbbb",	"JSCLR #n,[X or Y]:aa,xxxx", EffectiveAddress),
 		OpcodeInfo(Jsclr_pp,		"0000101110pppppp1S0bbbbb",	"JSCLR #n,[X or Y]:pp,xxxx", EffectiveAddress),
 		OpcodeInfo(Jsclr_qq,		"0000000111qqqqqq1S0bbbbb",	"JSCLR #n,[X or Y]:qq,xxxx", EffectiveAddress),
 		OpcodeInfo(Jsclr_S,			"0000101111DDDDDD000bbbbb",	"JSCLR #n,S,xxxx", EffectiveAddress),
 
-		OpcodeInfo(Jset_ea,			"0000101001MMMRRR1S1bbbbb",	"JSET #n,[X or Y]:ea,xxxx", EffectiveAddress),
+		OpcodeInfo(Jset_ea,			"0000101001MMMRRR1S1bbbbb",	"JSET #n,[X or Y]:ea,xxxx"),
 		OpcodeInfo(Jset_aa,			"0000101000aaaaaa1S1bbbbb",	"JSET #n,[X or Y]:aa,xxxx", EffectiveAddress),
 		OpcodeInfo(Jset_pp,			"0000101010pppppp1S1bbbbb",	"JSET #n,[X or Y]:pp,xxxx", EffectiveAddress),
 		OpcodeInfo(Jset_qq,			"0000000110qqqqqq1S1bbbbb",	"JSET #n,[X or Y]:qq,xxxx", EffectiveAddress),
@@ -226,7 +226,7 @@ namespace dsp56k
 		OpcodeInfo(Jsr_ea,			"0000101111MMMRRR10000000",	"JSR ea", EffectiveAddress),
 		OpcodeInfo(Jsr_xxx,			"000011010000aaaaaaaaaaaa",	"JSR xxx"),
 
-		OpcodeInfo(Jsset_ea,		"0000101101MMMRRR1S1bbbbb",	"JSSET #n,[X or Y]:ea,xxxx", EffectiveAddress),
+		OpcodeInfo(Jsset_ea,		"0000101101MMMRRR1S1bbbbb",	"JSSET #n,[X or Y]:ea,xxxx"),
 		OpcodeInfo(Jsset_aa,		"0000101100aaaaaa1S1bbbbb",	"JSSET #n,[X or Y]:aa,xxxx", EffectiveAddress),
 		OpcodeInfo(Jsset_pp,		"0000101110pppppp1S1bbbbb",	"JSSET #n,[X or Y]:pp,xxxx", EffectiveAddress),
 		OpcodeInfo(Jsset_qq,		"0000000111qqqqqq1S1bbbbb",	"JSSET #n,[X or Y]:qq,xxxx", EffectiveAddress),
