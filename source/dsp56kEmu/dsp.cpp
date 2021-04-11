@@ -22,8 +22,6 @@
 
 //
 
-std::string g_trace;
-
 namespace dsp56k
 {
 	constexpr bool g_dumpPC = false;
