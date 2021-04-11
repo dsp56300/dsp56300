@@ -55,6 +55,12 @@
     <ClCompile Include="opcodes.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="esai.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="audio.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="agu.h">
@@ -115,6 +121,12 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="semaphore.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="esai.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="audio.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

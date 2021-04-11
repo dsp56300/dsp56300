@@ -65,6 +65,7 @@
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)$(ProjectName)$(Configuration).lib</OutputFile>
+      <AdditionalDependencies>../dsp56k/CM56300.LIB</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -80,14 +81,17 @@
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)$(ProjectName)$(Configuration).lib</OutputFile>
+      <AdditionalDependencies>../dsp56k/CM56300.LIB</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="agu.cpp" />
     <ClCompile Include="assert.cpp" />
+    <ClCompile Include="audio.cpp" />
     <ClCompile Include="disasm.cpp" />
     <ClCompile Include="dsp.cpp" />
     <ClCompile Include="error.cpp" />
+    <ClCompile Include="esai.cpp" />
     <ClCompile Include="essi.cpp" />
     <ClCompile Include="instructioncache.cpp" />
     <ClCompile Include="logging.cpp" />
@@ -103,10 +107,12 @@
   <ItemGroup>
     <ClInclude Include="agu.h" />
     <ClInclude Include="assert.h" />
+    <ClInclude Include="audio.h" />
     <ClInclude Include="buildconfig.h" />
     <ClInclude Include="disasm.h" />
     <ClInclude Include="dsp.h" />
     <ClInclude Include="error.h" />
+    <ClInclude Include="esai.h" />
     <ClInclude Include="essi.h" />
     <ClInclude Include="instructioncache.h" />
     <ClInclude Include="logging.h" />
