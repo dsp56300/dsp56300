@@ -410,51 +410,16 @@ namespace dsp56k
 
 	void DSP::execOp(const TWord op)
 	{
-		auto opCache = m_opcodeCache[pcCurrentInstruction];
+		const TWord currentOp = pcCurrentInstruction;
+		const auto opCache = m_opcodeCache[currentOp];
 
 		exec_jump(static_cast<Instruction>(opCache & 0xff), op);
 
 		++reg.ictr.var;
 		++m_instructions;
-		
-		if(g_dumpPC && m_trace && static_cast<Instruction>(opCache & 0xff) != ResolveCache)
-		{
-			std::stringstream ss;
-			ss << "p:$" << HEX(pcCurrentInstruction) << ' ' << HEX(op);
-			if(m_currentOpLen > 1)
-				ss << ' ' << HEX(m_opWordB);
-			else
-				ss << "       ";
-			ss << " = " << m_asm;
-			const std::string str(ss.str());
-			LOGF(str);
 
-			dumpRegisters();
-
-			for( size_t i=0; i<Reg_COUNT; ++i )
-			{
-				int64_t regVal = 0;
-				const bool r = readRegToInt( (EReg)i, regVal );
-
-				if( !r )
-					continue;
-	//			assert( r && "failed to read register" );
-
-				if( regVal != m_prevRegStates[i].val )
-				{
-					SRegChange regChange;
-					regChange.reg = (EReg)i;
-					regChange.valOld.var = (int)m_prevRegStates[i].val;
-					regChange.valNew.var = (int)regVal;
-					regChange.pc = pcCurrentInstruction;
-					regChange.ictr = reg.ictr.var;
-
-					m_regChanges.push_back( regChange );
-
-					m_prevRegStates[i].val = regVal;
-				}
-			}
-		}
+		if(g_dumpPC && (opCache & 0xff) != ResolveCache && pcCurrentInstruction == currentOp)
+			traceOp();
 	}
 
 	void DSP::exec_jump(const Instruction inst, const TWord op)
@@ -1158,6 +1123,8 @@ namespace dsp56k
 		
 		sr_set( SR_LF );
 
+		traceOp();
+
 		// __________________
 		//
 
@@ -1204,6 +1171,8 @@ namespace dsp56k
 
 	bool DSP::rep_exec(const TWord loopCount)
 	{
+		traceOp();
+
 		pcCurrentInstruction = reg.pc.var;
 		const auto op = fetchPC();
 
@@ -1224,6 +1193,50 @@ namespace dsp56k
 		reg.lc = lcBackup;
 
 		return true;
+	}
+
+	void DSP::traceOp()
+	{
+		if(!g_dumpPC || !m_trace)
+			return;
+
+		const auto op = memRead(MemArea_P, pcCurrentInstruction);
+
+		std::stringstream ss;
+		ss << "p:$" << HEX(pcCurrentInstruction) << ' ' << HEX(op);
+		if(m_currentOpLen > 1)
+			ss << ' ' << HEX(m_opWordB);
+		else
+			ss << "       ";
+		ss << " = " << m_asm;
+		const std::string str(ss.str());
+		LOGF(str);
+
+		dumpRegisters();
+
+		for( size_t i=0; i<Reg_COUNT; ++i )
+		{
+			int64_t regVal = 0;
+			const bool r = readRegToInt( (EReg)i, regVal );
+
+			if( !r )
+				continue;
+			//			assert( r && "failed to read register" );
+
+			if( regVal != m_prevRegStates[i].val )
+			{
+				SRegChange regChange;
+				regChange.reg = (EReg)i;
+				regChange.valOld.var = (int)m_prevRegStates[i].val;
+				regChange.valNew.var = (int)regVal;
+				regChange.pc = pcCurrentInstruction;
+				regChange.ictr = reg.ictr.var;
+
+				m_regChanges.push_back( regChange );
+
+				m_prevRegStates[i].val = regVal;
+			}
+		}
 	}
 
 	void DSP::decSP()

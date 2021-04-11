@@ -224,6 +224,8 @@ namespace dsp56k
 
 		bool	rep_exec						(TWord loopCount);
 
+		void	traceOp							();
+
 		// -- execution helpers
 
 		void exec_move_ddddd_MMMRRR			( TWord ddddd, TWord mmmrrr, bool write, EMemArea memArea );
@@ -836,12 +838,12 @@ namespace dsp56k
 		TReg24	ssh()				{ TReg24 res = hiword(reg.ss[reg.sc.toWord()]); decSP(); return res; }
 		TReg24	ssl() const			{ return loword(reg.ss[reg.sc.toWord()]); }
 
-		void	ssl(TReg24 _val)	{ loword(reg.ss[reg.sc.toWord()],_val); }
-		void	ssh(TReg24 _val)	{ incSP(); hiword(reg.ss[reg.sc.toWord()],_val); }
+		void	ssl(const TReg24 _val)	{ loword(reg.ss[reg.sc.toWord()],_val); }
+		void	ssh(const TReg24 _val)	{ incSP(); hiword(reg.ss[reg.sc.toWord()],_val); }
 
 		void	pushPCSR()			{ ssh(reg.pc); ssl(reg.sr); }
-		void	popPCSR()			{ reg.sr = ssl(); reg.pc = ssh(); }
-		void	popPC()				{ reg.pc = ssh(); }
+		void	popPCSR()			{ reg.sr = ssl(); setPC(ssh()); }
+		void	popPC()				{ setPC(ssh()); }
 
 		// - ALU
 		void	alu_and				( bool ab, TWord   _val );
