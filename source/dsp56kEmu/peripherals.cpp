@@ -92,8 +92,14 @@ namespace dsp56k
 			return m_mem[_addr - XIO_Reserved_High_First];
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
-			assert(false);
-			break;
+			LOG("Read from " << HEX(_addr));
+			return m_mem[_addr - XIO_Reserved_High_First];
+		case Esai::M_RX0:
+		case Esai::M_RX1:
+		case Esai::M_RX2:
+		case Esai::M_RX3:
+			LOG("EASI READ");
+			return 0;
 		}
 
 		LOG( "Periph read @ " << std::hex << _addr );
@@ -113,23 +119,20 @@ namespace dsp56k
 			return;
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
-			assert(false);
-			break;
-/*
+			LOG("Write to " << HEX(_addr) << ": " << HEX(_val));
+			m_mem[_addr - XIO_Reserved_High_First] = _val;
+			return;
+
 		case  Esai::M_TCCR:
-			m_esai.writeSR(_val);
+			m_esai.writeTransmitControlRegister(_val);
 			return;
-		case  Essi::ESSI0_TX0:
-			m_esai.writeTX(0, _val);
-			return;
-		case  Essi::ESSI0_TX1:
-			m_essi.writeTX(1, _val);
-			return;
-		case  Essi::ESSI0_TX2:
-			m_esai.writeTX(2, _val);
+		case  Esai::M_TX0:
+		case  Esai::M_TX1:
+		case  Esai::M_TX2:
+			LOG("ESAI WRITE");
 			return;
 		default:
-*/
+			break;
 		}
 		LOG( "Periph write @ " << std::hex << _addr );
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
