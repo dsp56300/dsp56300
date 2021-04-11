@@ -163,9 +163,29 @@ namespace dsp56k
 		sr_s_update();
 		sr_l_update_by_v();
 	}
-	inline void DSP::op_Bclr_ea(const TWord op)
+	inline void DSP::op_Bclr_ea(const TWord op)	// 0000101001MMMRRR0S0bbbbb
 	{
-		LOG_ERR_NOTIMPLEMENTED("BCLR");		
+		const TWord mmmrrr = getFieldValue<Bclr_ea,Field_MMM, Field_RRR>(op);
+		const EMemArea S = getFieldValueMemArea<Bclr_ea>(op);
+
+		const TWord bbbbb = getFieldValue<Bclr_qq,Field_bbbbb>(op);
+
+		const TWord ea = decode_MMMRRR_read(mmmrrr);
+
+		
+		if(ea >= XIO_Reserved_High_First)
+		{
+			auto mem = memReadPeriph( S, ea );
+			mem = alu_bclr( bbbbb, mem );
+			memWritePeriph( S, ea, mem);
+		}
+		else
+		{
+			auto mem = memRead( S, ea );
+			mem = alu_bclr( bbbbb, mem );
+			memWrite( S, ea, mem);
+		}
+
 	}
 	inline void DSP::op_Bclr_aa(const TWord op)
 	{
