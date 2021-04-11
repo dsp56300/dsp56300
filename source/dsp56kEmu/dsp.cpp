@@ -1165,7 +1165,7 @@ namespace dsp56k
 		{
 			exec();
 
-			if(pcCurrentInstruction != reg.la.var )
+			if(reg.pc.var != (reg.la.var+1))
 				continue;
 
 			if( reg.lc.var <= 1 )
@@ -1175,7 +1175,7 @@ namespace dsp56k
 			}
 
 			--reg.lc.var;
-			reg.pc = hiword(reg.ss[reg.sc.toWord()]);
+			setPC(hiword(reg.ss[reg.sc.toWord()]));
 		}
 		return true;
 	}
