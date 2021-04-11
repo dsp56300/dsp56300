@@ -1,6 +1,9 @@
 #include "logging.h"
 
 #include <fstream>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 #ifdef _WIN32
 
@@ -32,14 +35,47 @@ namespace Logging
 		return std::string(strTime) + ".log";
 	}
 
-	static std::string g_outfilename = buildOutfilename();
+	static const std::string g_outfilename = buildOutfilename();
 
+	std::unique_ptr<std::thread> g_logger;
+	std::vector<std::string> g_pendingLogs;
+	std::mutex g_logMutex;
+	using Guard = std::lock_guard<std::mutex>;
+	
 	void g_logfWin32( const std::string& _s )
 	{
-		std::ofstream o(g_outfilename, std::ios::app);
+		{
+			Guard g(g_logMutex);
+			g_pendingLogs.push_back(_s);
+		}
 
-		if(o.is_open())
-			o << _s << std::endl;
+		if(!g_logger)
+		{
+			g_logger.reset(new std::thread([]()
+			{
+				std::ofstream o(g_outfilename, std::ios::app);
+
+				if(o.is_open())
+				{
+					while(true)
+					{
+						std::vector<std::string> pendingLogs;
+						{							
+							Guard g(g_logMutex);
+							std::swap(g_pendingLogs, pendingLogs);
+						}
+
+						if(pendingLogs.empty())
+							std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+						for(auto log : pendingLogs)
+							o << log << std::endl;
+
+						o.flush();
+					}
+				}
+			}));
+		}
 	}
 }
 #endif
