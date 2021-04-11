@@ -180,7 +180,7 @@ namespace dsp56k
 		bool			save							( FILE* _file ) const;
 		bool			load							( FILE* _file );
 
-		void			injectInterrupt					(InterruptVectorAddress _interruptVectorAddress);
+		void			injectInterrupt					(uint32_t _interruptVectorAddress);
 
 		void			clearOpcodeCache				();
 

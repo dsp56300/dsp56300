@@ -2341,7 +2341,7 @@ namespace dsp56k
 		return true;
 	}
 
-	void DSP::injectInterrupt(InterruptVectorAddress _interruptVectorAddress)
+	void DSP::injectInterrupt(uint32_t _interruptVectorAddress)
 	{
 		m_pendingInterrupts.push_back(_interruptVectorAddress);
 	}
