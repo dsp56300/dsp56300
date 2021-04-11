@@ -46,43 +46,49 @@ namespace dsp56k
 	// SR - Status register
 
 	// CCR - bit 0-7
-	#define			SRB_C			0			// carry
-	#define 		SRB_V			1			// overflow
-	#define 		SRB_Z			2			// zero
-	#define 		SRB_N			3			// negative
-	#define 		SRB_U			4			// unnormalized
-	#define 		SRB_E			5			// extension
-	#define 		SRB_L			6			// limit
-	#define 		SRB_S			7			// scaling
+	enum CCRBit
+	{
+		SRB_C,					// carry
+		SRB_V,					// overflow
+		SRB_Z,					// zero
+		SRB_N,					// negative
+		SRB_U,					// unnormalized
+		SRB_E,					// extension
+		SRB_L,					// limit
+		SRB_S,					// scaling		
+	};
 
-	#define			SR_C			(1<<SRB_C)	// carry
-	#define 		SR_V			(1<<SRB_V)	// overflow
-	#define 		SR_Z			(1<<SRB_Z)	// zero
-	#define 		SR_N			(1<<SRB_N)	// negative
-	#define 		SR_U			(1<<SRB_U)	// unnormalized
-	#define 		SR_E			(1<<SRB_E)	// extension
-	#define 		SR_L			(1<<SRB_L)	// limit
-	#define 		SR_S			(1<<SRB_S)	// scaling
+	enum CCRMask
+	{
+		SR_C = (1<<SRB_C),		// carry
+		SR_V = (1<<SRB_V),		// overflow
+		SR_Z = (1<<SRB_Z),		// zero
+		SR_N = (1<<SRB_N),		// negative
+		SR_U = (1<<SRB_U),		// unnormalized
+		SR_E = (1<<SRB_E),		// extension
+		SR_L = (1<<SRB_L),		// limit
+		SR_S = (1<<SRB_S),		// scaling
 
 	// bit 8-15
-	#define 		SR_I0			0x000100	// interrupt mask bit 0
-	#define 		SR_I1			0x000200	// interrupt mask bit 1
-	#define 		SR_S0			0x000400	// scaling bit 0
-	#define 		SR_S1			0x000800	// scaling bit 1
-	#define 		__SR_12			0x001000	// not used
-	#define 		SR_SC			0x002000	// sixteen-bit compatibility mode
-	#define 		SR_DM			0x004000	// double-precision multiply mode
-	#define 		SR_LF			0x008000	// DO loop flag
+		SR_I0	= 0x000100,	// interrupt mask bit 0
+		SR_I1	= 0x000200,	// interrupt mask bit 1
+		SR_S0	= 0x000400,	// scaling bit 0
+		SR_S1	= 0x000800,	// scaling bit 1
+		__SR_12	= 0x001000,	// not used
+		SR_SC	= 0x002000,	// sixteen-bit compatibility mode
+		SR_DM	= 0x004000,	// double-precision multiply mode
+		SR_LF	= 0x008000,	// DO loop flag
 
 	// bits 16-23
-	#define 		SR_FV			0x010000	// DO forever
-	#define 		SR_SA			0x020000	// sixteen-bit arithmetic mode
-	#define 		__SR_18			0x040000	// not used
-	#define 		SR_CE			0x080000	// cache enable
-	#define 		SR_SM			0x100000	// arithmetic saturation mode
-	#define 		SR_RM			0x200000	// rounding mode
-	#define 		SR_CP0			0x400000	// core priority bit 0
-	#define 		SR_CP1			0x800000	// core priority bit 1
+		SR_FV	= 0x010000,	// DO forever
+		SR_SA	= 0x020000,	// sixteen-bit arithmetic mode
+		__SR_18	= 0x040000,	// not used
+		SR_CE	= 0x080000,	// cache enable
+		SR_SM	= 0x100000,	// arithmetic saturation mode
+		SR_RM	= 0x200000,	// rounding mode
+		SR_CP0	= 0x400000,	// core priority bit 0
+		SR_CP1	= 0x800000,	// core priority bit 1
+	};
 
 	// OMR - Operating Mode Register
 	#define			OMR_MA			0x000001	// Chip Operating Mode

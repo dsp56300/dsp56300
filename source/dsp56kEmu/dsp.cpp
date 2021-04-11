@@ -320,8 +320,8 @@ namespace dsp56k
 
 		reg.sz.var = 0xbadbad; // The SZ register is not initialized during hardware reset, and must be set, using a MOVEC instruction, prior to enabling the stack extension.
 
-		const TWord srClear	= SR_RM | SR_SM | SR_CE | SR_SA | SR_FV | SR_LF | SR_DM | SR_SC | SR_S0 | SR_S1 | 0xf;
-		const TWord srSet		= SR_CP0 | SR_CP1 | SR_I0 | SR_I1;
+		const CCRMask srClear	= static_cast<CCRMask>(SR_RM | SR_SM | SR_CE | SR_SA | SR_FV | SR_LF | SR_DM | SR_SC | SR_S0 | SR_S1 | 0xf);
+		const CCRMask srSet		= static_cast<CCRMask>(SR_CP0 | SR_CP1 | SR_I0 | SR_I1);
 
 		sr_clear( srClear );
 		sr_set	( srSet );
@@ -1552,8 +1552,8 @@ namespace dsp56k
 		auto& dst = ab ? reg.b : reg.a;
 		dst.var = 0;
 
-		sr_clear( SR_E | SR_N | SR_V );
-		sr_set( SR_U | SR_Z );
+		sr_clear( static_cast<CCRMask>(SR_E | SR_N | SR_V) );
+		sr_set( static_cast<CCRMask>(SR_U | SR_Z) );
 		// TODO: SR_L and SR_S are changed according to standard definition, but that should mean that no update is required?!
 	}
 

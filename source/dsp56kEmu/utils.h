@@ -6,6 +6,11 @@ namespace dsp56k
 {
 	// TODO: optimize for x86 win32, use intrin.h that has those functions in it
 
+	template<typename T, uint32_t B> int bitvalue( const T& _val)
+	{
+		return (_val & (T(1)<<B)) >> B;
+	}
+
 	template<typename T> int bittest( const T& _val, unsigned int _bitNumber )
 	{
 		return (_val & (T(1)<<_bitNumber)) != 0;

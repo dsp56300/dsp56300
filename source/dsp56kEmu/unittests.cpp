@@ -148,7 +148,7 @@ namespace dsp56k
 		execOpcode(0x20004d);
 
 		assert(dsp.sr_test(SR_Z));
-		assert(!dsp.sr_test(SR_N | SR_E | SR_V | SR_C));
+		assert(!dsp.sr_test(static_cast<CCRMask>(SR_N | SR_E | SR_V | SR_C)));
 	}
 
 	void UnitTests::testMAC()

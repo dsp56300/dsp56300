@@ -578,11 +578,11 @@ namespace dsp56k
 
 		// -- status register management
 
-		void 	sr_set					( TWord _bits )						{ reg.sr.var |= _bits;	}
-		void 	sr_clear				( TWord _bits )						{ reg.sr.var &= ~_bits; }
-		int 	sr_test					( TWord _bits ) const				{ return (reg.sr.var & _bits); }
-		int 	sr_val					( TWord _bitNum ) const				{ return (reg.sr.var >> _bitNum) & 0x01; }
-		void 	sr_toggle				( TWord _bits, bool _set )			{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
+		void 	sr_set					( CCRMask _bits )					{ reg.sr.var |= _bits;	}
+		void 	sr_clear				( CCRMask _bits )					{ reg.sr.var &= ~_bits; }
+		int 	sr_test					( CCRMask _bits ) const				{ return (reg.sr.var & _bits); }
+		int 	sr_val					( CCRBit _bitNum ) const			{ return (reg.sr.var >> _bitNum) & 0x01; }
+		void 	sr_toggle				( CCRMask _bits, bool _set )		{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
 
 		void	sr_s_update				()
 		{
