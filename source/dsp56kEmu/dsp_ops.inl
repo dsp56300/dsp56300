@@ -202,7 +202,7 @@ namespace dsp56k
 
 		const EMemArea S = getFieldValueMemArea<Bclr_qq>(op);
 
-		const TWord res = alu_bclr( bit, memRead( S, ea ) );
+		const TWord res = alu_bclr( bit, memReadPeriphFFFF80( S, ea ) );
 
 		memWritePeriphFFFF80( S, ea, res );			
 	}
