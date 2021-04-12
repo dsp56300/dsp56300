@@ -85,10 +85,20 @@ namespace dsp56k
 			return m_hi08.readStatusRegister();
 		case HI08::HRX:
 			return m_hi08.read();
+
+		case Esai::M_RCR:
+			return m_esai.readReceiveControlRegister();
 		case Esai::M_SAISR:
 			return m_esai.readStatusRegister();
 		case Esai::M_TCR:
 			return m_esai.readTransmitControlRegister();
+		case Esai::M_RX0:
+		case Esai::M_RX1:
+		case Esai::M_RX2:
+		case Esai::M_RX3:
+			LOG("ESAI READ");
+			return 0;
+
 		case 0xffffff:
 		case 0xfffffe:
 			return m_mem[_addr - XIO_Reserved_High_First];
@@ -96,12 +106,6 @@ namespace dsp56k
 		case 0xFFFF94:			// SHI__HRX
 			LOG("Read from " << HEX(_addr));
 			return 0;	//m_mem[_addr - XIO_Reserved_High_First];	// There is nothing connected.
-		case Esai::M_RX0:
-		case Esai::M_RX1:
-		case Esai::M_RX2:
-		case Esai::M_RX3:
-			LOG("EASI READ");
-			return 0;
 		}
 
 		LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  m_mem[_addr - XIO_Reserved_High_First] << ")");
@@ -116,10 +120,6 @@ namespace dsp56k
 		case HI08::HSR:
 			m_hi08.writeStatusRegister(_val);
 			break;
-		case Esai::M_TCR:
-			m_esai.writeTransmitControlRegister(_val);
-			return;
-				
 				
 		case 0xFFFF86:	// TLR2
 		case 0xffff87:	// TCSR2
@@ -137,18 +137,32 @@ namespace dsp56k
 		case 0xFFFF8E:	// TLR0
 			LOG("Timer register " << HEX(_addr) << ": " << HEX(_val));
 			break;
+
+			
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
 			LOG("Write to " << HEX(_addr) << ": " << HEX(_val));
 //			m_mem[_addr - XIO_Reserved_High_First] = _val;	// Do not write!
 			return;
 
-		case  Esai::M_TCCR:
+		case Esai::M_RCR:
+			m_esai.writeReceiveControlRegister(_val);
+			return;
+		case Esai::M_TCR:
 			m_esai.writeTransmitControlRegister(_val);
 			return;
-		case  Esai::M_TX0:
-		case  Esai::M_TX1:
-		case  Esai::M_TX2:
+		case Esai::M_TCCR:
+			m_esai.writeTransmitControlRegister(_val);
+			return;
+		case Esai::M_SAICR:
+			m_esai.writeCommonControlRegister(_val);
+			return;
+		case Esai::M_RCCR:
+			m_esai.writeReceiveClockControlRegister(_val);
+			return;
+		case Esai::M_TX0:
+		case Esai::M_TX1:
+		case Esai::M_TX2:
 			LOG("ESAI WRITE");
 			return;
 		default:

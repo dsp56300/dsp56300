@@ -270,6 +270,16 @@ namespace dsp56k
 		void exec()
 		{
 		}
+		
+		TWord readReceiveControlRegister()
+		{
+			return m_rcr;
+		}
+		
+		void writeReceiveControlRegister(TWord _val)
+		{
+			m_rcr = _val;
+		}
 
 		TWord readTransmitControlRegister()
 		{
@@ -280,11 +290,21 @@ namespace dsp56k
 		{
 			m_tcr = _val;
 		}
-
+		
+		void writeCommonControlRegister(TWord _val)
+		{
+			
+		}
+		
+		void writeReceiveClockControlRegister(TWord _val)
+		{
+			
+		}
 	private:
 		IPeripherals& m_periph;
 		TWord m_sr = 0;				// status register
 		TWord m_tcr = 0;			// transmit control register
+		TWord m_rcr = 0;
 
 		TWord m_transmitFrameSync;
 	};
