@@ -26,16 +26,16 @@ namespace dsp56k
 			for(size_t i=0; i<_count; ++i)
 			{
 				m_data.waitNotFull();
-				m_data.push_back(_data[i] & 0x00ffffff);
+				m_data.push_back(_data[i] & 0x01ffffff);
 			}
 		}
 		
 		TWord read()
 		{
 			if(m_data.empty())
-				return 0;		// TODO: is there an interrupt if receive is empty?
+				return 0;
 
-			return m_data.pop_front();
+			return m_data.pop_front() & 0xFFFFFF;
 		}
 
 		TWord  readStatusRegister()
