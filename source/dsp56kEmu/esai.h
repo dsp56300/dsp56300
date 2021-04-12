@@ -276,5 +276,6 @@ namespace dsp56k
 
 		TWord m_transmitFrameSync;
 		uint32_t m_cyclesSinceWrite = 0;
+		uint32_t m_writtenTX = 0;
 	};
 }

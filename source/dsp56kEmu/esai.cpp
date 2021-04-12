@@ -10,15 +10,13 @@ namespace dsp56k
 
 	constexpr size_t g_cyclesPerSample = g_dspFrequencyMHz * 1000 * 1000 / g_samplerate;
 
-	constexpr size_t g_transmitEnableBits = (1<<Esai::M_TE0) | (1<<Esai::M_TE1) | (1<<Esai::M_TE2) | (1<<Esai::M_TE3) | (1<<Esai::M_TE4) | (1<<Esai::M_TE5);
-	
 	Esai::Esai(IPeripherals& _periph) : m_periph(_periph)
 	{
 	}
 
 	void Esai::exec()
 	{
-		if(m_tcr & g_transmitEnableBits)
+		if(m_tcr & M_TEM)
 		{
 			++m_cyclesSinceWrite;
 
@@ -38,14 +36,21 @@ namespace dsp56k
 
 	void Esai::writeTX(size_t _index, TWord _val)
 	{
-		m_cyclesSinceWrite = 0;
+		if(!bittest(m_tcr, M_TE0 + _index))
+			return;
 
-		bitset<TWord, M_TUE>(m_sr, 0);
+		m_cyclesSinceWrite = 0;
 
 		writeTXimpl(_index, _val);
 
-		if(_index == 2)
+		m_writtenTX |= (1<<_index);
+
+		if(m_writtenTX == (m_tcr & M_TEM))
 		{
+			bitset<TWord, M_TUE>(m_sr, 0);
+
+			m_writtenTX = 0;
+
 			if(bittest<TWord,M_TIE>(m_tcr))
 				m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data);
 			if(bittest<TWord,M_TLIE>(m_tcr))
