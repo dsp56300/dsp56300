@@ -2,6 +2,8 @@
 
 #include "hi08.h"
 #include "logging.h"
+#include "dsp.h"
+
 
 namespace dsp56k
 {
@@ -93,7 +95,7 @@ namespace dsp56k
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
 			LOG("Read from " << HEX(_addr));
-			return m_mem[_addr - XIO_Reserved_High_First];
+			return 0;	//m_mem[_addr - XIO_Reserved_High_First];	// There is nothing connected.
 		case Esai::M_RX0:
 		case Esai::M_RX1:
 		case Esai::M_RX2:
@@ -102,7 +104,7 @@ namespace dsp56k
 			return 0;
 		}
 
-		LOG( "Periph read @ " << std::hex << _addr );
+		LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  m_mem[_addr - XIO_Reserved_High_First] << ")");
 
 		return m_mem[_addr - XIO_Reserved_High_First];
 	}
@@ -117,10 +119,28 @@ namespace dsp56k
 		case Esai::M_TCR:
 			m_esai.writeTransmitControlRegister(_val);
 			return;
+				
+				
+		case 0xFFFF86:	// TLR2
+		case 0xffff87:	// TCSR2
+		case 0xffff8a:	// TLR1
+		case 0xffff8b:	// TCSR1
+			LOG("Timer register " << HEX(_addr) << ": " << HEX(_val));
+			return;
+
+		case 0xFFFF8F:	// TCSR0
+			if (!(m_mem[_addr - XIO_Reserved_High_First] & 1) && (_val & 1) )
+			{
+				m_mem[0xFFFF8C - XIO_Reserved_High_First] = m_mem[0xFFFF8E - XIO_Reserved_High_First];
+			}
+		case 0xFFFF8D:	// TCPR0
+		case 0xFFFF8E:	// TLR0
+			LOG("Timer register " << HEX(_addr) << ": " << HEX(_val));
+			break;
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
 			LOG("Write to " << HEX(_addr) << ": " << HEX(_val));
-			m_mem[_addr - XIO_Reserved_High_First] = _val;
+//			m_mem[_addr - XIO_Reserved_High_First] = _val;	// Do not write!
 			return;
 
 		case  Esai::M_TCCR:
@@ -141,6 +161,26 @@ namespace dsp56k
 	void Peripherals56362::exec()
 	{
 		m_esai.exec();
+		TWord TCSR0 = m_mem[0xFFFF8F - XIO_Reserved_High_First];
+		if (TCSR0 & 1)
+		{
+			TWord TCR = m_mem[0xFFFF8C - XIO_Reserved_High_First];
+			TCR++;
+			TCR=TCR&0xFFFFFF;
+			m_mem[0xFFFF8C - XIO_Reserved_High_First] = TCR;
+			if (TCR == m_mem[0xFFFF8D - XIO_Reserved_High_First] && (TCSR0 & 4))
+			{
+				getDSP().injectInterrupt(InterruptVectorAddress56362::Vba_TIMER0_Compare);
+			}
+			if (!TCR && (TCSR0 & 2))
+			{
+				getDSP().injectInterrupt(InterruptVectorAddress56362::Vba_TIMER0_Overflow);
+			}
+			if (!TCR)
+			{
+				m_mem[0xFFFF8C - XIO_Reserved_High_First] = m_mem[0xFFFF8E - XIO_Reserved_High_First];
+			}
+		}
 	}
 
 	void Peripherals56362::reset()
