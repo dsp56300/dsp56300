@@ -112,8 +112,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bcc_xxxx(const TWord op)
 	{
-		// TODO: unclear documentation, opcode that is written there is wrong
-		LOG_ERR_NOTIMPLEMENTED("BCC xxxx");
+		setPC(pcCurrentInstruction + fetchOpWordB());
 	}
 	inline void DSP::op_Bcc_xxx(const TWord op)
 	{
