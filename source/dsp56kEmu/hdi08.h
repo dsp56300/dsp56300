@@ -52,7 +52,7 @@ namespace dsp56k
 		
 		TWord readControlRegister()
 		{
-			if (!m_data.empty()) m_hcr=(((m_data[0]>>24) & 3) << 3) | (m_hcr&0xFFFE7);
+			if (!m_data.empty()) return (((m_data[0]>>24) & 3) << 3) | (m_hcr&0xFFFE7);
 			return m_hcr;
 		}
 
