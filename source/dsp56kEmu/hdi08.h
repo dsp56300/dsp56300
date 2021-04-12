@@ -2,13 +2,18 @@
 
 namespace dsp56k
 {
-	class HI08
+	class IPeripherals;
+	class HDI08
 	{
 	public:
+		explicit HDI08(IPeripherals& _peripheral) : m_periph(_peripheral)		{}
+
 		enum Addresses
 		{
 			HSR		= 0xFFFFC3,					// Host Status Register (HSR)
-			HRX		= 0xFFFFC6					// Host Receive Register (HRX)
+			HCR		= 0xFFFFC4,					// Host Control Register (HCR)
+			HRX		= 0xFFFFC6,					// Host Receive Register (HRX)
+			HTX	    = 0xFFFFC7					// Host Transmit Register (HTX)
 		};
 
 		enum HostStatusRegisterBits
@@ -46,10 +51,27 @@ namespace dsp56k
 			m_hsr = _val;
 		}
 		
+		TWord readControlRegister()
+		{
+			if (!m_data.empty()) m_hcr=(((m_data[0]>>24) & 3) << 3) | (m_hcr&0xFFFE7);
+			return m_hcr;
+		}
+
+		void writeControlRegister(TWord _val)
+		{
+			m_hcr = _val;
+		}
+		
+		void writeTransmitRegister(TWord _val);
+		
+		void exec();
+
 		void reset() {}
 
 	private:
 		TWord m_hsr = 0;
+		TWord m_hcr = 0;
 		RingBuffer<uint32_t, 1024, false> m_data;
+		IPeripherals& m_periph;
 	};
 }

@@ -1,10 +1,10 @@
 #include "dsp.h"
 #include "interrupts.h"
-#include "hi08.h"
+#include "hdi08.h"
 
 namespace dsp56k
 {
-	void HI08::exec()
+	void HDI08::exec()
 	{
 		if (m_hcr&1 && !m_data.empty())
 		{
@@ -12,9 +12,9 @@ namespace dsp56k
 		}
 	}
 
-	void HI08::writeTransmitRegister(TWord _val)
+	void HDI08::writeTransmitRegister(TWord _val)
 	{
-		LOG("HI08 write: 0x" << HEX(_val));
+		LOG("HDI08 write: 0x" << HEX(_val));
 		if (m_hcr&2)
 		{
 			m_periph.getDSP().injectInterrupt(Vba_Host_Transmit_Data_Empty);

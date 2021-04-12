@@ -13,7 +13,6 @@ namespace dsp56k
 	Peripherals56303::Peripherals56303()
 		: m_mem(0x0)
 		, m_essi(*this)
-		, m_hi08(*this)
 	{
 		m_mem[XIO_IDR - XIO_Reserved_High_First] = 0x001362;
 	}
@@ -74,7 +73,7 @@ namespace dsp56k
 		m_hi08.reset();
 	}
 
-	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hi08(*this)
+	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hdi08(*this)
 	{
 	}
 
@@ -82,12 +81,12 @@ namespace dsp56k
 	{
 		switch (_addr)
 		{
-		case HI08::HSR:
-			return m_hi08.readStatusRegister();
-		case HI08::HCR:
-			return m_hi08.readControlRegister();
-		case HI08::HRX:
-			return m_hi08.read();
+		case HDI08::HSR:
+			return m_hdi08.readStatusRegister();
+		case HDI08::HCR:
+			return m_hdi08.readControlRegister();
+		case HDI08::HRX:
+			return m_hdi08.read();
 
 		case Esai::M_RCR:
 			return m_esai.readReceiveControlRegister();
@@ -120,14 +119,14 @@ namespace dsp56k
 	{
 		switch (_addr)
 		{
-		case HI08::HSR:
-			m_hi08.writeStatusRegister(_val);
+		case HDI08::HSR:
+			m_hdi08.writeStatusRegister(_val);
 			break;
-		case HI08::HCR:
-			m_hi08.writeControlRegister(_val);
+		case HDI08::HCR:
+			m_hdi08.writeControlRegister(_val);
 			break;
-		case HI08::HTX:
-			m_hi08.writeTransmitRegister(_val);
+		case HDI08::HTX:
+			m_hdi08.writeTransmitRegister(_val);
 			break;
 				
 		case 0xFFFF86:	// TLR2
@@ -184,7 +183,7 @@ namespace dsp56k
 	void Peripherals56362::exec()
 	{
 		m_esai.exec();
-		m_hi08.exec();
+		m_hdi08.exec();
 		TWord TCSR0 = m_mem[0xFFFF8F - XIO_Reserved_High_First];
 		if (TCSR0 & 1)
 		{
