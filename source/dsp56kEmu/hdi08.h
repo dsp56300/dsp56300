@@ -43,7 +43,7 @@ namespace dsp56k
 			for(size_t i=0; i<_count; ++i)
 			{
 				m_data.waitNotFull();
-				m_data.push_back(_data[i] & 0x01ffffff);
+				m_data.push_back(_data[i] & 0x03ffffff);
 			}
 		}
 		

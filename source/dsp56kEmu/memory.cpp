@@ -11,7 +11,7 @@
 
 namespace dsp56k
 {
-	static const TWord g_initPattern = 0xabcabcab;
+	static const TWord g_initPattern = 0;
 
 	// _____________________________________________________________________________
 	// Memory
