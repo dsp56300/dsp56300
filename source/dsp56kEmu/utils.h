@@ -16,6 +16,11 @@ namespace dsp56k
 		return (_val & (T(1)<<_bitNumber)) != 0;
 	}
 
+	template<typename T, T B> T bittest( const T& _val)
+	{
+		return _val & (T(1)<<B);
+	}
+
 	static int bittest( const TReg56& _val, unsigned int _bitNumber )
 	{
 		return bittest( _val.var, _bitNumber );
@@ -43,7 +48,7 @@ namespace dsp56k
 		return res;
 	}
 
-	template<typename T, size_t B> void bitset( T& _val, const T& _zeroOrOne)
+	template<typename T, T B> void bitset( T& _val, const T& _zeroOrOne)
 	{
 		constexpr auto mask = static_cast<T>(1) << B;
 		const auto bit = (_zeroOrOne&1) << B;

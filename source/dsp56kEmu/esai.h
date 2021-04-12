@@ -3,6 +3,7 @@
 #pragma once
 
 #include "audio.h"
+#include "logging.h"
 
 namespace dsp56k
 {
@@ -203,6 +204,8 @@ namespace dsp56k
 
 		explicit Esai(IPeripherals& _periph);
 
+		void exec();
+		
 		TWord readStatusRegister()
 		{
 			// we just use a frame sync toggle dummy as we don't need anything else to sync up with the DSP as this function is called from it
@@ -211,45 +214,67 @@ namespace dsp56k
 			return m_sr;
 		}
 
-		void exec()
+		void writestatusRegister(TWord _val)
 		{
+			LOG("Write ESAI SR " << HEX(_val));
+			m_sr = _val;
 		}
-		
+
 		TWord readReceiveControlRegister()
 		{
 			return m_rcr;
 		}
 		
-		void writeReceiveControlRegister(TWord _val)
-		{
-			m_rcr = _val;
-		}
-
 		TWord readTransmitControlRegister()
 		{
 			return m_tcr;
 		}
 
+		void writeReceiveControlRegister(TWord _val)
+		{
+			LOG("Write ESAI RCR" << HEX(_val));
+			m_rcr = _val;
+		}
+
 		void writeTransmitControlRegister(TWord _val)
 		{
+			LOG("Write ESAI TCR " << HEX(_val));
 			m_tcr = _val;
 		}
-		
-		void writeCommonControlRegister(TWord _val)
+
+		void writeTransmitClockControlRegister(TWord _val)
 		{
-			
+			LOG("Write ESAI TCCR " << HEX(_val));
+			m_tcr = _val;
 		}
-		
+
+		void writeControlRegister(TWord _val)
+		{
+			LOG("Write ESAI CR" << HEX(_val));
+			m_cr = _val;
+		}
+
 		void writeReceiveClockControlRegister(TWord _val)
 		{
-			
+			LOG("Write ESAI RCCR" << HEX(_val));
+			m_rccr = _val;
 		}
+
+		void writeTX(size_t _index, TWord _val);
+		TWord readRX(size_t _index);
+		
 	private:
 		IPeripherals& m_periph;
 		TWord m_sr = 0;				// status register
+		TWord m_cr = 0;				// control register
+
 		TWord m_tcr = 0;			// transmit control register
-		TWord m_rcr = 0;
+		TWord m_rcr = 0;			// receive control register
+
+		TWord m_rccr = 0;			// receive clock control register
+		TWord m_tccr = 0;			// transmit clock control register
 
 		TWord m_transmitFrameSync;
+		uint32_t m_cyclesSinceWrite = 0;
 	};
 }

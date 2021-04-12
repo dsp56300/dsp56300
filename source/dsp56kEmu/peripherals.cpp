@@ -98,7 +98,7 @@ namespace dsp56k
 		case Esai::M_RX1:
 		case Esai::M_RX2:
 		case Esai::M_RX3:
-			LOG("ESAI READ");
+			m_esai.readRX(_addr - Esai::M_RX0);
 			return 0;
 		case 0xFFFFBE:	// Port C Direction Register
 			return 0;
@@ -115,9 +115,11 @@ namespace dsp56k
 			return 0x362;
 		}
 
-		LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  m_mem[_addr - XIO_Reserved_High_First] << ")");
+		auto& value = m_mem[_addr - XIO_Reserved_High_First];
 
-		return m_mem[_addr - XIO_Reserved_High_First];
+		LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  HEX(value) << ")");
+
+		return value;
 	}
 
 	void Peripherals56362::write(TWord _addr, TWord _val)
@@ -158,25 +160,31 @@ namespace dsp56k
 //			m_mem[_addr - XIO_Reserved_High_First] = _val;	// Do not write!
 			return;
 
+		case Esai::M_SAISR:
+			m_esai.writestatusRegister(_val);
+			return;
+		case Esai::M_SAICR:
+			m_esai.writeControlRegister(_val);
+			return;
 		case Esai::M_RCR:
 			m_esai.writeReceiveControlRegister(_val);
+			return;
+		case Esai::M_RCCR:
+			m_esai.writeReceiveClockControlRegister(_val);
 			return;
 		case Esai::M_TCR:
 			m_esai.writeTransmitControlRegister(_val);
 			return;
 		case Esai::M_TCCR:
-			m_esai.writeTransmitControlRegister(_val);
-			return;
-		case Esai::M_SAICR:
-			m_esai.writeCommonControlRegister(_val);
-			return;
-		case Esai::M_RCCR:
-			m_esai.writeReceiveClockControlRegister(_val);
+			m_esai.writeTransmitClockControlRegister(_val);
 			return;
 		case Esai::M_TX0:
 		case Esai::M_TX1:
 		case Esai::M_TX2:
-			LOG("ESAI WRITE");
+		case Esai::M_TX3:
+		case Esai::M_TX4:
+		case Esai::M_TX5:
+			m_esai.writeTX(_addr - Esai::M_TX0, _val);
 			return;
 		default:
 			break;

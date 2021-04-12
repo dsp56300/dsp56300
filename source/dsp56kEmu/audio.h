@@ -55,8 +55,17 @@ namespace dsp56k
 				{
 					const auto out = c >> 1;
 
-					m_audioOutputs[out].waitNotEmpty();
-					const auto v = m_audioOutputs[out].pop_front();
+					TWord v = 0;
+					
+					if(out == 0)
+					{
+						m_audioOutputs[out].waitNotEmpty();						
+						v = m_audioOutputs[out].pop_front();
+					}
+					else if(!m_audioOutputs[out].empty())
+					{
+						v = m_audioOutputs[out].pop_front();
+					}
 
 					_outputs[c][i] = dsp2Float(v);
 				}
