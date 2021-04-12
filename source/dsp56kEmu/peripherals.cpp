@@ -200,10 +200,11 @@ namespace dsp56k
 		TWord TCSR0 = m_mem[0xFFFF8F - XIO_Reserved_High_First];
 		if (TCSR0 & 1)
 		{
-			TWord TCR = m_mem[0xFFFF8C - XIO_Reserved_High_First];
+			auto& TCR = m_mem[0xFFFF8C - XIO_Reserved_High_First];
+
 			TCR++;
-			TCR=TCR&0xFFFFFF;
-			m_mem[0xFFFF8C - XIO_Reserved_High_First] = TCR;
+			TCR &= 0xFFFFFF;
+
 			if (TCR == m_mem[0xFFFF8D - XIO_Reserved_High_First] && (TCSR0 & 4))
 			{
 				getDSP().injectInterrupt(InterruptVectorAddress56362::Vba_TIMER0_Compare);
