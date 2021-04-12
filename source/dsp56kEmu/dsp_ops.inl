@@ -753,13 +753,36 @@ namespace dsp56k
 	{
 		LOG_ERR_NOTIMPLEMENTED("EXTRACT");
 	}
-	inline void DSP::op_Extractu_S1S2(const TWord op)
+	inline void DSP::op_Extractu_S1S2(const TWord op)  // 00001100 00011010 100sSSSD
 	{
-		LOG_ERR_NOTIMPLEMENTED("EXTRACTU");
+		const TWord sss = getFieldValue<Extractu_S1S2, Field_SSS>(op);
+		const TWord width_offset = decode_sss_read<TWord>(sss);
+
+		const bool abDst = getFieldValue<Extractu_S1S2, Field_D>(op);
+		const bool abSrc = getFieldValue<Extractu_S1S2, Field_s>(op);
+
+		const auto width = (width_offset >> 12) & 0x3f;
+		const auto offset = width_offset & 0x3f;
+
+		const TReg56& dSrc = abSrc ? reg.b : reg.a;
+		TReg56& dDst = abDst ? reg.b : reg.a;
+		const auto mask = 0xFFFFFFFFFFFFFF >> (56 - width);
+		dDst.var = (dSrc.var >> offset) & mask;
 	}
-	inline void DSP::op_Extractu_CoS2(const TWord op)
+	inline void DSP::op_Extractu_CoS2(const TWord op)  // 00001100 00011000 100s000D
 	{
-		LOG_ERR_NOTIMPLEMENTED("EXTRACTU");
+		const TWord width_offset = fetchOpWordB();
+
+		const bool abDst = getFieldValue<Extractu_CoS2, Field_D>(op);
+		const bool abSrc = getFieldValue<Extractu_CoS2, Field_s>(op);
+
+		const auto width = (width_offset >> 12) & 0x3f;
+		const auto offset = width_offset & 0x3f;
+
+		const TReg56& dSrc = abSrc ? reg.b : reg.a;
+		TReg56& dDst = abDst ? reg.b : reg.a;
+		const auto mask = 0xFFFFFFFFFFFFFF >> (56 - width);
+		dDst.var = (dSrc.var >> offset) & mask;
 	}
 	inline void DSP::op_Ifcc(const TWord op)
 	{

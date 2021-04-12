@@ -24,6 +24,8 @@ namespace dsp56k
 		testDIV();
 		testROL();
 		testNOT();
+		testEXTRACTU();
+		testEXTRACTU_CO();
 	}
 
 	void UnitTests::testASL()
@@ -265,5 +267,26 @@ namespace dsp56k
 		dsp.mem.set(MemArea_P, 1, _op1);
 		dsp.setPC(0);
 		dsp.exec();
+	}
+
+	void UnitTests::testEXTRACTU()
+	{
+		dsp.reg.x.var = 0x4008000000;  // x1 = 0x4008  (width=4, offset=8)
+		dsp.reg.a.var = 0xff00;
+
+		// extractu x1,a,b  (width = 0x8, offset = 0x28)
+		execOpcode(0x0c1a8d);
+
+		assert(dsp.reg.b.var == 0xf);
+	}
+
+	void UnitTests::testEXTRACTU_CO()
+	{
+		dsp.reg.b.var = 0x0444ffff000000;
+
+		// extractu #$C028,b,a  (width = 0xC, offset = 0x28)
+		execOpcode(0x0c1890, 0x00C028);
+
+		assert(dsp.reg.a.var == 0x444);
 	}
 }
