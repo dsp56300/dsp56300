@@ -87,6 +87,8 @@ namespace dsp56k
 			return m_hdi08.readControlRegister();
 		case HDI08::HRX:
 			return m_hdi08.read();
+		case HDI08::HPCR:
+			return m_hdi08.readPortControlRegister();
 
 		case Esai::M_RCR:
 			return m_esai.readReceiveControlRegister();
@@ -128,13 +130,16 @@ namespace dsp56k
 		{
 		case HDI08::HSR:
 			m_hdi08.writeStatusRegister(_val);
-			break;
+			return;
 		case HDI08::HCR:
 			m_hdi08.writeControlRegister(_val);
-			break;
+			return;
 		case HDI08::HTX:
 			m_hdi08.writeTransmitRegister(_val);
 			break;
+		case HDI08::HPCR:
+			m_hdi08.writePortControlRegister(_val);
+			return;
 				
 		case 0xFFFF86:	// TLR2
 		case 0xffff87:	// TCSR2

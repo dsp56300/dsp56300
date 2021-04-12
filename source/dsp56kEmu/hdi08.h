@@ -10,8 +10,9 @@ namespace dsp56k
 
 		enum Addresses
 		{
+			HCR		= 0xFFFFC2,					// Host Control Register (HCR)
 			HSR		= 0xFFFFC3,					// Host Status Register (HSR)
-			HCR		= 0xFFFFC4,					// Host Control Register (HCR)
+			HPCR	= 0xFFFFC4,					// Host Port Control Register (HPCR)
 			HRX		= 0xFFFFC6,					// Host Receive Register (HRX)
 			HTX	    = 0xFFFFC7					// Host Transmit Register (HTX)
 		};
@@ -24,6 +25,17 @@ namespace dsp56k
 			HSR_HF0,						// Host Flag 0
 			HSR_HF1,						// Host Flag 1
 			HSR_DMA = 7,					// DMA Status
+		};
+		
+		enum HostPortControlRegisterBits
+		{
+			HPCR_HEN = 6,					// HostEnable
+		};
+		
+		enum HostControlRegisterBits
+		{
+			HCR_HRIE = 0,					// Host Receive Interrupt Enable
+			HCR_HTIE = 1,					// Host Transmit Interrupt Enable
 		};
 		
 		void write(const int32_t* _data, const size_t _count)
@@ -64,7 +76,17 @@ namespace dsp56k
 		{
 			m_hcr = _val;
 		}
-		
+
+		TWord readPortControlRegister()
+		{
+			return m_hpcr;
+		}
+
+		void writePortControlRegister(TWord _val)
+		{
+			m_hpcr = _val;
+		}
+
 		void writeTransmitRegister(TWord _val);
 		
 		void exec();
@@ -74,6 +96,7 @@ namespace dsp56k
 	private:
 		TWord m_hsr = 0;
 		TWord m_hcr = 0;
+		TWord m_hpcr = 0;
 		RingBuffer<uint32_t, 1024, false> m_data;
 		IPeripherals& m_periph;
 	};
