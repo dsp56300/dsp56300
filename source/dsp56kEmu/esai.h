@@ -39,222 +39,166 @@ namespace dsp56k
 		enum Bits
 		{
 			// RSMB Register bits
-			M_RS31 = 15,
-			M_RS30 = 14,
-			M_RS29 = 13,
-			M_RS28 = 12,
-			M_RS27 = 11,
-			M_RS26 = 10,
-			M_RS25 = 9,
-			M_RS24 = 8,
-			M_RS23 = 7,
-			M_RS22 = 6,
-			M_RS21 = 5,
-			M_RS20 = 4,
-			M_RS19 = 3,
-			M_RS18 = 2,
-			M_RS17 = 1,
-			M_RS16 = 0,
+			M_RS31 = 15,	M_RS30 = 14,	M_RS29 = 13,	M_RS28 = 12,	M_RS27 = 11,	M_RS26 = 10,	M_RS25 = 9,		M_RS24 = 8,
+			M_RS23 = 7,		M_RS22 = 6,		M_RS21 = 5,		M_RS20 = 4,		M_RS19 = 3,		M_RS18 = 2,		M_RS17 = 1,		M_RS16 = 0,
 
 			// RSMA Register bits
-			M_RS15 = 15,
-			M_RS14 = 14,
-			M_RS13 = 13,
-			M_RS12 = 12,
-			M_RS11 = 11,
-			M_RS10 = 10,
-			M_RS9 = 9,
-			M_RS8 = 8,
-			M_RS7 = 7,
-			M_RS6 = 6,
-			M_RS5 = 5,
-			M_RS4 = 4,
-			M_RS3 = 3,
-			M_RS2 = 2,
-			M_RS1 = 1,
-			M_RS0 = 0,
+			M_RS15 = 15,	M_RS14 = 14,	M_RS13 = 13,	M_RS12 = 12,	M_RS11 = 11,	M_RS10 = 10,	M_RS9 = 9,		M_RS8 = 8,
+			M_RS7 = 7,		M_RS6 = 6,		M_RS5 = 5,		M_RS4 = 4,		M_RS3 = 3,		M_RS2 = 2,		M_RS1 = 1,		M_RS0 = 0,
 
 			// TSMB Register bits
-			M_TS31 = 15,
-			M_TS30 = 14,
-			M_TS29 = 13,
-			M_TS28 = 12,
-			M_TS27 = 11,
-			M_TS26 = 10,
-			M_TS25 = 9,
-			M_TS24 = 8,
-			M_TS23 = 7,
-			M_TS22 = 6,
-			M_TS21 = 5,
-			M_TS20 = 4,
-			M_TS19 = 3,
-			M_TS18 = 2,
-			M_TS17 = 1,
-			M_TS16 = 0,
+			M_TS31 = 15,	M_TS30 = 14,	M_TS29 = 13,	M_TS28 = 12,	M_TS27 = 11,	M_TS26 = 10,	M_TS25 = 9,		M_TS24 = 8,
+			M_TS23 = 7,		M_TS22 = 6,		M_TS21 = 5,		M_TS20 = 4,		M_TS19 = 3,		M_TS18 = 2,		M_TS17 = 1,		M_TS16 = 0,
 
 			// TSMA Register bits
-			M_TS15 = 15,
-			M_TS14 = 14,
-			M_TS13 = 13,
-			M_TS12 = 12,
-			M_TS11 = 11,
-			M_TS10 = 10,
-			M_TS9 = 9,
-			M_TS8 = 8,
-			M_TS7 = 7,
-			M_TS6 = 6,
-			M_TS5 = 5,
-			M_TS4 = 4,
-			M_TS3 = 3,
-			M_TS2 = 2,
-			M_TS1 = 1,
-			M_TS0 = 0,
+			M_TS15 = 15,	M_TS14 = 14,	M_TS13 = 13,	M_TS12 = 12,	M_TS11 = 11,	M_TS10 = 10,	M_TS9 = 9,		M_TS8 = 8,
+			M_TS7 = 7,		M_TS6 = 6,		M_TS5 = 5,		M_TS4 = 4,		M_TS3 = 3,		M_TS2 = 2,		M_TS1 = 1,		M_TS0 = 0,
 
 			// RCCR Register bits
-			M_RHCKD = 23,
-			M_RFSD = 22,
-			M_RCKD = 21,
-			M_RHCKP = 20,
-			M_RFSP = 19,
-			M_RCKP = 18,
+			M_RHCKD = 23,				// Receiver High Frequency Clock Direction
+			M_RFSD = 22,				// Receiver Frame Sync Signal Direction
+			M_RCKD = 21,				// Receiver Clock Source Direction
+			M_RHCKP = 20,				// Receiver High Frequency Clock Polarity
+			M_RFSP = 19,				// Receiver Frame Sync Polarity
+			M_RCKP = 18,				// Receiver Clock Polarity
 
-			M_RFP = 0x3C000,
-			M_RFP3 = 17,
-			M_RFP2 = 16,
-			M_RFP1 = 15,
-			M_RFP0 = 14,
+			M_RFP = 0x3C000,			// Rx High Frequency Clock Divider Mask
+			M_RFP3 = 17,				// Rx High Frequency Clock Divider Bit 3
+			M_RFP2 = 16,				// Rx High Frequency Clock Divider Bit 2
+			M_RFP1 = 15,				// Rx High Frequency Clock Divider Bit 1
+			M_RFP0 = 14,				// Rx High Frequency Clock Divider Bit 0
 
 			M_RDC = 0x3E00,
-			M_RDC4 = 13,
-			M_RDC3 = 12,
-			M_RDC2 = 11,
-			M_RDC1 = 10,
-			M_RDC0 = 9,
-			M_RPSR = 8,
+			M_RDC4 = 13,				// Rx Frame Rate Divider Control Bit 4
+			M_RDC3 = 12,				// Rx Frame Rate Divider Control Bit 3
+			M_RDC2 = 11,				// Rx Frame Rate Divider Control Bit 2
+			M_RDC1 = 10,				// Rx Frame Rate Divider Control Bit 1
+			M_RDC0 = 9,					// Rx Frame Rate Divider Control Bit 0
+			M_RPSR = 8,					// Receiver Prescaler Range
 
-			M_RPM = 0xFF,
-			M_RPM7 = 7,
-			M_RPM6 = 6,
-			M_RPM5 = 5,
-			M_RPM4 = 4,
-			M_RPM3 = 3,
-			M_RPM2 = 2,
-			M_RPM1 = 1,
-			M_RPM0 = 0,
+			M_RPM = 0xFF,				// Receiver Prescale Modulus Select Mask
+			M_RPM7 = 7,					// Receiver Prescale Modulus Select Bit 7
+			M_RPM6 = 6,					// Receiver Prescale Modulus Select Bit 6
+			M_RPM5 = 5,					// Receiver Prescale Modulus Select Bit 5
+			M_RPM4 = 4,					// Receiver Prescale Modulus Select Bit 4
+			M_RPM3 = 3,					// Receiver Prescale Modulus Select Bit 3
+			M_RPM2 = 2,					// Receiver Prescale Modulus Select Bit 2
+			M_RPM1 = 1,					// Receiver Prescale Modulus Select Bit 1
+			M_RPM0 = 0,					// Receiver Prescale Modulus Select Bit 0
 
 			// RCR Register bits
-			M_RLIE = 23,
-			M_RIE = 22,
-			M_REDIE = 21,
-			M_REIE = 20,
-			M_RPR = 19,
-			M_RFSR = 16,
-			M_RFSL = 15,
+			M_RLIE = 23,				// Receive Last Slot Interrupt Enable
+			M_RIE = 22,					// Receive Interrupt Enable
+			M_REDIE = 21,				// Receive Even Slot Data Interrupt Enable
+			M_REIE = 20,				// Receive Exception Interrupt Enable
+			M_RPR = 19,					// Receiver Section Personal Reset
+			M_RFSR = 16,				// Receiver Frame Sync Relative Timing
+			M_RFSL = 15,				// Receiver Frame Sync Length
 
-			M_RSWS = 0x7C00,
-			M_RSWS4 = 14,
-			M_RSWS3 = 13,
-			M_RSWS2 = 12,
-			M_RSWS1 = 11,
-			M_RSWS0 = 10,
+			M_RSWS = 0x7C00,			// Receiver Slot and Word Select Mask
+			M_RSWS4 = 14,				// Receiver Slot and Word Select Bit 4
+			M_RSWS3 = 13,				// Receiver Slot and Word Select Bit 3
+			M_RSWS2 = 12,				// Receiver Slot and Word Select Bit 2
+			M_RSWS1 = 11,				// Receiver Slot and Word Select Bit 1
+			M_RSWS0 = 10,				// Receiver Slot and Word Select Bit 0
 
 			M_RMOD = 0x300,
-			M_RMOD1 = 9,
-			M_RMOD0 = 8,
-			M_RWA = 7,
-			M_RSHFD = 6,
+			M_RMOD1 = 9,				// Receiver Network Mode Control Bit 1
+			M_RMOD0 = 8,				// Receiver Network Mode Control Bit 0
+			M_RWA = 7,					// Receiver Word Alignment Control
+			M_RSHFD = 6,				// Receiver Shift Direction
 
-			M_RE = 0xF,
-			M_RE3 = 3,
-			M_RE2 = 2,
-			M_RE1 = 1,
-			M_RE0 = 0,
+			M_RE = 0xF,					// Receive Enable Mask
+			M_RE3 = 3,					// Receive 3 Enable
+			M_RE2 = 2,					// Receive 2 Enable
+			M_RE1 = 1,					// Receive 1 Enable
+			M_RE0 = 0,					// Receive 0 Enable
 
 			// TCCR Register bits
-			M_THCKD = 23,
-			M_TFSD = 22,
-			M_TCKD = 21,
-			M_THCKP = 20,
-			M_TFSP = 19,
-			M_TCKP = 18,
+			M_THCKD = 23,				// Transmit High Frequency Clock Direction
+			M_TFSD = 22,				// Transmit Frame Sync Signal Direction
+			M_TCKD = 21,				// Transmit Clock Source Direction
+			M_THCKP = 20,				// Transmit High Frequency Clock Polarity
+			M_TFSP = 19,				// Transmit Frame Sync Polarity
+			M_TCKP = 18,				// Transmit Clock Polarity
 
-			M_TFP = 0x3C000,
-			M_TFP3 = 17,
-			M_TFP2 = 16,
-			M_TFP1 = 15,
-			M_TFP0 = 14,
+			M_TFP = 0x3C000,			// Tx High Frequency Clock Divider
+			M_TFP3 = 17,				// Tx High Frequency Clock Divider Bit 3
+			M_TFP2 = 16,				// Tx High Frequency Clock Divider Bit 2
+			M_TFP1 = 15,				// Tx High Frequency Clock Divider Bit 1
+			M_TFP0 = 14,				// Tx High Frequency Clock Divider Bit 0
 
 			M_TDC = 0x3E00,
-			M_TDC4 = 13,
-			M_TDC3 = 12,
-			M_TDC2 = 11,
-			M_TDC1 = 10,
-			M_TDC0 = 9,
-			M_TPSR = 8,
+			M_TDC4 = 13,				// Tx Frame Rate Divider Control Bit 4
+			M_TDC3 = 12,				// Tx Frame Rate Divider Control Bit 3
+			M_TDC2 = 11,				// Tx Frame Rate Divider Control Bit 2
+			M_TDC1 = 10,				// Tx Frame Rate Divider Control Bit 1
+			M_TDC0 = 9,					// Tx Frame Rate Divider Control Bit 0
+			M_TPSR = 8,					// Transmit Prescaler Range
 
-			M_TPM = 0xFF,
-			M_TPM7 = 7,
-			M_TPM6 = 6,
-			M_TPM5 = 5,
-			M_TPM4 = 4,
-			M_TPM3 = 3,
-			M_TPM2 = 2,
-			M_TPM1 = 1,
-			M_TPM0 = 0,
+			M_TPM = 0xFF,				// Transmit Prescale Modulus Select
+			M_TPM7 = 7,					// Transmit Prescale Modulus Select Bit 7
+			M_TPM6 = 6,					// Transmit Prescale Modulus Select Bit 6
+			M_TPM5 = 5,					// Transmit Prescale Modulus Select Bit 5
+			M_TPM4 = 4,					// Transmit Prescale Modulus Select Bit 4
+			M_TPM3 = 3,					// Transmit Prescale Modulus Select Bit 3
+			M_TPM2 = 2,					// Transmit Prescale Modulus Select Bit 2
+			M_TPM1 = 1,					// Transmit Prescale Modulus Select Bit 1
+			M_TPM0 = 0,					// Transmit Prescale Modulus Select Bit 0
 
 			// TCR Register bits
-			M_TLIE = 23,
-			M_TIE = 22,
-			M_TEDIE = 21,
-			M_TEIE = 20,
-			M_TPR = 19,
-			M_PADC = 17,
-			M_TFSR = 16,
-			M_TFSL = 15,
+			M_TLIE = 23,				// Transmit Last Slot Interrupt Enable
+			M_TIE = 22,					// Transmit Interrupt Enable
+			M_TEDIE = 21,				// Transmit Even Slot Data Interrupt Enable
+			M_TEIE = 20,				// Transmit Exception Interrupt Enable
+			M_TPR = 19,					// Transmit Section Personal Reset
+			M_PADC = 17,				// Transmit Zero Padding Control
+			M_TFSR = 16,				// Transmit Frame Sync Relative Timing
+			M_TFSL = 15,				// Transmit Frame Sync Length
 
-			M_TSWS = 0x7C00,
-			M_TSWS4 = 14,
-			M_TSWS3 = 13,
-			M_TSWS2 = 12,
-			M_TSWS1 = 11,
-			M_TSWS0 = 10,
+			M_TSWS = 0x7C00,			// Tx Slot and Word Length Select Mask
+			M_TSWS4 = 14,				// Tx Slot and Word Length Select Mask 4
+			M_TSWS3 = 13,				// Tx Slot and Word Length Select Mask 3
+			M_TSWS2 = 12,				// Tx Slot and Word Length Select Mask 2
+			M_TSWS1 = 11,				// Tx Slot and Word Length Select Mask 1
+			M_TSWS0 = 10,				// Tx Slot and Word Length Select Mask 0
 
 			M_TMOD = 0x300,
-			M_TMOD1 = 9,
-			M_TMOD0 = 8,
-			M_TWA = 7,
-			M_TSHFD = 6,
+			M_TMOD1 = 9,				// Transmit Network Mode Control
+			M_TMOD0 = 8,				// Transmit Network Mode Control
+			M_TWA = 7,					// Transmit Word Alignment
+			M_TSHFD = 6,				// Transmit Shift Direction
 
-			M_TEM = 0x3F,
-			M_TE5 = 5,
-			M_TE4 = 4,
-			M_TE3 = 3,
-			M_TE2 = 2,
-			M_TE1 = 1,
-			M_TE0 = 0,
+			M_TEM = 0x3F,				// Transmit Enable Mask
+			M_TE5 = 5,					// Transmit 5 Enable
+			M_TE4 = 4,					// Transmit 4 Enable
+			M_TE3 = 3,					// Transmit 3 Enable
+			M_TE2 = 2,					// Transmit 2 Enable
+			M_TE1 = 1,					// Transmit 1 Enable
+			M_TE0 = 0,					// Transmit 0 Enable
 
 			// control bits of SAICR
-			M_ALC = 8,
-			M_TEBE = 7,
-			M_SYN = 6,
-			M_OF2 = 2,
-			M_OF1 = 1,
-			M_OF0 = 0,
+			M_ALC = 8,					// Alignment Control
+			M_TEBE = 7,					// Transmit External Buffer Enable
+			M_SYN = 6,					// Synchronous Mode Selection
+			M_OF2 = 2,					// Serial Output Flag 2
+			M_OF1 = 1,					// Serial Output Flag 1
+			M_OF0 = 0,					// Serial Output Flag 0
 
 			// status bits of SAISR
-			M_TODE = 17,
-			M_TEDE = 16,
-			M_TDE = 15,
-			M_TUE = 14,
-			M_TFS = 13,
-			M_RODF = 10,
-			M_REDF = 9,
-			M_RDF = 8,
-			M_ROE = 7,
-			M_RFS = 6,
-			M_IF2 = 2,
-			M_IF1 = 1,
-			M_IF0 = 0,
+			M_TODE = 17,				// Transmit Odd-Data Register Empty
+			M_TEDE = 16,				// Transmit Even-Data Register Empty
+			M_TDE = 15,					// Transmit Data Register Empty
+			M_TUE = 14,					// Transmit Underrun Error Flag
+			M_TFS = 13,					// Transmit Frame Sync Flag
+			M_RODF = 10,				// Receive Odd-Data Register Full
+			M_REDF = 9,					// Receive Even-Data Register Full
+			M_RDF = 8,					// Receive Data Register Full
+			M_ROE = 7,					// Receiver Overrun Error Flag
+			M_RFS = 6,					// Receive Frame Sync Flag
+			M_IF2 = 2,					// Serial Input Flag 2
+			M_IF1 = 1,					// Serial Input Flag 1
+			M_IF0 = 0,					// Serial Input Flag 0
 		};
 
 		explicit Esai(IPeripherals& _periph);
