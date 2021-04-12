@@ -73,7 +73,7 @@ namespace dsp56k
 		m_hi08.reset();
 	}
 
-	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hdi08(*this)
+	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hdi08(*this), m_wasReset(false)
 	{
 	}
 
@@ -100,6 +100,8 @@ namespace dsp56k
 		case Esai::M_RX3:
 			LOG("ESAI READ");
 			return 0;
+		case 0xFFFFBE:	// Port C Direction Register
+			return 0;
 
 		case 0xffffff:
 		case 0xfffffe:
@@ -108,6 +110,9 @@ namespace dsp56k
 		case 0xFFFF94:			// SHI__HRX
 			LOG("Read from " << HEX(_addr));
 			return 0;	//m_mem[_addr - XIO_Reserved_High_First];	// There is nothing connected.
+
+		case 0xFFFFF5:					// ID Register
+			return 0x362;
 		}
 
 		LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  m_mem[_addr - XIO_Reserved_High_First] << ")");
@@ -208,5 +213,6 @@ namespace dsp56k
 
 	void Peripherals56362::reset()
 	{
+		m_wasReset = true;
 	}
 }
