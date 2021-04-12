@@ -390,6 +390,10 @@ namespace dsp56k
 			{
 				m_processingMode = LongInterrupt;
 			}
+			else
+			{
+				m_processingMode = DefaultPreventInterrupt;				
+			}
 
 			return;
 		}
