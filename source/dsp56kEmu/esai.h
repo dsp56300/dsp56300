@@ -208,15 +208,13 @@ namespace dsp56k
 		
 		TWord readStatusRegister()
 		{
-			// we just use a frame sync toggle dummy as we don't need anything else to sync up with the DSP as this function is called from it
-			incFrameSync(m_transmitFrameSync);
-			bitset<TWord>(m_sr, M_TFS, m_transmitFrameSync);
+			m_hasReadStatus = true;
 			return m_sr;
 		}
 
 		void writestatusRegister(TWord _val)
 		{
-			LOG("Write ESAI SR " << HEX(_val));
+//			LOG("Write ESAI SR " << HEX(_val));
 			m_sr = _val;
 		}
 
@@ -238,6 +236,7 @@ namespace dsp56k
 
 		void writeTransmitControlRegister(TWord _val)
 		{
+			bitset<TWord, M_TUE>(m_sr, 0);
 			LOG("Write ESAI TCR " << HEX(_val));
 			m_tcr = _val;
 		}
@@ -273,6 +272,11 @@ namespace dsp56k
 
 		TWord m_rccr = 0;			// receive clock control register
 		TWord m_tccr = 0;			// transmit clock control register
+		
+		TWord m_tx[6],m_rx[6];		// Words written by the DSP and words for the DSP to read
+		TWord m_frameCounter = 0;	// Which frame (0=left, 1=right) we're on
+		TWord m_hasReadStatus = 0;	// Has the status register been read since TUE was set?
+		TWord m_lastSlotSent = 0;	// Have we sent the last slot interrupt?
 
 		TWord m_transmitFrameSync;
 		uint32_t m_cyclesSinceWrite = 0;
