@@ -18,7 +18,12 @@ namespace dsp56k
 
 		enum HostStatusRegisterBits
 		{
-			HSR_HRDF = 0						// Host Status Register Bit: Receive Data Full
+			HSR_HRDF,						// Receive Data Full
+			HSR_HTDE,						// Transmit Data Empty
+			HSR_HCP,						// Host Command Pending
+			HSR_HF0,						// Host Flag 0
+			HSR_HF1,						// Host Flag 1
+			HSR_DMA = 7,					// DMA Status
 		};
 		
 		void write(const int32_t* _data, const size_t _count)
