@@ -112,7 +112,12 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bcc_xxxx(const TWord op)
 	{
-		setPC(pcCurrentInstruction + fetchOpWordB());
+		const TWord cccc	= getFieldValue<Bcc_xxxx,Field_CCCC>(op);
+
+		if( decode_cccc( cccc ) )
+		{
+			setPC(pcCurrentInstruction + fetchOpWordB());
+		}
 	}
 	inline void DSP::op_Bcc_xxx(const TWord op)
 	{
