@@ -245,7 +245,7 @@ namespace dsp56k
 		void writeTransmitClockControlRegister(TWord _val)
 		{
 			LOG("Write ESAI TCCR " << HEX(_val));
-			m_tcr = _val;
+			m_tccr = _val;
 		}
 
 		void writeControlRegister(TWord _val)
