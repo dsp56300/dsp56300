@@ -501,12 +501,20 @@ namespace dsp56k
 		const TWord ea = decode_MMMRRR_read( mmmrrr );
 		const EMemArea S = getFieldValueMemArea<Btst_ea>(op);
 
-		const TWord val = memRead( S, ea );
-
-		sr_toggle( SR_C, bittest( val, bit ) );
-
-		sr_s_update();
-		sr_l_update_by_v();
+		if (ea >= XIO_Reserved_High_First)
+		{
+			const TWord val = memReadPeriph(S, ea);
+			sr_toggle(SR_C, bittest(val, bit));
+			sr_s_update();
+			sr_l_update_by_v();
+		}
+		else
+		{
+			const TWord val = memRead(S, ea);
+			sr_toggle(SR_C, bittest(val, bit));
+			sr_s_update();
+			sr_l_update_by_v();
+		}
 	}
 	inline void DSP::op_Btst_aa(const TWord op)
 	{
