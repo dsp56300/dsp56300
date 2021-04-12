@@ -25,9 +25,6 @@
 namespace dsp56k
 {
 	constexpr bool g_dumpPC = false;
-//	constexpr TWord g_dumpPCictrMin = 0x153000;
-	constexpr TWord g_dumpPCictrMin = 0x0;
-	constexpr TWord g_dumpPCictrMax = 0x10d00;
 
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
