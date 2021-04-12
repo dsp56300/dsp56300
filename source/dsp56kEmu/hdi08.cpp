@@ -8,6 +8,7 @@ namespace dsp56k
 	{
 		if (m_hcr&1 && !m_data.empty())
 		{
+			m_hcr=(((m_data[0]>>24) & 3) << 3) | (m_hcr&0xFFFE7);
 			m_periph.getDSP().injectInterrupt(Vba_Host_Receive_Data_Full);
 		}
 	}
