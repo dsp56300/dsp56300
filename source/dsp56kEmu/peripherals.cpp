@@ -126,6 +126,9 @@ namespace dsp56k
 		case HI08::HCR:
 			m_hi08.writeControlRegister(_val);
 			break;
+		case HI08::HTX:
+			m_hi08.writeTransmitRegister(_val);
+			break;
 				
 		case 0xFFFF86:	// TLR2
 		case 0xffff87:	// TCSR2
