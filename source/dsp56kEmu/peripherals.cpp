@@ -73,7 +73,7 @@ namespace dsp56k
 		m_hi08.reset();
 	}
 
-	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hdi08(*this), m_wasReset(false)
+	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hdi08(*this)
 	{
 	}
 
@@ -213,6 +213,5 @@ namespace dsp56k
 
 	void Peripherals56362::reset()
 	{
-		m_wasReset = true;
 	}
 }

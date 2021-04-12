@@ -142,9 +142,7 @@ namespace dsp56k
 		Esai& getEsai()	{ return m_esai; }
 		HDI08& getHDI08()	{ return m_hdi08; }
 
-		bool readAndClearResetState() {bool b=m_wasReset; m_wasReset=false; return b;}
 	private:
 		Esai m_esai;
 		HDI08 m_hdi08;
-		bool m_wasReset;
 	};}
