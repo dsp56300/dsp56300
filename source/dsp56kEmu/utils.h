@@ -43,6 +43,15 @@ namespace dsp56k
 		return res;
 	}
 
+	template<typename T, size_t B> void bitset( T& _val, const T& _zeroOrOne)
+	{
+		constexpr auto mask = static_cast<T>(1) << B;
+		const auto bit = (_zeroOrOne&1) << B;
+
+		_val &= ~mask;
+		_val |= bit;
+	}
+
 	template<typename T> void bitset( T& _val, const T& _bit, const T& _zeroOrOne)
 	{
 		const auto mask = static_cast<T>(1) << _bit;

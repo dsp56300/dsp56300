@@ -1,5 +1,4 @@
 #pragma once
-#include <vector>
 
 namespace dsp56k
 {
@@ -31,22 +30,10 @@ namespace dsp56k
 			}
 		}
 		
-		void writeCommandStream(const std::vector<uint32_t>& str)
-		{
-			for (size_t i=0; i<str.size(); ++i) m_commandStream.push_back(str[i] & 0x00ffffff);
-		}
-
 		TWord read()
 		{
-			if (!m_commandStream.empty())
-			{
-				const auto ret = m_commandStream.front();
-				m_commandStream.erase(m_commandStream.begin());
-				return ret;
-			}
-
 			if(m_data.empty())
-				return 0;
+				return 0;		// TODO: is there an interrupt if receive is empty?
 
 			return m_data.pop_front();
 		}
@@ -54,7 +41,7 @@ namespace dsp56k
 		TWord  readStatusRegister()
 		{
 			// Toggle HDI8 "Receive Data Full" bit
-			if (!m_commandStream.empty() || !m_data.empty()) m_hsr |= (1<<HSR_HRDF);
+			dsp56k::bitset<TWord, HSR_HRDF>(m_hsr, m_data.empty() ? 0 : 1);
 			return m_hsr;
 		}
 		
@@ -84,7 +71,6 @@ namespace dsp56k
 		TWord m_hsr = 0;
 		TWord m_hcr = 0;
 		RingBuffer<uint32_t, 1024, false> m_data;
-		std::vector<uint32_t> m_commandStream;
 		IPeripherals& m_periph;
 	};
 }
