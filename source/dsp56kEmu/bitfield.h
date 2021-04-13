@@ -1,0 +1,57 @@
+#pragma once
+#include <cassert>
+
+#include "esai.h"
+
+namespace dsp56k
+{
+	template<typename T, typename B, size_t C=24>
+	class Bitfield
+	{
+	public:
+		enum
+		{
+			bitCount = C,
+		};
+
+		explicit Bitfield(T _value = 0) : m_value(_value) {}
+
+		T test(const B _bit) const							{ return m_value & mask(_bit); }
+		T test(const B _a, const B _b) const				{ return m_value & mask(_a,_b); }
+		T test(const B _a, const B _b, const B _c) const	{ return m_value & mask(_a, _b, _c); }
+
+		void clear(const B _bit)						{ m_value &= ~mask(_bit); }
+		void clear(const B _a, const B _b)				{ m_value &= ~(mask(_a) | mask(_b)); }
+		void set(const B _bit)							{ m_value |= mask(_bit); }
+		void set(const B _a, const B _b)				{ m_value |= mask(_a) | mask(_b); }
+
+		static T mask(const B _bit)
+		{
+			return (1<<_bit);
+		}
+
+		static T mask(const B _a, const B _b)
+		{
+			return mask(_a) | mask(_b);
+		}
+
+		static T mask(const B _a, const B _b, const B _c)
+		{
+			return mask(_a) | mask(_b) | mask(_c);
+		}
+
+		operator T () const
+		{
+			return m_value;
+		}
+
+		Bitfield<T,B,C>& operator = (T _value)
+		{
+			m_value = _value;
+			return *this;
+		}
+
+	private:
+		T m_value;
+	};
+}

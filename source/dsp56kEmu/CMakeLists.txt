@@ -6,6 +6,7 @@ add_library(dsp56kEmu STATIC)
 set(SOURCES
 agu.cpp agu.h
 audio.cpp audio.h
+bitfield.h
 buildconfig.h
 assert.cpp assert.h
 disasm.cpp disasm.h
