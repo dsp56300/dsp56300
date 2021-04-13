@@ -1280,7 +1280,7 @@ namespace dsp56k
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
-		d.var &= (TInt64(_val)<<24);
+		d.var &= (TInt64(_val)<<24) | 0xFF000000FFFFFF;
 
 		// S L E U N Z V C
 		// v - - - * * * -
