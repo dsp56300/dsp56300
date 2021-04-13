@@ -2,8 +2,9 @@
 
 #include "esai.h"
 #include "essi.h"
-#include "hi08.h"
 #include "hdi08.h"
+#include "hi08.h"
+#include "timers.h"
 #include "types.h"
 #include "staticArray.h"
 
@@ -139,7 +140,7 @@ namespace dsp56k
 		void exec() override;
 		void reset() override;
 
-		Esai& getEsai()	{ return m_esai; }
+		Esai& getEsai()		{ return m_esai; }
 		HDI08& getHDI08()	{ return m_hdi08; }
 
 	private:
