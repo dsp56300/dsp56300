@@ -16,25 +16,32 @@ namespace dsp56k
 
 	void Esai::exec()
 	{
-		int interrupt = 0;
-		if (bittest<TWord,M_TUE>(m_sr) && bittest<TWord,M_TDE>(m_sr) && bittest<TWord,M_TEIE>(m_tcr)) interrupt = Vba_ESAI_Transmit_Data_with_Exception_Status;
-		else if (!m_lastSlotSent && !bittest<TWord,M_TDE>(m_sr) && bittest<TWord,M_TLIE>(m_tcr)) interrupt = Vba_ESAI_Transmit_Last_Slot, m_lastSlotSent = true;
-		else if (bittest<TWord,M_TDE>(m_sr) && bittest<TWord,M_TIE>(m_tcr)) interrupt = Vba_ESAI_Transmit_Data;
-		
-		if (interrupt) m_periph.getDSP().injectInterrupt(interrupt);
-		
 		if(m_tcr & M_TEM)
 		{
 			++m_cyclesSinceWrite;
 			if(m_cyclesSinceWrite > g_cyclesPerSample)	// Time to xfer samples!
 			{
 				m_cyclesSinceWrite = 0;
+				// Are we about to underrun?
+				bool underrun=false;
+				if (bittest<TWord,M_TUE>(m_sr) && bittest<TWord,M_TDE>(m_sr) && bittest<TWord,M_TEIE>(m_tcr))
+				{
+					m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
+					underrun = true;
+				}
 
 				for (int i=0;i<6;i++) if (m_tcr & (1<<i)) writeTXimpl(i,m_tx[i]);
 				for (int i=0;i<6;i++) if (m_rcr & (1<<i)) m_rx[i]=readRXimpl(i);
 				bitset<TWord, M_TUE>(m_sr, 1);
 				bitset<TWord, M_TDE>(m_sr, 1);
-				m_frameCounter^=1;
+				m_frameCounter ^= 1;
+				m_writtenTX = 0;
+				m_hasReadStatus = 0;
+				if (!underrun)
+				{
+					if (!m_frameCounter && bittest<TWord,M_TLIE>(m_tcr))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
+					if (m_frameCounter && bittest<TWord,M_TIE>(m_tcr))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data);
+				}
 			}
 		}
 	}
@@ -43,14 +50,12 @@ namespace dsp56k
 	{
 		if(!bittest(m_tcr, M_TE0 + _index))
 			return;
-
 		m_tx[_index] = _val;
 		m_writtenTX |= (1<<_index);
 		if(m_writtenTX == (m_tcr & M_TEM))
 		{
 			if (m_hasReadStatus) bitset<TWord, M_TUE>(m_sr, 0);
-			if (m_hasReadStatus) bitset<TWord, M_TDE>(m_sr, 0);
-			m_hasReadStatus = 0;
+			bitset<TWord, M_TDE>(m_sr, 0);
 		}
 	}
 
