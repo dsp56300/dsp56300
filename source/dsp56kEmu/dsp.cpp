@@ -2386,7 +2386,7 @@ namespace dsp56k
 		LOGF("                                         r3=" << logReg(Reg_R3,6) << " n3=" << logReg(Reg_N3,6) << " m3=" << logReg(Reg_M3,6));
 		LOGF("  pc=" << logReg(Reg_PC, 6) << "   sr=" << logReg(Reg_SR, 6) << "  omr=" << logReg(Reg_OMR,6) << "   r2=" << logReg(Reg_R2,6) << " n2=" << logReg(Reg_N2,6) << " m2=" << logReg(Reg_M2,6));
 		LOGF("  la=" << logReg(Reg_LA, 6) << "   lc=" << logReg(Reg_LC, 6) << "                r1=" << logReg(Reg_R1,6) << " n1=" << logReg(Reg_N1,6) << " m1=" << logReg(Reg_M1,6));
-		LOGF(" ssh=" << logReg(Reg_SSH, 6) << "  ssl=" << logReg(Reg_SR, 6) << "   sp=" << logReg(Reg_OMR,6) << "   r0=" << logReg(Reg_R0,6) << " n0=" << logReg(Reg_N0,6) << " m0=" << logReg(Reg_M0,6));
+		LOGF(" ssh=" << logReg(Reg_SSH, 6) << "  ssl=" << logReg(Reg_SR, 6) << "   sp=" << logReg(Reg_SP,6) << "   r0=" << logReg(Reg_R0,6) << " n0=" << logReg(Reg_N0,6) << " m0=" << logReg(Reg_M0,6));
 		LOGF("  ep=" << logReg(Reg_EP, 6) << "   sz=" << logReg(Reg_SZ, 6) << "   sc=" << logReg(Reg_SC,6) << "  vba=" << logReg(Reg_VBA,6));
 		LOGF("iprc=" << logReg(Reg_IPRC, 6) << " iprp=" << logReg(Reg_IPRP, 6) << "  bcr=" << logReg(Reg_BCR,6) << "  dcr=" << logReg(Reg_DCR,6));
 		LOGF("aar0=" << logReg(Reg_AAR0, 6) << " aar1=" << logReg(Reg_AAR1, 6) << " aar2=" << logReg(Reg_AAR2,6) << " aar3=" << logReg(Reg_AAR3,6));
