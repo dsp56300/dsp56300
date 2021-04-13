@@ -10,7 +10,7 @@ namespace dsp56k
 
 	static DefaultMemoryMap g_defaultMemoryMap;
 	
-	UnitTests::UnitTests() : mem(g_defaultMemoryMap), dsp(mem, &peripherals, &peripherals)
+	UnitTests::UnitTests() : mem(g_defaultMemoryMap, 0x100), dsp(mem, &peripherals, &peripherals)
 	{
 		testMoveImmediateToRegister();
 		testCCCC();
