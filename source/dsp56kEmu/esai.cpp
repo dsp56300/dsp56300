@@ -16,33 +16,26 @@ namespace dsp56k
 
 	void Esai::exec()
 	{
-		if(m_tcr & M_TEM)
-		{
-			++m_cyclesSinceWrite;
-			if(m_cyclesSinceWrite > g_cyclesPerSample)	// Time to xfer samples!
-			{
-				m_cyclesSinceWrite = 0;
-				// Are we about to underrun?
-				bool underrun=false;
-				if (m_sr.test(M_TUE, M_TDE) && m_tcr.test(M_TEIE))
-				{
-					m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
-					underrun = true;
-				}
+		if(!(m_tcr & M_TEM))
+			return;
 
-				for (int i=0;i<6;i++) if (outputEnabled(i)) writeTXimpl(i,m_tx[i]);
-				for (int i=0;i<4;i++) if (inputEnabled(i)) m_rx[i]=readRXimpl(i);
-				m_sr.set(M_TUE, M_TDE);
-				m_frameCounter ^= 1;
-				m_writtenTX = 0;
-				m_hasReadStatus = 0;
-				if (!underrun)
-				{
-					if (!m_frameCounter && m_tcr.test(M_TLIE))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
-					else if (m_tcr.test(M_TIE))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data);
-				}
-			}
-		}
+		++m_cyclesSinceWrite;
+		if(m_cyclesSinceWrite <= g_cyclesPerSample)
+			return;
+
+		// Time to xfer samples!
+		m_cyclesSinceWrite = 0;
+		for (int i=0;i<6;i++) if (outputEnabled(i)) writeTXimpl(i,m_tx[i]);
+		for (int i=0;i<4;i++) if (inputEnabled(i)) m_rx[i]=readRXimpl(i);
+		m_frameCounter ^= 1;
+
+		if (m_sr.test(M_TUE) && m_tcr.test(M_TEIE)) m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
+		else if (m_tcr.test(M_TIE))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data);
+		if (!m_frameCounter && m_tcr.test(M_TLIE))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
+
+		m_sr.set(M_TUE, M_TDE);
+		m_writtenTX = 0;
+		m_hasReadStatus = 0;
 	}
 
 	void Esai::writeTX(size_t _index, TWord _val)
