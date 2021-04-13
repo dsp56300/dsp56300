@@ -305,7 +305,6 @@ namespace dsp56k
 		TWord m_tccr = 0;							// transmit clock control register
 		
 		TWord m_tx[6],m_rx[6];						// Words written by the DSP and words for the DSP to read
-		TWord m_frameCounter = 0;					// Which frame (0=left, 1=right) we're on
 		TWord m_hasReadStatus = 0;					// Has the status register been read since TUE was set?
 
 		uint32_t m_cyclesSinceWrite = 0;
