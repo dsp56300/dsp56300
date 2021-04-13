@@ -8,7 +8,17 @@ namespace dsp56k
 {
 	void Timers::exec()
 	{
-		auto& t = m_timers[0];
+		// Prescaler Counter
+		// The prescaler counter is a 21-bit counter that is decremented on the rising edge of the prescaler input clock.
+		// The counter is enabled when at least one of the three timers is enabled (i.e., one or more of the timer enable
+		// (TE) bits are set) and is using the prescaler output as its source (i.e., one or more of the PCE bits are set).
+
+		// If the timer runs on internal clock, the frequency is DSP / 2
+		m_prescalerClock ^= 1;
+		m_tpcr -= m_prescalerClock;
+
+		if(m_tpcr == 0)
+			m_tpcr = m_tplr & 0xfffff;
 
 		execTimer(m_timers[0], 0);
 		execTimer(m_timers[1], 1);

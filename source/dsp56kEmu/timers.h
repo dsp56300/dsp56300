@@ -138,6 +138,7 @@ namespace dsp56k
 		TWord m_tplr = 0;							// Timer Prescaler Load
 		TWord m_tpcr = 0;							// Timer Prescaler Count
 
+		TWord m_prescalerClock = 0;
 		std::array<Timer,3> m_timers;
 	};
 }
