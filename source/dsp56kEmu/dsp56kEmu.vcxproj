@@ -93,6 +93,7 @@
     <ClCompile Include="error.cpp" />
     <ClCompile Include="esai.cpp" />
     <ClCompile Include="essi.cpp" />
+    <ClCompile Include="hdi08.cpp" />
     <ClCompile Include="instructioncache.cpp" />
     <ClCompile Include="logging.cpp" />
     <ClCompile Include="memory.cpp" />
@@ -114,6 +115,7 @@
     <ClInclude Include="error.h" />
     <ClInclude Include="esai.h" />
     <ClInclude Include="essi.h" />
+    <ClInclude Include="hdi08.h" />
     <ClInclude Include="instructioncache.h" />
     <ClInclude Include="logging.h" />
     <ClInclude Include="memory.h" />
