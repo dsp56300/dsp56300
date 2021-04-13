@@ -31,7 +31,8 @@ peripherals.cpp peripherals.h
 registers.cpp registers.h
 ringbuffer.h
 semaphore.h
-staticArray.h 
+staticArray.h
+timers.h
 types.cpp types.h
 unittests.cpp unittests.h
 utils.cpp utils.h
