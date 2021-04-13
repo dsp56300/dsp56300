@@ -31,7 +31,7 @@ namespace dsp56k
 				}
 
 				for (int i=0;i<6;i++) if (m_tcr.test(static_cast<TcrBits>(i))) writeTXimpl(i,m_tx[i]);
-				for (int i=0;i<6;i++) if (m_rcr.test(static_cast<RcrBits>(i))) m_rx[i]=readRXimpl(i);
+				for (int i=0;i<4;i++) if (m_rcr.test(static_cast<RcrBits>(i))) m_rx[i]=readRXimpl(i);
 				m_sr.set(M_TUE, M_TDE);
 				m_frameCounter ^= 1;
 				m_writtenTX = 0;
