@@ -1043,7 +1043,16 @@ namespace dsp56k
 	}
 	inline void DSP::op_Jsset_S(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSSET");
+		const TWord dddddd = getFieldValue<Jsset_S,Field_DDDDDD>(op);
+		const TWord bit = getFieldValue<Jsset_S,Field_bbbbb>(op);
+		const int ea = fetchOpWordB();
+
+		const TReg24 r = decode_dddddd_read( dddddd );
+
+		if( bittest( r.var, bit ) )
+		{
+			jsr(TReg24(ea));
+		}
 	}
 	inline void DSP::op_Lra_Rn(const TWord op)
 	{
