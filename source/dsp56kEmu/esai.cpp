@@ -30,8 +30,8 @@ namespace dsp56k
 					underrun = true;
 				}
 
-				for (int i=0;i<6;i++) if (m_tcr.test(static_cast<TcrBits>(i))) writeTXimpl(i,m_tx[i]);
-				for (int i=0;i<4;i++) if (m_rcr.test(static_cast<RcrBits>(i))) m_rx[i]=readRXimpl(i);
+				for (int i=0;i<6;i++) if (outputEnabled(i)) writeTXimpl(i,m_tx[i]);
+				for (int i=0;i<4;i++) if (inputEnabled(i)) m_rx[i]=readRXimpl(i);
 				m_sr.set(M_TUE, M_TDE);
 				m_frameCounter ^= 1;
 				m_writtenTX = 0;
@@ -47,7 +47,7 @@ namespace dsp56k
 
 	void Esai::writeTX(size_t _index, TWord _val)
 	{
-		if(!m_tcr.test(static_cast<TcrBits>(M_TE0 + _index)))
+		if(!outputEnabled(_index))
 			return;
 		m_tx[_index] = _val;
 		m_writtenTX |= (1<<_index);
@@ -60,7 +60,7 @@ namespace dsp56k
 
 	TWord Esai::readRX(size_t _index)
 	{
-		if(!m_rcr.test(static_cast<RcrBits>(M_RE0 + _index)))
+		if(!inputEnabled(_index))
 			return 0;
 
 		return m_rx[_index];

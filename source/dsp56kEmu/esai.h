@@ -291,6 +291,9 @@ namespace dsp56k
 		TWord readRX(size_t _index);
 		
 	private:
+		bool inputEnabled(uint32_t _index) const	{ return m_rcr.test(static_cast<RcrBits>(_index)); }
+		bool outputEnabled(uint32_t _index) const	{ return m_tcr.test(static_cast<TcrBits>(_index)); }
+
 		IPeripherals& m_periph;
 		Bitfield<uint32_t, SrBits, 18> m_sr;		// status register
 		TWord m_cr = 0;								// control register
