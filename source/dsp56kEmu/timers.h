@@ -96,6 +96,9 @@ namespace dsp56k
 			if (!t.m_tcsr.test(Timer::M_TE) && bittest<TWord, Timer::M_TE>(_val))
 				t.m_tcr = t.m_tlr;
 
+			timerFlagReset<Timer::M_TOF>(t.m_tcsr, _val);
+			timerFlagReset<Timer::M_TCF>(t.m_tcsr, _val);
+
 			t.m_tcsr = _val;
 		}
 		
@@ -115,6 +118,21 @@ namespace dsp56k
 		TWord readTPCR()							{ return m_tpcr; }
 
 	private:
+		template<Timer::TcsrBits B> static void timerFlagReset(const Bitfield<unsigned, Timer::TcsrBits, 22>& _tcsr, TWord& _val)
+		{
+			// This is so WTF. Why not clearing it when writing a 0???
+
+			// The TOF/TCF bit is set to indicate that counter overflow has occurred. This bit is cleared by writing a 1 to the
+			// TOF/TCF bit. Writing a 0 to the TOF/TCF bit has no effect.
+			if(!_tcsr.test(B))
+				return;
+
+			if(bittest<TWord, B>(_val))
+				_val &= ~(1<<B);
+			else
+				_val |= (1<<B);
+		}
+
 		IPeripherals& m_peripherals;
 
 		TWord m_tplr = 0;							// Timer Prescaler Load

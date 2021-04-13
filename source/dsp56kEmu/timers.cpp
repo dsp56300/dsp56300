@@ -23,13 +23,19 @@ namespace dsp56k
 		_t.m_tcr++;
 		_t.m_tcr &= 0xFFFFFF;
 
-		if (_t.m_tcr == _t.m_tcpr && (_t.m_tcsr.test(Timer::M_TCIE)))
+		if (_t.m_tcr == _t.m_tcpr)
 		{
-			m_peripherals.getDSP().injectInterrupt(Vba_TIMER0_Compare + (_index << 1));
+			if(_t.m_tcsr.test(Timer::M_TCIE))
+				m_peripherals.getDSP().injectInterrupt(Vba_TIMER0_Compare + (_index << 1));
+
+			_t.m_tcsr.set(Timer::M_TCF);
 		}
-		if (!_t.m_tcr && (_t.m_tcsr.test(Timer::M_TOIE)))
+		if (!_t.m_tcr)
 		{
-			m_peripherals.getDSP().injectInterrupt(Vba_TIMER0_Overflow + (_index << 1));
+			if(_t.m_tcsr.test(Timer::M_TOIE))
+				m_peripherals.getDSP().injectInterrupt(Vba_TIMER0_Overflow + (_index << 1));
+
+			_t.m_tcsr.set(Timer::M_TOF);
 		}
 		if (!_t.m_tcr)
 		{
