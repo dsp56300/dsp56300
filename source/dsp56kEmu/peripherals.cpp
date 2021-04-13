@@ -84,10 +84,10 @@ namespace dsp56k
 			return m_hdi08.readStatusRegister();
 		case HDI08::HCR:
 			return m_hdi08.readControlRegister();
-		case HDI08::HRX:
-			return m_hdi08.read();
 		case HDI08::HPCR:
 			return m_hdi08.readPortControlRegister();
+		case HDI08::HORX:
+			return m_hdi08.readRX();
 
 		case Esai::M_RCR:
 			return m_esai.readReceiveControlRegister();
@@ -126,7 +126,7 @@ namespace dsp56k
 			return m_mem[_addr - XIO_Reserved_High_First];
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
-			LOG("Read from " << HEX(_addr));
+//			LOG("Read from " << HEX(_addr));
 			return 0;	//m_mem[_addr - XIO_Reserved_High_First];	// There is nothing connected.
 
 		case 0xFFFFF5:					// ID Register
@@ -135,7 +135,7 @@ namespace dsp56k
 
 		auto& value = m_mem[_addr - XIO_Reserved_High_First];
 
-		LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  HEX(value) << ")");
+		if (_addr!=0xffffd5) {LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  HEX(value) << ")");}
 
 		return value;
 	}
@@ -150,32 +150,32 @@ namespace dsp56k
 		case HDI08::HCR:
 			m_hdi08.writeControlRegister(_val);
 			return;
-		case HDI08::HTX:
-			m_hdi08.writeTransmitRegister(_val);
 			break;
 		case HDI08::HPCR:
 			m_hdi08.writePortControlRegister(_val);
 			return;
+		case HDI08::HOTX:
+			m_hdi08.writeTX(_val);
 
-		case Timers::M_TCSR0:		m_timers.writeTCSR	(0, _val);	break;		// TIMER0 Control/Status Register
-		case Timers::M_TCSR1:		m_timers.writeTCSR	(1, _val);	break;		// TIMER1 Control/Status Register
-		case Timers::M_TCSR2:		m_timers.writeTCSR	(2, _val);	break;		// TIMER2 Control/Status Register
-		case Timers::M_TLR0:		m_timers.writeTLR	(0, _val);	break;		// TIMER0 Load Reg
-		case Timers::M_TLR1:		m_timers.writeTLR	(1, _val);	break;		// TIMER1 Load Reg
-		case Timers::M_TLR2:		m_timers.writeTLR	(2, _val);	break;		// TIMER2 Load Reg
-		case Timers::M_TCPR0:		m_timers.writeTCPR	(0, _val);	break;		// TIMER0 Compare Register
-		case Timers::M_TCPR1:		m_timers.writeTCPR	(1, _val);	break;		// TIMER1 Compare Register
-		case Timers::M_TCPR2:		m_timers.writeTCPR	(2, _val);	break;		// TIMER2 Compare Register
-		case Timers::M_TCR0:		m_timers.writeTCR	(0, _val);	break;		// TIMER0 Count Register
-		case Timers::M_TCR1:		m_timers.writeTCR	(1, _val);	break;		// TIMER1 Count Register
-		case Timers::M_TCR2:		m_timers.writeTCR	(2, _val);	break;		// TIMER2 Count Register
+		case Timers::M_TCSR0:		m_timers.writeTCSR	(0, _val);	return;		// TIMER0 Control/Status Register
+		case Timers::M_TCSR1:		m_timers.writeTCSR	(1, _val);	return;		// TIMER1 Control/Status Register
+		case Timers::M_TCSR2:		m_timers.writeTCSR	(2, _val);	return;		// TIMER2 Control/Status Register
+		case Timers::M_TLR0:		m_timers.writeTLR	(0, _val);	return;		// TIMER0 Load Reg
+		case Timers::M_TLR1:		m_timers.writeTLR	(1, _val);	return;		// TIMER1 Load Reg
+		case Timers::M_TLR2:		m_timers.writeTLR	(2, _val);	return;		// TIMER2 Load Reg
+		case Timers::M_TCPR0:		m_timers.writeTCPR	(0, _val);	return;		// TIMER0 Compare Register
+		case Timers::M_TCPR1:		m_timers.writeTCPR	(1, _val);	return;		// TIMER1 Compare Register
+		case Timers::M_TCPR2:		m_timers.writeTCPR	(2, _val);	return;		// TIMER2 Compare Register
+		case Timers::M_TCR0:		m_timers.writeTCR	(0, _val);	return;		// TIMER0 Count Register
+		case Timers::M_TCR1:		m_timers.writeTCR	(1, _val);	return;		// TIMER1 Count Register
+		case Timers::M_TCR2:		m_timers.writeTCR	(2, _val);	return;		// TIMER2 Count Register
 
-		case Timers::M_TPLR:		m_timers.writeTPLR	(_val);		break;		// TIMER Prescaler Load Register
-		case Timers::M_TPCR:		m_timers.writeTPCR	(_val);		break;		// TIMER Prescalar Count Register
+		case Timers::M_TPLR:		m_timers.writeTPLR	(_val);		return;		// TIMER Prescaler Load Register
+		case Timers::M_TPCR:		m_timers.writeTPCR	(_val);		return;		// TIMER Prescalar Count Register
 			
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
-			LOG("Write to " << HEX(_addr) << ": " << HEX(_val));
+//			LOG("Write to " << HEX(_addr) << ": " << HEX(_val));
 //			m_mem[_addr - XIO_Reserved_High_First] = _val;	// Do not write!
 			return;
 
@@ -208,7 +208,7 @@ namespace dsp56k
 		default:
 			break;
 		}
-		LOG( "Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));
+		if (_addr!=0xffffd5) {LOG( "Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));}
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
 	}
 

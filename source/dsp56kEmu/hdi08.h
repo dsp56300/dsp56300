@@ -6,15 +6,15 @@ namespace dsp56k
 	class HDI08
 	{
 	public:
-		explicit HDI08(IPeripherals& _peripheral) : m_periph(_peripheral)		{}
+		explicit HDI08(IPeripherals& _peripheral) : m_periph(_peripheral), m_pendingRXInterrupts(0) {}
 
 		enum Addresses
 		{
 			HCR		= 0xFFFFC2,					// Host Control Register (HCR)
 			HSR		= 0xFFFFC3,					// Host Status Register (HSR)
 			HPCR	= 0xFFFFC4,					// Host Port Control Register (HPCR)
-			HRX		= 0xFFFFC6,					// Host Receive Register (HRX)
-			HTX	    = 0xFFFFC7					// Host Transmit Register (HTX)
+			HORX	= 0xFFFFC6,					// Host Receive Register (HORX)
+			HOTX	= 0xFFFFC7					// Host Transmit Register (HOTX)
 		};
 
 		enum HostStatusRegisterBits
@@ -26,7 +26,7 @@ namespace dsp56k
 			HSR_HF1,						// Host Flag 1
 			HSR_DMA = 7,					// DMA Status
 		};
-		
+			
 		enum HostPortControlRegisterBits
 		{
 			HPCR_HEN = 6,					// HostEnable
@@ -38,43 +38,17 @@ namespace dsp56k
 			HCR_HTIE = 1,					// Host Transmit Interrupt Enable
 		};
 		
-		void write(const int32_t* _data, const size_t _count)
-		{
-			for(size_t i=0; i<_count; ++i)
-			{
-				m_data.waitNotFull();
-				m_data.push_back(_data[i] & 0x03ffffff);
-			}
-		}
-		
-		TWord read()
-		{
-			if(m_data.empty())
-				return 0;
 
-			return m_data.pop_front() & 0xFFFFFF;
-		}
-
-		TWord  readStatusRegister()
+		TWord readStatusRegister()
 		{
 			// Toggle HDI8 "Receive Data Full" bit
 			dsp56k::bitset<TWord, HSR_HRDF>(m_hsr, m_data.empty() ? 0 : 1);
 			return m_hsr;
 		}
-		
-		void writeStatusRegister(TWord _val)
-		{
-			m_hsr = _val;
-		}
-		
+
 		TWord readControlRegister()
 		{
 			return m_hcr;
-		}
-
-		void writeControlRegister(TWord _val)
-		{
-			m_hcr = _val;
 		}
 
 		TWord readPortControlRegister()
@@ -82,14 +56,32 @@ namespace dsp56k
 			return m_hpcr;
 		}
 
+		void writeControlRegister(TWord _val);
+
+		void writeStatusRegister(TWord _val)
+		{
+			LOG("Write HDI08 HSR " << HEX(_val));
+			m_hsr = _val;
+		}
+
 		void writePortControlRegister(TWord _val)
 		{
+			LOG("Write HDI08 HPCR " << HEX(_val));
 			m_hpcr = _val;
 		}
 
-		void writeTransmitRegister(TWord _val);
-		
+		void writeTX(TWord _val)
+		{
+			LOG("Write HDI08 HOTX " << HEX(_val));
+		}
+
 		void exec();
+
+		TWord readRX();
+		void writeRX(const int32_t* _data, const size_t _count);
+		void clearRX();
+
+		void setHostFlags(const char _flag0, const char _flag1);
 
 		void reset() {}
 
@@ -99,5 +91,6 @@ namespace dsp56k
 		TWord m_hpcr = 0;
 		RingBuffer<uint32_t, 1024, false> m_data;
 		IPeripherals& m_periph;
+		std::atomic<uint32_t> m_pendingRXInterrupts;
 	};
 }
