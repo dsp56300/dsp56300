@@ -32,7 +32,7 @@ registers.cpp registers.h
 ringbuffer.h
 semaphore.h
 staticArray.h
-timers.h
+timers.cpp timers.h
 types.cpp types.h
 unittests.cpp unittests.h
 utils.cpp utils.h

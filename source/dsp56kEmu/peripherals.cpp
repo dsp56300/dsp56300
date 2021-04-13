@@ -4,7 +4,6 @@
 #include "logging.h"
 #include "dsp.h"
 
-
 namespace dsp56k
 {
 	// _____________________________________________________________________________
@@ -73,7 +72,7 @@ namespace dsp56k
 		m_hi08.reset();
 	}
 
-	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hdi08(*this)
+	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hdi08(*this), m_timers(*this)
 	{
 	}
 
@@ -104,6 +103,23 @@ namespace dsp56k
 			return 0;
 		case 0xFFFFBE:	// Port C Direction Register
 			return 0;
+
+			
+		case Timers::M_TCSR0:		return m_timers.readTCSR(0);	// TIMER0 Control/Status Register
+		case Timers::M_TCSR1:		return m_timers.readTCSR(1);	// TIMER1 Control/Status Register
+		case Timers::M_TCSR2:		return m_timers.readTCSR(2);	// TIMER2 Control/Status Register
+		case Timers::M_TLR0:		return m_timers.readTLR	(0);	// TIMER0 Load Reg
+		case Timers::M_TLR1:		return m_timers.readTLR	(1);	// TIMER1 Load Reg
+		case Timers::M_TLR2:		return m_timers.readTLR	(2);	// TIMER2 Load Reg
+		case Timers::M_TCPR0:		return m_timers.readTCPR(0);	// TIMER0 Compare Register
+		case Timers::M_TCPR1:		return m_timers.readTCPR(1);	// TIMER1 Compare Register
+		case Timers::M_TCPR2:		return m_timers.readTCPR(2);	// TIMER2 Compare Register
+		case Timers::M_TCR0:		return m_timers.readTCR	(0);	// TIMER0 Count Register
+		case Timers::M_TCR1:		return m_timers.readTCR	(1);	// TIMER1 Count Register
+		case Timers::M_TCR2:		return m_timers.readTCR	(2);	// TIMER2 Count Register
+
+		case Timers::M_TPLR:		return m_timers.readTPLR();		// TIMER Prescaler Load Register
+		case Timers::M_TPCR:		return m_timers.readTPCR();		// TIMER Prescalar Count Register
 
 		case 0xffffff:
 		case 0xfffffe:
@@ -140,24 +156,22 @@ namespace dsp56k
 		case HDI08::HPCR:
 			m_hdi08.writePortControlRegister(_val);
 			return;
-				
-		case 0xFFFF86:	// TLR2
-		case 0xffff87:	// TCSR2
-		case 0xffff8a:	// TLR1
-		case 0xffff8b:	// TCSR1
-			LOG("Timer register " << HEX(_addr) << ": " << HEX(_val));
-			return;
 
-		case 0xFFFF8F:	// TCSR0
-			if (!(m_mem[_addr - XIO_Reserved_High_First] & 1) && (_val & 1) )
-			{
-				m_mem[0xFFFF8C - XIO_Reserved_High_First] = m_mem[0xFFFF8E - XIO_Reserved_High_First];
-			}
-		case 0xFFFF8D:	// TCPR0
-		case 0xFFFF8E:	// TLR0
-			LOG("Timer register " << HEX(_addr) << ": " << HEX(_val));
-			break;
+		case Timers::M_TCSR0:		m_timers.writeTCSR	(0, _val);	break;		// TIMER0 Control/Status Register
+		case Timers::M_TCSR1:		m_timers.writeTCSR	(1, _val);	break;		// TIMER1 Control/Status Register
+		case Timers::M_TCSR2:		m_timers.writeTCSR	(2, _val);	break;		// TIMER2 Control/Status Register
+		case Timers::M_TLR0:		m_timers.writeTLR	(0, _val);	break;		// TIMER0 Load Reg
+		case Timers::M_TLR1:		m_timers.writeTLR	(1, _val);	break;		// TIMER1 Load Reg
+		case Timers::M_TLR2:		m_timers.writeTLR	(2, _val);	break;		// TIMER2 Load Reg
+		case Timers::M_TCPR0:		m_timers.writeTCPR	(0, _val);	break;		// TIMER0 Compare Register
+		case Timers::M_TCPR1:		m_timers.writeTCPR	(1, _val);	break;		// TIMER1 Compare Register
+		case Timers::M_TCPR2:		m_timers.writeTCPR	(2, _val);	break;		// TIMER2 Compare Register
+		case Timers::M_TCR0:		m_timers.writeTCR	(0, _val);	break;		// TIMER0 Count Register
+		case Timers::M_TCR1:		m_timers.writeTCR	(1, _val);	break;		// TIMER1 Count Register
+		case Timers::M_TCR2:		m_timers.writeTCR	(2, _val);	break;		// TIMER2 Count Register
 
+		case Timers::M_TPLR:		m_timers.writeTPLR	(_val);		break;		// TIMER Prescaler Load Register
+		case Timers::M_TPCR:		m_timers.writeTPCR	(_val);		break;		// TIMER Prescalar Count Register
 			
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
@@ -202,27 +216,7 @@ namespace dsp56k
 	{
 		m_esai.exec();
 		m_hdi08.exec();
-		TWord TCSR0 = m_mem[0xFFFF8F - XIO_Reserved_High_First];
-		if (TCSR0 & 1)
-		{
-			auto& TCR = m_mem[0xFFFF8C - XIO_Reserved_High_First];
-
-			TCR++;
-			TCR &= 0xFFFFFF;
-
-			if (TCR == m_mem[0xFFFF8D - XIO_Reserved_High_First] && (TCSR0 & 4))
-			{
-				getDSP().injectInterrupt(InterruptVectorAddress56362::Vba_TIMER0_Compare);
-			}
-			if (!TCR && (TCSR0 & 2))
-			{
-				getDSP().injectInterrupt(InterruptVectorAddress56362::Vba_TIMER0_Overflow);
-			}
-			if (!TCR)
-			{
-				m_mem[0xFFFF8C - XIO_Reserved_High_First] = m_mem[0xFFFF8E - XIO_Reserved_High_First];
-			}
-		}
+		m_timers.exec();
 	}
 
 	void Peripherals56362::reset()

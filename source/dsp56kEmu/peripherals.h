@@ -146,4 +146,5 @@ namespace dsp56k
 	private:
 		Esai m_esai;
 		HDI08 m_hdi08;
+		Timers m_timers;
 	};}
