@@ -37,24 +37,36 @@ namespace dsp56k
 			M_TX0	= 0xFFFFA0, // ESAI Transmit Data Register 0 (TX0)
 		};
 
-		enum Bits
+		enum RsbmBits
 		{
 			// RSMB Register bits
 			M_RS31 = 15,	M_RS30 = 14,	M_RS29 = 13,	M_RS28 = 12,	M_RS27 = 11,	M_RS26 = 10,	M_RS25 = 9,		M_RS24 = 8,
 			M_RS23 = 7,		M_RS22 = 6,		M_RS21 = 5,		M_RS20 = 4,		M_RS19 = 3,		M_RS18 = 2,		M_RS17 = 1,		M_RS16 = 0,
+		};
 
+		enum RsmaBits
+		{
 			// RSMA Register bits
 			M_RS15 = 15,	M_RS14 = 14,	M_RS13 = 13,	M_RS12 = 12,	M_RS11 = 11,	M_RS10 = 10,	M_RS9 = 9,		M_RS8 = 8,
 			M_RS7 = 7,		M_RS6 = 6,		M_RS5 = 5,		M_RS4 = 4,		M_RS3 = 3,		M_RS2 = 2,		M_RS1 = 1,		M_RS0 = 0,
+		};
 
+		enum TsmbBits
+		{
 			// TSMB Register bits
 			M_TS31 = 15,	M_TS30 = 14,	M_TS29 = 13,	M_TS28 = 12,	M_TS27 = 11,	M_TS26 = 10,	M_TS25 = 9,		M_TS24 = 8,
 			M_TS23 = 7,		M_TS22 = 6,		M_TS21 = 5,		M_TS20 = 4,		M_TS19 = 3,		M_TS18 = 2,		M_TS17 = 1,		M_TS16 = 0,
+		};
 
+		enum TsmaBits
+		{
 			// TSMA Register bits
 			M_TS15 = 15,	M_TS14 = 14,	M_TS13 = 13,	M_TS12 = 12,	M_TS11 = 11,	M_TS10 = 10,	M_TS9 = 9,		M_TS8 = 8,
 			M_TS7 = 7,		M_TS6 = 6,		M_TS5 = 5,		M_TS4 = 4,		M_TS3 = 3,		M_TS2 = 2,		M_TS1 = 1,		M_TS0 = 0,
+		};
 
+		enum RccrBits
+		{
 			// RCCR Register bits
 			M_RHCKD = 23,				// Receiver High Frequency Clock Direction
 			M_RFSD = 22,				// Receiver Frame Sync Signal Direction
@@ -86,7 +98,10 @@ namespace dsp56k
 			M_RPM2 = 2,					// Receiver Prescale Modulus Select Bit 2
 			M_RPM1 = 1,					// Receiver Prescale Modulus Select Bit 1
 			M_RPM0 = 0,					// Receiver Prescale Modulus Select Bit 0
+		};
 
+		enum RcrBits
+		{
 			// RCR Register bits
 			M_RLIE = 23,				// Receive Last Slot Interrupt Enable
 			M_RIE = 22,					// Receive Interrupt Enable
@@ -114,7 +129,10 @@ namespace dsp56k
 			M_RE2 = 2,					// Receive 2 Enable
 			M_RE1 = 1,					// Receive 1 Enable
 			M_RE0 = 0,					// Receive 0 Enable
+		};
 
+		enum TccrBits
+		{
 			// TCCR Register bits
 			M_THCKD = 23,				// Transmit High Frequency Clock Direction
 			M_TFSD = 22,				// Transmit Frame Sync Signal Direction
@@ -146,7 +164,10 @@ namespace dsp56k
 			M_TPM2 = 2,					// Transmit Prescale Modulus Select Bit 2
 			M_TPM1 = 1,					// Transmit Prescale Modulus Select Bit 1
 			M_TPM0 = 0,					// Transmit Prescale Modulus Select Bit 0
+		};
 
+		enum TcrBits
+		{
 			// TCR Register bits
 			M_TLIE = 23,				// Transmit Last Slot Interrupt Enable
 			M_TIE = 22,					// Transmit Interrupt Enable
@@ -177,7 +198,10 @@ namespace dsp56k
 			M_TE2 = 2,					// Transmit 2 Enable
 			M_TE1 = 1,					// Transmit 1 Enable
 			M_TE0 = 0,					// Transmit 0 Enable
+		};
 
+		enum CrBits
+		{
 			// control bits of SAICR
 			M_ALC = 8,					// Alignment Control
 			M_TEBE = 7,					// Transmit External Buffer Enable
@@ -185,7 +209,10 @@ namespace dsp56k
 			M_OF2 = 2,					// Serial Output Flag 2
 			M_OF1 = 1,					// Serial Output Flag 1
 			M_OF0 = 0,					// Serial Output Flag 0
+		};
 
+		enum SrBits
+		{
 			// status bits of SAISR
 			M_TODE = 17,				// Transmit Odd-Data Register Empty
 			M_TEDE = 16,				// Transmit Even-Data Register Empty
