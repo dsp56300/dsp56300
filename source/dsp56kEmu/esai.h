@@ -309,5 +309,6 @@ namespace dsp56k
 
 		uint32_t m_cyclesSinceWrite = 0;
 		uint32_t m_writtenTX = 0;
+		uint32_t m_lastClock = 0;
 	};
 }

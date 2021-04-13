@@ -14,15 +14,21 @@ namespace dsp56k
 		// (TE) bits are set) and is using the prescaler output as its source (i.e., one or more of the PCE bits are set).
 
 		// If the timer runs on internal clock, the frequency is DSP / 2
+		uint32_t diff = m_peripherals.getDSP().getInstructionCounter() - m_lastClock;
+		if (diff&0x80000000) diff=(diff^0xFFFFFFFF)+1;	m_lastClock=m_peripherals.getDSP().getInstructionCounter();
+
 		m_prescalerClock ^= 1;
 		m_tpcr -= m_prescalerClock;
 
 		if(m_tpcr == 0)
 			m_tpcr = m_tplr & 0xfffff;
 
-		execTimer(m_timers[0], 0);
-		execTimer(m_timers[1], 1);
-		execTimer(m_timers[2], 2);
+		for (int i=0;i<diff;i++)
+		{
+			execTimer(m_timers[0], 0);
+			execTimer(m_timers[1], 1);
+			execTimer(m_timers[2], 2);
+		}
 	}
 
 	void Timers::execTimer(Timer& _t, uint32_t _index) const
