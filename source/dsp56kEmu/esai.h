@@ -4,6 +4,7 @@
 
 #include "audio.h"
 #include "logging.h"
+#include "bitfield.h"
 
 namespace dsp56k
 {
@@ -263,7 +264,7 @@ namespace dsp56k
 
 		void writeTransmitControlRegister(TWord _val)
 		{
-			bitset<TWord, M_TUE>(m_sr, 0);
+			m_sr.clear(M_TUE);
 			LOG("Write ESAI TCR " << HEX(_val));
 			m_tcr = _val;
 		}
@@ -291,18 +292,18 @@ namespace dsp56k
 		
 	private:
 		IPeripherals& m_periph;
-		TWord m_sr = 0;				// status register
-		TWord m_cr = 0;				// control register
+		Bitfield<uint32_t, SrBits, 18> m_sr;		// status register
+		TWord m_cr = 0;								// control register
 
-		TWord m_tcr = 0;			// transmit control register
-		TWord m_rcr = 0;			// receive control register
+		Bitfield<uint32_t, TcrBits, 24> m_tcr;		// transmit control register
+		Bitfield<uint32_t, RcrBits, 24> m_rcr;		// receive control register
 
-		TWord m_rccr = 0;			// receive clock control register
-		TWord m_tccr = 0;			// transmit clock control register
+		TWord m_rccr = 0;							// receive clock control register
+		TWord m_tccr = 0;							// transmit clock control register
 		
-		TWord m_tx[6],m_rx[6];		// Words written by the DSP and words for the DSP to read
-		TWord m_frameCounter = 0;	// Which frame (0=left, 1=right) we're on
-		TWord m_hasReadStatus = 0;	// Has the status register been read since TUE was set?
+		TWord m_tx[6],m_rx[6];						// Words written by the DSP and words for the DSP to read
+		TWord m_frameCounter = 0;					// Which frame (0=left, 1=right) we're on
+		TWord m_hasReadStatus = 0;					// Has the status register been read since TUE was set?
 
 		uint32_t m_cyclesSinceWrite = 0;
 		uint32_t m_writtenTX = 0;
