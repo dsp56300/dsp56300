@@ -40,7 +40,7 @@ namespace dsp56k
 				if (!underrun)
 				{
 					if (!m_frameCounter && bittest<TWord,M_TLIE>(m_tcr))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
-					if (m_frameCounter && bittest<TWord,M_TIE>(m_tcr))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data);
+					else if (bittest<TWord,M_TIE>(m_tcr))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data);
 				}
 			}
 		}
