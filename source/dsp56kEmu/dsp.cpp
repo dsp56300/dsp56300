@@ -2169,11 +2169,7 @@ namespace dsp56k
 	const char* DSP::getASM(const TWord _wordA, const TWord _wordB)
 	{
 	#ifdef _DEBUG
-		unsigned long ops[3];
-		ops[0] = _wordA;
-		ops[1] = _wordB;
-		ops[2] = 0;
-		disassemble( m_asm, ops, reg.sr.var, reg.omr.var );
+		disassemble(m_asm, _wordA, _wordB, reg.sr.var, reg.omr.var);
 	#endif
 		return m_asm;
 	}

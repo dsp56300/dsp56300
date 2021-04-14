@@ -230,8 +230,7 @@ namespace dsp56k
 			}
 
 			char assembly[128]{};
-			unsigned long ops[3] = {opA, opB, 0};
-			auto usedOps = disassemble(assembly, ops, 0,0);
+			auto usedOps = disassemble(assembly, opA, opB, 0,0);
 
 			if(usedOps == 0)
 			{
