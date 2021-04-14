@@ -24,7 +24,7 @@
 
 namespace dsp56k
 {
-	constexpr bool g_dumpPC = false;
+	constexpr bool g_traceSupported = false;
 
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
@@ -407,6 +407,16 @@ namespace dsp56k
 		execOp(op);
 	}
 
+	std::string DSP::getSSindent() const
+	{
+		std::stringstream ss;
+
+		for(auto i=0; i<ssIndex(); ++i)
+			ss << "\t";
+
+		return std::string(ss.str());
+	}
+
 	void DSP::execOp(const TWord op)
 	{
 		const TWord currentOp = pcCurrentInstruction;
@@ -417,7 +427,7 @@ namespace dsp56k
 		++reg.ictr.var;
 		++m_instructions;
 
-		if(g_dumpPC && (opCache & 0xff) != ResolveCache && pcCurrentInstruction == currentOp)
+		if(g_traceSupported && (opCache & 0xff) != ResolveCache && pcCurrentInstruction == currentOp)
 			traceOp();
 	}
 
@@ -956,14 +966,9 @@ namespace dsp56k
 		if( strstr(_func, "DO" ) )
 			return;
 
-		std::stringstream scss;
-		
-		for( int i=0; i<reg.sc.var; ++i )
-		{
-			scss << "\t";
-		}
+		const std::string indent = getSSindent();
 
-		LOG( std::string(scss.str()) << " SC=" << std::hex << std::setw(6) << std::setfill('0') << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
+		LOG( indent << " SC=" << std::hex << std::setw(6) << std::setfill('0') << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
 	}
 
 	// _____________________________________________________________________________
@@ -1155,7 +1160,7 @@ namespace dsp56k
 			}
 
 			--reg.lc.var;
-			setPC(hiword(reg.ss[reg.sc.toWord()]));
+			setPC(hiword(reg.ss[ssIndex()]));
 		}
 		return true;
 	}
@@ -1210,7 +1215,7 @@ namespace dsp56k
 
 	void DSP::traceOp()
 	{
-		if(!g_dumpPC || !m_trace)
+		if(!g_traceSupported || !m_trace)
 			return;
 
 		const auto op = memRead(MemArea_P, pcCurrentInstruction);
@@ -1221,33 +1226,39 @@ namespace dsp56k
 			ss << ' ' << HEX(m_opWordB);
 		else
 			ss << "       ";
-		ss << " = " << m_asm;
+		ss << " = ";
+		if(m_trace & StackIndent)
+			ss << getSSindent();
+		ss << m_asm;
 		const std::string str(ss.str());
 		LOGF(str);
 
-		dumpRegisters();
-
-		for( size_t i=0; i<Reg_COUNT; ++i )
+		if(m_trace & Regs)
 		{
-			int64_t regVal = 0;
-			const bool r = readRegToInt( (EReg)i, regVal );
+			dumpRegisters();
 
-			if( !r )
-				continue;
-			//			assert( r && "failed to read register" );
-
-			if( regVal != m_prevRegStates[i].val )
+			for( size_t i=0; i<Reg_COUNT; ++i )
 			{
-				SRegChange regChange;
-				regChange.reg = (EReg)i;
-				regChange.valOld.var = (int)m_prevRegStates[i].val;
-				regChange.valNew.var = (int)regVal;
-				regChange.pc = pcCurrentInstruction;
-				regChange.ictr = reg.ictr.var;
+				int64_t regVal = 0;
+				const bool r = readRegToInt( (EReg)i, regVal );
 
-				m_regChanges.push_back( regChange );
+				if( !r )
+					continue;
+				//			assert( r && "failed to read register" );
 
-				m_prevRegStates[i].val = regVal;
+				if( regVal != m_prevRegStates[i].val )
+				{
+					SRegChange regChange;
+					regChange.reg = (EReg)i;
+					regChange.valOld.var = (int)m_prevRegStates[i].val;
+					regChange.valNew.var = (int)regVal;
+					regChange.pc = pcCurrentInstruction;
+					regChange.ictr = reg.ictr.var;
+
+					m_regChanges.push_back( regChange );
+
+					m_prevRegStates[i].val = regVal;
+				}
 			}
 		}
 	}
@@ -1256,20 +1267,17 @@ namespace dsp56k
 	{
 		LOGSC("return");
 
-		assert(reg.sc.var > 0);
+		assert(ssIndex() > 0);
 		--reg.sp.var;
 		--reg.sc.var;
 	}
 
 	void DSP::incSP()
 	{
-		assert(reg.sc.var < reg.ss.eSize-1);
+		assert(ssIndex() < reg.ss.eSize-1);
 		++reg.sp.var;
 		++reg.sc.var;
 
-		const std::string sym = mem.getSymbol(MemArea_P, reg.pc.var);
-			
-		LOGSC((std::string(m_asm) + " - " + sym).c_str());
 	//	assert( reg.sc.var <= 9 );
 	}
 
@@ -1863,8 +1871,8 @@ namespace dsp56k
 
 		case Reg_ICTR:	_res = reg.ictr;	break;
 
-		case Reg_SSH:	_res = hiword(reg.ss[reg.sc.toWord()]);	break;
-		case Reg_SSL:	_res = loword(reg.ss[reg.sc.toWord()]);	break;
+		case Reg_SSH:	_res = hiword(reg.ss[ssIndex()]);	break;
+		case Reg_SSL:	_res = loword(reg.ss[ssIndex()]);	break;
 
 		case Reg_CNT1:	_res = reg.cnt1;		break;
 		case Reg_CNT2:	_res = reg.cnt2;		break;
@@ -2384,7 +2392,7 @@ namespace dsp56k
 		LOGF("  a2=    " << logReg(Reg_A2, 2) << "   a1=" << logReg(Reg_A1, 6) << "   a0=" << logReg(Reg_A0,6) << "   r5=" << logReg(Reg_R5,6) << " n5=" << logReg(Reg_N5,6) << " m5=" << logReg(Reg_M5,6));
 		LOGF("  b2=    " << logReg(Reg_B2, 2) << "   b1=" << logReg(Reg_B1, 6) << "   b0=" << logReg(Reg_B0,6) << "   r4=" << logReg(Reg_R4,6) << " n4=" << logReg(Reg_N4,6) << " m4=" << logReg(Reg_M4,6));
 		LOGF("                                         r3=" << logReg(Reg_R3,6) << " n3=" << logReg(Reg_N3,6) << " m3=" << logReg(Reg_M3,6));
-		LOGF("  pc=" << logReg(Reg_PC, 6) << " sr=" << logReg(Reg_SR, 6) << "  omr=" << logReg(Reg_OMR,6) << "   r2=" << logReg(Reg_R2,6) << " n2=" << logReg(Reg_N2,6) << " m2=" << logReg(Reg_M2,6));
+		LOGF("  pc=" << logReg(Reg_PC, 6) << "   sr=" << logReg(Reg_SR, 6) << "  omr=" << logReg(Reg_OMR,6) << "   r2=" << logReg(Reg_R2,6) << " n2=" << logReg(Reg_N2,6) << " m2=" << logReg(Reg_M2,6));
 		LOGF("  la=" << logReg(Reg_LA, 6) << "   lc=" << logReg(Reg_LC, 6) << "                r1=" << logReg(Reg_R1,6) << " n1=" << logReg(Reg_N1,6) << " m1=" << logReg(Reg_M1,6));
 		LOGF(" ssh=" << logReg(Reg_SSH, 6) << "  ssl=" << logReg(Reg_SSL, 6) << "   sp=" << logReg(Reg_SP,6) << "   r0=" << logReg(Reg_R0,6) << " n0=" << logReg(Reg_N0,6) << " m0=" << logReg(Reg_M0,6));
 		LOGF("  ep=" << logReg(Reg_EP, 6) << "   sz=" << logReg(Reg_SZ, 6) << "   sc=" << logReg(Reg_SC,6) << "  vba=" << logReg(Reg_VBA,6));

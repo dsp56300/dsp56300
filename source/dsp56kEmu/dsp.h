@@ -75,6 +75,15 @@ namespace dsp56k
 			LongInterrupt,
 		};
 
+		enum TraceMode
+		{
+			Disabled	= 0,
+
+			Ops			= 0x01,
+			Regs		= 0x02,
+			StackIndent	= 0x04,
+		};
+
 		// _____________________________________________________________________________
 		// registers
 		//
@@ -124,7 +133,7 @@ namespace dsp56k
 
 		std::vector<uint32_t> m_opcodeCache;
 
-		bool m_trace = false;
+		TraceMode m_trace = Disabled;
 
 		// _____________________________________________________________________________
 		// implementation
@@ -161,14 +170,6 @@ namespace dsp56k
 
 		const char*	getASM						(TWord wordA, TWord wordB);
 
-		void	execUntilRTS					()
-		{
-			LOG( "EXEC UTIL RTS, SC=" << reg.sc.var << " PC=" << reg.pc.var );
-			const TReg5 oldSC = reg.sc;
-			while( reg.sc.var >= oldSC.var )
-				exec();
-		}
-
 		const SRegs&	readRegs						() const		{ return reg; }
 
 		void			readDebugRegs					( dsp56k::SRegs& _dst ) const;
@@ -185,13 +186,15 @@ namespace dsp56k
 		void			clearOpcodeCache				();
 
 		void			dumpRegisters					();
-		void			enableTrace						(bool _trace) { m_trace = _trace; };
+		void			enableTrace						(TraceMode _trace) { m_trace = _trace; }
 
 		Memory&			memory							()											{ return mem; }
 		void			setPeriph						(size_t _index, IPeripherals* _periph)		{ perif[_index] = _periph; _periph->setDSP(this); }
 		
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
 	private:
+
+		std::string getSSindent() const;
 
 		TWord	fetchOpWordB()
 		{
@@ -832,15 +835,16 @@ namespace dsp56k
 		void	setB			( const TReg56& _src )				{ reg.b = _src; }
 
 		// STACK
-		void decSP();
+		void	decSP			();
+		void	incSP			();
+		TWord	ssIndex			() const							{ return reg.sp.var & 0xf; }
+		void	ssIndex			(const TWord _index)				{ reg.sp.var = (reg.sp.var & ~0xf) | _index & 0xf; }
 
-		void incSP();
+		TReg24	ssh()				{ TReg24 res = hiword(reg.ss[ssIndex()]); decSP(); return res; }
+		TReg24	ssl() const			{ return loword(reg.ss[ssIndex()]); }
 
-		TReg24	ssh()				{ TReg24 res = hiword(reg.ss[reg.sc.toWord()]); decSP(); return res; }
-		TReg24	ssl() const			{ return loword(reg.ss[reg.sc.toWord()]); }
-
-		void	ssl(const TReg24 _val)	{ loword(reg.ss[reg.sc.toWord()],_val); }
-		void	ssh(const TReg24 _val)	{ incSP(); hiword(reg.ss[reg.sc.toWord()],_val); }
+		void	ssl(const TReg24 _val)	{ loword(reg.ss[ssIndex()],_val); }
+		void	ssh(const TReg24 _val)	{ incSP(); hiword(reg.ss[ssIndex()],_val); }
 
 		void	pushPCSR()			{ ssh(reg.pc); ssl(reg.sr); }
 		void	popPCSR()			{ reg.sr = ssl(); setPC(ssh()); }
