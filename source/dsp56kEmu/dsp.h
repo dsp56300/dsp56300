@@ -75,6 +75,15 @@ namespace dsp56k
 			LongInterrupt,
 		};
 
+		enum TraceMode
+		{
+			Disabled	= 0,
+
+			Ops			= 0x01,
+			Regs		= 0x02,
+			StackIndent	= 0x04,
+		};
+
 		// _____________________________________________________________________________
 		// registers
 		//
@@ -124,7 +133,7 @@ namespace dsp56k
 
 		std::vector<uint32_t> m_opcodeCache;
 
-		bool m_trace = false;
+		TraceMode m_trace = Disabled;
 
 		// _____________________________________________________________________________
 		// implementation
@@ -177,7 +186,7 @@ namespace dsp56k
 		void			clearOpcodeCache				();
 
 		void			dumpRegisters					();
-		void			enableTrace						(bool _trace) { m_trace = _trace; };
+		void			enableTrace						(TraceMode _trace) { m_trace = _trace; }
 
 		Memory&			memory							()											{ return mem; }
 		void			setPeriph						(size_t _index, IPeripherals* _periph)		{ perif[_index] = _periph; _periph->setDSP(this); }

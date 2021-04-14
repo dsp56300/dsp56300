@@ -24,7 +24,7 @@
 
 namespace dsp56k
 {
-	constexpr bool g_dumpPC = false;
+	constexpr bool g_traceSupported = false;
 
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
@@ -427,7 +427,7 @@ namespace dsp56k
 		++reg.ictr.var;
 		++m_instructions;
 
-		if(g_dumpPC && (opCache & 0xff) != ResolveCache && pcCurrentInstruction == currentOp)
+		if(g_traceSupported && (opCache & 0xff) != ResolveCache && pcCurrentInstruction == currentOp)
 			traceOp();
 	}
 
@@ -1215,7 +1215,7 @@ namespace dsp56k
 
 	void DSP::traceOp()
 	{
-		if(!g_dumpPC || !m_trace)
+		if(!g_traceSupported || !m_trace)
 			return;
 
 		const auto op = memRead(MemArea_P, pcCurrentInstruction);
@@ -1227,34 +1227,38 @@ namespace dsp56k
 		else
 			ss << "       ";
 		ss << " = ";
-		ss << getSSindent();
+		if(m_trace & StackIndent)
+			ss << getSSindent();
 		ss << m_asm;
 		const std::string str(ss.str());
 		LOGF(str);
 
-//		dumpRegisters();
-
-		for( size_t i=0; i<Reg_COUNT; ++i )
+		if(m_trace & Regs)
 		{
-			int64_t regVal = 0;
-			const bool r = readRegToInt( (EReg)i, regVal );
+			dumpRegisters();
 
-			if( !r )
-				continue;
-			//			assert( r && "failed to read register" );
-
-			if( regVal != m_prevRegStates[i].val )
+			for( size_t i=0; i<Reg_COUNT; ++i )
 			{
-				SRegChange regChange;
-				regChange.reg = (EReg)i;
-				regChange.valOld.var = (int)m_prevRegStates[i].val;
-				regChange.valNew.var = (int)regVal;
-				regChange.pc = pcCurrentInstruction;
-				regChange.ictr = reg.ictr.var;
+				int64_t regVal = 0;
+				const bool r = readRegToInt( (EReg)i, regVal );
 
-				m_regChanges.push_back( regChange );
+				if( !r )
+					continue;
+				//			assert( r && "failed to read register" );
 
-				m_prevRegStates[i].val = regVal;
+				if( regVal != m_prevRegStates[i].val )
+				{
+					SRegChange regChange;
+					regChange.reg = (EReg)i;
+					regChange.valOld.var = (int)m_prevRegStates[i].val;
+					regChange.valNew.var = (int)regVal;
+					regChange.pc = pcCurrentInstruction;
+					regChange.ictr = reg.ictr.var;
+
+					m_regChanges.push_back( regChange );
+
+					m_prevRegStates[i].val = regVal;
+				}
 			}
 		}
 	}
