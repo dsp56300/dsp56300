@@ -375,7 +375,7 @@ namespace dsp56k
 		else
 			return std::string();
 
-		temp[1] = '0' + _ddddd&0x07;
+		temp[1] = '0' + (_ddddd&0x07);
 
 		return temp;
 	}
@@ -844,21 +844,50 @@ namespace dsp56k
 				m_ss << mmmrrr(mr, 2, opB);
 			}
 			return 2;
-
 		case Jmp_xxx:
 		case Jsr_xxx:
 			m_ss << absAddr(opB);
 			return 1;
 
-		case Lra_Rn: break;
-		case Lra_xxxx: break;
-		case Lsl_ii: break;
-		case Lsl_SD: break;
-		case Lsr_D: break;
-		case Lsr_ii: break;
-		case Lsr_SD: break;
-		case Lua_ea: break;
-		case Lua_Rn: break;
+		case Lra_Rn:
+			{
+				const auto rr = getFieldValue(inst, Field_RRR, op);
+				const auto dd = getFieldValue(inst, Field_ddddd, op);
+				m_ss << decode_RRR(rr) << ',' << decode_DDDDDD(dd);
+			}
+			return 1;
+		case Lra_xxxx: 
+			{
+				const auto dd = getFieldValue(inst, Field_ddddd, op);
+				m_ss << relativeAddr(opB) << ',' << decode_DDDDDD(dd);
+			}
+			return 2;
+		case Lsl_ii: 
+		case Lsr_ii:
+			{
+				const auto i = getFieldValue(inst, Field_iiiii, op);
+				const auto d = getFieldValue(inst, Field_D, op);
+				m_ss << immediate(i) << ',' << aluD(d);
+			}
+			return 1;
+		case Lsl_SD:
+		case Lsr_SD:
+			{
+				const auto ss = getFieldValue(inst, Field_sss, op);
+				const auto d = getFieldValue(inst, Field_D, op);
+				m_ss << decode_sss(ss) << ',' << aluD(d);
+			}
+			return 1;
+		case Lua_ea:
+			{
+				const auto mr = getFieldValue(inst, Field_MMM, Field_RRR, op);
+				const auto dd = getFieldValue(inst, Field_ddddd, op);				
+				m_ss << mmmrrr(mr, 2, opB) << ',' << decode_DDDDDD(dd);
+			}
+			// TODO: every function that uses mmmrrr has a dynamic length of either 1 or 2
+			return 2;
+		case Lua_Rn: 
+			break;
 		case Mac_S: break;
 		case Maci_xxxx: break;
 		case Macsu: break;
