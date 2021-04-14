@@ -19,12 +19,15 @@ namespace dsp56k
 		if(!(m_tcr & M_TEM))
 			return;
 
-		++m_cyclesSinceWrite;
+		uint32_t diff = m_periph.getDSP().getInstructionCounter() - m_lastClock;
+		if (diff&0x80000000) diff=(diff^0xFFFFFFFF)+1;	m_lastClock=m_periph.getDSP().getInstructionCounter();
+
+		m_cyclesSinceWrite+=diff;
 		if(m_cyclesSinceWrite <= g_cyclesPerSample)
 			return;
 
 		// Time to xfer samples!
-		m_cyclesSinceWrite = 0;
+		m_cyclesSinceWrite -= g_cyclesPerSample;
 		for (int i=0;i<6;i++) if (outputEnabled(i)) writeTXimpl(i,m_tx[i]);
 		for (int i=0;i<4;i++) if (inputEnabled(i)) m_rx[i]=readRXimpl(i);
 		if (m_sr.test(M_TFS)) m_sr.clear(M_TFS); else m_sr.set(M_TFS);

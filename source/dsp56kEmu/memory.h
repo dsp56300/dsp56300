@@ -58,7 +58,7 @@ namespace dsp56k
 		TWord*												y;
 		TWord*												p;
 
-		TWord												m_bridgedMemoryAddress;
+		TWord												m_bridgedMemoryAddress = 0xffffff;
 		
 		struct STransaction
 		{

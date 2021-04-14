@@ -88,7 +88,7 @@ namespace dsp56k
 
 		void writeTCSR(int _index, TWord _val)
 		{
-			LOG("Write Timer " << _index << " TCSR: " << HEX(_val));
+//			LOG("Write Timer " << _index << " TCSR: " << HEX(_val));
 
 			auto& t = m_timers[_index];
 
@@ -103,7 +103,7 @@ namespace dsp56k
 		}
 		
 		void writeTLR(int _index, TWord _val)		{ m_timers[_index].m_tlr = _val;	LOG("Write Timer " << _index << " TLR: " << HEX(_val)); }
-		void writeTCPR(int _index, TWord _val)		{ m_timers[_index].m_tcpr = _val;	LOG("Write Timer " << _index << " TCPR: " << HEX(_val)); }
+		void writeTCPR(int _index, TWord _val)		{ m_timers[_index].m_tcpr = _val;	}//LOG("Write Timer " << _index << " TCPR: " << HEX(_val)); }
 		void writeTCR(int _index, TWord _val)		{ m_timers[_index].m_tcr = _val;	LOG("Write Timer " << _index << " TCR: " << HEX(_val)); }
 
 		void writeTPLR(TWord _val)					{ m_tplr = _val;					LOG("Write Timer TPLR " << ": " << HEX(_val)); }
@@ -139,6 +139,7 @@ namespace dsp56k
 		TWord m_tpcr = 0;							// Timer Prescaler Count
 
 		TWord m_prescalerClock = 0;
+		uint32_t m_lastClock = 0;
 		std::array<Timer,3> m_timers;
 	};
 }

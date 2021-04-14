@@ -190,6 +190,7 @@ namespace dsp56k
 		Memory&			memory							()											{ return mem; }
 		void			setPeriph						(size_t _index, IPeripherals* _periph)		{ perif[_index] = _periph; _periph->setDSP(this); }
 		
+		ProcessingMode getProcessingMode() const		{return m_processingMode;}
 	private:
 
 		TWord	fetchOpWordB()

@@ -126,7 +126,7 @@ namespace dsp56k
 			return m_mem[_addr - XIO_Reserved_High_First];
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
-			LOG("Read from " << HEX(_addr));
+//			LOG("Read from " << HEX(_addr));
 			return 0;	//m_mem[_addr - XIO_Reserved_High_First];	// There is nothing connected.
 
 		case 0xFFFFF5:					// ID Register
@@ -135,7 +135,7 @@ namespace dsp56k
 
 		auto& value = m_mem[_addr - XIO_Reserved_High_First];
 
-		LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  HEX(value) << ")");
+		if (_addr!=0xffffd5) {LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  HEX(value) << ")");}
 
 		return value;
 	}
@@ -175,7 +175,7 @@ namespace dsp56k
 			
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
-			LOG("Write to " << HEX(_addr) << ": " << HEX(_val));
+//			LOG("Write to " << HEX(_addr) << ": " << HEX(_val));
 //			m_mem[_addr - XIO_Reserved_High_First] = _val;	// Do not write!
 			return;
 
@@ -208,7 +208,7 @@ namespace dsp56k
 		default:
 			break;
 		}
-		LOG( "Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));
+		if (_addr!=0xffffd5) {LOG( "Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));}
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
 	}
 

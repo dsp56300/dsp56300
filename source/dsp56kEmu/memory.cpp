@@ -11,7 +11,8 @@
 
 namespace dsp56k
 {
-	static const TWord g_initPattern = 0;
+	constexpr bool g_useInitPattern	= false;
+	constexpr TWord g_initPattern	= 0xabcabcab;
 
 	// _____________________________________________________________________________
 	// Memory
@@ -37,7 +38,8 @@ namespace dsp56k
 		m_mem[MemArea_Y] = y;
 		m_mem[MemArea_P] = p;
 
-		fillWithInitPattern();
+		if(g_useInitPattern)
+			fillWithInitPattern();
 	}
 
 	// _____________________________________________________________________________

@@ -70,16 +70,15 @@ namespace dsp56k
 			m_hpcr = _val;
 		}
 
-		void writeTX(TWord _val)
-		{
-			LOG("Write HDI08 HOTX " << HEX(_val));
-		}
+		void writeTX(TWord _val);
 
 		void exec();
 
 		TWord readRX();
 		void writeRX(const int32_t* _data, const size_t _count);
 		void clearRX();
+		
+		bool hasDataToSend() {return !m_data.empty();}
 
 		void setHostFlags(const char _flag0, const char _flag1);
 
