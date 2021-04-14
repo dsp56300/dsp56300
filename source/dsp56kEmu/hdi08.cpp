@@ -6,9 +6,8 @@ namespace dsp56k
 {
 	void HDI08::exec()
 	{
-		if (m_pendingRXInterrupts > 0 && bittest(m_hpcr, HPCR_HEN) && bittest(m_hcr, HCR_HRIE))
+		if (!m_data.empty() && bittest(m_hpcr, HPCR_HEN) && bittest(m_hcr, HCR_HRIE) && !m_periph.getDSP().getProcessingMode())
 		{
-			--m_pendingRXInterrupts;
 			m_periph.getDSP().injectInterrupt(Vba_Host_Receive_Data_Full);
 		}
 	}
@@ -29,9 +28,6 @@ namespace dsp56k
 		{
 			m_data.waitNotFull();
 			m_data.push_back(_data[i] & 0x00ffffff);
-			if (bittest(m_hpcr, HPCR_HEN) && bittest(m_hcr, HCR_HRIE)) {
-				++m_pendingRXInterrupts;
-			}
 		}
 	}
 
