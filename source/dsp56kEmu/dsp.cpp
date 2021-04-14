@@ -407,6 +407,16 @@ namespace dsp56k
 		execOp(op);
 	}
 
+	std::string DSP::getSSindent() const
+	{
+		std::stringstream ss;
+
+		for(auto i=0; i<ssIndex(); ++i)
+			ss << "\t";
+
+		return std::string(ss.str());
+	}
+
 	void DSP::execOp(const TWord op)
 	{
 		const TWord currentOp = pcCurrentInstruction;
@@ -956,14 +966,9 @@ namespace dsp56k
 		if( strstr(_func, "DO" ) )
 			return;
 
-		std::stringstream scss;
-		
-		for( int i=0; i<reg.sc.var; ++i )
-		{
-			scss << "\t";
-		}
+		const std::string indent = getSSindent();
 
-		LOG( std::string(scss.str()) << " SC=" << std::hex << std::setw(6) << std::setfill('0') << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
+		LOG( indent << " SC=" << std::hex << std::setw(6) << std::setfill('0') << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
 	}
 
 	// _____________________________________________________________________________
@@ -1155,7 +1160,7 @@ namespace dsp56k
 			}
 
 			--reg.lc.var;
-			setPC(hiword(reg.ss[reg.sc.toWord()]));
+			setPC(hiword(reg.ss[ssIndex()]));
 		}
 		return true;
 	}
@@ -1221,11 +1226,13 @@ namespace dsp56k
 			ss << ' ' << HEX(m_opWordB);
 		else
 			ss << "       ";
-		ss << " = " << m_asm;
+		ss << " = ";
+		ss << getSSindent();
+		ss << m_asm;
 		const std::string str(ss.str());
 		LOGF(str);
 
-		dumpRegisters();
+//		dumpRegisters();
 
 		for( size_t i=0; i<Reg_COUNT; ++i )
 		{
@@ -1256,20 +1263,17 @@ namespace dsp56k
 	{
 		LOGSC("return");
 
-		assert(reg.sc.var > 0);
+		assert(ssIndex() > 0);
 		--reg.sp.var;
 		--reg.sc.var;
 	}
 
 	void DSP::incSP()
 	{
-		assert(reg.sc.var < reg.ss.eSize-1);
+		assert(ssIndex() < reg.ss.eSize-1);
 		++reg.sp.var;
 		++reg.sc.var;
 
-		const std::string sym = mem.getSymbol(MemArea_P, reg.pc.var);
-			
-		LOGSC((std::string(m_asm) + " - " + sym).c_str());
 	//	assert( reg.sc.var <= 9 );
 	}
 
@@ -1863,8 +1867,8 @@ namespace dsp56k
 
 		case Reg_ICTR:	_res = reg.ictr;	break;
 
-		case Reg_SSH:	_res = hiword(reg.ss[reg.sc.toWord()]);	break;
-		case Reg_SSL:	_res = loword(reg.ss[reg.sc.toWord()]);	break;
+		case Reg_SSH:	_res = hiword(reg.ss[ssIndex()]);	break;
+		case Reg_SSL:	_res = loword(reg.ss[ssIndex()]);	break;
 
 		case Reg_CNT1:	_res = reg.cnt1;		break;
 		case Reg_CNT2:	_res = reg.cnt2;		break;
