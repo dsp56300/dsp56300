@@ -17,8 +17,9 @@ namespace dsp56k
 		int disassemble(std::string& dst, TWord op, TWord opB, TWord sr, TWord omr);
 	private:
 		int disassembleAlu(std::string& _dst, const OpcodeInfo& _oiAlu, TWord op);
-		int disassembleAlu(const OpcodeInfo& oi, TWord op);
+		int disassembleAlu(TWord op);
 		int disassembleParallelMove(const OpcodeInfo& oi, TWord _op, TWord _opB);
+		int disassemble(const OpcodeInfo& oi, TWord op, TWord opB);
 		void disassembleDC(std::string& dst, TWord op);
 
 		int disassembleNonParallel(const OpcodeInfo& oi, TWord op, TWord opB, const TWord sr, const TWord omr);
