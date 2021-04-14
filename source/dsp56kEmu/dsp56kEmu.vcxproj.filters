@@ -64,6 +64,9 @@
     <ClCompile Include="hdi08.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="timers.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="agu.h">
@@ -133,6 +136,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="hdi08.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="timers.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

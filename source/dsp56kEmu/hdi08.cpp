@@ -6,10 +6,16 @@ namespace dsp56k
 {
 	void HDI08::exec()
 	{
-		if (m_pendingRXInterrupts > 0 && bittest(m_hpcr, HPCR_HEN) && bittest(m_hcr, HCR_HRIE) && !m_periph.getDSP().getProcessingMode())
+		if (m_periph.getDSP().getProcessingMode() || !bittest(m_hpcr, HPCR_HEN)) return;
+
+		if (m_pendingRXInterrupts > 0 && bittest(m_hcr, HCR_HRIE))
 		{
 			--m_pendingRXInterrupts;
 			m_periph.getDSP().injectInterrupt(Vba_Host_Receive_Data_Full);
+		}
+		else if (bittest(m_hcr, HCR_HTIE))
+		{
+			m_periph.getDSP().injectInterrupt(Vba_Host_Transmit_Data_Empty);
 		}
 	}
 
@@ -50,10 +56,6 @@ namespace dsp56k
 	void HDI08::writeTX(TWord _val)
 	{
 		LOG("Write HDI08 HOTX " << HEX(_val));
-		if (bittest(m_hcr, HCR_HTIE))
-		{
-			m_periph.getDSP().injectInterrupt(Vba_Host_Transmit_Data_Empty);
-		}
 	}
 
 
