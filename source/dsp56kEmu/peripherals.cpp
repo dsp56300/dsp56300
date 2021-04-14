@@ -157,21 +157,21 @@ namespace dsp56k
 		case HDI08::HOTX:
 			m_hdi08.writeTX(_val);
 
-		case Timers::M_TCSR0:		m_timers.writeTCSR	(0, _val);	break;		// TIMER0 Control/Status Register
-		case Timers::M_TCSR1:		m_timers.writeTCSR	(1, _val);	break;		// TIMER1 Control/Status Register
-		case Timers::M_TCSR2:		m_timers.writeTCSR	(2, _val);	break;		// TIMER2 Control/Status Register
-		case Timers::M_TLR0:		m_timers.writeTLR	(0, _val);	break;		// TIMER0 Load Reg
-		case Timers::M_TLR1:		m_timers.writeTLR	(1, _val);	break;		// TIMER1 Load Reg
-		case Timers::M_TLR2:		m_timers.writeTLR	(2, _val);	break;		// TIMER2 Load Reg
-		case Timers::M_TCPR0:		m_timers.writeTCPR	(0, _val);	break;		// TIMER0 Compare Register
-		case Timers::M_TCPR1:		m_timers.writeTCPR	(1, _val);	break;		// TIMER1 Compare Register
-		case Timers::M_TCPR2:		m_timers.writeTCPR	(2, _val);	break;		// TIMER2 Compare Register
-		case Timers::M_TCR0:		m_timers.writeTCR	(0, _val);	break;		// TIMER0 Count Register
-		case Timers::M_TCR1:		m_timers.writeTCR	(1, _val);	break;		// TIMER1 Count Register
-		case Timers::M_TCR2:		m_timers.writeTCR	(2, _val);	break;		// TIMER2 Count Register
+		case Timers::M_TCSR0:		m_timers.writeTCSR	(0, _val);	return;		// TIMER0 Control/Status Register
+		case Timers::M_TCSR1:		m_timers.writeTCSR	(1, _val);	return;		// TIMER1 Control/Status Register
+		case Timers::M_TCSR2:		m_timers.writeTCSR	(2, _val);	return;		// TIMER2 Control/Status Register
+		case Timers::M_TLR0:		m_timers.writeTLR	(0, _val);	return;		// TIMER0 Load Reg
+		case Timers::M_TLR1:		m_timers.writeTLR	(1, _val);	return;		// TIMER1 Load Reg
+		case Timers::M_TLR2:		m_timers.writeTLR	(2, _val);	return;		// TIMER2 Load Reg
+		case Timers::M_TCPR0:		m_timers.writeTCPR	(0, _val);	return;		// TIMER0 Compare Register
+		case Timers::M_TCPR1:		m_timers.writeTCPR	(1, _val);	return;		// TIMER1 Compare Register
+		case Timers::M_TCPR2:		m_timers.writeTCPR	(2, _val);	return;		// TIMER2 Compare Register
+		case Timers::M_TCR0:		m_timers.writeTCR	(0, _val);	return;		// TIMER0 Count Register
+		case Timers::M_TCR1:		m_timers.writeTCR	(1, _val);	return;		// TIMER1 Count Register
+		case Timers::M_TCR2:		m_timers.writeTCR	(2, _val);	return;		// TIMER2 Count Register
 
-		case Timers::M_TPLR:		m_timers.writeTPLR	(_val);		break;		// TIMER Prescaler Load Register
-		case Timers::M_TPCR:		m_timers.writeTPCR	(_val);		break;		// TIMER Prescalar Count Register
+		case Timers::M_TPLR:		m_timers.writeTPLR	(_val);		return;		// TIMER Prescaler Load Register
+		case Timers::M_TPCR:		m_timers.writeTPCR	(_val);		return;		// TIMER Prescalar Count Register
 			
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
