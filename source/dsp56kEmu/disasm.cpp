@@ -24,118 +24,120 @@ namespace dsp56k
 {
 	const char* g_opNames[InstructionCount] = 
 	{
-		"abs",
-		"adc",
-		"add",		"add",		"add",
-		"addl",		"addr",
-		"and",		"and",		"and",		"andi",
-		"asl",		"asl",		"asl",
-		"asr",		"asr",		"asr",
-		"bcc",		"bcc",		"bcc",
-		"bchg",		"bchg",		"bchg",		"bchg",		"bchg",
-		"bclr",		"bclr",		"bclr",		"bclr",		"bclr",
-		"bra",		"bra",		"bra",
-		"brclr",	"brclr",	"brclr",	"brclr",	"brclr",
-		"brkcc",
-		"brset",	"brset",	"brset",	"brset",	"brset",
-		"bscc",		"bscc",		"bscc",
-		"bsclr",	"bsclr",	"bsclr",	"bsclr",	"bsclr",
-		"bset",		"bset",		"bset",		"bset",		"bset",
-		"bsr",		"bsr",		"bsr",
-		"bsset",	"bsset",	"bsset",	"bsset",	"bsset",
-		"btst",		"btst",		"btst",		"btst",		"btst",
-		"clb",
-		"clr",
-		"cmp",		"cmp",		"cmp",
-		"cmpm",		"cmpu",
-		"debug",	"debugcc",
-		"dec",
-		"div",
-		"dmac",
-		"do",		"do",		"do",		"do",
-		"doforever",
-		"dor",		"dor",		"dor",		"dor",
-		"dorforever",
-		"enddo",
-		"eor",		"eor",		"eor",
-		"extract",	"extract",
-		"extractu",	"extractu",
-		"ifcc",		"ifcc",
-		"illegal",	"inc",
-		"insert",	"insert",
-		"jcc",		"jcc",
-		"jclr",		"jclr",		"jclr",		"jclr",		"jclr",
-		"jmp",		"jmp",
-		"jscc",		"jscc",
-		"jsclr",	"jsclr",	"jsclr",	"jsclr",	"jsclr",
-		"jset",		"jset",		"jset",		"jset",		"jset",
-		"jsr",		"jsr",
-		"jsset",	"jsset",	"jsset",	"jsset",	"jsset",
-		"lra",		"lra",
-		"lsl",		"lsl",		"lsl",
-		"lsr",		"lsr",		"lsr",
-		"lua",		"lua",
-		"mac",		"mac",
-		"maci",
-		"macsu",
-		"macr",		"macr",
-		"macri",
-		"max",
-		"maxm",
-		"merge",
-		"move",		"move",
-		"mover",
-		"move",
-		"movex",	"movex",	"movex",		"movex",
-		"movexr",	"movexr",
-		"movey",	"movey",	"movey",		"movey",
-		"moveyr",	"moveyr",
-		"movel",	"movel",
-		"movexy",
-		"movec",	"movec",	"movec",		"movec",
-		"movem",	"movem",
-		"movep",	"movep",	"movep",		"movep",		"movep",		"movep",		"movep",		"movep",
-		"mpy",		"mpy",		"mpy",
-		"mpyi",
-		"mpyr",		"mpyr",
-		"mpyri",
-		"neg",
-		"nop",
-		"norm",
-		"normf",
-		"not",
-		"or",		"or",		"or",
-		"ori",
-		"pflush",
-		"pflushun",
-		"pfree",
-		"plock",
-		"plockr",
-		"punlock",
-		"punlockr",
-		"rep",		"rep",		"rep",		"rep",
-		"reset",
-		"rnd",
-		"rol",
-		"ror",
-		"rti",
-		"rts",
-		"sbc",
-		"stop",
-		"sub",		"sub",		"sub",
-		"subl",
-		"subr",
-		"tcc",		"tcc",		"tcc",
-		"tfr",
+		"abs ",
+		"adc ",
+		"add ",		"add ",		"add ",
+		"addl ",		"addr ",
+		"and ",		"and ",		"and ",		"andi ",
+		"asl ",		"asl ",		"asl ",
+		"asr ",		"asr ",		"asr ",
+		"b",		"b",		"b",
+		"bchg ",		"bchg ",		"bchg ",		"bchg ",		"bchg ",
+		"bclr ",		"bclr ",		"bclr ",		"bclr ",		"bclr ",
+		"bra ",		"bra ",		"bra ",
+		"brclr ",	"brclr ",	"brclr ",	"brclr ",	"brclr ",
+		"brk",
+		"brset ",	"brset ",	"brset ",	"brset ",	"brset ",
+		"bs",		"bs",		"bs",
+		"bsclr ",	"bsclr ",	"bsclr ",	"bsclr ",	"bsclr ",
+		"bset ",		"bset ",		"bset ",		"bset ",		"bset ",
+		"bsr ",		"bsr ",		"bsr ",
+		"bsset ",	"bsset ",	"bsset ",	"bsset ",	"bsset ",
+		"btst ",		"btst ",		"btst ",		"btst ",		"btst ",
+		"clb ",
+		"clr ",
+		"cmp ",		"cmp ",		"cmp ",
+		"cmpm ",		"cmpu ",
+		"debug ",	"debug",
+		"dec ",
+		"div ",
+		"dmac ",
+		"do ",		"do ",		"do ",		"do ",
+		"doforever ",
+		"dor ",		"dor ",		"dor ",		"dor ",
+		"dorforever ",
+		"enddo ",
+		"eor ",		"eor ",		"eor ",
+		"extract ",	"extract ",
+		"extractu ",	"extractu ",
+		"if",		"if",
+		"illegal ",	"inc ",
+		"insert ",	"insert ",
+		"j",		"j",
+		"jclr ",		"jclr ",		"jclr ",		"jclr ",		"jclr ",
+		"jmp ",		"jmp ",
+		"js",		"js",
+		"jsclr ",	"jsclr ",	"jsclr ",	"jsclr ",	"jsclr ",
+		"jset ",		"jset ",		"jset ",		"jset ",		"jset ",
+		"jsr ",		"jsr ",
+		"jsset ",	"jsset ",	"jsset ",	"jsset ",	"jsset ",
+		"lra ",		"lra ",
+		"lsl ",		"lsl ",		"lsl ",
+		"lsr ",		"lsr ",		"lsr ",
+		"lua ",		"lua ",
+		"mac ",		"mac ",
+		"maci ",
+		"macsu ",
+		"macr ",		"macr ",
+		"macri ",
+		"max ",
+		"maxm ",
+		"merge ",
+		"move ",		"move ",
+		"mover ",
+		"move ",
+		"movex ",	"movex ",	"movex ",		"movex ",
+		"movexr ",	"movexr ",
+		"movey ",	"movey ",	"movey ",		"movey ",
+		"moveyr ",	"moveyr ",
+		"movel ",	"movel ",
+		"movexy ",
+		"movec ",	"movec ",	"movec ",		"movec ",
+		"movem ",	"movem ",
+		"movep ",	"movep ",	"movep ",		"movep ",		"movep ",		"movep ",		"movep ",		"movep ",
+		"mpy ",		"mpy ",		"mpy ",
+		"mpyi ",
+		"mpyr ",		"mpyr ",
+		"mpyri ",
+		"neg ",
+		"nop ",
+		"norm ",
+		"normf ",
+		"not ",
+		"or ",		"or ",		"or ",
+		"ori ",
+		"pflush ",
+		"pflushun ",
+		"pfree ",
+		"plock ",
+		"plockr ",
+		"punlock ",
+		"punlockr ",
+		"rep ",		"rep ",		"rep ",		"rep ",
+		"reset ",
+		"rnd ",
+		"rol ",
+		"ror ",
+		"rti ",
+		"rts ",
+		"sbc ",
+		"stop ",
+		"sub ",		"sub ",		"sub ",
+		"subl ",
+		"subr ",
+		"t",		"t",		"t",
+		"tfr ",
+		"trap ",
 		"trap",
-		"trapcc",
-		"tst",
-		"vsl",
-		"wait",
-		"resolvecache",
-		"parallel",
+		"tst ",
+		"vsl ",
+		"wait ",
+		"resolvecache ",
+		"parallel ",
 	};
 
+	const char* g_conditionCodes[16] =	{"cc", "ge", "ne", "pl", "nn", "ec", "lc", "gt", "cs", "lt", "eq", "mi", "nr", "es", "ls", "le"};
+	
 	std::string hex(TWord _data)
 	{
 		std::stringstream ss; ss << '$' << std::hex << _data; return std::string(ss.str());
@@ -151,10 +153,10 @@ namespace dsp56k
 		return std::string("#>") + hex(_data);
 	}
 
-	std::string relativeAddr(TWord _data)
+	std::string relativeAddr(int _data)
 	{
 		const auto a = signextend<int,24>(_data);
-		return std::string(">*") + (a > 0 ? "+" : "") + hex(_data);
+		return std::string(">*") + (a > 0 ? "+" : "-") + hex(std::abs(_data));
 	}
 
 	const char* aluD(bool ab)
@@ -284,6 +286,76 @@ namespace dsp56k
 		}
 	}
 
+	const char* condition(TWord _cccc)
+	{
+		return g_conditionCodes[_cccc];
+	}
+
+	const char* decodeEE(TWord _ee)
+	{
+		switch (_ee)
+		{
+		case 0:	return "mr";
+		case 1:	return "ccr";
+		case 2:	return "com";
+		case 3:	return "eom";
+		}
+		return nullptr;
+	}
+
+	
+	const char* decode_sss( TWord _sss )
+	{
+		switch( _sss )
+		{
+		case 2:		return "a1";
+		case 3:		return "b1";
+		case 4:		return "x0";
+		case 5:		return "y0";
+		case 6:		return "x1";
+		case 7:		return "y1";
+		}
+		return nullptr;
+	}
+
+	std::string decode_RRR( TWord _r )
+	{
+		char temp[3] = {'r', '0', 0};
+		temp[1] = '0' + _r;
+		return temp;
+	}
+
+
+	std::string decode_DDDDDD( TWord _ddddd )
+	{
+		switch( _ddddd )
+		{
+		case 0x04:	return "x0";
+		case 0x05:	return "x1";
+		case 0x06:	return "y0";
+		case 0x07:	return "y1";
+		case 0x08:	return "a0";
+		case 0x09:	return "b0";
+		case 0x0a:	return "a2";
+		case 0x0b:	return "b2";
+		case 0x0c:	return "a1";
+		case 0x0d:	return "b1";
+		case 0x0e:	return "a";	
+		case 0x0f:	return "b";	
+		}
+
+		char temp[3]{0,0,0};
+		if( (_ddddd & 0x18) == 0x10 )					// r0-r7
+			temp[0] = 'r';
+		else if( (_ddddd & 0x18) == 0x18 )				// n0-n7
+			temp[0] = 'n';
+		else
+			return std::string();
+
+		temp[1] = '0' + _ddddd&0x07;
+
+		return temp;
+	}
 	int Disassembler::disassembleAlu(dsp56k::TWord op)
 	{
 		const auto D = (op>>3) & 0x1;
@@ -398,6 +470,16 @@ namespace dsp56k
 				m_ss << immediate(b) << ',' << peripheralQ(S, q);
 				return 1;
 			}
+		case Bchg_D:
+		case Bclr_D:
+		case Bset_D:
+		case Btst_D:
+			{
+				const auto b	= getFieldValue(inst, Field_bbbbb, op);
+				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
+				m_ss << immediate(b) << ',' << decode_DDDDDD(d);
+				return 1;
+			}
 		// Branch if bit condition is met
 		case Brclr_ea:
 		case Brset_ea:
@@ -443,19 +525,53 @@ namespace dsp56k
 				m_ss << immediate(b) << ',' << peripheralP(S, q) << ',' << relativeAddr(opB);
 				return 2;
 			}
-		case Andi: break;
-		case Asl_D: break;
-		case Asl_ii: break;
-		case Asl_S1S2D: break;
-		case Asr_D: break;
-		case Asr_ii: break;
-		case Asr_S1S2D: break;
-		case Bcc_xxxx: break;
-		case Bcc_xxx: break;
-		case Bcc_Rn: break;
-		case Bchg_D: break;
-		case Bclr_D: break;
-		case Bra_xxxx: break;
+		case Andi:
+			{
+				const auto i = getFieldValue(inst, Field_iiiiiiii, op);
+				const auto ee = getFieldValue(inst, Field_EE, op);
+				m_ss << immediate(i) << ',' << decodeEE(ee);
+			}
+			return 1;
+		case Asl_ii:
+		case Asr_ii:
+			{
+				const auto i = getFieldValue(inst, Field_iiiiii, op);
+				const auto s = getFieldValue(inst, Field_S, op);
+				const auto d = getFieldValue(inst, Field_D, op);
+				m_ss << immediate(i) << ',' << aluD(s) << ',' << aluD(d);
+			}
+			return 1;
+		case Asl_S1S2D:
+		case Asr_S1S2D:
+			{
+				const auto sss = getFieldValue(inst, Field_sss, op);
+				const auto s = getFieldValue(inst, Field_S, op);
+				const auto d = getFieldValue(inst, Field_D, op);
+				m_ss << decode_sss(sss) << ',' << aluD(s) << ',' << aluD(d);
+			}
+			return 1;
+		case Bcc_xxxx:
+			{
+				const auto cccc = getFieldValue(inst, Field_CCCC, op);
+				m_ss << condition(cccc) << ' ' << relativeAddr(opB);
+			}
+			break;
+		case Bcc_xxx: 
+			{
+				const auto cccc = getFieldValue(inst, Field_CCCC, op);
+				const auto a = signextend<int,9>(getFieldValue(inst, Field_aaaa, Field_aaaaa, op));
+				m_ss << condition(cccc) << ' ' << relativeAddr(a);
+			}
+			break;
+		case Bcc_Rn: 
+			{
+				const auto cccc = getFieldValue(inst, Field_CCCC, op);
+				const auto r = getFieldValue(inst, Field_RRR, op);
+				m_ss << condition(cccc) << ' ' << decode_RRR(r);
+			}
+			break;
+		case Bra_xxxx: 
+			break;
 		case Bra_xxx: break;
 		case Bra_Rn: break;
 		case Brclr_S: break;
@@ -465,16 +581,11 @@ namespace dsp56k
 		case BScc_xxx: break;
 		case BScc_Rn: break;
 		case Bsclr_S: break;
-		case Bset_D: break;
 		case Bsr_xxxx: break;
 		case Bsr_xxx: break;
 		case Bsr_Rn: break;
 		case Bsset_S: break;
-		case Btst_D: break;
 		case Clb: break;
-		case Clr: break;
-		case Cmp_S1S2: break;
-		case Cmpm_S1S2: break;
 		case Cmpu_S1S2: break;
 		case Debug: break;
 		case Debugcc: break;
@@ -492,7 +603,6 @@ namespace dsp56k
 		case Dor_S: break;
 		case DorForever: break;
 		case Enddo: break;
-		case Eor_SD: break;
 		case Extract_S1S2: break;
 		case Extract_CoS2: break;
 		case Extractu_S1S2: break;
@@ -533,7 +643,6 @@ namespace dsp56k
 		case Jsset_S: break;
 		case Lra_Rn: break;
 		case Lra_xxxx: break;
-		case Lsl_D: break;
 		case Lsl_ii: break;
 		case Lsl_SD: break;
 		case Lsr_D: break;
@@ -541,15 +650,11 @@ namespace dsp56k
 		case Lsr_SD: break;
 		case Lua_ea: break;
 		case Lua_Rn: break;
-		case Mac_S1S2: break;
 		case Mac_S: break;
 		case Maci_xxxx: break;
 		case Macsu: break;
-		case Macr_S1S2: break;
 		case Macr_S: break;
 		case Macri_xxxx: break;
-		case Max: break;
-		case Maxm: break;
 		case Merge: break;
 		case Move_Nop: break;
 		case Move_xx: break;
@@ -584,19 +689,16 @@ namespace dsp56k
 		case Movep_Spp: break;
 		case Movep_SXqq: break;
 		case Movep_SYqq: break;
-		case Mpy_S1S2D: break;
 		case Mpy_SD: break;
 		case Mpy_su: break;
 		case Mpyi: break;
 		case Mpyr_S1S2D: break;
 		case Mpyr_SD: break;
 		case Mpyri: break;
-		case Neg: break;
 		case Nop: break;
 		case Norm: break;
 		case Normf: break;
 		case Not: break;
-		case Or_SD: break;
 		case Ori: break;
 		case Pflush: break;
 		case Pflushun: break;
@@ -610,23 +712,14 @@ namespace dsp56k
 		case Rep_xxx: break;
 		case Rep_S: break;
 		case Reset: break;
-		case Rnd: break;
-		case Rol: break;
-		case Ror: break;
 		case Rti: break;
 		case Rts: break;
 		case Sbc: break;
-		case Stop: break;
-		case Sub_SD: break;
-		case Subl: break;
-		case subr: break;
 		case Tcc_S1D1: break;
 		case Tcc_S1D1S2D2: break;
 		case Tcc_S2D2: break;
-		case Tfr: break;
 		case Trap: break;
 		case Trapcc: break;
-		case Tst: break;
 		case Vsl: break;
 		case Wait: break;
 		case ResolveCache: break;
@@ -670,7 +763,7 @@ namespace dsp56k
 			const auto* oi = m_opcodes.findNonParallelOpcodeInfo(op);
 			if(oi)
 			{
-				m_ss << g_opNames[oi->m_instruction] << ' ';
+				m_ss << g_opNames[oi->m_instruction];
 				const auto res = disassembleNonParallel(*oi, op, opB, sr, omr);
 				if(!res)
 				{
@@ -706,7 +799,7 @@ namespace dsp56k
 		}
 		else if(!oiAlu)
 		{
-			m_ss << g_opNames[oiMove->m_instruction] << ' ';
+			m_ss << g_opNames[oiMove->m_instruction];
 			const int resMove = disassembleParallelMove(*oiMove, op, opB);
 			if(resMove)
 				return finalize(resMove);
@@ -718,7 +811,7 @@ namespace dsp56k
 		{
 		case Move_Nop:
 			{
-				m_ss << g_opNames[oiAlu->m_instruction] << ' ';
+				m_ss << g_opNames[oiAlu->m_instruction];
 				const auto resAlu = disassembleAlu(op & 0xff);
 				if(resAlu)
 					return finalize(resAlu);
@@ -727,7 +820,7 @@ namespace dsp56k
 			return 0;
 		default:
 			{
-				m_ss << g_opNames[oiAlu->m_instruction] << ' ';
+				m_ss << g_opNames[oiAlu->m_instruction];
 
 				const auto resAlu = disassembleAlu(op & 0xff);
 				const auto resMove = disassembleParallelMove(*oiMove, op, opB);
