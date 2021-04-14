@@ -245,7 +245,7 @@ namespace dsp56k
 		template<typename T> T decode_ddddd_read( TWord _ddddd )
 		{
 			T res;
-
+			// TODO: can be replaced with the six bit version, numbers are identical anyway
 			switch( _ddddd )
 			{
 			case 0x04:	convert( res, x0() ); 	return res;	// x0

@@ -676,6 +676,7 @@ namespace dsp56k
 	//
 	dsp56k::TWord DSP::decode_XMove_MMRRR( TWord _mmrrr )
 	{
+		// TODO: can't we use MMMRRR?
 		unsigned int regIdx = _mmrrr & 0x07;
 
 		const TReg24	_n = reg.n[regIdx];
