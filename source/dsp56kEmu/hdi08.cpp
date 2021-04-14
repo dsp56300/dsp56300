@@ -53,15 +53,22 @@ namespace dsp56k
 		LOG("Write HostFlags, HSR " << HEX(m_hsr));
 	}
 
-	void HDI08::writeTX(TWord _val)
+	uint32_t HDI08::readTX()
 	{
-		LOG("Write HDI08 HOTX " << HEX(_val));
+		m_dataTX.waitNotEmpty();
+		return m_dataTX.pop_front();
 	}
 
+	void HDI08::writeTX(TWord _val)
+	{
+		m_dataTX.waitNotFull();
+		m_dataTX.push_back(_val);
+		//LOG("Write HDI08 HOTX " << HEX(_val));
+	}
 
 	void HDI08::writeControlRegister(TWord _val)
 	{
-		LOG("Write HDI08 HCR " << HEX(_val));
+		//LOG("Write HDI08 HCR " << HEX(_val));
 		m_hcr = _val;
 	}
 };
