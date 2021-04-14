@@ -204,7 +204,7 @@ namespace dsp56k
 			buf[index++] =(w) & 0xff;;
 		}
 
-		out.write(reinterpret_cast<const char*>(&buf.front()), size());
+		out.write(reinterpret_cast<const char*>(&buf.front()), size() * 3);
 
 		out.close();
 

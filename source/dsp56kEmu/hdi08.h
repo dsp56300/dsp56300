@@ -70,6 +70,7 @@ namespace dsp56k
 			m_hpcr = _val;
 		}
 
+		TWord readTX();
 		void writeTX(TWord _val);
 
 		void exec();
@@ -89,6 +90,7 @@ namespace dsp56k
 		TWord m_hcr = 0;
 		TWord m_hpcr = 0;
 		RingBuffer<uint32_t, 1024, false> m_data;
+		RingBuffer<uint32_t, 1024, false> m_dataTX;
 		IPeripherals& m_periph;
 		std::atomic<uint32_t> m_pendingRXInterrupts;
 	};
