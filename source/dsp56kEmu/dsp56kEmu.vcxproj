@@ -62,6 +62,7 @@
       </PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)$(ProjectName)$(Configuration).lib</OutputFile>
@@ -78,6 +79,7 @@
       </PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)$(ProjectName)$(Configuration).lib</OutputFile>
@@ -101,6 +103,7 @@
     <ClCompile Include="opcodes.cpp" />
     <ClCompile Include="peripherals.cpp" />
     <ClCompile Include="registers.cpp" />
+    <ClCompile Include="timers.cpp" />
     <ClCompile Include="types.cpp" />
     <ClCompile Include="unittests.cpp" />
     <ClCompile Include="utils.cpp" />
@@ -126,6 +129,7 @@
     <ClInclude Include="ringbuffer.h" />
     <ClInclude Include="semaphore.h" />
     <ClInclude Include="staticArray.h" />
+    <ClInclude Include="timers.h" />
     <ClInclude Include="types.h" />
     <ClInclude Include="unittests.h" />
     <ClInclude Include="utils.h" />
