@@ -1,13 +1,12 @@
 #include "unittests.h"
 
+
+#include "disasm.h"
 #include "dsp.h"
 #include "memory.h"
 
 namespace dsp56k
 {
-#define T true
-#define F false
-
 	static DefaultMemoryMap g_defaultMemoryMap;
 	
 	UnitTests::UnitTests() : mem(g_defaultMemoryMap, 0x100), dsp(mem, &peripherals, &peripherals)
@@ -26,6 +25,19 @@ namespace dsp56k
 		testNOT();
 		testEXTRACTU();
 		testEXTRACTU_CO();
+
+		testDisassembler();		// will take a few minutes in debug, so commented out for now
+	}
+
+	void UnitTests::execOpcode(uint32_t _op0, uint32_t _op1, const bool _reset)
+	{
+		if(_reset)
+			dsp.resetHW();
+		dsp.clearOpcodeCache();
+		dsp.mem.set(MemArea_P, 0, _op0);
+		dsp.mem.set(MemArea_P, 1, _op1);
+		dsp.setPC(0);
+		dsp.exec();
 	}
 
 	void UnitTests::testASL()
@@ -119,6 +131,9 @@ namespace dsp56k
 
 	void UnitTests::testCCCC()
 	{
+		constexpr auto T=true;
+		constexpr auto F=false;
+
 		//                            <  <= =  >= >  != 
 		testCCCC(0xff000000000000, 0, T, T, F, F, F, T);
 		testCCCC(0x00ff0000000000, 0, F, F, F, T, T, T);
@@ -258,17 +273,6 @@ namespace dsp56k
 		assert(dsp.reg.a.var == 0x12aaaaaa123456);		
 	}
 
-	void UnitTests::execOpcode(uint32_t _op0, uint32_t _op1, const bool _reset)
-	{
-		if(_reset)
-			dsp.resetHW();
-		dsp.clearOpcodeCache();
-		dsp.mem.set(MemArea_P, 0, _op0);
-		dsp.mem.set(MemArea_P, 1, _op1);
-		dsp.setPC(0);
-		dsp.exec();
-	}
-
 	void UnitTests::testEXTRACTU()
 	{
 		dsp.reg.x.var = 0x4008000000;  // x1 = 0x4008  (width=4, offset=8)
@@ -288,5 +292,81 @@ namespace dsp56k
 		execOpcode(0x0c1890, 0x00C028);
 
 		assert(dsp.reg.a.var == 0x444);
+	}
+
+	void UnitTests::testDisassembler()
+	{
+#ifdef USE_MOTOROLA_UNASM
+		Disassembler disasm;
+
+		constexpr TWord opB = 0x234567;
+
+		for(TWord i=0x000000; i<=0xffffff; ++i)
+		{
+			const TWord op = i;
+			
+			char assemblyMotorola[128];
+			std::string assembly;
+
+			const auto opcodeCountMotorola = disassembleMotorola(assemblyMotorola, op, opB, 0, 0);
+
+			if(opcodeCountMotorola > 0)
+			{
+				const int opcodeCount = disasm.disassemble(assembly, op, opB, 0, 0);
+
+				if(!opcodeCount)
+					continue;
+
+				std::string asmMot(assemblyMotorola);
+
+				if(asmMot.back() == ' ')	// debugcc has extra space
+					asmMot.pop_back();
+
+				if(assembly != asmMot)
+				{
+					switch (op)
+					{
+					case 0x000006: if(assembly == "trap" && asmMot == "swi")                       continue; break;
+					case 0x202015: if(assembly == "maxm a,b ifcc"   && asmMot == "max b,a ifcc")   continue; break;
+					case 0x202115: if(assembly == "maxm a,b ifge"   && asmMot == "max b,a ifge")   continue; break;
+					case 0x202215: if(assembly == "maxm a,b ifne"   && asmMot == "max b,a ifne")   continue; break;
+					case 0x202315: if(assembly == "maxm a,b ifpl"   && asmMot == "max b,a ifpl")   continue; break;
+					case 0x202415: if(assembly == "maxm a,b ifnn"   && asmMot == "max b,a ifnn")   continue; break;
+					case 0x202515: if(assembly == "maxm a,b ifec"   && asmMot == "max b,a ifec")   continue; break;
+					case 0x202615: if(assembly == "maxm a,b iflc"   && asmMot == "max b,a iflc")   continue; break;
+					case 0x202715: if(assembly == "maxm a,b ifgt"   && asmMot == "max b,a ifgt")   continue; break;
+					case 0x202815: if(assembly == "maxm a,b ifcs"   && asmMot == "max b,a ifcs")   continue; break;
+					case 0x202915: if(assembly == "maxm a,b iflt"   && asmMot == "max b,a iflt")   continue; break;
+					case 0x202a15: if(assembly == "maxm a,b ifeq"   && asmMot == "max b,a ifeq")   continue; break;
+					case 0x202b15: if(assembly == "maxm a,b ifmi"   && asmMot == "max b,a ifmi")   continue; break;
+					case 0x202c15: if(assembly == "maxm a,b ifnr"   && asmMot == "max b,a ifnr")   continue; break;
+					case 0x202d15: if(assembly == "maxm a,b ifes"   && asmMot == "max b,a ifes")   continue; break;
+					case 0x202e15: if(assembly == "maxm a,b ifls"   && asmMot == "max b,a ifls")   continue; break;
+					case 0x202f15: if(assembly == "maxm a,b ifle"   && asmMot == "max b,a ifle")   continue; break;
+					case 0x203015: if(assembly == "maxm a,b ifcc.u" && asmMot == "max b,a ifcc.u") continue; break;
+					case 0x203115: if(assembly == "maxm a,b ifge.u" && asmMot == "max b,a ifge.u") continue; break;
+					case 0x203215: if(assembly == "maxm a,b ifne.u" && asmMot == "max b,a ifne.u") continue; break;
+					case 0x203315: if(assembly == "maxm a,b ifpl.u" && asmMot == "max b,a ifpl.u") continue; break;
+					case 0x203415: if(assembly == "maxm a,b ifnn.u" && asmMot == "max b,a ifnn.u") continue; break;
+					case 0x203515: if(assembly == "maxm a,b ifec.u" && asmMot == "max b,a ifec.u") continue; break;
+					case 0x203615: if(assembly == "maxm a,b iflc.u" && asmMot == "max b,a iflc.u") continue; break;
+					case 0x203715: if(assembly == "maxm a,b ifgt.u" && asmMot == "max b,a ifgt.u") continue; break;
+					case 0x203815: if(assembly == "maxm a,b ifcs.u" && asmMot == "max b,a ifcs.u") continue; break;
+					case 0x203915: if(assembly == "maxm a,b iflt.u" && asmMot == "max b,a iflt.u") continue; break;
+					case 0x203a15: if(assembly == "maxm a,b ifeq.u" && asmMot == "max b,a ifeq.u") continue; break;
+					case 0x203b15: if(assembly == "maxm a,b ifmi.u" && asmMot == "max b,a ifmi.u") continue; break;
+					case 0x203c15: if(assembly == "maxm a,b ifnr.u" && asmMot == "max b,a ifnr.u") continue; break;
+					case 0x203d15: if(assembly == "maxm a,b ifes.u" && asmMot == "max b,a ifes.u") continue; break;
+					case 0x203e15: if(assembly == "maxm a,b ifls.u" && asmMot == "max b,a ifls.u") continue; break;
+					case 0x203f15: if(assembly == "maxm a,b ifle.u" && asmMot == "max b,a ifle.u") continue; break;
+					}
+
+					LOG("Diff for opcode " << HEX(op) << ": " << assembly << " != " << assemblyMotorola);
+					assert(false);
+					disasm.disassemble(assembly, op, opB, 0, 0);	// retry to help debugging
+				}
+			}
+		}
+#endif
 	}
 }

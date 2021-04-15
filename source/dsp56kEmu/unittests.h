@@ -27,6 +27,8 @@ namespace dsp56k
 		void testNOT();
 		void testEXTRACTU();
 		void testEXTRACTU_CO();
+
+		void testDisassembler();
 		
 		void execOpcode(uint32_t _op0, uint32_t _op1 = 0, bool _reset=false);
 
