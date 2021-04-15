@@ -548,8 +548,8 @@ namespace dsp56k
 			case 1:		convert(x,b1()); 		convert(y,b0());		return;
 			case 2:		convert(x,x1()); 		convert(y,x0());		return;
 			case 3:		convert(x,y1()); 		convert(y,y0());		return;
-			case 4:		convert(x,a1()); 		convert(y,a0());		return;
-			case 5:		convert(x,b1()); 		convert(y,b0());		return;
+			case 4:		convert(x,a1()); 		convert(y,a0());		return;	// TODO: source is a and saturation needs to be applied
+			case 5:		convert(x,b1()); 		convert(y,b0());		return;	// TODO: source is b and saturation needs to be applied
 			case 6:		x = getA<TWord>();		y = getB<TWord>();		return;
 			case 7:		x = getB<TWord>();		y = getA<TWord>();		return;
 			}
