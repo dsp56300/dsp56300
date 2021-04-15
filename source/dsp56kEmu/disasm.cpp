@@ -772,7 +772,7 @@ namespace dsp56k
 		case Jcc_xxx: 
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
-				const auto a = signextend<int,9>(getFieldValue(inst, Field_aaaa, Field_aaaaa, op));
+				const auto a = getFieldValue(inst, Field_aaaaaaaaaaaa, op);
 				m_ss << condition(cccc) << ' ' << absAddr(a);
 			}
 			return 1;
