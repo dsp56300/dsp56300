@@ -880,7 +880,7 @@ namespace dsp56k
 			return 1;
 		case Lua_ea:
 			{
-				const auto mr = getFieldValue(inst, Field_MMM, Field_RRR, op);
+				const auto mr = getFieldValue(inst, Field_MM, Field_RRR, op);
 				const auto dd = getFieldValue(inst, Field_ddddd, op);				
 				m_ss << mmmrrr(mr, 2, opB) << ',' << decode_DDDDDD(dd);
 			}
