@@ -340,14 +340,21 @@ namespace dsp56k
 		}
 		return "?";
 	}
-
-	std::string decode_RRR( TWord _r )
+	
+	std::string decode_RRR(TWord _r)
 	{
-		char temp[3] = {'r', '0', 0};
+		char temp[3] = "r0";
 		temp[1] = '0' + _r;
 		return temp;
 	}
 
+	std::string decode_RRR( TWord _r, TWord shortDisplacement)
+	{
+		const auto displacement = signextend<int,24>(shortDisplacement);
+		char temp[16] = "(r0)";
+		sprintf(temp, "(r%d+%s)", _r, immediate(displacement).c_str());
+		return temp;
+	}
 
 	std::string decode_DDDDDD( TWord _ddddd )
 	{
@@ -451,6 +458,30 @@ namespace dsp56k
 		case 15: return "y1,y1";
 		}
 		return "?,?";
+	}
+
+	const char* decode_QQ_read( TWord _qq )
+	{
+		switch( _qq )
+		{
+		case 0:		return "y1";
+		case 1:		return "x0";
+		case 2:		return "y0";
+		case 3:		return "x1";
+		}
+		return "?";
+	}
+
+	const char* decode_qq_read( TWord _qq )
+	{
+		switch( _qq )
+		{
+		case 0:		return "x0";
+		case 1:		return "y0";
+		case 2:		return "x1";
+		case 3:		return "y1";
+		}
+		return "?";
 	}
 
 	int Disassembler::disassemble(const OpcodeInfo& oi, TWord op, TWord opB)
@@ -887,8 +918,26 @@ namespace dsp56k
 			// TODO: every function that uses mmmrrr has a dynamic length of either 1 or 2
 			return 2;
 		case Lua_Rn: 
+			{
+				const auto aa = getFieldValue(inst, Field_aaa, Field_aaaaa, op);
+				const auto rr = getFieldValue(inst, Field_RRR, op);				
+				const auto dd = getFieldValue(inst, Field_ddddd, op);				
+				m_ss << decode_RRR(rr, aa) << ',' << decode_DDDDDD(dd);
+			}
+			return 1;
+		case Mac_S:
+		case Mpy_SD:
+			{
+				const int sssss		= getFieldValue(inst,Field_sssss,op);
+				const TWord QQ		= getFieldValue(inst,Field_QQ,op);
+				const bool ab		= getFieldValue(inst,Field_d,op);
+				const bool negate	= getFieldValue(inst,Field_k,op);
+
+				if(negate)
+					m_ss << '-';
+				m_ss << decode_QQ_read(QQ) << ',' << immediate(sssss) << ',' << aluD(ab);
+			}
 			break;
-		case Mac_S: break;
 		case Maci_xxxx: break;
 		case Macsu: break;
 		case Macr_S: break;
@@ -927,7 +976,6 @@ namespace dsp56k
 		case Movep_Spp: break;
 		case Movep_SXqq: break;
 		case Movep_SYqq: break;
-		case Mpy_SD: break;
 		case Mpy_su: break;
 		case Mpyi: break;
 		case Mpyr_S1S2D: break;
