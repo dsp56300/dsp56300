@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(_WIN32) && defined(_DEBUG)
+#	define USE_MOTOROLA_UNASM
+#endif
+
 #include <sstream>
 #include <string>
 
@@ -17,7 +21,7 @@ namespace dsp56k
 		int disassemble(std::string& dst, TWord op, TWord opB, TWord sr, TWord omr);
 	private:
 		int disassembleAlu(std::string& _dst, const OpcodeInfo& _oiAlu, TWord op);
-		int disassembleAlu(TWord op);
+		int disassembleAlu(Instruction inst, TWord op);
 		int disassembleParallelMove(const OpcodeInfo& oi, TWord _op, TWord _opB);
 		int disassemble(const OpcodeInfo& oi, TWord op, TWord opB);
 		void disassembleDC(std::string& dst, TWord op);
@@ -29,5 +33,6 @@ namespace dsp56k
 		Opcodes m_opcodes;
 	};
 
+	uint32_t disassembleMotorola( char* _dst, TWord _opA, TWord _opB, TWord _sr, TWord _omr);
 	uint32_t disassemble( char* _dst, TWord _opA, TWord _opB, TWord _sr, TWord _omr);
 }
