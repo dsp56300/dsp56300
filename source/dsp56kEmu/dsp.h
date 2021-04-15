@@ -441,7 +441,7 @@ namespace dsp56k
 			case 12:	_s1 = y1();		_s2 = x0();		return;
 			case 13:	_s1 = x0();		_s2 = y0();		return;
 			case 14:	_s1 = y0();		_s2 = x1();		return;
-			case 15:	_s1 = y1();		_s2 = y1();		return;
+			case 15:	_s1 = x1();		_s2 = y1();		return;
 			}
 			assert( 0 && "invalid QQQQ value" );
 		}
