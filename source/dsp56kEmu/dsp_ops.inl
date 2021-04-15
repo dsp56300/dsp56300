@@ -658,18 +658,20 @@ namespace dsp56k
 	}
 	inline void DSP::op_Dmac(const TWord op)
 	{
-		const bool dstUnsigned	= getFieldValue<Dmac,Field_s>(op);
-		const bool srcUnsigned	= getFieldValue<Dmac,Field_S>(op);
+		const auto ss			= getFieldValue<Dmac,Field_S, Field_s>(op);
 		const bool ab			= getFieldValue<Dmac,Field_d>(op);
 		const bool negate		= getFieldValue<Dmac,Field_k>(op);
 
 		const TWord qqqq		= getFieldValue<Dmac,Field_QQQQ>(op);
 
+		const bool s1Unsigned	= ss > 1;
+		const bool s2Unsigned	= ss > 0;
+
 		TReg24 s1, s2;
 		decode_QQQQ_read( s1, s2, qqqq );
 
 		// TODO: untested
-		alu_dmac( ab, s1, s2, negate, srcUnsigned, dstUnsigned );
+		alu_dmac( ab, s1, s2, negate, s1Unsigned, s2Unsigned );
 	}
 	inline void DSP::op_Do_ea(const TWord op)
 	{
@@ -1400,7 +1402,6 @@ namespace dsp56k
 		const TWord ea = decode_MMMRRR_read(mmmrrr);
 		
 		// S1/D1 move
-
 		if( write )
 		{
 			if( mmmrrr == MMM_ImmediateData )
@@ -1690,7 +1691,6 @@ namespace dsp56k
 		const bool negate	= getFieldValue<Mpy_SD,Field_k>(op);
 
 		const TReg24 s1 = decode_QQ_read(QQ);
-
 		const TReg24 s2 = TReg24( decode_sssss(sssss) );
 
 		alu_mpy( ab, s1, s2, negate, false );
