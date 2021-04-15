@@ -26,7 +26,7 @@ namespace dsp56k
 		testEXTRACTU();
 		testEXTRACTU_CO();
 
-		testDisassembler();		// will take a few minutes in debug, so commented out for now
+//		testDisassembler();		// will take a few minutes in debug, so commented out for now
 	}
 
 	void UnitTests::execOpcode(uint32_t _op0, uint32_t _op1, const bool _reset)
