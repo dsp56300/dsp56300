@@ -811,8 +811,8 @@ namespace dsp56k
 		case Jscc_ea:
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
-				const auto dd = getFieldValue(inst, Field_MMM, Field_RRR, op);
-				m_ss << condition(cccc) << ' ' << decode_DDDDDD(dd);
+				const auto mr = getFieldValue(inst, Field_MMM, Field_RRR, op);
+				m_ss << condition(cccc) << ' ' << mmmrrr(mr, 2, opB);
 			}
 			return 1;
 		case Jclr_ea:
