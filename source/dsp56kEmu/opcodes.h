@@ -116,6 +116,7 @@ namespace dsp56k
 				switch (_oi.m_instruction)
 				{
 				case Tfr:
+				case Cmp_S1S2:
 				case Cmpm_S1S2:
 					// There are two variants for JJJ, one does not allow 001, 010 and 011 (56 bit regs), only 24 bit are allowed.
 					if(v > 0 && v < 4)
