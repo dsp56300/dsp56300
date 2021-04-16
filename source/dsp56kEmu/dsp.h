@@ -1150,5 +1150,8 @@ namespace dsp56k
 	private:
 		void errNotImplemented(const char* _opName);
 		void updatePreviousRegisterStates();
+	public:
+		void coreDump(std::stringstream& _dst);
+		void coreDump();
 	};
 }

@@ -2400,38 +2400,11 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 
 	void DSP::errNotImplemented(const char* _opName)
 	{
-		TWord opA, opB;
-		mem.get2(MemArea_P, pcCurrentInstruction, opA, opB);
-
-		std::string op;
-		m_disasm.disassemble(op, opA, opB, 0, 0);
-
 		std::stringstream ss; ss << std::endl;
 		ss << "Not Implemented: " << _opName << std::endl;
-		ss << "Instruction: " << op << std::endl;
-		ss << "Opcode: $" << HEX(opA) << " ($" << opB << ")" << std::endl;
-		ss << std::endl;
-		ss << "Stack:" << std::endl;
-		int s = ssIndex();
+		coreDump(ss);
 
-		while(s >= 0)
-		{
-			const auto pc = hiword(reg.ss[s]).var;
-			const auto sr = loword(reg.ss[s]).var;
-			ss << '$' << std::setw(2) << std::setfill('0') << std::hex << s << ": ";
-			ss << '$' << HEX(pc) << ":$" << HEX(sr) << " - pc:$" << HEX(pc) << " - ";
-
-			mem.get2(MemArea_P, pc, opA, opB);
-			m_disasm.disassemble(op, opA, opB, 0, 0);
-			ss << op << std::endl;
-			--s;
-		}
-		ss << std::endl;
-		ss << "Registers:" << std::endl;
-		updatePreviousRegisterStates();
-		dumpRegisters(ss);
-
-		const std::string str(ss.str());
+		const auto str(ss.str());
 		LOG(str);
 
 		assert(false && "instruction not implemented, see console for details");
@@ -2462,5 +2435,45 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 				m_prevRegStates[i].val = regVal;
 			}
 		}
+	}
+
+	void DSP::coreDump(std::stringstream& _ss)
+	{
+		TWord opA, opB;
+		mem.get2(MemArea_P, pcCurrentInstruction, opA, opB);
+
+		std::string op;
+		m_disasm.disassemble(op, opA, opB, 0, 0);
+
+		_ss << "Current Instruction: " << op << std::endl;
+		_ss << "Current Opcode: $" << HEX(opA) << " ($" << opB << ")" << std::endl;
+		_ss << std::endl;
+		_ss << "Stack:" << std::endl;
+		int s = ssIndex();
+
+		while(s >= 0)
+		{
+			const auto pc = hiword(reg.ss[s]).var;
+			const auto sr = loword(reg.ss[s]).var;
+			_ss << '$' << std::setw(2) << std::setfill('0') << std::hex << s << ": ";
+			_ss << '$' << HEX(pc) << ":$" << HEX(sr) << " - pc:$" << HEX(pc) << " - ";
+
+			mem.get2(MemArea_P, pc, opA, opB);
+			m_disasm.disassemble(op, opA, opB, 0, 0);
+			_ss << op << std::endl;
+			--s;
+		}
+		_ss << std::endl;
+		_ss << "Registers:" << std::endl;
+		updatePreviousRegisterStates();
+		dumpRegisters(_ss);
+	}
+
+	void DSP::coreDump()
+	{
+		std::stringstream ss;
+		coreDump(ss);
+		const std::string dump(ss.str());
+		LOG(std::endl << dump);
 	}
 }
