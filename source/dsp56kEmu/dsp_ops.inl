@@ -1601,7 +1601,8 @@ namespace dsp56k
 	}
 	inline void DSP::op_Rep_S(const TWord op)
 	{
-		errNotImplemented("REP S");
+		const int loopcount = decode_dddddd_read(getFieldValue<Rep_S,Field_dddddd>(op)).var;
+		rep_exec(loopcount);
 	}
 	inline void DSP::op_Reset(const TWord op)
 	{
