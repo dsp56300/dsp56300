@@ -161,7 +161,6 @@ namespace dsp56k
 	const OpcodeInfo* Opcodes::findOpcodeInfo(TWord _opcode, const std::vector<const OpcodeInfo*>& _opcodes)
 	{
 		const OpcodeInfo* res = nullptr;
-		size_t resIndex = 0;
 
 		for (size_t i=0; i<_opcodes.size(); ++i)
 		{
@@ -176,7 +175,6 @@ namespace dsp56k
 					assert(res == nullptr);
 				}
 				res = oi;
-				resIndex = i;
 			}
 		}
 		return res;

@@ -336,7 +336,7 @@ namespace dsp56k
 
 		OpcodeInfo(Rep_ea,			"0000011001MMMRRR0S100000",	"REP [X or Y]:ea"),
 		OpcodeInfo(Rep_aa,			"0000011000aaaaaa0S100000",	"REP [X or Y]:aa"),
-		OpcodeInfo(Rep_xxx,			"00000110iiiiiiii1010hhhh",	"REP #xxx"),
+		OpcodeInfo(Rep_xxx,			"00000110iiiiiiii1o1ohhhh",	"REP #xxx"),
 		OpcodeInfo(Rep_S,			"0000011011dddddd00100000",	"REP S"),
 
 		OpcodeInfo(Reset,			"00000000000000001o0o0100",	"RESET"),

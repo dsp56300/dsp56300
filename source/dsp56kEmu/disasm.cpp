@@ -424,9 +424,13 @@ namespace dsp56k
 	{
 		switch( _ddddd )
 		{
+		case 0x00:
 		case 0x04:	return "x0";
+		case 0x01:
 		case 0x05:	return "x1";
+		case 0x02:
 		case 0x06:	return "y0";
+		case 0x03:
 		case 0x07:	return "y1";
 		case 0x08:	return "a0";
 		case 0x09:	return "b0";

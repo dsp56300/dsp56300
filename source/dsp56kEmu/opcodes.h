@@ -66,10 +66,19 @@ namespace dsp56k
 		return v >= min && v <= max;
 	}
 
-	static bool matchdddddd(TWord v)
+	static bool matchdddddd(const Instruction inst, const TWord v)
 	{
-		if(v < 4)
-			return false;
+		switch (inst)
+		{
+		case Lua_ea:
+		case Lua_Rn:
+		case Lra_xxxx:
+		case Lra_Rn:
+			break;
+		default:
+			if(v < 4)		// undocumented: There are no valid register if dddddd < 4, but the Motorola disasm says these are x0,x1,y0,y1, just as the values 4-7
+				return false;
+		}
 		if(v >= 0b101000 && v <= 0b101111 && v != 0b101010)	// For 101EEE, only 010 is valid for EEE (EP register)
 			return false;
 		if(v >= 0b110010 && v <= 0b110111)					// For 110VVV, only VBA (000) and SC (001) exist
@@ -79,7 +88,7 @@ namespace dsp56k
 
 	static bool matchdddddd(Instruction _instruction, Field _field, TWord _word)
 	{
-		return matchdddddd(getFieldValue(_instruction, _field, _word));
+		return matchdddddd(_instruction, getFieldValue(_instruction, _field, _word));
 	}
 
 	static bool hasField(const OpcodeInfo& _oi, const Field _field)
@@ -146,7 +155,7 @@ namespace dsp56k
 		
 		if(hasField(_oi, Field_dd) && hasField(_oi, Field_ddd))
 		{
-			if(!matchdddddd(getFieldValue(_oi.m_instruction, Field_dd, Field_ddd, _word)))
+			if(!matchdddddd(_oi.m_instruction, getFieldValue(_oi.m_instruction, Field_dd, Field_ddd, _word)))
 				return false;
 		}
 		
