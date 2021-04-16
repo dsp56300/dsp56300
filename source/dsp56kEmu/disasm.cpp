@@ -276,7 +276,7 @@ namespace dsp56k
 		return peripheral(S, a, 0xffffc0);
 	}
 	
-	std::string mmrrr(TWord mmmrrr, TWord S, TWord opB, bool _addMemSpace = true, bool _long = true)
+	std::string mmrrr(TWord mmmrrr, TWord S, bool _addMemSpace = true, bool _long = true)
 	{
 		const char* formats[4]
 		{
@@ -331,7 +331,7 @@ namespace dsp56k
 			{
 				const auto mmm = (mmmrrr>>3)&7;
 				const auto r = mmmrrr & 7;
-				const auto format = formats[mmm];
+				const auto* format = formats[mmm];
 				if(!format)
 					return std::string();
 				sprintf(temp, format, r, r);
@@ -1476,8 +1476,8 @@ namespace dsp56k
 
 				const auto mrY = mmY << 3 | rrY;
 
-				const auto eaX = mmrrr(mrX, 0, opB);
-				const auto eaY = mmrrr(mrY, 1, opB);
+				const auto eaX = mmrrr(mrX, 0);
+				const auto eaY = mmrrr(mrY, 1);
 
 				// X
 				if( writeX )	m_ss << "x:" << eaX << ',' << decode_ee(ee);
