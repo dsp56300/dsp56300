@@ -14,8 +14,17 @@ namespace dsp56k
 	template<Instruction I, Field F>
 	constexpr FieldInfo static getFieldInfoCE()
 	{
-		static_assert(initField(g_opcodes[I].m_opcode, g_fieldParseConfigs[F].ch, g_fieldParseConfigs[F].count).len > 0, "field not known");
 		return initField(g_opcodes[I].m_opcode, g_fieldParseConfigs[F].ch, g_fieldParseConfigs[F].count);
+	}
+
+	template<Instruction I, Field F> constexpr bool hasField()
+	{
+		return getFieldInfoCE<I,F>().len > 0;
+	}
+
+	template<Instruction I, Field A, Field B> constexpr bool hasFields()
+	{
+		return hasField<I,A>() && hasField<I,B>();
 	}
 
 	static constexpr TWord getFieldValue(const FieldInfo& _fi, TWord _memoryValue)
@@ -24,16 +33,19 @@ namespace dsp56k
 		return (_memoryValue >> _fi.bit) & _fi.mask;
 	}
 
-	template<Instruction I, Field F> static TWord getFieldValue(const TWord _memValue)
+	template<Instruction I, Field F> TWord getFieldValue(const TWord _memValue)
 	{
 		constexpr auto fi = getFieldInfoCE<I,F>();
+		static_assert(fi.len > 0, "field not known");
 		return getFieldValue(fi, _memValue);
 	}
 
-	template<Instruction I, Field MSB, Field LSB> static TWord getFieldValue(const TWord _memValue)
+	template<Instruction I, Field MSB, Field LSB> TWord getFieldValue(const TWord _memValue)
 	{
 		constexpr auto fa = getFieldInfoCE<I,MSB>();
+		static_assert(fa.len > 0, "field MSB not known");
 		constexpr auto fb = getFieldInfoCE<I,LSB>();
+		static_assert(fb.len > 0, "field LSB not known");
 		return getFieldValue<I,MSB>(_memValue) << fb.len | getFieldValue<I,LSB>(_memValue);
 	}
 
