@@ -218,6 +218,9 @@ namespace dsp56k
 		if(!out.is_open())
 			return false;
 
+		Opcodes opcodes;
+		Disassembler disasm(opcodes);
+		
 		for(size_t i=_offset; i<_offset+_count;)
 		{
 			TWord opA, opB;
@@ -229,8 +232,8 @@ namespace dsp56k
 				continue;
 			}
 
-			char assembly[128]{};
-			auto usedOps = disassemble(assembly, opA, opB, 0,0);
+			std::string assembly;
+			auto usedOps = disasm.disassemble(assembly, opA, opB, 0,0);
 
 			if(usedOps == 0)
 			{

@@ -274,7 +274,8 @@ namespace dsp56k
 	// DSP
 	//
 	DSP::DSP( Memory& _memory, IPeripherals* _pX, IPeripherals* _pY  )
-		: mem(_memory)
+		: m_disasm(m_opcodes)
+		, mem(_memory)
 		, perif({_pX, _pY})
 		, pcCurrentInstruction(0xffffff)
 	{
@@ -369,7 +370,6 @@ namespace dsp56k
 			m_processingMode = FastInterrupt;
 
 			pcCurrentInstruction = vba;
-			getASM(op0, op1);
 			execOp(op0);
 
 			auto jumped = reg.sp.var - oldSP;
@@ -378,7 +378,7 @@ namespace dsp56k
 			if(m_currentOpLen == 1 && !jumped)
 			{
 				pcCurrentInstruction = vba+1;
-				getASM(op1, 0);
+				m_opWordB = 0;
 				execOp(op1);
 
 				m_processingMode = DefaultPreventInterrupt;
@@ -402,8 +402,6 @@ namespace dsp56k
 
 		const auto op = fetchPC();
 
-		getASM(op, m_opWordB);
-
 		execOp(op);
 	}
 
@@ -419,6 +417,8 @@ namespace dsp56k
 
 	void DSP::execOp(const TWord op)
 	{
+		getASM(op, m_opWordB);
+
 		const TWord currentOp = pcCurrentInstruction;
 		const auto opCache = m_opcodeCache[currentOp];
 
@@ -1197,8 +1197,6 @@ namespace dsp56k
 
 		const auto lcBackup = reg.lc;
 		reg.lc.var = loopCount;
-
-		getASM(op, m_opWordB);
 
 		execOp(op);
 		// TODO: remember function pointer and call directly
@@ -2170,9 +2168,9 @@ namespace dsp56k
 	const char* DSP::getASM(const TWord _wordA, const TWord _wordB)
 	{
 	#ifdef _DEBUG
-		disassemble(m_asm, _wordA, _wordB, reg.sr.var, reg.omr.var);
+		m_disasm.disassemble(m_asm, _wordA, _wordB, reg.sr.var, reg.omr.var);
 	#endif
-		return m_asm;
+		return m_asm.c_str();
 	}
 
 	// _____________________________________________________________________________
@@ -2328,7 +2326,6 @@ namespace dsp56k
 	{
 		fwrite( &reg, sizeof(reg), 1, _file );
 		fwrite( &pcCurrentInstruction, 1, 1, _file );
-		fwrite( m_asm, sizeof(m_asm), 1, _file );
 		fwrite( &cache, sizeof(cache), 1, _file );
 
 		return true;
@@ -2341,7 +2338,6 @@ namespace dsp56k
 	{
 		fread( &reg, sizeof(reg), 1, _file );
 		fread( &pcCurrentInstruction, 1, 1, _file );
-		fread( m_asm, sizeof(m_asm), 1, _file );
 		fread( &cache, sizeof(cache), 1, _file );
 
 		return true;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "disasm.h"
 #include "registers.h"
 #include "memory.h"
 #include "utils.h"
@@ -94,13 +95,14 @@ namespace dsp56k
 		// members
 		//
 		Opcodes m_opcodes;
+		Disassembler m_disasm;
 
 		Memory& mem;
 		std::array<IPeripherals*, 2> perif;
 		
 		TWord	pcCurrentInstruction;
 
-		char	m_asm[128];
+		std::string	m_asm;
 
 		InstructionCache	cache;
 		uint32_t			m_instructions = 0;

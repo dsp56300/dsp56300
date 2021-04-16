@@ -194,7 +194,7 @@ namespace dsp56k
 		dst << "dc $" << HEX(op);
 	}
 
-	Disassembler::Disassembler()
+	Disassembler::Disassembler(const Opcodes& _opcodes) : m_opcodes(_opcodes)
 	{
 		m_str.reserve(1024);
 	}
@@ -1891,25 +1891,14 @@ namespace dsp56k
 		}
 	}
 	
-	uint32_t disassembleMotorola(char* dst, TWord op, TWord opB, const TWord sr, const TWord omr)
+	uint32_t disassembleMotorola(char* _dst, TWord _op, TWord _opB, const TWord _sr, const TWord _omr)
 	{
 #ifdef USE_MOTOROLA_UNASM
-		unsigned long ops[3] = {op, opB, 0};
-		const int ret = dspt_unasm_563( ops, dst, sr, omr, nullptr );
+		unsigned long ops[3] = {_op, _opB, 0};
+		const int ret = dspt_unasm_563( ops, _dst, _sr, _omr, nullptr );
 		return ret;
 #endif
-		dst[0] = 0;
+		_dst[0] = 0;
 		return 0;
-	}
-
-	uint32_t disassemble(char* dst, TWord op, TWord opB, const TWord sr, const TWord omr)
-	{
-		// TODO: not thread-safe
-		static Disassembler disassembler;
-
-		std::string assembly;
-		const int res = disassembler.disassemble(assembly, op, opB, sr, omr);
-		strcpy(dst, assembly.c_str());
-		return res;
 	}
 }

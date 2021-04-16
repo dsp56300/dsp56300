@@ -299,7 +299,8 @@ namespace dsp56k
 #ifdef USE_MOTOROLA_UNASM
 		LOG("Executing Disassembler Unit Tests");
 
-		Disassembler disasm;
+		Opcodes opcodes;
+		Disassembler disasm(opcodes);
 
 		constexpr TWord opB = 0x234567;
 
