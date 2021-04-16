@@ -166,7 +166,7 @@ namespace dsp56k
 		bool	readReg							( EReg _reg, TReg56& _res ) const;
 		bool	writeReg						( EReg _reg, const TReg56& _val );
 
-		bool	readRegToInt					( EReg _reg, int64_t& _dst );
+		bool	readRegToInt					( EReg _reg, int64_t& _dst ) const;
 
 		uint32_t	getInstructionCounter		() const									{ return m_instructions; }
 
@@ -187,7 +187,8 @@ namespace dsp56k
 
 		void			clearOpcodeCache				();
 
-		void			dumpRegisters					();
+		void			dumpRegisters					() const;
+		void			dumpRegisters					(std::stringstream& _ss) const;
 		void			enableTrace						(TraceMode _trace) { m_trace = _trace; }
 
 		Memory&			memory							()											{ return mem; }
@@ -1144,5 +1145,10 @@ namespace dsp56k
 		void op_Wait(TWord op);
 		void op_ResolveCache(TWord op);
 		void op_Parallel(TWord op);
+
+		// --- debugging tools
+	private:
+		void errNotImplemented(const char* _opName);
+		void updatePreviousRegisterStates();
 	};
 }

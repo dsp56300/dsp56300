@@ -136,23 +136,23 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bcc_Rn(const TWord op)	// 00001101 00011RRR 0100CCCC
 	{
-		LOG_ERR_NOTIMPLEMENTED("Bcc Rn");	
+		errNotImplemented("Bcc Rn");	
 	}
 	inline void DSP::op_Bchg_ea(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BCHG");
+		errNotImplemented("BCHG");
 	}
 	inline void DSP::op_Bchg_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BCHG");
+		errNotImplemented("BCHG");
 	}
 	inline void DSP::op_Bchg_pp(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BCHG");
+		errNotImplemented("BCHG");
 	}
 	inline void DSP::op_Bchg_qq(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BCHG");
+		errNotImplemented("BCHG");
 	}
 	inline void DSP::op_Bchg_D(const TWord op)
 	{
@@ -194,11 +194,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bclr_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BCLR");
+		errNotImplemented("BCLR");
 	}
 	inline void DSP::op_Bclr_pp(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BCLR");
+		errNotImplemented("BCLR");
 	}
 	inline void DSP::op_Bclr_qq(const TWord op)
 	{
@@ -237,15 +237,15 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bra_Rn(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BRA_Rn");
+		errNotImplemented("BRA_Rn");
 	}
 	inline void DSP::op_Brclr_ea(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BRCLR");			
+		errNotImplemented("BRCLR");			
 	}
 	inline void DSP::op_Brclr_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BRCLR");			
+		errNotImplemented("BRCLR");			
 	}
 	inline void DSP::op_Brclr_pp(const TWord op)
 	{
@@ -293,19 +293,19 @@ namespace dsp56k
 	}
 	inline void DSP::op_BRKcc(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BRKcc");
+		errNotImplemented("BRKcc");
 	}
 	inline void DSP::op_Brset_ea(const TWord op)	// BRSET #n,[X or Y]:ea,xxxx - 0 0 0 0 1 1 0 0 1 0 M M M R R R 0 S 1 b b b b b
 	{
-		LOG_ERR_NOTIMPLEMENTED("BRSET");
+		errNotImplemented("BRSET");
 	}
 	inline void DSP::op_Brset_aa(const TWord op)	// BRSET #n,[X or Y]:aa,xxxx - 0 0 0 0 1 1 0 0 1 0 a a a a a a 1 S 1 b b b b b
 	{
-		LOG_ERR_NOTIMPLEMENTED("BRSET");
+		errNotImplemented("BRSET");
 	}
 	inline void DSP::op_Brset_pp(const TWord op)	// BRSET #n,[X or Y]:pp,xxxx - 
 	{
-		LOG_ERR_NOTIMPLEMENTED("BRSET");
+		errNotImplemented("BRSET");
 	}
 	inline void DSP::op_Brset_qq(const TWord op)
 	{
@@ -362,27 +362,27 @@ namespace dsp56k
 	}
 	inline void DSP::op_BScc_Rn(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BScc Rn");
+		errNotImplemented("BScc Rn");
 	}
 	inline void DSP::op_Bsclr_ea(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSCLR");
+		errNotImplemented("BSCLR");
 	}
 	inline void DSP::op_Bsclr_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSCLR");
+		errNotImplemented("BSCLR");
 	}
 	inline void DSP::op_Bsclr_pp(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSCLR");
+		errNotImplemented("BSCLR");
 	}
 	inline void DSP::op_Bsclr_qq(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSCLR");		
+		errNotImplemented("BSCLR");		
 	}
 	inline void DSP::op_Bsclr_S(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSCLR");		
+		errNotImplemented("BSCLR");		
 	}
 	inline void DSP::op_Bset_ea(const TWord op)
 	{
@@ -412,7 +412,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bset_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSET");
+		errNotImplemented("BSET");
 	}
 	inline void DSP::op_Bset_pp(const TWord op)	// 0000101010pppppp0S1bbbbb
 	{
@@ -481,23 +481,23 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bsset_ea(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSSET");
+		errNotImplemented("BSSET");
 	}
 	inline void DSP::op_Bsset_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSSET");		
+		errNotImplemented("BSSET");		
 	}
 	inline void DSP::op_Bsset_pp(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSSET");
+		errNotImplemented("BSSET");
 	}
 	inline void DSP::op_Bsset_qq(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSSET");		
+		errNotImplemented("BSSET");		
 	}
 	inline void DSP::op_Bsset_S(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BSSET");
+		errNotImplemented("BSSET");
 	}
 	inline void DSP::op_Btst_ea(const TWord op)
 	{
@@ -523,7 +523,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Btst_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BTST aa");
+		errNotImplemented("BTST aa");
 	}
 	inline void DSP::op_Btst_pp(const TWord op)
 	{
@@ -539,7 +539,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Btst_qq(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("BTST qq");
+		errNotImplemented("BTST qq");
 	}
 	inline void DSP::op_Btst_D(const TWord op)
 	{
@@ -552,7 +552,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Clb(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("CLB");		
+		errNotImplemented("CLB");		
 	}
 	inline void DSP::op_Clr(const TWord op)
 	{
@@ -586,12 +586,12 @@ namespace dsp56k
 	}
 	inline void DSP::op_Cmpu_S1S2(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("CMPU");		
+		errNotImplemented("CMPU");		
 	}
 	inline void DSP::op_Debug(const TWord op)
 	{
 		LOG( "Entering DEBUG mode" );
-		LOG_ERR_NOTIMPLEMENTED("DEBUG");		
+		errNotImplemented("DEBUG");		
 	}
 	inline void DSP::op_Debugcc(const TWord op)
 	{
@@ -599,7 +599,7 @@ namespace dsp56k
 		if( decode_cccc( cccc ) )
 		{
 			LOG( "Entering DEBUG mode because condition is met" );
-			LOG_ERR_NOTIMPLEMENTED("DEBUGcc");
+			errNotImplemented("DEBUGcc");
 		}
 	}
 	inline void DSP::op_Dec(const TWord op)
@@ -675,11 +675,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Do_ea(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("DO");
+		errNotImplemented("DO");
 	}
 	inline void DSP::op_Do_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("DO");		
+		errNotImplemented("DO");		
 	}
 	inline void DSP::op_Do_xxx(const TWord op)
 	{
@@ -700,15 +700,15 @@ namespace dsp56k
 	}
 	inline void DSP::op_DoForever(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("DO FOREVER");
+		errNotImplemented("DO FOREVER");
 	}
 	inline void DSP::op_Dor_ea(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("DOR");		
+		errNotImplemented("DOR");		
 	}
 	inline void DSP::op_Dor_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("DOR");		
+		errNotImplemented("DOR");		
 	}
 	inline void DSP::op_Dor_xxx(const TWord op)
 	{
@@ -726,7 +726,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_DorForever(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("DOR FOREVER");		
+		errNotImplemented("DOR FOREVER");		
 	}
 	inline void DSP::op_Enddo(const TWord op)
 	{
@@ -746,19 +746,19 @@ namespace dsp56k
 	}
 	inline void DSP::op_Eor_xx(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("EOR");		
+		errNotImplemented("EOR");		
 	}
 	inline void DSP::op_Eor_xxxx(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("EOR");
+		errNotImplemented("EOR");
 	}
 	inline void DSP::op_Extract_S1S2(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("EXTRACT");		
+		errNotImplemented("EXTRACT");		
 	}
 	inline void DSP::op_Extract_CoS2(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("EXTRACT");
+		errNotImplemented("EXTRACT");
 	}
 	inline void DSP::op_Extractu_S1S2(const TWord op)  // 00001100 00011010 100sSSSD
 	{
@@ -809,7 +809,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Illegal(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("ILLEGAL");
+		errNotImplemented("ILLEGAL");
 	}
 	inline void DSP::op_Inc(const TWord op)
 	{
@@ -833,11 +833,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Insert_S1S2(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("INSERT");
+		errNotImplemented("INSERT");
 	}
 	inline void DSP::op_Insert_CoS2(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("INSERT");
+		errNotImplemented("INSERT");
 	}
 	inline void DSP::op_Jcc_xxx(const TWord op)
 	{
@@ -874,15 +874,15 @@ namespace dsp56k
 		{
 			setPC(addr);
 		}
-		LOG_ERR_NOTIMPLEMENTED("JCLR ea");
+		errNotImplemented("JCLR ea");
 	}
 	inline void DSP::op_Jclr_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JCLR aa");
+		errNotImplemented("JCLR aa");
 	}
 	inline void DSP::op_Jclr_pp(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JCLR pp");
+		errNotImplemented("JCLR pp");
 	}
 	inline void DSP::op_Jclr_qq(const TWord op)
 	{
@@ -938,23 +938,23 @@ namespace dsp56k
 	}
 	inline void DSP::op_Jsclr_ea(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSCLR");
+		errNotImplemented("JSCLR");
 	}
 	inline void DSP::op_Jsclr_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSCLR");
+		errNotImplemented("JSCLR");
 	}
 	inline void DSP::op_Jsclr_pp(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSCLR");
+		errNotImplemented("JSCLR");
 	}
 	inline void DSP::op_Jsclr_qq(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSCLR");
+		errNotImplemented("JSCLR");
 	}
 	inline void DSP::op_Jsclr_S(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSCLR");
+		errNotImplemented("JSCLR");
 	}
 	inline void DSP::op_Jset_ea(const TWord op)
 	{
@@ -971,7 +971,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Jset_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSET #n,[X or Y]:aa,xxxx");
+		errNotImplemented("JSET #n,[X or Y]:aa,xxxx");
 	}
 	inline void DSP::op_Jset_pp(const TWord op)
 	{
@@ -1029,19 +1029,19 @@ namespace dsp56k
 	}
 	inline void DSP::op_Jsset_ea(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSSET");
+		errNotImplemented("JSSET");
 	}
 	inline void DSP::op_Jsset_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSSET");
+		errNotImplemented("JSSET");
 	}
 	inline void DSP::op_Jsset_pp(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSSET");
+		errNotImplemented("JSSET");
 	}
 	inline void DSP::op_Jsset_qq(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("JSSET");
+		errNotImplemented("JSSET");
 	}
 	inline void DSP::op_Jsset_S(const TWord op)
 	{
@@ -1058,7 +1058,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Lra_Rn(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("LRA");
+		errNotImplemented("LRA");
 	}
 	inline void DSP::op_Lra_xxxx(const TWord op)	// 0000010001oooooo010ddddd
 	{
@@ -1080,7 +1080,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Lsl_SD(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("LSL");
+		errNotImplemented("LSL");
 	}
 	inline void DSP::op_Lsr_D(const TWord op)
 	{
@@ -1095,7 +1095,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Lsr_SD(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("LSR");		
+		errNotImplemented("LSR");		
 	}
 	inline void DSP::op_Lua_ea(const TWord op)
 	{
@@ -1159,7 +1159,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Maci_xxxx(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("MACI");		
+		errNotImplemented("MACI");		
 	}
 	inline void DSP::op_Macsu(const TWord op)
 	{
@@ -1179,11 +1179,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Macr_S(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("MACR");		
+		errNotImplemented("MACR");		
 	}
 	inline void DSP::op_Macri_xxxx(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("MACRI");		
+		errNotImplemented("MACRI");		
 	}
 	inline void DSP::op_Max(const TWord op)
 	{
@@ -1195,7 +1195,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Merge(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("MERGE");		
+		errNotImplemented("MERGE");		
 	}
 	inline void DSP::op_Move_Nop(const TWord op)
 	{
@@ -1384,7 +1384,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Movexr_A(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("Movexr_A");
+		errNotImplemented("Movexr_A");
 	}
 	inline void DSP::op_Moveyr_ea(const TWord op)
 	{
@@ -1416,7 +1416,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Moveyr_A(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE YR A");
+		errNotImplemented("MOVE YR A");
 	}
 	inline void DSP::op_Movel_ea(const TWord op)
 	{
@@ -1567,7 +1567,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Movem_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE(M) S,P:aa");
+		errNotImplemented("MOVE(M) S,P:aa");
 	}
 	inline void DSP::op_Movep_ppea(const TWord op)
 	{
@@ -1634,11 +1634,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Movep_eapp(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE");
+		errNotImplemented("MOVE");
 	}
 	inline void DSP::op_Movep_eaqq(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("MOVE");
+		errNotImplemented("MOVE");
 	}
 	inline void DSP::op_Movep_Spp(const TWord op)
 	{
@@ -1725,11 +1725,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Mpyr_SD(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("MPYR");
+		errNotImplemented("MPYR");
 	}
 	inline void DSP::op_Mpyri(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("MPYRI");
+		errNotImplemented("MPYRI");
 	}
 	inline void DSP::op_Neg(const TWord op)
 	{
@@ -1740,11 +1740,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Norm(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("NORM");
+		errNotImplemented("NORM");
 	}
 	inline void DSP::op_Normf(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("NORMF");
+		errNotImplemented("NORMF");
 	}
 	inline void DSP::op_Not(const TWord op)
 	{
@@ -1756,11 +1756,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Or_xx(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("OR");
+		errNotImplemented("OR");
 	}
 	inline void DSP::op_Or_xxxx(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("OR");
+		errNotImplemented("OR");
 	}
 	inline void DSP::op_Ori(const TWord op)
 	{
@@ -1777,7 +1777,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Pflush(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("PFLUSH");		
+		errNotImplemented("PFLUSH");		
 	}
 	inline void DSP::op_Pflushun(const TWord op)
 	{
@@ -1793,23 +1793,23 @@ namespace dsp56k
 	}
 	inline void DSP::op_Plockr(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("PLOCKR");		
+		errNotImplemented("PLOCKR");		
 	}
 	inline void DSP::op_Punlock(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("PUNLOCK");
+		errNotImplemented("PUNLOCK");
 	}
 	inline void DSP::op_Punlockr(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("PUNLOCKR");		
+		errNotImplemented("PUNLOCKR");		
 	}
 	inline void DSP::op_Rep_ea(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("REP");
+		errNotImplemented("REP");
 	}
 	inline void DSP::op_Rep_aa(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("REP");
+		errNotImplemented("REP");
 	}
 	inline void DSP::op_Rep_xxx(const TWord op)
 	{
@@ -1818,7 +1818,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Rep_S(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("REP S");
+		errNotImplemented("REP S");
 	}
 	inline void DSP::op_Reset(const TWord op)
 	{
@@ -1851,7 +1851,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Stop(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("STOP");
+		errNotImplemented("STOP");
 	}
 	inline void DSP::op_Sub_SD(const TWord op)
 	{
@@ -1925,11 +1925,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Trap(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("TRAP");		
+		errNotImplemented("TRAP");		
 	}
 	inline void DSP::op_Trapcc(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("TRAPcc");		
+		errNotImplemented("TRAPcc");		
 	}
 	inline void DSP::op_Tst(const TWord op)
 	{
@@ -1937,11 +1937,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Vsl(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("VSL");		
+		errNotImplemented("VSL");		
 	}
 	inline void DSP::op_Wait(const TWord op)
 	{
-		LOG_ERR_NOTIMPLEMENTED("WAIT");		
+		errNotImplemented("WAIT");		
 	}
 	inline void DSP::op_ResolveCache(const TWord op)
 	{

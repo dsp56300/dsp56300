@@ -549,7 +549,7 @@ namespace dsp56k
 			{
 			case 1:		alu_tfr(D, decode_JJJ_read_56(JJJ, !D));			return true;
 			case 2:		alu_or(D, decode_JJJ_read_24(JJJ, !D).var);			return true;
-			case 3:		LOG_ERR_NOTIMPLEMENTED("eor");						return true;	// alu_eor(D, decode_JJJ_read_24(JJJ, !D).var);
+			case 3:		errNotImplemented("eor");							return true;	// alu_eor(D, decode_JJJ_read_24(JJJ, !D).var);
 			case 5:		alu_cmp(D, decode_JJJ_read_56(JJJ, !D), false);		return true;
 			case 6:		alu_and(D, decode_JJJ_read_24(JJJ, !D).var);		return true;
 			case 7:		alu_cmp(D, decode_JJJ_read_56(JJJ, !D), true);		return true;
@@ -565,7 +565,7 @@ namespace dsp56k
 			case 2:		alu_addr(D);										return true;
 			case 3:		alu_tst(D);											return true;
 			case 5:		alu_cmp(D, D ? reg.a : reg.b, false);				return true;
-			case 6:		LOG_ERR_NOTIMPLEMENTED("addr");						return true;	// alu_subr
+			case 6:		errNotImplemented("addr");							return true;	// alu_subr
 			case 7:		alu_cmp(D, D ? reg.a : reg.b, true);				return true;
 			}
 		case 1:
@@ -574,7 +574,7 @@ namespace dsp56k
 			case 1:		alu_rnd(D);								return true;
 			case 2:		alu_addl(D);							return true;
 			case 3:		alu_clr(D);								return true;
-			case 6:		LOG_ERR_NOTIMPLEMENTED("subl");			return true;	// alu_subl
+			case 6:		errNotImplemented("subl");				return true;	// alu_subl
 			case 7:		alu_not(D);								return true;
 			}
 			break;
@@ -584,7 +584,7 @@ namespace dsp56k
 			case 2:		alu_asr(D, D, 1);						return true;
 			case 3:		alu_lsr(D, 1);							return true;
 			case 6:		alu_abs(D);								return true;
-			case 7:		LOG_ERR_NOTIMPLEMENTED("ror");			return true;	// alu_ror
+			case 7:		errNotImplemented("ror");				return true;	// alu_ror
 			}
 			break;
 		case 3:
@@ -600,8 +600,8 @@ namespace dsp56k
 		case 5:
 			switch (kkk)
 			{
-			case 1:		LOG_ERR_NOTIMPLEMENTED("adc");			return true;	// alu_adc
-			case 5:		LOG_ERR_NOTIMPLEMENTED("sbc");			return true;	// alu_sbc
+			case 1:		errNotImplemented("adc");				return true;	// alu_adc
+			case 5:		errNotImplemented("sbc");				return true;	// alu_sbc
 			}
 		}
 		return false;
@@ -1235,30 +1235,7 @@ namespace dsp56k
 		if(m_trace & Regs)
 		{
 			dumpRegisters();
-
-			for( size_t i=0; i<Reg_COUNT; ++i )
-			{
-				int64_t regVal = 0;
-				const bool r = readRegToInt( (EReg)i, regVal );
-
-				if( !r )
-					continue;
-				//			assert( r && "failed to read register" );
-
-				if( regVal != m_prevRegStates[i].val )
-				{
-					SRegChange regChange;
-					regChange.reg = (EReg)i;
-					regChange.valOld.var = (int)m_prevRegStates[i].val;
-					regChange.valNew.var = (int)regVal;
-					regChange.pc = pcCurrentInstruction;
-					regChange.ictr = reg.ictr.var;
-
-					m_regChanges.push_back( regChange );
-
-					m_prevRegStates[i].val = regVal;
-				}
-			}
+			updatePreviousRegisterStates();
 		}
 	}
 
@@ -1953,7 +1930,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// readRegToInt
 	//
-	bool DSP::readRegToInt( EReg _reg, int64_t& _dst )
+	bool DSP::readRegToInt( EReg _reg, int64_t& _dst ) const
 	{
 		switch( g_regBitCount[_reg] )
 		{
@@ -2354,7 +2331,14 @@ namespace dsp56k
 		m_opcodeCache.resize(mem.size(), ResolveCache);		
 	}
 
-	void DSP::dumpRegisters()
+	void DSP::dumpRegisters() const
+	{
+		std::stringstream ss;
+		dumpRegisters(ss);
+		const std::string str(ss.str());
+		LOGF(str);
+	}
+	void DSP::dumpRegisters(std::stringstream& _ss) const
 	{
 		auto logReg = [this](EReg _reg, int _width)
 		{
@@ -2378,22 +2362,22 @@ namespace dsp56k
 			return res;
 		};
 
-		LOGF("   x=       " << logReg(Reg_X, 12) << "    y=       " << logReg(Reg_Y, 12));
-		LOGF("   a=     " << logReg(Reg_A, 14) << "    b=     " << logReg(Reg_B, 14));
-		LOGF("               x1=" << logReg(Reg_X1, 6) << "   x0=" << logReg(Reg_X0, 6) << "   r7=" << logReg(Reg_R7,6) << " n7=" << logReg(Reg_N7,6) << " m7=" << logReg(Reg_M7,6));
-		LOGF("               y1=" << logReg(Reg_Y1, 6) << "   y0=" << logReg(Reg_Y0, 6) << "   r6=" << logReg(Reg_R6,6) << " n6=" << logReg(Reg_N6,6) << " m6=" << logReg(Reg_M6,6));
-		LOGF("  a2=    " << logReg(Reg_A2, 2) << "   a1=" << logReg(Reg_A1, 6) << "   a0=" << logReg(Reg_A0,6) << "   r5=" << logReg(Reg_R5,6) << " n5=" << logReg(Reg_N5,6) << " m5=" << logReg(Reg_M5,6));
-		LOGF("  b2=    " << logReg(Reg_B2, 2) << "   b1=" << logReg(Reg_B1, 6) << "   b0=" << logReg(Reg_B0,6) << "   r4=" << logReg(Reg_R4,6) << " n4=" << logReg(Reg_N4,6) << " m4=" << logReg(Reg_M4,6));
-		LOGF("                                         r3=" << logReg(Reg_R3,6) << " n3=" << logReg(Reg_N3,6) << " m3=" << logReg(Reg_M3,6));
-		LOGF("  pc=" << logReg(Reg_PC, 6) << "   sr=" << logReg(Reg_SR, 6) << "  omr=" << logReg(Reg_OMR,6) << "   r2=" << logReg(Reg_R2,6) << " n2=" << logReg(Reg_N2,6) << " m2=" << logReg(Reg_M2,6));
-		LOGF("  la=" << logReg(Reg_LA, 6) << "   lc=" << logReg(Reg_LC, 6) << "                r1=" << logReg(Reg_R1,6) << " n1=" << logReg(Reg_N1,6) << " m1=" << logReg(Reg_M1,6));
-		LOGF(" ssh=" << logReg(Reg_SSH, 6) << "  ssl=" << logReg(Reg_SSL, 6) << "   sp=" << logReg(Reg_SP,6) << "   r0=" << logReg(Reg_R0,6) << " n0=" << logReg(Reg_N0,6) << " m0=" << logReg(Reg_M0,6));
-		LOGF("  ep=" << logReg(Reg_EP, 6) << "   sz=" << logReg(Reg_SZ, 6) << "   sc=" << logReg(Reg_SC,6) << "  vba=" << logReg(Reg_VBA,6));
-		LOGF("iprc=" << logReg(Reg_IPRC, 6) << " iprp=" << logReg(Reg_IPRP, 6) << "  bcr=" << logReg(Reg_BCR,6) << "  dcr=" << logReg(Reg_DCR,6));
-		LOGF("aar0=" << logReg(Reg_AAR0, 6) << " aar1=" << logReg(Reg_AAR1, 6) << " aar2=" << logReg(Reg_AAR2,6) << " aar3=" << logReg(Reg_AAR3,6));
-		LOGF("  hit=   " << logReg(Reg_HIT, -6) << "   miss=   " << logReg(Reg_MISS, -6) << " replace=" << logReg(Reg_REPLACE,-6));
-		LOGF("  cyc=   " << logReg(Reg_CYC, -6) << "   ictr=   " << logReg(Reg_ICTR, -6));
-		LOGF(" cnt1=   " << logReg(Reg_CNT1, -6) << "   cnt2=   " << logReg(Reg_CNT2, -6) << " cnt3=   " << logReg(Reg_CNT3,-6) << "  cnt4=   " << logReg(Reg_CNT4,-6));
+		_ss << "   x=       " << logReg(Reg_X, 12) << "    y=       " << logReg(Reg_Y, 12) << std::endl;
+		_ss << "   a=     " << logReg(Reg_A, 14) << "    b=     " << logReg(Reg_B, 14) << std::endl;
+		_ss << "               x1=" << logReg(Reg_X1, 6) << "   x0=" << logReg(Reg_X0, 6) << "   r7=" << logReg(Reg_R7,6) << " n7=" << logReg(Reg_N7,6) << " m7=" << logReg(Reg_M7,6) << std::endl;
+		_ss << "               y1=" << logReg(Reg_Y1, 6) << "   y0=" << logReg(Reg_Y0, 6) << "   r6=" << logReg(Reg_R6,6) << " n6=" << logReg(Reg_N6,6) << " m6=" << logReg(Reg_M6,6) << std::endl;
+		_ss << "  a2=    " << logReg(Reg_A2, 2) << "   a1=" << logReg(Reg_A1, 6) << "   a0=" << logReg(Reg_A0,6) << "   r5=" << logReg(Reg_R5,6) << " n5=" << logReg(Reg_N5,6) << " m5=" << logReg(Reg_M5,6) << std::endl;
+		_ss << "  b2=    " << logReg(Reg_B2, 2) << "   b1=" << logReg(Reg_B1, 6) << "   b0=" << logReg(Reg_B0,6) << "   r4=" << logReg(Reg_R4,6) << " n4=" << logReg(Reg_N4,6) << " m4=" << logReg(Reg_M4,6) << std::endl;
+		_ss << "                                         r3=" << logReg(Reg_R3,6) << " n3=" << logReg(Reg_N3,6) << " m3=" << logReg(Reg_M3,6) << std::endl;
+		_ss << "  pc=" << logReg(Reg_PC, 6) << "   sr=" << logReg(Reg_SR, 6) << "  omr=" << logReg(Reg_OMR,6) << "   r2=" << logReg(Reg_R2,6) << " n2=" << logReg(Reg_N2,6) << " m2=" << logReg(Reg_M2,6) << std::endl;
+		_ss << "  la=" << logReg(Reg_LA, 6) << "   lc=" << logReg(Reg_LC, 6) << "                r1=" << logReg(Reg_R1,6) << " n1=" << logReg(Reg_N1,6) << " m1=" << logReg(Reg_M1,6) << std::endl;
+		_ss << " ssh=" << logReg(Reg_SSH, 6) << "  ssl=" << logReg(Reg_SSL, 6) << "   sp=" << logReg(Reg_SP,6) << "   r0=" << logReg(Reg_R0,6) << " n0=" << logReg(Reg_N0,6) << " m0=" << logReg(Reg_M0,6) << std::endl;
+		_ss << "  ep=" << logReg(Reg_EP, 6) << "   sz=" << logReg(Reg_SZ, 6) << "   sc=" << logReg(Reg_SC,6) << "  vba=" << logReg(Reg_VBA,6) << std::endl;
+		_ss << "iprc=" << logReg(Reg_IPRC, 6) << " iprp=" << logReg(Reg_IPRP, 6) << "  bcr=" << logReg(Reg_BCR,6) << "  dcr=" << logReg(Reg_DCR,6) << std::endl;
+		_ss << "aar0=" << logReg(Reg_AAR0, 6) << " aar1=" << logReg(Reg_AAR1, 6) << " aar2=" << logReg(Reg_AAR2,6) << " aar3=" << logReg(Reg_AAR3,6) << std::endl;
+		_ss << "  hit=   " << logReg(Reg_HIT, -6) << "   miss=   " << logReg(Reg_MISS, -6) << " replace=" << logReg(Reg_REPLACE,-6) << std::endl;
+		_ss << "  cyc=   " << logReg(Reg_CYC, -6) << "   ictr=   " << logReg(Reg_ICTR, -6) << std::endl;
+		_ss << " cnt1=   " << logReg(Reg_CNT1, -6) << "   cnt2=   " << logReg(Reg_CNT2, -6) << " cnt3=   " << logReg(Reg_CNT3,-6) << "  cnt4=   " << logReg(Reg_CNT4,-6) << std::endl;
 /*
    x=       $000000000000    y=       $000000000000
    a=     $00000000000051    b=     $00000000000000
@@ -2412,5 +2396,71 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
   cyc=   001027   ictr=   000259
  cnt1=   000000   cnt2=   000000 cnt3=   000000  cnt4=   000000
 */
+	}
+
+	void DSP::errNotImplemented(const char* _opName)
+	{
+		TWord opA, opB;
+		mem.get2(MemArea_P, pcCurrentInstruction, opA, opB);
+
+		std::string op;
+		m_disasm.disassemble(op, opA, opB, 0, 0);
+
+		std::stringstream ss; ss << std::endl;
+		ss << "Not Implemented: " << _opName << std::endl;
+		ss << "Instruction: " << op << std::endl;
+		ss << "Opcode: $" << HEX(opA) << " ($" << opB << ")" << std::endl;
+		ss << std::endl;
+		ss << "Stack:" << std::endl;
+		int s = ssIndex();
+
+		while(s >= 0)
+		{
+			const auto pc = hiword(reg.ss[s]).var;
+			const auto sr = loword(reg.ss[s]).var;
+			ss << '$' << std::setw(2) << std::setfill('0') << std::hex << s << ": ";
+			ss << '$' << HEX(pc) << ":$" << HEX(sr) << " - pc:$" << HEX(pc) << " - ";
+
+			mem.get2(MemArea_P, pc, opA, opB);
+			m_disasm.disassemble(op, opA, opB, 0, 0);
+			ss << op << std::endl;
+			--s;
+		}
+		ss << std::endl;
+		ss << "Registers:" << std::endl;
+		updatePreviousRegisterStates();
+		dumpRegisters(ss);
+
+		const std::string str(ss.str());
+		LOG(str);
+
+		assert(false && "instruction not implemented, see console for details");
+	}
+
+	void DSP::updatePreviousRegisterStates()
+	{
+		for( size_t i=0; i<Reg_COUNT; ++i )
+		{
+			int64_t regVal = 0;
+			const bool r = readRegToInt( (EReg)i, regVal );
+
+			if( !r )
+				continue;
+			//			assert( r && "failed to read register" );
+
+			if( regVal != m_prevRegStates[i].val )
+			{
+				SRegChange regChange;
+				regChange.reg = (EReg)i;
+				regChange.valOld.var = (int)m_prevRegStates[i].val;
+				regChange.valNew.var = (int)regVal;
+				regChange.pc = pcCurrentInstruction;
+				regChange.ictr = reg.ictr.var;
+
+				m_regChanges.push_back( regChange );
+
+				m_prevRegStates[i].val = regVal;
+			}
+		}
 	}
 }
