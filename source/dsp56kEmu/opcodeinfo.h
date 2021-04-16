@@ -47,7 +47,7 @@ namespace dsp56k
 
 		static bool isParallelOpcode(const uint32_t _word)
 		{
-			return _word >= 0x100000;
+			return (_word >= 0x100000) || ((_word & 0xFE4000) == 0x080000);
 		}
 	};
 
