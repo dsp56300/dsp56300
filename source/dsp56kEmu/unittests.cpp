@@ -297,6 +297,8 @@ namespace dsp56k
 	void UnitTests::testDisassembler()
 	{
 #ifdef USE_MOTOROLA_UNASM
+		LOG("Executing Disassembler Unit Tests");
+
 		Disassembler disasm;
 
 		constexpr TWord opB = 0x234567;
@@ -304,6 +306,9 @@ namespace dsp56k
 		for(TWord i=0x000000; i<=0xffffff; ++i)
 		{
 			const TWord op = i;
+
+			if((i&0x03ffff) == 0)
+				LOG("Testing opcodes $" << HEX(i) << "+");
 			
 			char assemblyMotorola[128];
 			std::string assembly;
@@ -373,6 +378,8 @@ namespace dsp56k
 				}
 			}
 		}
+
+		LOG("Disassembler Unit Tests completed");
 #endif
 	}
 }
