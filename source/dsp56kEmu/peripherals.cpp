@@ -205,6 +205,9 @@ namespace dsp56k
 		case Esai::M_TX5:
 			m_esai.writeTX(_addr - Esai::M_TX0, _val);
 			return;
+		
+		case 0xFFFFFD:	m_esai.updatePCTL(_val);
+			return;
 		default:
 			break;
 		}

@@ -287,6 +287,18 @@ namespace dsp56k
 			m_rccr = _val;
 		}
 
+		void updatePCTL(TWord _val)
+		{
+			TWord pctl = _val;
+			int pd = ((pctl>>20) & 15) + 1;
+			int mf = (pctl & 0xfff) + 1;
+			m_cyclesPerSample = mf * 256 / pd;	// The ratio between external clock and sample period simplifies to this.
+			// A more full expression would be m_cyclesPerSample = dsp_frequency / samplerate, where
+			// dsp_frequency = m_extClock * mf / pd    and   samplerate = m_extClock/256
+
+			float speed_mhz = 12.0 * mf / pd;
+			LOG("Clock speed changed to: " << speed_mhz << "Mhz");	// logging assumes an external crystal at 12MHz
+		}
 		void writeTX(size_t _index, TWord _val);
 		TWord readRX(size_t _index);
 		
@@ -306,9 +318,10 @@ namespace dsp56k
 		
 		TWord m_tx[6],m_rx[6];						// Words written by the DSP and words for the DSP to read
 		TWord m_hasReadStatus = 0;					// Has the status register been read since TUE was set?
-
+		
 		uint32_t m_cyclesSinceWrite = 0;
 		uint32_t m_writtenTX = 0;
 		uint32_t m_lastClock = 0;
+		uint32_t m_cyclesPerSample = 2133;			// estimate cycles per sample.
 	};
 }

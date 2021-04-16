@@ -5,11 +5,6 @@
 
 namespace dsp56k
 {
-	constexpr size_t g_dspFrequencyMHz = 100;
-	constexpr size_t g_samplerate = 12000000 / 256;
-
-	constexpr size_t g_cyclesPerSample = g_dspFrequencyMHz * 1000 * 1000 / g_samplerate;
-
 	Esai::Esai(IPeripherals& _periph) : m_periph(_periph)
 	{
 	}
@@ -23,11 +18,11 @@ namespace dsp56k
 		if (diff&0x80000000) diff=(diff^0xFFFFFFFF)+1;	m_lastClock=m_periph.getDSP().getInstructionCounter();
 
 		m_cyclesSinceWrite+=diff;
-		if(m_cyclesSinceWrite <= g_cyclesPerSample)
+		if(m_cyclesSinceWrite <= m_cyclesPerSample)
 			return;
 
 		// Time to xfer samples!
-		m_cyclesSinceWrite -= g_cyclesPerSample;
+		m_cyclesSinceWrite -= m_cyclesPerSample;
 		for (int i=0;i<6;i++) if (outputEnabled(i)) writeTXimpl(i,m_tx[i]);
 		for (int i=0;i<4;i++) if (inputEnabled(i)) m_rx[i]=readRXimpl(i);
 		if (m_sr.test(M_TFS)) m_sr.clear(M_TFS); else m_sr.set(M_TFS);
