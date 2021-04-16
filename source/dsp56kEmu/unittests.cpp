@@ -365,6 +365,12 @@ namespace dsp56k
 					assert(false);
 					disasm.disassemble(assembly, op, opB, 0, 0);	// retry to help debugging
 				}
+
+				if(opcodeCount != opcodeCountMotorola)
+				{
+					LOG("Diff for opcode " << HEX(op) << ": " << assembly << ": instruction length " << opcodeCount << " != " << opcodeCountMotorola);
+					disasm.disassemble(assembly, op, opB, 0, 0);	// retry to help debugging
+				}
 			}
 		}
 #endif
