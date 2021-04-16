@@ -13,6 +13,7 @@
 #include "opcodes.h"
 
 #include "dsp_ops.inl"
+#include "dsp_ops_jmp.inl"
 
 #if 0
 #	define LOGSC(F)	logSC(F)
@@ -709,7 +710,7 @@ namespace dsp56k
 	//
 	dsp56k::TWord DSP::decode_YMove_mmrr( TWord _mmrr, TWord _regIdxOffset )
 	{
-		unsigned int regIdx = _mmrr & 0x3;
+		const unsigned int regIdx = _mmrr & 0x3;
 
 		const TReg24	_n = reg.n[regIdx + _regIdxOffset];
 		TReg24&			_r = reg.r[regIdx + _regIdxOffset];

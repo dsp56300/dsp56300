@@ -1146,6 +1146,22 @@ namespace dsp56k
 		void op_ResolveCache(TWord op);
 		void op_Parallel(TWord op);
 
+		// operation helper methods
+		template <Instruction I> bool checkCondition(TWord op) const;
+		template<bool Jsr> void jumpOrJSR(TWord ea);
+
+		template<Instruction Inst, typename std::enable_if<hasFields<Inst,Field_MMM, Field_RRR>()>::type* = nullptr>
+		TWord effectiveAddress(const TWord op);
+
+		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaaaaaaaa>()>::type* = nullptr>
+		TWord effectiveAddress(const TWord op) const;
+
+		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaa>()>::type* = nullptr>
+		TWord effectiveAddress(const TWord op) const;
+
+		template<Instruction Inst, bool Jsr> void jumpIfCC(TWord op);
+		template<Instruction Inst, bool Jsr> void jumpIfCC(TWord op, TWord ea);
+
 		// --- debugging tools
 	private:
 		void errNotImplemented(const char* _opName);
