@@ -299,7 +299,7 @@ namespace dsp56k
 		return temp;
 	}
 
-	std::string mmmrrr(TWord mmmrrr, TWord S, TWord opB, bool _addMemSpace = true, bool _long = true)
+	std::string Disassembler::mmmrrr(TWord mmmrrr, TWord S, TWord opB, bool _addMemSpace, bool _long)
 	{
 		const char* formats[8]
 		{
@@ -320,10 +320,12 @@ namespace dsp56k
 		switch (mmmrrr)
 		{
 		case 0x30:	// absolute address
+			++m_extWordUsed;
 			if(opB >= XIO_Reserved_High_First)
 				return peripheral(S, opB, 0xffff80);
 			return area + absAddr(opB, _long);
 		case 0x34:	// immediate data
+			++m_extWordUsed;
 			return immediateLong(opB);
 		default:
 			{
@@ -771,7 +773,7 @@ namespace dsp56k
 				const auto mr	= getFieldValue(inst, Field_MMM, Field_RRR, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
 				m_ss << immediate(b) << ',' << mmmrrr(mr, S, opB);
-				return 2;
+				return 1 + m_extWordUsed;
 			}
 		case Bchg_aa:
 		case Bclr_aa:
@@ -1002,38 +1004,38 @@ namespace dsp56k
 				const auto S	= getFieldValue(inst, Field_S, op);
 				m_ss << memory(S, a) << ',' << hex(opB + 1);
 			}
-			return 1;
+			return 2;
 		case Dor_aa:
 			{
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
 				m_ss << memory(S, a) << ',' << relativeAddr(opB + 1);
 			}
-			return 1;
+			return 2;
 		case Do_xxx: 
 			{
 				const auto a	= getFieldValue(inst, Field_hhhh, Field_iiiiiiii, op);
 				m_ss << immediateShort(a) << ',' << hex(opB + 1);
 			}
-			return 1;
+			return 2;
 		case Dor_xxx:
 			{
 				const auto a	= getFieldValue(inst, Field_hhhh, Field_iiiiiiii, op);
 				m_ss << immediateShort(a) << ',' << relativeAddr(opB + 1);
 			}
-			return 1;
+			return 2;
 		case Do_S: 
 			{
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
 				m_ss << decode_dddddd(d) << ',' << hex(opB + 1);
 			}
-			return 1;
+			return 2;
 		case Dor_S:
 			{
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
 				m_ss << decode_dddddd(d) << ',' << relativeAddr(opB + 1);
 			}
-			return 1;
+			return 2;
 		case DoForever:
 			{
 				m_ss << absAddr(opB + 1);
@@ -1101,7 +1103,7 @@ namespace dsp56k
 				const auto mr = getFieldValue(inst, Field_MMM, Field_RRR, op);
 				m_ss << condition(cccc) << ' ' << mmmrrr(mr, 2, opB, false);
 			}
-			return 1;
+			return 1 + m_extWordUsed;
 		case Jclr_ea:
 		case Jset_ea:
 		case Jsclr_ea:
@@ -1162,7 +1164,7 @@ namespace dsp56k
 				const auto mr = getFieldValue(inst, Field_MMM, Field_RRR, op);
 				m_ss << mmmrrr(mr, 2, opB, false);
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Jmp_xxx:
 		case Jsr_xxx:
 			{
@@ -1206,8 +1208,7 @@ namespace dsp56k
 				const auto dd = getFieldValue(inst, Field_ddddd, op);				
 				m_ss << mmmrrr(mr, 2, opB, false) << ',' << decode_DDDDDD(dd);
 			}
-			// TODO: every function that uses mmmrrr has a dynamic length of either 1 or 2
-			return 2;
+			return 1 + m_extWordUsed;
 		case Lua_Rn: 
 			{
 				const auto aa = signextend<int,7>(getFieldValue(inst, Field_aaa, Field_aaaa, op));
@@ -1290,7 +1291,7 @@ namespace dsp56k
 				const auto mr = getFieldValue<Move_ea, Field_MM, Field_RRR>(op);
 				m_ss << mmmrrr(mr, 2, op, false);
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movex_ea:
 		case Movey_ea:
 			{
@@ -1305,7 +1306,7 @@ namespace dsp56k
 				else
 					m_ss << d << ',' << ea;
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movex_aa:
 		case Movey_aa:
 			{
@@ -1386,7 +1387,7 @@ namespace dsp56k
 
 				m_ss << ' ' << ab << ',' << f;
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movexr_A: 
 		case Moveyr_A:
 			{
@@ -1402,7 +1403,7 @@ namespace dsp56k
 				// S2 D2 move
 				m_ss << ' ' << (inst == Moveyr_A ? "y" : "x") << "0," << ab;
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Moveyr_ea:
 			{
 				const TWord e		= getFieldValue<Moveyr_ea,Field_e>(op);	// true:Y1, false:Y0
@@ -1431,7 +1432,7 @@ namespace dsp56k
 					m_ss << ee << ',' << ea;
 				}
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movel_ea:
 			{
 				const TWord ll = getFieldValue<Movel_ea,Field_L, Field_LL>(op);
@@ -1446,7 +1447,7 @@ namespace dsp56k
 				else
 					m_ss << l << ',' << "l:" << ea;
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movel_aa:
 			{
 				const TWord ll = getFieldValue<Movel_aa,Field_L, Field_LL>(op);
@@ -1488,7 +1489,7 @@ namespace dsp56k
 				if( writeY )	m_ss << "y:" << eaY << ',' << decode_ff(ff);
 				else			m_ss << decode_ff(ff) << ',' << "y:" << eaY;
 			}
-			return 2;
+			return 1;
 		case Movec_ea:
 			{
 				const TWord dd	= getFieldValue<Movec_ea,Field_DDDDD>(op);
@@ -1501,7 +1502,7 @@ namespace dsp56k
 				if(w)		m_ss << ea << ',' << decode_ddddd_pcr(dd);
 				else		m_ss << decode_ddddd_pcr(dd) << ',' << ea;
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movec_aa: 
 			{
 				const TWord dd	= getFieldValue<Movec_aa,Field_DDDDD>(op);
@@ -1551,7 +1552,7 @@ namespace dsp56k
 				else
 					m_ss << reg << ',' << ea;
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movem_aa:
 			{
 				const TWord dd	= getFieldValue<Movem_aa,Field_dddddd>(op);
@@ -1582,7 +1583,7 @@ namespace dsp56k
 				else
 					m_ss << peripheralP(s, pp) << ',' << ea;
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movep_Xqqea: 
 		case Movep_Yqqea:
 			{
@@ -1599,7 +1600,7 @@ namespace dsp56k
 				else
 					m_ss << peripheralQ(s, qq) << ',' << ea;
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movep_eapp: 
 			{
 				const TWord pp		= getFieldValue<Movep_eapp,Field_pppppp>(op);
@@ -1614,7 +1615,7 @@ namespace dsp56k
 				else
 					m_ss << peripheralP(s, pp) << ',' << ea;
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movep_eaqq: 
 			{
 				const TWord qq		= getFieldValue<Movep_eaqq,Field_qqqqqq>(op);
@@ -1629,7 +1630,7 @@ namespace dsp56k
 				else
 					m_ss << peripheralQ(S, qq) << ',' << ea;
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Movep_Spp: 
 			{
 				const TWord pp		= getFieldValue<Movep_Spp,Field_pppppp>(op);
@@ -1681,7 +1682,7 @@ namespace dsp56k
 				const TWord mr = getFieldValue<Plock, Field_MMM, Field_RRR>(op);
 				m_ss << mmmrrr(mr, 2, opB, false, false);
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Plockr:
 		case Punlockr:
 			{
@@ -1694,7 +1695,7 @@ namespace dsp56k
 				const auto S = getFieldValueMemArea<Rep_ea>(op);
 				m_ss << mmmrrr(mr, S, opB);
 			}
-			return 2;
+			return 1 + m_extWordUsed;
 		case Rep_aa: 
 			{
 				const TWord aa = getFieldValue<Rep_aa, Field_aaaaaa>(op);
@@ -1762,7 +1763,7 @@ namespace dsp56k
 				const auto ea = mmmrrr(mr, 0, opB, false);
 				m_ss << aluD(s) << ',' << i << ",l:" << ea;
 			}
-			break;
+			return 1 + m_extWordUsed;
 
 		// Opcodes without parameters
 		case Debug: 
@@ -1801,6 +1802,8 @@ namespace dsp56k
 
 	int Disassembler::disassemble(std::string& dst, TWord op, TWord opB, const TWord sr, const TWord omr)
 	{
+		m_extWordUsed = 0;
+
 		m_ss.str("");
 		m_ss.clear();
 

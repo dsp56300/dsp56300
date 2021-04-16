@@ -28,6 +28,8 @@ namespace dsp56k
 
 		int disassembleNonParallel(const OpcodeInfo& oi, TWord op, TWord opB, const TWord sr, const TWord omr);
 
+		std::string mmmrrr(TWord mmmrrr, TWord S, TWord opB, bool _addMemSpace = true, bool _long = true);
+
 		std::stringstream m_ss;
 		std::string m_str;
 		Opcodes m_opcodes;
