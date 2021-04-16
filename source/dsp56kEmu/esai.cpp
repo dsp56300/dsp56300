@@ -6,7 +6,7 @@
 namespace dsp56k
 {
 	constexpr size_t g_dspFrequencyMHz = 100;
-	constexpr size_t g_samplerate = 48000;
+	constexpr size_t g_samplerate = 12000000 / 256;
 
 	constexpr size_t g_cyclesPerSample = g_dspFrequencyMHz * 1000 * 1000 / g_samplerate;
 
