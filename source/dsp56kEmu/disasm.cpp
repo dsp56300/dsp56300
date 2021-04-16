@@ -1090,6 +1090,7 @@ namespace dsp56k
 			}
 			return 1;
 		case Jcc_xxx: 
+		case Jscc_xxx:
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
 				const auto a = getFieldValue(inst, Field_aaaaaaaaaaaa, op);
