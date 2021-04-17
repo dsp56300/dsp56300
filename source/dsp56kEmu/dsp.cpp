@@ -13,6 +13,7 @@
 #include "opcodes.h"
 
 #include "dsp_ops.inl"
+#include "dsp_ops_bra.inl"
 #include "dsp_ops_jmp.inl"
 
 #if 0

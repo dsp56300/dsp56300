@@ -11,7 +11,8 @@ buildconfig.h
 assert.cpp assert.h
 disasm.cpp disasm.h
 dsp.cpp dsp.h 
-dsp_ops.inl dsp_ops_helper.inl dsp_ops_jmp.inl
+dsp_ops.inl dsp_ops_helper.inl 
+dsp_ops_bra.inl dsp_ops_jmp.inl
 error.cpp error.h
 essi.cpp essi.h
 esai.cpp esai.h
