@@ -11,7 +11,7 @@ namespace dsp56k
 		return (_val & (T(1)<<B)) >> B;
 	}
 
-	template<typename T> int bittest( const T& _val, unsigned int _bitNumber )
+	template<typename T> bool bittest( const T& _val, unsigned int _bitNumber )
 	{
 		return (_val & (T(1)<<_bitNumber)) != 0;
 	}
