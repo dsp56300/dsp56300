@@ -498,7 +498,7 @@ namespace dsp56k
 	inline void DSP::op_Dor_xxx(const TWord op)
 	{
         const auto loopcount = getFieldValue<Dor_xxx,Field_hhhh, Field_iiiiiiii>(op);
-        const auto displacement = signextend<int, 24>(fetchOpWordB());
+        const auto displacement = pcRelativeAddressExt<Dor_xxx>();
         do_exec(loopcount, pcCurrentInstruction + displacement);
 	}
 	inline void DSP::op_Dor_S(const TWord op)
@@ -506,7 +506,7 @@ namespace dsp56k
 		const TWord dddddd = getFieldValue<Dor_S,Field_DDDDDD>(op);
 		const TReg24 lc		= decode_dddddd_read( dddddd );
 		
-		const int displacement = signextend<int,24>(fetchOpWordB());
+		const int displacement = pcRelativeAddressExt<Dor_S>();
 		do_exec( lc.var, pcCurrentInstruction + displacement);
 	}
 	inline void DSP::op_DorForever(const TWord op)
@@ -515,7 +515,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Enddo(const TWord op)
 	{
-		// TODO: do_exit?
+		// TODO: call do_end? The only difference is that this instruction does not set the PC to point to the next instruction. 
 		// restore previous loop flag
 		sr_toggle( SR_LF, (ssl().var & SR_LF) != 0 );
 

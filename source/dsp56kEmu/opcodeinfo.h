@@ -169,11 +169,11 @@ namespace dsp56k
 		OpcodeInfo(Do_S,			"0000011011DDDDDD00000000",	"DO S, expr", AbsoluteAddressExt),
 		OpcodeInfo(DoForever,		"000000000000001000000011",	"DO FOREVER", AbsoluteAddressExt),
 
-		OpcodeInfo(Dor_ea,			"0000011001MMMRRR0S010000",	"DOR [X or Y]:ea,label", EffectiveAddress),
-		OpcodeInfo(Dor_aa,			"0000011000aaaaaa0S010000",	"DOR [X or Y]:aa,label", EffectiveAddress),
-		OpcodeInfo(Dor_xxx,			"00000110iiiiiiii1001hhhh",	"DOR #xxx, label", EffectiveAddress),
-		OpcodeInfo(Dor_S,			"0000011011DDDDDD00010000",	"DOR S, label", EffectiveAddress),
-		OpcodeInfo(DorForever,		"000000000000001000000010",	"DOR FOREVER", EffectiveAddress),
+		OpcodeInfo(Dor_ea,			"0000011001MMMRRR0S010000",	"DOR [X or Y]:ea,label", PCRelativeAddressExt),
+		OpcodeInfo(Dor_aa,			"0000011000aaaaaa0S010000",	"DOR [X or Y]:aa,label", PCRelativeAddressExt),
+		OpcodeInfo(Dor_xxx,			"00000110iiiiiiii1001hhhh",	"DOR #xxx, label", PCRelativeAddressExt),
+		OpcodeInfo(Dor_S,			"0000011011DDDDDD00010000",	"DOR S, label", PCRelativeAddressExt),
+		OpcodeInfo(DorForever,		"000000000000001000000010",	"DOR FOREVER", PCRelativeAddressExt),
 
 		OpcodeInfo(Enddo,			"00000000000000001o0o1100",	"ENDDO"),
 
