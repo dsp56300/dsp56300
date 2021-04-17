@@ -99,7 +99,6 @@ namespace dsp56k
 		if( _offset >= size() )
 		{
 			LOG_ERR_MEM_READ( _offset );
-			assert( 0 && "invalid memory address" );
 			return 0x00badbad;
 		}
 #endif
