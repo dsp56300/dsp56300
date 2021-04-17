@@ -30,6 +30,7 @@ namespace dsp56k
 	}
 
 	// Relative Address
+/*
 	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type*> int DSP::relativeAddressOffset(const TWord op) const
 	{
 		return signextend<int,12>(getFieldValue<Inst, Field_aaaaaaaaaaaa>(op));
@@ -39,7 +40,7 @@ namespace dsp56k
 	{
 		return signextend<int,6>(getFieldValue<Inst, Field_aaaaaa>(op));
 	}
-
+*/
 
 	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaa, Field_aaaaa>()>::type*>	int DSP::relativeAddressOffset(const TWord op) const
 	{
