@@ -1171,21 +1171,22 @@ namespace dsp56k
 	}
 	inline void DSP::op_Movexr_A(const TWord op)
 	{
-	   const TWord mmmrrr   = getFieldValue<Movexr_A,Field_MMM, Field_RRR>(op);
-	   const TWord d        = getFieldValue<Movexr_A,Field_d>(op);
-	   const TWord ea 		= decode_MMMRRR_read(mmmrrr);
+		const TWord mmmrrr	= getFieldValue<Movexr_A,Field_MMM, Field_RRR>(op);
+		const TWord d		= getFieldValue<Movexr_A,Field_d>(op);
 
-	   // S1/D1 move
-	   const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
-	   memWrite(MemArea_X, ea, ab.var);
+		const TWord ea = decode_MMMRRR_read(mmmrrr);
 
-	   // S2/D2 move
-	   if(d)
-		   setB(x0());
-	   else
-		   setA(x0());
-				   
+		// S1/D1 move
+		const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
+		memWrite(MemArea_X, ea, ab.var);
+
+		// S2/D2 move
+		if(d)
+			setB(x0());
+		else
+			setA(x0());
 	}
+
 	inline void DSP::op_Moveyr_ea(const TWord op)
 	{
 		const bool e		= getFieldValue<Moveyr_ea,Field_e>(op);	// true:X1, false:X0
@@ -1216,16 +1217,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Moveyr_A(const TWord op)
 	{
-		const TWord mmmrrr	= getFieldValue<Movexr_A,Field_MMM, Field_RRR>(op);
-		const TWord d		= getFieldValue<Movexr_A,Field_d>(op);
-		const TWord ea 		= decode_MMMRRR_read(mmmrrr);
-
-		const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
-		memWrite( MemArea_Y, ea, ab.var );
-		if (d)
-			setB(y0());
-		else
-			setA(y0());
+		errNotImplemented("MOVE YR A");
 	}
 	inline void DSP::op_Movel_ea(const TWord op)
 	{
