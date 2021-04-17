@@ -16,7 +16,7 @@ namespace dsp56k
 		if(checkCondition<Inst>(op))
 			jumpOrJSR<Jsr>(ea);
 	}
-	
+
 	template<Instruction Inst, bool Jsr> void DSP::jumpIfCC(const TWord op)
 	{
 		const auto ea = effectiveAddress<Inst>(op);
@@ -31,77 +31,94 @@ namespace dsp56k
 
 	inline void DSP::op_Jclr_ea(const TWord op)
 	{
-		const TWord bit		= getFieldValue<Jclr_ea,Field_bbbbb>(op);
-		const EMemArea S	= getFieldValueMemArea<Jclr_ea>(op);
-		const TWord addr	= fetchOpWordB();
+		const auto addr = fetchOpWordB();
 
-		const TWord ea		= effectiveAddress<Jclr_ea>(op);
-
-		if( !bittest( ea, bit ) )	// TODO: S is not used, need to read mem if mmmrrr is not immediate data!
+		if(!bitTestMemory<Jclr_ea>(op))
 		{
 			setPC(addr);
 		}
-		errNotImplemented("JCLR ea");
 	}
 	inline void DSP::op_Jclr_aa(const TWord op)
 	{
-		const auto ea = effectiveAddress<Jclr_aa>(op);
-		
-		errNotImplemented("JCLR aa");
+		const auto addr = fetchOpWordB();
+
+		if(!bitTestMemory<Jclr_aa>(op))
+		{
+			setPC(addr);
+		}
 	}
 	inline void DSP::op_Jclr_pp(const TWord op)
 	{
-		errNotImplemented("JCLR pp");
+		const auto addr = fetchOpWordB();
+
+		if(!bitTestMemory<Jclr_pp>(op))
+		{
+			setPC(addr);
+		}
 	}
 	inline void DSP::op_Jclr_qq(const TWord op)
 	{
-		const TWord qqqqqq	= getFieldValue<Jclr_qq,Field_qqqqqq>(op);
-		const TWord bit		= getFieldValue<Jclr_qq,Field_bbbbb>(op);
-		const EMemArea S	= getFieldValueMemArea<Jclr_qq>(op);
+		const auto addr = fetchOpWordB();
 
-		const TWord ea		= qqqqqq;
-		const TWord addr	= fetchOpWordB();
-
-		if( !bittest( memReadPeriphFFFF80(S, ea), bit ) )
+		if(!bitTestMemory<Jclr_qq>(op))
+		{
 			setPC(addr);
+		}
 	}
 	inline void DSP::op_Jclr_S(const TWord op)
 	{
-		const TWord dddddd	= getFieldValue<Jclr_S,Field_DDDDDD>(op);
-		const TWord bit		= getFieldValue<Jclr_S,Field_bbbbb>(op);
+		const auto addr = fetchOpWordB();
 
-		const TWord addr = fetchOpWordB();
-
-		if( !bittest( decode_dddddd_read(dddddd), bit ) )
+		if( !bitTest<Jclr_S>( op, regValueDDDDDD<Jclr_S>(op) ) )
 			setPC(addr);
 	}
+	// jmp
 	inline void DSP::op_Jmp_ea(const TWord op)
 	{
-		const TWord mmmrrr	= getFieldValue<Jmp_ea,Field_MMM, Field_RRR>(op);
-		setPC(decode_MMMRRR_read(mmmrrr));
+		setPC(effectiveAddress<Jmp_ea>(op));
 	}
-	inline void DSP::op_Jmp_xxx(const TWord op)			{ setPC(effectiveAddress<Jmp_xxx>(op)); }
-	inline void DSP::op_Jscc_xxx(const TWord op)		{ jumpIfCC<Jscc_xxx, true>(op);	}
-	inline void DSP::op_Jscc_ea(const TWord op)			{ jumpIfCC<Jscc_ea, true>(op); }
+	inline void DSP::op_Jmp_xxx(const TWord op)
+	{
+		setPC(effectiveAddress<Jmp_xxx>(op));
+	}
+	// jscc
+	inline void DSP::op_Jscc_xxx(const TWord op)
+	{
+		jumpIfCC<Jscc_xxx, true>(op);
+	}
+	inline void DSP::op_Jscc_ea(const TWord op)
+	{
+		jumpIfCC<Jscc_ea, true>(op);
+	}
 	inline void DSP::op_Jsclr_ea(const TWord op)
 	{
-		errNotImplemented("JSCLR");
+		const auto addr = absAddressExt<Jsclr_ea>();
+		if(!bitTestMemory<Jsclr_ea>(op))
+			jsr(addr);
 	}
 	inline void DSP::op_Jsclr_aa(const TWord op)
 	{
-		errNotImplemented("JSCLR");
+		const auto addr = absAddressExt<Jsclr_aa>();
+		if(!bitTestMemory<Jsclr_aa>(op))
+			jsr(addr);
 	}
 	inline void DSP::op_Jsclr_pp(const TWord op)
 	{
-		errNotImplemented("JSCLR");
+		const auto addr = absAddressExt<Jsclr_pp>();
+		if(!bitTestMemory<Jsclr_pp>(op))
+			jsr(addr);
 	}
 	inline void DSP::op_Jsclr_qq(const TWord op)
 	{
-		errNotImplemented("JSCLR");
+		const auto addr = absAddressExt<Jsclr_qq>();
+		if(!bitTestMemory<Jsclr_qq>(op))
+			jsr(addr);
 	}
 	inline void DSP::op_Jsclr_S(const TWord op)
 	{
-		errNotImplemented("JSCLR");
+		const auto addr = fetchOpWordB();
+		if(!bitTest<Jsclr_S>(op, regValueDDDDDD<Jsclr_S>(op)))
+			jsr(addr);
 	}
 	inline void DSP::op_Jset_ea(const TWord op)
 	{
@@ -118,34 +135,30 @@ namespace dsp56k
 	}
 	inline void DSP::op_Jset_aa(const TWord op)
 	{
-		errNotImplemented("JSET #n,[X or Y]:aa,xxxx");
+		const auto addr = fetchOpWordB();
+
+		if(bitTestMemory<Jclr_ea>(op))
+		{
+			setPC(addr);
+		}
 	}
 	inline void DSP::op_Jset_pp(const TWord op)
 	{
-		const TWord pppppp	= getFieldValue<Jset_pp,Field_pppppp>(op);
-		const TWord bit		= getFieldValue<Jset_pp,Field_bbbbb>(op);
-		const EMemArea S	= getFieldValueMemArea<Jset_pp>(op);
+		const auto addr = fetchOpWordB();
 
-		const TWord ea		= pppppp;
-
-		const TWord addr	= fetchOpWordB();
-
-		if( bittest( memReadPeriphFFFFC0(S, ea), bit ) )
+		if(bitTestMemory<Jclr_pp>(op))
+		{
 			setPC(addr);
+		}
 	}
 	inline void DSP::op_Jset_qq(const TWord op)
 	{
-		// TODO: combine code with Jset_pp, only the offset is different
-		const TWord qqqqqq	= getFieldValue<Jset_qq,Field_qqqqqq>(op);
-		const TWord bit		= getFieldValue<Jset_qq,Field_bbbbb>(op);
-		const EMemArea S	= getFieldValueMemArea<Jset_qq>(op);
+		const auto addr = fetchOpWordB();
 
-		const TWord ea		= qqqqqq;
-
-		const TWord addr	= fetchOpWordB();
-
-		if( bittest( memReadPeriphFFFF80(S, ea), bit ) )
+		if(bitTestMemory<Jclr_qq>(op))
+		{
 			setPC(addr);
+		}
 	}
 	inline void DSP::op_Jset_S(const TWord op)
 	{
@@ -165,19 +178,27 @@ namespace dsp56k
 	inline void DSP::op_Jsr_xxx(const TWord op)			{ jsr(effectiveAddress<Jsr_xxx>(op)); }
 	inline void DSP::op_Jsset_ea(const TWord op)
 	{
-		errNotImplemented("JSSET");
+		const auto addr = fetchOpWordB();
+		if(bitTestMemory<Jsset_ea>(op))
+			jsr(addr);
 	}
 	inline void DSP::op_Jsset_aa(const TWord op)
 	{
-		errNotImplemented("JSSET");
+		const auto addr = fetchOpWordB();
+		if(bitTestMemory<Jsset_aa>(op))
+			jsr(addr);
 	}
 	inline void DSP::op_Jsset_pp(const TWord op)
 	{
-		errNotImplemented("JSSET");
+		const auto addr = fetchOpWordB();
+		if(bitTestMemory<Jsset_pp>(op))
+			jsr(addr);
 	}
 	inline void DSP::op_Jsset_qq(const TWord op)
 	{
-		errNotImplemented("JSSET");
+		const auto addr = fetchOpWordB();
+		if(bitTestMemory<Jsset_qq>(op))
+			jsr(addr);
 	}
 	inline void DSP::op_Jsset_S(const TWord op)
 	{

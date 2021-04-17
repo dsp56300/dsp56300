@@ -200,6 +200,7 @@ namespace dsp56k
 		None				= 0x0,
 		EffectiveAddress	= 0x1,
 		ImmediateData		= 0x2,
+		AbsoluteAddressExt	= 0x4,
 		EAandID				= EffectiveAddress | ImmediateData
 	};
 }

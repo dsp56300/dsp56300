@@ -1146,10 +1146,12 @@ namespace dsp56k
 		void op_ResolveCache(TWord op);
 		void op_Parallel(TWord op);
 
-		// operation helper methods
-		template <Instruction I> bool checkCondition(TWord op) const;
-		template<bool Jsr> void jumpOrJSR(TWord ea);
+		// ------------- operation helper methods -------------
 
+		// Check Condition
+		template <Instruction I> bool checkCondition(TWord op) const;
+
+		// Effective Address
 		template<Instruction Inst, typename std::enable_if<hasFields<Inst,Field_MMM, Field_RRR>()>::type* = nullptr>
 		TWord effectiveAddress(const TWord op);
 
@@ -1159,9 +1161,59 @@ namespace dsp56k
 		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaa>()>::type* = nullptr>
 		TWord effectiveAddress(const TWord op) const;
 
-		template<Instruction Inst, bool Jsr> void jumpIfCC(TWord op);
-		template<Instruction Inst, bool Jsr> void jumpIfCC(TWord op, TWord ea);
+		// Memory Read
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type* = nullptr>
+		TWord readMem(const TWord op);
 
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr>
+		TWord readMem(const TWord op, EMemArea area);
+
+		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type* = nullptr>
+		TWord readMem(const TWord op, EMemArea area) const;
+
+		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaa>()>::type* = nullptr>
+		TWord readMem(const TWord op, EMemArea area) const;
+
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_S>()>::type* = nullptr>
+		TWord readMem(const TWord op) const;
+
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
+
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type* = nullptr> bool bitTestMemory(TWord op);
+		template <Instruction Inst> bool bitTest(TWord op, TWord toBeTested)
+		{
+			const auto bit = getFieldValue<Inst, Field_bbbbb>(op);
+			return dsp56k::bittest<TWord>(toBeTested, bit);
+		}
+
+		template<Instruction Inst> TWord regValueMMMRRR(TWord op)
+		{
+			const TWord mmmrrr	= getFieldValue<Inst,Field_MMM, Field_RRR>(op);
+			return decode_MMMRRR_read(mmmrrr);
+		}
+
+		template<Instruction Inst> TWord regValueDDDDDD(TWord op)
+		{
+			const auto d = getFieldValue<Inst,Field_DDDDDD>(op);
+			return decode_dddddd_read(d).var;
+		}
+
+		template<Instruction Inst> TWord absAddressExt()
+		{
+			static_assert(g_opcodes[Inst].m_extensionWordType == AbsoluteAddressExt, "opcode does not have an absolute address extension word");
+			return fetchOpWordB();
+		}
+		
+		// -------------- operation helpers
+		template<bool Jsr> void jumpOrJSR(TWord ea);
+
+		template<Instruction Inst, bool Jsr>
+		void jumpIfCC(TWord op);
+
+		template<Instruction Inst, bool Jsr>
+		void jumpIfCC(TWord op, TWord ea);
+		
 		// --- debugging tools
 	private:
 		void errNotImplemented(const char* _opName);

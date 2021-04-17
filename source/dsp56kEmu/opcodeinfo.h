@@ -163,11 +163,11 @@ namespace dsp56k
 
 		OpcodeInfo(Dmac,			"000000010010010s1SdkQQQQ",	"DMAC (+/-)S1,S2,D"),
 
-		OpcodeInfo(Do_ea,			"0000011001MMMRRR0S000000",	"DO [X or Y]:ea, expr", EffectiveAddress),
-		OpcodeInfo(Do_aa,			"0000011000aaaaaa0S000000",	"DO [X or Y]:aa, expr", EffectiveAddress),
-		OpcodeInfo(Do_xxx,			"00000110iiiiiiii1000hhhh",	"DO #xxx, expr", EffectiveAddress),
-		OpcodeInfo(Do_S,			"0000011011DDDDDD00000000",	"DO S, expr", EffectiveAddress),
-		OpcodeInfo(DoForever,		"000000000000001000000011",	"DO FOREVER", EffectiveAddress),
+		OpcodeInfo(Do_ea,			"0000011001MMMRRR0S000000",	"DO [X or Y]:ea, expr", AbsoluteAddressExt),
+		OpcodeInfo(Do_aa,			"0000011000aaaaaa0S000000",	"DO [X or Y]:aa, expr", AbsoluteAddressExt),
+		OpcodeInfo(Do_xxx,			"00000110iiiiiiii1000hhhh",	"DO #xxx, expr", AbsoluteAddressExt),
+		OpcodeInfo(Do_S,			"0000011011DDDDDD00000000",	"DO S, expr", AbsoluteAddressExt),
+		OpcodeInfo(DoForever,		"000000000000001000000011",	"DO FOREVER", AbsoluteAddressExt),
 
 		OpcodeInfo(Dor_ea,			"0000011001MMMRRR0S010000",	"DOR [X or Y]:ea,label", EffectiveAddress),
 		OpcodeInfo(Dor_aa,			"0000011000aaaaaa0S010000",	"DOR [X or Y]:aa,label", EffectiveAddress),
@@ -199,11 +199,11 @@ namespace dsp56k
 		OpcodeInfo(Jcc_xxx,			"00001110CCCCaaaaaaaaaaaa",	"Jcc xxx"),
 		OpcodeInfo(Jcc_ea,			"0000101011MMMRRR1010CCCC",	"Jcc ea", EffectiveAddress),
 
-		OpcodeInfo(Jclr_ea,			"0000101001MMMRRR1S0bbbbb",	"JCLR #n,[X or Y]:ea,xxxx"),
-		OpcodeInfo(Jclr_aa,			"0000101000aaaaaa1S0bbbbb",	"JCLR #n,[X or Y]:aa,xxxx", EffectiveAddress),
-		OpcodeInfo(Jclr_pp,			"0000101010pppppp1S0bbbbb",	"JCLR #n,[X or Y]:pp,xxxx", EffectiveAddress),
-		OpcodeInfo(Jclr_qq,			"0000000110qqqqqq1S0bbbbb",	"JCLR #n,[X or Y]:qq,xxxx", EffectiveAddress),
-		OpcodeInfo(Jclr_S,			"0000101011DDDDDD000bbbbb",	"JCLR #n,S,xxxx", EffectiveAddress),				// Documentation issue? used to be 0bbbb but we need bbbbb
+		OpcodeInfo(Jclr_ea,			"0000101001MMMRRR1S0bbbbb",	"JCLR #n,[X or Y]:ea,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jclr_aa,			"0000101000aaaaaa1S0bbbbb",	"JCLR #n,[X or Y]:aa,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jclr_pp,			"0000101010pppppp1S0bbbbb",	"JCLR #n,[X or Y]:pp,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jclr_qq,			"0000000110qqqqqq1S0bbbbb",	"JCLR #n,[X or Y]:qq,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jclr_S,			"0000101011DDDDDD000bbbbb",	"JCLR #n,S,xxxx", AbsoluteAddressExt),				// Documentation issue? used to be 0bbbb but we need bbbbb
 
 		OpcodeInfo(Jmp_ea,			"0000101011MMMRRR10000000",	"JMP ea", EffectiveAddress),
 		OpcodeInfo(Jmp_xxx,			"000011000000aaaaaaaaaaaa",	"JMP xxx"),
@@ -211,26 +211,26 @@ namespace dsp56k
 		OpcodeInfo(Jscc_xxx,		"00001111CCCCaaaaaaaaaaaa",	"JScc xxx"),
 		OpcodeInfo(Jscc_ea,			"0000101111MMMRRR1010CCCC",	"JScc ea", EffectiveAddress),
 
-		OpcodeInfo(Jsclr_ea,		"0000101101MMMRRR1S0bbbbb",	"JSCLR #n,[X or Y]:ea,xxxx"),
-		OpcodeInfo(Jsclr_aa,		"0000101100aaaaaa1S0bbbbb",	"JSCLR #n,[X or Y]:aa,xxxx", EffectiveAddress),
-		OpcodeInfo(Jsclr_pp,		"0000101110pppppp1S0bbbbb",	"JSCLR #n,[X or Y]:pp,xxxx", EffectiveAddress),
-		OpcodeInfo(Jsclr_qq,		"0000000111qqqqqq1S0bbbbb",	"JSCLR #n,[X or Y]:qq,xxxx", EffectiveAddress),
-		OpcodeInfo(Jsclr_S,			"0000101111DDDDDD000bbbbb",	"JSCLR #n,S,xxxx", EffectiveAddress),
+		OpcodeInfo(Jsclr_ea,		"0000101101MMMRRR1S0bbbbb",	"JSCLR #n,[X or Y]:ea,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jsclr_aa,		"0000101100aaaaaa1S0bbbbb",	"JSCLR #n,[X or Y]:aa,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jsclr_pp,		"0000101110pppppp1S0bbbbb",	"JSCLR #n,[X or Y]:pp,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jsclr_qq,		"0000000111qqqqqq1S0bbbbb",	"JSCLR #n,[X or Y]:qq,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jsclr_S,			"0000101111DDDDDD000bbbbb",	"JSCLR #n,S,xxxx", AbsoluteAddressExt),
 
-		OpcodeInfo(Jset_ea,			"0000101001MMMRRR1S1bbbbb",	"JSET #n,[X or Y]:ea,xxxx"),
-		OpcodeInfo(Jset_aa,			"0000101000aaaaaa1S1bbbbb",	"JSET #n,[X or Y]:aa,xxxx", EffectiveAddress),
-		OpcodeInfo(Jset_pp,			"0000101010pppppp1S1bbbbb",	"JSET #n,[X or Y]:pp,xxxx", EffectiveAddress),
-		OpcodeInfo(Jset_qq,			"0000000110qqqqqq1S1bbbbb",	"JSET #n,[X or Y]:qq,xxxx", EffectiveAddress),
-		OpcodeInfo(Jset_S,			"0000101011DDDDDD001bbbbb",	"JSET #n,S,xxxx", EffectiveAddress),
+		OpcodeInfo(Jset_ea,			"0000101001MMMRRR1S1bbbbb",	"JSET #n,[X or Y]:ea,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jset_aa,			"0000101000aaaaaa1S1bbbbb",	"JSET #n,[X or Y]:aa,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jset_pp,			"0000101010pppppp1S1bbbbb",	"JSET #n,[X or Y]:pp,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jset_qq,			"0000000110qqqqqq1S1bbbbb",	"JSET #n,[X or Y]:qq,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jset_S,			"0000101011DDDDDD001bbbbb",	"JSET #n,S,xxxx", AbsoluteAddressExt),
 
 		OpcodeInfo(Jsr_ea,			"0000101111MMMRRR10000000",	"JSR ea", EffectiveAddress),
 		OpcodeInfo(Jsr_xxx,			"000011010000aaaaaaaaaaaa",	"JSR xxx"),
 
-		OpcodeInfo(Jsset_ea,		"0000101101MMMRRR1S1bbbbb",	"JSSET #n,[X or Y]:ea,xxxx"),
-		OpcodeInfo(Jsset_aa,		"0000101100aaaaaa1S1bbbbb",	"JSSET #n,[X or Y]:aa,xxxx", EffectiveAddress),
-		OpcodeInfo(Jsset_pp,		"0000101110pppppp1S1bbbbb",	"JSSET #n,[X or Y]:pp,xxxx", EffectiveAddress),
-		OpcodeInfo(Jsset_qq,		"0000000111qqqqqq1S1bbbbb",	"JSSET #n,[X or Y]:qq,xxxx", EffectiveAddress),
-		OpcodeInfo(Jsset_S,			"0000101111DDDDDD001bbbbb",	"JSSET #n,S,xxxx", EffectiveAddress),
+		OpcodeInfo(Jsset_ea,		"0000101101MMMRRR1S1bbbbb",	"JSSET #n,[X or Y]:ea,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jsset_aa,		"0000101100aaaaaa1S1bbbbb",	"JSSET #n,[X or Y]:aa,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jsset_pp,		"0000101110pppppp1S1bbbbb",	"JSSET #n,[X or Y]:pp,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jsset_qq,		"0000000111qqqqqq1S1bbbbb",	"JSSET #n,[X or Y]:qq,xxxx", AbsoluteAddressExt),
+		OpcodeInfo(Jsset_S,			"0000101111DDDDDD001bbbbb",	"JSSET #n,S,xxxx", AbsoluteAddressExt),
 
 		OpcodeInfo(Lra_Rn,			"0000010011000RRR000ddddd",	"LRA Rn,D"),
 		OpcodeInfo(Lra_xxxx,		"0000010001oooooo010ddddd",	"LRA xxxx,D", EffectiveAddress),

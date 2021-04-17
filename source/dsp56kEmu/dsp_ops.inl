@@ -1163,7 +1163,7 @@ namespace dsp56k
 		{
 			const auto ea = decode_MMMRRR_read(mmmrrr);
 			memWrite( MemArea_X, ea, decode_ff_read(ff).toWord());
-		}		
+		}
 	}
 	inline void DSP::op_Movexr_A(const TWord op)
 	{
