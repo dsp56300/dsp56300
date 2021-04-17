@@ -1205,14 +1205,29 @@ namespace dsp56k
 			return fetchOpWordB();
 		}
 		
-		// -------------- operation helpers
-		template<bool Jsr> void jumpOrJSR(TWord ea);
+		// -------------- jmp variants
+		enum JumpMode
+		{
+			Jump,
+			JSR
+		};
 
-		template<Instruction Inst, bool Jsr>
+		enum ExpectedBitValue
+		{
+			BitClear = false,
+			BitSet = true
+		};
+
+		template<JumpMode Jsr> void jumpOrJSR(TWord ea);
+
+		template<Instruction Inst, JumpMode Jsr>
 		void jumpIfCC(TWord op);
 
-		template<Instruction Inst, bool Jsr>
+		template<Instruction Inst, JumpMode Jsr>
 		void jumpIfCC(TWord op, TWord ea);
+		
+		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue>
+		void jumpIfBitTestMem(TWord op);
 		
 		// --- debugging tools
 	private:
