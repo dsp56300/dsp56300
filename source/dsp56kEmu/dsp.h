@@ -1226,8 +1226,8 @@ namespace dsp56k
 		template<Instruction Inst, JumpMode Jsr>
 		void jumpIfCC(TWord op, TWord ea);
 		
-		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue>
-		void jumpIfBitTestMem(TWord op);
+		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestMem(TWord op);
+		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestDDDDDD(TWord op);
 		
 		// --- debugging tools
 	private:

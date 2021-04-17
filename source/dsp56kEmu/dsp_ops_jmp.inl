@@ -2,7 +2,6 @@
 
 #include "dsp.h"
 #include "types.h"
-#include "utils.h"
 
 #include "dsp_ops_helper.inl"
 
@@ -28,9 +27,15 @@ namespace dsp56k
 		const auto addr = absAddressExt<Inst>();
 
 		if(bitTestMemory<Inst>(op) == BitValue)
-		{
 			jumpOrJSR<Jsr>(addr);
-		}
+	}
+
+	template<Instruction Inst, DSP::JumpMode Jsr, DSP::ExpectedBitValue BitValue> void DSP::jumpIfBitTestDDDDDD(const TWord op)
+	{
+		const auto addr = absAddressExt<Inst>();
+
+		if( !bitTest<Inst>( op, regValueDDDDDD<Inst>(op) ) )
+			jumpOrJSR<Jsr>(addr);
 	}
 
 	// ____________________________________________
@@ -65,10 +70,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Jclr_S(const TWord op)
 	{
-		const auto addr = absAddressExt<Jclr_S>();
-
-		if( !bitTest<Jclr_S>( op, regValueDDDDDD<Jclr_S>(op) ) )
-			setPC(addr);
+		jumpIfBitTestDDDDDD<Jclr_S, Jump, BitClear>(op);
 	}
 
 	// Jmp
@@ -110,9 +112,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Jsclr_S(const TWord op)
 	{
-		const auto addr = absAddressExt<Jsclr_S>();
-		if(!bitTest<Jsclr_S>(op, regValueDDDDDD<Jsclr_S>(op)))
-			jsr(addr);
+		jumpIfBitTestDDDDDD<Jsclr_S, JSR, BitClear>(op);
 	}
 
 	// Jset
@@ -134,9 +134,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Jset_S(const TWord op)
 	{
-		const auto addr = absAddressExt<Jset_S>();
-		if( bitTest<Jset_S>( op, regValueDDDDDD<Jset_S>(op) ) )
-			setPC(addr);
+		jumpIfBitTestDDDDDD<Jset_S, Jump, BitSet>(op);
 	}
 
 	// Jsr
@@ -168,8 +166,6 @@ namespace dsp56k
 	}
 	inline void DSP::op_Jsset_S(const TWord op)
 	{
-		const auto addr = absAddressExt<Jsset_S>();
-		if( bitTest<Jsset_S>( op, regValueDDDDDD<Jsset_S>(op) ) )
-			jsr(addr);
+		jumpIfBitTestDDDDDD<Jsset_S, JSR, BitSet>(op);
 	}
 }
