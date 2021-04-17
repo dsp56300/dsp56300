@@ -675,18 +675,22 @@ namespace dsp56k
 	}
 	inline void DSP::op_Do_ea(const TWord op)
 	{
-		errNotImplemented("DO");
+		const auto addr = absAddressExt<Do_ea>();
+		const auto loopCount = effectiveAddress<Do_ea>(op);
+		do_exec(loopCount, addr);
 	}
 	inline void DSP::op_Do_aa(const TWord op)
 	{
-		errNotImplemented("DO");		
+		const auto addr = absAddressExt<Do_aa>();
+		const auto loopCount = effectiveAddress<Do_aa>(op);
+		do_exec(loopCount, addr);
 	}
 	inline void DSP::op_Do_xxx(const TWord op)
 	{
 		const TWord addr = fetchOpWordB();
 		const TWord loopcount = getFieldValue<Do_xxx,Field_hhhh, Field_iiiiiiii>(op);
 
-		do_exec( TReg24(loopcount), addr );						
+		do_exec( loopcount, addr );
 	}
 	inline void DSP::op_Do_S(const TWord op)
 	{
@@ -696,7 +700,7 @@ namespace dsp56k
 
 		const TReg24 loopcount = decode_dddddd_read( dddddd );
 
-		do_exec( loopcount, addr );
+		do_exec( loopcount.var, addr );
 	}
 	inline void DSP::op_DoForever(const TWord op)
 	{
@@ -714,7 +718,7 @@ namespace dsp56k
 	{
         const auto loopcount = getFieldValue<Dor_xxx,Field_hhhh, Field_iiiiiiii>(op);
         const auto displacement = signextend<int, 24>(fetchOpWordB());
-        do_exec(TReg24(loopcount), pcCurrentInstruction + displacement);
+        do_exec(loopcount, pcCurrentInstruction + displacement);
 	}
 	inline void DSP::op_Dor_S(const TWord op)
 	{
@@ -722,7 +726,7 @@ namespace dsp56k
 		const TReg24 lc		= decode_dddddd_read( dddddd );
 		
 		const int displacement = signextend<int,24>(fetchOpWordB());
-		do_exec( lc, pcCurrentInstruction + displacement);
+		do_exec( lc.var, pcCurrentInstruction + displacement);
 	}
 	inline void DSP::op_DorForever(const TWord op)
 	{

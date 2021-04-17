@@ -1116,14 +1116,14 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// exec_do
 	//
-	bool DSP::do_exec( TReg24 _loopcount, TWord _addr )
+	bool DSP::do_exec( TWord _loopcount, TWord _addr )
 	{
 	//	LOG( "DO BEGIN: " << (int)sc.var << ", loop flag = " << sr_test(SR_LF) );
 
-		if( !_loopcount.var )
+		if( !_loopcount )
 		{
 			if( sr_test( SR_SC ) )
-				_loopcount.var = 65536;
+				_loopcount = 65536;
 			else
 			{
 				setPC(_addr+1);
@@ -1135,7 +1135,7 @@ namespace dsp56k
 		ssl(reg.lc);
 
 		reg.la.var = _addr;
-		reg.lc = _loopcount;
+		reg.lc.var = _loopcount;
 
 		pushPCSR();
 
