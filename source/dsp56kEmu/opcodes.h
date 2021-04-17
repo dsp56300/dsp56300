@@ -27,6 +27,11 @@ namespace dsp56k
 		return hasField<I,A>() && hasField<I,B>();
 	}
 
+	template<Instruction I, Field A, Field B, Field C> constexpr bool hasFields()
+	{
+		return hasField<I,A>() && hasField<I,B>() && hasField<I,C>();
+	}
+
 	static constexpr TWord getFieldValue(const FieldInfo& _fi, TWord _memoryValue)
 	{
 		assert(_fi.len > 0 && "field not known");
