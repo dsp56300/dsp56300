@@ -50,7 +50,7 @@ namespace dsp56k
 	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_RRR>()>::type*> int DSP::relativeAddressOffset(const TWord op) const
 	{
 		const TWord r = getFieldValue<Inst,Field_RRR>(op);
-		return decode_RRR_read(r);
+		return signextend<int,24>(decode_RRR_read(r));
 	}
 
 	// Memory Read	
