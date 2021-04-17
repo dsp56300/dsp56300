@@ -4,6 +4,7 @@ project(dsp56kEmu)
 add_library(dsp56kEmu STATIC)
 
 set(SOURCES
+aar.h
 agu.cpp agu.h
 audio.cpp audio.h
 bitfield.h
