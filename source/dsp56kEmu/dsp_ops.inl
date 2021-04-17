@@ -1217,7 +1217,16 @@ namespace dsp56k
 	}
 	inline void DSP::op_Moveyr_A(const TWord op)
 	{
-		errNotImplemented("MOVE YR A");
+		const TWord mmmrrr	= getFieldValue<Movexr_A,Field_MMM, Field_RRR>(op);
+		const TWord d		= getFieldValue<Movexr_A,Field_d>(op);
+		const TWord ea 		= decode_MMMRRR_read(mmmrrr);
+
+		const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
+		memWrite( MemArea_Y, ea, ab.var );
+		if (d)
+			setB(y0());
+		else
+			setA(y0());
 	}
 	inline void DSP::op_Movel_ea(const TWord op)
 	{
