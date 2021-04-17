@@ -68,6 +68,7 @@ namespace dsp56k
 		return memReadPeriphFFFFC0(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_pppppp>(op));
 	}
 
+	// Bit Testing
 	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type*> bool DSP::bitTestMemory(TWord op)
 	{
 		const auto mem = readMem<Inst>(op);
@@ -75,8 +76,6 @@ namespace dsp56k
 		return dsp56k::bittest<TWord>(mem, bit);
 	}
 
-	// Bit Testing
-
 	// Register Decode
-	
+
 }
