@@ -946,7 +946,6 @@ namespace dsp56k
 		}
 		else
 		{
-			const auto ea = decode_MMMRRR_read(mmmrrr);
 			memWrite( MemArea_X, ea, decode_ff_read(ff).toWord());
 		}
 	}
