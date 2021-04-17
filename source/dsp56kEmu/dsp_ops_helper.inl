@@ -5,6 +5,14 @@
 
 namespace dsp56k
 {
+	// Check Condition
+	template <Instruction Inst> bool DSP::checkCondition(const TWord op) const
+	{
+		const TWord cccc = getFieldValue<Inst,Field_CCCC>(op);
+		return decode_cccc( cccc );
+	}
+
+	// Effective Address
 	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> TWord DSP::effectiveAddress(const TWord op)
 	{
 		const TWord mmmrrr = getFieldValue<Inst, Field_MMM, Field_RRR>(op);

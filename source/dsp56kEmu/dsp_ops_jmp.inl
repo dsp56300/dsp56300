@@ -11,12 +11,6 @@ namespace dsp56k
 	template <> inline void DSP::jumpOrJSR<false>(const TWord _ea)	{ setPC(_ea); }
 	template <> inline void DSP::jumpOrJSR<true>(const TWord _ea)	{ jsr(_ea); }
 
-	template <Instruction Inst> bool DSP::checkCondition(const TWord op) const
-	{
-		const TWord cccc = getFieldValue<Inst,Field_CCCC>(op);
-		return decode_cccc( cccc );
-	}
-
 	template<Instruction Inst, bool Jsr> void DSP::jumpIfCC(const TWord op, const TWord ea)
 	{
 		if(checkCondition<Inst>(op))
