@@ -34,7 +34,10 @@ namespace dsp56k
 	{
 		const auto addr = absAddressExt<Inst>();
 
-		if( !bitTest<Inst>( op, regValueDDDDDD<Inst>(op) ) )
+		const auto d = getFieldValue<Inst,Field_DDDDDD>(op);
+		const auto v = decode_dddddd_read(d).var;
+
+		if( !bitTest<Inst>( op, v ) )
 			jumpOrJSR<Jsr>(addr);
 	}
 

@@ -243,7 +243,8 @@ namespace dsp56k
 		TWord	decode_XMove_MMRRR		( TWord _mmrrr );
 		TWord	decode_YMove_mmrr		( TWord _mmrr, TWord _regIdxOffset );
 
-		TWord	decode_RRR_read			( TWord _mmmrrr, int _shortDisplacement );
+		TWord	decode_RRR_read			( TWord _mmmrrr ) const;
+		TWord	decode_RRR_read			( TWord _mmmrrr, int _shortDisplacement ) const;
 
 		template<typename T> T decode_ddddd_read( TWord _ddddd )
 		{
@@ -1153,29 +1154,40 @@ namespace dsp56k
 
 		// Effective Address
 		template<Instruction Inst, typename std::enable_if<hasFields<Inst,Field_MMM, Field_RRR>()>::type* = nullptr>
-		TWord effectiveAddress(const TWord op);
+		TWord effectiveAddress(TWord op);
 
 		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaaaaaaaa>()>::type* = nullptr>
-		TWord effectiveAddress(const TWord op) const;
+		TWord effectiveAddress(TWord op) const;
 
 		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaa>()>::type* = nullptr>
-		TWord effectiveAddress(const TWord op) const;
+		TWord effectiveAddress(TWord op) const;
+
+		// Relative Address Offset
+		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaaaaaaaa>()>::type* = nullptr>
+		int relativeAddressOffset(TWord op) const;
+
+		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaa>()>::type* = nullptr>
+		int relativeAddressOffset(TWord op) const;
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaa, Field_aaaaa>()>::type* = nullptr>
+		int relativeAddressOffset(TWord op) const;
+		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_RRR>()>::type* = nullptr> 
+		int relativeAddressOffset(TWord op) const;
 
 		// Memory Read
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type* = nullptr>
-		TWord readMem(const TWord op);
+		TWord readMem(TWord op);
 
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr>
-		TWord readMem(const TWord op, EMemArea area);
+		TWord readMem(TWord op, EMemArea area);
 
 		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type* = nullptr>
-		TWord readMem(const TWord op, EMemArea area) const;
+		TWord readMem(TWord op, EMemArea area) const;
 
 		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaa>()>::type* = nullptr>
-		TWord readMem(const TWord op, EMemArea area) const;
+		TWord readMem(TWord op, EMemArea area) const;
 
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_S>()>::type* = nullptr>
-		TWord readMem(const TWord op) const;
+		TWord readMem(TWord op) const;
 
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
@@ -1187,35 +1199,46 @@ namespace dsp56k
 			return dsp56k::bittest<TWord>(toBeTested, bit);
 		}
 
-		template<Instruction Inst> TWord regValueMMMRRR(TWord op)
-		{
-			const TWord mmmrrr	= getFieldValue<Inst,Field_MMM, Field_RRR>(op);
-			return decode_MMMRRR_read(mmmrrr);
-		}
-
-		template<Instruction Inst> TWord regValueDDDDDD(TWord op)
-		{
-			const auto d = getFieldValue<Inst,Field_DDDDDD>(op);
-			return decode_dddddd_read(d).var;
-		}
-
+		// extension word access
 		template<Instruction Inst> TWord absAddressExt()
 		{
 			static_assert(g_opcodes[Inst].m_extensionWordType == AbsoluteAddressExt, "opcode does not have an absolute address extension word");
 			return fetchOpWordB();
 		}
+
+		template<Instruction Inst> int pcRelativeAddressExt()
+		{
+			static_assert(g_opcodes[Inst].m_extensionWordType == PCRelativeAddressExt, "opcode does not have a PC-relative address extension word");
+			return signextend<int,24>(fetchOpWordB());
+		}
+		
+		enum ExpectedBitValue
+		{
+			BitClear = false,
+			BitSet = true
+		};
+
+		// -------------- bra variants
+		enum BraMode
+		{
+			Bra,
+			Bsr
+		};
+
+		template<BraMode Bmode> void braOrBsr(int offset);
+
+		template<Instruction Inst, BraMode Bmode> void braIfCC(TWord op);
+
+		template<Instruction Inst, BraMode Bmode> void braIfCC(TWord op, int offset);
+
+		template<Instruction Inst, BraMode Bmode, ExpectedBitValue BitValue> void braIfBitTestMem(TWord op);
+		template<Instruction Inst, BraMode Bmode, ExpectedBitValue BitValue> void braIfBitTestDDDDDD(TWord op);
 		
 		// -------------- jmp variants
 		enum JumpMode
 		{
 			Jump,
 			JSR
-		};
-
-		enum ExpectedBitValue
-		{
-			BitClear = false,
-			BitSet = true
 		};
 
 		template<JumpMode Jsr> void jumpOrJSR(TWord ea);

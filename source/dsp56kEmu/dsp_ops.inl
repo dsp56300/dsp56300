@@ -112,10 +112,6 @@ namespace dsp56k
 
 		alu_asr( abDst, abSrc, shiftAmount );			
 	}
-	inline void DSP::op_Bcc_Rn(const TWord op)	// 00001101 00011RRR 0100CCCC
-	{
-		errNotImplemented("Bcc Rn");	
-	}
 	inline void DSP::op_Bchg_ea(const TWord op)
 	{
 		errNotImplemented("BCHG");
@@ -285,42 +281,7 @@ namespace dsp56k
 		sr_s_update();
 		sr_l_update_by_v();
 	}
-	inline void DSP::op_Bsr_xxxx(const TWord op)
-	{
-		const int displacement = signextend<int,24>(fetchOpWordB());
-		jsr(pcCurrentInstruction + displacement);
-	}
-	inline void DSP::op_Bsr_xxx(const TWord op)
-	{
-		const TWord aaaaaaaaa = getFieldValue<Bsr_xxx,Field_aaaa, Field_aaaaa>(op);
-		const int displacement = signextend<int,9>(aaaaaaaaa);
-		jsr(pcCurrentInstruction + displacement);		
-	}
-	inline void DSP::op_Bsr_Rn(const TWord op)
-	{
-        const auto rrr = getFieldValue<Bsr_Rn,Field_RRR>(op);
-        jsr(pcCurrentInstruction + reg.r[rrr].var);		
-	}
-	inline void DSP::op_Bsset_ea(const TWord op)
-	{
-		errNotImplemented("BSSET");
-	}
-	inline void DSP::op_Bsset_aa(const TWord op)
-	{
-		errNotImplemented("BSSET");		
-	}
-	inline void DSP::op_Bsset_pp(const TWord op)
-	{
-		errNotImplemented("BSSET");
-	}
-	inline void DSP::op_Bsset_qq(const TWord op)
-	{
-		errNotImplemented("BSSET");		
-	}
-	inline void DSP::op_Bsset_S(const TWord op)
-	{
-		errNotImplemented("BSSET");
-	}
+
 	inline void DSP::op_Btst_ea(const TWord op)
 	{
 		const TWord bit = getFieldValue<Btst_ea,Field_bbbbb>(op);

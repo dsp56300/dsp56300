@@ -79,7 +79,7 @@ namespace dsp56k
 		OpcodeInfo(Asr_ii,			"0000110000011100SiiiiiiD",	"ASR #ii,S2,D"),
 		OpcodeInfo(Asr_S1S2D,		"0000110000011110011SsssD",	"ASR S1,S2,D"),
 
-		OpcodeInfo(Bcc_xxxx,		"00001101000100000100CCCC",	"Bcc xxxx", EffectiveAddress),
+		OpcodeInfo(Bcc_xxxx,		"00001101000100000100CCCC",	"Bcc xxxx", PCRelativeAddressExt),
 		OpcodeInfo(Bcc_xxx,			"00000101CCCC01aaaa0aaaaa",	"Bcc xxx"),
 		OpcodeInfo(Bcc_Rn,			"0000110100011RRR0100CCCC",	"Bcc Rn"),
 
@@ -95,33 +95,33 @@ namespace dsp56k
 		OpcodeInfo(Bclr_qq,			"0000000100qqqqqq0S0bbbbb",	"BCLR #n,[X or Y]:qq"),
 		OpcodeInfo(Bclr_D,			"0000101011DDDDDD010bbbbb",	"BCLR #n,D"),
 
-		OpcodeInfo(Bra_xxxx,		"000011010001000011000000",	"BRA xxxx", EffectiveAddress),
+		OpcodeInfo(Bra_xxxx,		"000011010001000011000000",	"BRA xxxx", PCRelativeAddressExt),
 		OpcodeInfo(Bra_xxx,			"00000101000011aaaa0aaaaa",	"BRA xxx"),
 		OpcodeInfo(Bra_Rn,			"0000110100011RRR11000000",	"BRA Rn"),
 
-		OpcodeInfo(Brclr_ea,		"0000110010MMMRRR0S0bbbbb",	"BRCLR #n,[X or Y]:ea,xxxx", EffectiveAddress),
-		OpcodeInfo(Brclr_aa,		"0000110010aaaaaa1S0bbbbb",	"BRCLR #n,[X or Y]:aa,xxxx", EffectiveAddress),
-		OpcodeInfo(Brclr_pp,		"0000110011pppppp0S0bbbbb",	"BRCLR #n,[X or Y]:pp,xxxx", EffectiveAddress),
-		OpcodeInfo(Brclr_qq,		"0000010010qqqqqq0S0bbbbb",	"BRCLR #n,[X or Y]:qq,xxxx", EffectiveAddress),
-		OpcodeInfo(Brclr_S,			"0000110011DDDDDD100bbbbb",	"BRCLR #n,S,xxxx", EffectiveAddress),
+		OpcodeInfo(Brclr_ea,		"0000110010MMMRRR0S0bbbbb",	"BRCLR #n,[X or Y]:ea,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Brclr_aa,		"0000110010aaaaaa1S0bbbbb",	"BRCLR #n,[X or Y]:aa,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Brclr_pp,		"0000110011pppppp0S0bbbbb",	"BRCLR #n,[X or Y]:pp,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Brclr_qq,		"0000010010qqqqqq0S0bbbbb",	"BRCLR #n,[X or Y]:qq,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Brclr_S,			"0000110011DDDDDD100bbbbb",	"BRCLR #n,S,xxxx", PCRelativeAddressExt),
 
 		OpcodeInfo(BRKcc,			"00000000000000100001CCCC",	"BRKcc"),
 
-		OpcodeInfo(Brset_ea,		"0000110010MMMRRR0S1bbbbb",	"BRSET #n,[X or Y]:ea,xxxx", EffectiveAddress),
-		OpcodeInfo(Brset_aa,		"0000110010aaaaaa1S1bbbbb",	"BRSET #n,[X or Y]:aa,xxxx", EffectiveAddress),
-		OpcodeInfo(Brset_pp,		"0000110011pppppp0S1bbbbb",	"BRSET #n,[X or Y]:pp,xxxx", EffectiveAddress),
-		OpcodeInfo(Brset_qq,		"0000010010qqqqqq0S1bbbbb",	"BRSET #n,[X or Y]:qq,xxxx", EffectiveAddress),
-		OpcodeInfo(Brset_S,			"0000110011DDDDDD101bbbbb",	"BRSET #n,S,xxxx", EffectiveAddress),
+		OpcodeInfo(Brset_ea,		"0000110010MMMRRR0S1bbbbb",	"BRSET #n,[X or Y]:ea,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Brset_aa,		"0000110010aaaaaa1S1bbbbb",	"BRSET #n,[X or Y]:aa,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Brset_pp,		"0000110011pppppp0S1bbbbb",	"BRSET #n,[X or Y]:pp,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Brset_qq,		"0000010010qqqqqq0S1bbbbb",	"BRSET #n,[X or Y]:qq,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Brset_S,			"0000110011DDDDDD101bbbbb",	"BRSET #n,S,xxxx", PCRelativeAddressExt),
 
-		OpcodeInfo(BScc_xxxx,		"00001101000100000000CCCC",	"BScc xxxx", EffectiveAddress),
+		OpcodeInfo(BScc_xxxx,		"00001101000100000000CCCC",	"BScc xxxx", PCRelativeAddressExt),
 		OpcodeInfo(BScc_xxx,		"00000101CCCC00aaaa0aaaaa",	"BScc xxx"),
 		OpcodeInfo(BScc_Rn,			"0000110100011RRR0000CCCC",	"BScc Rn"),
 
-		OpcodeInfo(Bsclr_ea,		"0000110110MMMRRR0S0bbbbb",	"BSCLR #n,[X or Y]:ea,xxxx", EffectiveAddress),
-		OpcodeInfo(Bsclr_aa,		"0000110110aaaaaa1S0bbbbb",	"BSCLR #n,[X or Y]:aa,xxxx", EffectiveAddress),
-		OpcodeInfo(Bsclr_pp,		"0000110111pppppp0S0bbbbb",	"BSCLR #n,[X or Y]:pp,xxxx", EffectiveAddress),
-		OpcodeInfo(Bsclr_qq,		"0000010010qqqqqq1S0bbbbb",	"BSCLR #n,[X or Y]:qq,xxxx", EffectiveAddress),
-		OpcodeInfo(Bsclr_S,			"0000110111DDDDDD100bbbbb",	"BSCLR #n,S,xxxx"),
+		OpcodeInfo(Bsclr_ea,		"0000110110MMMRRR0S0bbbbb",	"BSCLR #n,[X or Y]:ea,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Bsclr_aa,		"0000110110aaaaaa1S0bbbbb",	"BSCLR #n,[X or Y]:aa,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Bsclr_pp,		"0000110111pppppp0S0bbbbb",	"BSCLR #n,[X or Y]:pp,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Bsclr_qq,		"0000010010qqqqqq1S0bbbbb",	"BSCLR #n,[X or Y]:qq,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Bsclr_S,			"0000110111DDDDDD100bbbbb",	"BSCLR #n,S,xxxx", PCRelativeAddressExt),
 
 		OpcodeInfo(Bset_ea,			"0000101001MMMRRR0S1bbbbb",	"BSET #n,[X or Y]:ea", EffectiveAddress),
 		OpcodeInfo(Bset_aa,			"0000101000aaaaaa0S1bbbbb",	"BSET #n,[X or Y]:aa"),
@@ -129,15 +129,15 @@ namespace dsp56k
 		OpcodeInfo(Bset_qq,			"0000000100qqqqqq0S1bbbbb",	"BSET #n,[X or Y]:qq"),
 		OpcodeInfo(Bset_D,			"0000101011DDDDDD011bbbbb",	"BSET #n,D"),
 
-		OpcodeInfo(Bsr_xxxx,		"000011010001000010000000",	"BSR xxxx", EffectiveAddress),
+		OpcodeInfo(Bsr_xxxx,		"000011010001000010000000",	"BSR xxxx", PCRelativeAddressExt),
 		OpcodeInfo(Bsr_xxx,			"00000101000010aaaa0aaaaa",	"BSR xxx"),
 		OpcodeInfo(Bsr_Rn,			"0000110100011RRR10000000",	"BSR Rn"),
 
-		OpcodeInfo(Bsset_ea,		"0000110110MMMRRR0S1bbbbb",	"BSSET #n,[X or Y]:ea,xxxx", EffectiveAddress),
-		OpcodeInfo(Bsset_aa,		"0000110110aaaaaa1S1bbbbb",	"BSSET #n,[X or Y]:aa,xxxx", EffectiveAddress),
-		OpcodeInfo(Bsset_pp,		"0000110111pppppp0S1bbbbb",	"BSSET #n,[X or Y]:pp,xxxx", EffectiveAddress),
-		OpcodeInfo(Bsset_qq,		"0000010010qqqqqq1S1bbbbb",	"BSSET #n,[X or Y]:qq,xxxx", EffectiveAddress),
-		OpcodeInfo(Bsset_S,			"0000110111DDDDDD101bbbbb",	"BSSET #n,S,xxxx", EffectiveAddress),
+		OpcodeInfo(Bsset_ea,		"0000110110MMMRRR0S1bbbbb",	"BSSET #n,[X or Y]:ea,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Bsset_aa,		"0000110110aaaaaa1S1bbbbb",	"BSSET #n,[X or Y]:aa,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Bsset_pp,		"0000110111pppppp0S1bbbbb",	"BSSET #n,[X or Y]:pp,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Bsset_qq,		"0000010010qqqqqq1S1bbbbb",	"BSSET #n,[X or Y]:qq,xxxx", PCRelativeAddressExt),
+		OpcodeInfo(Bsset_S,			"0000110111DDDDDD101bbbbb",	"BSSET #n,S,xxxx", PCRelativeAddressExt),
 
 		OpcodeInfo(Btst_ea,			"0000101101MMMRRR0S1bbbbb",	"BTST #n,[X or Y]:ea", EffectiveAddress),		// Note: Doc typo, was ROS not R0S
 		OpcodeInfo(Btst_aa,			"0000101100aaaaaa0S1bbbbb",	"BTST #n,[X or Y]:aa"),

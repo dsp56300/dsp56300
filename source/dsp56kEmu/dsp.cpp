@@ -742,7 +742,19 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// decode_RRR_read
 	//
-	dsp56k::TWord DSP::decode_RRR_read( TWord _mmmrrr, int _shortDisplacement )
+	TWord DSP::decode_RRR_read( TWord _mmmrrr) const
+	{
+		unsigned int regIdx = _mmmrrr&0x07;
+
+		const TReg24& _r = reg.r[regIdx];
+
+		return _r.var;
+	}
+
+	// _____________________________________________________________________________
+	// decode_RRR_read
+	//
+	TWord DSP::decode_RRR_read( TWord _mmmrrr, int _shortDisplacement ) const
 	{
 		unsigned int regIdx = _mmmrrr&0x07;
 

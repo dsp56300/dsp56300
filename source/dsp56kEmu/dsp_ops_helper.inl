@@ -29,6 +29,30 @@ namespace dsp56k
 		return getFieldValue<Inst, Field_aaaaaa>(op);
 	}
 
+	// Relative Address
+	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type*> int DSP::relativeAddressOffset(const TWord op) const
+	{
+		return signextend<int,12>(getFieldValue<Inst, Field_aaaaaaaaaaaa>(op));
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaa>()>::type*>	int DSP::relativeAddressOffset(const TWord op) const
+	{
+		return signextend<int,6>(getFieldValue<Inst, Field_aaaaaa>(op));
+	}
+
+
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaa, Field_aaaaa>()>::type*>	int DSP::relativeAddressOffset(const TWord op) const
+	{
+		const TWord a = getFieldValue<Inst,Field_aaaa, Field_aaaaa>(op);
+		return signextend<int,9>( a );
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_RRR>()>::type*> int DSP::relativeAddressOffset(const TWord op) const
+	{
+		const TWord r = getFieldValue<Inst,Field_RRR>(op);
+		return decode_RRR_read(r);
+	}
+
 	// Memory Read	
 	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type*> TWord DSP::readMem(const TWord op)
 	{

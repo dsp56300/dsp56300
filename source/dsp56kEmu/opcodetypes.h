@@ -197,10 +197,12 @@ namespace dsp56k
 
 	enum ExtensionWordTypes
 	{
-		None				= 0x0,
-		EffectiveAddress	= 0x1,
-		ImmediateData		= 0x2,
-		AbsoluteAddressExt	= 0x4,
-		EAandID				= EffectiveAddress | ImmediateData
+		None					= 0x0,
+		EffectiveAddress		= 0x1,
+		ImmediateData			= 0x2,
+		AbsoluteAddressExt		= 0x4,
+		PCRelativeAddressExt	= 0x8,
+
+		EAandID					= EffectiveAddress | ImmediateData
 	};
 }
