@@ -906,6 +906,8 @@ namespace dsp56k
 		TWord	memReadPeriphFFFF80	( EMemArea _area, TWord _offset ) const;
 		TWord	memReadPeriphFFFFC0	( EMemArea _area, TWord _offset ) const;
 
+		void	aarTranslate		( EMemArea _area, TWord& _offset ) const;
+
 		// --- operations
 	public:
 		void op_Abs(TWord op);

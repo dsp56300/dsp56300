@@ -11,6 +11,7 @@
 #include "agu.h"
 #include "disasm.h"
 #include "opcodes.h"
+#include "aar.h"
 
 #include "dsp_ops.inl"
 #include "dsp_ops_bra.inl"
@@ -2169,6 +2170,8 @@ namespace dsp56k
 	//
 	bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
 	{
+		aarTranslate(_area, _offset);
+	
 		const auto res = mem.dspWrite( _area, _offset, _value );
 
 //		if(_area == MemArea_P)	does not work for external memory
@@ -2217,11 +2220,14 @@ namespace dsp56k
 	// 		}
 	// 	}
 
-		return mem.get( _area, _offset );
+		aarTranslate(_area, _offset);
+
+		return mem.get(_area, _offset);
 	}
 
 	void DSP::memRead2(EMemArea _area, TWord _offset, TWord& _wordA, TWord& _wordB) const
 	{
+		aarTranslate(_area, _offset);
 		mem.get2(_area, _offset, _wordA, _wordB);
 	}
 
@@ -2236,6 +2242,44 @@ namespace dsp56k
 	TWord DSP::memReadPeriphFFFFC0(EMemArea _area, TWord _offset) const
 	{
 		return memReadPeriph(_area, _offset + 0xffffc0);
+	}
+
+	void DSP::aarTranslate(EMemArea _area, TWord& _offset) const
+	{
+		// TODO: probably not as generic as it should be
+		if(_offset < 0x3800)
+			return;
+
+		constexpr AARRegisters aarRegs[4] = {M_AAR0, M_AAR1, M_AAR2, M_AAR3};
+		constexpr uint32_t areaEnabled[3] = {M_BXEN, M_BYEN, M_BPEN};
+
+		auto o = _offset;
+
+		for(int i=3; i>=0; --i)
+		{
+			const auto aar = memReadPeriph(MemArea_X, aarRegs[i]);
+
+			if(!bittest(aar, areaEnabled[_area]))
+				continue;
+
+			const auto compareValue = aar & M_BAC;
+			const auto compareBitCount = (aar & M_BNC) >> 8;
+
+			const auto mask = static_cast<int32_t>(0xff000000) >> compareBitCount;
+
+			const auto match = (_offset & mask) == (compareValue & mask);
+
+			if(match)
+			{
+				o = (_offset & 0xffff) | ((i+2)<<16);
+				break;
+			}
+		}
+
+		if(o != _offset)
+			LOG("AAR translated: " << HEX(_offset) << " => " << HEX(o));
+
+		_offset = o;
 	}
 
 	// _____________________________________________________________________________

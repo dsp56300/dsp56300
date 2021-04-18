@@ -1,5 +1,7 @@
 #include "peripherals.h"
 
+
+#include "aar.h"
 #include "hi08.h"
 #include "logging.h"
 #include "dsp.h"
@@ -131,6 +133,12 @@ namespace dsp56k
 
 		case 0xFFFFF5:					// ID Register
 			return 0x362;
+
+		case M_AAR0:
+		case M_AAR1:
+		case M_AAR2:
+		case M_AAR3:
+			return m_mem[_addr - XIO_Reserved_High_First];
 		}
 
 		auto& value = m_mem[_addr - XIO_Reserved_High_First];
