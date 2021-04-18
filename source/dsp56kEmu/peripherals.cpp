@@ -131,6 +131,8 @@ namespace dsp56k
 //			LOG("Read from " << HEX(_addr));
 			return 0;	//m_mem[_addr - XIO_Reserved_High_First];	// There is nothing connected.
 
+		case 0xFFFFF4:					// DMA status reg
+			return 0x3f;
 		case 0xFFFFF5:					// ID Register
 			return 0x362;
 
