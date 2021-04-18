@@ -2390,6 +2390,11 @@ namespace dsp56k
 		m_opcodeCache.resize(mem.size(), ResolveCache);		
 	}
 
+	void DSP::clearOpcodeCache(TWord _address)
+	{
+		m_opcodeCache[_address] = ResolveCache;
+	}
+
 	void DSP::dumpRegisters() const
 	{
 		std::stringstream ss;

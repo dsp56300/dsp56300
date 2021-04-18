@@ -186,6 +186,7 @@ namespace dsp56k
 		void			injectInterrupt					(uint32_t _interruptVectorAddress);
 
 		void			clearOpcodeCache				();
+		void			clearOpcodeCache				(TWord _address);
 
 		void			dumpRegisters					() const;
 		void			dumpRegisters					(std::stringstream& _ss) const;
