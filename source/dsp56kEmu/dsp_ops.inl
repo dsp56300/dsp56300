@@ -1367,7 +1367,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Plock(const TWord op)
 	{
-		cache.plock(fetchOpWordB());		
+		cache.plock(effectiveAddress<Plock>(op));
 	}
 	inline void DSP::op_Plockr(const TWord op)
 	{
