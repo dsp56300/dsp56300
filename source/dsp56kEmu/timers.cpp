@@ -23,7 +23,7 @@ namespace dsp56k
 		if(m_tpcr == 0)
 			m_tpcr = m_tplr & 0xfffff;
 
-		for (int i=0;i<diff;i++)
+		for (uint32_t i=0;i<diff;i++)
 		{
 			execTimer(m_timers[0], 0);
 			execTimer(m_timers[1], 1);

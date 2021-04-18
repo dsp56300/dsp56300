@@ -296,7 +296,7 @@ namespace dsp56k
 			// A more full expression would be m_cyclesPerSample = dsp_frequency / samplerate, where
 			// dsp_frequency = m_extClock * mf / pd    and   samplerate = m_extClock/256
 
-			float speed_mhz = 12.0 * mf / pd;
+			float speed_mhz = 12.0f * mf / pd;
 			LOG("Clock speed changed to: " << speed_mhz << "Mhz");	// logging assumes an external crystal at 12MHz
 		}
 		void writeTX(size_t _index, TWord _val);
