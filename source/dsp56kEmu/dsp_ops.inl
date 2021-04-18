@@ -144,12 +144,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bclr_ea(const TWord op)	// 0000101001MMMRRR0S0bbbbb
 	{
-		const TWord mmmrrr = getFieldValue<Bclr_ea,Field_MMM, Field_RRR>(op);
 		const EMemArea S = getFieldValueMemArea<Bclr_ea>(op);
 
 		const TWord bbbbb = getBit<Bclr_qq>(op);
 
-		const TWord ea = decode_MMMRRR_read(mmmrrr);
+		const TWord ea = effectiveAddress<Bclr_ea>(op);
 		
 		if(ea >= XIO_Reserved_High_First)
 		{
@@ -204,10 +203,8 @@ namespace dsp56k
 	inline void DSP::op_Bset_ea(const TWord op)
 	{
 		const TWord bit		= getBit<Bset_ea>(op);
-		const TWord mmmrrr	= getFieldValue<Bset_ea,Field_MMM, Field_RRR>(op);
 		const EMemArea S	= getFieldValueMemArea<Bset_ea>(op);
-
-		const TWord ea		= decode_MMMRRR_read(mmmrrr);
+		const TWord ea		= effectiveAddress<Bset_ea>(op);
 
 		if(ea >= XIO_Reserved_High_First)
 		{
@@ -284,8 +281,7 @@ namespace dsp56k
 	inline void DSP::op_Btst_ea(const TWord op)
 	{
 		const TWord bit = getBit<Btst_ea>(op);
-		const TWord mmmrrr	= getFieldValue<Btst_ea,Field_MMM, Field_RRR>(op);
-		const TWord ea = decode_MMMRRR_read( mmmrrr );
+		const TWord ea = effectiveAddress<Btst_ea>(op);
 		const EMemArea S = getFieldValueMemArea<Btst_ea>(op);
 
 		if (ea >= XIO_Reserved_High_First)
@@ -921,7 +917,7 @@ namespace dsp56k
 		if(F)		y1(ab);
 		else		y0(ab);
 		
-		const TWord ea = decode_MMMRRR_read(mmmrrr);
+		const auto ea = decode_MMMRRR_read(mmmrrr);
 
 		// S1/D1 move
 		if( write )
@@ -938,10 +934,8 @@ namespace dsp56k
 	}
 	inline void DSP::op_Movexr_A(const TWord op)
 	{
-		const TWord mmmrrr	= getFieldValue<Movexr_A,Field_MMM, Field_RRR>(op);
 		const TWord d		= getFieldValue<Movexr_A,Field_d>(op);
-
-		const TWord ea = decode_MMMRRR_read(mmmrrr);
+		const TWord ea		= effectiveAddress<Movexr_A>(op);
 
 		// S1/D1 move
 		const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
@@ -984,9 +978,8 @@ namespace dsp56k
 	}
 	inline void DSP::op_Moveyr_A(const TWord op)
 	{
-		const TWord mmmrrr	= getFieldValue<Movexr_A,Field_MMM, Field_RRR>(op);
-		const TWord d		= getFieldValue<Movexr_A,Field_d>(op);
-		const TWord ea 		= decode_MMMRRR_read(mmmrrr);
+		const TWord d		= getFieldValue<Moveyr_A,Field_d>(op);
+		const TWord ea 		= effectiveAddress<Moveyr_A>(op);
 
 		const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
 		memWrite( MemArea_Y, ea, ab.var );
@@ -998,10 +991,9 @@ namespace dsp56k
 	inline void DSP::op_Movel_ea(const TWord op)
 	{
 		const auto LLL		= getFieldValue<Movel_ea,Field_L, Field_LL>(op);
-		const auto mmmrrr	= getFieldValue<Movel_ea,Field_MMM, Field_RRR>(op);
 		const auto write	= getFieldValue<Movel_ea,Field_W>(op);
 
-		const TWord ea = decode_MMMRRR_read(mmmrrr);
+		const TWord ea = effectiveAddress<Movel_ea>(op);
 
 		if( write )
 		{
