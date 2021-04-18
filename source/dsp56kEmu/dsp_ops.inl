@@ -130,7 +130,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bchg_D(const TWord op)
 	{
-		const TWord bit		= getFieldValue<Bchg_D,Field_bbbbb>(op);
+		const TWord bit		= getBit<Bchg_D>(op);
 		const TWord dddddd	= getFieldValue<Bchg_D,Field_DDDDDD>(op);
 
 		TReg24 val = decode_dddddd_read( dddddd );
@@ -147,10 +147,9 @@ namespace dsp56k
 		const TWord mmmrrr = getFieldValue<Bclr_ea,Field_MMM, Field_RRR>(op);
 		const EMemArea S = getFieldValueMemArea<Bclr_ea>(op);
 
-		const TWord bbbbb = getFieldValue<Bclr_qq,Field_bbbbb>(op);
+		const TWord bbbbb = getBit<Bclr_qq>(op);
 
 		const TWord ea = decode_MMMRRR_read(mmmrrr);
-
 		
 		if(ea >= XIO_Reserved_High_First)
 		{
@@ -176,7 +175,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bclr_qq(const TWord op)
 	{
-		const TWord bit = getFieldValue<Bclr_qq,Field_bbbbb>(op);
+		const TWord bit = getBit<Bclr_qq>(op);
 		const TWord ea	= getFieldValue<Bclr_qq,Field_qqqqqq>(op);
 
 		const EMemArea S = getFieldValueMemArea<Bclr_qq>(op);
@@ -187,7 +186,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bclr_D(const TWord op)
 	{
-		const TWord bit		= getFieldValue<Bclr_D,Field_bbbbb>(op);
+		const TWord bit		= getBit<Bclr_D>(op);
 		const TWord dddddd	= getFieldValue<Bclr_D,Field_DDDDDD>(op);
 
 		TWord val;
@@ -204,7 +203,7 @@ namespace dsp56k
 
 	inline void DSP::op_Bset_ea(const TWord op)
 	{
-		const TWord bit		= getFieldValue<Bset_ea,Field_bbbbb>(op);
+		const TWord bit		= getBit<Bset_ea>(op);
 		const TWord mmmrrr	= getFieldValue<Bset_ea,Field_MMM, Field_RRR>(op);
 		const EMemArea S	= getFieldValueMemArea<Bset_ea>(op);
 
@@ -234,7 +233,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bset_pp(const TWord op)	// 0000101010pppppp0S1bbbbb
 	{
-		const TWord bit		= getFieldValue<Bset_pp,Field_bbbbb>(op);
+		const TWord bit		= getBit<Bset_pp>(op);
 		const TWord pppppp	= getFieldValue<Bset_pp,Field_pppppp>(op);
 		const EMemArea S	= getFieldValueMemArea<Bset_pp>(op);
 
@@ -248,7 +247,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bset_qq(const TWord op)
 	{
-		const TWord bit		= getFieldValue<Bset_qq,Field_bbbbb>(op);
+		const TWord bit		= getBit<Bset_qq>(op);
 		const TWord qqqqqq	= getFieldValue<Bset_qq,Field_qqqqqq>(op);
 		const EMemArea S	= getFieldValueMemArea<Bset_qq>(op);
 
@@ -262,7 +261,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bset_D(const TWord op)
 	{
-		const TWord bit	= getFieldValue<Bset_D,Field_bbbbb>(op);
+		const TWord bit	= getBit<Bset_D>(op);
 		const TWord d	= getFieldValue<Bset_D,Field_DDDDDD>(op);
 
 		TReg24 val = decode_dddddd_read(d);
@@ -284,7 +283,7 @@ namespace dsp56k
 
 	inline void DSP::op_Btst_ea(const TWord op)
 	{
-		const TWord bit = getFieldValue<Btst_ea,Field_bbbbb>(op);
+		const TWord bit = getBit<Btst_ea>(op);
 		const TWord mmmrrr	= getFieldValue<Btst_ea,Field_MMM, Field_RRR>(op);
 		const TWord ea = decode_MMMRRR_read( mmmrrr );
 		const EMemArea S = getFieldValueMemArea<Btst_ea>(op);
@@ -308,7 +307,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Btst_pp(const TWord op)
 	{
-		const TWord bitNum	= getFieldValue<Btst_pp,Field_bbbbb>(op);
+		const TWord bitNum	= getBit<Btst_pp>(op);
 		const TWord pppppp	= getFieldValue<Btst_pp,Field_pppppp>(op);
 		const EMemArea S	= getFieldValueMemArea<Btst_pp>(op);
 
@@ -325,7 +324,7 @@ namespace dsp56k
 	inline void DSP::op_Btst_D(const TWord op)
 	{
 		const TWord dddddd	= getFieldValue<Btst_D,Field_DDDDDD>(op);
-		const TWord bit		= getFieldValue<Btst_D,Field_bbbbb>(op);
+		const TWord bit		= getBit<Btst_D>(op);
 
 		TReg24 val = decode_dddddd_read( dddddd );
 

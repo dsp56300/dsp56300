@@ -1195,12 +1195,17 @@ namespace dsp56k
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
 
-		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type* = nullptr> bool bitTestMemory(TWord op);
+		// bit manipulation
+		template <Instruction Inst> TWord getBit(TWord op) const
+		{
+			return getFieldValue<Inst, Field_bbbbb>(op);
+		}
 		template <Instruction Inst> bool bitTest(TWord op, TWord toBeTested)
 		{
-			const auto bit = getFieldValue<Inst, Field_bbbbb>(op);
+			const auto bit = getBit<Inst>(op);
 			return dsp56k::bittest<TWord>(toBeTested, bit);
 		}
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type* = nullptr> bool bitTestMemory(TWord op);
 
 		// extension word access
 		template<Instruction Inst> TWord absAddressExt()
