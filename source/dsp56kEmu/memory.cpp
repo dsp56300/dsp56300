@@ -267,6 +267,36 @@ namespace dsp56k
 		return true;
 	}
 
+	bool Memory::saveAsText(const char* _file, EMemArea _area, const TWord _offset, const TWord _count)
+	{
+		std::ofstream out(_file, std::ios::trunc);
+		if(!out.is_open())
+			return false;
+
+		auto putVal = [&](TWord v)
+		{
+			std::stringstream ss;
+			ss << std::setfill('0') << std::hex << std::setw(8) << v;
+			const std::string str(ss.str());
+			return str;
+		};
+
+		const auto last = _offset+_count;
+
+		for(auto i=_offset; i<last; i += 8)
+		{
+			out << "0x" << putVal(i) << ':';
+
+			for(size_t j=i; j<i+8 && j < last; ++j)
+			{
+				out << ' ' << putVal(get(_area, j));
+			}
+
+			out << std::endl;
+		}
+		return true;
+	}
+
 	void Memory::setSymbol(char _area, TWord _address, const std::string& _name)
 	{
 		SSymbol s;

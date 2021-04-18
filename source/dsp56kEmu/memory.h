@@ -103,6 +103,8 @@ namespace dsp56k
 		bool				save				(const char* _file, EMemArea _area);
 		bool				saveAssembly		(const char* _file, TWord _offset, const TWord _count, bool _skipNops = true, bool _skipDC = false);
 
+		bool				saveAsText			(const char* _file, EMemArea _area, const TWord _offset, const TWord _count);
+
 		void				setDSP				( DSP* _dsp )	{ m_dsp = _dsp; }
 
 		void				setSymbol			(char _area, TWord _address, const std::string& _name);
