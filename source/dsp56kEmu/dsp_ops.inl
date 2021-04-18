@@ -514,15 +514,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Enddo(const TWord op)
 	{
-		// TODO: call do_end? The only difference is that this instruction does not set the PC to point to the next instruction. 
-		// restore previous loop flag
-		sr_toggle( SR_LF, (ssl().var & SR_LF) != 0 );
-
-		// decrement SP twice, restoring old loop settings
-		decSP();
-
-		reg.lc = ssl();
-		reg.la = ssh();	
+		do_end();
 	}
 	inline void DSP::op_Eor_SD(const TWord op)
 	{

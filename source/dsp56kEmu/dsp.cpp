@@ -1171,6 +1171,9 @@ namespace dsp56k
 
 			if( reg.lc.var <= 1 )
 			{
+				// restore PC to point to the next instruction after the last instruction of the loop
+				setPC(reg.la.var+1);
+
 				do_end();
 				break;
 			}
@@ -1186,9 +1189,6 @@ namespace dsp56k
 	//
 	bool DSP::do_end()
 	{
-		// restore PC to point to the next instruction after the last instruction of the loop
-		setPC(reg.la.var+1);
-
 		// restore previous loop flag
 		sr_toggle( SR_LF, (ssl().var & SR_LF) != 0 );
 
