@@ -240,7 +240,7 @@ namespace dsp56k
 		OpcodeInfo(Lsl_SD,			"00001100000111100001sssD",	"LSL S,D"),
 
 		OpcodeInfo(Lsr_D,			"????????????????0010D011",	"LSR D"),
-		OpcodeInfo(Lsr_ii,			"000011000001111011iiiiiD",	"LSR #ii,D", EffectiveAddress),
+		OpcodeInfo(Lsr_ii,			"000011000001111011iiiiiD",	"LSR #ii,D"),
 		OpcodeInfo(Lsr_SD,			"00001100000111100011sssD",	"LSR S,D"),
 
 		OpcodeInfo(Lua_ea,			"00000100010MMRRR000ddddd",	"LUA/LEA ea,D"),
@@ -330,9 +330,9 @@ namespace dsp56k
 		OpcodeInfo(Pfree,			"000000000000000000000010",	"PFREE"),
 
 		OpcodeInfo(Plock,			"0000101111MMMRRR10000001",	"PLOCK ea", EAandID),
-		OpcodeInfo(Plockr,			"000000000000000000001111",	"PLOCKR xxxx", EffectiveAddress),
+		OpcodeInfo(Plockr,			"000000000000000000001111",	"PLOCKR xxxx", PCRelativeAddressExt),
 		OpcodeInfo(Punlock,			"0000101011MMMRRR10000001",	"PUNLOCK ea", EAandID),
-		OpcodeInfo(Punlockr,		"000000000000000000001110",	"PUNLOCKR xxxx", EffectiveAddress),
+		OpcodeInfo(Punlockr,		"000000000000000000001110",	"PUNLOCKR xxxx", PCRelativeAddressExt),
 
 		OpcodeInfo(Rep_ea,			"0000011001MMMRRR0S100000",	"REP [X or Y]:ea"),
 		OpcodeInfo(Rep_aa,			"0000011000aaaaaa0S100000",	"REP [X or Y]:aa"),
