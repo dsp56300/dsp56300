@@ -376,8 +376,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Debugcc(const TWord op)
 	{
-		const TWord cccc = getFieldValue<Debugcc,Field_CCCC>(op);
-		if( decode_cccc( cccc ) )
+		if( checkCondition<Debugcc>(op) )
 		{
 			LOG( "Entering DEBUG mode because condition is met" );
 			errNotImplemented("DEBUGcc");
@@ -578,8 +577,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Ifcc(const TWord op)
 	{
-		const auto cccc = getFieldValue<Ifcc_U, Field_CCCC>(op);
-		if( decode_cccc( cccc ) )
+		if( checkCondition<Ifcc>(op) )
 		{
 			const auto backupCCR = ccr();
 			const auto res = exec_parallel_alu(op);
@@ -588,8 +586,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Ifcc_U(const TWord op)
 	{
-		const auto cccc = getFieldValue<Ifcc_U, Field_CCCC>(op);
-		if( decode_cccc( cccc ) )
+		if( checkCondition<Ifcc_U>(op) )
 			exec_parallel_alu(op);
 	}
 	inline void DSP::op_Illegal(const TWord op)
@@ -1474,9 +1471,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Tcc_S1D1(const TWord op)
 	{
-		const TWord cccc = getFieldValue<Tcc_S1D1,Field_CCCC>(op);
-
-		if( decode_cccc( cccc ) )
+		if( checkCondition<Tcc_S1D1>(op) )
 		{
 			const TWord JJJ = getFieldValue<Tcc_S1D1,Field_JJJ>(op);
 			const bool ab = getFieldValue<Tcc_S1D1,Field_d>(op);
@@ -1486,9 +1481,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Tcc_S1D1S2D2(const TWord op)
 	{
-		const TWord cccc = getFieldValue<Tcc_S1D1S2D2,Field_CCCC>(op);
-
-		if( decode_cccc( cccc ) )
+		if( checkCondition<Tcc_S1D1S2D2>(op) )
 		{
 			const TWord TTT		= getFieldValue<Tcc_S1D1S2D2,Field_TTT>(op);
 			const TWord JJJ		= getFieldValue<Tcc_S1D1S2D2,Field_JJJ>(op);
@@ -1501,9 +1494,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Tcc_S2D2(const TWord op)
 	{
-		const TWord cccc = getFieldValue<Tcc_S2D2,Field_CCCC>(op);
-
-		if( decode_cccc( cccc ) )
+		if( checkCondition<Tcc_S2D2>(op) )
 		{
 			const TWord TTT		= getFieldValue<Tcc_S2D2,Field_TTT>(op);
 			const TWord ttt		= getFieldValue<Tcc_S2D2,Field_ttt>(op);
@@ -1520,7 +1511,8 @@ namespace dsp56k
 	}
 	inline void DSP::op_Trapcc(const TWord op)
 	{
-		errNotImplemented("TRAPcc");		
+		if(checkCondition<Trapcc>(op))
+			errNotImplemented("TRAPcc");
 	}
 	inline void DSP::op_Tst(const TWord op)
 	{
