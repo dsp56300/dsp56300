@@ -64,7 +64,7 @@ namespace dsp56k
 	{
 		const TWord mmmrrr = getFieldValue<Inst, Field_MMM, Field_RRR>(op);
 		if (mmmrrr == MMM_ImmediateData)
-			return fetchOpWordB();
+			return immediateDataExt<Inst>();
 		return memRead(area, decode_MMMRRR_read(mmmrrr));
 	}
 

@@ -1210,13 +1210,20 @@ namespace dsp56k
 		// extension word access
 		template<Instruction Inst> TWord absAddressExt()
 		{
-			static_assert(g_opcodes[Inst].m_extensionWordType == AbsoluteAddressExt, "opcode does not have an absolute address extension word");
+			static_assert(g_opcodes[Inst].m_extensionWordType & AbsoluteAddressExt, "opcode does not have an absolute address extension word");
+			return fetchOpWordB();
+		}
+
+		template<Instruction Inst> TWord immediateDataExt()
+		{
+			// TODO: it would be better to check for extension word type & ImmediateDataExt but as there is code that is not compiled at compile time, we can't do that yet
+			static_assert(g_opcodes[Inst].m_extensionWordType, "opcode does not have an immediate data extension word");
 			return fetchOpWordB();
 		}
 
 		template<Instruction Inst> int pcRelativeAddressExt()
 		{
-			static_assert(g_opcodes[Inst].m_extensionWordType == PCRelativeAddressExt, "opcode does not have a PC-relative address extension word");
+			static_assert(g_opcodes[Inst].m_extensionWordType & PCRelativeAddressExt, "opcode does not have a PC-relative address extension word");
 			return signextend<int,24>(fetchOpWordB());
 		}
 		
