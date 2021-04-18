@@ -79,7 +79,7 @@ namespace dsp56k
 			}
 		}
 */
-		if (_offset!=0xff004e)	// Fix the amazing "write to wrong address" bug.
+		if (_offset<0xff0000)	// Fix the amazing "write to wrong address" bug.
 		m_mem[_area][_offset] = _value & 0x00ffffff;
 
 		return true;
