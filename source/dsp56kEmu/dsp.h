@@ -170,7 +170,8 @@ namespace dsp56k
 
 		uint32_t	getInstructionCounter		() const									{ return m_instructions; }
 
-		const char*	getASM						(TWord wordA, TWord wordB);
+		const char*			getASM						(TWord wordA, TWord wordB);
+		const std::string&	getASM						() const							{ return m_asm; }
 
 		const SRegs&	readRegs						() const		{ return reg; }
 

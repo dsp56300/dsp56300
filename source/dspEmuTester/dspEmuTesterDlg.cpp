@@ -12,10 +12,12 @@
 
 #define LOCKDSP		std::lock_guard<std::mutex> sl(m_lockDSP)
 
+static DefaultMemoryMap g_defaultMemoryValidator;
+
 CdspEmuTesterDlg::CdspEmuTesterDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(IDD, pParent)
-	, m_mem(&m_periphA, &m_periphB)
-	, m_dsp(m_mem)
+	, m_mem(g_defaultMemoryValidator)
+	, m_dsp(m_mem, &m_periphA, &m_periphB)
 	, m_runUntilPC(-1)
 	, m_alwaysUpdateRegs(TRUE)
 	, m_triggerRun(false)
@@ -461,7 +463,8 @@ void CdspEmuTesterDlg::execOne()
 	m_dsp.exec();
 
 	char ass[256];
-	sprintf_s( ass, 255, "%06x: %s", m_dsp.getPC().toWord(), m_dsp.getASM() );
+	
+	sprintf_s( ass, 255, "%06x: %s", m_dsp.getPC().toWord(), m_dsp.getASM().c_str() );
 
 	m_asm.emplace_back(ass);
 }
