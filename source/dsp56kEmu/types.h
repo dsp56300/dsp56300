@@ -67,7 +67,7 @@ namespace dsp56k
 		template<typename D> D signextend() const
 		{
 			const D shiftAmount = (sizeof(D) * CHAR_BIT) - bitCount;
-			assert( shiftAmount > 0 );
+			static_assert( shiftAmount > 0, "Invalid destination data size" );
 			return (D(var) << shiftAmount) >> shiftAmount;
 		}
 
