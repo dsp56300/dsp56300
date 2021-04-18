@@ -160,12 +160,12 @@ namespace dsp56k
 		case HDI08::HCR:
 			m_hdi08.writeControlRegister(_val);
 			return;
-			break;
 		case HDI08::HPCR:
 			m_hdi08.writePortControlRegister(_val);
 			return;
 		case HDI08::HOTX:
 			m_hdi08.writeTX(_val);
+			return;
 
 		case Timers::M_TCSR0:		m_timers.writeTCSR	(0, _val);	return;		// TIMER0 Control/Status Register
 		case Timers::M_TCSR1:		m_timers.writeTCSR	(1, _val);	return;		// TIMER1 Control/Status Register
