@@ -42,7 +42,7 @@ namespace dsp56k
 			if(count == _count)
 			{
 				const auto bit = 23 - i;
-				return FieldInfo(bit - count + 1, count);
+				return FieldInfo(bit + 1 - count, count);
 			}
 
 			i += count;
