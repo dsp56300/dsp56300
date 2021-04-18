@@ -412,7 +412,7 @@ namespace dsp56k
 	{
 		std::stringstream ss;
 
-		for(auto i=0; i<ssIndex(); ++i)
+		for(TWord i=0; i<ssIndex(); ++i)
 			ss << "\t";
 
 		return std::string(ss.str());
