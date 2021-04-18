@@ -37,7 +37,7 @@ namespace dsp56k
 		const auto d = getFieldValue<Inst,Field_DDDDDD>(op);
 		const auto v = decode_dddddd_read(d).var;
 
-		if( !bitTest<Inst>( op, v ) )
+		if( bitTest<Inst>( op, v ) == BitValue )
 			jumpOrJSR<Jsr>(addr);
 	}
 
