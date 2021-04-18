@@ -27,7 +27,7 @@ namespace dsp56k
 		const auto ab = getFieldValue<Add_xxxx,Field_d>(op);
 
 		TReg56 r56;
-		convert( r56, TReg24(fetchOpWordB()) );
+		convert( r56, TReg24(immediateDataExt<Add_xxxx>()) );
 
 		alu_add( ab, r56 );
 	}
@@ -53,7 +53,7 @@ namespace dsp56k
 	inline void DSP::op_And_xxxx(const TWord op)
 	{
 		const auto ab = getFieldValue<And_xxxx,Field_d>(op);
-		const TWord xxxx = fetchOpWordB();
+		const TWord xxxx = immediateDataExt<And_xxxx>();
 
 		alu_and( ab, xxxx );		
 	}
@@ -353,7 +353,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Cmp_xxxxS2(const TWord op)
 	{
-		const TReg24 s( signextend<int,24>( fetchOpWordB() ) );
+		const TReg24 s( signextend<int,24>( immediateDataExt<Cmp_xxxxS2>() ) );
 
 		TReg56 r56;
 		convert( r56, s );
@@ -466,14 +466,14 @@ namespace dsp56k
 	}
 	inline void DSP::op_Do_xxx(const TWord op)
 	{
-		const TWord addr = fetchOpWordB();
+		const TWord addr = absAddressExt<Do_xxx>();
 		const TWord loopcount = getFieldValue<Do_xxx,Field_hhhh, Field_iiiiiiii>(op);
 
 		do_exec( loopcount, addr );
 	}
 	inline void DSP::op_Do_S(const TWord op)
 	{
-		const TWord addr = fetchOpWordB();
+		const TWord addr = absAddressExt<Do_S>();
 
 		const TWord dddddd = getFieldValue<Do_S,Field_DDDDDD>(op);
 
@@ -619,8 +619,7 @@ namespace dsp56k
 	inline void DSP::op_Lra_xxxx(const TWord op)	// 0000010001oooooo010ddddd
 	{
 		const TWord ddddd = getFieldValue<Lra_xxxx, Field_ddddd>(op);
-
-		const auto ea = pcCurrentInstruction + fetchOpWordB();
+		const auto ea = pcCurrentInstruction + pcRelativeAddressExt<Lra_xxxx>();
 		decode_ddddd_write(ddddd, TReg24(ea));
 	}
 	inline void DSP::op_Lsl_D(const TWord op)
@@ -831,7 +830,7 @@ namespace dsp56k
 		const auto	write	= getFieldValue<Movex_Rnxxxx,Field_W>(op);
 		const TWord rrr		= getFieldValue<Movex_Rnxxxx,Field_RRR>(op);
 
-		const int shortDisplacement = signextend<int,24>(fetchOpWordB());
+		const int shortDisplacement = pcRelativeAddressExt<Movex_Rnxxxx>();
 		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
 
 		const auto area = MemArea_X;
@@ -852,7 +851,7 @@ namespace dsp56k
 		const auto	write	= getFieldValue<Movey_Rnxxxx,Field_W>(op);
 		const TWord rrr		= getFieldValue<Movey_Rnxxxx,Field_RRR>(op);
 
-		const int shortDisplacement = signextend<int,24>(fetchOpWordB());
+		const int shortDisplacement = pcRelativeAddressExt<Movey_Rnxxxx>();
 		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
 
 		const auto area = MemArea_Y;
@@ -1291,7 +1290,7 @@ namespace dsp56k
 		const bool	negate	= getFieldValue<Mpyi,Field_k>(op);
 		const TWord qq		= getFieldValue<Mpyi,Field_qq>(op);
 
-		const TReg24 s		= TReg24(fetchOpWordB());
+		const TReg24 s		= TReg24(immediateDataExt<Mpyi>());
 
 		const TReg24 reg	= decode_qq_read(qq);
 
@@ -1448,7 +1447,7 @@ namespace dsp56k
 		const auto ab = getFieldValue<Sub_xxxx,Field_d>(op);
 
 		TReg56 r56;
-		convert( r56, TReg24(fetchOpWordB()) );
+		convert( r56, TReg24(immediateDataExt<Sub_xxxx>()) );
 
 		alu_sub( ab, r56 );
 	}
