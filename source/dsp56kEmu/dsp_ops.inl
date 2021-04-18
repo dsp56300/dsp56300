@@ -1120,17 +1120,15 @@ namespace dsp56k
 	{
 		const auto	write	= getFieldValue<Movem_ea,Field_W>(op);
 		const TWord dddddd	= getFieldValue<Movem_ea,Field_dddddd>(op);
-		const TWord mmmrrr	= getFieldValue<Movem_ea,Field_MMM, Field_RRR>(op);
-
-		const TWord ea		= decode_MMMRRR_read( mmmrrr );
 
 		if( write )
 		{
-			assert( mmmrrr != MMM_ImmediateData && "immediate data should not be allowed here" );
-			decode_dddddd_write( dddddd, TReg24(memRead( MemArea_P, ea )) );
+			const auto m = readMem<Movem_ea>(op, MemArea_P);
+			decode_dddddd_write( dddddd, TReg24(m));
 		}
 		else
 		{
+			const TWord ea = effectiveAddress<Movem_ea>(op);
 			memWrite( MemArea_P, ea, decode_dddddd_read(dddddd).toWord() );
 		}
 	}
