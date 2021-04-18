@@ -233,7 +233,7 @@ namespace dsp56k
 		OpcodeInfo(Jsset_S,			"0000101111DDDDDD001bbbbb",	"JSSET #n,S,xxxx", AbsoluteAddressExt),
 
 		OpcodeInfo(Lra_Rn,			"0000010011000RRR000ddddd",	"LRA Rn,D"),
-		OpcodeInfo(Lra_xxxx,		"0000010001oooooo010ddddd",	"LRA xxxx,D", EffectiveAddress),
+		OpcodeInfo(Lra_xxxx,		"0000010001oooooo010ddddd",	"LRA xxxx,D", PCRelativeAddressExt),
 
 		OpcodeInfo(Lsl_D,			"????????????????0011D011",	"LSL D"),
 		OpcodeInfo(Lsl_ii,			"000011000001111010iiiiiD",	"LSL #ii,D"),
@@ -267,7 +267,7 @@ namespace dsp56k
 		// X Memory Data Move
 		OpcodeInfo(Movex_ea,		"01dd0dddW1MMMRRR????????",	"(...) X:ea,D / (...) S,X:ea / (...) #xxxxxx,D", EAandID),
 		OpcodeInfo(Movex_aa,		"01dd0dddW0aaaaaa????????",	"(...) X:aa,D / (...) S,X:aa"),
-		OpcodeInfo(Movex_Rnxxxx,	"0000101001110RRR1WDDDDDD",	"MOVE X:(Rn + xxxx),D / MOVE S,X:(Rn + xxxx)", ImmediateData),											// ImData = Rn Relative Displacement
+		OpcodeInfo(Movex_Rnxxxx,	"0000101001110RRR1WDDDDDD",	"MOVE X:(Rn + xxxx),D / MOVE S,X:(Rn + xxxx)", PCRelativeAddressExt),									// ImData = Rn Relative Displacement
 		OpcodeInfo(Movex_Rnxxx,		"0000001aaaaaaRRR1a0WDDDD",	"MOVE X:(Rn + xxx),D / MOVE S,X:(Rn + xxx)"),
 		OpcodeInfo(Movexr_ea,		"0001ffdFW0MMMRRR????????",	"(...) X:ea,D1 S2,D2 / (...) S1,X:ea S2, D2 / (...) #xxxx,D1 S2,D2", EAandID),							// X Memory and Register Data Move
 		OpcodeInfo(Movexr_A,		"0000100d00MMMRRR????????",	"(...) A -> X:ea X0 -> A / (...) B -> X:ea X0 -> B", EAandID),
@@ -275,7 +275,7 @@ namespace dsp56k
 		// Y Memory Data Move
 		OpcodeInfo(Movey_ea,		"01dd1dddW1MMMRRR????????",	"(...) Y:ea,D / (...) S,Y:ea / (...) #xxxx,D", EAandID),
 		OpcodeInfo(Movey_aa,		"01dd1dddW0aaaaaa????????",	"(...) Y:aa,D / (...) S,Y:aa"),
-		OpcodeInfo(Movey_Rnxxxx,	"0000101101110RRR1WDDDDDD",	"MOVE Y:(Rn + xxxx),D / MOVE D,Y:(Rn + xxxx)", ImmediateData),											// ImData = Rn Relative Displacement
+		OpcodeInfo(Movey_Rnxxxx,	"0000101101110RRR1WDDDDDD",	"MOVE Y:(Rn + xxxx),D / MOVE D,Y:(Rn + xxxx)", PCRelativeAddressExt),									// Rn Relative Displacement
 		OpcodeInfo(Movey_Rnxxx,		"0000001aaaaaaRRR1a1WDDDD",	"MOVE Y:(Rn + xxx),D / MOVE D,Y:(Rn + xxx)"),
 		OpcodeInfo(Moveyr_ea,		"0001deffW1MMMRRR????????",	"(...) S1,D1 Y:ea,D2 / (...) S1,D1 S2,Y:ea / (...) S1,D1 #xxxx,D2", EAandID),							// Register and Y Memory Data Move
 		OpcodeInfo(Moveyr_A,		"0000100d10MMMRRR????????",	"(...) Y0 -> A A -> Y:ea / (...) Y0 -> B B -> Y:ea", EAandID),
