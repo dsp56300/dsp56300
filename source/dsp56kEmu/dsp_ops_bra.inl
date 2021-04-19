@@ -100,11 +100,11 @@ namespace dsp56k
 	inline void DSP::op_Bsclr_S(const TWord op)		{ braIfBitTestDDDDDD<Brclr_S, Bsr, BitClear>(op); }
 
 	// Bsset
-	inline void DSP::op_Bsset_ea(const TWord op)	{ braIfBitTestMem<Brset_ea, Bsr, BitSet>(op); }
-	inline void DSP::op_Bsset_aa(const TWord op)	{ braIfBitTestMem<Brset_aa, Bsr, BitSet>(op); }
-	inline void DSP::op_Bsset_pp(const TWord op)	{ braIfBitTestMem<Brset_pp, Bsr, BitSet>(op); }
-	inline void DSP::op_Bsset_qq(const TWord op)	{ braIfBitTestMem<Brset_qq, Bsr, BitSet>(op); }
-	inline void DSP::op_Bsset_S(const TWord op)		{ braIfBitTestDDDDDD<Brset_S, Bsr, BitSet>(op); }
+	inline void DSP::op_Bsset_ea(const TWord op)	{ braIfBitTestMem<Bsset_ea, Bsr, BitSet>(op); }
+	inline void DSP::op_Bsset_aa(const TWord op)	{ braIfBitTestMem<Bsset_aa, Bsr, BitSet>(op); }
+	inline void DSP::op_Bsset_pp(const TWord op)	{ braIfBitTestMem<Bsset_pp, Bsr, BitSet>(op); }
+	inline void DSP::op_Bsset_qq(const TWord op)	{ braIfBitTestMem<Bsset_qq, Bsr, BitSet>(op); }
+	inline void DSP::op_Bsset_S(const TWord op)		{ braIfBitTestDDDDDD<Bsset_S, Bsr, BitSet>(op); }
 
 	// BScc
 	inline void DSP::op_BScc_xxxx(const TWord op)
