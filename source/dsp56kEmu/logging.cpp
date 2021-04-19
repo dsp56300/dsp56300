@@ -50,6 +50,8 @@ namespace Logging
 	
 	void g_logfWin32( const std::string& _s )
 	{
+		g_logWin32(_s);
+
 		{
 			Guard g(g_logMutex);
 			g_pendingLogs.push_back(_s);
