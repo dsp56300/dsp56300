@@ -675,7 +675,8 @@ namespace dsp56k
  			sr_toggle( SR_C, bittest(_ab,55) );
  		}
 
-		void	sr_c_update_arithmetic( const TReg56& _old, const TReg56& _new )
+		template<typename T>
+		void	sr_c_update_arithmetic( const T& _old, const T& _new )
 		{
 			sr_toggle( SR_C, bittest(_old,55) != bittest(_new,55) );
 		}

@@ -137,6 +137,16 @@ namespace dsp56k
 		execOpcode(0x200014);
 		assert(dsp.reg.a.var == 0xffffffffffffff);
 		assert(dsp.sr_test(SR_C));
+		assert(!dsp.sr_test(SR_V));
+
+		dsp.reg.a.var = 0x80000000000000;
+		dsp.reg.b.var = 0x00000000000001;
+
+		// sub b,a
+		execOpcode(0x200014);
+		assert(dsp.reg.a.var == 0x7fffffffffffff);
+		assert(dsp.sr_test(SR_C));
+		assert(dsp.sr_test(SR_V));
 	}
 
 	void UnitTests::testAdd(int64_t a, int y0, int64_t expectedResult)
