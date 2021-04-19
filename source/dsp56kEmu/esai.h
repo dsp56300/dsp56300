@@ -292,7 +292,7 @@ namespace dsp56k
 			TWord pctl = _val;
 			int pd = ((pctl>>20) & 15) + 1;
 			int mf = (pctl & 0xfff) + 1;
-			m_cyclesPerSample = mf * 256 / pd;	// The ratio between external clock and sample period simplifies to this.
+			m_cyclesPerSample = mf * 128 / pd;	// The ratio between external clock and sample period simplifies to this.
 			// A more full expression would be m_cyclesPerSample = dsp_frequency / samplerate, where
 			// dsp_frequency = m_extClock * mf / pd    and   samplerate = m_extClock/256
 
