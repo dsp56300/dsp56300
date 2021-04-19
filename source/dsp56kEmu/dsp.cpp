@@ -637,7 +637,7 @@ namespace dsp56k
 	//
 	dsp56k::TWord DSP::decode_MMMRRR_read( TWord _mmmrrr )
 	{
-		switch( _mmmrrr & 0x3f )
+		switch( _mmmrrr)
 		{
 		case MMM_AbsAddr:		return fetchOpWordB();		// absolute address
 		case MMM_ImmediateData:	return fetchOpWordB();		// immediate data
