@@ -15,6 +15,7 @@ namespace dsp56k
 		testCCCC();
 		testMultiply();
 		testAdd();
+		testSub();
 		testCMP();
 		testASL();
 		testASR();
@@ -124,6 +125,17 @@ namespace dsp56k
 		// add b,a
 		execOpcode(0x200010);
 		assert(dsp.reg.a.var == 0);
+		assert(dsp.sr_test(SR_C));
+	}
+
+	void UnitTests::testSub()
+	{
+		dsp.reg.a.var = 0x00000000000001;
+		dsp.reg.b.var = 0x00000000000002;
+
+		// sub b,a
+		execOpcode(0x200014);
+		assert(dsp.reg.a.var == 0xffffffffffffff);
 		assert(dsp.sr_test(SR_C));
 	}
 

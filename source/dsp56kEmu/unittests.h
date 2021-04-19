@@ -16,6 +16,7 @@ namespace dsp56k
 		void testMultiply(int x0, int y0, int64_t expectedResult, TWord opcode);
 		void testMoveImmediateToRegister();
 		void testAdd();
+		void testSub();
 		void testAdd(int64_t a, int y0, int64_t expectedResult);
 		void testCCCC();
 		void testCCCC(int64_t _val, int64_t _compareValue, bool _lt, bool _le, bool _eq, bool _ge, bool _gt, bool _neq);

@@ -1381,26 +1381,25 @@ namespace dsp56k
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
-		const TReg56 old = d;
+		const uint64_t d64 = d.var;
+		const uint64_t res = d64 - _val.var;
 
-		const TInt64 d64 = d.signextend<TInt64>();
-
-		const TInt64 res = d64 - _val.signextend<TInt64>();
+		const auto carry = res > d64;
 
 		d.var = res;
 		d.doMasking();
 
 		// S L E U N Z V C
 
+		sr_toggle(SR_C, carry);
+		sr_toggle(SR_V, carry);
+
 		sr_s_update();
 		sr_e_update(d);
 		sr_u_update(d);
 		sr_n_update(d);
 		sr_z_update(d);
-		sr_v_update(res,d);
 		sr_l_update_by_v();
-		sr_c_update_arithmetic( old, d );
-	//	sr_c_update_logical( d );
 	}
 
 	// _____________________________________________________________________________
