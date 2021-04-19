@@ -921,7 +921,6 @@ namespace dsp56k
 	inline void DSP::op_Movexr_ea(const TWord op)
 	{
 		const TWord F		= getFieldValue<Movexr_ea,Field_F>(op);	// true:Y1, false:Y0
-		const TWord mmmrrr	= getFieldValue<Movexr_ea,Field_MMM, Field_RRR>(op);
 		const TWord ff		= getFieldValue<Movexr_ea,Field_ff>(op);
 		const TWord write	= getFieldValue<Movexr_ea,Field_W>(op);
 		const TWord d		= getFieldValue<Movexr_ea,Field_d>(op);
@@ -931,18 +930,16 @@ namespace dsp56k
 		if(F)		y1(ab);
 		else		y0(ab);
 		
-		const auto ea = decode_MMMRRR_read(mmmrrr);
-
 		// S1/D1 move
 		if( write )
 		{
-			if( mmmrrr == MMM_ImmediateData )
-				decode_ee_write( ff, TReg24(ea) );
-			else
-				decode_ee_write( ff, TReg24(memRead(MemArea_X, ea)) );
+			const auto m = readMem<Movexr_ea>(op, MemArea_X);
+
+			decode_ee_write( ff, TReg24(m) );
 		}
 		else
 		{
+			const auto ea = effectiveAddress<Movexr_ea>(op);
 			memWrite( MemArea_X, ea, decode_ff_read(ff).toWord());
 		}
 	}
@@ -965,7 +962,6 @@ namespace dsp56k
 	inline void DSP::op_Moveyr_ea(const TWord op)
 	{
 		const bool e		= getFieldValue<Moveyr_ea,Field_e>(op);	// true:X1, false:X0
-		const TWord mmmrrr	= getFieldValue<Moveyr_ea,Field_MMM, Field_RRR>(op);
 		const TWord ff		= getFieldValue<Moveyr_ea,Field_ff>(op);
 		const bool write	= getFieldValue<Moveyr_ea,Field_W>(op);
 		const bool d		= getFieldValue<Moveyr_ea,Field_d>(op);
@@ -974,19 +970,16 @@ namespace dsp56k
 		const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
 		if( e )		x1(ab);
 		else		x0(ab);
-
-		const TWord ea = decode_MMMRRR_read(mmmrrr);
-		
+	
 		// S1/D1 move
 		if( write )
 		{
-			if( mmmrrr == MMM_ImmediateData )
-				decode_ff_write( ff, TReg24(ea) );
-			else
-				decode_ff_write( ff, TReg24(memRead(MemArea_Y, ea)) );
+			const auto m = readMem<Moveyr_ea>(op, MemArea_Y);
+			decode_ff_write( ff, TReg24(m) );
 		}
 		else
 		{
+			const TWord ea = effectiveAddress<Moveyr_ea>(op);
 			memWrite( MemArea_Y, ea, decode_ff_read( ff ).toWord() );
 		}
 	}
@@ -1074,41 +1067,41 @@ namespace dsp56k
 	inline void DSP::op_Movec_ea(const TWord op)
 	{
 		const TWord ddddd	= getFieldValue<Movec_ea,Field_DDDDD>(op);
-		const TWord mmmrrr	= getFieldValue<Movec_ea,Field_MMM, Field_RRR>(op);
 		const auto write	= getFieldValue<Movec_ea,Field_W>(op);
 
-		const TWord addr = decode_MMMRRR_read( mmmrrr );
-
-		const EMemArea area = getFieldValueMemArea<Movec_ea>(op);
-			
 		if( write )
 		{
-			if( mmmrrr == MMM_ImmediateData )	decode_ddddd_pcr_write( ddddd, TReg24(addr) );		
-			else								decode_ddddd_pcr_write( ddddd, TReg24(memRead( area, addr )) );
+			const auto m = readMem<Movec_ea>(op);
+
+			decode_ddddd_pcr_write( ddddd, TReg24(m) );
 		}
 		else
 		{
-			const TReg24 regVal = decode_ddddd_pcr_read(ddddd);
-			assert( (mmmrrr != MMM_ImmediateData) && "register move to immediate data? not possible" );
+			const auto addr = effectiveAddress<Movec_ea>(op);
+			const EMemArea area = getFieldValueMemArea<Movec_ea>(op);
+
+			const auto regVal = decode_ddddd_pcr_read(ddddd);
+
 			memWrite( area, addr, regVal.toWord() );
 		}
 	}
 	inline void DSP::op_Movec_aa(const TWord op)
 	{
 		const TWord ddddd	= getFieldValue<Movec_aa,Field_DDDDD>(op);
-		const TWord aaaaaa	= getFieldValue<Movec_aa,Field_aaaaaa>(op);
 		const auto write	= getFieldValue<Movec_aa,Field_W>(op);
-
-		const TWord addr = aaaaaa;
-
-		const EMemArea area = getFieldValueMemArea<Movec_aa>(op);
-			
+		
 		if( write )
 		{
-			decode_ddddd_pcr_write( ddddd, TReg24(memRead( area, addr )) );
+			const auto m = readMem<Movec_aa>(op);
+			decode_ddddd_pcr_write( ddddd, TReg24(m) );
 		}
 		else
 		{
+			const TWord aaaaaa	= getFieldValue<Movec_aa,Field_aaaaaa>(op);
+			const TWord addr = aaaaaa;
+
+			const EMemArea area = getFieldValueMemArea<Movec_aa>(op);
+
 			memWrite( area, addr, decode_ddddd_pcr_read(ddddd).toWord() );
 		}		
 	}
