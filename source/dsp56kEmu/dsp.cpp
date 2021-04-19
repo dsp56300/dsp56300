@@ -1453,7 +1453,7 @@ namespace dsp56k
 		overflowMaskI >>= _shiftAmount;
 		uint64_t overflowMaskU = overflowMaskI;
 		overflowMaskU >>= 8;
-		const uint64_t v = dSrc.var & overflowMaskU;
+		const uint64_t v = d64 & overflowMaskU;
 		const bool isOverflow = v != overflowMaskU && v != 0;
 
 		// S L E U N Z V C

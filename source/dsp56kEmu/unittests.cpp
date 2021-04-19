@@ -58,6 +58,13 @@ namespace dsp56k
 		dsp.reg.b.var = 0x000599f2204000;
 		execOpcode(0x20003a);
 		assert(dsp.reg.b.var == 0x000b33e4408000);
+
+		// asl #28,a,a
+		dsp.reg.a.var = 0xf4;
+		dsp.reg.sr.var = 0x0800d0;
+		execOpcode(0x0c1d50);
+		assert(dsp.reg.a.var == 0x00f40000000000);
+		assert(dsp.reg.sr.var == 0x0800f0);
 	}
 
 	void UnitTests::testASR()
