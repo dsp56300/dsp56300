@@ -29,6 +29,9 @@ namespace dsp56k
 {
 	constexpr bool g_traceSupported = false;
 
+	constexpr int64_t g_alu_max_56 =  0x7FFFFFFFFFFFFF;
+	constexpr int64_t g_alu_min_56 = -0x80000000000000;
+
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
 	constexpr TInstructionFunc g_jumpTable[InstructionCount] =
@@ -1323,8 +1326,6 @@ namespace dsp56k
 		d.doMasking();
 
 		const bool carry = res > 0xffffffffffffff;
-		sr_toggle(SR_C, carry);
-		sr_toggle(SR_V, carry);
 
 		// S L E U N Z V C
 
@@ -1334,6 +1335,8 @@ namespace dsp56k
 		sr_n_update(d);
 		sr_z_update(d);
 		sr_l_update_by_v();
+		sr_toggle(SR_C, carry);
+		sr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
 	//	dumpCCCC();
 	}
@@ -1367,7 +1370,7 @@ namespace dsp56k
 		sr_u_update(d);
 		sr_n_update(d);
 		sr_z_update(d);
-		sr_v_update(res,d);
+		sr_clear(SR_V);		// as cmp is identical to sub, the same for the V bit applies (see sub for details)
 		sr_l_update_by_v();
 		sr_c_update_arithmetic(oldD,d);
 
@@ -1383,16 +1386,12 @@ namespace dsp56k
 		const auto d64 = d.signextend<int64_t>();
 		const auto res = d64 - _val.signextend<int64_t>();
 
-		const auto overflow = res > 0x7FFFFFFFFFFFFF || res < -0x80000000000000;
-
 		d.var = res;
 		d.doMasking();
 
 		// S L E U N Z V C
-
 		sr_c_update_arithmetic(d64, res);
-
-		sr_toggle(SR_V, overflow);
+		sr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
 		sr_s_update();
 		sr_e_update(d);
@@ -1572,7 +1571,7 @@ namespace dsp56k
 		sr_u_update(d);
 		sr_n_update(d);
 		sr_z_update(d);
-		sr_v_update(res, d);
+		sr_clear(SR_V);		// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 		sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);
 	}
