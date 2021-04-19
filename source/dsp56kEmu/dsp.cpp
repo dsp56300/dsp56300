@@ -1351,9 +1351,9 @@ namespace dsp56k
 
 		const TReg56 oldD = d;
 
-		TInt64 d64 = d.signextend<TInt64>();
+		auto d64 = d.signextend<int64_t>();
 
-		TInt64 val = _val.signextend<TInt64>();
+		auto val = _val.signextend<int64_t>();
 
 		if( _magnitude )
 		{
@@ -1361,7 +1361,9 @@ namespace dsp56k
 			val = val < 0 ? -val : val;
 		}
 
-		const TInt64 res = d64 - val;
+		const auto res = static_cast<uint64_t>(d64) - static_cast<uint64_t>(val);
+
+		const auto carry = res > 0xffffffffffffff;
 
 		d.var = res;
 		d.doMasking();
@@ -1373,7 +1375,7 @@ namespace dsp56k
 		sr_z_update(d);
 		sr_clear(SR_V);		// as cmp is identical to sub, the same for the V bit applies (see sub for details)
 		sr_l_update_by_v();
-		sr_c_update_arithmetic(oldD,d);
+		sr_toggle(SR_C, carry);
 
 		d = oldD;
 	}
@@ -1384,14 +1386,16 @@ namespace dsp56k
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
-		const auto d64 = d.signextend<int64_t>();
-		const auto res = d64 - _val.signextend<int64_t>();
+		const uint64_t d64 = d.var;
+		const uint64_t res = d64 - _val.var;
+
+		const auto carry = res > 0xffffffffffffff;
 
 		d.var = res;
 		d.doMasking();
 
 		// S L E U N Z V C
-		sr_c_update_arithmetic(d64, res);
+		sr_toggle(SR_C, carry);
 		sr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
 		sr_s_update();

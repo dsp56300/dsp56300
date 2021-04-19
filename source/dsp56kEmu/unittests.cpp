@@ -153,7 +153,7 @@ namespace dsp56k
 		// sub b,a
 		execOpcode(0x200014);
 		assert(dsp.reg.a.var == 0x7fffffffffffff);
-		assert(dsp.sr_test(SR_C));
+		assert(!dsp.sr_test(SR_C));
 		assert(!dsp.sr_test(SR_V));
 	}
 
@@ -207,6 +207,14 @@ namespace dsp56k
 
 		assert(dsp.sr_test(SR_Z));
 		assert(!dsp.sr_test(static_cast<CCRMask>(SR_N | SR_E | SR_V | SR_C)));
+
+		dsp.x0(0xf00000);
+		dsp.reg.a.var = 0xfff40000000000;
+		dsp.reg.sr.var = 0x0800d8;
+
+		// cmp x0,a
+		execOpcode(0x200045);
+		assert(dsp.reg.sr.var == 0x0800d0);
 	}
 
 	void UnitTests::testMAC()
