@@ -1216,10 +1216,11 @@ namespace dsp56k
 		pcCurrentInstruction = reg.pc.var;
 		const auto op = fetchPC();
 
+		--reg.lc.var;
 		execOp(op);
 		// TODO: remember function pointer and call directly
 
-		while( reg.lc.var > 1 )
+		while( reg.lc.var > 0 )
 		{
 			--reg.lc.var;
 			execOp(op);
