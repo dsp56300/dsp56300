@@ -25,6 +25,7 @@ namespace dsp56k
 		testNOT();
 		testEXTRACTU();
 		testEXTRACTU_CO();
+		testMPY();
 
 //		testDisassembler();		// will take a few minutes in debug, so commented out for now
 	}
@@ -292,6 +293,20 @@ namespace dsp56k
 		execOpcode(0x0c1890, 0x00C028);
 
 		assert(dsp.reg.a.var == 0x444);
+	}
+
+	void UnitTests::testMPY()
+	{
+		dsp.reg.a.var = 0x00400000000000;
+		dsp.reg.b.var = 0x0003a400000000;
+		dsp.reg.x.var = 0x00000506c000;
+		dsp.reg.y.var = 0x000400000400;
+		dsp.reg.sr.var = 0x0800c9;
+
+		// mpy y0,x0,a
+		execOpcode(0x2000d0);
+		assert(dsp.reg.a.var == 0x00000036000000);
+		assert(dsp.reg.sr.var == 0x0800d1);
 	}
 
 	void UnitTests::testDisassembler()

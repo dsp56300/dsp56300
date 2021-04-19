@@ -27,6 +27,7 @@ namespace dsp56k
 		void testNOT();
 		void testEXTRACTU();
 		void testEXTRACTU_CO();
+		void testMPY();
 
 		void testDisassembler();
 		
