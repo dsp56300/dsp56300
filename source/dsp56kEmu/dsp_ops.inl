@@ -546,6 +546,13 @@ namespace dsp56k
 		TReg56& dDst = abDst ? reg.b : reg.a;
 		const auto mask = 0xFFFFFFFFFFFFFF >> (56 - width);
 		dDst.var = (dSrc.var >> offset) & mask;
+
+		sr_clear(SR_C);
+		sr_clear(SR_V);
+		sr_u_update(dDst);
+		sr_e_update(dDst);
+		sr_n_update(dDst);
+		sr_z_update(dDst);
 	}
 	inline void DSP::op_Extractu_CoS2(const TWord op)  // 00001100 00011000 100s000D
 	{
@@ -561,6 +568,13 @@ namespace dsp56k
 		TReg56& dDst = abDst ? reg.b : reg.a;
 		const auto mask = 0xFFFFFFFFFFFFFF >> (56 - width);
 		dDst.var = (dSrc.var >> offset) & mask;
+
+		sr_clear(SR_C);
+		sr_clear(SR_V);
+		sr_u_update(dDst);
+		sr_e_update(dDst);
+		sr_n_update(dDst);
+		sr_z_update(dDst);
 	}
 	inline void DSP::op_Ifcc(const TWord op)
 	{

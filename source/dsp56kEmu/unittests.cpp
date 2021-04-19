@@ -313,6 +313,16 @@ namespace dsp56k
 		execOpcode(0x0c1a8d);
 
 		assert(dsp.reg.b.var == 0xf);
+
+		dsp.reg.a.var = 0;
+		dsp.reg.b.var = 0xfff47555000000;
+		dsp.reg.sr.var = 0x0800d9;
+
+		// extractu $8028,b,a
+		execOpcode(0x0c1890, 0x008028);
+
+		assert(dsp.reg.a.var == 0xf4);
+		assert(dsp.reg.sr.var == 0x0800d0);
 	}
 
 	void UnitTests::testEXTRACTU_CO()
