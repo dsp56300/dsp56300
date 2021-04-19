@@ -652,9 +652,9 @@ namespace dsp56k
 
 		void	sr_u_update				( const TReg56& _ab )
 		{
-			if( sr_test( SR_S0 ) )			sr_toggle( SR_U, bittest( _ab, 48 ) != bittest( _ab, 47 ) );
-			else if( sr_test( SR_S1 ) )		sr_toggle( SR_U, bittest( _ab, 46 ) != bittest( _ab, 45 ) );
-			else							sr_toggle( SR_U, bittest( _ab, 47 ) != bittest( _ab, 46 ) );
+			if( sr_test( SR_S0 ) )			sr_toggle( SR_U, bittest( _ab, 48 ) == bittest( _ab, 47 ) );
+			else if( sr_test( SR_S1 ) )		sr_toggle( SR_U, bittest( _ab, 46 ) == bittest( _ab, 45 ) );
+			else							sr_toggle( SR_U, bittest( _ab, 47 ) == bittest( _ab, 46 ) );
 		}
 
 		void	sr_n_update( const TReg56& _ab )
