@@ -1197,6 +1197,25 @@ namespace dsp56k
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
 
+		// Memory Write
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type* = nullptr>
+		void writeMem(TWord op, TWord value);
+
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr>
+		void writeMem(TWord op, EMemArea area, TWord value);
+
+		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type* = nullptr>
+		void writeMem(TWord op, EMemArea area, TWord value) const;
+
+		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaa>()>::type* = nullptr>
+		void writeMem(TWord op, EMemArea area, TWord value) const;
+
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_S>()>::type* = nullptr>
+		void writeMem(TWord op, TWord value) const;
+
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void writeMem(TWord op, TWord value) const;
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void writeMem(TWord op, TWord value) const;
+
 		// bit manipulation
 		template <Instruction Inst> TWord getBit(TWord op) const
 		{

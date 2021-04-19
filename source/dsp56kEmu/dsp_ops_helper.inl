@@ -100,6 +100,51 @@ namespace dsp56k
 		return memReadPeriphFFFFC0(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_pppppp>(op));
 	}
 
+	// Memory Write	
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type*> void DSP::writeMem(const TWord op, const TWord value)
+	{
+		return writeMem<Inst>(op, getFieldValueMemArea<Inst>(op), value);
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
+	{
+		const TWord mmmrrr = getFieldValue<Inst, Field_MMM, Field_RRR>(op);
+
+		assert(mmmrrr != MMM_ImmediateData && "can't write to immediate data");
+
+		const auto ea = decode_MMMRRR_read(mmmrrr);
+
+		// TODO: I don't like this. There are special instructions to access peripherals, but the decoding allows to access peripherals with regular addressing.
+		if(ea >= XIO_Reserved_High_First)
+			memWritePeriph(area, ea, value);
+		memWrite(area, ea, value);
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value) const
+	{
+		memWrite(area, effectiveAddress<Inst>(op), value);
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaa>()>::type*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value) const
+	{
+		memWrite(area, getFieldValue<Inst, Field_aaaaaa>(op), value);
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_S>()>::type*> void DSP::writeMem(const TWord op, const TWord value) const
+	{
+		writeMem<Inst>(getFieldValue<Inst, Field_aaaaaa>(op), getFieldValueMemArea<Inst>(op), value);
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> void DSP::writeMem(const TWord op, const TWord value) const
+	{
+		memWritePeriphFFFF80(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_qqqqqq>(op), value);
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_pppppp, Field_S>()>::type*> void DSP::writeMem(const TWord op, const TWord value) const
+	{
+		memWritePeriphFFFFC0(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_pppppp>(op), value);
+	}
+
 	// Bit Manipulation & Access
 	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type*> bool DSP::bitTestMemory(TWord op)
 	{
