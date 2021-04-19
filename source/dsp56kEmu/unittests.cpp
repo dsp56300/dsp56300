@@ -117,6 +117,14 @@ namespace dsp56k
 		testAdd(0, 0, 0);
 		testAdd(0x00000000123456, 0x000abc, 0x00000abc123456);
 		testAdd(0x00000000123456, 0xabcdef, 0xffabcdef123456);	// TODO: test CCR
+
+		dsp.reg.a.var = 0x0001e000000000;
+		dsp.reg.b.var = 0xfffe2000000000;
+
+		// add b,a
+		execOpcode(0x200010);
+		assert(dsp.reg.a.var == 0);
+		assert(dsp.sr_test(SR_C));
 	}
 
 	void UnitTests::testAdd(int64_t a, int y0, int64_t expectedResult)
