@@ -27,8 +27,9 @@ namespace dsp56k
 		for (int i=0;i<4;i++) if (inputEnabled(i)) m_rx[i]=readRXimpl(i);
 		if (m_sr.test(M_TFS)) m_sr.clear(M_TFS); else m_sr.set(M_TFS);
 
-		if (m_sr.test(M_TUE) && m_tcr.test(M_TEIE)) m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
-		else if (m_tcr.test(M_TIE))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data);
+//		if (m_sr.test(M_TUE) && m_tcr.test(M_TEIE)) m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
+//		else
+		if (m_tcr.test(M_TIE))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data);
 		if (m_sr.test(M_TFS) && m_tcr.test(M_TLIE))  m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
 
 		m_sr.set(M_TUE, M_TDE);
