@@ -233,7 +233,7 @@ namespace dsp56k
 			}
 
 			std::string assembly;
-			auto usedOps = disasm.disassemble(assembly, opA, opB, 0,0);
+			auto usedOps = disasm.disassemble(assembly, opA, opB, 0, 0, i);
 
 			if(usedOps == 0)
 			{

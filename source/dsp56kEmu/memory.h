@@ -109,6 +109,7 @@ namespace dsp56k
 
 		void				setSymbol			(char _area, TWord _address, const std::string& _name);
 		const std::string&	getSymbol			(EMemArea _memArea, TWord addr);
+		const std::map<char, std::map<TWord, SSymbol>>& getSymbols() const { return m_symbols; }
 
 		size_t				size				() const	{ return m_size; }
 

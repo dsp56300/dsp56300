@@ -2166,7 +2166,7 @@ namespace dsp56k
 	const char* DSP::getASM(const TWord _wordA, const TWord _wordB)
 	{
 	#ifdef _DEBUG
-		m_disasm.disassemble(m_asm, _wordA, _wordB, reg.sr.var, reg.omr.var);
+		m_disasm.disassemble(m_asm, _wordA, _wordB, reg.sr.var, reg.omr.var, pcCurrentInstruction);
 	#endif
 		return m_asm.c_str();
 	}
@@ -2513,7 +2513,7 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 		mem.get2(MemArea_P, pcCurrentInstruction, opA, opB);
 
 		std::string op;
-		m_disasm.disassemble(op, opA, opB, 0, 0);
+		m_disasm.disassemble(op, opA, opB, 0, 0, pcCurrentInstruction);
 
 		_ss << "Current Instruction: " << op << std::endl;
 		_ss << "Current Opcode: $" << HEX(opA) << " ($" << opB << ")" << std::endl;
@@ -2529,7 +2529,7 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 			_ss << '$' << HEX(pc) << ":$" << HEX(sr) << " - pc:$" << HEX(pc) << " - ";
 
 			mem.get2(MemArea_P, pc, opA, opB);
-			m_disasm.disassemble(op, opA, opB, 0, 0);
+			m_disasm.disassemble(op, opA, opB, 0, 0, pc);
 			_ss << op << std::endl;
 			--s;
 		}

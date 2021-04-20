@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "logging.h"
+#include "memory.h"
 #include "peripherals.h"
 #include "utils.h"
 
@@ -142,23 +143,36 @@ namespace dsp56k
 		std::stringstream ss; ss << '$' << std::hex << _data; return std::string(ss.str());
 	}
 
-	std::string immediate(TWord _data)
+	std::string Disassembler::immediate(const char* _prefix, TWord _data)
 	{
-		return std::string("#") + hex(_data);
+		std::string sym;
+		if(getSymbol(Immediate, _data, sym))
+			return sym;
+
+		return std::string(_prefix) + hex(_data);
 	}
 
-	std::string immediateShort(TWord _data)
+	std::string Disassembler::immediate(TWord _data)
 	{
-		return std::string("#<") + hex(_data);
+		return immediate("#", _data);
 	}
 
-	std::string immediateLong(TWord _data)
+	std::string Disassembler::immediateShort(TWord _data)
 	{
-		return std::string("#>") + hex(_data);
+		return immediate("#<", _data);
 	}
 
-	std::string relativeAddr(int _data, bool _long = false)
+	std::string Disassembler::immediateLong(TWord _data)
 	{
+		return immediate("#>", _data);
+	}
+
+	std::string Disassembler::relativeAddr(EMemArea _area, int _data, bool _long) const
+	{
+		std::string sym;
+		if(getSymbol(_area, m_pc + _data, sym))
+			return sym;
+
 		const auto a = signextend<int,24>(_data);
 		char temp[3] = {'>', '*', 0};
 		temp[0] = _long ? '<' : '>';
@@ -169,19 +183,19 @@ namespace dsp56k
 		return std::string(temp) + (a >= 0 ? "+" : "-") + hex(std::abs(_data));
 	}
 
-	std::string relativeLongAddr(int _data)
+	std::string Disassembler::relativeLongAddr(EMemArea _area, int _data) const
 	{
-		return relativeAddr(_data, true);
+		return relativeAddr(_area, _data, true);
 	}
 
-	std::string absAddr(int _data, bool _long = false)
+	std::string Disassembler::absAddr(EMemArea _area, int _data, bool _long) const
 	{
 		if(!_long)
 			return hex(_data);
 		return ">" + hex(_data);
 	}
 
-	std::string absShortAddr(int _data)
+	std::string Disassembler::absShortAddr(int _data)
 	{
 		return "<" + hex(_data);
 	}
@@ -251,29 +265,47 @@ namespace dsp56k
 		return nullptr;
 	}
 
-	const char* memArea(TWord _area)
+	EMemArea memArea(TWord _area)
 	{
 		if(_area > 1)
-			return "p:";
-		return _area ? "y:" : "x:";
+			return MemArea_P;
+		return _area ? MemArea_Y : MemArea_X;
+	}
+
+	const char* memArea(EMemArea _area)
+	{
+		switch (_area)
+		{
+		case MemArea_X: return "x:";
+		case MemArea_Y: return "y:";
+		case MemArea_P: return "p:";
+		default:		return "?:";
+		}
 	}
 
 	std::string memory(TWord S, TWord a)
 	{
-		return std::string(memArea(S)) + '<' + hex(a);
+		const auto area = memArea(S);
+		return std::string(memArea(area)) + '<' + hex(a);
 	}
 
-	std::string peripheral(TWord S, TWord a, TWord _root)
+	std::string Disassembler::peripheral(TWord S, TWord a, TWord _root) const
 	{
-		return std::string(memArea(S)) + "<<" + hex(_root + a);
+		const auto area = memArea(S);
+
+		std::string sym;
+		if(getSymbol(area, a, sym))
+			return sym;
+
+		return std::string(memArea(area)) + "<<" + hex(_root + a);
 	}
 
-	std::string peripheralQ(TWord S, TWord a)
+	std::string Disassembler::peripheralQ(TWord S, TWord a) const
 	{
 		return peripheral(S, a, 0xffff80);
 	}
 
-	std::string peripheralP(TWord S, TWord a)
+	std::string Disassembler::peripheralP(TWord S, TWord a) const
 	{
 		return peripheral(S, a, 0xffffc0);
 	}
@@ -288,7 +320,7 @@ namespace dsp56k
 			"(r%d)+"
 		};
 
-		const std::string area(_addMemSpace ? memArea(S) : "");
+		const std::string area(_addMemSpace ? memArea(memArea(S)) : "");
 
 		char temp[32];
 	
@@ -315,7 +347,7 @@ namespace dsp56k
 			"-(r%d)",
 		};
 
-		const std::string area(_addMemSpace ? memArea(S) : "");
+		const std::string area(_addMemSpace ? memArea(memArea(S)) : "");
 
 		char temp[32];
 	
@@ -325,7 +357,7 @@ namespace dsp56k
 			++m_extWordUsed;
 			if(opB >= XIO_Reserved_High_First)
 				return peripheral(S, opB, 0xffff80);
-			return area + absAddr(opB, _long);
+			return area + absAddr(memArea(S), opB, _long);
 		case 0x34:	// immediate data
 			++m_extWordUsed;
 			return immediateLong(opB);
@@ -342,7 +374,7 @@ namespace dsp56k
 		}
 	}
 
-	const char* condition(TWord _cccc)
+	const char* condition(const TWord _cccc)
 	{
 		return g_conditionCodes[_cccc];
 	}
@@ -833,7 +865,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto mr	= getFieldValue(inst, Field_MMM, Field_RRR, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << mmmrrr(mr, S, opB) << ',' << relativeAddr(opB);
+				m_ss << immediate(b) << ',' << mmmrrr(mr, S, opB) << ',' << relativeAddr(MemArea_P, opB);
 				return 2;
 			}
 		case Brclr_aa:
@@ -844,7 +876,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << memory(S, a) << ',' << relativeAddr(opB);
+				m_ss << immediate(b) << ',' << memory(S, a) << ',' << relativeAddr(MemArea_P, opB);
 				return 2;
 			}
 		case Brclr_pp:
@@ -855,7 +887,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto p	= getFieldValue(inst, Field_pppppp, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralP(S, p) << ',' << relativeAddr(opB);
+				m_ss << immediate(b) << ',' << peripheralP(S, p) << ',' << relativeAddr(MemArea_P, opB);
 				return 2;
 			}
 		case Brclr_qq:
@@ -866,7 +898,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto q	= getFieldValue(inst, Field_qqqqqq, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralQ(S, q) << ',' << relativeAddr(opB);
+				m_ss << immediate(b) << ',' << peripheralQ(S, q) << ',' << relativeAddr(MemArea_P, opB);
 				return 2;
 			}
 		case Brclr_S:
@@ -876,7 +908,7 @@ namespace dsp56k
 			{
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
-				m_ss << immediate(b) << ',' << decode_dddddd(d) << ',' << relativeAddr(opB);
+				m_ss << immediate(b) << ',' << decode_dddddd(d) << ',' << relativeAddr(MemArea_P, opB);
 				return 2;
 			}
 		case Andi:
@@ -909,7 +941,7 @@ namespace dsp56k
 		case BScc_xxxx:
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
-				m_ss << condition(cccc) << ' ' << relativeAddr(opB);
+				m_ss << condition(cccc) << ' ' << relativeAddr(MemArea_P, opB);
 			}
 			return 2;
 		case Bcc_xxx: 
@@ -917,7 +949,7 @@ namespace dsp56k
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
 				const auto a = signextend<int,9>(getFieldValue(inst, Field_aaaa, Field_aaaaa, op));
-				m_ss << condition(cccc) << ' ' << relativeLongAddr(a);
+				m_ss << condition(cccc) << ' ' << relativeLongAddr(MemArea_P, a);
 			}
 			return 1;
 		case Bcc_Rn: 
@@ -930,13 +962,13 @@ namespace dsp56k
 			return 1;
 		case Bra_xxxx: 
 		case Bsr_xxxx:
-			m_ss << relativeAddr(opB);
+			m_ss << relativeAddr(MemArea_P, opB);
 			return 2;
 		case Bra_xxx: 
 		case Bsr_xxx:
 			{
 				const auto a = signextend<int,9>(getFieldValue(inst, Field_aaaa, Field_aaaaa, op));
-				m_ss << relativeLongAddr(a);
+				m_ss << relativeLongAddr(MemArea_P, a);
 			}
 			return 1;
 		case Bra_Rn: 
@@ -994,62 +1026,62 @@ namespace dsp56k
 			{
 				const auto mr	= getFieldValue(inst, Field_MMM, Field_RRR, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << mmmrrr(mr, S, opB) << ',' << hex(opB + 1);
+				m_ss << mmmrrr(mr, S, opB) << ',' << hex(opB + 1);	// TODO: absolute address?!
 			}
 			return 2;
 		case Dor_ea:
 			{
 				const auto mr	= getFieldValue(inst, Field_MMM, Field_RRR, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << mmmrrr(mr, S, opB) << ',' << relativeAddr(opB + 1);
+				m_ss << mmmrrr(mr, S, opB) << ',' << relativeAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case Do_aa:
 			{
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << memory(S, a) << ',' << hex(opB + 1);
+				m_ss << memory(S, a) << ',' << hex(opB + 1);		// TODO: absolute adress?!
 			}
 			return 2;
 		case Dor_aa:
 			{
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << memory(S, a) << ',' << relativeAddr(opB + 1);
+				m_ss << memory(S, a) << ',' << relativeAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case Do_xxx: 
 			{
 				const auto a	= getFieldValue(inst, Field_hhhh, Field_iiiiiiii, op);
-				m_ss << immediateShort(a) << ',' << hex(opB + 1);
+				m_ss << immediateShort(a) << ',' << hex(opB + 1);		// TODO: absolute address
 			}
 			return 2;
 		case Dor_xxx:
 			{
 				const auto a	= getFieldValue(inst, Field_hhhh, Field_iiiiiiii, op);
-				m_ss << immediateShort(a) << ',' << relativeAddr(opB + 1);
+				m_ss << immediateShort(a) << ',' << relativeAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case Do_S: 
 			{
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
-				m_ss << decode_dddddd(d) << ',' << hex(opB + 1);
+				m_ss << decode_dddddd(d) << ',' << hex(opB + 1);		// TODO: absolute address
 			}
 			return 2;
 		case Dor_S:
 			{
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
-				m_ss << decode_dddddd(d) << ',' << relativeAddr(opB + 1);
+				m_ss << decode_dddddd(d) << ',' << relativeAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case DoForever:
 			{
-				m_ss << absAddr(opB + 1);
+				m_ss << absAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case DorForever:
 			{
-				m_ss << relativeAddr(opB + 1);
+				m_ss << relativeAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case Extract_S1S2:
@@ -1119,7 +1151,7 @@ namespace dsp56k
 				const auto b		= getFieldValue(inst, Field_bbbbb, op);
 				const auto mr		= getFieldValue(inst, Field_MMM, Field_RRR, op);
 				const auto S		= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << mmmrrr(mr, S, opB) << ',' << absAddr(opB);
+				m_ss << immediate(b) << ',' << mmmrrr(mr, S, opB) << ',' << absAddr(MemArea_P, opB);
 			}
 			return 2;
 		case Jclr_aa:
@@ -1130,7 +1162,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << memory(S, a) << ',' << absAddr(opB);
+				m_ss << immediate(b) << ',' << memory(S, a) << ',' << absAddr(MemArea_P, opB);
 			}
 			return 2;
 		case Jclr_pp:
@@ -1141,7 +1173,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto p	= getFieldValue(inst, Field_pppppp, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralP(S, p) << ',' << absAddr(opB);
+				m_ss << immediate(b) << ',' << peripheralP(S, p) << ',' << absAddr(MemArea_P, opB);
 			}
 			return 2;
 		case Jclr_qq:
@@ -1152,7 +1184,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto q	= getFieldValue(inst, Field_qqqqqq, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralQ(S, q) << ',' << absAddr(opB);
+				m_ss << immediate(b) << ',' << peripheralQ(S, q) << ',' << absAddr(MemArea_P, opB);
 			}
 			return 2;
 		case Jclr_S:
@@ -1162,7 +1194,7 @@ namespace dsp56k
 			{
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
-				m_ss << immediate(b) << ',' << decode_dddddd(d) << ',' << absAddr(opB);
+				m_ss << immediate(b) << ',' << decode_dddddd(d) << ',' << absAddr(MemArea_P, opB);
 			}
 			return 2;
 		case Jmp_ea: 
@@ -1190,7 +1222,7 @@ namespace dsp56k
 		case Lra_xxxx: 
 			{
 				const auto dd = getFieldValue(inst, Field_ddddd, op);
-				m_ss << relativeAddr(opB) << ',' << decode_DDDDDD(dd);
+				m_ss << relativeAddr(MemArea_P, opB) << ',' << decode_DDDDDD(dd);
 			}
 			return 2;
 		case Lsl_ii: 
@@ -1339,7 +1371,7 @@ namespace dsp56k
 				const auto r = decode_RRR(rr, opB);
 				const auto d = decode_dddddd(dd);
 
-				const char* area = memArea(inst == Movey_Rnxxxx ? 1 : 0);
+				const char* area = memArea(inst == Movey_Rnxxxx ? MemArea_Y : MemArea_X);
 
 				if(w)
 					m_ss << area << r << ',' << d;
@@ -1358,7 +1390,7 @@ namespace dsp56k
 				const auto r = decode_RRR(rr, aa);
 				const auto d = decode_DDDDDD(dd);
 
-				const char* area = memArea(inst == Movey_Rnxxx ? 1 : 0);
+				const char* area = memArea(inst == Movey_Rnxxx ? MemArea_Y : MemArea_X);
 
 				if(w)
 					m_ss << area << r << ',' << decode_DDDDDD(dd);
@@ -1581,7 +1613,7 @@ namespace dsp56k
 				const auto w	= getFieldValue<Movem_aa,Field_W>(op);
 
 				const auto reg = decode_dddddd(dd);
-				const auto ea = memArea(2) + absShortAddr(aa);
+				const auto ea = memArea(MemArea_P) + absShortAddr(aa);
 
 				if(w)
 					m_ss << ea << ',' << reg;
@@ -1707,7 +1739,7 @@ namespace dsp56k
 		case Plockr:
 		case Punlockr:
 			{
-				m_ss << relativeAddr(opB);
+				m_ss << relativeAddr(MemArea_P, opB);
 			}
 			return 2;
 		case Rep_ea:
@@ -1821,9 +1853,10 @@ namespace dsp56k
 		return disassemble(oi, op, opB);
 	}
 
-	int Disassembler::disassemble(std::string& dst, TWord op, TWord opB, const TWord sr, const TWord omr)
+	int Disassembler::disassemble(std::string& dst, TWord op, TWord opB, const TWord sr, const TWord omr, const TWord pc)
 	{
 		m_extWordUsed = 0;
+		m_pc = pc;
 
 		m_ss.str("");
 		m_ss.clear();
@@ -1911,7 +1944,81 @@ namespace dsp56k
 			}
 		}
 	}
-	
+
+	bool Disassembler::getSymbol(const SymbolType _type, const TWord _key, std::string& _result) const
+	{
+		const auto& symbols = m_symbols[_type];
+		const auto it = symbols.find(_key);
+		if(it != symbols.end())
+		{
+			_result = it->second;
+			return true;
+		}
+		return false;
+	}
+
+	bool Disassembler::getSymbol(EMemArea _area, TWord _key, std::string& _result) const
+	{
+		switch (_area)
+		{
+		case MemArea_X: return getSymbol(MemX, _key, _result);
+		case MemArea_Y: return getSymbol(MemY, _key, _result);
+		case MemArea_P: return getSymbol(MemP, _key, _result);
+		default:
+			return false;
+		}
+	}
+
+	bool Disassembler::addSymbol(const SymbolType _type, const TWord _key, const std::string& _value)
+	{
+		auto& symbols = m_symbols[_type];
+		const auto it = symbols.find(_key);
+		if(it != symbols.end())
+			return false;
+
+		symbols.insert(std::make_pair(_key, _value));
+
+		return true;
+	}
+
+	bool Disassembler::addSymbols(const Memory& _mem)
+	{
+		const auto& symbols = _mem.getSymbols();
+
+		auto success = false;
+		
+		for (const auto& symbol : symbols)
+		{
+			auto type = SymbolTypeCount;
+
+			switch (symbol.first)
+			{
+			case 'x':
+			case 'X':
+				type = MemX;
+				break;
+			case 'y':
+			case 'Y':
+				type = MemY;
+				break;
+			case 'p':
+			case 'P':
+				type = MemP;
+				break;
+			default:
+				type = Immediate;
+				break;
+			}
+
+			for(auto it = symbol.second.begin(); it != symbol.second.end(); ++it)
+			{
+				success |= addSymbol(type, it->first, *it->second.names.begin());
+			}
+		}
+
+		return success;
+	}
+
 	uint32_t disassembleMotorola(char* _dst, TWord _op, TWord _opB, const TWord _sr, const TWord _omr)
 	{
 #ifdef USE_MOTOROLA_UNASM

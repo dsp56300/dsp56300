@@ -389,7 +389,7 @@ namespace dsp56k
 
 			if(opcodeCountMotorola > 0)
 			{
-				const int opcodeCount = disasm.disassemble(assembly, op, opB, 0, 0);
+				const int opcodeCount = disasm.disassemble(assembly, op, opB, 0, 0, 0);
 
 				if(!opcodeCount)
 					continue;
@@ -440,13 +440,13 @@ namespace dsp56k
 
 					LOG("Diff for opcode " << HEX(op) << ": " << assembly << " != " << assemblyMotorola);
 					assert(false);
-					disasm.disassemble(assembly, op, opB, 0, 0);	// retry to help debugging
+					disasm.disassemble(assembly, op, opB, 0, 0, 0);	// retry to help debugging
 				}
 
 				if(opcodeCount != opcodeCountMotorola)
 				{
 					LOG("Diff for opcode " << HEX(op) << ": " << assembly << ": instruction length " << opcodeCount << " != " << opcodeCountMotorola);
-					disasm.disassemble(assembly, op, opB, 0, 0);	// retry to help debugging
+					disasm.disassemble(assembly, op, opB, 0, 0, 0);	// retry to help debugging
 				}
 			}
 		}

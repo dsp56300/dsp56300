@@ -4,6 +4,8 @@
 #	define USE_MOTOROLA_UNASM
 #endif
 
+#include <array>
+#include <map>
 #include <sstream>
 #include <string>
 
@@ -11,14 +13,34 @@
 
 namespace dsp56k
 {
+	class Memory;
 	struct OpcodeInfo;
 	
 	class Disassembler
 	{
 	public:
+		enum SymbolType
+		{
+			MemX,
+			MemY,
+			MemP,
+			Immediate,
+
+			SymbolTypeCount
+		};
+
+		struct Symbol
+		{
+			SymbolType type;
+			std::string name;
+		};
+
 		Disassembler(const Opcodes& _opcodes);
 
-		int disassemble(std::string& dst, TWord op, TWord opB, TWord sr, TWord omr);
+		int disassemble(std::string& dst, TWord op, TWord opB, TWord sr, TWord omr, TWord pc);
+
+		bool addSymbol(SymbolType _type, TWord _key, const std::string& _value);
+		bool addSymbols(const Memory& _mem);
 
 	private:
 		int disassembleAlu(std::string& _dst, const OpcodeInfo& _oiAlu, TWord op);
@@ -31,12 +53,32 @@ namespace dsp56k
 
 		std::string mmmrrr(TWord mmmrrr, TWord S, TWord opB, bool _addMemSpace = true, bool _long = true);
 
+		bool getSymbol(SymbolType _type, TWord _key, std::string& _result) const;
+		bool getSymbol(EMemArea _area, TWord _key, std::string& _result) const;
+
+		std::string immediate(const char* _prefix, TWord _data);
+		std::string immediate(TWord _data);
+		std::string immediateShort(TWord _data);
+		std::string immediateLong(TWord _data);
+		std::string relativeAddr(EMemArea _area, int _data, bool _long = false) const;
+		std::string relativeLongAddr(EMemArea _area, int _data) const;
+		std::string absAddr(EMemArea _area, int _data, bool _long = false) const;
+
+		std::string peripheral(TWord S, TWord a, TWord _root) const;
+		std::string peripheralQ(TWord S, TWord a) const;
+		std::string peripheralP(TWord S, TWord a) const;
+
+		std::string absShortAddr(int _data);
+
 		const Opcodes& m_opcodes;
 
 		std::stringstream m_ss;
 		std::string m_str;
 
 		size_t m_extWordUsed = 0;
+		TWord m_pc = 0;
+
+		std::array<std::map<TWord,std::string>, SymbolTypeCount> m_symbols;
 	};
 
 	uint32_t disassembleMotorola( char* _dst, TWord _opA, TWord _opB, TWord _sr, TWord _omr);
