@@ -397,7 +397,7 @@ namespace dsp56k
 		case 2:	return "omr";	// it is "com" but Motorola displays it as omr as it is only used in opcodes that work with 8 bit data
 		case 3:	return "eom";
 		}
-		return nullptr;
+		return "?";
 	}
 
 	
@@ -412,7 +412,7 @@ namespace dsp56k
 		case 6:		return "x1";
 		case 7:		return "y1";
 		}
-		return nullptr;
+		return "?";
 	}
 	
 	const char* decode_qqq( TWord _sss )
@@ -426,7 +426,7 @@ namespace dsp56k
 		case 6:		return "x1";
 		case 7:		return "y1";
 		}
-		return nullptr;
+		return "?";
 	}
 
 	const char* decode_alu_GGG( TWord _ggg, bool D )
