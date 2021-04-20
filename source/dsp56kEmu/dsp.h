@@ -556,8 +556,14 @@ namespace dsp56k
 			case 1:		convert(x,b1()); 		convert(y,b0());		return;
 			case 2:		convert(x,x1()); 		convert(y,x0());		return;
 			case 3:		convert(x,y1()); 		convert(y,y0());		return;
-			case 4:		convert(x,a1()); 		convert(y,a0());		return;	// TODO: source is a and saturation needs to be applied
-			case 5:		convert(x,b1()); 		convert(y,b0());		return;	// TODO: source is b and saturation needs to be applied
+			case 4:
+				x = reg.a.var >> 24 & 0xffffff;
+				y = reg.a.var & 0xffffff;
+				return;
+			case 5:
+				x = reg.b.var >> 24 & 0xffffff;
+				y = reg.b.var & 0xffffff;
+				return;
 			case 6:		x = getA<TWord>();		y = getB<TWord>();		return;
 			case 7:		x = getB<TWord>();		y = getA<TWord>();		return;
 			}
@@ -566,19 +572,29 @@ namespace dsp56k
 
 		void decode_LLL_write( TWord _lll, TReg24 x, TReg24 y )
 		{
-			const TReg24 s1 = x;
-			const TReg24 s2 = y;
-
 			switch( _lll )
 			{
-			case 0:		a1  (s1); a0  (s2);	return;
-			case 1:		b1  (s1); b0  (s2);	return;
-			case 2:		x1  (s1); x0  (s2);	return;
-			case 3:		y1  (s1); y0  (s2);	return;
-			case 4:		a1  (s1); a0  (s2);	return;
-			case 5:		b1  (s1); b0  (s2);	return;
-			case 6:		setA(s1); setB(s2);	return;
-			case 7:		setB(s1); setA(s2);	return;
+			case 0:		a1  (x); a0  (y);	return;
+			case 1:		b1  (x); b0  (y);	return;
+			case 2:		x1  (x); x0  (y);	return;
+			case 3:		y1  (x); y0  (y);	return;
+			case 4:
+				{
+					
+					TReg48 xy;
+					xy.var = static_cast<uint64_t>(x.var) << 24 | y.var;
+					convert(reg.a, xy);
+				}
+				return;
+			case 5:
+				{
+					TReg48 xy;
+					xy.var = static_cast<uint64_t>(x.var) << 24 | y.var;
+					convert(reg.b, xy);
+				}
+				return;
+			case 6:		setA(x); setB(y);	return;
+			case 7:		setB(x); setA(y);	return;
 			}
 			assert( 0 && "invalid LLL value" );
 		}

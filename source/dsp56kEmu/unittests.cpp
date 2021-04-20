@@ -260,6 +260,15 @@ namespace dsp56k
 		execOpcode(0x4ae000);
 		assert(dsp.reg.a.var == 0x00123456000000);
 		assert(dsp.reg.b.var == 0x00345678000000);
+
+		dsp.reg.b.var = 0xaabadbadbadbad;
+		dsp.memory().set(MemArea_X, 10, 0x123456);
+		dsp.memory().set(MemArea_Y, 10, 0x543210);
+		dsp.reg.r[0].var = 10;
+
+		// move l:(r0),b
+		execOpcode(0x49e000);
+		assert(dsp.reg.b == 0x00123456543210);
 	}
 
 	void UnitTests::testDIV()
