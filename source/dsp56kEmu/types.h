@@ -85,6 +85,8 @@ namespace dsp56k
 	typedef RegType<int64_t,48>		TReg48;
 	typedef RegType<int64_t,56>		TReg56;
 
+	typedef RegType<TWord,24>		TMem;
+
 	// required for stack
 // 	static void operator |=	( TReg24& _val, const TWord _mask )	{ _val.var |= _mask; }
 // 	static void operator &=	( TReg24& _val, const TWord _mask )	{ _val.var &= _mask; }
