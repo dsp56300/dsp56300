@@ -280,26 +280,17 @@ namespace dsp56k
 
 	inline void DSP::op_Btst_ea(const TWord op)
 	{
-		const TWord bit = getBit<Btst_ea>(op);
-		const TWord ea = effectiveAddress<Btst_ea>(op);
-		const EMemArea S = getFieldValueMemArea<Btst_ea>(op);
+		sr_toggle(SR_C, bitTestMemory<Btst_ea>(op));
 
-		if (ea >= XIO_Reserved_High_First)
-		{
-			const TWord val = memReadPeriph(S, ea);
-			sr_toggle(SR_C, bittest(val, bit));
-		}
-		else
-		{
-			const TWord val = memRead(S, ea);
-			sr_toggle(SR_C, bittest(val, bit));
-		}
 		sr_s_update();
 		sr_l_update_by_v();
 	}
 	inline void DSP::op_Btst_aa(const TWord op)
 	{
-		errNotImplemented("BTST aa");
+		sr_toggle(SR_C, bitTestMemory<Btst_aa>(op));
+
+		sr_s_update();
+		sr_l_update_by_v();
 	}
 	inline void DSP::op_Btst_pp(const TWord op)
 	{
