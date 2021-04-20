@@ -416,7 +416,9 @@ namespace dsp56k
 
 		sr_toggle( SR_C, bittest(d,55) == 0 );	// Set if bit 55 of the result is cleared.
 		sr_toggle( SR_V, msbNew != msbOld );	// Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
-		sr_toggle( SR_L, msbNew != msbOld );	// Set if the Overflow bit (V) is set.
+
+		if(msbNew != msbOld)
+			sr_set(SR_L);						// Set if the Overflow bit (V) is set.
 
 		d.var &= 0x00ffffffffffffff;
 
