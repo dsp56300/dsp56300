@@ -179,7 +179,7 @@ namespace dsp56k
 		return true;
 	}
 
-	bool Memory::save(const char* _file, EMemArea _area)
+	bool Memory::save(const char* _file, EMemArea _area) const
 	{
 		FILE* hFile = fopen(_file, "wb");
 		if(!hFile)
