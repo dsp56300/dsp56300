@@ -1633,13 +1633,7 @@ namespace dsp56k
 		// TODO: revisit signed fraction multiplies
 		auto res = s1 * s2;
 
-		if( sr_test(SR_S0) )
-		{
-		}
-		else if( sr_test(SR_S1) )
-			res <<= 2;
-		else
-			res <<= 1;
+		res <<= 1;
 
 		if( _negate )
 			res = -res;
@@ -1678,13 +1672,7 @@ namespace dsp56k
 			res = _s1.signextend<TInt64>() * TUInt64(_s2.var);
 
 		// fractional multiplication requires one post-shift to be correct
-		if( sr_test(SR_S0) )
-		{
-		}
-		else if( sr_test(SR_S1) )
-			res <<= 2;
-		else
-			res <<= 1;
+		res <<= 1;
 
 		if( _negate )
 			res = -res;
@@ -1723,13 +1711,7 @@ namespace dsp56k
 		else								res = _s2.signextend<TInt64>() * _s1.signextend<TInt64>();
 
 		// fractional multiplication requires one post-shift to be correct
-		if( sr_test(SR_S0) )
-		{
-		}
-		else if( sr_test(SR_S1) )
-			res <<= 2;
-		else
-			res <<= 1;
+		res <<= 1;
 
 		if( _negate )
 			res = -res;
@@ -1772,13 +1754,7 @@ namespace dsp56k
 			res = _s1.signextend<TInt64>() * TUInt64(_s2.var);
 
 		// fractional multiplication requires one post-shift to be correct
-		if( sr_test(SR_S0) )
-		{
-		}
-		else if( sr_test(SR_S1) )
-			res <<= 2;
-		else
-			res <<= 1;
+		res <<= 1;
 
 		if( _negate )
 			res = -res;
