@@ -288,10 +288,14 @@ namespace dsp56k
 		, pcCurrentInstruction(0xffffff)
 	{
 		mem.setDSP(this);
+
+		m_disasm.addSymbols(mem);
+		
 		perif[0]->setDSP(this);
 		perif[1]->setDSP(this);
 
-		m_asm[0] = 0;
+		perif[0]->setSymbols(m_disasm);
+		perif[1]->setSymbols(m_disasm);
 
 		clearOpcodeCache();
 

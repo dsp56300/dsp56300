@@ -194,6 +194,8 @@ namespace dsp56k
 		void			enableTrace						(TraceMode _trace) { m_trace = _trace; }
 
 		Memory&			memory							()											{ return mem; }
+		Disassembler&	disassembler					()											{ return m_disasm; }
+
 		void			setPeriph						(size_t _index, IPeripherals* _periph)		{ perif[_index] = _periph; _periph->setDSP(this); }
 		
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
