@@ -372,39 +372,42 @@ namespace dsp56k
 
 			const auto minPrio = mr().var & 0x3;
 
-			TWord op0, op1;
-			memRead2(MemArea_P, vba, op0, op1);
-
-			const auto oldSP = reg.sp.var;
-
-			m_opWordB = op1;
-
-			m_processingMode = FastInterrupt;
-
-			pcCurrentInstruction = vba;
-			execOp(op0);
-
-			auto jumped = reg.sp.var - oldSP;
-
-			// only exec the second op if the first one was a one-word op and we did not jump into a long interrupt
-			if(m_currentOpLen == 1 && !jumped)
+			if(minPrio < 3)
 			{
-				pcCurrentInstruction = vba+1;
-				m_opWordB = 0;
-				execOp(op1);
+				TWord op0, op1;
+				memRead2(MemArea_P, vba, op0, op1);
 
-				m_processingMode = DefaultPreventInterrupt;
-			}
-			else if(jumped)
-			{
-				m_processingMode = LongInterrupt;
-			}
-			else
-			{
-				m_processingMode = DefaultPreventInterrupt;				
-			}
+				const auto oldSP = reg.sp.var;
 
-			return;
+				m_opWordB = op1;
+
+				m_processingMode = FastInterrupt;
+
+				pcCurrentInstruction = vba;
+				execOp(op0);
+
+				auto jumped = reg.sp.var - oldSP;
+
+				// only exec the second op if the first one was a one-word op and we did not jump into a long interrupt
+				if(m_currentOpLen == 1 && !jumped)
+				{
+					pcCurrentInstruction = vba+1;
+					m_opWordB = 0;
+					execOp(op1);
+
+					m_processingMode = DefaultPreventInterrupt;
+				}
+				else if(jumped)
+				{
+					m_processingMode = LongInterrupt;
+				}
+				else
+				{
+					m_processingMode = DefaultPreventInterrupt;				
+				}
+
+				return;
+			}
 		}
 
 		if(m_processingMode == DefaultPreventInterrupt)
