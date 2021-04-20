@@ -133,7 +133,7 @@ namespace dsp56k
 		const TWord bit		= getBit<Bchg_D>(op);
 		const TWord dddddd	= getFieldValue<Bchg_D,Field_DDDDDD>(op);
 
-		TReg24 val = decode_dddddd_read( dddddd, false );
+		TReg24 val = decode_dddddd_read( dddddd );
 
 		sr_toggle( SR_C, bittestandchange( val, bit ) );
 
@@ -189,7 +189,7 @@ namespace dsp56k
 		const TWord dddddd	= getFieldValue<Bclr_D,Field_DDDDDD>(op);
 
 		TWord val;
-		convert( val, decode_dddddd_read( dddddd, false ) );
+		convert( val, decode_dddddd_read( dddddd ) );
 
 		const TWord newVal = alu_bclr( bit, val );
 		decode_dddddd_write( dddddd, TReg24(newVal) );			
@@ -261,7 +261,7 @@ namespace dsp56k
 		const TWord bit	= getBit<Bset_D>(op);
 		const TWord d	= getFieldValue<Bset_D,Field_DDDDDD>(op);
 
-		TReg24 val = decode_dddddd_read(d, false);
+		TReg24 val = decode_dddddd_read(d);
 
 		if( (d & 0x3f) == 0x39 )	// is SR the destination?	TODO: magic value
 		{
@@ -313,7 +313,7 @@ namespace dsp56k
 		const TWord dddddd	= getFieldValue<Btst_D,Field_DDDDDD>(op);
 		const TWord bit		= getBit<Btst_D>(op);
 
-		TReg24 val = decode_dddddd_read( dddddd, false );
+		TReg24 val = decode_dddddd_read( dddddd );
 
 		sr_toggle( SR_C, bittest( val.var, bit ) );
 	}
@@ -466,7 +466,7 @@ namespace dsp56k
 
 		const TWord dddddd = getFieldValue<Do_S,Field_DDDDDD>(op);
 
-		const TReg24 loopcount = decode_dddddd_read( dddddd, false );
+		const TReg24 loopcount = decode_dddddd_read( dddddd );
 
 		do_exec( loopcount.var, addr );
 	}
@@ -491,7 +491,7 @@ namespace dsp56k
 	inline void DSP::op_Dor_S(const TWord op)
 	{
 		const TWord dddddd = getFieldValue<Dor_S,Field_DDDDDD>(op);
-		const TReg24 lc		= decode_dddddd_read( dddddd, false );
+		const TReg24 lc		= decode_dddddd_read( dddddd );
 		
 		const int displacement = pcRelativeAddressExt<Dor_S>();
 		do_exec( lc.var, pcCurrentInstruction + displacement);
@@ -771,7 +771,7 @@ namespace dsp56k
 		const auto ddddd = getFieldValue<Mover,Field_ddddd>(op);
 
 		// TODO: we need to determine the two register types and call different template versions of read and write
-		decode_ddddd_write<TReg24>( ddddd, decode_ddddd_read<TReg24>( eeeee, false ) );
+		decode_ddddd_write<TReg24>( ddddd, decode_ddddd_read<TReg24>( eeeee ) );
 	}
 	inline void DSP::op_Move_ea(const TWord op)
 	{
@@ -919,7 +919,7 @@ namespace dsp56k
 		const TWord d		= getFieldValue<Movexr_ea,Field_d>(op);
 
 		// S2 D2 move
-		const TReg24 ab = d ? getB<TReg24>(false) : getA<TReg24>(false);
+		const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
 		if(F)		y1(ab);
 		else		y0(ab);
 		
@@ -960,7 +960,7 @@ namespace dsp56k
 		const bool d		= getFieldValue<Moveyr_ea,Field_d>(op);
 
 		// S2 D2 move
-		const TReg24 ab = d ? getB<TReg24>(false) : getA<TReg24>(false);
+		const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
 		if( e )		x1(ab);
 		else		x0(ab);
 	
@@ -1106,7 +1106,7 @@ namespace dsp56k
 		const TWord ddddd	= getFieldValue<Movec_S1D2,Field_DDDDD>(op);
 
 		if( write )
-			decode_ddddd_pcr_write( ddddd, decode_dddddd_read( eeeeee, false ) );
+			decode_ddddd_pcr_write( ddddd, decode_dddddd_read( eeeeee ) );
 		else
 			decode_dddddd_write( eeeeee, decode_ddddd_pcr_read( ddddd ) );
 	}
@@ -1385,7 +1385,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Rep_S(const TWord op)
 	{
-		const int loopcount = decode_dddddd_read(getFieldValue<Rep_S,Field_dddddd>(op), false).var;
+		const int loopcount = decode_dddddd_read(getFieldValue<Rep_S,Field_dddddd>(op)).var;
 		rep_exec(loopcount);
 	}
 	inline void DSP::op_Reset(const TWord op)

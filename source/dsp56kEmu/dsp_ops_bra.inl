@@ -33,7 +33,7 @@ namespace dsp56k
 		const auto addr = pcRelativeAddressExt<Inst>();
 
 		const auto d = getFieldValue<Inst,Field_DDDDDD>(op);
-		const auto v = decode_dddddd_read(d, false).var;
+		const auto v = decode_dddddd_read(d).var;
 
 		if( bitTest<Inst>( op, v ) == BitValue )
 			braOrBsr<BMode>(addr);
