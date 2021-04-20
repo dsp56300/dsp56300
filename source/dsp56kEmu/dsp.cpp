@@ -2364,7 +2364,7 @@ namespace dsp56k
 		d |= masked;
 
 		sr_toggle(SR_N, bitvalue<uint64_t, 47>(d));		// Set if bit 47 of the result is set
-		sr_toggle(SR_Z, masked != 0);					// Set if bits 47–24 of the result are 0
+		sr_toggle(SR_Z, masked == 0);					// Set if bits 47–24 of the result are 0
 		sr_clear(SR_V);									// Always cleared
 		sr_s_update();									// Changed according to the standard definition
 		sr_l_update_by_v();								// Changed according to the standard definition
