@@ -231,6 +231,16 @@ namespace dsp56k
 		// mac y0,x0,b 
 		execOpcode(0x2000da);
 		assert(dsp.reg.b == 0x00000000000000);
+
+		dsp.y0(0x7fffff);
+		dsp.x0(0x6bb14a);
+		dsp.reg.b.var = 0x00553300000000;
+		dsp.reg.sr.var = 0x0880d0;
+
+		// mac y0,x0,b 
+		execOpcode(0x2000da);
+		assert(dsp.reg.b == 0x00c0e449289d6c);
+		assert(dsp.reg.sr.var == 0x0880f0);
 	}
 
 	void UnitTests::testLongMemoryMoves()

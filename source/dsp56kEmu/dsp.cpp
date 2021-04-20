@@ -627,8 +627,8 @@ namespace dsp56k
 
 		decode_QQQ_read(s1, s2, qqq);
 
-		// TODO: ccr
 		alu_mpy(ab, s1, s2, negative, mulAcc);
+
 		if(round)
 		{
 			alu_rnd(ab);
@@ -1643,10 +1643,10 @@ namespace dsp56k
 
 		// Update SR
 		sr_s_update();
-		sr_clear( SR_E );	// I don't know how this should happen because both operands are only 24 bits, the doc says "changed by standard definition" which should be okay here
-		sr_u_update( d );
-		sr_n_update( d );
-		sr_z_update( d );
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
+		sr_z_update(d);
 		sr_v_update(res,d);
 
 		sr_l_update_by_v();
