@@ -248,7 +248,7 @@ namespace dsp56k
 		TWord	decode_RRR_read			( TWord _mmmrrr ) const;
 		TWord	decode_RRR_read			( TWord _mmmrrr, int _shortDisplacement ) const;
 
-		template<typename T> T decode_ddddd_read( TWord _ddddd )
+		template<typename T> T decode_ddddd_read( TWord _ddddd, bool willWriteToMemory = true )
 		{
 			T res;
 			// TODO: can be replaced with the six bit version, numbers are identical anyway
@@ -264,8 +264,8 @@ namespace dsp56k
 			case 0x0b:	convertS( res, b2() ); 	return res;	// b2
 			case 0x0c:	convert( res, a1() ); 	return res;	// a1
 			case 0x0d:	convert( res, b1() ); 	return res;	// b1
-			case 0x0e:	return getA<T>();					// a
-			case 0x0f:	return getB<T>();					// b
+			case 0x0e:	return getA<T>(willWriteToMemory);	// a
+			case 0x0f:	return getB<T>(willWriteToMemory);	// b
 			}
 			if( (_ddddd & 0x18) == 0x10 )					// r0-r7
 				convert( res, reg.r[_ddddd&0x07] );
@@ -333,7 +333,7 @@ namespace dsp56k
 		void	decode_ddddd_pcr_write	( TWord _ddddd, TReg24 _val );
 
 		// Six-Bit Encoding for all on-chip registers
-		TReg24	decode_dddddd_read		(TWord _dddddd);
+		TReg24	decode_dddddd_read		(TWord _dddddd, bool willWriteToMemory = true);
 		void	decode_dddddd_write		(TWord _dddddd, TReg24 _val);
 
 		TReg24	decode_JJ_read			( TWord jj ) const
@@ -749,19 +749,19 @@ namespace dsp56k
 		TWord	iprc			() const							{ return memReadPeriph(MemArea_X, XIO_IPRC); }
 		TWord	iprp			() const							{ return memReadPeriph(MemArea_X, XIO_IPRP); }
 
-		template<typename T> T getA(bool scaled=true)
+		template<typename T> T getA(bool willWriteToMemory=true)
 		{
 			TReg56 temp = reg.a;
-			if (scaled) scale( temp );
+			if (willWriteToMemory) scale( temp );
 			T res;
 			limit_transfer( res, temp );
 			return res;
 		}
 
-		template<typename T> T getB(bool scaled=true)
+		template<typename T> T getB(bool willWriteToMemory=true)
 		{
 			TReg56 temp(reg.b);
-			if (scaled) scale(temp);
+			if (willWriteToMemory) scale(temp);
 			T res;
 			limit_transfer( res, temp );
 			return res;

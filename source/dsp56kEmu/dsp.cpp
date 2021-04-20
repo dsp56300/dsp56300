@@ -827,7 +827,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// decode_eeeeee_read
 	//
-	TReg24 DSP::decode_dddddd_read( TWord _dddddd )
+	TReg24 DSP::decode_dddddd_read( TWord _dddddd, bool willWriteToMemory )
 	{
 		switch( _dddddd & 0x3f )
 		{
@@ -849,8 +849,8 @@ namespace dsp56k
 		case 0x0b:	{ TReg24 res; convertS(res,b2()); return res; }
 		case 0x0c:	return a1();
 		case 0x0d:	return b1();
-		case 0x0e:	return getA<TReg24>();
-		case 0x0f:	return getB<TReg24>();
+		case 0x0e:	return getA<TReg24>(willWriteToMemory);
+		case 0x0f:	return getB<TReg24>(willWriteToMemory);
 
 			// 010TTT - 8 address registers in AGU
 		case 0x10:	return reg.r[0];
@@ -2175,7 +2175,7 @@ namespace dsp56k
 	bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
 	{
 		aarTranslate(_area, _offset);
-	
+
 		const auto res = mem.dspWrite( _area, _offset, _value );
 
 //		if(_area == MemArea_P)	does not work for external memory
