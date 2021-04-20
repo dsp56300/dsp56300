@@ -211,7 +211,7 @@ namespace dsp56k
 		return true;
 	}
 
-	bool Memory::saveAssembly(const char* _file, TWord _offset, const TWord _count, bool _skipNops, bool _skipDC)
+	bool Memory::saveAssembly(const char* _file, TWord _offset, const TWord _count, bool _skipNops, bool _skipDC, IPeripherals* _peripherals)
 	{
 		std::ofstream out(_file, std::ios::trunc);
 
@@ -220,7 +220,12 @@ namespace dsp56k
 
 		Opcodes opcodes;
 		Disassembler disasm(opcodes);
+
+		disasm.addSymbols(*this);
 		
+		if(_peripherals)
+			_peripherals->setSymbols(disasm);
+
 		for(size_t i=_offset; i<_offset+_count;)
 		{
 			TWord opA, opB;

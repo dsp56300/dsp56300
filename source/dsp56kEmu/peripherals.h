@@ -10,6 +10,8 @@
 
 namespace dsp56k
 {
+	class Disassembler;
+
 	enum XIO
 	{
 		XIO_Reserved_High_First	= 0xffff80,	// 24 bit mode
@@ -89,6 +91,7 @@ namespace dsp56k
 		virtual void write(TWord _addr, TWord _value) = 0;
 		virtual void exec() = 0;
 		virtual void reset() = 0;
+		virtual void setSymbols(Disassembler& _disasm) = 0;
 
 	private:
 		DSP* m_dsp = nullptr;
@@ -116,6 +119,8 @@ namespace dsp56k
 		Essi& getEssi()	{ return m_essi; }
 		HI08& getHI08()	{ return m_hi08; }
 
+		void setSymbols(Disassembler& _disasm) override {}
+
 	private:
 		Essi m_essi;
 		HI08 m_hi08;
@@ -142,6 +147,8 @@ namespace dsp56k
 
 		Esai& getEsai()		{ return m_esai; }
 		HDI08& getHDI08()	{ return m_hdi08; }
+		
+		void setSymbols(Disassembler& _disasm) override;
 
 	private:
 		Esai m_esai;

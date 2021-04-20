@@ -1,10 +1,10 @@
 #include "peripherals.h"
 
-
 #include "aar.h"
+#include "disasm.h"
+#include "dsp.h"
 #include "hi08.h"
 #include "logging.h"
-#include "dsp.h"
 
 namespace dsp56k
 {
@@ -234,5 +234,112 @@ namespace dsp56k
 
 	void Peripherals56362::reset()
 	{
+	}
+
+	void Peripherals56362::setSymbols(Disassembler& _disasm)
+	{
+		constexpr std::pair<int,const char*> symbols[] =
+		{
+			// ESAI
+			{Esai::M_RSMB	,	"M_RSMB"},
+			{Esai::M_RSMA	,	"M_RSMA"},
+			{Esai::M_TSMB	,	"M_TSMB"},
+			{Esai::M_TSMA	,	"M_TSMA"},
+			{Esai::M_RCCR	,	"M_RCCR"},
+			{Esai::M_RCR	,	"M_RCR"},
+			{Esai::M_TCCR	,	"M_TCCR"},
+			{Esai::M_TCR	,	"M_TCR"},
+			{Esai::M_SAICR	,	"M_SAICR"},
+			{Esai::M_SAISR	,	"M_SAISR"},
+			{Esai::M_RX3	,	"M_RX3"},
+			{Esai::M_RX2	,	"M_RX2"},
+			{Esai::M_RX1	,	"M_RX1"},
+			{Esai::M_RX0	,	"M_RX0"},
+			{Esai::M_TSR	,	"M_TSR"},
+			{Esai::M_TX5	,	"M_TX5"},
+			{Esai::M_TX4	,	"M_TX4"},
+			{Esai::M_TX3	,	"M_TX3"},
+			{Esai::M_TX2	,	"M_TX2"},
+			{Esai::M_TX1	,	"M_TX1"},
+			{Esai::M_TX0	,	"M_TX0"},
+
+			// Timers
+			{Timers::M_TCSR0, "M_TCSR0"},
+			{Timers::M_TLR0	, "M_TLR0"},
+			{Timers::M_TCPR0, "M_TCPR0"},
+			{Timers::M_TCR0	, "M_TCR0"},
+			{Timers::M_TCSR1, "M_TCSR1"},
+			{Timers::M_TLR1	, "M_TLR1"},
+			{Timers::M_TCPR1, "M_TCPR1"},
+			{Timers::M_TCR1	, "M_TCR1"},
+			{Timers::M_TCSR2, "M_TCSR2"},
+			{Timers::M_TLR2	, "M_TLR2"},
+			{Timers::M_TCPR2, "M_TCPR2"},
+			{Timers::M_TCR2	, "M_TCR2"},
+			{Timers::M_TPLR	, "M_TPLR"},
+			{Timers::M_TPCR	, "M_TPCR"},
+
+			// HDI08
+			{HDI08::HCR	, "M_HCR"},
+			{HDI08::HSR	, "M_HSR"},
+			{HDI08::HPCR, "M_HPCR"},
+			{HDI08::HORX, "M_HORX"},
+			{HDI08::HOTX, "M_HOTX"},
+
+			// AAR
+			{M_AAR0, "M_AAR0"},
+			{M_AAR1, "M_AAR1"},
+			{M_AAR2, "M_AAR2"},
+			{M_AAR3, "M_AAR3"},
+
+			// Others
+			{XIO_DCR5, "M_DCR5"},
+			{XIO_DCO5, "M_DCO5"},
+			{XIO_DDR5, "M_DDR5"},
+			{XIO_DSR5, "M_DSR5"},
+			{XIO_DCR4, "M_DCR4"},
+			{XIO_DCO4, "M_DCO4"},
+			{XIO_DDR4, "M_DDR4"},
+			{XIO_DSR4, "M_DSR4"},
+			{XIO_DCR3, "M_DCR3"},
+			{XIO_DCO3, "M_DCO3"},
+			{XIO_DDR3, "M_DDR3"},
+			{XIO_DSR3, "M_DSR3"},
+			{XIO_DCR2, "M_DCR2"},
+			{XIO_DCO2, "M_DCO2"},
+			{XIO_DDR2, "M_DDR2"},
+			{XIO_DSR2, "M_DSR2"},
+			{XIO_DCR1, "M_DCR1"},
+			{XIO_DCO1, "M_DCO1"},
+			{XIO_DDR1, "M_DDR1"},
+			{XIO_DSR1, "M_DSR1"},
+			{XIO_DCR0, "M_DCR0"},
+			{XIO_DCO0, "M_DCO0"},
+			{XIO_DDR0, "M_DDR0"},
+			{XIO_DSR0, "M_DSR0"},
+			{XIO_DOR3, "M_DOR3"},
+			{XIO_DOR2, "M_DOR2"},
+			{XIO_DOR1, "M_DOR1"},
+			{XIO_DOR0, "M_DOR0"},
+			{XIO_DSTR, "M_DSTR"},
+			{XIO_IDR,  "M_IDR"},
+			{XIO_AAR3, "M_AAR3"},
+			{XIO_AAR2, "M_AAR2"},
+			{XIO_AAR1, "M_AAR1"},
+			{XIO_AAR0, "M_AAR0"},
+			{XIO_DCR,  "M_DCR"},
+			{XIO_BCR,  "M_BCR"},
+			{XIO_OGDB, "M_OGDB"},
+			{XIO_PCTL, "M_PCTL"},
+			{XIO_IPRP, "M_IPRP"},
+			{XIO_IPRC, "M_IPRC"},
+
+			{0xFFFFF5, "M_ID"}
+		};
+
+		for (const auto& symbol : symbols)
+		{
+			_disasm.addSymbol(Disassembler::MemX, symbol.first, symbol.second);	
+		}
 	}
 }

@@ -101,7 +101,7 @@ namespace dsp56k
 		bool				load				( FILE* _file );
 
 		bool				save				(const char* _file, EMemArea _area) const;
-		bool				saveAssembly		(const char* _file, TWord _offset, const TWord _count, bool _skipNops = true, bool _skipDC = false);
+		bool				saveAssembly		(const char* _file, TWord _offset, const TWord _count, bool _skipNops = true, bool _skipDC = false, IPeripherals* _peripherals = nullptr);
 
 		bool				saveAsText			(const char* _file, EMemArea _area, const TWord _offset, const TWord _count);
 
