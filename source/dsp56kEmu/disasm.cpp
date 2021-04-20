@@ -1396,19 +1396,33 @@ namespace dsp56k
 			}
 			return 1 + m_extWordUsed;
 		case Movexr_A: 
+			{
+				const TWord mr		= getFieldValue<Movexr_A,Field_MMM, Field_RRR>(op);
+				const TWord d		= getFieldValue<Movexr_A,Field_d>(op);
+
+				const auto ea = mmmrrr(mr, 0, opB);
+				const auto* const ab = aluD(d);
+
+				// S1/D1 move
+				m_ss <<  ab << ',' << ea;
+
+				// S2 D2 move
+				m_ss << ' ' << "x" << "0," << ab;
+			}
+			return 1 + m_extWordUsed;
 		case Moveyr_A:
 			{
 				const TWord mr		= getFieldValue<Movexr_A,Field_MMM, Field_RRR>(op);
 				const TWord d		= getFieldValue<Movexr_A,Field_d>(op);
 
-				const auto ea = mmmrrr(mr, inst == Moveyr_A ? 1 : 0, opB);
+				const auto ea = mmmrrr(mr, 1, opB);
 				const auto* const ab = aluD(d);
 
-				// S1/D1 move
-				m_ss << ab << ',' << ea;
-
 				// S2 D2 move
-				m_ss << ' ' << (inst == Moveyr_A ? "y" : "x") << "0," << ab;
+				m_ss << "y" << "0," << ab;
+
+				// S1/D1 move
+				m_ss << ' ' << ab << ',' << ea;
 			}
 			return 1 + m_extWordUsed;
 		case Moveyr_ea:
