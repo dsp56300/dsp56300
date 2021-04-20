@@ -749,19 +749,19 @@ namespace dsp56k
 		TWord	iprc			() const							{ return memReadPeriph(MemArea_X, XIO_IPRC); }
 		TWord	iprp			() const							{ return memReadPeriph(MemArea_X, XIO_IPRP); }
 
-		template<typename T> T getA()
+		template<typename T> T getA(bool scaled=true)
 		{
 			TReg56 temp = reg.a;
-			scale( temp );
+			if (scaled) scale( temp );
 			T res;
 			limit_transfer( res, temp );
 			return res;
 		}
 
-		template<typename T> T getB()
+		template<typename T> T getB(bool scaled=true)
 		{
 			TReg56 temp(reg.b);
-			scale(temp);
+			if (scaled) scale(temp);
 			T res;
 			limit_transfer( res, temp );
 			return res;

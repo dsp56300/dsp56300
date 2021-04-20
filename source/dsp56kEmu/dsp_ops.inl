@@ -926,7 +926,7 @@ namespace dsp56k
 		const TWord d		= getFieldValue<Movexr_ea,Field_d>(op);
 
 		// S2 D2 move
-		const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
+		const TReg24 ab = d ? getB<TReg24>(false) : getA<TReg24>(false);
 		if(F)		y1(ab);
 		else		y0(ab);
 		
@@ -967,7 +967,7 @@ namespace dsp56k
 		const bool d		= getFieldValue<Moveyr_ea,Field_d>(op);
 
 		// S2 D2 move
-		const TReg24 ab = d ? getB<TReg24>() : getA<TReg24>();
+		const TReg24 ab = d ? getB<TReg24>(false) : getA<TReg24>(false);
 		if( e )		x1(ab);
 		else		x0(ab);
 	
