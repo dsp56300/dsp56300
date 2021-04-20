@@ -1357,14 +1357,19 @@ namespace dsp56k
 
 		const TReg56 oldD = d;
 
-		auto d64 = d.signextend<int64_t>();
+		uint64_t d64 = d.var;
 
-		auto val = _val.signextend<int64_t>();
+		uint64_t val = _val.var;
 
 		if( _magnitude )
 		{
-			d64 = d64 < 0 ? -d64 : d64;
-			val = val < 0 ? -val : val;
+			const auto d64Signed = d.signextend<int64_t>();
+			if(d64Signed < 0)
+				d64 = -d64Signed;
+
+			const auto valSigned = _val.signextend<int64_t>();
+			if(valSigned < 0)
+				val = -valSigned;
 		}
 
 		const auto res = static_cast<uint64_t>(d64) - static_cast<uint64_t>(val);

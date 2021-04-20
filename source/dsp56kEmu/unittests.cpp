@@ -215,6 +215,12 @@ namespace dsp56k
 		// cmp x0,a
 		execOpcode(0x200045);
 		assert(dsp.reg.sr.var == 0x0800d0);
+
+		// cmp #>$aa,a
+		dsp.reg.sr.var = 0x080099;
+		dsp.reg.a.var = 0xfffffc6c000000;
+		execOpcode(0x0140c5, 0x0000aa);
+		assert(dsp.reg.sr.var == 0x080098);
 	}
 
 	void UnitTests::testMAC()
