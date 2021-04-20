@@ -303,6 +303,15 @@ namespace dsp56k
 			execOpcode(0x018050);
 			assert(dsp.reg.a.var == expectedValues[i]);
 		}
+
+		dsp.y0(0x218dec);
+		dsp.reg.a.var = 0x00008000000000;
+		dsp.reg.sr.var = 0x0800d4;
+
+		// div y0,a
+		execOpcode(0x018050);
+		assert(dsp.reg.a.var == 0xffdf7214000000);
+		assert(dsp.reg.sr.var == 0x0800d4);		
 	}
 
 	void UnitTests::testROL()
