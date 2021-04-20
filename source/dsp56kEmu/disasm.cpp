@@ -190,13 +190,21 @@ namespace dsp56k
 
 	std::string Disassembler::absAddr(EMemArea _area, int _data, bool _long) const
 	{
+		std::string sym;
+		if(getSymbol(_area, _data, sym))
+			return sym;
+
 		if(!_long)
 			return hex(_data);
 		return ">" + hex(_data);
 	}
 
-	std::string Disassembler::absShortAddr(int _data)
+	std::string Disassembler::absShortAddr(EMemArea _area, int _data) const
 	{
+		std::string sym;
+		if(getSymbol(_area, _data, sym))
+			return sym;
+
 		return "<" + hex(_data);
 	}
 
@@ -347,7 +355,8 @@ namespace dsp56k
 			"-(r%d)",
 		};
 
-		const std::string area(_addMemSpace ? memArea(memArea(S)) : "");
+		const char* ar = _addMemSpace ? memArea(memArea(S)) : "";
+		const std::string area(ar);
 
 		char temp[32];
 	
@@ -1132,7 +1141,7 @@ namespace dsp56k
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
 				const auto a = getFieldValue(inst, Field_aaaaaaaaaaaa, op);
-				m_ss << condition(cccc) << ' ' << absShortAddr(a);
+				m_ss << condition(cccc) << ' ' << absShortAddr(MemArea_P, a);
 			}
 			return 1;
 		case Jcc_ea: 
@@ -1208,7 +1217,7 @@ namespace dsp56k
 		case Jsr_xxx:
 			{
 				const auto a = getFieldValue(inst, Field_aaaaaaaaaaaa, op);
-				m_ss << absShortAddr(a);
+				m_ss << absShortAddr(MemArea_P, a);
 			}
 			return 1;
 
@@ -1508,7 +1517,7 @@ namespace dsp56k
 				const auto w   = getFieldValue<Movel_aa,Field_W>(op);
 				
 				const auto* l = decode_LLL(ll);
-				const auto ea = absShortAddr(aa);
+				const auto ea = absShortAddr(MemArea_X, aa);	// TODO: Memarea L
 				if(w)
 					m_ss << "l:" << ea << ',' << l;
 				else
@@ -1613,7 +1622,7 @@ namespace dsp56k
 				const auto w	= getFieldValue<Movem_aa,Field_W>(op);
 
 				const auto reg = decode_dddddd(dd);
-				const auto ea = memArea(MemArea_P) + absShortAddr(aa);
+				const auto ea = memArea(MemArea_P) + absShortAddr(MemArea_P, aa);
 
 				if(w)
 					m_ss << ea << ',' << reg;

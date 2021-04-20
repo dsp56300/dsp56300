@@ -226,6 +226,8 @@ namespace dsp56k
 		if(_peripherals)
 			_peripherals->setSymbols(disasm);
 
+		const auto& pSymbols = disasm.getSymbols(Disassembler::MemP);
+
 		for(size_t i=_offset; i<_offset+_count;)
 		{
 			TWord opA, opB;
@@ -236,6 +238,10 @@ namespace dsp56k
 				++i;
 				continue;
 			}
+
+			const auto it = pSymbols.find(i);
+			if(it != pSymbols.end())
+				out << it->second << ':' << std::endl;
 
 			std::string assembly;
 			auto usedOps = disasm.disassemble(assembly, opA, opB, 0, 0, i);
