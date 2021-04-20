@@ -24,27 +24,27 @@ namespace dsp56k
 		"abs ",
 		"adc ",
 		"add ",		"add ",		"add ",
-		"addl ",		"addr ",
+		"addl ",	"addr ",
 		"and ",		"and ",		"and ",		"andi ",
 		"asl ",		"asl ",		"asl ",
 		"asr ",		"asr ",		"asr ",
 		"b",		"b",		"b",
-		"bchg ",		"bchg ",		"bchg ",		"bchg ",		"bchg ",
-		"bclr ",		"bclr ",		"bclr ",		"bclr ",		"bclr ",
+		"bchg ",	"bchg ",	"bchg ",	"bchg ",	"bchg ",
+		"bclr ",	"bclr ",	"bclr ",	"bclr ",	"bclr ",
 		"bra ",		"bra ",		"bra ",
 		"brclr ",	"brclr ",	"brclr ",	"brclr ",	"brclr ",
 		"brk",
 		"brset ",	"brset ",	"brset ",	"brset ",	"brset ",
 		"bs",		"bs",		"bs",
 		"bsclr ",	"bsclr ",	"bsclr ",	"bsclr ",	"bsclr ",
-		"bset ",		"bset ",		"bset ",		"bset ",		"bset ",
+		"bset ",	"bset ",	"bset ",	"bset ",	"bset ",
 		"bsr ",		"bsr ",		"bsr ",
 		"bsset ",	"bsset ",	"bsset ",	"bsset ",	"bsset ",
-		"btst ",		"btst ",		"btst ",		"btst ",		"btst ",
+		"btst ",	"btst ",	"btst ",	"btst ",	"btst ",
 		"clb ",
 		"clr ",
 		"cmp ",		"cmp ",		"cmp ",
-		"cmpm ",		"cmpu ",
+		"cmpm ",	"cmpu ",
 		"debug",	"debug",
 		"dec ",
 		"div ",
@@ -56,16 +56,16 @@ namespace dsp56k
 		"enddo",
 		"eor ",		"eor ",		"eor ",
 		"extract ",	"extract ",
-		"extractu ",	"extractu ",
-		"",		"",																		// ifcc
+		"extractu ","extractu ",
+		"",			"",																						// ifcc
 		"illegal",	"inc ",
 		"insert ",	"insert ",
 		"j",		"j",
-		"jclr ",		"jclr ",		"jclr ",		"jclr ",		"jclr ",
+		"jclr ",	"jclr ",	"jclr ",	"jclr ",	"jclr ",
 		"jmp ",		"jmp ",
 		"js",		"js",
 		"jsclr ",	"jsclr ",	"jsclr ",	"jsclr ",	"jsclr ",
-		"jset ",		"jset ",		"jset ",		"jset ",		"jset ",
+		"jset ",	"jset ",	"jset ",	"jset ",	"jset ",
 		"jsr ",		"jsr ",
 		"jsset ",	"jsset ",	"jsset ",	"jsset ",	"jsset ",
 		"lra ",		"lra ",
@@ -75,26 +75,26 @@ namespace dsp56k
 		"mac ",		"mac ",
 		"maci ",
 		"mac",
-		"macr ",		"macr ",
+		"macr ",	"macr ",
 		"macri ",
 		"max ",
 		"maxm ",
 		"merge ",
-		"move ",		"move ",																								// movenop, move_xx
-		"move ",																												// move_xx
-		"move ",																												// move_ea
-		"move ",	"move ",	"move ",		"move ",																		// movex
-		"move ",	"move ",																									// movexr
-		"move ",	"move ",	"move ",		"move ",																		// movey
-		"move ",	"move ",																									// moveyr
-		"move ",	"move ",																									// movel
-		"move ",																												// movexy
-		"move ",	"move ",	"move ",		"move ",																		// movec
-		"move ",	"move ",																									// movem
-		"movep ",	"movep ",	"movep ",		"movep ",		"movep ",		"movep ",		"movep ",		"movep ",		// movep
+		"move ",	"move ",																				// movenop, move_xx
+		"move ",																							// move_xx
+		"move ",																							// move_ea
+		"move ",	"move ",	"move ",	"move ",														// movex
+		"move ",	"move ",																				// movexr
+		"move ",	"move ",	"move ",	"move ",														// movey
+		"move ",	"move ",																				// moveyr
+		"move ",	"move ",																				// movel
+		"move ",																							// movexy
+		"move ",	"move ",	"move ",	"move ",														// movec
+		"move ",	"move ",																				// movem
+		"movep ",	"movep ",	"movep ",	"movep ",	"movep ",	"movep ",	"movep ",	"movep ",		// movep
 		"mpy ",		"mpy ",		"mpy",
 		"mpyi ",
-		"mpyr ",		"mpyr ",
+		"mpyr ",	"mpyr ",
 		"mpyri ",
 		"neg ",
 		"nop",
