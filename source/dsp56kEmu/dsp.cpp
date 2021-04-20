@@ -34,7 +34,7 @@ namespace dsp56k
 
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
-	constexpr TInstructionFunc g_jumpTable[InstructionCount] =
+	constexpr TInstructionFunc g_jumpTable[] =
 	{
 		&DSP::op_Abs,							// Abs Abs 
 		&DSP::op_ADC,							// ADC ADC 
@@ -275,6 +275,8 @@ namespace dsp56k
 		&DSP::op_ResolveCache,					// ResolveCache
 		&DSP::op_Parallel						// Parallel
 	};
+
+	static_assert(sizeof(g_jumpTable) / sizeof(g_jumpTable[0]) == InstructionCount, "jump table entries missing or too many");
 
 	// _____________________________________________________________________________
 	// DSP

@@ -19,7 +19,7 @@ extern "C"
 
 namespace dsp56k
 {
-	const char* g_opNames[InstructionCount] = 
+	const char* g_opNames[] = 
 	{
 		"abs ",
 		"adc ",
@@ -132,6 +132,8 @@ namespace dsp56k
 		"resolvecache",
 		"parallel",
 	};
+
+	static_assert(sizeof(g_opNames) / sizeof(g_opNames[0]) == InstructionCount, "operation names entries missing or too many");
 
 	const char* g_conditionCodes[16] =	{"cc", "ge", "ne", "pl", "nn", "ec", "lc", "gt", "cs", "lt", "eq", "mi", "nr", "es", "ls", "le"};
 	
