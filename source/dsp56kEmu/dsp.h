@@ -767,7 +767,7 @@ namespace dsp56k
 			return res;
 		}
 
-		void scale( TReg56& _scale )
+		void scale( TReg56& _scale ) const
 		{
 			if( sr_test(SR_S1) )
 				_scale.var <<= 1;
