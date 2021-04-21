@@ -50,8 +50,10 @@ namespace dsp56k
 						const TWord baseAddrMask	= ~moduloMask;
 
 						const TWord baseAddr		= r&baseAddrMask;
+						const TWord modulo			= moduloTest + 1;
+						const TWord offset			= r & moduloMask;
 
-						const TWord rNew 			= baseAddr | (((r+n)&moduloMask ) % (moduloTest+1));
+						const TWord rNew 			= baseAddr | (offset + n + modulo) % modulo;
 
 //						LOG( "r " << std::hex << r << " + n " << std::hex << n << "(m=" << std::hex << m << ") = " << std::hex << rNew << " mask=" << std::hex << moduloMask << " baseAddrMask=" << std::hex << baseAddrMask << " baseAddr=" << std::hex << baseAddr );
 
