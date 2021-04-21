@@ -1800,6 +1800,8 @@ namespace dsp56k
 			if (!(_alu.var & mask)) _alu.var&=~(rounder<<1);	// then the bit to the left of the rounding position is cleared in the result
 		}
 		_alu.var&=~mask;			// all bits to the right of and including the rounding position are cleared.
+
+		_alu.doMasking();
 	}
 
 	// _____________________________________________________________________________
