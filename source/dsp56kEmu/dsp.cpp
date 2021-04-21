@@ -1542,7 +1542,11 @@ namespace dsp56k
 		auto& d			= ab ? reg.b : reg.a;
 		const auto& s	= ab ? reg.a : reg.b;
 
-		const auto res = (static_cast<uint64_t>(d.var) >> 1) + static_cast<uint64_t>(s.var);
+		uint64_t res = static_cast<uint64_t>(d.var) >> 1;
+		res |= d.var & (1ll<<55);
+
+		res += static_cast<uint64_t>(s.var);
+
 		const auto carry = res > g_alu_max_56_u;
 
 		d.var = res;

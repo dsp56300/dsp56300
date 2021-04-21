@@ -145,6 +145,13 @@ namespace dsp56k
 		execOpcode(0x200002);	// addr b,a
 		assert(dsp.reg.a.var == 0x0ffb16e12000000);
 		assert(dsp.reg.sr.var == 0x0800c8);		
+
+		dsp.reg.a.var = 0xffb16e12000000;
+		dsp.reg.b.var = 0xff89fe13000000;
+		dsp.reg.sr.var = 0x0800c8;
+		execOpcode(0x20000a);	// addr a,b
+		assert(dsp.reg.b.var == 0xff766d1b800000);
+		assert(dsp.reg.sr.var == 0x0800e9);
 	}
 
 	void UnitTests::testSub()
