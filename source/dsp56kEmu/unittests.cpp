@@ -12,6 +12,7 @@ namespace dsp56k
 	UnitTests::UnitTests() : mem(g_defaultMemoryMap, 0x100), dsp(mem, &peripherals, &peripherals)
 	{
 		testMoveImmediateToRegister();
+		testMoveMemoryToRegister();
 		testCCCC();
 		testMultiply();
 		testAdd();
@@ -119,6 +120,18 @@ namespace dsp56k
 
 		// move a,b
 		execOpcode(0x21cf00);				assert(dsp.reg.b.var == 0x00007fffff000000);
+	}
+
+	void UnitTests::testMoveMemoryToRegister()
+	{
+		dsp.reg.r[5].var = 10;
+		dsp.memory().set(MemArea_Y, 9, 0x123456);
+		dsp.reg.b.var = 0;
+
+		// move y:-(r5),b)
+		execOpcode(0x5ffd00);
+		assert(dsp.reg.b.var == 0x00123456000000);
+		assert(dsp.reg.r[5].var == 9);
 	}
 
 	void UnitTests::testAdd()

@@ -673,7 +673,7 @@ namespace dsp56k
 		case 0x18:	/* 011 */	a =	r;					AGU::updateAddressRegister(r,+1,_m.var);						break;
 		case 0x20:	/* 100 */	a = r;																					break;
 		case 0x28:	/* 101 */	a = r + _n.toWord();																	break;
-		case 0x38:	/* 111 */							AGU::updateAddressRegister(r,-1,_m.var);		a = _r.var;		break;
+		case 0x38:	/* 111 */							AGU::updateAddressRegister(r,-1,_m.var);		a = r;			break;
 
 		default:
 			assert(0 && "impossible to happen" );
