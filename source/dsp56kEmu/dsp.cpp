@@ -29,8 +29,9 @@ namespace dsp56k
 {
 	constexpr bool g_traceSupported = false;
 
-	constexpr int64_t g_alu_max_56 =  0x7FFFFFFFFFFFFF;
-	constexpr int64_t g_alu_min_56 = -0x80000000000000;
+	constexpr int64_t g_alu_max_56		=  0x7FFFFFFFFFFFFF;
+	constexpr int64_t g_alu_min_56		= -0x80000000000000;
+	constexpr uint64_t g_alu_max_56_u	=  0xffffffffffffff;
 
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
@@ -1335,7 +1336,7 @@ namespace dsp56k
 		d.var = res;
 		d.doMasking();
 
-		const bool carry = res > 0xffffffffffffff;
+		const bool carry = res > g_alu_max_56_u;
 
 		// S L E U N Z V C
 
@@ -1539,11 +1540,12 @@ namespace dsp56k
 
 	void DSP::alu_addr(bool ab)
 	{
-		TReg56&			d = ab ? reg.b : reg.a;
-		const TReg56&	s = ab ? reg.a : reg.b;
+		auto& d			= ab ? reg.b : reg.a;
+		const auto& s	= ab ? reg.a : reg.b;
 
-		const TReg56 old = d;
-		const TInt64 res = (d.signextend<TInt64>() >> 1) + s.signextend<TInt64>();
+		const auto res = (static_cast<uint64_t>(d.var) >> 1) + static_cast<uint64_t>(s.var);
+		const auto carry = res > g_alu_max_56_u;
+
 		d.var = res;
 		d.doMasking();
 
@@ -1554,7 +1556,7 @@ namespace dsp56k
 		sr_z_update(d);
 		sr_v_update(res, d);
 		sr_l_update_by_v();
-		sr_c_update_arithmetic(old,d);
+		sr_toggle(SR_C, carry);
 	}
 
 	void DSP::alu_rol(const bool ab)
