@@ -22,4 +22,4 @@ Performance goal: Emulating the DSP56362 in real time, which runs at 120MHz, res
 ### Join us on Discord
 
 I ceased development of this emulator about 10 years ago but due to [this reddit post](https://www.reddit.com/r/synthesizers/comments/l29ys5/dsp563xx_emulator_access_virus_nord_lead_waldorf/) I resumed working on it and a core team of several people now work together to make the emulator do something *"useful"* 😊
-Contributions are welcome! If you want to help or just want to follow the state of the project, feel free to join us on Discord: https://discord.gg/Vk9yKAaE
+Contributions are welcome! If you want to help or just want to follow the state of the project, feel free to join us on Discord: https://discord.gg/mveFUNbNCK
