@@ -737,7 +737,16 @@ namespace dsp56k
 	}
 	inline void DSP::op_Macr_S(const TWord op)
 	{
-		errNotImplemented("MACR");		
+		const TWord sssss	= getFieldValue<Macr_S,Field_sssss>(op);
+		const bool ab		= getFieldValue<Macr_S,Field_d>(op);
+		const bool negate	= getFieldValue<Macr_S,Field_k>(op);
+		const TWord qq		= getFieldValue<Macr_S,Field_QQ>(op);
+
+		const TReg24 s1 = decode_QQ_read( qq );
+		const TReg24 s2( decode_sssss(sssss) );
+
+		alu_mac( ab, s1, s2, negate, false );
+		alu_rnd( ab );
 	}
 	inline void DSP::op_Macri_xxxx(const TWord op)
 	{
