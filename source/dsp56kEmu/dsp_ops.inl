@@ -1158,46 +1158,38 @@ namespace dsp56k
 	}
 	inline void DSP::op_Movep_Xqqea(const TWord op)
 	{
-		const TWord mmmrrr	= getFieldValue<Movep_Xqqea,Field_MMM, Field_RRR>(op);
-		const EMemArea S	= getFieldValueMemArea<Movep_Xqqea>(op);
-		const TWord qAddr	= getFieldValue<Movep_Xqqea,Field_qqqqqq>(op);
+		const auto qAddr	= getFieldValue<Movep_Xqqea,Field_qqqqqq>(op);
 		const auto write	= getFieldValue<Movep_Xqqea,Field_W>(op);
-
-		const TWord ea		= decode_MMMRRR_read( mmmrrr );
 
 		const auto area = MemArea_X;
 
 		if( write )
 		{
-			if( mmmrrr == MMM_ImmediateData )
-				memWritePeriphFFFF80( area, qAddr, ea );
-			else
-				memWritePeriphFFFF80( area, qAddr, memRead( S, ea ) );
+			const auto m = readMem<Movep_Xqqea>(op);
+			memWritePeriphFFFF80( area, qAddr, m );
 		}
 		else
-			memWrite( S, ea, memReadPeriphFFFF80( area, qAddr ) );				
+		{
+			writeMem<Movep_Xqqea>(op, memReadPeriphFFFF80( area, qAddr ));
+		}
 	}
 	inline void DSP::op_Movep_Yqqea(const TWord op)
 	{
 		// TODO: code dup op_Movep_Xqqea
-		const TWord mmmrrr	= getFieldValue<Movep_Xqqea,Field_MMM, Field_RRR>(op);
-		const EMemArea S	= getFieldValueMemArea<Movep_Xqqea>(op);
-		const TWord qAddr	= getFieldValue<Movep_Xqqea,Field_qqqqqq>(op);
-		const auto write	= getFieldValue<Movep_Xqqea,Field_W>(op);
-
-		const TWord ea		= decode_MMMRRR_read( mmmrrr );
+		const auto qAddr	= getFieldValue<Movep_Yqqea,Field_qqqqqq>(op);
+		const auto write	= getFieldValue<Movep_Yqqea,Field_W>(op);
 
 		const auto area = MemArea_Y;
 
 		if( write )
 		{
-			if( mmmrrr == MMM_ImmediateData )
-				memWritePeriphFFFF80( area, qAddr, ea );
-			else
-				memWritePeriphFFFF80( area, qAddr, memRead( S, ea ) );
+			const auto m = readMem<Movep_Yqqea>(op);
+			memWritePeriphFFFF80( area, qAddr, m );
 		}
 		else
-			memWrite( S, ea, memReadPeriphFFFF80( area, qAddr ) );				
+		{
+			writeMem<Movep_Yqqea>(op, memReadPeriphFFFF80( area, qAddr ));
+		}
 	}
 	inline void DSP::op_Movep_eapp(const TWord op)
 	{
