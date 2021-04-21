@@ -351,7 +351,15 @@ namespace dsp56k
 		// not a
 		execOpcode(0x200017);
 
-		assert(dsp.reg.a.var == 0x12aaaaaa123456);		
+		assert(dsp.reg.a.var == 0x12aaaaaa123456);
+
+		dsp.reg.a.var = 0xffd8b38b000000;
+		dsp.reg.sr.var = 0x0800e8;
+
+		// not a
+		execOpcode(0x200017);
+		assert(dsp.reg.a.var == 0xff274c74000000);
+		assert(dsp.reg.sr.var == 0x0800e0);
 	}
 
 	void UnitTests::testEXTRACTU()
