@@ -7,15 +7,14 @@
 #include "registers.h"
 #include "types.h"
 #include "memory.h"
-#include "error.h"
 #include "agu.h"
 #include "disasm.h"
-#include "opcodes.h"
 #include "aar.h"
 
 #include "dsp_ops.inl"
 #include "dsp_ops_bra.inl"
 #include "dsp_ops_jmp.inl"
+#include "dsp_ops_move.inl"
 
 #if 0
 #	define LOGSC(F)	logSC(F)
