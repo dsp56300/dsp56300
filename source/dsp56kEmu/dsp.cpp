@@ -347,7 +347,7 @@ namespace dsp56k
 		reg.pc = TReg24(int(0));
 		reg.omr = TReg24(int(0));
 
-		reg.ictr.var = 0;
+		m_instructions = 0;
 	}
 
 	// _____________________________________________________________________________
@@ -439,7 +439,6 @@ namespace dsp56k
 
 		exec_jump(static_cast<Instruction>(opCache & 0xff), op);
 
-		++reg.ictr.var;
 		++m_instructions;
 
 		if(g_traceSupported && (opCache & 0xff) != ResolveCache && pcCurrentInstruction == currentOp)
@@ -996,7 +995,7 @@ namespace dsp56k
 
 		const std::string indent = getSSindent();
 
-		LOG( indent << " SC=" << std::hex << std::setw(6) << std::setfill('0') << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << reg.ictr.var << " func=" << _func );
+		LOG( indent << " SC=" << std::hex << std::setw(6) << std::setfill('0') << (int)reg.sc.var << " pcOld=" << pcCurrentInstruction << " pcNew=" << reg.pc.var << " ictr=" << (m_instructions & 0xffffff) << " func=" << _func );
 	}
 
 	// _____________________________________________________________________________
@@ -1874,7 +1873,7 @@ namespace dsp56k
 		case Reg_LA:	_res = reg.la;		break;
 		case Reg_LC:	_res = reg.lc;		break;
 
-		case Reg_ICTR:	_res = reg.ictr;	break;
+		case Reg_ICTR:	_res.var = m_instructions & 0xffffff;	break;
 
 		case Reg_SSH:	_res = hiword(reg.ss[ssIndex()]);	break;
 		case Reg_SSL:	_res = loword(reg.ss[ssIndex()]);	break;
@@ -2506,7 +2505,7 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 				regChange.valOld.var = (int)m_prevRegStates[i].val;
 				regChange.valNew.var = (int)regVal;
 				regChange.pc = pcCurrentInstruction;
-				regChange.ictr = reg.ictr.var;
+				regChange.ictr = m_instructions & 0xffffff;
 
 				m_regChanges.push_back( regChange );
 
