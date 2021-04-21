@@ -365,7 +365,7 @@ namespace dsp56k
 
 		m_currentOpLen = 1;
 		
-		if(m_processingMode == Default && !m_pendingInterrupts.empty())
+		if(m_processingMode == Default && !m_pendingInterrupts.empty() && !sr_test((CCRMask)(SR_I0|SR_I1)))
 		{
 			// TODO: priority sorting, masking
 			const auto vba = m_pendingInterrupts.pop_front();
