@@ -399,6 +399,7 @@ namespace dsp56k
 				else if(jumped)
 				{
 					m_processingMode = LongInterrupt;
+					sr_clear((CCRMask)(SR_S1|SR_S0|SR_SA));
 				}
 				else
 				{
@@ -1784,8 +1785,8 @@ namespace dsp56k
 	//
 	void DSP::alu_rnd( TReg56& _alu )
 	{
-	// 	if( sr_test( SR_S0 ) || sr_test( SR_S1 ) )
-	// 		LOG_ERR_NOTIMPLEMENTED( "scaling modes" );
+//	 	if( sr_test( SR_S0 ) || sr_test( SR_S1 ) )
+//	 		LOG_ERR_NOTIMPLEMENTED( "scaling modes" );
 
 		const int lsb = int(_alu.var & 0x000000ffffff);
 
