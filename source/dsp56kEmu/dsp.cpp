@@ -1788,20 +1788,34 @@ namespace dsp56k
 	void DSP::alu_rnd( TReg56& _alu )
 	{
 		int64_t rounder = 0x800000;
-		if (sr_test(SR_S1)) rounder>>=1;
-		else if (sr_test(SR_S0)) rounder<<=1;
+
+		if		(sr_test(SR_S1)) rounder>>=1;
+		else if	(sr_test(SR_S0)) rounder<<=1;
 		
-		_alu.var+=rounder;
+		_alu.var += rounder;
 
-		int64_t mask=(rounder<<1)-1;	// all the bits to the right of, and including the rounding position
+		const auto mask = (rounder<<1)-1;		// all the bits to the right of, and including the rounding position
 
-		if (!sr_test(SR_RM))	// convergent rounding. If all mask bits are cleared
+		if (!sr_test(SR_RM))					// convergent rounding. If all mask bits are cleared
 		{
-			if (!(_alu.var & mask)) _alu.var&=~(rounder<<1);	// then the bit to the left of the rounding position is cleared in the result
+			if (!(_alu.var & mask)) 
+				_alu.var&=~(rounder<<1);		// then the bit to the left of the rounding position is cleared in the result
 		}
-		_alu.var&=~mask;			// all bits to the right of and including the rounding position are cleared.
+
+		_alu.var&=~mask;						// all bits to the right of and including the rounding position are cleared.
+
+		const auto res = _alu.var;
 
 		_alu.doMasking();
+
+		sr_s_update();
+		sr_e_update(_alu);
+		sr_u_update(_alu);
+		sr_n_update(_alu);
+		sr_z_update(_alu);
+		sr_v_update(res, _alu);
+
+		sr_l_update_by_v();
 	}
 
 	// _____________________________________________________________________________
