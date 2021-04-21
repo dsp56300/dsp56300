@@ -60,7 +60,7 @@ namespace dsp56k
 			TReg24 hit;		
 			TReg24 miss;		
 			TReg24 replace;	
-			TReg24 cyc;		
+			TReg24 cyc;
 			TReg24 cnt1;		
 			TReg24 cnt2;		
 			TReg24 cnt3;		
