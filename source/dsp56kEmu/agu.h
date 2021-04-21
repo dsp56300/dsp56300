@@ -35,7 +35,7 @@ namespace dsp56k
 				// modulo
 				else if( moduloTest <= 0x007fff )
 				{
-					if( abs(signextend<int,24>(n)) > int(m+1) )
+					if( abs(signextend<int,24>(n)) >= int(m+1) )
 					{
 						// the doc says it's only valid for N = P x (2 pow k), but assume the assembly is okay
 //						LOG( "r " << std::hex << r << " + n " << std::hex << n << " = " << std::hex << ((r+n)&0x00ffffff) );
