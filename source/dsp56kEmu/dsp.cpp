@@ -1785,20 +1785,19 @@ namespace dsp56k
 	//
 	void DSP::alu_rnd( TReg56& _alu )
 	{
-//	 	if( sr_test( SR_S0 ) || sr_test( SR_S1 ) )
-//	 		LOG_ERR_NOTIMPLEMENTED( "scaling modes" );
+		int64_t rounder = 0x800000;
+		if (sr_test(SR_S1)) rounder>>=1;
+		else if (sr_test(SR_S0)) rounder<<=1;
+		
+		_alu.var+=rounder;
 
-		const int lsb = int(_alu.var & 0x000000ffffff);
+		int64_t mask=(rounder<<1)-1;	// all the bits to the right of, and including the rounding position
 
-		if( lsb > 0x800000 )
+		if (!sr_test(SR_RM))	// convergent rounding. If all mask bits are cleared
 		{
-			_alu.var += 0x1000000;
+			if (!(_alu.var & mask)) _alu.var&=~(rounder<<1);	// then the bit to the left of the rounding position is cleared in the result
 		}
-		else if( !sr_test(SR_RM) && lsb == 0x800000 && (_alu.var & 0x000001000000) != 0 )
-		{
-			_alu.var += 0x1000000;
-		}
-		_alu.var &= 0x00ffffffff000000;	// TODO: wrong?
+		_alu.var&=~mask;			// all bits to the right of and including the rounding position are cleared.
 	}
 
 	// _____________________________________________________________________________
