@@ -365,15 +365,14 @@ namespace dsp56k
 
 		m_currentOpLen = 1;
 		
-		if(m_processingMode == Default && !m_pendingInterrupts.empty() && !sr_test((CCRMask)(SR_I0|SR_I1)))
+		if(m_processingMode == Default && !m_pendingInterrupts.empty())
 		{
 			// TODO: priority sorting, masking
-			const auto vba = m_pendingInterrupts.pop_front();
-
 			const auto minPrio = mr().var & 0x3;
 
 			if(minPrio < 3)
 			{
+				const auto vba = m_pendingInterrupts.pop_front();
 				TWord op0, op1;
 				memRead2(MemArea_P, vba, op0, op1);
 
