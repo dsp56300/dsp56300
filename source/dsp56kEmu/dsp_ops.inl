@@ -1019,77 +1019,90 @@ namespace dsp56k
 	{
 		auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
 		cacheEntry = Nop;
-		
-		--reg.ictr.var;
-		--m_instructions;
 
-		if( op )
+		if( !op )
 		{
-			if(Opcodes::isNonParallelOpcode(op))
+			op_Nop(0);
+			return;
+		}
+
+		if(Opcodes::isNonParallelOpcode(op))
+		{
+			const auto* oi = m_opcodes.findNonParallelOpcodeInfo(op);
+
+			if(!oi)
 			{
-				const auto* oi = m_opcodes.findNonParallelOpcodeInfo(op);
+				m_opcodes.findNonParallelOpcodeInfo(op);		// retry here to help debugging
+				assert(0 && "illegal instruction");
+			}
 
-				if(!oi)
-				{
-					m_opcodes.findNonParallelOpcodeInfo(op);		// retry here to help debugging
-					assert(0 && "illegal instruction");
-				}
+			cacheEntry = oi->m_instruction;
 
-				cacheEntry = oi->m_instruction;
+			exec_jump(oi->m_instruction, op);
+			return;
+		}
+		const auto* oiMove = m_opcodes.findParallelMoveOpcodeInfo(op);
+		if(!oiMove)
+		{
+			m_opcodes.findParallelMoveOpcodeInfo(op);		// retry here to help debugging
+			assert(0 && "illegal instruction");
+		}
+
+		const OpcodeInfo* oiAlu = nullptr;
+
+		if(op & 0xff)
+		{
+			oiAlu = m_opcodes.findParallelAluOpcodeInfo(op);
+			if(!oiAlu)
+			{
+				m_opcodes.findParallelAluOpcodeInfo(op);	// retry here to help debugging
+				assert(0 && "invalid instruction");						
+			}
+		}
+
+		switch (oiMove->m_instruction)
+		{
+		case Move_Nop:
+			// Only ALU, no parallel move
+			if(oiAlu)
+			{
+				cacheEntry = oiAlu->m_instruction;
+				exec_jump(static_cast<Instruction>(oiAlu->m_instruction), op);
 			}
 			else
 			{
-				const auto* oiMove = m_opcodes.findParallelMoveOpcodeInfo(op);
-				if(!oiMove)
-				{
-					m_opcodes.findParallelMoveOpcodeInfo(op);		// retry here to help debugging
-					assert(0 && "illegal instruction");
-				}
-
-				const OpcodeInfo* oiAlu = nullptr;
-
-				if(op & 0xff)
-				{
-					oiAlu = m_opcodes.findParallelAluOpcodeInfo(op);
-					if(!oiAlu)
-					{
-						m_opcodes.findParallelAluOpcodeInfo(op);	// retry here to help debugging
-						assert(0 && "invalid instruction");						
-					}
-				}
-
-				switch (oiMove->m_instruction)
-				{
-				case Move_Nop:
-					// Only ALU, no parallel move
-					cacheEntry = oiAlu ? oiAlu->m_instruction : Nop;
-					break;
-				case Ifcc:
-				case Ifcc_U:
-					// IFcc executes the ALU instruction if the condition is met, therefore no ALU exec by us
-					cacheEntry = oiAlu ? oiMove->m_instruction : Nop;
-					break;
-				default:
-					if(!oiAlu)
-					{
-						// if there is no ALU instruction, do only a move
-						cacheEntry = oiMove->m_instruction;
-					}
-					else
-					{
-						// call special function that simulates latch registers for alu op + parallel move
-						cacheEntry = Parallel | oiMove->m_instruction << 8 | oiAlu->m_instruction << 16;
-					}
-				}
+				op_Nop(op);
 			}
-
-			execOp(op);
-		}
-		else
-		{
-			execOp(0);
+			break;
+		case Ifcc:
+		case Ifcc_U:
+			// IFcc executes the ALU instruction if the condition is met, therefore no ALU exec by us
+			if(oiAlu)
+			{
+				cacheEntry = oiMove->m_instruction;
+				exec_jump(oiMove->m_instruction, op);
+			}
+			else
+			{
+				op_Nop(op);						
+			}
+			break;
+		default:
+			if(!oiAlu)
+			{
+				// if there is no ALU instruction, do only a move
+				cacheEntry = oiMove->m_instruction;
+				exec_jump(oiMove->m_instruction, op);
+			}
+			else
+			{
+				// call special function that simulates latch registers for alu op + parallel move
+				cacheEntry = Parallel | oiMove->m_instruction << 8 | oiAlu->m_instruction << 16;
+				op_Parallel(op);
+			}
 		}
 	}
+
 	inline void DSP::op_Parallel(const TWord op)
 	{
 		const auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
