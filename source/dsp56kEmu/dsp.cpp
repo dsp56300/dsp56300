@@ -517,25 +517,6 @@ namespace dsp56k
 		return true;
 	}
 
-	bool DSP::exec_parallel_alu(TWord op)
-	{
-#ifdef _DEBUG
-		const auto* opInfo = m_opcodes.findParallelAluOpcodeInfo(op);
-#endif
-		op &= 0xff;
-
-		switch(op>>7)
-		{
-		case 0:
-			return exec_parallel_alu_nonMultiply(op);
-		case 1:
-			return exec_parallel_alu_multiply(op);
-		default:
-			assert(0 && "invalid op");
-			return false;
-		}
-	}
-
 	bool DSP::exec_parallel_alu_nonMultiply(TWord op)
 	{
 		const auto kkk = op & 0x7;

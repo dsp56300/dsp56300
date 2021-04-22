@@ -574,14 +574,24 @@ namespace dsp56k
 		if( checkCondition<Ifcc>(op) )
 		{
 			const auto backupCCR = ccr();
-			const auto res = exec_parallel_alu(op);
+
+			const auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
+			const auto instAlu = static_cast<Instruction>((cacheEntry >> 8) & 0xff);
+
+			exec_jump(instAlu, op);
+
 			ccr(backupCCR);
 		}
 	}
 	inline void DSP::op_Ifcc_U(const TWord op)
 	{
 		if( checkCondition<Ifcc_U>(op) )
-			exec_parallel_alu(op);
+		{
+			const auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
+			const auto instAlu = static_cast<Instruction>((cacheEntry >> 8) & 0xff);
+
+			exec_jump(instAlu, op);
+		}
 	}
 	inline void DSP::op_Illegal(const TWord op)
 	{
@@ -1088,7 +1098,7 @@ namespace dsp56k
 			// IFcc executes the ALU instruction if the condition is met, therefore no ALU exec by us
 			if(oiAlu)
 			{
-				cacheEntry = oiMove->m_instruction;
+				cacheEntry = oiMove->m_instruction | (oiAlu->m_instruction << 8);
 				exec_jump(oiMove->m_instruction, op);
 			}
 			else
