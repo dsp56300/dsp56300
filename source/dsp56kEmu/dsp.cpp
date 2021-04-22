@@ -666,13 +666,13 @@ namespace dsp56k
 
 		switch( _mmmrrr & 0x38 )
 		{
-		case 0x00:	/* 000 */	a = r;					AGU::updateAddressRegister(r,-_n.var,_m.var);					break;
-		case 0x08:	/* 001 */	a = r;					AGU::updateAddressRegister(r,+_n.var,_m.var);					break;
-		case 0x10:	/* 010 */	a = r;					AGU::updateAddressRegister(r,-1,_m.var);						break;
-		case 0x18:	/* 011 */	a =	r;					AGU::updateAddressRegister(r,+1,_m.var);						break;
-		case 0x20:	/* 100 */	a = r;																					break;
-		case 0x28:	/* 101 */	a = r;					AGU::updateAddressRegister(a,+_n.var, _m.var);					break;
-		case 0x38:	/* 111 */							AGU::updateAddressRegister(r,-1,_m.var);		a = r;			break;
+		case 0x00:	/* 000 (Rn)-Nn */	a = r;		AGU::updateAddressRegister(r,-_n.var,_m.var);					break;
+		case 0x08:	/* 001 (Rn)+Nn */	a = r;		AGU::updateAddressRegister(r,+_n.var,_m.var);					break;
+		case 0x10:	/* 010 (Rn)-   */	a = r;		AGU::updateAddressRegister(r,-1,_m.var);						break;
+		case 0x18:	/* 011 (Rn)+   */	a =	r;		AGU::updateAddressRegister(r,+1,_m.var);						break;
+		case 0x20:	/* 100 (Rn)    */	a = r;																		break;
+		case 0x28:	/* 101 (Rn+Nn) */	a = r;		AGU::updateAddressRegister(a,+_n.var, _m.var);					break;
+		case 0x38:	/* 111 -(Rn)   */				AGU::updateAddressRegister(r,-1,_m.var);			a = r;		break;
 
 		default:
 			assert(0 && "impossible to happen" );
