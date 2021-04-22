@@ -1,6 +1,5 @@
 #include "unittests.h"
 
-
 #include "disasm.h"
 #include "dsp.h"
 #include "memory.h"
@@ -14,6 +13,7 @@ namespace dsp56k
 		testMoveImmediateToRegister();
 		testMoveMemoryToRegister();
 		testCCCC();
+		testJSGE();
 		testMultiply();
 		testAdd();
 		testAddr();
@@ -223,6 +223,18 @@ namespace dsp56k
 		assert(_ge == dsp.decode_cccc(CCCC_GreaterEqual));
 		assert(_gt == dsp.decode_cccc(CCCC_GreaterThan));
 		assert(_neq == dsp.decode_cccc(CCCC_NotEqual));	
+	}
+
+	void UnitTests::testJSGE()
+	{
+		// SR is the result of a being 0x0055000000000000 and then: tst a
+		dsp.reg.sr.var = 0x0800c0;
+
+		dsp.reg.r[2].var = 0x50;
+
+		// jsge (r2)
+		execOpcode(0x0be2a1);
+		assert(dsp.getPC() == 0x50);
 	}
 
 	void UnitTests::testCMP()
