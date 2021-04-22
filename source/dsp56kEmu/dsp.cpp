@@ -1226,12 +1226,15 @@ namespace dsp56k
 
 		--reg.lc.var;
 		execOp(op);
-		// TODO: remember function pointer and call directly
+
+		const auto opCache = m_opcodeCache[pcCurrentInstruction];
+
+		const auto func = g_jumpTable[static_cast<Instruction>(opCache & 0xff)];
 
 		while( reg.lc.var > 0 )
 		{
 			--reg.lc.var;
-			execOp(op);
+			(this->*func)(op);
 		}
 
 		reg.lc = lcBackup;
