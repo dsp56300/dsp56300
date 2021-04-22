@@ -5,20 +5,62 @@
 
 namespace dsp56k
 {
-	template<Instruction Inst> void DSP::move_ddddd_MMMRRR( TWord op, EMemArea memArea)
+	template<Instruction Inst, EMemArea Area> void DSP::move_ddddd_MMMRRR(TWord op)
 	{
 		const TWord ddddd	= getFieldValue<Inst,Field_dd, Field_ddd>(op);
 		const TWord write	= getFieldValue<Inst,Field_W>(op);
 
 		if(write)
 		{
-			const auto m = readMem<Inst>(op, memArea);
+			const auto m = readMem<Inst>(op, Area);
 			decode_ddddd_write<TReg24>( ddddd, TReg24(m));
 		}
 		else
 		{
 			const auto r = decode_ddddd_read<TWord>( ddddd );
-			writeMem<Inst>(op, memArea, r);
+			writeMem<Inst>(op, Area, r);
+		}
+	}
+	template<Instruction Inst> void DSP::move_L(TWord op)
+	{
+		const auto LLL		= getFieldValue<Inst,Field_L, Field_LL>(op);
+		const auto write	= getFieldValue<Inst,Field_W>(op);
+
+		const TWord ea = effectiveAddress<Inst>(op);
+
+		if( write )
+		{
+			const TReg24 x( memRead( MemArea_X, ea ) );
+			const TReg24 y( memRead( MemArea_Y, ea ) );
+
+			decode_LLL_write( LLL, x,y );
+		}
+		else
+		{
+			TWord x,y;
+
+			decode_LLL_read( LLL, x, y );
+
+			memWrite( MemArea_X, ea, x );
+			memWrite( MemArea_Y, ea, y );
+		}
+	}
+	template<Instruction Inst, EMemArea Area> void DSP::move_Rnxxxx(TWord op)
+	{
+		const TWord DDDDDD	= getFieldValue<Inst,Field_DDDDDD>(op);
+		const auto	write	= getFieldValue<Inst,Field_W>(op);
+		const TWord rrr		= getFieldValue<Inst,Field_RRR>(op);
+
+		const int shortDisplacement = pcRelativeAddressExt<Inst>();
+		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
+
+		if( write )
+		{
+			decode_dddddd_write( DDDDDD, TReg24(memRead( Area, ea )) );
+		}
+		else
+		{
+			memWrite( Area, ea, decode_dddddd_read( DDDDDD ).var );
 		}
 	}
 
@@ -48,52 +90,14 @@ namespace dsp56k
 		decode_MMMRRR_read( mmrrr );
 	}
 	
-	inline void DSP::op_Movex_ea(const TWord op)	{ move_ddddd_MMMRRR<Movex_ea>(op, MemArea_X); }
-	inline void DSP::op_Movey_ea(const TWord op)	{ move_ddddd_MMMRRR<Movey_ea>(op, MemArea_Y); }
-	inline void DSP::op_Movex_aa(const TWord op)	{ move_ddddd_MMMRRR<Movex_aa>(op, MemArea_X); }
-	inline void DSP::op_Movey_aa(const TWord op)	{ move_ddddd_MMMRRR<Movey_aa>(op, MemArea_Y); }
+	inline void DSP::op_Movex_ea(const TWord op)		{ move_ddddd_MMMRRR<Movex_ea, MemArea_X>(op); }
+	inline void DSP::op_Movey_ea(const TWord op)		{ move_ddddd_MMMRRR<Movey_ea, MemArea_Y>(op); }
+	inline void DSP::op_Movex_aa(const TWord op)		{ move_ddddd_MMMRRR<Movex_aa, MemArea_X>(op); }
+	inline void DSP::op_Movey_aa(const TWord op)		{ move_ddddd_MMMRRR<Movey_aa, MemArea_Y>(op); }
 
-	inline void DSP::op_Movex_Rnxxxx(const TWord op)
-	{
-		const TWord DDDDDD	= getFieldValue<Movex_Rnxxxx,Field_DDDDDD>(op);
-		const auto	write	= getFieldValue<Movex_Rnxxxx,Field_W>(op);
-		const TWord rrr		= getFieldValue<Movex_Rnxxxx,Field_RRR>(op);
+	inline void DSP::op_Movex_Rnxxxx(const TWord op)	{ move_Rnxxxx<Movex_Rnxxxx, MemArea_X>(op); }
+	inline void DSP::op_Movey_Rnxxxx(const TWord op)	{ move_Rnxxxx<Movey_Rnxxxx, MemArea_Y>(op);	}
 
-		const int shortDisplacement = pcRelativeAddressExt<Movex_Rnxxxx>();
-		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-		const auto area = MemArea_X;
-
-		if( write )
-		{
-			decode_dddddd_write( DDDDDD, TReg24(memRead( area, ea )) );
-		}
-		else
-		{
-			memWrite( area, ea, decode_dddddd_read( DDDDDD ).var );
-		}
-	}
-	inline void DSP::op_Movey_Rnxxxx(const TWord op)
-	{
-		// TODO: code dup op_Movex_Rnxxxx
-		const TWord DDDDDD	= getFieldValue<Movey_Rnxxxx,Field_DDDDDD>(op);
-		const auto	write	= getFieldValue<Movey_Rnxxxx,Field_W>(op);
-		const TWord rrr		= getFieldValue<Movey_Rnxxxx,Field_RRR>(op);
-
-		const int shortDisplacement = pcRelativeAddressExt<Movey_Rnxxxx>();
-		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-		const auto area = MemArea_Y;
-
-		if( write )
-		{
-			decode_dddddd_write( DDDDDD, TReg24(memRead( area, ea )) );
-		}
-		else
-		{
-			memWrite( area, ea, decode_dddddd_read( DDDDDD ).var );
-		}
-	}
 	inline void DSP::op_Movex_Rnxxx(const TWord op)
 	{
 		const TWord ddddd	= getFieldValue<Movex_Rnxxx,Field_DDDD>(op);
@@ -204,54 +208,10 @@ namespace dsp56k
 		else
 			setA(y0());
 	}
-	inline void DSP::op_Movel_ea(const TWord op)
-	{
-		const auto LLL		= getFieldValue<Movel_ea,Field_L, Field_LL>(op);
-		const auto write	= getFieldValue<Movel_ea,Field_W>(op);
 
-		const TWord ea = effectiveAddress<Movel_ea>(op);
+	inline void DSP::op_Movel_ea(const TWord op)	{ move_L<Movel_ea>(op); }
+	inline void DSP::op_Movel_aa(const TWord op)	{ move_L<Movel_aa>(op); }
 
-		if( write )
-		{
-			const TReg24 x( memRead( MemArea_X, ea ) );
-			const TReg24 y( memRead( MemArea_Y, ea ) );
-
-			decode_LLL_write( LLL, x,y );
-		}
-		else
-		{
-			TWord x,y;
-
-			decode_LLL_read( LLL, x, y );
-
-			memWrite( MemArea_X, ea, x );
-			memWrite( MemArea_Y, ea, y );
-		}
-	}
-	inline void DSP::op_Movel_aa(const TWord op)
-	{
-		const auto LLL		= getFieldValue<Movel_aa,Field_L, Field_LL>(op);
-		const auto write	= getFieldValue<Movel_aa,Field_W>(op);
-
-		const TWord ea = getFieldValue<Movel_aa,Field_aaaaaa>(op);
-
-		if( write )
-		{
-			const TReg24 x( memRead( MemArea_X, ea ) );
-			const TReg24 y( memRead( MemArea_Y, ea ) );
-
-			decode_LLL_write( LLL, x,y );
-		}
-		else
-		{
-			TWord x,y;
-
-			decode_LLL_read( LLL, x, y );
-
-			memWrite( MemArea_X, ea, x );
-			memWrite( MemArea_Y, ea, y );
-		}
-	}
 	inline void DSP::op_Movexy(const TWord op)
 	{
 		const TWord mmrrr	= getFieldValue<Movexy,Field_MM, Field_RRR>(op);

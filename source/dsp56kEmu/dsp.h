@@ -1299,7 +1299,9 @@ namespace dsp56k
 		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestDDDDDD(TWord op);
 
 		// -------------- move helper
-		template<Instruction Inst> void move_ddddd_MMMRRR(TWord op, EMemArea memArea);
+		template<Instruction Inst, EMemArea Area> void move_ddddd_MMMRRR(TWord op);
+		template<Instruction Inst> void move_L(TWord op);
+		template<Instruction Inst, EMemArea Area> void move_Rnxxxx(TWord op);
 		
 		// --- debugging tools
 	private:
