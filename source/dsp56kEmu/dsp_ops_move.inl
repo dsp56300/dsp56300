@@ -221,18 +221,17 @@ namespace dsp56k
 		const TWord	ee		= getFieldValue<Movexy,Field_ee>(op);
 		const TWord ff		= getFieldValue<Movexy,Field_ff>(op);
 
-		// X
-		const TWord eaX = decode_XMove_MMRRR( mmrrr );
+		const TWord eaX				= decode_XMove_MMRRR( mmrrr );
+		const TWord regIdxOffset	= ((mmrrr&0x7) >= 4) ? 0 : 4;
+		const TWord eaY				= decode_YMove_mmrr( mmrr, regIdxOffset );
+
+		if(!writeX)		memWrite( MemArea_X, eaX, decode_ee_read( ee ).toWord() );
+		if(!writeY)		memWrite( MemArea_Y, eaY, decode_ff_read( ff ).toWord() );
+
 		if( writeX )	decode_ee_write( ee, TReg24(memRead( MemArea_X, eaX )) );
-		else			memWrite( MemArea_X, eaX, decode_ee_read( ee ).toWord() );
-
-		// Y
-		const TWord regIdxOffset = ((mmrrr&0x7) >= 4) ? 0 : 4;
-
-		const TWord eaY = decode_YMove_mmrr( mmrr, regIdxOffset );
 		if( writeY )	decode_ff_write( ff, TReg24(memRead( MemArea_Y, eaY )) );
-		else			memWrite( MemArea_Y, eaY, decode_ff_read( ff ).toWord() );		
 	}
+
 	inline void DSP::op_Movec_ea(const TWord op)
 	{
 		const TWord ddddd	= getFieldValue<Movec_ea,Field_DDDDD>(op);

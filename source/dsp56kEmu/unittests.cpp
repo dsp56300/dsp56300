@@ -12,6 +12,7 @@ namespace dsp56k
 	{
 		testMoveImmediateToRegister();
 		testMoveMemoryToRegister();
+		testMoveXYOverlap();
 		testCCCC();
 		testJSGE();
 		testMultiply();
@@ -132,6 +133,25 @@ namespace dsp56k
 		execOpcode(0x5ffd00);
 		assert(dsp.reg.b.var == 0x00123456000000);
 		assert(dsp.reg.r[5].var == 9);
+	}
+
+	void UnitTests::testMoveXYOverlap()
+	{
+		dsp.memory().set(MemArea_X, 10, 0x123456);
+		dsp.memory().set(MemArea_Y, 5, 0x543210);
+		dsp.reg.a.var = 0x0000babeb00bab;
+
+		dsp.reg.r[2].var = 10;
+		dsp.reg.r[6].var = 5;
+
+		// move x:(r2)+,a a,y:(r6)+
+		execOpcode(0xbada00);
+		assert(dsp.reg.r[2] == 11);
+		assert(dsp.reg.r[6] == 6);
+
+		assert(dsp.reg.a == 0x00123456000000);
+		assert(dsp.memory().get(MemArea_X, 10) == 0x123456);
+		assert(dsp.memory().get(MemArea_Y, 5 ) == 0xbabe);
 	}
 
 	void UnitTests::testAdd()
