@@ -6,28 +6,24 @@
 
 namespace Logging
 {
-	void g_logWin32( const std::string& _s );
-	void g_logfWin32( const std::string& _s );
+	void g_logToConsole( const std::string& _s );
+	void g_logToFile( const std::string& _s );
 }
 
-	#define LOGWIN32(ss)	{ Logging::g_logWin32( (ss).str() ); }
-	#define LOGFWIN32(ss)	{ Logging::g_logfWin32( (ss).str() ); }
+#define LOGTOCONSOLE(ss)	{ Logging::g_logToConsole( (ss).str() ); }
+#define LOGTOFILE(ss)		{ Logging::g_logToFile( (ss).str() ); }
 
-//#ifndef _MASTER_BUILD
-	#define LOG(S)																												\
-	{																															\
-		std::stringstream ss;	ss << __FUNCTION__ << "@" << __LINE__ << ": " << S;												\
-																																\
-		LOGWIN32(ss)																											\
-	}
-	#define LOGF(S)																												\
-	{																															\
-		std::stringstream ss;	ss << S;																						\
-																																\
-		LOGFWIN32(ss)																											\
-	}
-//#else
-//	#define LOG(S)	{}
-//#endif
+#define LOG(S)																												\
+{																															\
+	std::stringstream ss;	ss << __FUNCTION__ << "@" << __LINE__ << ": " << S;												\
+																															\
+	LOGTOCONSOLE(ss)																										\
+}
+#define LOGF(S)																												\
+{																															\
+	std::stringstream ss;	ss << S;																						\
+																															\
+	LOGTOFILE(ss)																											\
+}
 
 #define HEX(S)			std::hex << std::setfill('0') << std::setw(6) << S

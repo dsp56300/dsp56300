@@ -7,9 +7,8 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
 #define NOMINMAX
-#include <windows.h>
+#include <Windows.h>
 #include <ctime>
 #define output_string(s) ::OutputDebugStringA(s)
 #else
@@ -18,7 +17,7 @@
 
 namespace Logging
 {
-	void g_logWin32( const std::string& _s )
+	void g_logToConsole( const std::string& _s )
 	{
 		output_string( (_s + "\n").c_str() );
 	}
@@ -31,11 +30,9 @@ namespace Logging
 		time(&t);
 
 		tm lt;
-#ifdef _WIN32
-		localtime_s(&lt,&t);
-#else
+
 		memcpy(&lt,localtime(&t),sizeof(tm));
-#endif
+
 		strftime( strTime, 127, "%Y-%m-%d-%H-%M-%S", &lt );
 
 		return std::string(strTime) + ".log";
@@ -48,9 +45,9 @@ namespace Logging
 	std::mutex g_logMutex;
 	using Guard = std::lock_guard<std::mutex>;
 	
-	void g_logfWin32( const std::string& _s )
+	void g_logToFile( const std::string& _s )
 	{
-		g_logWin32(_s);
+		g_logToConsole(_s);
 
 		{
 			Guard g(g_logMutex);
