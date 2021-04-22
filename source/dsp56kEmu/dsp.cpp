@@ -441,7 +441,7 @@ namespace dsp56k
 
 		++m_instructions;
 
-		if(g_traceSupported && (opCache & 0xff) != ResolveCache && pcCurrentInstruction == currentOp)
+		if(g_traceSupported && pcCurrentInstruction == currentOp)
 			traceOp();
 	}
 
