@@ -351,6 +351,13 @@ namespace dsp56k
 		return false;
 #endif
 	}
+	void Memory::clearHeatmap()
+	{
+#if MEMORY_HEAT_MAP
+		for (size_t a=0; a<m_heatMap.size(); ++a)
+			m_heatMap[a].clear();
+#endif
+	}
 
 	void Memory::setSymbol(char _area, TWord _address, const std::string& _name)
 	{
