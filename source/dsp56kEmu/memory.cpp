@@ -354,8 +354,11 @@ namespace dsp56k
 	void Memory::clearHeatmap()
 	{
 #if MEMORY_HEAT_MAP
-		for (size_t a=0; a<m_heatMap.size(); ++a)
+		for (size_t a=0; a<MemArea_COUNT; ++a)
+		{
 			m_heatMap[a].clear();
+			m_heatMap[a].resize(size());
+		}
 #endif
 	}
 
