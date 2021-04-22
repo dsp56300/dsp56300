@@ -5,6 +5,26 @@
 
 namespace dsp56k
 {
+	template<Instruction Inst> void DSP::move_ddddd_MMMRRR( TWord op, EMemArea memArea)
+	{
+		const TWord ddddd	= getFieldValue<Inst,Field_dd, Field_ddd>(op);
+		const TWord write	= getFieldValue<Inst,Field_W>(op);
+
+		if(write)
+		{
+			const auto m = readMem<Inst>(op, memArea);
+			decode_ddddd_write<TReg24>( ddddd, TReg24(m));
+		}
+		else
+		{
+			const auto r = decode_ddddd_read<TWord>( ddddd );
+			writeMem<Inst>(op, memArea, r);
+		}
+	}
+
+	// _______________________
+	//
+	
 	inline void DSP::op_Move_Nop(const TWord op)
 	{
 	}
@@ -20,7 +40,6 @@ namespace dsp56k
 		const auto eeeee = getFieldValue<Mover,Field_eeeee>(op);
 		const auto ddddd = getFieldValue<Mover,Field_ddddd>(op);
 
-		// TODO: we need to determine the two register types and call different template versions of read and write
 		decode_ddddd_write<TReg24>( ddddd, decode_ddddd_read<TReg24>( eeeee ) );
 	}
 	inline void DSP::op_Move_ea(const TWord op)
@@ -28,55 +47,12 @@ namespace dsp56k
 		const TWord mmrrr = getFieldValue<Move_ea, Field_MM, Field_RRR>(op);
 		decode_MMMRRR_read( mmrrr );
 	}
-	inline void DSP::op_Movex_ea(const TWord op)
-	{
-		const TWord mmmrrr	= getFieldValue<Movex_ea,Field_MMM, Field_RRR>(op);
-		const TWord ddddd	= getFieldValue<Movex_ea,Field_dd, Field_ddd>(op);
-		const TWord write	= getFieldValue<Movex_ea,Field_W>(op);
+	
+	inline void DSP::op_Movex_ea(const TWord op)	{ move_ddddd_MMMRRR<Movex_ea>(op, MemArea_X); }
+	inline void DSP::op_Movey_ea(const TWord op)	{ move_ddddd_MMMRRR<Movey_ea>(op, MemArea_Y); }
+	inline void DSP::op_Movex_aa(const TWord op)	{ move_ddddd_MMMRRR<Movex_aa>(op, MemArea_X); }
+	inline void DSP::op_Movey_aa(const TWord op)	{ move_ddddd_MMMRRR<Movey_aa>(op, MemArea_Y); }
 
-		exec_move_ddddd_MMMRRR( ddddd, mmmrrr, write, MemArea_X);
-	}
-	inline void DSP::op_Movey_ea(const TWord op)
-	{
-		const TWord mmmrrr	= getFieldValue<Movey_ea,Field_MMM, Field_RRR>(op);
-		const TWord ddddd	= getFieldValue<Movey_ea,Field_dd, Field_ddd>(op);
-		const TWord write	= getFieldValue<Movey_ea,Field_W>(op);
-
-		exec_move_ddddd_MMMRRR( ddddd, mmmrrr, write, MemArea_Y);
-	}
-	inline void DSP::op_Movex_aa(const TWord op)
-	{
-		const bool write	= getFieldValue<Movex_aa,Field_W>(op);
-		const TWord ddddd	= getFieldValue<Movex_aa,Field_dd, Field_ddd>(op);
-		const TWord aaaaaa	= getFieldValue<Movex_aa,Field_aaaaaa>(op);
-		const EMemArea area	= MemArea_X;
-
-		if (write)
-		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead(area, aaaaaa)) );
-		}
-		else
-		{
-			memWrite( area, aaaaaa, decode_ddddd_read<TWord>(ddddd) );
-		}		
-	}
-	inline void DSP::op_Movey_aa(const TWord op)
-	{
-		// TODO: code dup op_Movex_aa
-		const bool write	= getFieldValue<Movex_aa,Field_W>(op);
-		const TWord ddddd	= getFieldValue<Movex_aa,Field_dd, Field_ddd>(op);
-		const TWord aaaaaa	= getFieldValue<Movex_aa,Field_aaaaaa>(op);
-		const EMemArea area	= MemArea_Y;
-
-		if (write)
-		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead(area, aaaaaa)) );
-		}
-		else
-		{
-			memWrite( area, aaaaaa, decode_ddddd_read<TWord>(ddddd) );
-		}
-	}
 	inline void DSP::op_Movex_Rnxxxx(const TWord op)
 	{
 		const TWord DDDDDD	= getFieldValue<Movex_Rnxxxx,Field_DDDDDD>(op);
@@ -121,14 +97,9 @@ namespace dsp56k
 	inline void DSP::op_Movex_Rnxxx(const TWord op)
 	{
 		const TWord ddddd	= getFieldValue<Movex_Rnxxx,Field_DDDD>(op);
-		const TWord aaaaaaa	= getFieldValue<Movex_Rnxxx,Field_aaaaaa, Field_a>(op);
 		const auto	write	= getFieldValue<Movex_Rnxxx,Field_W>(op);
-		const TWord rrr		= getFieldValue<Movex_Rnxxx,Field_RRR>(op);
-
-		const int shortDisplacement = signextend<int,7>(aaaaaaa);
-		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-		const auto area = MemArea_X;
+		const TWord ea		= effectiveAddress<Movex_Rnxxx>(op);
+		constexpr auto area	= MemArea_X;
 
 		if( write )
 		{
@@ -143,14 +114,9 @@ namespace dsp56k
 	{
 		// TODO: code dup op_Movex_Rnxxx
 		const TWord ddddd	= getFieldValue<Movey_Rnxxx,Field_DDDD>(op);
-		const TWord aaaaaaa	= getFieldValue<Movey_Rnxxx,Field_aaaaaa, Field_a>(op);
 		const auto	write	= getFieldValue<Movey_Rnxxx,Field_W>(op);
-		const TWord rrr		= getFieldValue<Movey_Rnxxx,Field_RRR>(op);
-
-		const int shortDisplacement = signextend<int,7>(aaaaaaa);
-		const TWord ea = decode_RRR_read( rrr, shortDisplacement );
-
-		const auto area = MemArea_Y;
+		const TWord ea		= effectiveAddress<Movey_Rnxxx>(op);
+		constexpr auto area	= MemArea_Y;
 
 		if( write )
 		{
@@ -394,7 +360,7 @@ namespace dsp56k
 		const EMemArea s	= getFieldValue<Movep_ppea,Field_s>(op) ? MemArea_Y : MemArea_X;
 		const EMemArea S	= getFieldValueMemArea<Movep_ppea>(op);
 
-		const TWord ea		= decode_MMMRRR_read( mmmrrr );
+		const TWord ea		= effectiveAddress<Movep_ppea>(op);
 
 		if( write )
 		{

@@ -235,10 +235,6 @@ namespace dsp56k
 
 		void	traceOp							();
 
-		// -- execution helpers
-
-		void exec_move_ddddd_MMMRRR			( TWord ddddd, TWord mmmrrr, bool write, EMemArea memArea );
-
 		// -- decoding helper functions
 
 		TWord	decode_MMMRRR_read		( TWord _mmmrrr );
@@ -1180,15 +1176,13 @@ namespace dsp56k
 		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaaaaaaaa>()>::type* = nullptr>
 		TWord effectiveAddress(TWord op) const;
 
-		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaa>()>::type* = nullptr>
+		template<Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst,Field_aaaaaa>()>::type* = nullptr>
+		TWord effectiveAddress(TWord op) const;
+
+		template<Instruction Inst, typename std::enable_if<hasFields<Inst,Field_aaaaaa, Field_a, Field_RRR>()>::type* = nullptr>
 		TWord effectiveAddress(TWord op) const;
 
 		// Relative Address Offset
-		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaaaaaaaa>()>::type* = nullptr>
-		int relativeAddressOffset(TWord op) const;
-
-		template<Instruction Inst, typename std::enable_if<hasField<Inst,Field_aaaaaa>()>::type* = nullptr>
-		int relativeAddressOffset(TWord op) const;
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaa, Field_aaaaa>()>::type* = nullptr>
 		int relativeAddressOffset(TWord op) const;
 		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_RRR>()>::type* = nullptr> 
@@ -1210,8 +1204,8 @@ namespace dsp56k
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_S>()>::type* = nullptr>
 		TWord readMem(TWord op) const;
 
-		template <Instruction Inst, typename std::enable_if<!hasFields<Inst, Field_S, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
-		template <Instruction Inst, typename std::enable_if<!hasFields<Inst, Field_S, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> TWord readMem(TWord op) const;
 
 		// Memory Write
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type* = nullptr>
@@ -1221,16 +1215,16 @@ namespace dsp56k
 		void writeMem(TWord op, EMemArea area, TWord value);
 
 		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type* = nullptr>
-		void writeMem(TWord op, EMemArea area, TWord value) const;
+		void writeMem(TWord op, EMemArea area, TWord value);
 
 		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaa>()>::type* = nullptr>
-		void writeMem(TWord op, EMemArea area, TWord value) const;
+		void writeMem(TWord op, EMemArea area, TWord value);
 
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_S>()>::type* = nullptr>
-		void writeMem(TWord op, TWord value) const;
+		void writeMem(TWord op, TWord value);
 
-		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void writeMem(TWord op, TWord value) const;
-		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void writeMem(TWord op, TWord value) const;
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void writeMem(TWord op, TWord value);
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void writeMem(TWord op, TWord value);
 
 		// bit manipulation
 		template <Instruction Inst> TWord getBit(TWord op) const
@@ -1303,6 +1297,9 @@ namespace dsp56k
 		
 		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestMem(TWord op);
 		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestDDDDDD(TWord op);
+
+		// -------------- move helper
+		template<Instruction Inst> void move_ddddd_MMMRRR(TWord op, EMemArea memArea);
 		
 		// --- debugging tools
 	private:

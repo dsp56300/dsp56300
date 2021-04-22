@@ -1004,43 +1004,6 @@ namespace dsp56k
 	}
 
 	// _____________________________________________________________________________
-	// exec_move_ddddd_MMMRRR
-	//
-	void DSP::exec_move_ddddd_MMMRRR( TWord ddddd, TWord mmmrrr, bool write, EMemArea memArea )
-	{
-		if( write && mmmrrr == MMM_ImmediateData )
-		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(fetchOpWordB()) );
-			return;
-		}
-
-		const auto addr = decode_MMMRRR_read( mmmrrr );
-
-		if(addr >= XIO_Reserved_High_First)
-		{
-			if( write )
-			{
-				decode_ddddd_write<TReg24>( ddddd, TReg24(memReadPeriph( memArea, addr )) );
-			}
-			else
-			{
-				memWritePeriph( memArea, addr, decode_ddddd_read<TWord>( ddddd ) );
-			}
-		}
-		else
-		{
-			if( write )
-			{
-				decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( memArea, addr )) );
-			}
-			else
-			{
-				memWrite( memArea, addr, decode_ddddd_read<TWord>( ddddd ) );
-			}			
-		}
-	}
-
-	// _____________________________________________________________________________
 	// decode_cccc
 	//
 	bool DSP::decode_cccc( TWord cccc ) const
