@@ -1216,6 +1216,7 @@ namespace dsp56k
 		{
 			--reg.lc.var;
 			(this->*func)(op);
+			traceOp();
 		}
 
 		reg.lc = lcBackup;
