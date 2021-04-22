@@ -38,6 +38,11 @@ namespace dsp56k
 		m_mem[MemArea_Y] = y;
 		m_mem[MemArea_P] = p;
 
+#if MEMORY_HEAT_MAP
+		for(size_t i=0; i<MemArea_COUNT; ++i)
+			m_heatMap[i].resize(size());
+#endif
+
 		if(g_useInitPattern)
 			fillWithInitPattern();
 	}
@@ -47,6 +52,10 @@ namespace dsp56k
 	//
 	bool Memory::dspWrite( EMemArea& _area, TWord& _offset, TWord _value )
 	{
+#if MEMORY_HEAT_MAP
+		++m_heatMap[_area][_offset];
+#endif
+
 		memTranslateAddress(_area, _offset);
 
 #ifdef _DEBUG
@@ -90,6 +99,10 @@ namespace dsp56k
 	//
 	TWord Memory::get( EMemArea _area, TWord _offset ) const
 	{
+#if MEMORY_HEAT_MAP
+		++m_heatMap[_area][_offset];
+#endif
+
 		memTranslateAddress(_area, _offset);
 
 #ifdef _DEBUG
@@ -116,8 +129,13 @@ namespace dsp56k
 
 	void Memory::get2(EMemArea _area, TWord _offset, TWord& _wordA, TWord& _wordB)
 	{
-		memTranslateAddress(_area, _offset);
+#if MEMORY_HEAT_MAP
+		++m_heatMap[_area][_offset];
+		++m_heatMap[_area][_offset+1];
+#endif
 
+		memTranslateAddress(_area, _offset);
+		
 #ifdef _DEBUG
 		assert(_offset < XIO_Reserved_High_First);
 		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
@@ -306,6 +324,32 @@ namespace dsp56k
 			out << std::endl;
 		}
 		return true;
+	}
+
+	bool Memory::saveHeatmap(const char* _file, bool _writeZeroes)
+	{
+#if MEMORY_HEAT_MAP
+		std::ofstream out(_file, std::ios::trunc);
+		if(!out.is_open())
+			return false;
+
+//		for(size_t a=0; a<m_heatMap.size(); ++a)
+		const size_t a = MemArea_P;
+		{
+			const auto& hm = m_heatMap[a];
+			for(size_t i=0; i<hm.size(); ++i)
+			{
+				const auto count = hm[i];
+				if(!count && !_writeZeroes)
+					continue;
+				out << g_memAreaNames[a] << ':' << HEX(i) << ": " << std::setfill('0') << std::setw(8) << std::hex << count << std::endl;
+			}
+		}
+
+		return true;
+#else
+		return false;
+#endif
 	}
 
 	void Memory::setSymbol(char _area, TWord _address, const std::string& _name)

@@ -7,6 +7,8 @@
 
 #include "peripherals.h"
 
+#define MEMORY_HEAT_MAP	true
+
 namespace dsp56k
 {
 	// 128 words - boostrap extension
@@ -59,6 +61,10 @@ namespace dsp56k
 		TWord*												p;
 
 		TWord												m_bridgedMemoryAddress = 0xffffff;
+
+#if MEMORY_HEAT_MAP
+		mutable std::array<std::vector<uint32_t>, MemArea_COUNT>	m_heatMap;
+#endif
 		
 		struct STransaction
 		{
@@ -105,6 +111,8 @@ namespace dsp56k
 
 		bool				saveAsText			(const char* _file, EMemArea _area, const TWord _offset, const TWord _count);
 
+		bool				saveHeatmap			(const char* _file, bool _writeZeroes);
+		
 		void				setDSP				( DSP* _dsp )	{ m_dsp = _dsp; }
 
 		void				setSymbol			(char _area, TWord _address, const std::string& _name);
