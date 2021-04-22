@@ -112,6 +112,7 @@ namespace dsp56k
 		bool				saveAsText			(const char* _file, EMemArea _area, const TWord _offset, const TWord _count);
 
 		bool				saveHeatmap			(const char* _file, bool _writeZeroes);
+		bool				saveHeatmapImage	(const char* _file);
 		void				clearHeatmap		();
 		
 		void				setDSP				( DSP* _dsp )	{ m_dsp = _dsp; }

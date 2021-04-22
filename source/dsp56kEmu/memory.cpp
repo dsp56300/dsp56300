@@ -351,6 +351,48 @@ namespace dsp56k
 		return false;
 #endif
 	}
+	bool Memory::saveHeatmapImage(const char* _file)
+	{
+#if MEMORY_HEAT_MAP
+		std::ofstream out(_file, std::ios::trunc);
+		if(!out.is_open())
+			return false;
+
+		const uint32_t width = 512;
+		const uint32_t height = size() / 512;
+
+		out << "P3" << std::endl;
+		out << width << ' ' << height << std::endl;
+		out << "255" << std::endl;
+
+		const size_t a = MemArea_P;
+
+		const auto& hm = m_heatMap[a];
+		size_t maxVal = 0;
+		for(size_t i=0; i<hm.size(); ++i)
+			maxVal = std::max(maxVal, hm[i]);
+
+		for(size_t i=0; i<hm.size(); ++i)
+		{
+			if(hm[i] == 0)
+				out << "255 0 0";
+			else
+			{
+				const int brightness = hm[i] * 255 / maxVal;
+				out << "0 " << brightness << " 0";				
+			}
+
+			if(i % width == (width-1))
+				out << std::endl;
+			else
+				out << ' ';
+		}
+
+		return true;
+#else
+		return false;
+#endif
+	}
 	void Memory::clearHeatmap()
 	{
 #if MEMORY_HEAT_MAP
