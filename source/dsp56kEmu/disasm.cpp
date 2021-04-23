@@ -20,7 +20,7 @@ extern "C"
 
 namespace dsp56k
 {
-	const char* g_opNames[] = 
+	constexpr char* g_opNames[] = 
 	{
 		"abs ",
 		"adc ",
@@ -143,7 +143,7 @@ namespace dsp56k
 		std::stringstream ss; ss << '$' << std::hex << _data; return std::string(ss.str());
 	}
 
-	std::string Disassembler::immediate(const char* _prefix, TWord _data)
+	std::string Disassembler::immediate(const char* _prefix, TWord _data) const
 	{
 		std::string sym;
 		if(getSymbol(Immediate, _data, sym))
@@ -152,17 +152,17 @@ namespace dsp56k
 		return std::string(_prefix) + hex(_data);
 	}
 
-	std::string Disassembler::immediate(TWord _data)
+	std::string Disassembler::immediate(TWord _data) const
 	{
 		return immediate("#", _data);
 	}
 
-	std::string Disassembler::immediateShort(TWord _data)
+	std::string Disassembler::immediateShort(TWord _data) const
 	{
 		return immediate("#<", _data);
 	}
 
-	std::string Disassembler::immediateLong(TWord _data)
+	std::string Disassembler::immediateLong(TWord _data) const
 	{
 		return immediate("#>", _data);
 	}
@@ -318,7 +318,7 @@ namespace dsp56k
 		return peripheral(S, a, 0xffffc0);
 	}
 	
-	std::string mmrrr(TWord mmmrrr, TWord S, bool _addMemSpace = true, bool _long = true)
+	std::string mmrrr(TWord mmmrrr)
 	{
 		const char* formats[4]
 		{
@@ -327,8 +327,6 @@ namespace dsp56k
 			"(r%d)-",
 			"(r%d)+"
 		};
-
-		const std::string area(_addMemSpace ? memArea(memArea(S)) : "");
 
 		char temp[32];
 	
@@ -1538,8 +1536,8 @@ namespace dsp56k
 
 				const auto mrY = mmY << 3 | rrY;
 
-				const auto eaX = mmrrr(mrX, 0);
-				const auto eaY = mmrrr(mrY, 1);
+				const auto eaX = mmrrr(mrX);
+				const auto eaY = mmrrr(mrY);
 
 				// X
 				if( writeX )	m_ss << "x:" << eaX << ',' << decode_ee(ee);
@@ -1998,7 +1996,7 @@ namespace dsp56k
 		
 		for (const auto& symbol : symbols)
 		{
-			auto type = SymbolTypeCount;
+			SymbolType type;
 
 			switch (symbol.first)
 			{

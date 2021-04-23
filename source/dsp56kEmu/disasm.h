@@ -57,10 +57,10 @@ namespace dsp56k
 		bool getSymbol(SymbolType _type, TWord _key, std::string& _result) const;
 		bool getSymbol(EMemArea _area, TWord _key, std::string& _result) const;
 
-		std::string immediate(const char* _prefix, TWord _data);
-		std::string immediate(TWord _data);
-		std::string immediateShort(TWord _data);
-		std::string immediateLong(TWord _data);
+		std::string immediate(const char* _prefix, TWord _data) const;
+		std::string immediate(TWord _data) const;
+		std::string immediateShort(TWord _data) const;
+		std::string immediateLong(TWord _data) const;
 		std::string relativeAddr(EMemArea _area, int _data, bool _long = false) const;
 		std::string relativeLongAddr(EMemArea _area, int _data) const;
 		std::string absAddr(EMemArea _area, int _data, bool _long = false) const;
