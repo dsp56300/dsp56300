@@ -2,6 +2,10 @@
 
 #include "dsp.h"
 
+#ifdef WIN32
+#include <Windows.h>
+#endif
+
 namespace dsp56k
 {
 	DSPThread::DSPThread(DSP& _dsp): m_dsp(_dsp), m_runThread(true)
@@ -29,6 +33,9 @@ namespace dsp56k
 
 	void DSPThread::threadFunc()
 	{
+#ifdef _WIN32
+		::SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
 		size_t instructions = 0;
 		size_t counter = 0;
 
