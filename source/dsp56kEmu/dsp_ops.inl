@@ -4,114 +4,6 @@
 
 namespace dsp56k
 {
-	inline void DSP::op_Abs(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_ADC(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);		
-	}
-	inline void DSP::op_Add_SD(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Add_xx(const TWord op)
-	{
-		const TWord iiiiii	= getFieldValue<Add_xx,Field_iiiiii>(op);
-		const auto ab		= getFieldValue<Add_xx,Field_d>(op);
-		alu_add( ab, TReg56(iiiiii) );
-	}
-	inline void DSP::op_Add_xxxx(const TWord op)
-	{
-		const auto ab = getFieldValue<Add_xxxx,Field_d>(op);
-
-		TReg56 r56;
-		convert( r56, TReg24(immediateDataExt<Add_xxxx>()) );
-
-		alu_add( ab, r56 );
-	}
-	inline void DSP::op_Addl(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Addr(const TWord op)
-	{		
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_And_SD(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);		
-	}
-	inline void DSP::op_And_xx(const TWord op)
-	{
-		const auto ab		= getFieldValue<And_xx,Field_d>(op);
-		const TWord xxxx	= getFieldValue<And_xx,Field_iiiiii>(op);
-
-		alu_and(ab, xxxx );
-	}
-	inline void DSP::op_And_xxxx(const TWord op)
-	{
-		const auto ab = getFieldValue<And_xxxx,Field_d>(op);
-		const TWord xxxx = immediateDataExt<And_xxxx>();
-
-		alu_and( ab, xxxx );		
-	}
-	inline void DSP::op_Andi(const TWord op)
-	{
-		const TWord ee		= getFieldValue<Andi,Field_EE>(op);
-		const TWord iiiiii	= getFieldValue<Andi,Field_iiiiiiii>(op);
-
-		TReg8 val = decode_EE_read(ee);
-		val.var &= iiiiii;
-		decode_EE_write(ee,val);			
-	}
-	inline void DSP::op_Asl_D(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Asl_ii(const TWord op)
-	{
-		const TWord shiftAmount	= getFieldValue<Asl_ii,Field_iiiiii>(op);
-
-		const bool abDst		= getFieldValue<Asl_ii,Field_D>(op);
-		const bool abSrc		= getFieldValue<Asl_ii,Field_S>(op);
-
-		alu_asl( abDst, abSrc, shiftAmount );					
-	}
-	inline void DSP::op_Asl_S1S2D(const TWord op)
-	{
-		const TWord sss = getFieldValue<Asl_S1S2D,Field_sss>(op);
-		const bool abDst = getFieldValue<Asl_S1S2D,Field_D>(op);
-		const bool abSrc = getFieldValue<Asl_S1S2D,Field_S>(op);
-
-		const TWord shiftAmount = decode_sss_read<TWord>( sss );
-
-		alu_asl( abDst, abSrc, shiftAmount );
-	}
-	inline void DSP::op_Asr_D(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Asr_ii(const TWord op)
-	{		
-		const TWord shiftAmount	= getFieldValue<Asr_ii,Field_iiiiii>(op);
-
-		const bool abDst		= getFieldValue<Asr_ii,Field_D>(op);
-		const bool abSrc		= getFieldValue<Asr_ii,Field_S>(op);
-
-		alu_asr( abDst, abSrc, shiftAmount );
-	}
-	inline void DSP::op_Asr_S1S2D(const TWord op)
-	{
-		const TWord sss = getFieldValue<Asr_S1S2D,Field_sss>(op);
-		const bool abDst = getFieldValue<Asr_S1S2D,Field_D>(op);
-		const bool abSrc = getFieldValue<Asr_S1S2D,Field_S>(op);
-
-		const TWord shiftAmount = decode_sss_read<TWord>( sss );
-
-		alu_asr( abDst, abSrc, shiftAmount );			
-	}
 	inline void DSP::op_Bchg_ea(const TWord op)
 	{
 		errNotImplemented("BCHG");
@@ -317,44 +209,6 @@ namespace dsp56k
 
 		sr_toggle( SR_C, bittest( val.var, bit ) );
 	}
-	inline void DSP::op_Clb(const TWord op)
-	{
-		errNotImplemented("CLB");		
-	}
-	inline void DSP::op_Clr(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Cmp_S1S2(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);		
-	}
-	inline void DSP::op_Cmp_xxS2(const TWord op)
-	{
-		const TWord iiiiii = getFieldValue<Cmp_xxS2,Field_iiiiii>(op);
-		
-		TReg56 r56;
-		convert( r56, TReg24(iiiiii) );
-
-		alu_cmp( bittest(op,3), r56, false );
-	}
-	inline void DSP::op_Cmp_xxxxS2(const TWord op)
-	{
-		const TReg24 s( signextend<int,24>( immediateDataExt<Cmp_xxxxS2>() ) );
-
-		TReg56 r56;
-		convert( r56, s );
-
-		alu_cmp( bittest(op,3), r56, false );
-	}
-	inline void DSP::op_Cmpm_S1S2(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Cmpu_S1S2(const TWord op)
-	{
-		errNotImplemented("CMPU");		
-	}
 	inline void DSP::op_Debug(const TWord op)
 	{
 		LOG( "Entering DEBUG mode" );
@@ -504,71 +358,6 @@ namespace dsp56k
 	{
 		do_end();
 	}
-	inline void DSP::op_Eor_SD(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Eor_xx(const TWord op)
-	{
-		errNotImplemented("EOR");		
-	}
-	inline void DSP::op_Eor_xxxx(const TWord op)
-	{
-		errNotImplemented("EOR");
-	}
-	inline void DSP::op_Extract_S1S2(const TWord op)
-	{
-		errNotImplemented("EXTRACT");		
-	}
-	inline void DSP::op_Extract_CoS2(const TWord op)
-	{
-		errNotImplemented("EXTRACT");
-	}
-	inline void DSP::op_Extractu_S1S2(const TWord op)  // 00001100 00011010 100sSSSD
-	{
-		const TWord sss = getFieldValue<Extractu_S1S2, Field_SSS>(op);
-		const TWord width_offset = decode_sss_read<TWord>(sss);
-
-		const bool abDst = getFieldValue<Extractu_S1S2, Field_D>(op);
-		const bool abSrc = getFieldValue<Extractu_S1S2, Field_s>(op);
-
-		const auto width = (width_offset >> 12) & 0x3f;
-		const auto offset = width_offset & 0x3f;
-
-		const TReg56& dSrc = abSrc ? reg.b : reg.a;
-		TReg56& dDst = abDst ? reg.b : reg.a;
-		const auto mask = 0xFFFFFFFFFFFFFF >> (56 - width);
-		dDst.var = (dSrc.var >> offset) & mask;
-
-		sr_clear(SR_C);
-		sr_clear(SR_V);
-		sr_u_update(dDst);
-		sr_e_update(dDst);
-		sr_n_update(dDst);
-		sr_z_update(dDst);
-	}
-	inline void DSP::op_Extractu_CoS2(const TWord op)  // 00001100 00011000 100s000D
-	{
-		const TWord width_offset = fetchOpWordB();
-
-		const bool abDst = getFieldValue<Extractu_CoS2, Field_D>(op);
-		const bool abSrc = getFieldValue<Extractu_CoS2, Field_s>(op);
-
-		const auto width = (width_offset >> 12) & 0x3f;
-		const auto offset = width_offset & 0x3f;
-
-		const TReg56& dSrc = abSrc ? reg.b : reg.a;
-		TReg56& dDst = abDst ? reg.b : reg.a;
-		const auto mask = 0xFFFFFFFFFFFFFF >> (56 - width);
-		dDst.var = (dSrc.var >> offset) & mask;
-
-		sr_clear(SR_C);
-		sr_clear(SR_V);
-		sr_u_update(dDst);
-		sr_e_update(dDst);
-		sr_n_update(dDst);
-		sr_z_update(dDst);
-	}
 	inline void DSP::op_Ifcc(const TWord op)
 	{
 		if( checkCondition<Ifcc>(op) )
@@ -597,34 +386,7 @@ namespace dsp56k
 	{
 		errNotImplemented("ILLEGAL");
 	}
-	inline void DSP::op_Inc(const TWord op)
-	{
-		auto& d = getFieldValue<Inc,Field_d>(op) ? reg.b : reg.a;
 
-		const auto old = d;
-
-		const auto res = ++d.var;
-
-		d.doMasking();
-
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
-		sr_z_update(d);
-		sr_v_update(res,d);
-		sr_l_update_by_v();
-		sr_c_update_arithmetic(old,d);
-		sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
-	}
-	inline void DSP::op_Insert_S1S2(const TWord op)
-	{
-		errNotImplemented("INSERT");
-	}
-	inline void DSP::op_Insert_CoS2(const TWord op)
-	{
-		errNotImplemented("INSERT");
-	}
 	inline void DSP::op_Lra_Rn(const TWord op)
 	{
 		errNotImplemented("LRA");
@@ -634,36 +396,6 @@ namespace dsp56k
 		const TWord ddddd = getFieldValue<Lra_xxxx, Field_ddddd>(op);
 		const auto ea = pcCurrentInstruction + pcRelativeAddressExt<Lra_xxxx>();
 		decode_ddddd_write(ddddd, TReg24(ea));
-	}
-	inline void DSP::op_Lsl_D(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Lsl_ii(const TWord op)
-	{
-		const auto shiftAmount = getFieldValue<Lsl_ii,Field_iiiii>(op);
-		const auto abDst = getFieldValue<Lsl_ii,Field_D>(op);
-
-		alu_lsl(abDst, shiftAmount);
-	}
-	inline void DSP::op_Lsl_SD(const TWord op)
-	{
-		errNotImplemented("LSL");
-	}
-	inline void DSP::op_Lsr_D(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Lsr_ii(const TWord op)
-	{
-		const auto shiftAmount = getFieldValue<Lsr_ii,Field_iiiii>(op);
-		const auto abDst = getFieldValue<Lsr_ii,Field_D>(op);
-
-		alu_lsr(abDst, shiftAmount);
-	}
-	inline void DSP::op_Lsr_SD(const TWord op)
-	{
-		errNotImplemented("LSR");		
 	}
 	inline void DSP::op_Lua_ea(const TWord op)
 	{
@@ -709,127 +441,6 @@ namespace dsp56k
 			convert(reg.n[dddd&0x07],val);
 		}
 	}
-	inline void DSP::op_Mac_S1S2(const TWord op)
-	{
-		exec_parallel_alu_multiply(op);
-	}
-	inline void DSP::op_Mac_S(const TWord op)
-	{
-		const TWord sssss	= getFieldValue<Mac_S,Field_sssss>(op);
-		const TWord qq		= getFieldValue<Mac_S,Field_QQ>(op);
-		const bool	ab		= getFieldValue<Mac_S,Field_d>(op);
-		const bool	negate	= getFieldValue<Mac_S,Field_k>(op);
-
-		const TReg24 s1 = decode_QQ_read( qq );
-		const TReg24 s2( decode_sssss(sssss) );
-
-		alu_mac( ab, s1, s2, negate, false );		
-	}
-	inline void DSP::op_Maci_xxxx(const TWord op)
-	{
-		errNotImplemented("MACI");		
-	}
-	inline void DSP::op_Macsu(const TWord op)
-	{
-		const bool uu			= getFieldValue<Macsu,Field_s>(op);
-		const bool ab			= getFieldValue<Macsu,Field_d>(op);
-		const bool negate		= getFieldValue<Macsu,Field_k>(op);
-		const TWord qqqq		= getFieldValue<Macsu,Field_QQQQ>(op);
-
-		TReg24 s1, s2;
-		decode_QQQQ_read( s1, s2, qqqq );
-
-		alu_mac( ab, s1, s2, negate, uu );
-	}
-	inline void DSP::op_Macr_S1S2(const TWord op)
-	{
-		exec_parallel_alu_multiply(op);
-	}
-	inline void DSP::op_Macr_S(const TWord op)
-	{
-		const TWord sssss	= getFieldValue<Macr_S,Field_sssss>(op);
-		const bool ab		= getFieldValue<Macr_S,Field_d>(op);
-		const bool negate	= getFieldValue<Macr_S,Field_k>(op);
-		const TWord qq		= getFieldValue<Macr_S,Field_QQ>(op);
-
-		const TReg24 s1 = decode_QQ_read( qq );
-		const TReg24 s2( decode_sssss(sssss) );
-
-		alu_mac( ab, s1, s2, negate, false );
-		alu_rnd( ab );
-	}
-	inline void DSP::op_Macri_xxxx(const TWord op)
-	{
-		errNotImplemented("MACRI");		
-	}
-	inline void DSP::op_Max(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Maxm(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Merge(const TWord op)
-	{
-		errNotImplemented("MERGE");		
-	}
-	inline void DSP::op_Mpy_S1S2D(const TWord op)
-	{
-		exec_parallel_alu_multiply(op);
-	}
-	inline void DSP::op_Mpy_SD(const TWord op)
-	{
-		const int sssss		= getFieldValue<Mpy_SD,Field_sssss>(op);
-		const TWord QQ		= getFieldValue<Mpy_SD,Field_QQ>(op);
-		const bool ab		= getFieldValue<Mpy_SD,Field_d>(op);
-		const bool negate	= getFieldValue<Mpy_SD,Field_k>(op);
-
-		const TReg24 s1 = decode_QQ_read(QQ);
-		const TReg24 s2 = TReg24( decode_sssss(sssss) );
-
-		alu_mpy( ab, s1, s2, negate, false );
-	}
-	inline void DSP::op_Mpy_su(const TWord op)
-	{
-		const bool ab		= getFieldValue<Mpy_su,Field_d>(op);
-		const bool negate	= getFieldValue<Mpy_su,Field_k>(op);
-		const bool uu		= getFieldValue<Mpy_su,Field_s>(op);
-		const TWord qqqq	= getFieldValue<Mpy_su,Field_QQQQ>(op);
-
-		TReg24 s1, s2;
-		decode_QQQQ_read( s1, s2, qqqq );
-
-		alu_mpysuuu( ab, s1, s2, negate, false, uu );
-	}
-	inline void DSP::op_Mpyi(const TWord op)
-	{
-		const bool	ab		= getFieldValue<Mpyi,Field_d>(op);
-		const bool	negate	= getFieldValue<Mpyi,Field_k>(op);
-		const TWord qq		= getFieldValue<Mpyi,Field_qq>(op);
-
-		const TReg24 s		= TReg24(immediateDataExt<Mpyi>());
-
-		const TReg24 reg	= decode_qq_read(qq);
-
-		alu_mpy( ab, reg, s, negate, false );
-	}
-	inline void DSP::op_Mpyr_S1S2D(const TWord op)
-	{
-		exec_parallel_alu_multiply(op);
-	}
-	inline void DSP::op_Mpyr_SD(const TWord op)
-	{
-		errNotImplemented("MPYR");
-	}
-	inline void DSP::op_Mpyri(const TWord op)
-	{
-		errNotImplemented("MPYRI");
-	}
-	inline void DSP::op_Neg(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
 	inline void DSP::op_Nop(TWord)
 	{
 	}
@@ -841,35 +452,7 @@ namespace dsp56k
 	{
 		errNotImplemented("NORMF");
 	}
-	inline void DSP::op_Not(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Or_SD(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Or_xx(const TWord op)
-	{
-		errNotImplemented("OR");
-	}
-	inline void DSP::op_Or_xxxx(const TWord op)
-	{
-		errNotImplemented("OR");
-	}
-	inline void DSP::op_Ori(const TWord op)
-	{
-		const TWord iiiiiiii = getFieldValue<Ori,Field_iiiiiiii>(op);
-		const TWord ee = getFieldValue<Ori,Field_EE>(op);
 
-		switch( ee )
-		{
-		case 0:	mr ( TReg8( mr().var | iiiiiiii) );	break;
-		case 1:	ccr( TReg8(ccr().var | iiiiiiii) );	break;
-		case 2:	com( TReg8(com().var | iiiiiiii) );	break;
-		case 3:	eom( TReg8(eom().var | iiiiiiii) );	break;
-		}
-	}
 	inline void DSP::op_Pflush(const TWord op)
 	{
 		errNotImplemented("PFLUSH");		
@@ -920,18 +503,6 @@ namespace dsp56k
 	{
 		resetSW();
 	}
-	inline void DSP::op_Rnd(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Rol(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Ror(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);		
-	}
 	inline void DSP::op_Rti(const TWord op)
 	{
 		popPCSR();
@@ -942,41 +513,9 @@ namespace dsp56k
 	{
 		popPC();		
 	}
-	inline void DSP::op_Sbc(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
 	inline void DSP::op_Stop(const TWord op)
 	{
 		errNotImplemented("STOP");
-	}
-	inline void DSP::op_Sub_SD(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Sub_xx(const TWord op)
-	{
-		const auto ab		= getFieldValue<Sub_xx,Field_d>(op);
-		const TWord iiiiii	= getFieldValue<Sub_xx,Field_iiiiii>(op);
-
-		alu_sub( ab, TReg56(iiiiii) );
-	}
-	inline void DSP::op_Sub_xxxx(const TWord op)
-	{
-		const auto ab = getFieldValue<Sub_xxxx,Field_d>(op);
-
-		TReg56 r56;
-		convert( r56, TReg24(immediateDataExt<Sub_xxxx>()) );
-
-		alu_sub( ab, r56 );
-	}
-	inline void DSP::op_Subl(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_subr(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);		
 	}
 	inline void DSP::op_Tcc_S1D1(const TWord op)
 	{
@@ -1010,10 +549,6 @@ namespace dsp56k
 			reg.r[TTT] = reg.r[ttt];
 		}
 	}
-	inline void DSP::op_Tfr(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
 	inline void DSP::op_Trap(const TWord op)
 	{
 		errNotImplemented("TRAP");		
@@ -1022,14 +557,6 @@ namespace dsp56k
 	{
 		if(checkCondition<Trapcc>(op))
 			errNotImplemented("TRAPcc");
-	}
-	inline void DSP::op_Tst(const TWord op)
-	{
-		exec_parallel_alu_nonMultiply(op);
-	}
-	inline void DSP::op_Vsl(const TWord op)
-	{
-		errNotImplemented("VSL");		
 	}
 	inline void DSP::op_Wait(const TWord op)
 	{
