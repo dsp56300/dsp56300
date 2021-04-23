@@ -156,7 +156,7 @@ namespace dsp56k
 		void 	exec							();
 		void	execPeriph						();
 		void	execInterrupts					();
-		void	execInterruptPreventDefault		();
+		void	execDefaultPreventInterrupt		();
 		void	nop								() {}
 
 		bool	readReg							( EReg _reg, TReg8& _res ) const;

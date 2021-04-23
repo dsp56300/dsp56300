@@ -361,7 +361,7 @@ namespace dsp56k
 		execPeriph();
 
 		execInterrupts();
-		execInterruptPreventDefault();
+		execDefaultPreventInterrupt();
 
 		pcCurrentInstruction = reg.pc.toWord();
 
@@ -429,7 +429,7 @@ namespace dsp56k
 		}
 	}
 
-	void DSP::execInterruptPreventDefault()
+	void DSP::execDefaultPreventInterrupt()
 	{
 		if(m_processingMode == DefaultPreventInterrupt)
 			m_processingMode = Default;
