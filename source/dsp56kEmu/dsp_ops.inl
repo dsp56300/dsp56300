@@ -396,13 +396,13 @@ namespace dsp56k
 
 		const TReg24 s24 = decode_JJ_read( jj );
 
-		const auto msbOld = bittest(d,55);
+		const auto msbOld = bitvalue<55>(d);
 		
-		const bool c = msbOld != bittest(s24,23);
+		const auto c = msbOld != bitvalue<23>(s24);
 		
 		d.var <<= 1;
 
-		const auto msbNew = bittest(d,55);
+		const auto msbNew = bitvalue<55>(d);
 
 		if( sr_test(SR_C) )
 			bittestandset( d.var, 0 );
