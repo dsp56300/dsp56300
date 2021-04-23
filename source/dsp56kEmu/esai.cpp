@@ -14,6 +14,9 @@ namespace dsp56k
 		if(!(m_tcr & M_TEM))
 			return;
 
+		if(m_periph.getDSP().getProcessingMode())
+			return;
+
 		uint32_t diff = m_periph.getDSP().getInstructionCounter() - m_lastClock;
 		if (diff&0x80000000) diff=(diff^0xFFFFFFFF)+1;	m_lastClock=m_periph.getDSP().getInstructionCounter();
 
