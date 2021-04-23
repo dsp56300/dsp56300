@@ -936,6 +936,7 @@ namespace dsp56k
 	{
 		popPCSR();
 		m_processingMode = DefaultPreventInterrupt;
+		m_interruptFunc = &DSP::execDefaultPreventInterrupt;
 	}
 	inline void DSP::op_Rts(const TWord op)
 	{

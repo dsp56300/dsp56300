@@ -361,8 +361,7 @@ namespace dsp56k
 
 		execPeriph();
 
-		execInterrupts();
-		execDefaultPreventInterrupt();
+		(this->*m_interruptFunc)();
 
 		pcCurrentInstruction = reg.pc.toWord();
 
@@ -381,7 +380,7 @@ namespace dsp56k
 
 	void DSP::execInterrupts()
 	{
-		if(m_processingMode == Default && !m_pendingInterrupts.empty())
+		if(!m_pendingInterrupts.empty())
 		{
 			// TODO: priority sorting, masking
 			const auto minPrio = mr().var & 0x3;
@@ -412,6 +411,7 @@ namespace dsp56k
 
 					// fast interrupt done
 					m_processingMode = DefaultPreventInterrupt;
+					m_interruptFunc = &DSP::execDefaultPreventInterrupt;
 				}
 				else if(jumped)
 				{
@@ -420,11 +420,13 @@ namespace dsp56k
 					sr_clear((CCRMask)(SR_S1|SR_S0|SR_SA));
 
 					m_processingMode = LongInterrupt;
+					m_interruptFunc = &DSP::nop;
 				}
 				else
 				{
 					// Default Processing, no interrupt
 					m_processingMode = DefaultPreventInterrupt;
+					m_interruptFunc = &DSP::execDefaultPreventInterrupt;
 				}
 			}
 		}
@@ -432,8 +434,12 @@ namespace dsp56k
 
 	void DSP::execDefaultPreventInterrupt()
 	{
-		if(m_processingMode == DefaultPreventInterrupt)
-			m_processingMode = Default;
+		m_processingMode = Default;
+
+		if(m_pendingInterrupts.empty())
+			m_interruptFunc = &DSP::nop;
+		else
+			m_interruptFunc = &DSP::execInterrupts;
 	}
 
 	std::string DSP::getSSindent() const
@@ -2363,7 +2369,11 @@ namespace dsp56k
 
 	void DSP::injectInterrupt(uint32_t _interruptVectorAddress)
 	{
+//		assert(!m_pendingInterrupts.full());
 		m_pendingInterrupts.push_back(_interruptVectorAddress);
+
+		if(m_interruptFunc == &DSP::nop)
+			m_interruptFunc = &DSP::execInterrupts;
 	}
 
 	void DSP::clearOpcodeCache()

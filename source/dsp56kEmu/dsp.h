@@ -131,6 +131,8 @@ namespace dsp56k
 		TWord m_opWordB;
 		uint32_t m_currentOpLen = 0;
 		ProcessingMode m_processingMode = Default;
+		using TInterruptFunc = void (DSP::*)();
+		TInterruptFunc m_interruptFunc = &DSP::nop;
 
 		std::vector<uint32_t> m_opcodeCache;
 
