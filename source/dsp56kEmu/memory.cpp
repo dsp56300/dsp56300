@@ -370,7 +370,7 @@ namespace dsp56k
 		const auto& hm = m_heatMap[a];
 		size_t maxVal = 0;
 		for(size_t i=0; i<hm.size(); ++i)
-			maxVal = std::max(maxVal, hm[i]);
+			maxVal = std::max(maxVal, (size_t)hm[i]);
 
 		for(size_t i=0; i<hm.size(); ++i)
 		{
