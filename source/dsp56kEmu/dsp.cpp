@@ -10,6 +10,7 @@
 #include "agu.h"
 #include "disasm.h"
 #include "aar.h"
+#include "dspconfig.h"
 
 #include "dsp_ops.inl"
 #include "dsp_ops_bra.inl"
@@ -2224,6 +2225,9 @@ namespace dsp56k
 
 	void DSP::aarTranslate(EMemArea _area, TWord& _offset) const
 	{
+		if(!g_useAARTranslate)
+			return;
+
 		// TODO: probably not as generic as it should be
 		if(_offset < 0x3800)
 			return;

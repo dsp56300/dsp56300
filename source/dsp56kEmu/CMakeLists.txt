@@ -11,6 +11,7 @@ bitfield.h
 buildconfig.h
 assert.cpp assert.h
 disasm.cpp disasm.h
+dspconfig.h
 dsp.cpp dsp.h 
 dsp_ops.inl dsp_ops_helper.inl 
 dsp_ops_bra.inl dsp_ops_jmp.inl dsp_ops_move.inl
