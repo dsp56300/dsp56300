@@ -7,7 +7,7 @@
 
 #include "peripherals.h"
 
-#define MEMORY_HEAT_MAP	true
+#define MEMORY_HEAT_MAP	false
 
 namespace dsp56k
 {
