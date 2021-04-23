@@ -358,13 +358,28 @@ namespace dsp56k
 		// we do not support 16-bit compatibility mode
 		assert( (reg.sr.var & SR_SC) == 0 && "16 bit compatibility mode is not supported");
 
+		execPeriph();
+
+		execInterrupts();
+		execInterruptPreventDefault();
+
+		pcCurrentInstruction = reg.pc.toWord();
+
+		const auto op = fetchPC();
+
+		execOp(op);
+	}
+
+	void DSP::execPeriph()
+	{
 		perif[0]->exec();
 
 		if(perif[1] != perif[0])
 			perif[1]->exec();
+	}
 
-		m_currentOpLen = 1;
-		
+	void DSP::execInterrupts()
+	{
 		if(m_processingMode == Default && !m_pendingInterrupts.empty())
 		{
 			// TODO: priority sorting, masking
@@ -385,7 +400,7 @@ namespace dsp56k
 				pcCurrentInstruction = vba;
 				execOp(op0);
 
-				auto jumped = reg.sp.var - oldSP;
+				const auto jumped = reg.sp.var - oldSP;
 
 				// only exec the second op if the first one was a one-word op and we did not jump into a long interrupt
 				if(m_currentOpLen == 1 && !jumped)
@@ -394,30 +409,30 @@ namespace dsp56k
 					m_opWordB = 0;
 					execOp(op1);
 
+					// fast interrupt done
 					m_processingMode = DefaultPreventInterrupt;
 				}
 				else if(jumped)
 				{
-					m_processingMode = LongInterrupt;
+					// Long Interrupt
+
 					sr_clear((CCRMask)(SR_S1|SR_S0|SR_SA));
+
+					m_processingMode = LongInterrupt;
 				}
 				else
 				{
-					m_processingMode = DefaultPreventInterrupt;				
+					// Default Processing, no interrupt
+					m_processingMode = DefaultPreventInterrupt;
 				}
-
-				return;
 			}
 		}
+	}
 
+	void DSP::execInterruptPreventDefault()
+	{
 		if(m_processingMode == DefaultPreventInterrupt)
 			m_processingMode = Default;
-
-		pcCurrentInstruction = reg.pc.toWord();
-
-		const auto op = fetchPC();
-
-		execOp(op);
 	}
 
 	std::string DSP::getSSindent() const
@@ -433,6 +448,8 @@ namespace dsp56k
 	void DSP::execOp(const TWord op)
 	{
 		getASM(op, m_opWordB);
+
+		m_currentOpLen = 1;
 
 		const TWord currentOp = pcCurrentInstruction;
 		const auto opCache = m_opcodeCache[currentOp];

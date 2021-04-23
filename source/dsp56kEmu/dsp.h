@@ -154,6 +154,10 @@ namespace dsp56k
 		TReg24	getPC							() const									{ return reg.pc; }
 
 		void 	exec							();
+		void	execPeriph						();
+		void	execInterrupts					();
+		void	execInterruptPreventDefault		();
+		void	nop								() {}
 
 		bool	readReg							( EReg _reg, TReg8& _res ) const;
 		bool	readReg							( EReg _reg, TReg48& _res ) const;
