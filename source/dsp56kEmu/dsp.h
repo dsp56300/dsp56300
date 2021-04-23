@@ -231,8 +231,7 @@ namespace dsp56k
 		
 		bool	exec_parallel					(Instruction instMove, Instruction instAlu, TWord op);
 
-		bool	exec_parallel_alu_nonMultiply	(TWord op);
-		bool	exec_parallel_alu_multiply		(TWord op);
+		bool	alu_multiply					(TWord op);
 
 		bool	do_exec							( TWord _loopcount, TWord _addr );
 		bool	do_end							();
