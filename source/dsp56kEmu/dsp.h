@@ -28,43 +28,42 @@ namespace dsp56k
 			TReg48 x,y;						// 48 bit
 			TReg56 a,b;						// 56 bit
 
-			// ---- PCU ----
-			TReg24 omr;						// operation mode register
-			TReg24 sr;						// status register (SR_..)
-
-			StaticArray< TReg48, 16> ss;	// system stack
-
-			//TReg24	ssh, ssl;			// system stack high, system stack low
-			TReg24	sp;						// stack pointer
-			TReg5	sc;						// stack counter
-
-			TReg24	sz;						// stack size (used for stack extension)
-
-			TReg24 pc;						// program counter
-			TReg24 la, lc;					// loop address, loop counter
-
-			TReg24 vba;						// vector base address
-
-			TReg24 bcr, dcr;
-
-			TReg24 aar0, aar1, aar2, aar3;
-
 			// ---- AGU ----
 			StaticArray< TReg24, 8> r;
 			StaticArray< TReg24, 8> n;
 			StaticArray< TReg24, 8> m;
 
+			// ---- PCU ----
+			TReg24 sr;						// status register (SR_..)
+			TReg24 omr;						// operation mode register
+
+			TReg24 pc;						// program counter
+			TReg24 la, lc;					// loop address, loop counter
+
+			//TReg24	ssh, ssl;			// system stack high, system stack low
+			TReg24	sp;						// stack pointer
+			TReg5	sc;						// stack counter
+
+			StaticArray< TReg48, 16> ss;	// system stack
+
+			TReg24	sz;						// stack size (used for stack extension)
+
+			TReg24 vba;						// vector base address
+
+//			TReg24 bcr, dcr;
+//			TReg24 aar0, aar1, aar2, aar3;
+
 			TReg24 ep;						// stack extension pointer register
 
 			// ---- ----
-			TReg24 hit;		
-			TReg24 miss;		
-			TReg24 replace;	
-			TReg24 cyc;
-			TReg24 cnt1;		
-			TReg24 cnt2;		
-			TReg24 cnt3;		
-			TReg24 cnt4;
+//			TReg24 hit;		
+//			TReg24 miss;		
+//			TReg24 replace;	
+//			TReg24 cyc;
+//			TReg24 cnt1;
+//			TReg24 cnt2;
+//			TReg24 cnt3;		
+//			TReg24 cnt4;
 		};
 
 		enum ProcessingMode
@@ -84,27 +83,32 @@ namespace dsp56k
 			StackIndent	= 0x04,
 		};
 
-		// _____________________________________________________________________________
-		// registers
-		//
-	private:
-		SRegs		reg;
+		using TInterruptFunc = void (DSP::*)();
 
+	private:
 		// _____________________________________________________________________________
 		// members
 		//
-		Opcodes m_opcodes;
-		Disassembler m_disasm;
-
-		Memory& mem;
-		std::array<IPeripherals*, 2> perif;
+		Memory&							mem;
+		std::array<IPeripherals*, 2>	perif;
 		
-		TWord	pcCurrentInstruction;
+		TWord							pcCurrentInstruction = 0;
+		TWord							m_opWordB = 0;
+		uint32_t						m_currentOpLen = 0;
+		uint32_t						m_instructions = 0;
 
-		std::string	m_asm;
+		SRegs							reg;
 
-		InstructionCache	cache;
-		uint32_t			m_instructions = 0;
+		ProcessingMode					m_processingMode = Default;
+
+		TInterruptFunc					m_interruptFunc = &DSP::nop;
+
+		RingBuffer<TWord, 16, false>	m_pendingInterrupts;
+
+		Opcodes							m_opcodes;
+		std::vector<uint32_t>			m_opcodeCache;
+		
+		InstructionCache				cache;
 
 		// used to monitor ALL register changes during exec
 		struct SRegChange
@@ -126,17 +130,10 @@ namespace dsp56k
 
 		StaticArray<SRegState,Reg_COUNT>	m_prevRegStates;
 
-		RingBuffer<TWord, 16, false>		m_pendingInterrupts;
-
-		TWord m_opWordB;
-		uint32_t m_currentOpLen = 0;
-		ProcessingMode m_processingMode = Default;
-		using TInterruptFunc = void (DSP::*)();
-		TInterruptFunc m_interruptFunc = &DSP::nop;
-
-		std::vector<uint32_t> m_opcodeCache;
-
 		TraceMode m_trace = Disabled;
+
+		std::string		m_asm;
+		Disassembler	m_disasm;
 
 		// _____________________________________________________________________________
 		// implementation
