@@ -316,7 +316,8 @@ namespace dsp56k
 		TWord m_rccr = 0;							// receive clock control register
 		TWord m_tccr = 0;							// transmit clock control register
 		
-		TWord m_tx[6],m_rx[6];						// Words written by the DSP and words for the DSP to read
+		std::array<TWord, 6> m_tx;					// Words written by the DSP 
+		std::array<TWord, 6> m_rx;					// Words for the DSP to read
 		TWord m_hasReadStatus = 0;					// Has the status register been read since TUE was set?
 		
 		uint32_t m_cyclesSinceWrite = 0;

@@ -7,6 +7,8 @@ namespace dsp56k
 {
 	Esai::Esai(IPeripherals& _periph) : m_periph(_periph)
 	{
+		m_tx.fill(0);
+		m_rx.fill(0);
 	}
 
 	void Esai::exec()
