@@ -298,10 +298,10 @@ namespace dsp56k
 		d &= 0xff000000ffffff;
 		d |= shifted;
 
-		sr_toggle(SR_N, bitvalue<uint64_t, 47>(shifted));	// Set if bit 47 of the result is set
+		sr_toggle(SRB_N, bitvalue<uint64_t, 47>(shifted));	// Set if bit 47 of the result is set
 		sr_toggle(SR_Z, shifted == 0);						// Set if bits 47–24 of the result are 0
 		sr_clear(SR_V);										// This bit is always cleared
-		sr_toggle(SR_C, c);									// Set if bit 47 of the destination operand is set, and cleared otherwise
+		sr_toggle(SRB_C, c);								// Set if bit 47 of the destination operand is set, and cleared otherwise
 	}
 
 	void DSP::alu_addl(bool ab)

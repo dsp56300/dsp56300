@@ -241,6 +241,7 @@ namespace dsp56k
 		sr_c_update_arithmetic(old,d);
 		sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
 	}
+
 	inline void DSP::op_Div(const TWord op)
 	{
 		const TWord jj	= getFieldValue<Div,Field_JJ>(op);
@@ -255,21 +256,17 @@ namespace dsp56k
 		const auto c = msbOld != bitvalue<23>(s24);
 		
 		d.var <<= 1;
+		d.var |= sr_test(SR_C);
 
 		const auto msbNew = bitvalue<55>(d);
-
-		if( sr_test(SR_C) )
-			bittestandset( d.var, 0 );
-		else
-			bittestandclear( d.var, 0 );
 
 		if( c )
 			d.var = ((d.var + (signextend<TInt64,24>(s24.var) << 24) )&0xffffffffff000000) | (d.var & 0xffffff);
 		else
 			d.var = ((d.var - (signextend<TInt64,24>(s24.var) << 24) )&0xffffffffff000000) | (d.var & 0xffffff);
 
-		sr_toggle( SR_C, bittest(d,55) == 0 );	// Set if bit 55 of the result is cleared.
-		sr_toggle( SR_V, msbNew != msbOld );	// Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
+		sr_toggle( SRB_C, !bitvalue<55>(d) );	// Set if bit 55 of the result is cleared.
+		sr_toggle( SRB_V, msbNew != msbOld );	// Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
 
 		if(msbNew != msbOld)
 			sr_set(SR_L);						// Set if the Overflow bit (V) is set.

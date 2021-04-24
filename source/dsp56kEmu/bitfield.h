@@ -1,10 +1,35 @@
 #pragma once
-#include <cassert>
-
-#include "esai.h"
 
 namespace dsp56k
 {
+	struct Bit
+	{
+		const uint32_t bit;
+
+		explicit Bit(uint32_t _bit) : bit(_bit) {}
+		template <uint32_t V> explicit constexpr Bit() : bit(V) {static_assert(V == 0 || V == 1); }
+
+		Bit operator != (const Bit& _bit) const
+		{
+			return Bit(bit ^ _bit.bit);
+		}
+
+		Bit operator == (const Bit& _bit) const
+		{
+			return Bit((bit ^ _bit.bit) ^ 0);
+		}
+
+		explicit operator bool() const
+		{
+			return bit;
+		}
+
+		Bit operator !() const
+		{
+			return Bit(bit^1);
+		}
+	};
+
 	template<typename T, typename B, size_t C=24>
 	class Bitfield
 	{

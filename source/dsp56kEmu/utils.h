@@ -1,24 +1,25 @@
 #pragma once
 
+#include "bitfield.h"
 #include "types.h"
 
 namespace dsp56k
 {
 	// TODO: optimize for x86 win32, use intrin.h that has those functions in it
 
-	template<typename T, uint32_t B> uint32_t bitvalue(const T& _val)
+	template<typename T, uint32_t B> Bit bitvalue(const T& _val)
 	{
-		return (_val & (T(1)<<B)) >> B;
+		return Bit((_val >> B) & 1);
 	}
 
-	template<uint32_t B, typename Type, uint32_t BitCount> uint32_t bitvalue(const RegType<Type,BitCount>& _val)
+	template<uint32_t B, typename Type, uint32_t BitCount> Bit bitvalue(const RegType<Type,BitCount>& _val)
 	{
 		return bitvalue<typename RegType<Type,BitCount>::MyType,B>(_val.var);
 	}
 
-	template<uint32_t B> uint32_t bitvalue(const TReg24& _val)
+	template<uint32_t B> Bit bitvalue(const TReg56& _val)
 	{
-		return bitvalue<TReg24::MyType,B>(_val.var);
+		return bitvalue<uint64_t,B>(_val.var);
 	}
 
 	template<typename T> bool bittest( const T& _val, unsigned int _bitNumber )
@@ -74,6 +75,11 @@ namespace dsp56k
 
 		_val &= ~mask;
 		_val |= bit;
+	}
+
+	template<typename T> void bitset( T& _val, const T& _bit, const Bit& _zeroOrOne)
+	{
+		bitset<T>(_val, _bit, _zeroOrOne.bit);
 	}
 
 	template<typename T,unsigned int B> int bittestandset( RegType<T,B>& _val, unsigned int _bitNumber )

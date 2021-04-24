@@ -56,6 +56,11 @@ namespace dsp56k
 		SRB_E,					// extension
 		SRB_L,					// limit
 		SRB_S,					// scaling		
+
+		SRB_I0,					// interrupt mask bit 0
+		SRB_I1,					// interrupt mask bit 1
+		SRB_S0,					// scaling bit 0
+		SRB_S1,					// scaling bit 1
 	};
 
 	enum CCRMask

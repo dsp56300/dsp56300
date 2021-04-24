@@ -594,8 +594,9 @@ namespace dsp56k
 		void 	sr_set					( CCRMask _bits )					{ reg.sr.var |= _bits;	}
 		void 	sr_clear				( CCRMask _bits )					{ reg.sr.var &= ~_bits; }
 		int 	sr_test					( CCRMask _bits ) const				{ return (reg.sr.var & _bits); }
-		int 	sr_val					( CCRBit _bitNum ) const			{ return (reg.sr.var >> _bitNum) & 0x01; }
+		int 	sr_val					( CCRBit _bitNum ) const			{ return (reg.sr.var >> _bitNum) & 1; }
 		void 	sr_toggle				( CCRMask _bits, bool _set )		{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
+		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, int32_t(_bit), _value); }
 
 		void	sr_s_update				()
 		{
@@ -640,31 +641,32 @@ namespace dsp56k
 			1	0	Scale Up	Bits 55,54..............47,46
 			*/
 
-			TInt64 mask;
+			const uint32_t s0 = (sr_val(SRB_S0) ^ 1) << 1;
+			const uint32_t s1 = sr_val(SRB_S1) | (sr_val(SRB_S1)<<1);
 
-			TInt64 m;
+			const uint32_t mask = 0x3fc | s0 | s1;
 
-			if( sr_test(SR_S0) )		mask = 0xff000000000000;	// Scale down
-			else if( sr_test(SR_S1) )	mask = 0xffc00000000000;	// Scale up
-			else						mask = 0xff800000000000;	// nor scaling
+			const uint32_t d2 = _ab.var >> 46;
 
-			m = _ab.var & mask;
+			const uint32_t m2 = d2 & mask;
 
-			sr_toggle( SR_E, (m != mask) && (m != 0) );
+			const auto res = (m2 != mask) && (m2 != 0);	// TODO: reduce to one if
+
+			sr_toggle( SR_E, res );
 		}
 
 		void	sr_u_update				( const TReg56& _ab )
 		{
-			if( sr_test( SR_S0 ) )			sr_toggle( SR_U, bittest( _ab, 48 ) == bittest( _ab, 47 ) );
-			else if( sr_test( SR_S1 ) )		sr_toggle( SR_U, bittest( _ab, 46 ) == bittest( _ab, 45 ) );
-			else							sr_toggle( SR_U, bittest( _ab, 47 ) == bittest( _ab, 46 ) );
+			if( sr_test( SR_S0 ) )			sr_toggle( SRB_U, bitvalue<48>( _ab ) == bitvalue<47>( _ab ) );
+			else if( sr_test( SR_S1 ) )		sr_toggle( SRB_U, bitvalue<46>( _ab ) == bitvalue<45>( _ab ) );
+			else							sr_toggle( SRB_U, bitvalue<47>( _ab ) == bitvalue<46>( _ab ) );
 		}
 
 		void	sr_n_update( const TReg56& _ab )
 		{
 			// Negative
 			// Set if the MSB of the result is set; otherwise, this bit is cleared.	
-			sr_toggle( SR_N, bittest( _ab, 55 ) );
+			sr_toggle( SRB_N, bitvalue<55>(_ab) );
 		}
 
 		void	sr_z_update( const TReg56& _ab )
@@ -675,13 +677,13 @@ namespace dsp56k
 
  		void	sr_c_update_logical( const TReg56& _ab )
  		{
- 			sr_toggle( SR_C, bittest(_ab,55) );
+ 			sr_toggle( SRB_C, bitvalue<55>(_ab) );
  		}
 
 		template<typename T>
 		void	sr_c_update_arithmetic( const T& _old, const T& _new )
 		{
-			sr_toggle( SR_C, bittest(_old,55) != bittest(_new,55) );
+			sr_toggle( SRB_C, bitvalue<55>(_old) != bitvalue<55>(_new) );
 		}
 
 		void	sr_l_update_by_v()
