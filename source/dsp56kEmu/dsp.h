@@ -103,7 +103,7 @@ namespace dsp56k
 
 		TInterruptFunc					m_interruptFunc = &DSP::nop;
 
-		RingBuffer<TWord, 16, false>	m_pendingInterrupts;
+		RingBuffer<TWord, 1024, false>	m_pendingInterrupts;	// TODO: array is way too large
 
 		Opcodes							m_opcodes;
 		std::vector<uint32_t>			m_opcodeCache;
