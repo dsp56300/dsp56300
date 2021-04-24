@@ -612,8 +612,8 @@ namespace dsp56k
 	inline void DSP::op_And_SD(const TWord op)
 	{
 		const auto D = getFieldValue<And_SD, Field_d>(op);
-		const auto JJJ = getFieldValue<And_SD, Field_JJ>(op) + 4;
-		alu_and(D, decode_JJJ_read_24(JJJ, !D).var);
+		const auto JJ = getFieldValue<And_SD, Field_JJ>(op);
+		alu_and(D, decode_JJ_read(JJ).var);
 	}
 	inline void DSP::op_And_xx(const TWord op)
 	{
@@ -985,8 +985,8 @@ namespace dsp56k
 	inline void DSP::op_Or_SD(const TWord op)
 	{
 		const auto D = getFieldValue<Or_SD, Field_d>(op);
-		const auto JJJ = getFieldValue<Or_SD, Field_JJ>(op) + 4;
-		alu_or(D, decode_JJJ_read_24(JJJ, !D).var);
+		const auto JJ = getFieldValue<Or_SD, Field_JJ>(op);
+		alu_or(D, decode_JJ_read(JJ).var);
 	}
 	inline void DSP::op_Or_xx(const TWord op)
 	{

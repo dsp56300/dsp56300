@@ -370,20 +370,6 @@ namespace dsp56k
 			return res;
 		}
 
-		TReg24 decode_JJJ_read_24( TWord jjj, bool _b ) const
-		{
-			switch( jjj )
-			{
-			case 4: return x0();
-			case 5: return y0();
-			case 6: return x1();
-			case 7: return y1();
-			default:
-				assert( 0 && "unreachable, invalid JJJ value" );
-				return TReg24(0xbadbad);
-			}
-		}
-
 		void decode_JJJ_readwrite( TReg56& alu, TWord jjj, bool _b )
 		{
 			switch( jjj )
