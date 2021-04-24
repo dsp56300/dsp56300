@@ -16,7 +16,7 @@ namespace dsp56k
 
 		Bit operator == (const Bit& _bit) const
 		{
-			return Bit((bit ^ _bit.bit) ^ 0);
+			return Bit((bit ^ _bit.bit) ^ 1);
 		}
 
 		explicit operator bool() const
