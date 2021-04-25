@@ -6,7 +6,7 @@
 
 namespace dsp56k
 {
-	static DefaultMemoryMap g_defaultMemoryMap;
+	static DefaultMemoryValidator g_defaultMemoryMap;
 	
 	UnitTests::UnitTests() : mem(g_defaultMemoryMap, 0x100), dsp(mem, &peripherals, &peripherals)
 	{

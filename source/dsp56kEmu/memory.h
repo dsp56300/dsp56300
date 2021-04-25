@@ -37,7 +37,7 @@ namespace dsp56k
 		virtual bool memValidateAccess	( EMemArea _area, TWord _addr, bool _write ) const = 0;
 	};
 
-	class DefaultMemoryMap final : public IMemoryValidator
+	class DefaultMemoryValidator final : public IMemoryValidator
 	{
 	public:
 		bool memValidateAccess(EMemArea _area, TWord _addr, bool _write) const override	{ return true; }
@@ -49,7 +49,7 @@ namespace dsp56k
 		// members
 		//
 
-		const IMemoryValidator&									m_memoryMap;
+		const IMemoryValidator&								m_memoryMap;
 		
 		// 768k words of 24-bit data for 3 banks (XYP)
 		const size_t										m_size;
