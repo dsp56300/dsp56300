@@ -23,7 +23,7 @@ namespace dsp56k
 				// bit-reverse mode
 				if( moduloTest == 0x0000 )
 				{
-					assert( 0 && "is used" );
+					assert( 0 && "bitreverse mode is used" );
 
 					r = bitreverse24(r);
 					n = bitreverse24(n);
@@ -35,7 +35,7 @@ namespace dsp56k
 				// modulo
 				else if( moduloTest <= 0x007fff )
 				{
-					if( abs(signextend<int,24>(n)) >= int(m+1) )
+					if( abs(signextend<int,24>(n)) >= static_cast<int>(m + 1) )
 					{
 						// the doc says it's only valid for N = P x (2 pow k), but assume the assembly is okay
 //						LOG( "r " << std::hex << r << " + n " << std::hex << n << " = " << std::hex << ((r+n)&0x00ffffff) );
@@ -61,7 +61,9 @@ namespace dsp56k
 					}
 				}
 				else
-					LOG_ERR_NOTIMPLEMENTED( "AGU multiple Wrap-Around Modulo Modifier" );
+				{
+					LOG_ERR_NOTIMPLEMENTED( "AGU multiple Wrap-Around Modulo Modifier: r=" << HEX(r) <<", n=" << HEX(n) << ", m=" << HEX(m) );					
+				}
 			}
 			r &= 0x00ffffff;
 		}
