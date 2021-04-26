@@ -9,6 +9,20 @@ namespace dsp56k
 	class AGU
 	{
 	public:
+		static TWord calcModuloMask(TWord m)
+		{
+//			const auto zeroBits = countZeroBitsReversed(m);
+//			const int testRes = (1<<((sizeof(m)*CHAR_BIT)-zeroBits))-1;
+
+			m |= m >> 1;
+			m |= m >> 2;
+			m |= m >> 4;
+			m |= m >> 8;
+
+//			assert(m == testRes);
+			return m;
+		}
+
 		static void updateAddressRegister( TWord& r, TWord n, TWord m )
 		{
 			// linear addressing
@@ -43,17 +57,15 @@ namespace dsp56k
 					}
 					else
 					{
-						// find base address
-						unsigned int zeroBits		= countZeroBitsReversed(m);
-
-						const TWord moduloMask		= (1<<((sizeof(m)*CHAR_BIT)-zeroBits))-1;
+						const TWord moduloMask		= calcModuloMask(m);
 						const TWord baseAddrMask	= ~moduloMask;
 
-						const TWord baseAddr		= r&baseAddrMask;
-						const TWord modulo			= moduloTest + 1;
-						const TWord offset			= r & moduloMask;
+						const TWord rBase			= r & baseAddrMask;
+						const TWord rOffset			= r & moduloMask;
 
-						const TWord rNew 			= baseAddr | (offset + n + modulo) % modulo;
+						const TWord modulo			= moduloTest + 1;
+
+						const TWord rNew 			= rBase | (rOffset + n + modulo) % modulo;
 
 //						LOG( "r " << std::hex << r << " + n " << std::hex << n << "(m=" << std::hex << m << ") = " << std::hex << rNew << " mask=" << std::hex << moduloMask << " baseAddrMask=" << std::hex << baseAddrMask << " baseAddr=" << std::hex << baseAddr );
 
