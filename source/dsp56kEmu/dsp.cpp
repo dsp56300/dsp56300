@@ -1093,6 +1093,7 @@ namespace dsp56k
 		{
 			--reg.lc.var;
 			(this->*func)(op);
+			++m_instructions;
 			traceOp();
 		}
 
