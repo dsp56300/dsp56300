@@ -101,7 +101,7 @@ namespace dsp56k
 
 		ProcessingMode					m_processingMode = Default;
 
-		TInterruptFunc					m_interruptFunc = &DSP::nop;
+		TInterruptFunc					m_interruptFunc = &DSP::execNoPendingInterrupts;
 
 		RingBuffer<TWord, 1024, false>	m_pendingInterrupts;	// TODO: array is way too large
 
@@ -156,6 +156,7 @@ namespace dsp56k
 		void	execPeriph						();
 		void	execInterrupts					();
 		void	execDefaultPreventInterrupt		();
+		void	execNoPendingInterrupts			();
 		void	nop								() {}
 
 		bool	readReg							( EReg _reg, TReg8& _res ) const;

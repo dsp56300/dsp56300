@@ -6,7 +6,8 @@ namespace dsp56k
 {
 	void HDI08::exec()
 	{
-		if (m_periph.getDSP().getProcessingMode() || !bittest(m_hpcr, HPCR_HEN)) return;
+		if (!bittest(m_hpcr, HPCR_HEN)) 
+			return;
 
 		if (m_pendingRXInterrupts > 0 && bittest(m_hcr, HCR_HRIE))
 		{

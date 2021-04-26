@@ -154,4 +154,14 @@ namespace dsp56k
 
 		return ((temp & 0xff0000) >> 16) | (temp & 0x00ff00) | ((temp & 0x0000ff) << 16);
 	}
+
+	static TWord delta(TWord b, TWord a)
+	{
+		auto d = b - a;
+
+		if (d & 0x80000000) 
+			d = (d^0xFFFFFFFF)+1;
+
+		return d;
+	}
 }

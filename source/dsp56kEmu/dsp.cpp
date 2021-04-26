@@ -356,8 +356,6 @@ namespace dsp56k
 		// we do not support 16-bit compatibility mode
 		assert( (reg.sr.var & SR_SC) == 0 && "16 bit compatibility mode is not supported");
 
-		execPeriph();
-
 		(this->*m_interruptFunc)();
 
 		pcCurrentInstruction = reg.pc.toWord();
@@ -434,9 +432,14 @@ namespace dsp56k
 		m_processingMode = Default;
 
 		if(m_pendingInterrupts.empty())
-			m_interruptFunc = &DSP::nop;
+			m_interruptFunc = &DSP::execNoPendingInterrupts;
 		else
 			m_interruptFunc = &DSP::execInterrupts;
+	}
+
+	void DSP::execNoPendingInterrupts()
+	{
+		execPeriph();
 	}
 
 	std::string DSP::getSSindent() const
@@ -1727,7 +1730,7 @@ namespace dsp56k
 //		assert(!m_pendingInterrupts.full());
 		m_pendingInterrupts.push_back(_interruptVectorAddress);
 
-		if(m_interruptFunc == &DSP::nop)
+		if(m_interruptFunc == &DSP::execNoPendingInterrupts)
 			m_interruptFunc = &DSP::execInterrupts;
 	}
 

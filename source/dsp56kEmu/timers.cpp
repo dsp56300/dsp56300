@@ -14,8 +14,9 @@ namespace dsp56k
 		// (TE) bits are set) and is using the prescaler output as its source (i.e., one or more of the PCE bits are set).
 
 		// If the timer runs on internal clock, the frequency is DSP / 2
-		uint32_t diff = m_peripherals.getDSP().getInstructionCounter() - m_lastClock;
-		if (diff&0x80000000) diff=(diff^0xFFFFFFFF)+1;	m_lastClock=m_peripherals.getDSP().getInstructionCounter();
+		const auto clock = m_peripherals.getDSP().getInstructionCounter();
+		const auto diff = delta(clock, m_lastClock);
+		m_lastClock = clock;
 
 //		m_prescalerClock ^= 1;
 //		m_tpcr -= m_prescalerClock;
