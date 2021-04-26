@@ -42,7 +42,7 @@ namespace dsp56k
 		m_hasReadStatus = 0;
 	}
 
-	void Esai::writeTX(size_t _index, TWord _val)
+	void Esai::writeTX(uint32_t _index, TWord _val)
 	{
 		if(!outputEnabled(_index))
 			return;
@@ -55,7 +55,7 @@ namespace dsp56k
 		}
 	}
 
-	TWord Esai::readRX(size_t _index)
+	TWord Esai::readRX(uint32_t _index)
 	{
 		if(!inputEnabled(_index))
 			return 0;

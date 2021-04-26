@@ -299,8 +299,8 @@ namespace dsp56k
 			float speed_mhz = 12.0f * mf / pd;
 			LOG("Clock speed changed to: " << speed_mhz << "Mhz");	// logging assumes an external crystal at 12MHz
 		}
-		void writeTX(size_t _index, TWord _val);
-		TWord readRX(size_t _index);
+		void writeTX(uint32_t _index, TWord _val);
+		TWord readRX(uint32_t _index);
 		
 	private:
 		bool inputEnabled(uint32_t _index) const	{ return m_rcr.test(static_cast<RcrBits>(_index)); }

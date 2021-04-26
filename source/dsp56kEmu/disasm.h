@@ -76,7 +76,7 @@ namespace dsp56k
 		std::stringstream m_ss;
 		std::string m_str;
 
-		size_t m_extWordUsed = 0;
+		uint32_t m_extWordUsed = 0;
 		TWord m_pc = 0;
 
 		std::array<std::map<TWord,std::string>, SymbolTypeCount> m_symbols;

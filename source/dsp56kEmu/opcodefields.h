@@ -20,11 +20,11 @@ namespace dsp56k
 		constexpr explicit FieldParseConfig(const char _ch, const uint32_t _count) : ch(_ch), count(_count) {}
 	};
 
-	constexpr static FieldInfo initField(const char* _opcode, const char _c, const size_t _count)
+	constexpr static FieldInfo initField(const char* _opcode, const char _c, const uint32_t _count)
 	{
 		constexpr auto len = 24;
 
-		for(size_t i=0; i<len;)
+		for(uint32_t i=0; i<len;)
 		{
 			if(_opcode[i] != _c)
 			{
@@ -32,7 +32,7 @@ namespace dsp56k
 				continue;					
 			}
 
-			size_t count = 1;
+			uint32_t count = 1;
 			for(auto j=i+1; j<len; ++j)
 			{
 				if(_opcode[j] != _c)

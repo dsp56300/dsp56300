@@ -213,7 +213,7 @@ namespace dsp56k
 
 		size_t index = 0;
 
-		for(size_t i=0; i<size(); ++i)
+		for(uint32_t i=0; i<size(); ++i)
 		{
 			const auto w = get(_area, i);
 
@@ -246,7 +246,7 @@ namespace dsp56k
 
 		const auto& pSymbols = disasm.getSymbols(Disassembler::MemP);
 
-		for(size_t i=_offset; i<_offset+_count;)
+		for(uint32_t i=_offset; i<_offset+_count;)
 		{
 			TWord opA, opB;
 			get2(MemArea_P, i, opA, opB);
@@ -316,7 +316,7 @@ namespace dsp56k
 		{
 			out << "0x" << putVal(i) << ':';
 
-			for(size_t j=i; j<i+8 && j < last; ++j)
+			for(uint32_t j=i; j<i+8 && j < last; ++j)
 			{
 				out << ' ' << putVal(get(_area, j));
 			}
