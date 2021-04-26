@@ -46,7 +46,7 @@ namespace dsp56k
 #ifdef _DEBUG
 		const size_t ipsStep = 0x0010000;
 #else
-		const size_t ipsStep = 0x4000000;
+		const size_t ipsStep = 0x1000000;
 #endif
 		while(m_runThread)
 		{
