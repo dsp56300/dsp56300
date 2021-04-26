@@ -23,7 +23,7 @@ namespace dsp56k
 			return m;
 		}
 
-		static void updateAddressRegister( TWord& r, TWord n, TWord m )
+		static void updateAddressRegister( TWord& r, int n, TWord m )
 		{
 			// linear addressing
 			if( m == 0xffffff )
