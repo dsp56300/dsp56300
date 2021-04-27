@@ -280,11 +280,11 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// DSP
 	//
-	DSP::DSP( Memory& _memory, IPeripherals* _pX, IPeripherals* _pY  )
-		: m_disasm(m_opcodes)
-		, mem(_memory)
+	DSP::DSP(Memory& _memory, IPeripherals* _pX, IPeripherals* _pY)
+		: mem(_memory)
 		, perif({_pX, _pY})
 		, pcCurrentInstruction(0xffffff)
+		, m_disasm(m_opcodes)
 	{
 		mem.setDSP(this);
 
