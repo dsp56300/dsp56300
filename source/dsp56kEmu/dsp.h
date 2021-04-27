@@ -613,6 +613,7 @@ namespace dsp56k
 		// --- operations
 	public:
 		void op_Abs(TWord op);
+		template<TWord ab> void opCE_Abs(TWord op);
 		void op_ADC(TWord op);
 		void op_Add_SD(TWord op);
 		void op_Add_xx(TWord op);
@@ -624,6 +625,7 @@ namespace dsp56k
 		void op_And_xxxx(TWord op);
 		void op_Andi(TWord op);
 		void op_Asl_D(TWord op);
+		template<TWord ab> void opCE_Asl_D(TWord op);
 		void op_Asl_ii(TWord op);
 		void op_Asl_S1S2D(TWord op);
 		void op_Asr_D(TWord op);
@@ -850,6 +852,9 @@ namespace dsp56k
 		void op_Wait(TWord op);
 		void op_ResolveCache(TWord op);
 		void op_Parallel(TWord op);
+
+		// ------------- function permutations -------------
+		TWord resolvePermutation(Instruction _inst, TWord _op) const;
 
 		// ------------- operation helper methods -------------
 

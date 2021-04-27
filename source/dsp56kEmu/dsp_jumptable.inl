@@ -7,12 +7,53 @@ namespace dsp56k
 {
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
+	enum PermutationFuncs
+	{
+		Abs_Field_d_0 = InstructionCount,
+		Abs_Field_d_1,
+		Asl_D_Field_d_0,
+		Asl_D_Field_d_1,
+
+		PermutationFunc_END,
+		PermutationFunc_COUNT = PermutationFunc_END - InstructionCount
+	};
+
+	struct PermutationValueToFunc
+	{
+		const TWord value;
+		const PermutationFuncs func;
+	};
+
+	struct FieldPermutationType
+	{
+		constexpr explicit FieldPermutationType(const Instruction _instruction, const Field _field, const TWord _value, const PermutationFuncs _func) noexcept
+		: instruction(_instruction)
+		, field(_field)
+		, value(_value)
+		, func(_func)
+		{
+		}
+
+		const Instruction instruction;
+		const Field field;
+		const TWord value;
+		const PermutationFuncs func;
+	};
+
+	static const FieldPermutationType g_permutationTypes[] =
+	{
+		FieldPermutationType(Abs, Field_d, 0, Abs_Field_d_0),
+		FieldPermutationType(Abs, Field_d, 1, Abs_Field_d_1),
+		FieldPermutationType(Asl_D, Field_d, 0,Asl_D_Field_d_0),
+		FieldPermutationType(Asl_D, Field_d, 1,Asl_D_Field_d_1)
+	};
+
 	constexpr TInstructionFunc g_jumpTable[] =
 	{
-		&DSP::op_Abs,							// Abs Abs 
-		&DSP::op_ADC,							// ADC ADC 
-		&DSP::op_Add_SD,						// Add_SD Add_SD 
-		&DSP::op_Add_xx,						// Add_xx Add_xx 
+		&DSP::op_Abs,							// Abs
+		&DSP::op_ADC,							// ADC 
+		&DSP::op_Add_SD,						// Add_SD
+		&DSP::op_Add_xx,						// Add_xx
 		&DSP::op_Add_xxxx,						// Add_xxxx 
 		&DSP::op_Addl,							// Addl 
 		&DSP::op_Addr,							// Addr 
@@ -246,8 +287,15 @@ namespace dsp56k
 		&DSP::op_Vsl,							// Vsl 
 		&DSP::op_Wait,							// Wait 
 		&DSP::op_ResolveCache,					// ResolveCache
-		&DSP::op_Parallel						// Parallel
+		&DSP::op_Parallel,						// Parallel
+
+		// Permutations
+		&DSP::opCE_Abs<0>,
+		&DSP::opCE_Abs<1>,
+		&DSP::opCE_Asl_D<0>,
+		&DSP::opCE_Asl_D<1>,
 	};
 
-	static_assert(sizeof(g_jumpTable) / sizeof(g_jumpTable[0]) == InstructionCount, "jump table entries missing or too many");
+	static_assert(sizeof(g_jumpTable) / sizeof(g_jumpTable[0]) == (InstructionCount + PermutationFunc_COUNT), "jump table entries missing or too many");
+	static_assert(sizeof(g_jumpTable) / sizeof(g_jumpTable[0]) < 256, "jump table too large");
 }

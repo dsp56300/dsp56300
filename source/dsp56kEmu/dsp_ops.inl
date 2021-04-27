@@ -510,9 +510,9 @@ namespace dsp56k
 				assert(0 && "illegal instruction");
 			}
 
-			cacheEntry = oi->m_instruction;
+			cacheEntry = resolvePermutation(oi->m_instruction, op);
 
-			exec_jump(oi->m_instruction, op);
+			exec_jump(cacheEntry, op);
 			return;
 		}
 		const auto* oiMove = m_opcodes.findParallelMoveOpcodeInfo(op);
@@ -540,8 +540,8 @@ namespace dsp56k
 			// Only ALU, no parallel move
 			if(oiAlu)
 			{
-				cacheEntry = oiAlu->m_instruction;
-				exec_jump(static_cast<Instruction>(oiAlu->m_instruction), op);
+				cacheEntry = resolvePermutation(oiAlu->m_instruction, op);
+				exec_jump(cacheEntry, op);
 			}
 			else
 			{
@@ -553,8 +553,9 @@ namespace dsp56k
 			// IFcc executes the ALU instruction if the condition is met, therefore no ALU exec by us
 			if(oiAlu)
 			{
-				cacheEntry = oiMove->m_instruction | (oiAlu->m_instruction << 8);
-				exec_jump(oiMove->m_instruction, op);
+				const auto moveFunc = resolvePermutation(oiMove->m_instruction, op);
+				cacheEntry = moveFunc | (resolvePermutation(oiAlu->m_instruction, op) << 8);
+				exec_jump(moveFunc, op);
 			}
 			else
 			{
@@ -565,13 +566,13 @@ namespace dsp56k
 			if(!oiAlu)
 			{
 				// if there is no ALU instruction, do only a move
-				cacheEntry = oiMove->m_instruction;
-				exec_jump(oiMove->m_instruction, op);
+				cacheEntry = resolvePermutation(oiMove->m_instruction, op);
+				exec_jump(cacheEntry, op);
 			}
 			else
 			{
 				// call special function that simulates latch registers for alu op + parallel move
-				cacheEntry = Parallel | oiMove->m_instruction << 8 | oiAlu->m_instruction << 16;
+				cacheEntry = Parallel | resolvePermutation(oiMove->m_instruction, op) << 8 | resolvePermutation(oiAlu->m_instruction, op) << 16;
 				op_Parallel(op);
 			}
 		}

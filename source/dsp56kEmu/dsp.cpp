@@ -1115,12 +1115,31 @@ namespace dsp56k
 	{
 		m_opcodeCache[_address] = ResolveCache;
 	}
+	
+	TWord DSP::resolvePermutation(const Instruction _inst, const TWord _op) const
+	{
+		constexpr auto size = sizeof(g_permutationTypes) / sizeof(g_permutationTypes[0]);
+
+		for(size_t i=0; i<size; ++i)
+		{
+			const auto& p = g_permutationTypes[i];
+
+			if(p.instruction != _inst)
+				continue;
+			
+			const auto v = getFieldValue(_inst, p.field, _op);
+
+			if(p.value == v)
+				return p.func;
+		}
+		return _inst;
+	}
 
 	void DSP::dumpRegisters() const
 	{
 		std::stringstream ss;
 		dumpRegisters(ss);
-		const std::string str(ss.str());
+		const auto str(ss.str());
 		LOGF(str);
 	}
 	void DSP::dumpRegisters(std::stringstream& _ss) const

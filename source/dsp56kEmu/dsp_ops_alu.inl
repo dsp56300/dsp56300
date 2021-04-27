@@ -575,6 +575,12 @@ namespace dsp56k
 		const auto D = getFieldValue<Abs, Field_d>(op);
 		alu_abs(D);
 	}
+
+	template<TWord ab> void DSP::opCE_Abs(const TWord op)
+	{
+		alu_abs(ab);
+	}
+
 	inline void DSP::op_ADC(const TWord op)
 	{
 		errNotImplemented("ADC");
@@ -641,6 +647,10 @@ namespace dsp56k
 	inline void DSP::op_Asl_D(const TWord op)
 	{
 		const auto D = getFieldValue<Asl_D, Field_d>(op);
+		alu_asl(D, D, 1);
+	}
+	template<TWord D> void DSP::opCE_Asl_D(const TWord op)
+	{
 		alu_asl(D, D, 1);
 	}
 	inline void DSP::op_Asl_ii(const TWord op)
