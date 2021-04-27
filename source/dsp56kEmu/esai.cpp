@@ -1,6 +1,7 @@
 #include "esai.h"
 
 #include "dsp.h"
+#include "interrupts.h"
 #include "peripherals.h"
 
 namespace dsp56k
