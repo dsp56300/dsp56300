@@ -5,7 +5,6 @@
 #include "memory.h"
 #include "utils.h"
 #include "instructioncache.h"
-#include "interrupts.h"
 #include "opcodes.h"
 #include "logging.h"
 
@@ -240,6 +239,8 @@ namespace dsp56k
 
 		// -- decoding helper functions
 
+		bool	decode_cccc				( TWord cccc ) const;
+
 		TWord	decode_MMMRRR_read		( TWord _mmmrrr );
 		TWord	decode_XMove_MMRRR		( TWord _mmrrr );
 		TWord	decode_YMove_mmrr		( TWord _mmrr, TWord _regIdxOffset );
@@ -247,345 +248,40 @@ namespace dsp56k
 		TWord	decode_RRR_read			( TWord _mmmrrr ) const;
 		TWord	decode_RRR_read			( TWord _mmmrrr, int _shortDisplacement ) const;
 
-		template<typename T> T decode_ddddd_read( TWord _ddddd )
-		{
-			T res;
-			// TODO: can be replaced with the six bit version, numbers are identical anyway
-			switch( _ddddd )
-			{
-			case 0x04:	convert( res, x0() ); 	return res;	// x0
-			case 0x05:	convert( res, x1() ); 	return res;	// x1	
-			case 0x06:	convert( res, y0() ); 	return res;	// y0
-			case 0x07:	convert( res, y1() ); 	return res;	// y1
-			case 0x08:	convert( res, a0() ); 	return res;	// a0
-			case 0x09:	convert( res, b0() ); 	return res;	// b0
-			case 0x0a:	convertS( res, a2() ); 	return res;	// a2
-			case 0x0b:	convertS( res, b2() ); 	return res;	// b2
-			case 0x0c:	convert( res, a1() ); 	return res;	// a1
-			case 0x0d:	convert( res, b1() ); 	return res;	// b1
-			case 0x0e:	return getA<T>();					// a
-			case 0x0f:	return getB<T>();					// b
-			}
-			if( (_ddddd & 0x18) == 0x10 )					// r0-r7
-				convert( res, reg.r[_ddddd&0x07] );
-			else if( (_ddddd & 0x18) == 0x18 )				// n0-n7
-				convert( res, reg.n[_ddddd&0x07] );
-			else
-			{
-				assert( 0 && "invalid ddddd value" );
-				return T(0xbadbad);
-			}
-			return res;
-		}
-		template<typename T> T decode_sss_read( TWord _sss ) const
-		{
-			T res;
+		template<typename T> T decode_ddddd_read( TWord _ddddd );
 
-			switch( _sss )
-			{
-			case 2:		convert( res, a1() );				break;
-			case 3:		convert( res, b1() );				break;
-			case 4:		convert( res, x0() );				break;
-			case 5:		convert( res, y0() );				break;
-			case 6:		convert( res, x1() );				break;
-			case 7:		convert( res, y1() );				break;
-			case 0:
-			case 1:
-			default:	assert( 0 && "invalid sss value" ); return 0xbadbad;
-			}
-			return res;
-		}
-
-		template<typename T> bool decode_ddddd_write(const TWord _ddddd, const T& _val )
-		{
-			switch( _ddddd )
-			{
-				case 0x04:	x0(_val);										return true;	// x0
-				case 0x05:	x1(_val);										return true;	// x1	
-				case 0x06:	y0(_val);										return true;	// y0
-				case 0x07:	y1(_val);										return true;	// y1
-				case 0x08:	{ TReg24 temp; convertU(temp,_val); a0(temp); }	return true;	// a0
-				case 0x09:	{ TReg24 temp; convertU(temp,_val); b0(temp); }	return true;	// b0
-				case 0x0a:	{ TReg8  temp; convertU(temp,_val); a2(temp); }	return true;	// a2
-				case 0x0b:	{ TReg8  temp; convertU(temp,_val); b2(temp); }	return true;	// b2
-				case 0x0c:	{ TReg24 temp; convertU(temp,_val); a1(temp); }	return true;	// a1
-				case 0x0d:	{ TReg24 temp; convertU(temp,_val); b1(temp); }	return true;	// b1
-				case 0x0e:	convert(reg.a,_val);							return true;	// a
-				case 0x0f:	convert(reg.b,_val);							return true;	// b
-				default:
-					if( (_ddddd & 0x18) == 0x10 )											// r0-r7
-					{
-						convertU(reg.r[_ddddd&0x07],_val);
-						return true;
-					}
-					if( (_ddddd & 0x18) == 0x18 )											// n0-n7
-					{
-						convertU(reg.n[_ddddd&0x07],_val);
-						return true;
-					}
-					assert(0 && "invalid ddddd destination register");
-					return false;
-			}
-		}
-
-		TReg24	decode_ddddd_pcr_read 	( TWord _ddddd );
-		void	decode_ddddd_pcr_write	( TWord _ddddd, TReg24 _val );
+		template<typename T> bool decode_ddddd_write(TWord _ddddd, const T& _val );
 
 		// Six-Bit Encoding for all on-chip registers
 		TReg24	decode_dddddd_read		(TWord _dddddd);
 		void	decode_dddddd_write		(TWord _dddddd, TReg24 _val);
 
-		TReg24	decode_JJ_read			( TWord jj ) const
-		{
-			switch( jj )
-			{
-			case 0:	return x0();
-			case 1: return y0();
-			case 2:	return x1();
-			case 3: return y1();
-			}
-			assert( 0 && "unreachable, invalid JJ value" );
-			return TReg24(0xbadbad);
-		}
+		TReg24	decode_ddddd_pcr_read 	( TWord _ddddd );
+		void	decode_ddddd_pcr_write	( TWord _ddddd, TReg24 _val );
 
-		TReg56 decode_JJJ_read_56( TWord jjj, bool _b ) const
-		{
-			TReg56 res;
-			switch( jjj )
-			{
-			case 0:
-			case 1:	res = _b ? reg.b : reg.a;		break;
-			case 2:	convert( res, reg.x );		break;
-			case 3:	convert( res, reg.y );		break;
-			case 4: convert( res, x0() );		break;
-			case 5: convert( res, y0() );		break;
-			case 6: convert( res, x1() );		break;
-			case 7: convert( res, y1() );		break;
-			default:
-				assert( 0 && "unreachable, invalid JJJ value" );
-				return TReg56(TReg56::MyType(0xbadbadbadbadbadb));
-			}
-			return res;
-		}
+		TReg8 decode_EE_read(TWord _ee) const;
+		void decode_EE_write(TWord _ee, TReg8 _val);
 
-		void decode_JJJ_readwrite( TReg56& alu, TWord jjj, bool _b )
-		{
-			switch( jjj )
-			{
-			case 0:
-			case 1:	alu = _b ? reg.b : reg.a;	return;
-			case 2:	convert(alu,reg.x);			return;
-			case 3:	convert(alu,reg.y);			return;
-			case 4: convert(alu,x0());			return;
-			case 5: convert(alu,y0());			return;
-			case 6: convert(alu,x1());			return;
-			case 7: convert(alu,y1());			return;
-			default:
-				assert( 0 && "unreachable, invalid JJJ value" );
-			}
-		}
+		TReg24 decode_ee_read(TWord _ff);
+		void decode_ee_write(TWord _ff, const TReg24& _value);
 
-		TReg8	decode_EE_read( TWord _ee ) const
-		{
-			switch( _ee )
-			{
-			case 0:	return mr();
-			case 1:	return ccr();
-			case 2:	return com();
-			case 3:	return eom();
-			}
-			assert( 0 && "invalid EE value" );
-			return TReg8((char)0xee);
-		}
+		TReg24 decode_ff_read(TWord _ff);
+		void decode_ff_write(TWord _ff, const TReg24& _value);
 
-		void	decode_EE_write( TWord _ee, TReg8 _val )
-		{
-			switch( _ee )
-			{
-			case 0:	mr(_val);	return;
-			case 1:	ccr(_val);	return;
-			case 2:	com(_val);	return;
-			case 3:	eom(_val);	return;
-			}
-			assert( 0 && "invalid EE value" );
-		}
+		TReg24 decode_JJ_read(TWord jj) const;
+		TReg56 decode_JJJ_read_56(TWord jjj, bool _b) const;
+		void decode_JJJ_readwrite(TReg56& alu, TWord jjj, bool _b);
 
-		void decode_QQQQ_read( TReg24& _s1, TReg24& _s2, TWord _qqqq ) const
-		{
-			switch( _qqqq )
-			{
-			case 0:		_s1 = x0();		_s2 = x0();		return;
-			case 1:		_s1 = y0();		_s2 = y0();		return;
-			case 2:		_s1 = x1();		_s2 = x0();		return;
-			case 3:		_s1 = y1();		_s2 = y0();		return;
+		void decode_LLL_read(TWord _lll, TWord& x, TWord& y);
+		void decode_LLL_write(TWord _lll, TReg24 x, TReg24 y);
 
-			case 4:		_s1 = x0();		_s2 = y1();		return;
-			case 5:		_s1 = y0();		_s2 = x0();		return;
-			case 6:		_s1 = x1();		_s2 = y0();		return;
-			case 7:		_s1 = y1();		_s2 = x1();		return;
+		void decode_QQQQ_read(TReg24& _s1, TReg24& _s2, TWord _qqqq) const;
+		void decode_QQQ_read(TReg24& _s1, TReg24& _s2, TWord _qqq) const;
+		TReg24 decode_QQ_read(TWord _qq) const;
+		TReg24 decode_qq_read(TWord _qq) const;
 
-			case 8:		_s1 = x1();		_s2 = x1();		return;
-			case 9:		_s1 = y1();		_s2 = y1();		return;
-			case 10:	_s1 = x0();		_s2 = x1();		return;
-			case 11:	_s1 = y0();		_s2 = y1();		return;
-
-			case 12:	_s1 = y1();		_s2 = x0();		return;
-			case 13:	_s1 = x0();		_s2 = y0();		return;
-			case 14:	_s1 = y0();		_s2 = x1();		return;
-			case 15:	_s1 = x1();		_s2 = y1();		return;
-			}
-			assert( 0 && "invalid QQQQ value" );
-		}
-
-		void decode_QQQ_read( TReg24& _s1, TReg24& _s2, TWord _qqq ) const
-		{
-			switch( _qqq )
-			{
-			case 0:		_s1 = x0();		_s2 = x0();		return;
-			case 1:		_s1 = y0();		_s2 = y0();		return;
-			case 2:		_s1 = x1();		_s2 = x0();		return;
-			case 3:		_s1 = y1();		_s2 = y0();		return;
-			case 4:		_s1 = x0();		_s2 = y1();		return;
-			case 5:		_s1 = y0();		_s2 = x0();		return;
-			case 6:		_s1 = x1();		_s2 = y0();		return;
-			case 7:		_s1 = y1();		_s2 = x1();		return;
-			}
-			assert( 0 && "invalid QQQ value" );
-		}
-
-		TReg24 decode_QQ_read( TWord _qq ) const
-		{
-			switch( _qq )
-			{
-			case 0:		return y1();
-			case 1:		return x0();
-			case 2:		return y0();
-			case 3:		return x1();
-			}
-			assert( 0 && "invalid QQ value" );
-			return TReg24(int(0xbadbad));
-		}
-
-		TReg24 decode_qq_read( TWord _qq ) const
-		{
-			switch( _qq )
-			{
-			case 0:		return x0();
-			case 1:		return y0();
-			case 2:		return x1();
-			case 3:		return y1();
-			}
-			assert( 0 && "invalid qq value" );
-			return TReg24(int(0xbadbad));
-		}
-
-		bool decode_cccc( TWord cccc ) const;
-
-		TReg24 decode_ff_read( TWord _ff )
-		{
-			switch( _ff )
-			{
-			case 0:	return y0();
-			case 1:	return y1();
-			case 2:	return getA<TReg24>();
-			case 3:	return getB<TReg24>();
-			}
-			assert( 0 && "invalid ff value" );
-			return TReg24(int(0xbadbad));
-		}
-
-		void decode_ff_write( TWord _ff, const TReg24& _value)
-		{
-			switch( _ff )
-			{
-			case 0:	y0(_value);		return;
-			case 1:	y1(_value);		return;
-			case 2:	setA(_value);	return;
-			case 3:	setB(_value);	return;
-			}
-			assert( 0 && "invalid ff value" );
-		}
-
-		TReg24 decode_ee_read(const TWord _ff)
-		{
-			switch( _ff )
-			{
-			case 0:	return x0();
-			case 1:	return x1();
-			case 2:	return getA<TReg24>();
-			case 3:	return getB<TReg24>();
-			}
-			assert( 0 && "invalid ff value" );
-			return TReg24(int(0xbadbad));
-		}
-
-		void decode_ee_write(const TWord _ff, const TReg24& _value)
-		{
-			switch( _ff )
-			{
-			case 0:	x0(_value);		return;
-			case 1:	x1(_value);		return;
-			case 2:	setA(_value);	return;
-			case 3:	setB(_value);	return;
-			}
-			assert( 0 && "invalid ff value" );
-		}
-
-		void decode_LLL_read( TWord _lll, TWord& x, TWord& y )
-		{
-			switch( _lll )
-			{
-			case 0:		convert(x,a1()); 		convert(y,a0());		return;
-			case 1:		convert(x,b1()); 		convert(y,b0());		return;
-			case 2:		convert(x,x1()); 		convert(y,x0());		return;
-			case 3:		convert(x,y1()); 		convert(y,y0());		return;
-			case 4:
-				x = reg.a.var >> 24 & 0xffffff;
-				y = reg.a.var & 0xffffff;
-				return;
-			case 5:
-				x = reg.b.var >> 24 & 0xffffff;
-				y = reg.b.var & 0xffffff;
-				return;
-			case 6:		x = getA<TWord>();		y = getB<TWord>();		return;
-			case 7:		x = getB<TWord>();		y = getA<TWord>();		return;
-			}
-			assert( 0 && "invalid LLL value" );
-		}
-
-		void decode_LLL_write( TWord _lll, TReg24 x, TReg24 y )
-		{
-			switch( _lll )
-			{
-			case 0:		a1  (x); a0  (y);	return;
-			case 1:		b1  (x); b0  (y);	return;
-			case 2:		x1  (x); x0  (y);	return;
-			case 3:		y1  (x); y0  (y);	return;
-			case 4:
-				{
-					
-					TReg48 xy;
-					xy.var = static_cast<uint64_t>(x.var) << 24 | y.var;
-					convert(reg.a, xy);
-				}
-				return;
-			case 5:
-				{
-					TReg48 xy;
-					xy.var = static_cast<uint64_t>(x.var) << 24 | y.var;
-					convert(reg.b, xy);
-				}
-				return;
-			case 6:		setA(x); setB(y);	return;
-			case 7:		setB(x); setA(y);	return;
-			}
-			assert( 0 && "invalid LLL value" );
-		}
-
-		static TWord decode_sssss(const TWord _sssss)
-		{
-			return 0x800000 >> _sssss;
-		}
+		template<typename T> T decode_sss_read( TWord _sss ) const;
+		static TWord decode_sssss(TWord _sssss);
 
 		// -- status register management
 
