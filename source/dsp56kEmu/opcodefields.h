@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 
+#include "opcodetypes.h"
+
 namespace dsp56k
 {
 	struct FieldInfo
@@ -123,4 +125,6 @@ namespace dsp56k
 		FieldParseConfig('?', 8),		// Field_AluOperation		
 		FieldParseConfig('?', 16)		// Field_MoveOperation
 	};
+
+	static_assert(sizeof(g_fieldParseConfigs) / sizeof(g_fieldParseConfigs[0]) == Field_COUNT, "g_fieldParseConfigs has wrong size");
 }
