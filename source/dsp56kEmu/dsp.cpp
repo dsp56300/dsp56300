@@ -3,6 +3,7 @@
 #include "dsp.h"
 
 #include <iomanip>
+#include <cstring>
 
 #include "registers.h"
 #include "types.h"
