@@ -14,6 +14,7 @@ disasm.cpp disasm.h
 dspconfig.h
 dsp.cpp dsp.h 
 dsp_decode.inl
+dsp_jumptable.inl
 dsp_ops.inl dsp_ops_helper.inl 
 dsp_ops_alu.inl dsp_ops_bra.inl dsp_ops_jmp.inl dsp_ops_move.inl
 dspthread.cpp dspthread.h
