@@ -1,7 +1,7 @@
 #pragma once
 
-#if defined(_WIN32) && defined(_DEBUG)
-#	define USE_MOTOROLA_UNASM
+#if defined(DSP56K_USE_MOTOROLA_UNASM) && (!defined(_WIN32) || !defined(_DEBUG) || defined(_WIN64))
+#	undef USE_MOTOROLA_UNASM
 #endif
 
 #include <array>
