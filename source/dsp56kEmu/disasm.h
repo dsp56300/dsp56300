@@ -35,7 +35,7 @@ namespace dsp56k
 			std::string name;
 		};
 
-		Disassembler(const Opcodes& _opcodes);
+		explicit Disassembler(const Opcodes& _opcodes);
 
 		int disassemble(std::string& dst, TWord op, TWord opB, TWord sr, TWord omr, TWord pc);
 
