@@ -226,7 +226,7 @@ namespace dsp56k
 			traceOp();
 	}
 
-	void DSP::exec_jump(const Instruction inst, const TWord op)
+	void DSP::exec_jump(const TWord inst, const TWord op)
 	{
 		const auto func = g_jumpTable[inst];
 		(this->*func)(op);

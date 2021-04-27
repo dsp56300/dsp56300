@@ -224,7 +224,7 @@ namespace dsp56k
 
 		void 	execOp							(TWord op);
 
-		void	exec_jump						(Instruction _inst, TWord op);
+		void	exec_jump						(TWord _inst, TWord op);
 		
 		bool	exec_parallel					(Instruction instMove, Instruction instAlu, TWord op);
 
