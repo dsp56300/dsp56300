@@ -59,13 +59,19 @@ namespace dsp56k
 					{
 						const TWord moduloMask		= calcModuloMask(m);
 						const TWord baseAddrMask	= ~moduloMask;
+						const int32_t modulo		= moduloTest + 1;
 
 						const TWord rBase			= r & baseAddrMask;
-						const TWord rOffset			= r & moduloMask;
+						const int32_t rOffset		= (r & moduloMask);
+						
+						// If (rOffset<0) then bit 31 of rOffset is set. Shift it down 31 places to get -1. Otherwise you have 0.
+						// and this value with modulo to get either modulo or zero. Add to rOffset.
+						// If (moduloTest-rOffset<0) (rOffset>moduloTest) (i.e. rOffset exceeds moduloTest), do the same trick.
+						const int32_t p				= rOffset + n;
+						const int32_t mt			= moduloTest;
+						const int32_t rOffsetNew	= p + ((p>>31) & modulo) - (((mt-p)>>31) & modulo);
 
-						const TWord modulo			= moduloTest + 1;
-
-						const TWord rNew 			= rBase | (rOffset + n + modulo) % modulo;
+						const TWord rNew 			= rBase | rOffsetNew;
 
 //						LOG( "r " << std::hex << r << " + n " << std::hex << n << "(m=" << std::hex << m << ") = " << std::hex << rNew << " mask=" << std::hex << moduloMask << " baseAddrMask=" << std::hex << baseAddrMask << " baseAddr=" << std::hex << baseAddr );
 
