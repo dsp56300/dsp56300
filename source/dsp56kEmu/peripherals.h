@@ -154,4 +154,5 @@ namespace dsp56k
 		Esai m_esai;
 		HDI08 m_hdi08;
 		Timers m_timers;
+		bool m_disableTimers;
 	};}
