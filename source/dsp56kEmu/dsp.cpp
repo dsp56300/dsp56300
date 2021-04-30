@@ -127,6 +127,8 @@ namespace dsp56k
 
 	void DSP::execPeriph()
 	{
+		if ((peripheralCounter--)) return;
+		peripheralCounter = 20;
 		perif[0]->exec();
 
 		if(perif[1] != perif[0])
