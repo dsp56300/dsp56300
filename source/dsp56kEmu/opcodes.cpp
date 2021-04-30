@@ -104,7 +104,7 @@ namespace dsp56k
 
 	static_assert(getFieldInfoCE<Bsset_S, Field_DDDDDD>().bit == 8, "invalid");
 
-	const FieldInfo& getFieldInfo(Instruction _i, Field _f)
+	const FieldInfo& getFieldInfo(const Instruction _i, const Field _f)
 	{
 		return g_runtimeFieldInfos.m_fieldInfos[_i].m_fieldInfos[_f];
 	}
