@@ -54,6 +54,11 @@ namespace dsp56k
 		LOG("Write HostFlags, HSR " << HEX(m_hsr));
 	}
 
+	bool HDI08::hasTX() const
+	{
+		return !m_dataTX.empty();
+	}
+
 	uint32_t HDI08::readTX()
 	{
 		m_dataTX.waitNotEmpty();

@@ -95,6 +95,71 @@ namespace dsp56k
 				}
 			}
 		}
+		void processAudioInterleavedSingle(float* _inputs, float* _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
+		{
+			if (!_sampleFrames)
+				return;
+
+			// write input data
+
+			if(_latency > m_latency)
+			{
+				// write 0s to input to increase latency
+				const auto len = std::min(_latency - m_latency, _sampleFrames);
+
+				for (size_t i = 0; i < len; ++i)
+				{
+					for (size_t c = 0; c < _numDSPins; ++c)
+					{
+						const auto in = c >> 1;
+						m_audioInputs[in].waitNotFull();
+						m_audioInputs[in].push_back(0);
+					}
+				}
+			}
+
+			for (size_t i = 0; i < _sampleFrames; ++i)
+			{
+				for (size_t c = 0; c < _numDSPins; ++c)
+				{
+					const auto in = c >> 1;
+					m_audioInputs[in].waitNotFull();
+					m_audioInputs[in].push_back(float2Dsdp(_inputs[c*i]));
+				}
+
+				m_pendingRXInterrupts += 2;
+			}
+
+			// read output
+			for (size_t i = 0; i < _sampleFrames; ++i)
+			{
+				if(_latency > m_latency)
+				{
+					for (size_t c = 0; c < _numDSPouts; ++c)
+						_outputs[c*i] = 0;
+					++m_latency;
+				}
+
+				for (size_t c = 0; c < _numDSPouts; ++c)
+				{
+					const auto out = c >> 1;
+
+					TWord v = 0;
+
+					if(out == 0)
+					{
+						m_audioOutputs[out].waitNotEmpty();
+						v = m_audioOutputs[out].pop_front();
+					}
+					else if(!m_audioOutputs[out].empty())
+					{
+						v = m_audioOutputs[out].pop_front();
+					}
+
+					_outputs[c*i] = dsp2Float(v);
+				}
+			}
+		}
 
 		void processAudioInterleavedTX0(float** _inputs, float** _outputs, size_t _sampleFrames)
 		{
