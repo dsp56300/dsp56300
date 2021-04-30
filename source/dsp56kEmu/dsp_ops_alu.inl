@@ -621,6 +621,11 @@ namespace dsp56k
 		const auto JJ = getFieldValue<And_SD, Field_JJ>(op);
 		alu_and(D, decode_JJ_read(JJ).var);
 	}
+	template<TWord D, TWord JJ>
+	void DSP::opCE_And_SD(const TWord op)
+	{
+		alu_and(D ? true : false, decode_JJ_read(JJ).var);
+	}
 	inline void DSP::op_And_xx(const TWord op)
 	{
 		const auto ab		= getFieldValue<And_xx,Field_d>(op);

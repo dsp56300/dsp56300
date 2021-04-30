@@ -620,6 +620,7 @@ namespace dsp56k
 		void op_Add_xxxx(TWord op);
 		void op_Addl(TWord op);
 		void op_Addr(TWord op);
+		template<TWord D, TWord JJ> void opCE_And_SD(TWord op);
 		void op_And_SD(TWord op);
 		void op_And_xx(TWord op);
 		void op_And_xxxx(TWord op);
