@@ -3,6 +3,9 @@
 #include "bitfield.h"
 #include "types.h"
 
+//#include "buildconfig.h"
+//#include <intrin.h>
+
 namespace dsp56k
 {
 	// TODO: optimize for x86 win32, use intrin.h that has those functions in it
@@ -19,6 +22,9 @@ namespace dsp56k
 
 	template<uint32_t B> Bit bitvalue(const TReg56& _val)
 	{
+//#ifdef HAVE_SSE
+//		return Bit(_bittest64(&_val.var, B));
+//#endif
 		return bitvalue<uint64_t,B>(_val.var);
 	}
 
