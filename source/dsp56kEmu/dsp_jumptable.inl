@@ -7,48 +7,7 @@ namespace dsp56k
 {
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
-	enum PermutationFuncs
-	{
-		Abs_Field_d_0 = InstructionCount,
-		Abs_Field_d_1,
-		Asl_D_Field_d_0,
-		Asl_D_Field_d_1,
-
-		PermutationFunc_END,
-		PermutationFunc_COUNT = PermutationFunc_END - InstructionCount
-	};
-
-	struct PermutationValueToFunc
-	{
-		const TWord value;
-		const PermutationFuncs func;
-	};
-
-	struct FieldPermutationType
-	{
-		constexpr explicit FieldPermutationType(const Instruction _instruction, const Field _field, const TWord _value, const PermutationFuncs _func) noexcept
-		: instruction(_instruction)
-		, field(_field)
-		, value(_value)
-		, func(_func)
-		{
-		}
-
-		const Instruction instruction;
-		const Field field;
-		const TWord value;
-		const PermutationFuncs func;
-	};
-
-	static const FieldPermutationType g_permutationTypes[] =
-	{
-		FieldPermutationType(Abs, Field_d, 0, Abs_Field_d_0),
-		FieldPermutationType(Abs, Field_d, 1, Abs_Field_d_1),
-		FieldPermutationType(Asl_D, Field_d, 0,Asl_D_Field_d_0),
-		FieldPermutationType(Asl_D, Field_d, 1,Asl_D_Field_d_1)
-	};
-
-	constexpr TInstructionFunc g_jumpTable[] =
+	constexpr TInstructionFunc g_opcodeFuncs[] =
 	{
 		&DSP::op_Abs,							// Abs
 		&DSP::op_ADC,							// ADC 
@@ -288,14 +247,357 @@ namespace dsp56k
 		&DSP::op_Wait,							// Wait 
 		&DSP::op_ResolveCache,					// ResolveCache
 		&DSP::op_Parallel,						// Parallel
-
-		// Permutations
-		&DSP::opCE_Abs<0>,
-		&DSP::opCE_Abs<1>,
-		&DSP::opCE_Asl_D<0>,
-		&DSP::opCE_Asl_D<1>,
 	};
 
-	static_assert(sizeof(g_jumpTable) / sizeof(g_jumpTable[0]) == (InstructionCount + PermutationFunc_COUNT), "jump table entries missing or too many");
-	static_assert(sizeof(g_jumpTable) / sizeof(g_jumpTable[0]) < 256, "jump table too large");
+	constexpr size_t g_opcodeFuncsSize = sizeof(g_opcodeFuncs) / sizeof(g_opcodeFuncs[0]);
+	static_assert(g_opcodeFuncsSize <= 256, "jump table too large");
+
+	using TField = std::pair<Field,TWord>;	// Field + Field Value
+
+	struct FieldPermutationType
+	{
+		constexpr explicit FieldPermutationType(const Instruction _instruction, const TField _field) noexcept
+		: instruction(_instruction)
+		, field(_field)
+		{
+		}
+
+		const Instruction instruction;
+		const TField field;
+	};
+
+	constexpr FieldPermutationType g_permutationTypes[] =
+	{
+		FieldPermutationType(Abs, {Field_d, 0}),
+		FieldPermutationType(Abs, {Field_d, 1}),
+
+		FieldPermutationType(Asl_D, {Field_d, 0}),
+		FieldPermutationType(Asl_D, {Field_d, 1}),
+		
+		FieldPermutationType(And_SD, {Field_d, 0}),
+		FieldPermutationType(And_SD, {Field_d, 1}),
+		FieldPermutationType(And_SD, {Field_JJ, 0}),
+		FieldPermutationType(And_SD, {Field_JJ, 1}),
+		FieldPermutationType(And_SD, {Field_JJ, 2}),
+		FieldPermutationType(And_SD, {Field_JJ, 3}),
+/*
+		FieldPermutationType(Movexy, {Field_MM, 0}),
+		FieldPermutationType(Movexy, {Field_MM, 1}),
+		FieldPermutationType(Movexy, {Field_MM, 2}),
+		FieldPermutationType(Movexy, {Field_MM, 3}),
+
+		FieldPermutationType(Movexy, {Field_RRR, 0}),
+		FieldPermutationType(Movexy, {Field_RRR, 1}),
+		FieldPermutationType(Movexy, {Field_RRR, 2}),
+		FieldPermutationType(Movexy, {Field_RRR, 3}),
+		FieldPermutationType(Movexy, {Field_RRR, 4}),
+		FieldPermutationType(Movexy, {Field_RRR, 5}),
+		FieldPermutationType(Movexy, {Field_RRR, 6}),
+		FieldPermutationType(Movexy, {Field_RRR, 7}),
+
+		FieldPermutationType(Movexy, {Field_mm, 0}),
+		FieldPermutationType(Movexy, {Field_mm, 1}),
+		FieldPermutationType(Movexy, {Field_mm, 2}),
+		FieldPermutationType(Movexy, {Field_mm, 3}),
+
+		FieldPermutationType(Movexy, {Field_rr, 0}),
+		FieldPermutationType(Movexy, {Field_rr, 1}),
+		FieldPermutationType(Movexy, {Field_rr, 2}),
+		FieldPermutationType(Movexy, {Field_rr, 3}),
+*/
+		FieldPermutationType(Movexy, {Field_W, 0}),
+		FieldPermutationType(Movexy, {Field_W, 1}),
+
+		FieldPermutationType(Movexy, {Field_w, 0}),
+		FieldPermutationType(Movexy, {Field_w, 1}),
+/*
+		FieldPermutationType(Movexy, {Field_ee, 0}),
+		FieldPermutationType(Movexy, {Field_ee, 1}),
+		FieldPermutationType(Movexy, {Field_ee, 2}),
+		FieldPermutationType(Movexy, {Field_ee, 3}),
+
+		FieldPermutationType(Movexy, {Field_ff, 0}),
+		FieldPermutationType(Movexy, {Field_ff, 1}),
+		FieldPermutationType(Movexy, {Field_ff, 2}),
+		FieldPermutationType(Movexy, {Field_ff, 3}),
+*/
+	};
+
+	constexpr size_t g_permutationTypeCount = sizeof(g_permutationTypes) / sizeof(g_permutationTypes[0]);
+
+	struct FunctorAbs		{ template<TWord A>				constexpr TInstructionFunc get() const noexcept	{ return &DSP::opCE_Abs<A>;			} };
+	struct FunctorAsl		{ template<TWord A>				constexpr TInstructionFunc get() const noexcept	{ return &DSP::opCE_Asl_D<A>;		} };
+	struct FunctorAndSD		{ template<TWord A, TWord B>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_And_SD<A,B>;	} };
+	struct FunctorMovexy	{ template<TWord W, TWord w>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_Movexy<W,w>;	} };
+
+	constexpr TWord permutationCount(const Instruction _inst, const Field _field) noexcept
+	{
+		TWord result = 0;
+
+		for (auto permutationType : g_permutationTypes)
+		{
+			if(permutationType.instruction == _inst && permutationType.field.first == _field)
+				++result;
+		}
+		return result;
+	}
+
+	template<Instruction I, Field F>
+	constexpr TWord permutationCount() noexcept
+	{
+		return permutationCount(I, F);
+	}
+
+	template<Instruction I>
+	constexpr TWord permutationCount() noexcept
+	{
+		TWord result = 1;
+
+		for(size_t f=0; f<Field_COUNT; ++f)
+		{
+			result *= std::max(static_cast<TWord>(1), permutationCount(I, static_cast<Field>(f)));
+		}
+
+		return result;
+	}
+	
+	template<Instruction I, Field F, TWord _index>
+	constexpr TWord permutationValue() noexcept
+	{
+		static_assert(getFieldInfoCE<I,F>().len > 0, "field not known for opcode");
+
+		TWord index=0;
+
+		for(size_t i=0; i<g_permutationTypeCount; ++i)
+		{
+			if(g_permutationTypes[i].instruction != I || g_permutationTypes[i].field.first != F)
+				continue;
+
+			if(index == _index)
+			{
+				return g_permutationTypes[i].field.second;
+			}
+
+			++index;
+		}
+
+		return 0;
+	}
+
+	template<Instruction I> constexpr TWord fieldCount()
+	{
+		TWord count = 0;
+		auto lastField = Field_COUNT;
+
+		for(auto p : g_permutationTypes)
+		{
+			if(p.instruction != I)
+				continue;
+			if(p.field.first != lastField)
+			{
+				++count;
+				lastField = p.field.first;
+			}
+		}
+		return count;
+	}
+
+	template<Instruction I>
+	struct Permutation
+	{
+		Instruction inst;
+		TInstructionFunc func;
+		std::array<TField, fieldCount<I>()> fields;
+	};
+
+	template<Instruction I>
+	using TPermutations = std::array<Permutation<I>,permutationCount<I>()>;
+
+	template<Instruction I, TWord ...Fs> constexpr TWord permIndex(const Field FieldOfInterest, const TWord offset)
+	{
+		const TWord d[] = {Fs...};
+		uint32_t mul = 1;
+		for(size_t i=0; i<sizeof...(Fs); ++i)
+		{
+			if(d[i] == FieldOfInterest)
+				return (offset / mul) % permutationCount(I,static_cast<Field>(d[i]));
+			mul *= permutationCount(I,static_cast<Field>(d[i]));
+		}
+		return 0;
+	}
+
+	template<Field... Fields>
+	struct FieldSequence
+	{
+		static constexpr size_t size() noexcept { return (sizeof...(Fields)); }
+	};
+
+	template<Instruction I, Field... Fs>
+	auto constexpr permIndex(Field FieldOfInterest, TWord Offset, FieldSequence<Fs...>)
+	{
+	    return permIndex<I, Fs...>(FieldOfInterest, Offset);
+	}
+
+	using TPack = uint32_t;
+
+	template<Instruction I, Field F, TWord Index> constexpr TPack packValues()
+	{
+		static_assert(F < 256, "field too large");
+		static_assert(Index < 256, "index too large");
+//		static_assert(permutationCount<I,F>() <= 256, "too many permutations");
+		return (F) | (Index << 8);// | permutationCount<I,F>() << 16;
+	}
+
+	template<TPack Pack> constexpr Field unpackField()								{ return static_cast<Field>((Pack >> 0) & 0xff); }
+	template<TPack Pack> constexpr TWord unpackIndex()								{ return static_cast<TWord>((Pack >> 8) & 0xff); }
+//	template<Instruction I, TPack Pack> constexpr TWord unpackPermutationCount()	{ return static_cast<TWord>((Pack >> 16) & 0xffff); }	// Note: we can omit storing the permutationcount if we need more storage in the pack, will be more costly then but will work
+
+	template<Instruction I, TPack Pack> constexpr TWord permutationValue()			{ return permutationValue<I, unpackField<Pack>(), unpackIndex<Pack>()>(); }
+
+	template<typename Functor, Instruction I, TPack ...Pack> constexpr TInstructionFunc getPtr()
+	{
+		return Functor().template get< permutationValue<I, Pack>()...>();
+	}
+
+	template<Instruction I, TPack Pack> constexpr TField getTField()
+	{
+		return std::make_pair<Field,TWord>(unpackField<Pack>(), permutationValue<I, Pack>());
+	}
+
+	template<typename Functor, Instruction I, TPack ...Pack> constexpr Permutation<I> getPermutationFromPack()
+	{
+		return 
+		{
+			I,
+			getPtr<Functor, I, Pack...>(),
+			{getTField<I,Pack>()...},
+		};
+	}
+
+	template<typename Functor, Instruction I, TWord Index, Field ...Fields> constexpr auto getPermutationFromPack(FieldSequence<Fields...> fields)
+	{
+		return getPermutationFromPack<Functor, I, packValues<I, Fields, permIndex<I>(Fields, Index, fields)>()...>();
+	}
+
+	template<typename Functor, Instruction I, TWord Index, TWord IndexMax, Field ...Fields>
+	constexpr void getPermutationsRecursive(TPermutations<I>& _target)
+	{
+		_target[Index] = getPermutationFromPack<Functor, I, Index, Fields...>(FieldSequence<Fields...>());
+
+		// TODO: We need something that is NOT recursive
+		if constexpr (Index < (IndexMax - 1))
+		{
+			getPermutationsRecursive<Functor, I, Index+1, IndexMax, Fields...>(_target);
+		}
+	}
+
+	template<typename Functor, Instruction I, Field ...Fields> constexpr TPermutations<I> getFuncs()
+	{
+		TPermutations<I> funcs{};
+		static_assert((permutationCount<I>() & (permutationCount<I>()-1)) == 0, "permutation count needs to be a power of two");
+
+		getPermutationsRecursive<Functor, I, 0, permutationCount<I>(), Fields...>(funcs);
+
+		return funcs;
+	}
+	/*
+	static_assert(permutationCount(Abs, Field_d) == 2, "something wrong");
+	static_assert(permutationCount(And_SD, Field_d) == 2, "something wrong");
+	static_assert(permutationCount(And_SD, Field_JJ) == 4, "something wrong");
+	static_assert(permutationCount<And_SD>() == 8, "something wrong");
+
+	static_assert(permutationValue<Abs, Field_d,1>() == 1, "unexpected value for Field_d");
+	static_assert(permutationValue<And_SD, Field_JJ,3>() == 3, "unexpected value for Field_JJ");
+	*/
+
+	class Jumptable
+	{
+	public:
+		Jumptable()
+		{
+			m_jumpTable.reserve(g_opcodeFuncsSize);
+
+			for(size_t i=0; i<g_opcodeFuncsSize; ++i)
+				m_jumpTable.push_back(g_opcodeFuncs[i]);
+
+			
+			addPermutations(getFuncs<FunctorAbs, Abs, Field_d>());
+			addPermutations(getFuncs<FunctorAndSD, And_SD, Field_d, Field_JJ>());
+			addPermutations(getFuncs<FunctorMovexy, Movexy, Field_W, Field_w>());
+		}
+
+		const std::vector<TInstructionFunc>& jumptable() const { return m_jumpTable; }
+		TWord resolve(const Instruction _inst, const TWord _op) const
+		{
+			const auto& perms = m_permutationInfo[_inst];
+
+			if(perms.permutations.empty())
+				return _inst;
+
+			for(const auto& p : perms.permutations)
+			{
+				bool match = true;
+
+				for(const auto& f : p.fields)
+				{
+					assert(hasField(_inst, f.first));
+
+					const auto v = getFieldValue(_inst, f.first, _op);
+
+					if(v != f.second)
+					{
+						match = false;
+						break;
+					}
+				}
+				if(match)
+					return p.jumpTableIndex;
+			}
+
+			return _inst;
+		}
+	private:
+		struct FieldValues
+		{
+			Field field;
+			std::vector<TWord> values;
+			std::vector<FieldValues> children;
+		};
+
+		struct PermutationInfo
+		{
+			TWord jumpTableIndex = 0;
+			std::vector<TField> fields;
+		};
+
+		struct PermutationList
+		{
+			std::vector<PermutationInfo> permutations;
+		};
+
+		template<Instruction I>
+		void addPermutations(const TPermutations<I>& _permutations)
+		{
+			auto& pl = m_permutationInfo[I];
+			pl.permutations.clear();
+
+			for (const Permutation<I>& p : _permutations)
+			{
+				PermutationInfo pi;
+
+				pi.jumpTableIndex = (TWord)m_jumpTable.size();
+				pi.fields.reserve(p.fields.size());
+
+				for(const auto& f : p.fields)
+					pi.fields.push_back(f);
+
+				m_jumpTable.push_back(p.func);
+
+				pl.permutations.emplace_back(pi);
+			}
+		}
+
+		std::vector<TInstructionFunc> m_jumpTable;
+		std::array<PermutationList, InstructionCount> m_permutationInfo;
+	};
 }

@@ -34,6 +34,8 @@ namespace dsp56k
 {
 	constexpr bool g_traceSupported = false;
 
+	Jumptable g_jumptable;
+
 	// _____________________________________________________________________________
 	// DSP
 	//
@@ -229,7 +231,7 @@ namespace dsp56k
 
 	void DSP::exec_jump(const TWord inst, const TWord op)
 	{
-		const auto func = g_jumpTable[inst];
+		const auto func = g_jumptable.jumptable()[inst];
 		(this->*func)(op);
 	}
 
@@ -462,7 +464,7 @@ namespace dsp56k
 
 		const auto opCache = m_opcodeCache[pcCurrentInstruction];
 
-		const auto func = g_jumpTable[static_cast<Instruction>(opCache & 0xff)];
+		const auto func = g_opcodeFuncs[static_cast<Instruction>(opCache & 0xff)];
 
 		while( reg.lc.var > 0 )
 		{
@@ -1119,21 +1121,7 @@ namespace dsp56k
 	
 	TWord DSP::resolvePermutation(const Instruction _inst, const TWord _op) const
 	{
-		constexpr auto size = sizeof(g_permutationTypes) / sizeof(g_permutationTypes[0]);
-
-		for(size_t i=0; i<size; ++i)
-		{
-			const auto& p = g_permutationTypes[i];
-
-			if(p.instruction != _inst)
-				continue;
-			
-			const auto v = getFieldValue(_inst, p.field, _op);
-
-			if(p.value == v)
-				return p.func;
-		}
-		return _inst;
+		return g_jumptable.resolve(_inst, _op);
 	}
 
 	void DSP::dumpRegisters() const

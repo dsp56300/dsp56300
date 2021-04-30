@@ -17,6 +17,11 @@ namespace dsp56k
 		return initField(g_opcodes[I].m_opcode, g_fieldParseConfigs[F].ch, g_fieldParseConfigs[F].count);
 	}
 
+	inline bool hasField(const Instruction _inst, const Field _field)
+	{
+		return getFieldInfo(_inst, _field).len > 0;
+	}
+
 	template<Instruction I, Field F> constexpr bool hasField()
 	{
 		return getFieldInfoCE<I,F>().len > 0;
@@ -274,6 +279,5 @@ namespace dsp56k
 		std::vector<const OpcodeInfo*> m_opcodesNonParallel;
 		std::vector<const OpcodeInfo*> m_opcodesMove;
 		std::vector<const OpcodeInfo*> m_opcodesAlu;
-
 	};
 }
