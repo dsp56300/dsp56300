@@ -20,7 +20,7 @@ extern "C"
 
 namespace dsp56k
 {
-	constexpr char* g_opNames[] = 
+	constexpr const char* g_opNames[] = 
 	{
 		"abs ",
 		"adc ",
