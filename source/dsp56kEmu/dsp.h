@@ -788,6 +788,8 @@ namespace dsp56k
 		void op_Movel_ea(TWord op);
 		void op_Movel_aa(TWord op);
 		void op_Movexy(TWord op);
+		template<TWord W, TWord w>
+		void opCE_Movexy(TWord op);
 		void op_Movec_ea(TWord op);
 		void op_Movec_aa(TWord op);
 		void op_Movec_S1D2(TWord op);
