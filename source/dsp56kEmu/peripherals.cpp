@@ -74,7 +74,7 @@ namespace dsp56k
 		m_hi08.reset();
 	}
 
-	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hdi08(*this), m_timers(*this)
+	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hdi08(*this), m_timers(*this), m_disableTimers(false)
 	{
 	}
 
@@ -182,7 +182,10 @@ namespace dsp56k
 
 		case Timers::M_TPLR:		m_timers.writeTPLR	(_val);		return;		// TIMER Prescaler Load Register
 		case Timers::M_TPCR:		m_timers.writeTPCR	(_val);		return;		// TIMER Prescalar Count Register
-			
+		
+		case 0xFFFF91:			// SHI__HCSR
+				if (!_val) m_disableTimers=true;
+				return;
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
 //			LOG("Write to " << HEX(_addr) << ": " << HEX(_val));
@@ -229,7 +232,7 @@ namespace dsp56k
 	{
 		m_esai.exec();
 		m_hdi08.exec();
-		m_timers.exec();
+		if (!m_disableTimers) m_timers.exec();
 	}
 
 	void Peripherals56362::reset()

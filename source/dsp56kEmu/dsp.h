@@ -90,6 +90,7 @@ namespace dsp56k
 		//
 		Memory&							mem;
 		std::array<IPeripherals*, 2>	perif;
+		uint32_t						peripheralCounter = 0;
 		
 		TWord							pcCurrentInstruction = 0;
 		TWord							m_opWordB = 0;
