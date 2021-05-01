@@ -15,6 +15,11 @@ namespace dsp56k
 		return Bit((_val >> B) & 1);
 	}
 
+	template<typename T> Bit bitvalue(const T& _val, const TWord bit)
+	{
+		return Bit((_val >> bit) & 1);
+	}
+
 	template<uint32_t B, typename Type, uint32_t BitCount> Bit bitvalue(const RegType<Type,BitCount>& _val)
 	{
 		return bitvalue<typename RegType<Type,BitCount>::MyType,B>(_val.var);

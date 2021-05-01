@@ -304,25 +304,12 @@ namespace dsp56k
 			if( sr_test(SR_S) )
 				return;
 
-			// TODO: too complicated. shift bit a and bit b by S0 and S1
-			unsigned int bitA = 46;
-			unsigned int bitB = 45;
+			const TWord offset = sr_val(SRB_S1) - sr_val(SRB_S0);
+			const TWord bitA = 46 + offset;
+			const TWord bitB = 45 + offset;
 
-			if( sr_test(SR_S0) )
-			{
-				// scale down
-				--bitA;
-				--bitB;
-			}
-			else if( sr_test(SR_S1) )
-			{
-				// scale up
-				++bitA;
-				++bitB;
-			}
-
-			if	(	(bittest(reg.a,bitA) != bittest(reg.a,bitB))
-				||	(bittest(reg.b,bitA) != bittest(reg.b,bitB)) )
+			if	(	(bitvalue(reg.a,bitA) != bitvalue(reg.a,bitB))
+				|	(bitvalue(reg.b,bitA) != bitvalue(reg.b,bitB)) )
 				sr_set( SR_S );
 		}
 
@@ -343,11 +330,7 @@ namespace dsp56k
 			1	0	Scale Up	Bits 55,54..............47,46
 			*/
 
-			// TODO: too complicated. have a fixed mask and shift it by S0 and by S1 is much easier
-			const uint32_t s0 = (sr_val(SRB_S0) ^ 1) << 1;
-			const uint32_t s1 = sr_val(SRB_S1) | (sr_val(SRB_S1)<<1);
-
-			const uint32_t mask = 0x3fc | s0 | s1;
+			const uint32_t mask = (0x3fe << sr_val(SRB_S0) >> sr_val(SRB_S1)) & 0x3ff;
 
 			const uint32_t d2 = _ab.var >> 46;
 
@@ -360,9 +343,12 @@ namespace dsp56k
 
 		void	sr_u_update				( const TReg56& _ab )
 		{
-			if( sr_test( SR_S0 ) )			sr_toggle( SRB_U, bitvalue<48>( _ab ) == bitvalue<47>( _ab ) );
-			else if( sr_test( SR_S1 ) )		sr_toggle( SRB_U, bitvalue<46>( _ab ) == bitvalue<45>( _ab ) );
-			else							sr_toggle( SRB_U, bitvalue<47>( _ab ) == bitvalue<46>( _ab ) );
+			const auto sOffset = sr_val(SRB_S0) - sr_val(SRB_S1);
+
+			const auto msb = 47 + sOffset;
+			const auto lsb = 46 + sOffset;
+
+			sr_toggle( SRB_U, bitvalue(_ab,msb) == bitvalue(_ab,lsb) );
 		}
 
 		void	sr_n_update( const TReg56& _ab )
