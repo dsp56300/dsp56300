@@ -9,33 +9,33 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// decode_cccc
 	//
-	bool DSP::decode_cccc( TWord cccc ) const
+	int DSP::decode_cccc( TWord cccc ) const
 	{
-	#define			SRT_C			sr_val(SRB_C)			// carry
+//	#define			SRT_C			sr_val(SRB_C)			// carry
 	#define 		SRT_V			sr_val(SRB_V)			// overflow
 	#define 		SRT_Z			sr_val(SRB_Z)			// zero
 	#define 		SRT_N			sr_val(SRB_N)			// negative
 	#define 		SRT_U			sr_val(SRB_U)			// unnormalized
 	#define 		SRT_E			sr_val(SRB_E)			// extension
-	#define 		SRT_L			sr_val(SRB_L)			// limit
-	//#define 		SRT_S			sr_val(SRB_S)			// scaling
+//	#define 		SRT_L			sr_val(SRB_L)			// limit
+//	#define 		SRT_S			sr_val(SRB_S)			// scaling
 
 		switch( cccc )
 		{
-		case CCCC_CarrySet:			return SRT_C!=0;								// CC(LO)		Carry Set	(lower)
-		case CCCC_CarryClear:		return !SRT_C;									// CC(HS)		Carry Clear (higher or same)
+		case CCCC_CarrySet:			return sr_test(SR_C);							// CC(LO)		Carry Set	(lower)
+		case CCCC_CarryClear:		return !sr_test(SR_C);							// CC(HS)		Carry Clear (higher or same)
 
-		case CCCC_ExtensionSet:		return SRT_E!=0;								// ES			Extension set
-		case CCCC_ExtensionClear:	return !SRT_E;									// EC			Extension clear
+		case CCCC_ExtensionSet:		return sr_test(SR_E);							// ES			Extension set
+		case CCCC_ExtensionClear:	return !sr_test(SR_E);							// EC			Extension clear
 
-		case CCCC_Equal:			return SRT_Z!=0;								// EQ			Equal
-		case CCCC_NotEqual:			return !SRT_Z;									// NE			Not Equal
+		case CCCC_Equal:			return sr_test(SR_Z);							// EQ			Equal
+		case CCCC_NotEqual:			return !sr_test(SR_Z);							// NE			Not Equal
 
-		case CCCC_LimitSet:			return SRT_L!=0;								// LS			Limit set
-		case CCCC_LimitClear:		return !SRT_L;									// LC			Limit clear
+		case CCCC_LimitSet:			return sr_test(SR_L);							// LS			Limit set
+		case CCCC_LimitClear:		return !sr_test(SR_L);							// LC			Limit clear
 
-		case CCCC_Minus:			return SRT_N!=0;								// MI			Minus
-		case CCCC_Plus:				return !SRT_N;									// PL			Plus
+		case CCCC_Minus:			return sr_test(SR_N);							// MI			Minus
+		case CCCC_Plus:				return !sr_test(SR_N);							// PL			Plus
 
 		case CCCC_GreaterEqual:		return SRT_N == SRT_V;							// GE			Greater than or equal
 		case CCCC_LessThan:			return SRT_N != SRT_V;							// LT			Less than

@@ -6,7 +6,7 @@
 namespace dsp56k
 {
 	// Check Condition
-	template <Instruction Inst> bool DSP::checkCondition(const TWord op) const
+	template <Instruction Inst> int DSP::checkCondition(const TWord op) const
 	{
 		const TWord cccc = getFieldValue<Inst,Field_CCCC>(op);
 		return decode_cccc( cccc );

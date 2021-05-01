@@ -240,7 +240,7 @@ namespace dsp56k
 
 		// -- decoding helper functions
 
-		bool	decode_cccc				( TWord cccc ) const;
+		int		decode_cccc				( TWord cccc ) const;
 
 		TWord	decode_MMMRRR_read		( TWord _mmmrrr );
 		TWord	decode_XMove_MMRRR		( TWord _mmrrr );
@@ -857,7 +857,7 @@ namespace dsp56k
 		// ------------- operation helper methods -------------
 
 		// Check Condition
-		template <Instruction I> bool checkCondition(TWord op) const;
+		template <Instruction I> int checkCondition(TWord op) const;
 
 		// Effective Address
 		template<Instruction Inst, typename std::enable_if<hasFields<Inst,Field_MMM, Field_RRR>()>::type* = nullptr>
