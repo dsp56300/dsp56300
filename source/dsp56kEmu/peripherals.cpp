@@ -184,7 +184,7 @@ namespace dsp56k
 		case Timers::M_TPCR:		m_timers.writeTPCR	(_val);		return;		// TIMER Prescalar Count Register
 		
 		case 0xFFFF91:			// SHI__HCSR
-				if (!_val) m_disableTimers=true;
+				if (!_val) m_disableTimers=true;		// TODO: HACK to disable timers once we don't need them anymore
 				return;
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
