@@ -607,4 +607,7 @@ namespace dsp56k
 		std::vector<TInstructionFunc> m_jumpTable;
 		std::array<PermutationList, InstructionCount> m_permutationInfo;
 	};
+
+	constexpr TWord g_opcodeCacheShift = 10;
+	constexpr TWord g_opcodeCacheMask = (1<<g_opcodeCacheShift) - 1;
 }

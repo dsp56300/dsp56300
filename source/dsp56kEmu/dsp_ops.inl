@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dsp_jumptable.inl"
 #include "types.h"
 
 namespace dsp56k
@@ -292,7 +293,7 @@ namespace dsp56k
 			const auto backupCCR = ccr();
 
 			const auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
-			const auto instAlu = static_cast<Instruction>((cacheEntry >> 8) & 0xff);
+			const auto instAlu = static_cast<Instruction>((cacheEntry >> g_opcodeCacheShift) & g_opcodeCacheMask);
 
 			exec_jump(instAlu, op);
 
@@ -304,7 +305,7 @@ namespace dsp56k
 		if( checkCondition<Ifcc_U>(op) )
 		{
 			const auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
-			const auto instAlu = static_cast<Instruction>((cacheEntry >> 8) & 0xff);
+			const auto instAlu = static_cast<Instruction>((cacheEntry >> g_opcodeCacheShift) & g_opcodeCacheMask);
 
 			exec_jump(instAlu, op);
 		}
@@ -554,7 +555,7 @@ namespace dsp56k
 			if(oiAlu)
 			{
 				const auto moveFunc = resolvePermutation(oiMove->m_instruction, op);
-				cacheEntry = moveFunc | (resolvePermutation(oiAlu->m_instruction, op) << 8);
+				cacheEntry = moveFunc | (resolvePermutation(oiAlu->m_instruction, op) << g_opcodeCacheShift);
 				exec_jump(moveFunc, op);
 			}
 			else
@@ -572,7 +573,7 @@ namespace dsp56k
 			else
 			{
 				// call special function that simulates latch registers for alu op + parallel move
-				cacheEntry = Parallel | resolvePermutation(oiMove->m_instruction, op) << 8 | resolvePermutation(oiAlu->m_instruction, op) << 16;
+				cacheEntry = Parallel | resolvePermutation(oiMove->m_instruction, op) << g_opcodeCacheShift | resolvePermutation(oiAlu->m_instruction, op) << (g_opcodeCacheShift<<1);
 				op_Parallel(op);
 			}
 		}
@@ -581,8 +582,8 @@ namespace dsp56k
 	inline void DSP::op_Parallel(const TWord op)
 	{
 		const auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
-		const auto instMove = static_cast<Instruction>((cacheEntry >> 8) & 0xff);
-		const auto instAlu = static_cast<Instruction>((cacheEntry >> 16) & 0xff);
+		const auto instMove = static_cast<Instruction>((cacheEntry >> g_opcodeCacheShift) & g_opcodeCacheMask);
+		const auto instAlu = static_cast<Instruction>((cacheEntry >> (g_opcodeCacheShift<<1)) & g_opcodeCacheMask);
 
 		exec_parallel(instMove, instAlu, op);
 	}

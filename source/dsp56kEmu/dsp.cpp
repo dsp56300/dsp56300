@@ -221,7 +221,7 @@ namespace dsp56k
 		const TWord currentOp = pcCurrentInstruction;
 		const auto opCache = m_opcodeCache[currentOp];
 
-		exec_jump(static_cast<Instruction>(opCache & 0xff), op);
+		exec_jump(static_cast<Instruction>(opCache & g_opcodeCacheMask), op);
 
 		++m_instructions;
 
@@ -464,7 +464,7 @@ namespace dsp56k
 
 		const auto opCache = m_opcodeCache[pcCurrentInstruction];
 
-		const auto func = g_opcodeFuncs[static_cast<Instruction>(opCache & 0xff)];
+		const auto func = g_opcodeFuncs[static_cast<Instruction>(opCache & g_opcodeCacheMask)];
 
 		while( reg.lc.var > 0 )
 		{
