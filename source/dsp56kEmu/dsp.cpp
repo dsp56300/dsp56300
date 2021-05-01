@@ -466,7 +466,7 @@ namespace dsp56k
 
 		const auto opCache = m_opcodeCache[pcCurrentInstruction];
 
-		const auto func = g_opcodeFuncs[static_cast<Instruction>(opCache & g_opcodeCacheMask)];
+		const auto func = g_jumptable.jumptable()[static_cast<Instruction>(opCache & g_opcodeCacheMask)];
 
 		while( reg.lc.var > 0 )
 		{
