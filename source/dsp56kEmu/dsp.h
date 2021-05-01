@@ -304,6 +304,7 @@ namespace dsp56k
 			if( sr_test(SR_S) )
 				return;
 
+			// TODO: too complicated. shift bit a and bit b by S0 and S1
 			unsigned int bitA = 46;
 			unsigned int bitB = 45;
 
@@ -342,6 +343,7 @@ namespace dsp56k
 			1	0	Scale Up	Bits 55,54..............47,46
 			*/
 
+			// TODO: too complicated. have a fixed mask and shift it by S0 and by S1 is much easier
 			const uint32_t s0 = (sr_val(SRB_S0) ^ 1) << 1;
 			const uint32_t s1 = sr_val(SRB_S1) | (sr_val(SRB_S1)<<1);
 

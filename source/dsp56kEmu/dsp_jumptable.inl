@@ -401,6 +401,22 @@ namespace dsp56k
 		return count;
 	}
 
+	constexpr TWord totalPermutationCount()
+	{
+		TWord count = 0;
+		auto lastField = Field_COUNT;
+
+		for(auto p : g_permutationTypes)
+		{
+			if(p.field.first != lastField)
+			{
+				count += permutationCount(p.instruction, p.field.first);
+				lastField = p.field.first;
+			}
+		}
+		return count;
+	}
+
 	template<Instruction I>
 	struct Permutation
 	{
