@@ -335,17 +335,25 @@ namespace dsp56k
 		assert(0 && "invalid EE value");
 	}
 
-	inline TReg24 DSP::decode_ee_read(const TWord _ff)
+	template<TWord ee>
+	TReg24 DSP::decode_ee_read()
 	{
-		switch (_ff)
-		{
-		case 0: return x0();
-		case 1: return x1();
-		case 2: return getA<TReg24>();
-		case 3: return getB<TReg24>();
-		}
-		assert(0 && "invalid ff value");
-		return TReg24(int(0xbadbad));
+		static_assert(ee >= 0 && ee <= 3, "invalid ee value");
+		
+		if constexpr (ee == 0)	return x0();
+		if constexpr (ee == 1)	return x1();
+		if constexpr (ee == 2)	return getA<TReg24>();
+		if constexpr (ee == 3)	return getB<TReg24>();
+		return TReg24(0xbadbad);
+	}
+
+	template<TWord ee>
+	void DSP::decode_ee_write(const TReg24& _value)
+	{
+		if constexpr (ee == 0)	x0(_value);
+		if constexpr (ee == 1)	x1(_value);
+		if constexpr (ee == 2)	setA(_value);
+		if constexpr (ee == 3)	setB(_value);
 	}
 
 	inline void DSP::decode_ee_write(const TWord _ff, const TReg24& _value)
@@ -358,6 +366,25 @@ namespace dsp56k
 		case 3: setB(_value);	return;
 		}
 		assert(0 && "invalid ff value");
+	}
+
+	template<TWord ff>
+	TReg24 DSP::decode_ff_read()
+	{
+		if constexpr(ff == 0) return y0();
+		if constexpr(ff == 1) return y1();
+		if constexpr(ff == 2) return getA<TReg24>();
+		if constexpr(ff == 3) return getB<TReg24>();
+		return TReg24(0xbadbad);
+	}
+
+	template<TWord ff>
+	inline void DSP::decode_ff_write(const TReg24& _value)
+	{
+		if constexpr (ff == 0) y0(_value);
+		if constexpr (ff == 1) y1(_value);
+		if constexpr (ff == 2) setA(_value);
+		if constexpr (ff == 3) setB(_value);
 	}
 
 	inline TReg24 DSP::decode_ff_read(TWord _ff)

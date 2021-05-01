@@ -214,6 +214,8 @@ namespace dsp56k
 
 	inline void DSP::op_Movexy(const TWord op)
 	{
+		assert(false);
+		/*
 		const TWord mmrrr	= getFieldValue<Movexy,Field_MM, Field_RRR>(op);
 		const TWord mmrr	= getFieldValue<Movexy,Field_mm, Field_rr>(op);
 		const TWord writeX	= getFieldValue<Movexy,Field_W>(op);
@@ -230,15 +232,16 @@ namespace dsp56k
 
 		if( writeX )	decode_ee_write( ee, TReg24(memRead( MemArea_X, eaX )) );
 		if( writeY )	decode_ff_write( ff, TReg24(memRead( MemArea_Y, eaY )) );
+		*/
 	}
 
-	template<TWord W, TWord w>
+	template<TWord W, TWord w, TWord ee, TWord ff>
 	void DSP::opCE_Movexy(const TWord op)
 	{
 		const TWord mmrrr	= getFieldValue<Movexy, Field_MM, Field_RRR>(op);
 		const TWord mmrr	= getFieldValue<Movexy, Field_mm, Field_rr>(op);
-		const TWord	ee		= getFieldValue<Movexy, Field_ee>(op);
-		const TWord ff		= getFieldValue<Movexy, Field_ff>(op);
+//		const TWord	ee		= getFieldValue<Movexy, Field_ee>(op);
+//		const TWord ff		= getFieldValue<Movexy, Field_ff>(op);
 
 		constexpr TWord writeX	= W;
 		constexpr TWord	writeY	= w;
@@ -247,11 +250,11 @@ namespace dsp56k
 		const TWord regIdxOffset	= ((mmrrr&0x7) >= 4) ? 0 : 4;
 		const TWord eaY				= decode_YMove_mmrr( mmrr, regIdxOffset );
 
-		if constexpr(!writeX)	memWrite( MemArea_X, eaX, decode_ee_read( ee ).toWord() );
-		if constexpr(!writeY)	memWrite( MemArea_Y, eaY, decode_ff_read( ff ).toWord() );
+		if constexpr(!writeX)	memWrite( MemArea_X, eaX, decode_ee_read<ee>().toWord() );
+		if constexpr(!writeY)	memWrite( MemArea_Y, eaY, decode_ff_read<ff>().toWord() );
 
-		if constexpr( writeX )	decode_ee_write( ee, TReg24(memRead( MemArea_X, eaX )) );
-		if constexpr( writeY )	decode_ff_write( ff, TReg24(memRead( MemArea_Y, eaY )) );
+		if constexpr( writeX )	decode_ee_write<ee>(TReg24(memRead( MemArea_X, eaX )) );
+		if constexpr( writeY )	decode_ff_write<ff>(TReg24(memRead( MemArea_Y, eaY )) );
 	}
 
 	inline void DSP::op_Movec_ea(const TWord op)

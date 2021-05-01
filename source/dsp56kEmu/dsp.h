@@ -262,8 +262,14 @@ namespace dsp56k
 		TReg8 decode_EE_read(TWord _ee) const;
 		void decode_EE_write(TWord _ee, TReg8 _val);
 
-		TReg24 decode_ee_read(TWord _ff);
-		void decode_ee_write(TWord _ff, const TReg24& _value);
+		template<TWord ee> TReg24 decode_ee_read();
+		template<TWord ee> void decode_ee_write(const TReg24& _value);
+		void decode_ee_write(TWord ee, const TReg24& _value);
+
+		template<TWord ff>
+		TReg24 decode_ff_read();
+		template<TWord ff>
+		void decode_ff_write(const TReg24& _value);
 
 		TReg24 decode_ff_read(TWord _ff);
 		void decode_ff_write(TWord _ff, const TReg24& _value);
@@ -788,7 +794,7 @@ namespace dsp56k
 		void op_Movel_ea(TWord op);
 		void op_Movel_aa(TWord op);
 		void op_Movexy(TWord op);
-		template<TWord W, TWord w>
+		template<TWord W, TWord w, TWord ee, TWord ff>
 		void opCE_Movexy(TWord op);
 		void op_Movec_ea(TWord op);
 		void op_Movec_aa(TWord op);

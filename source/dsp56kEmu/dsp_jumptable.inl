@@ -310,7 +310,7 @@ namespace dsp56k
 
 		FieldPermutationType(Movexy, {Field_w, 0}),
 		FieldPermutationType(Movexy, {Field_w, 1}),
-/*
+
 		FieldPermutationType(Movexy, {Field_ee, 0}),
 		FieldPermutationType(Movexy, {Field_ee, 1}),
 		FieldPermutationType(Movexy, {Field_ee, 2}),
@@ -320,7 +320,6 @@ namespace dsp56k
 		FieldPermutationType(Movexy, {Field_ff, 1}),
 		FieldPermutationType(Movexy, {Field_ff, 2}),
 		FieldPermutationType(Movexy, {Field_ff, 3}),
-*/
 	};
 
 	constexpr size_t g_permutationTypeCount = sizeof(g_permutationTypes) / sizeof(g_permutationTypes[0]);
@@ -328,7 +327,7 @@ namespace dsp56k
 	struct FunctorAbs		{ template<TWord A>				constexpr TInstructionFunc get() const noexcept	{ return &DSP::opCE_Abs<A>;			} };
 	struct FunctorAsl		{ template<TWord A>				constexpr TInstructionFunc get() const noexcept	{ return &DSP::opCE_Asl_D<A>;		} };
 	struct FunctorAndSD		{ template<TWord A, TWord B>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_And_SD<A,B>;	} };
-	struct FunctorMovexy	{ template<TWord W, TWord w>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_Movexy<W,w>;	} };
+	struct FunctorMovexy	{ template<TWord W, TWord w, TWord ee, TWord ff>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_Movexy<W,w,ee,ff>;	} };
 
 	constexpr TWord permutationCount(const Instruction _inst, const Field _field) noexcept
 	{
@@ -527,10 +526,9 @@ namespace dsp56k
 			for(size_t i=0; i<g_opcodeFuncsSize; ++i)
 				m_jumpTable.push_back(g_opcodeFuncs[i]);
 
-			
 			addPermutations(getFuncs<FunctorAbs, Abs, Field_d>());
 			addPermutations(getFuncs<FunctorAndSD, And_SD, Field_d, Field_JJ>());
-			addPermutations(getFuncs<FunctorMovexy, Movexy, Field_W, Field_w>());
+			addPermutations(getFuncs<FunctorMovexy, Movexy, Field_W, Field_w, Field_ee, Field_ff>());
 		}
 
 		const std::vector<TInstructionFunc>& jumptable() const { return m_jumpTable; }
