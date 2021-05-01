@@ -243,8 +243,7 @@ namespace dsp56k
 		int		decode_cccc				( TWord cccc ) const;
 
 		TWord	decode_MMMRRR_read		( TWord _mmmrrr );
-		TWord	decode_XMove_MMRRR		( TWord _mmrrr );
-		TWord	decode_YMove_mmrr		( TWord _mmrr, TWord _regIdxOffset );
+		TWord	decode_XMove_MMRRR		( TWord _mm, TWord _rrr );
 
 		TWord	decode_RRR_read			( TWord _mmmrrr ) const;
 		TWord	decode_RRR_read			( TWord _mmmrrr, int _shortDisplacement ) const;

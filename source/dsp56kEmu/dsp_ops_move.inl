@@ -237,17 +237,17 @@ namespace dsp56k
 	template<TWord W, TWord w, TWord ee, TWord ff>
 	void DSP::opCE_Movexy(const TWord op)
 	{
-		const TWord mmrrr	= getFieldValue<Movexy, Field_MM, Field_RRR>(op);
-		const TWord mmrr	= getFieldValue<Movexy, Field_mm, Field_rr>(op);
-//		const TWord	ee		= getFieldValue<Movexy, Field_ee>(op);
-//		const TWord ff		= getFieldValue<Movexy, Field_ff>(op);
+		const TWord MM		= getFieldValue<Movexy, Field_MM>(op);
+		const TWord RRR		= getFieldValue<Movexy, Field_RRR>(op);
+		const TWord mm		= getFieldValue<Movexy, Field_mm>(op);
+		const TWord rr		= getFieldValue<Movexy, Field_rr>(op);
 
 		constexpr TWord writeX	= W;
 		constexpr TWord	writeY	= w;
 
-		const TWord eaX				= decode_XMove_MMRRR( mmrrr );
-		const TWord regIdxOffset	= ((mmrrr&0x7) >= 4) ? 0 : 4;
-		const TWord eaY				= decode_YMove_mmrr( mmrr, regIdxOffset );
+		const TWord eaX				= decode_XMove_MMRRR( MM, RRR );
+		const TWord regIdxOffset	= RRR >= 4 ? 0 : 4;
+		const TWord eaY				= decode_XMove_MMRRR( mm, (rr + regIdxOffset) & 7 );
 
 		if constexpr(!writeX)	memWrite( MemArea_X, eaX, decode_ee_read<ee>().toWord() );
 		if constexpr(!writeY)	memWrite( MemArea_Y, eaY, decode_ff_read<ff>().toWord() );

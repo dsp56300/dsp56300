@@ -451,63 +451,26 @@ namespace dsp56k
 		return a;
 	}
 
-	inline TWord DSP::decode_XMove_MMRRR( TWord _mmrrr )
+	inline TWord DSP::decode_XMove_MMRRR( TWord _mm, TWord _rrr )
 	{
-		const unsigned int regIdx = _mmrrr & 0x07;
-
-		const TReg24	_n = reg.n[regIdx];
-		TReg24&			_r = reg.r[regIdx];
-		const TReg24	_m = reg.m[regIdx];
+		const TReg24	_n = reg.n[_rrr];
+		TReg24&			_r = reg.r[_rrr];
+		const TReg24	_m = reg.m[_rrr];
 
 		TWord r = _r.toWord();
 
 		TWord a;
 
-		switch( _mmrrr & 0x18 )
+		switch( _mm )
 		{
-		case 0x08:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var);	break;
-		case 0x10:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var);		break;
-		case 0x18:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var);		break;
-		case 0x00:	/* 00 */	a = r;													break;
-
-		default:
-			assert(0 && "impossible to happen" );
-			return 0xbadbad;
+		case 0:	/* 00 */	a = r;													break;
+		case 1:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var);	break;
+		case 2:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var);		break;
+		case 3:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var);		break;
 		}
 
 		_r.var = r;
 
-		assert( a >= 0x00000000 && a <= 0x00ffffff && "invalid memory address" );
-		return a;
-	}
-
-	inline TWord DSP::decode_YMove_mmrr( TWord _mmrr, TWord _regIdxOffset )
-	{
-		const unsigned int regIdx = _mmrr & 0x3;
-
-		const TReg24	_n = reg.n[regIdx + _regIdxOffset];
-		TReg24&			_r = reg.r[regIdx + _regIdxOffset];
-		const TReg24	_m = reg.m[regIdx + _regIdxOffset];
-
-		TWord r = _r.toWord();
-
-		TWord a;
-
-		switch( _mmrr & 0xc	 )
-		{
-		case 0x4:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var);	break;
-		case 0x8:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var);		break;
-		case 0xc:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var);		break;
-		case 0x0:	/* 00 */	a = r;													break;
-
-		default:
-			assert(0 && "impossible to happen" );
-			return 0xbadbad;
-		}
-
-		_r.var = r;
-
-		assert( a >= 0x00000000 && a <= 0x00ffffff && "invalid memory address" );
 		return a;
 	}
 
