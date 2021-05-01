@@ -768,14 +768,14 @@ namespace dsp56k
 		void op_Move_xx(TWord op);
 		void op_Mover(TWord op);
 		void op_Move_ea(TWord op);
-		void op_Movex_ea(TWord op);
-		void op_Movex_aa(TWord op);
+		template<TWord W> void opCE_Movex_ea(TWord op);
+		template<TWord W> void opCE_Movex_aa(TWord op);
 		void op_Movex_Rnxxxx(TWord op);
 		void op_Movex_Rnxxx(TWord op);
 		void op_Movexr_ea(TWord op);
 		void op_Movexr_A(TWord op);
-		void op_Movey_ea(TWord op);
-		void op_Movey_aa(TWord op);
+		template<TWord W> void opCE_Movey_ea(TWord op);
+		template<TWord W> void opCE_Movey_aa(TWord op);
 		void op_Movey_Rnxxxx(TWord op);
 		void op_Movey_Rnxxx(TWord op);
 		void op_Moveyr_ea(TWord op);
@@ -989,7 +989,7 @@ namespace dsp56k
 		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestDDDDDD(TWord op);
 
 		// -------------- move helper
-		template<Instruction Inst, EMemArea Area> void move_ddddd_MMMRRR(TWord op);
+		template<Instruction Inst, EMemArea Area, TWord W> void move_ddddd_MMMRRR(TWord op);
 		template<Instruction Inst> void move_L(TWord op);
 		template<Instruction Inst, EMemArea Area> void move_Rnxxxx(TWord op);
 		

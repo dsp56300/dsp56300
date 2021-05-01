@@ -5,12 +5,11 @@
 
 namespace dsp56k
 {
-	template<Instruction Inst, EMemArea Area> void DSP::move_ddddd_MMMRRR(TWord op)
+	template<Instruction Inst, EMemArea Area, TWord write> void DSP::move_ddddd_MMMRRR(TWord op)
 	{
 		const TWord ddddd	= getFieldValue<Inst,Field_dd, Field_ddd>(op);
-		const TWord write	= getFieldValue<Inst,Field_W>(op);
 
-		if(write)
+		if constexpr (write)
 		{
 			const auto m = readMem<Inst>(op, Area);
 			decode_ddddd_write<TReg24>( ddddd, TReg24(m));
@@ -90,10 +89,10 @@ namespace dsp56k
 		decode_MMMRRR_read( mmrrr );
 	}
 	
-	inline void DSP::op_Movex_ea(const TWord op)		{ move_ddddd_MMMRRR<Movex_ea, MemArea_X>(op); }
-	inline void DSP::op_Movey_ea(const TWord op)		{ move_ddddd_MMMRRR<Movey_ea, MemArea_Y>(op); }
-	inline void DSP::op_Movex_aa(const TWord op)		{ move_ddddd_MMMRRR<Movex_aa, MemArea_X>(op); }
-	inline void DSP::op_Movey_aa(const TWord op)		{ move_ddddd_MMMRRR<Movey_aa, MemArea_Y>(op); }
+	template<TWord W> void DSP::opCE_Movex_ea(const TWord op)	{ move_ddddd_MMMRRR<Movex_ea, MemArea_X, W>(op); }
+	template<TWord W> void DSP::opCE_Movey_ea(const TWord op)	{ move_ddddd_MMMRRR<Movey_ea, MemArea_Y, W>(op); }
+	template<TWord W> void DSP::opCE_Movex_aa(const TWord op)	{ move_ddddd_MMMRRR<Movex_aa, MemArea_X, W>(op); }
+	template<TWord W> void DSP::opCE_Movey_aa(const TWord op)	{ move_ddddd_MMMRRR<Movey_aa, MemArea_Y, W>(op); }
 
 	inline void DSP::op_Movex_Rnxxxx(const TWord op)	{ move_Rnxxxx<Movex_Rnxxxx, MemArea_X>(op); }
 	inline void DSP::op_Movey_Rnxxxx(const TWord op)	{ move_Rnxxxx<Movey_Rnxxxx, MemArea_Y>(op);	}
