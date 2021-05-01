@@ -350,9 +350,9 @@ namespace dsp56k
 
 			const uint32_t m2 = d2 & mask;
 
-			const auto res = (m2 != mask) && (m2 != 0);	// TODO: reduce to one if
+			const auto res = static_cast<int>(m2 != mask) & static_cast<int>(m2 != 0);
 
-			sr_toggle( SR_E, res );
+			sr_toggle( SRB_E, Bit(res));
 		}
 
 		void	sr_u_update				( const TReg56& _ab )
