@@ -479,15 +479,22 @@ namespace dsp56k
 		return getPermutationFromPack<Functor, I, packValues<I, Fields, permIndex<I>(Fields, Index, fields)>()...>();
 	}
 
-	template<typename Functor, Instruction I, TWord Index, TWord IndexMax, Field ...Fields>
+	template<typename Functor, Instruction I, TWord IdxLeft, TWord IdxRight, Field ...Fields>
 	constexpr void getPermutationsRecursive(TPermutations<I>& _target)
 	{
-		_target[Index] = getPermutationFromPack<Functor, I, Index, Fields...>(FieldSequence<Fields...>());
-
-		// TODO: We need something that is NOT recursive
-		if constexpr (Index < (IndexMax - 1))
+		if constexpr (IdxLeft == IdxRight)
 		{
-			getPermutationsRecursive<Functor, I, Index+1, IndexMax, Fields...>(_target);
+			_target[IdxLeft] = getPermutationFromPack<Functor, I, IdxLeft, Fields...>(FieldSequence<Fields...>());			
+		}
+		else if((IdxRight - IdxLeft) == 1)
+		{
+			_target[IdxLeft] = getPermutationFromPack<Functor, I, IdxLeft, Fields...>(FieldSequence<Fields...>());			
+			_target[IdxRight] = getPermutationFromPack<Functor, I, IdxRight, Fields...>(FieldSequence<Fields...>());			
+		}
+		else
+		{
+			getPermutationsRecursive<Functor, I, IdxLeft, IdxLeft + (IdxRight-IdxLeft)/2, Fields...>(_target);
+			getPermutationsRecursive<Functor, I, IdxLeft + (IdxRight-IdxLeft)/2, IdxRight, Fields...>(_target);
 		}
 	}
 
@@ -496,7 +503,7 @@ namespace dsp56k
 		TPermutations<I> funcs{};
 		static_assert((permutationCount<I>() & (permutationCount<I>()-1)) == 0, "permutation count needs to be a power of two");
 
-		getPermutationsRecursive<Functor, I, 0, permutationCount<I>(), Fields...>(funcs);
+		getPermutationsRecursive<Functor, I, 0, permutationCount<I>() - 1, Fields...>(funcs);
 
 		return funcs;
 	}
