@@ -414,10 +414,10 @@ namespace dsp56k
 
 	inline TWord DSP::decode_MMMRRR_read( TWord _mmmrrr )
 	{
-		switch( _mmmrrr)
+		switch(_mmmrrr)
 		{
-		case MMM_AbsAddr:		return fetchOpWordB();		// absolute address
-		case MMM_ImmediateData:	return fetchOpWordB();		// immediate data
+		case MMMRRR_AbsAddr:		return fetchOpWordB();		// absolute address
+		case MMMRRR_ImmediateData:	return fetchOpWordB();		// immediate data
 		}
 
 		const TWord regIdx = _mmmrrr & 0x7;
@@ -435,7 +435,7 @@ namespace dsp56k
 		case 0x00:	/* 000 (Rn)-Nn */	a = r;		AGU::updateAddressRegister(r,-_n.var,_m.var);					break;
 		case 0x08:	/* 001 (Rn)+Nn */	a = r;		AGU::updateAddressRegister(r,+_n.var,_m.var);					break;
 		case 0x10:	/* 010 (Rn)-   */	a = r;		AGU::updateAddressRegister(r,-1,_m.var);						break;
-		case 0x18:	/* 011 (Rn)+   */	a =	r;		AGU::updateAddressRegister(r,+1,_m.var);						break;
+		case 0x18:	/* 011 (Rn)+   */	a = r;		AGU::updateAddressRegister(r,+1,_m.var);						break;
 		case 0x20:	/* 100 (Rn)    */	a = r;																		break;
 		case 0x28:	/* 101 (Rn+Nn) */	a = r;		AGU::updateAddressRegister(a,+_n.var, _m.var);					break;
 		case 0x38:	/* 111 -(Rn)   */				AGU::updateAddressRegister(r,-1,_m.var);			a = r;		break;

@@ -61,7 +61,7 @@ namespace dsp56k
 	{
 		const TWord mmmrrr = getFieldValue<Inst, Field_MMM, Field_RRR>(op);
 
-		if (mmmrrr == MMM_ImmediateData)
+		if (mmmrrr == MMMRRR_ImmediateData)
 			return immediateDataExt<Inst>();
 
 		const auto ea = decode_MMMRRR_read(mmmrrr);
@@ -107,7 +107,7 @@ namespace dsp56k
 	{
 		const TWord mmmrrr = getFieldValue<Inst, Field_MMM, Field_RRR>(op);
 
-		assert(mmmrrr != MMM_ImmediateData && "can't write to immediate data");
+		assert(mmmrrr != MMMRRR_ImmediateData && "can't write to immediate data");
 
 		const auto ea = decode_MMMRRR_read(mmmrrr);
 

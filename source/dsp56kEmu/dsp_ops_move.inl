@@ -347,7 +347,7 @@ namespace dsp56k
 
 		if( write )
 		{
-			if( mmmrrr == MMM_ImmediateData )
+			if( mmmrrr == MMMRRR_ImmediateData )
 				memWritePeriphFFFFC0( S, pp, ea );
 			else
 				memWritePeriphFFFFC0( S, pp, memRead( s, ea ) );
