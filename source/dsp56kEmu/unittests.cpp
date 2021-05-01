@@ -237,12 +237,12 @@ namespace dsp56k
 		dsp.alu_cmp(false, TReg56(_compareValue), false);
 		char sr[16]{};
 		dsp.sr_debug(sr);
-		assert(_lt == dsp.decode_cccc(CCCC_LessThan));
-		assert(_le == dsp.decode_cccc(CCCC_LessEqual));
-		assert(_eq == dsp.decode_cccc(CCCC_Equal));
-		assert(_ge == dsp.decode_cccc(CCCC_GreaterEqual));
-		assert(_gt == dsp.decode_cccc(CCCC_GreaterThan));
-		assert(_neq == dsp.decode_cccc(CCCC_NotEqual));	
+		assert(_lt == (dsp.decode_cccc(CCCC_LessThan) != 0));
+		assert(_le == (dsp.decode_cccc(CCCC_LessEqual) != 0));
+		assert(_eq == (dsp.decode_cccc(CCCC_Equal) != 0));
+		assert(_ge == (dsp.decode_cccc(CCCC_GreaterEqual) != 0));
+		assert(_gt == (dsp.decode_cccc(CCCC_GreaterThan) != 0));
+		assert(_neq == (dsp.decode_cccc(CCCC_NotEqual) != 0));	
 	}
 
 	void UnitTests::testJSGE()
