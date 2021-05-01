@@ -359,17 +359,15 @@ namespace dsp56k
 		const int64_t s1 = _s1.signextend<int64_t>();
 		const int64_t s2 = _s2.signextend<int64_t>();
 
-		// TODO: revisit signed fraction multiplies
 		auto res = s1 * s2;
 
+		// fractional multiplication requires one post-shift to be correct
 		res <<= 1;
 
 		if( _negate )
 			res = -res;
 
 		TReg56& d = ab ? reg.b : reg.a;
-
-		const TReg56 old = d;
 
 		if( _accumulate )
 			res += d.signextend<int64_t>();
