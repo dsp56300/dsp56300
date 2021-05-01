@@ -893,8 +893,7 @@ namespace dsp56k
 	
 		const auto res = mem.dspWrite( _area, _offset, _value );
 
-//		if(_area == MemArea_P)	does not work for external memory
-		if(_offset < m_opcodeCache.size())
+		if(_area == MemArea_P && _offset < m_opcodeCache.size())
 			m_opcodeCache[_offset] = ResolveCache;
 
 		return res;

@@ -470,11 +470,11 @@ namespace dsp56k
 	void Memory::memTranslateAddress(EMemArea& _area, TWord& _addr) const
 	{
 //		if(_addr >= m_bridgedMemoryAddress)
-//			_area = MemArea_X;
+//			_area = MemArea_P;
 
 		// It's magic...
-		auto o = static_cast<int32_t>(_addr - m_bridgedMemoryAddress);
-		o >>= 24;
-		_area = static_cast<EMemArea>(_area & o);
+		auto o = static_cast<uint32_t>(m_bridgedMemoryAddress - _addr);
+		o >>= 30;
+		_area = static_cast<EMemArea>(_area | o);
 	}
 }
