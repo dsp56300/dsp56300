@@ -546,6 +546,9 @@ namespace dsp56k
 	static_assert(permutationValue<Abs, Field_d,1>() == 1, "unexpected value for Field_d");
 	static_assert(permutationValue<And_SD, Field_JJ,3>() == 3, "unexpected value for Field_JJ");
 	*/
+	
+	constexpr TWord g_opcodeCacheShift = 10;
+	constexpr TWord g_opcodeCacheMask = (1<<g_opcodeCacheShift) - 1;
 
 	class Jumptable
 	{
@@ -564,6 +567,8 @@ namespace dsp56k
 			addPermutations(getFuncs<FunctorMovex_aa, Movex_aa, Field_W>());
 			addPermutations(getFuncs<FunctorMovey_ea, Movey_ea, Field_W>());
 			addPermutations(getFuncs<FunctorMovey_aa, Movey_aa, Field_W>());
+
+			assert(m_jumpTable.size() <= (g_opcodeCacheMask+1));
 		}
 
 		const std::vector<TInstructionFunc>& jumptable() const { return m_jumpTable; }
@@ -640,7 +645,4 @@ namespace dsp56k
 		std::vector<TInstructionFunc> m_jumpTable;
 		std::array<PermutationList, InstructionCount> m_permutationInfo;
 	};
-
-	constexpr TWord g_opcodeCacheShift = 10;
-	constexpr TWord g_opcodeCacheMask = (1<<g_opcodeCacheShift) - 1;
 }
