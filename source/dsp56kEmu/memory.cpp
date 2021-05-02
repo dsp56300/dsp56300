@@ -127,11 +127,10 @@ namespace dsp56k
 		return res;
 	}
 
-	void Memory::getOpcode(TWord _offset, TWord& _wordA, TWord& _wordB)
+	void Memory::getOpcode(TWord _offset, TWord& _wordA, TWord& _wordB) const
 	{
 #if MEMORY_HEAT_MAP
 		++m_heatMap[MemArea_P][_offset];
-		++m_heatMap[MemArea_P][_offset+1];
 #endif
 
 #ifdef _DEBUG
