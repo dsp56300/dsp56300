@@ -63,14 +63,17 @@ namespace dsp56k
 
 		// S L E U N Z V C
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 		sr_toggle(SR_C, carry);
 		sr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 //		sr_l_update_by_v();
+
+//		sr_s_update();
+//		sr_e_update(d);
+//		sr_u_update(d);
+//		sr_n_update(d);
+
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 
 	//	dumpCCCC();
 	}
@@ -106,14 +109,12 @@ namespace dsp56k
 		d.var = res;
 		d.doMasking();
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 		sr_clear(SR_V);		// as cmp is identical to sub, the same for the V bit applies (see sub for details)
 		//sr_l_update_by_v();
 		sr_toggle(SR_C, carry);
+
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 
 		d = oldD;
 	}
@@ -136,12 +137,9 @@ namespace dsp56k
 		sr_toggle(SR_C, carry);
 		sr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 		//sr_l_update_by_v();
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -163,13 +161,10 @@ namespace dsp56k
 
 		// S L E U N Z V C
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 		sr_clear(SR_V);
 		//sr_l_update_by_v();
+		setCCRDirty(abDst, d, SR_S | SR_E | SR_U | SR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -199,13 +194,10 @@ namespace dsp56k
 		const bool isOverflow = v != overflowMaskU && v != 0;
 
 		// S L E U N Z V C
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 		sr_toggle(SR_V, isOverflow);
 		sr_l_update_by_v();
+		setCCRDirty(abDst, d, SR_S | SR_E | SR_U | SR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -276,14 +268,11 @@ namespace dsp56k
 		d.var = res;
 		d.doMasking();
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 		sr_v_update(res, d);
 		sr_l_update_by_v();
 		sr_toggle(SR_C, carry);
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 	}
 
 	void DSP::alu_rol(const bool ab)
@@ -314,14 +303,11 @@ namespace dsp56k
 		d.var = res;
 		d.doMasking();
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 		sr_clear(SR_V);		// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 		//sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 	}
 
 	void DSP::alu_clr(bool ab)
@@ -375,14 +361,17 @@ namespace dsp56k
 		d.var = res & 0x00ffffffffffffff;
 
 		// Update SR
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 		sr_v_update(res,d);
 
 		sr_l_update_by_v();
+
+//		sr_s_update();
+//		sr_e_update(d);
+//		sr_u_update(d);
+//		sr_n_update(d);
+
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 	}
 	// _____________________________________________________________________________
 	// alu_mpysuuu
@@ -415,13 +404,11 @@ namespace dsp56k
 		d.doMasking();
 
 		// Update SR
-		sr_e_update(d);
-		sr_u_update( d );
-		sr_n_update( d );
 		sr_z_update( d );
 		sr_v_update(res,d);
 
 		sr_l_update_by_v();
+		setCCRDirty(ab, d, SR_E | SR_U | SR_N);
 	}
 	// _____________________________________________________________________________
 	// alu_dmac
@@ -457,13 +444,11 @@ namespace dsp56k
 		d.doMasking();
 
 		// Update SR
-		sr_e_update(d);
-		sr_u_update( d );
-		sr_n_update( d );
 		sr_z_update( d );
 		sr_v_update(res,d);
 
 		sr_l_update_by_v();
+		setCCRDirty(ab, d, SR_E | SR_U | SR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -497,31 +482,30 @@ namespace dsp56k
 		d.doMasking();
 
 		// Update SR
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update( d );
-		sr_n_update( d );
 		sr_z_update( d );
 		sr_v_update(res,d);
 
 		sr_l_update_by_v();
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 	}
 
 	// _____________________________________________________________________________
 	// alu_rnd
 	//
-	void DSP::alu_rnd( TReg56& _alu )
+	void DSP::alu_rnd( bool ab)
 	{
+		auto& _alu = ab ? reg.b : reg.a;
+
 		int64_t rounder = 0x800000;
 
-		if		(sr_test(SR_S1)) rounder>>=1;
-		else if	(sr_test(SR_S0)) rounder<<=1;
+		if		(sr_test_noCache(SR_S1)) rounder>>=1;
+		else if	(sr_test_noCache(SR_S0)) rounder<<=1;
 		
 		_alu.var += rounder;
 
 		const auto mask = (rounder<<1)-1;		// all the bits to the right of, and including the rounding position
 
-		if (!sr_test(SR_RM))					// convergent rounding. If all mask bits are cleared
+		if (!sr_test_noCache(SR_RM))			// convergent rounding. If all mask bits are cleared
 		{
 			if (!(_alu.var & mask)) 
 				_alu.var&=~(rounder<<1);		// then the bit to the left of the rounding position is cleared in the result
@@ -533,14 +517,11 @@ namespace dsp56k
 
 		_alu.doMasking();
 
-		sr_s_update();
-		sr_e_update(_alu);
-		sr_u_update(_alu);
-		sr_n_update(_alu);
 		sr_z_update(_alu);
 		sr_v_update(res, _alu);
 
 		sr_l_update_by_v();
+		setCCRDirty(ab, _alu, SR_S | SR_E | SR_U | SR_N);
 	}
 	
 	inline bool DSP::alu_multiply(const TWord op)
@@ -744,22 +725,20 @@ namespace dsp56k
 	}
 	inline void DSP::op_Dec(const TWord op)
 	{
-		auto& d = getFieldValue<Dec,Field_d>(op) ? reg.b : reg.a;
+		auto ab = getFieldValue<Dec,Field_d>(op);
+		auto& d = ab ? reg.b : reg.a;
 
 		const auto old = d;
 		const auto res = --d.var;
 
 		d.doMasking();
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 		sr_v_update(res,d);
 		sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);
 		sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 	}
 
 	inline void DSP::op_Div(const TWord op)
@@ -776,7 +755,7 @@ namespace dsp56k
 		const auto c = msbOld != bitvalue<23>(s24);
 		
 		d.var <<= 1;
-		d.var |= sr_test(SR_C);
+		d.var |= sr_test_noCache(SR_C);
 
 		const auto msbNew = bitvalue<55>(d);
 
@@ -849,10 +828,8 @@ namespace dsp56k
 
 		sr_clear(SR_C);
 		sr_clear(SR_V);
-		sr_u_update(dDst);
-		sr_e_update(dDst);
-		sr_n_update(dDst);
 		sr_z_update(dDst);
+		setCCRDirty(abDst, dDst, SR_E | SR_U | SR_N);
 	}
 	inline void DSP::op_Extractu_CoS2(const TWord op)  // 00001100 00011000 100s000D
 	{
@@ -871,14 +848,13 @@ namespace dsp56k
 
 		sr_clear(SR_C);
 		sr_clear(SR_V);
-		sr_u_update(dDst);
-		sr_e_update(dDst);
-		sr_n_update(dDst);
 		sr_z_update(dDst);
+		setCCRDirty(abDst, dDst, SR_E | SR_U | SR_N);
 	}
 	inline void DSP::op_Inc(const TWord op)
 	{
-		auto& d = getFieldValue<Inc,Field_d>(op) ? reg.b : reg.a;
+		const auto ab = getFieldValue<Inc,Field_d>(op);
+		auto& d = ab ? reg.b : reg.a;
 
 		const auto old = d;
 
@@ -886,15 +862,12 @@ namespace dsp56k
 
 		d.doMasking();
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 		sr_v_update(res,d);
 		sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);	// TODO: what? C updated two times?!
 		sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 	}
 	inline void DSP::op_Insert_S1S2(const TWord op)
 	{

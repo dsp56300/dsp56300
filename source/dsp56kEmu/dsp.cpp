@@ -340,6 +340,31 @@ namespace dsp56k
 		setPC(_val);
 	}
 
+	void DSP::setCCRDirty(bool ab, const TReg56& _alu, uint32_t _dirtyBitsMask)
+	{
+		if(ccrCache.dirty && ccrCache.ab != ab)
+			updateDirtyCCR();
+
+		ccrCache.dirty |= _dirtyBitsMask;
+		ccrCache.alu = _alu;
+		ccrCache.ab = ab;
+	}
+
+	void DSP::updateDirtyCCR() const
+	{
+		if(!ccrCache.dirty)
+			return;
+
+		auto& dsp = const_cast<DSP&>(*this);
+
+		dsp.ccrCache.dirty = 0;
+		
+		dsp.sr_s_update();
+		dsp.sr_e_update(ccrCache.alu);
+		dsp.sr_u_update(ccrCache.alu);
+		dsp.sr_n_update(ccrCache.alu);
+	}
+
 	void DSP::sr_debug(char* _dst) const
 	{
 		_dst[8] = 0;
@@ -384,7 +409,7 @@ namespace dsp56k
 
 		if( !_loopcount )
 		{
-			if( sr_test( SR_SC ) )
+			if( sr_test_noCache( SR_SC ) )
 				_loopcount = 65536;
 			else
 			{
@@ -410,7 +435,7 @@ namespace dsp56k
 		// __________________
 		//
 
-		while(sr_test(SR_LF) && reg.sc.var >= stackCount)
+		while(sr_test_noCache(SR_LF) && reg.sc.var >= stackCount)
 		{
 			exec();
 
@@ -879,7 +904,7 @@ namespace dsp56k
 	const char* DSP::getASM(const TWord _wordA, const TWord _wordB)
 	{
 	#ifdef _DEBUG
-		m_disasm.disassemble(m_asm, _wordA, _wordB, reg.sr.var, reg.omr.var, pcCurrentInstruction);
+		m_disasm.disassemble(m_asm, _wordA, _wordB, 0, 0, pcCurrentInstruction);
 	#endif
 		return m_asm.c_str();
 	}
@@ -1016,13 +1041,10 @@ namespace dsp56k
 
 		d.var = d64 & 0xffffffffffffff;
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 	//	sr_v_update(d);
 	//	sr_l_update_by_v();
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 	}
 
 	void DSP::alu_tfr(const bool ab, const TReg56& src)
@@ -1051,13 +1073,10 @@ namespace dsp56k
 		
 		d.var = d64 & 0x00ffffffffffffff;
 
-		sr_s_update();
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
 		sr_z_update(d);
 	//	TODO: how to update v? test in sim		sr_v_update(d);
 		sr_l_update_by_v();
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 	}
 
 	void DSP::alu_not(const bool ab)

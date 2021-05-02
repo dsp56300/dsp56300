@@ -65,6 +65,13 @@ namespace dsp56k
 //			TReg24 cnt4;
 		};
 
+		struct CCRCache
+		{
+			bool ab;
+			TReg56 alu;
+			uint32_t dirty;
+		};
+
 		enum ProcessingMode
 		{
 			Default,
@@ -98,6 +105,7 @@ namespace dsp56k
 		uint32_t						m_instructions = 0;
 
 		SRegs							reg;
+		CCRCache						ccrCache;
 
 		ProcessingMode					m_processingMode = Default;
 
@@ -293,17 +301,19 @@ namespace dsp56k
 
 		void 	sr_set					( CCRMask _bits )					{ reg.sr.var |= _bits;	}
 		void 	sr_clear				( CCRMask _bits )					{ reg.sr.var &= ~_bits; }
-		int 	sr_test					( CCRMask _bits ) const				{ updateDirtyCCR(); return (reg.sr.var & _bits); }
-		int 	sr_val					( CCRBit _bitNum ) const			{ updateDirtyCCR(); return (reg.sr.var >> _bitNum) & 1; }
+		int 	sr_test					( CCRMask _bits ) const				{ updateDirtyCCR(); return sr_test_noCache(_bits); }
+		int 	sr_test_noCache			( CCRMask _bits ) const				{ return (reg.sr.var & _bits); }
+		int 	sr_val					( CCRBit _bitNum ) const			{ updateDirtyCCR(); return sr_val_noCache(_bitNum); }
+		int 	sr_val_noCache			( CCRBit _bitNum ) const			{ return (reg.sr.var >> _bitNum) & 1; }
 		void 	sr_toggle				( CCRMask _bits, bool _set )		{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
 		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, int32_t(_bit), _value); }
 
 		void	sr_s_update				()
 		{
-			if( sr_test(SR_S) )
+			if( sr_test_noCache(SR_S) )
 				return;
 
-			const TWord offset = sr_val(SRB_S1) - sr_val(SRB_S0);
+			const TWord offset = sr_val_noCache(SRB_S1) - sr_val_noCache(SRB_S0);
 			const TWord bitA = 46 + offset;
 			const TWord bitB = 45 + offset;
 
@@ -329,7 +339,7 @@ namespace dsp56k
 			1	0	Scale Up	Bits 55,54..............47,46
 			*/
 
-			const uint32_t mask = (0x3fe << sr_val(SRB_S0) >> sr_val(SRB_S1)) & 0x3ff;
+			const uint32_t mask = (0x3fe << sr_val_noCache(SRB_S0) >> sr_val_noCache(SRB_S1)) & 0x3ff;
 
 			const uint32_t d2 = _ab.var >> 46;
 
@@ -340,9 +350,9 @@ namespace dsp56k
 			sr_toggle( SRB_E, Bit(res));
 		}
 
-		void	sr_u_update				( const TReg56& _ab )
+		void sr_u_update( const TReg56& _ab )
 		{
-			const auto sOffset = sr_val(SRB_S0) - sr_val(SRB_S1);
+			const auto sOffset = sr_val_noCache(SRB_S0) - sr_val_noCache(SRB_S1);
 
 			const auto msb = 47 + sOffset;
 			const auto lsb = 46 + sOffset;
@@ -350,23 +360,18 @@ namespace dsp56k
 			sr_toggle( SRB_U, bitvalue(_ab,msb) == bitvalue(_ab,lsb) );
 		}
 
-		void	sr_n_update( const TReg56& _ab )
+		void sr_n_update( const TReg56& _ab )
 		{
 			// Negative
 			// Set if the MSB of the result is set; otherwise, this bit is cleared.	
 			sr_toggle( SRB_N, bitvalue<55>(_ab) );
 		}
 
-		void	sr_z_update( const TReg56& _ab )
+		void sr_z_update( const TReg56& _ab )
 		{
 			const TReg56 zero(static_cast<TReg56::MyType>(0));
 			sr_toggle( SR_Z, zero == _ab );
 		}
-
- 		void	sr_c_update_logical( const TReg56& _ab )
- 		{
- 			sr_toggle( SRB_C, bitvalue<55>(_ab) );
- 		}
 
 		template<typename T>
 		void	sr_c_update_arithmetic( const T& _old, const T& _new )
@@ -374,17 +379,17 @@ namespace dsp56k
 			sr_toggle( SRB_C, bitvalue<55>(_old) != bitvalue<55>(_new) );
 		}
 
-		void	sr_l_update_by_v()
+		void sr_l_update_by_v()
 		{
 			// L is never cleared automatically, so only test to set
-			if( sr_test(SR_V) )
+			if( sr_test_noCache(SR_V) )
 				sr_set(SR_L);
 		}
 
 		// value needs to fit into 48 or 56 bits
 		void	sr_v_update( const int64_t& _notLimitedResult, TReg56& _result )
 		{
-			if( sr_test(SR_SM) )
+			if( sr_test_noCache(SR_SM) )
 			{
 				limit_arithmeticSaturation(_result);
 			}
@@ -410,8 +415,9 @@ namespace dsp56k
 			return reg.sr;
 		}
 
-		void updateDirtyCCR() const {}
-		void resetCCRCache() {}
+		void setCCRDirty(bool ab, const TReg56& _alu, uint32_t _dirtyBitsMask);
+		void updateDirtyCCR() const;
+		void resetCCRCache() { ccrCache.dirty = 0; }
 
 		void sr_debug(char* _dst) const;
 
@@ -481,9 +487,9 @@ namespace dsp56k
 
 		void scale( TReg56& _scale ) const
 		{
-			if( sr_test(SR_S1) )
+			if( sr_test_noCache(SR_S1) )
 				_scale.var <<= 1;
-			else if( sr_test(SR_S0) )
+			else if( sr_test_noCache(SR_S0) )
 				_scale.var >>= 1;
 		}
 
@@ -518,7 +524,7 @@ namespace dsp56k
 
 		void limit_arithmeticSaturation( TReg56& _dst )
 		{
-			if( !sr_test(SR_SM) )
+			if( !sr_test_noCache(SR_SM) )
 				return;
 
 			const unsigned int v = (int(bittest( _dst, 55 )) << 2) | (int(bittest( _dst, 48 )) << 1) | (int(bittest(_dst,47)));
@@ -562,8 +568,8 @@ namespace dsp56k
 		TReg24	ssh()				{ TReg24 res = hiword(reg.ss[ssIndex()]); decSP(); return res; }
 		TReg24	ssl() const			{ return loword(reg.ss[ssIndex()]); }
 
-		void	ssl(const TReg24 _val)	{ loword(reg.ss[ssIndex()],_val); }
-		void	ssh(const TReg24 _val)	{ incSP(); hiword(reg.ss[ssIndex()],_val); }
+		void	ssl(const TReg24& _val)	{ loword(reg.ss[ssIndex()],_val); }
+		void	ssh(const TReg24& _val)	{ incSP(); hiword(reg.ss[ssIndex()],_val); }
 
 		void	pushPCSR()			{ ssh(reg.pc); ssl(getSR()); }
 		void	popPCSR()			{ setSR(ssl()); setPC(ssh()); }
@@ -594,9 +600,7 @@ namespace dsp56k
 		void	alu_dmac			( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool srcUnsigned, bool dstUnsigned );
 		void	alu_mac				( bool ab, TReg24 _s1, TReg24 _s2, bool _negate, bool _uu );
 
-		void	alu_rnd				( bool _ab )	{ alu_rnd( _ab ? reg.b : reg.a ); }
-
-		void	alu_rnd				( TReg56& _alu );
+		void	alu_rnd				( bool _ab );
 
 		void	alu_abs				( bool ab );
 
