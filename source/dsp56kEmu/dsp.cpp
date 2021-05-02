@@ -1022,7 +1022,7 @@ namespace dsp56k
 		sr_n_update(d);
 		sr_z_update(d);
 	//	sr_v_update(d);
-		sr_l_update_by_v();
+	//	sr_l_update_by_v();
 	}
 
 	void DSP::alu_tfr(const bool ab, const TReg56& src)
@@ -1073,7 +1073,7 @@ namespace dsp56k
 		sr_toggle(SR_Z, masked == 0);					// Set if bits 47–24 of the result are 0
 		sr_clear(SR_V);									// Always cleared
 		sr_s_update();									// Changed according to the standard definition
-		sr_l_update_by_v();								// Changed according to the standard definition
+		//sr_l_update_by_v();							// Changed according to the standard definition
 	}
 
 	// _____________________________________________________________________________

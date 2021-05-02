@@ -68,9 +68,9 @@ namespace dsp56k
 		sr_u_update(d);
 		sr_n_update(d);
 		sr_z_update(d);
-		sr_l_update_by_v();
 		sr_toggle(SR_C, carry);
 		sr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
+//		sr_l_update_by_v();
 
 	//	dumpCCCC();
 	}
@@ -112,7 +112,7 @@ namespace dsp56k
 		sr_n_update(d);
 		sr_z_update(d);
 		sr_clear(SR_V);		// as cmp is identical to sub, the same for the V bit applies (see sub for details)
-		sr_l_update_by_v();
+		//sr_l_update_by_v();
 		sr_toggle(SR_C, carry);
 
 		d = oldD;
@@ -141,7 +141,7 @@ namespace dsp56k
 		sr_u_update(d);
 		sr_n_update(d);
 		sr_z_update(d);
-		sr_l_update_by_v();
+		//sr_l_update_by_v();
 	}
 
 	// _____________________________________________________________________________
@@ -169,7 +169,7 @@ namespace dsp56k
 		sr_n_update(d);
 		sr_z_update(d);
 		sr_clear(SR_V);
-		sr_l_update_by_v();
+		//sr_l_update_by_v();
 	}
 
 	// _____________________________________________________________________________
@@ -231,7 +231,7 @@ namespace dsp56k
 		sr_clear( SR_V );
 
 		sr_s_update();
-		sr_l_update_by_v();
+		//sr_l_update_by_v();
 	}
 
 	// _____________________________________________________________________________
@@ -257,7 +257,7 @@ namespace dsp56k
 		sr_clear( SR_V );
 
 		sr_s_update();
-		sr_l_update_by_v();
+		//sr_l_update_by_v();
 	}
 
 
@@ -320,7 +320,7 @@ namespace dsp56k
 		sr_n_update(d);
 		sr_z_update(d);
 		sr_clear(SR_V);		// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
-		sr_l_update_by_v();
+		//sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);
 	}
 
@@ -893,7 +893,7 @@ namespace dsp56k
 		sr_z_update(d);
 		sr_v_update(res,d);
 		sr_l_update_by_v();
-		sr_c_update_arithmetic(old,d);
+		sr_c_update_arithmetic(old,d);	// TODO: what? C updated two times?!
 		sr_toggle( SR_C, bittest(d,47) != bittest(old,47) );
 	}
 	inline void DSP::op_Insert_S1S2(const TWord op)
