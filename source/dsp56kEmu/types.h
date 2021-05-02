@@ -157,9 +157,9 @@ namespace dsp56k
 //	TReg56 operator & (const TReg56& a, const TReg56& b )	{ return TReg56(a.var & b.var); }
 	enum EMemArea
 	{
+		MemArea_P,
 		MemArea_X,
 		MemArea_Y,
-		MemArea_P,
 
 		MemArea_COUNT,
 	};
