@@ -64,7 +64,7 @@ namespace dsp56k
 
 		// asl #28,a,a
 		dsp.reg.a.var = 0xf4;
-		dsp.reg.sr.var = 0x0800d0;
+		dsp.setSR(0x0800d0);
 		execOpcode(0x0c1d50);
 		assert(dsp.reg.a.var == 0x00f40000000000);
 		assert(dsp.reg.sr.var == 0x0800f0);
@@ -174,14 +174,14 @@ namespace dsp56k
 	{
 		dsp.reg.a.var = 0x004edffe000000;
 		dsp.reg.b.var = 0xff89fe13000000;
-		dsp.reg.sr.var = 0x0800d0;
+		dsp.setSR(0x0800d0);
 		execOpcode(0x200002);	// addr b,a
 		assert(dsp.reg.a.var == 0x0ffb16e12000000);
 		assert(dsp.reg.sr.var == 0x0800c8);		
 
 		dsp.reg.a.var = 0xffb16e12000000;
 		dsp.reg.b.var = 0xff89fe13000000;
-		dsp.reg.sr.var = 0x0800c8;
+		dsp.setSR(0x0800c8);
 		execOpcode(0x20000a);	// addr a,b
 		assert(dsp.reg.b.var == 0xff766d1b800000);
 		assert(dsp.reg.sr.var == 0x0800e9);
@@ -248,7 +248,7 @@ namespace dsp56k
 	void UnitTests::testJSGE()
 	{
 		// SR is the result of a being 0x0055000000000000 and then: tst a
-		dsp.reg.sr.var = 0x0800c0;
+		dsp.setSR(0x0800c0);
 
 		dsp.reg.r[2].var = 0x50;
 
@@ -273,14 +273,14 @@ namespace dsp56k
 
 		dsp.x0(0xf00000);
 		dsp.reg.a.var = 0xfff40000000000;
-		dsp.reg.sr.var = 0x0800d8;
+		dsp.setSR(0x0800d8);
 
 		// cmp x0,a
 		execOpcode(0x200045);
 		assert(dsp.reg.sr.var == 0x0800d0);
 
 		// cmp #>$aa,a
-		dsp.reg.sr.var = 0x080099;
+		dsp.setSR(0x080099);
 		dsp.reg.a.var = 0xfffffc6c000000;
 		execOpcode(0x0140c5, 0x0000aa);
 		assert(dsp.reg.sr.var == 0x080098);
@@ -304,7 +304,7 @@ namespace dsp56k
 		dsp.y0(0x7fffff);
 		dsp.x0(0x6bb14a);
 		dsp.reg.b.var = 0x00553300000000;
-		dsp.reg.sr.var = 0x0880d0;
+		dsp.setSR(0x0880d0);
 
 		// mac y0,x0,b 
 		execOpcode(0x2000da);
@@ -314,7 +314,7 @@ namespace dsp56k
 		// mac y1,y0,b x:(r5)-,y0
 		dsp.y1(0xf3aab8);
 		dsp.y0(0x000080);
-		dsp.reg.sr.var = 0x0800d8;
+		dsp.setSR(0x0800d8);
 		dsp.reg.b.var = 0x0000000c000000;
 		dsp.reg.r[5].var = 10;
 		dsp.memory().set(MemArea_X, 10, 0x123456);
@@ -393,7 +393,7 @@ namespace dsp56k
 
 		dsp.y0(0x218dec);
 		dsp.reg.a.var = 0x00008000000000;
-		dsp.reg.sr.var = 0x0800d4;
+		dsp.setSR(0x0800d4);
 
 		// div y0,a
 		execOpcode(0x018050);
@@ -432,7 +432,7 @@ namespace dsp56k
 		assert(dsp.reg.a.var == 0x12aaaaaa123456);
 
 		dsp.reg.a.var = 0xffd8b38b000000;
-		dsp.reg.sr.var = 0x0800e8;
+		dsp.setSR(0x0800e8);
 
 		// not a
 		execOpcode(0x200017);
@@ -452,7 +452,7 @@ namespace dsp56k
 
 		dsp.reg.a.var = 0;
 		dsp.reg.b.var = 0xfff47555000000;
-		dsp.reg.sr.var = 0x0800d9;
+		dsp.setSR(0x0800d9);
 
 		// extractu $8028,b,a
 		execOpcode(0x0c1890, 0x008028);
@@ -477,7 +477,7 @@ namespace dsp56k
 		dsp.reg.b.var = 0x0003a400000000;
 		dsp.reg.x.var = 0x00000506c000;
 		dsp.reg.y.var = 0x000400000400;
-		dsp.reg.sr.var = 0x0800c9;
+		dsp.setSR(0x0800c9);
 
 		// mpy y0,x0,a
 		execOpcode(0x2000d0);

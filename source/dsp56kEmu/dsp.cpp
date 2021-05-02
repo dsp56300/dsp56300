@@ -572,7 +572,7 @@ namespace dsp56k
 		case Reg_Y1:	_res = y1();	break;
 
 		case Reg_PC:	_res = reg.pc;		break;
-		case Reg_SR:	_res = reg.sr;		break;
+		case Reg_SR:	_res = getSR();		break;
 		case Reg_OMR:	_res = reg.omr;		break;
 		case Reg_SP:	_res = reg.sp;		break;
 

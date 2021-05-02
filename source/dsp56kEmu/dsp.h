@@ -293,8 +293,8 @@ namespace dsp56k
 
 		void 	sr_set					( CCRMask _bits )					{ reg.sr.var |= _bits;	}
 		void 	sr_clear				( CCRMask _bits )					{ reg.sr.var &= ~_bits; }
-		int 	sr_test					( CCRMask _bits ) const				{ return (reg.sr.var & _bits); }
-		int 	sr_val					( CCRBit _bitNum ) const			{ return (reg.sr.var >> _bitNum) & 1; }
+		int 	sr_test					( CCRMask _bits ) const				{ updateDirtyCCR(); return (reg.sr.var & _bits); }
+		int 	sr_val					( CCRBit _bitNum ) const			{ updateDirtyCCR(); return (reg.sr.var >> _bitNum) & 1; }
 		void 	sr_toggle				( CCRMask _bits, bool _set )		{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
 		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, int32_t(_bit), _value); }
 
@@ -394,7 +394,26 @@ namespace dsp56k
 			}
 		}
 
-		void	sr_debug(char* _dst) const;
+		void setSR(const TReg24& _sr)
+		{
+			reg.sr = _sr;
+		}
+
+		void setSR(const TWord _sr)
+		{
+			setSR(TReg24(_sr));
+		}
+
+		const TReg24& getSR() const
+		{
+			updateDirtyCCR();
+			return reg.sr;
+		}
+
+		void updateDirtyCCR() const {}
+		void resetCCRCache() {}
+
+		void sr_debug(char* _dst) const;
 
 		// register access helpers
 
@@ -518,9 +537,9 @@ namespace dsp56k
 			}
 		}
 
-		TReg8	ccr				() const							{ return byte0(reg.sr); }
+		TReg8	ccr				() const							{ return byte0(getSR()); }
 		TReg8	mr				() const							{ return byte1(reg.sr); }
-		void	ccr				( TReg8 _val )						{ byte0(reg.sr,_val); }
+		void	ccr				( TReg8 _val )						{ byte0(reg.sr,_val); resetCCRCache(); }
 		void	mr				( TReg8 _val )						{ byte1(reg.sr,_val); }
 
 		TReg8	com				() const							{ return byte0(reg.omr); }
@@ -546,8 +565,8 @@ namespace dsp56k
 		void	ssl(const TReg24 _val)	{ loword(reg.ss[ssIndex()],_val); }
 		void	ssh(const TReg24 _val)	{ incSP(); hiword(reg.ss[ssIndex()],_val); }
 
-		void	pushPCSR()			{ ssh(reg.pc); ssl(reg.sr); }
-		void	popPCSR()			{ reg.sr = ssl(); setPC(ssh()); }
+		void	pushPCSR()			{ ssh(reg.pc); ssl(getSR()); }
+		void	popPCSR()			{ setSR(ssl()); setPC(ssh()); }
 		void	popPC()				{ setPC(ssh()); }
 
 		// - ALU

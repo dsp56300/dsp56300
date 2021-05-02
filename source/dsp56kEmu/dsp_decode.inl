@@ -176,7 +176,7 @@ namespace dsp56k
 
 		// 111GGG - 8 program controller registers
 		case 0x38:	return reg.sz;
-		case 0x39:	return reg.sr;
+		case 0x39:	return getSR();
 		case 0x3a:	return reg.omr;
 		case 0x3b:	return reg.sp;
 		case 0x3c:	return ssh();
@@ -249,7 +249,7 @@ namespace dsp56k
 
 		// 111GGG - 8 program controller registers
 		case 0x38:	reg.sz = _val;	return;
-		case 0x39:	reg.sr = _val;	return;
+		case 0x39:	setSR(_val);	return;
 		case 0x3a:	reg.omr = _val;	return;
 		case 0x3b:	reg.sp = _val;	return;
 		case 0x3c:	ssh(_val);	return;
@@ -273,7 +273,7 @@ namespace dsp56k
 		case 0x10:	return reg.vba;
 		case 0x11:	return TReg24(reg.sc.var);
 		case 0x18:	return reg.sz;
-		case 0x19:	return reg.sr;
+		case 0x19:	return getSR();
 		case 0x1a:	return reg.omr;
 		case 0x1b:	return reg.sp;
 		case 0x1c:	return ssh();
@@ -299,7 +299,7 @@ namespace dsp56k
 		case 0x10:	reg.vba = _val;				return;
 		case 0x11:	reg.sc.var = _val.var&0x1f;	return;
 		case 0x18:	reg.sz = _val;				return;
-		case 0x19:	reg.sr = _val;				return;
+		case 0x19:	setSR(_val);				return;
 		case 0x1a:	reg.omr = _val;				return;
 		case 0x1b:	reg.sp = _val;				return;
 		case 0x1c:	ssh(_val);					return;
