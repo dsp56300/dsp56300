@@ -221,9 +221,9 @@ namespace dsp56k
 		m_currentOpLen = 1;
 
 		const TWord currentOp = pcCurrentInstruction;
-		const auto opCache = m_opcodeCache[currentOp];
+		const auto& opCache = m_opcodeCache[currentOp];
 
-		exec_jump(static_cast<Instruction>(opCache & g_opcodeCacheMask), op);
+		exec_jump(opCache.op, op);
 
 		++m_instructions;
 
@@ -231,13 +231,12 @@ namespace dsp56k
 			traceOp();
 	}
 
-	void DSP::exec_jump(const TWord inst, const TWord op)
+	void DSP::exec_jump(const TInstructionFunc& _func, TWord op)
 	{
-		const auto func = g_jumptable.jumptable()[inst];
-		(this->*func)(op);
+		(this->*_func)(op);
 	}
 
-	bool DSP::exec_parallel(const Instruction instMove, const Instruction instAlu, const TWord op)
+	bool DSP::exec_parallel(const TInstructionFunc& funcMove, const TInstructionFunc& funcAlu, const TWord op)
 	{
 		// simulate latches registers for parallel instructions
 		const auto preMoveX = reg.x;
@@ -245,7 +244,7 @@ namespace dsp56k
 		const auto preMoveA = reg.a;
 		const auto preMoveB = reg.b;
 
-		exec_jump(instMove, op);
+		exec_jump(funcMove, op);
 
 		const auto postMoveX = reg.x;
 		const auto postMoveY = reg.y;
@@ -258,7 +257,7 @@ namespace dsp56k
 		reg.a = preMoveA;
 		reg.b = preMoveB;
 
-		exec_jump(instAlu, op);
+		exec_jump(funcAlu, op);
 
 		// now check what has changed and get the final values for all registers
 		if( postMoveX != preMoveX )
@@ -489,9 +488,9 @@ namespace dsp56k
 		--reg.lc.var;
 		execOp(op);
 
-		const auto opCache = m_opcodeCache[pcCurrentInstruction];
+		const auto& opCache = m_opcodeCache[pcCurrentInstruction];
 
-		const auto func = g_jumptable.jumptable()[static_cast<Instruction>(opCache & g_opcodeCacheMask)];
+		const auto& func = opCache.op;
 
 		while( reg.lc.var > 0 )
 		{
@@ -919,7 +918,7 @@ namespace dsp56k
 		const auto res = mem.dspWrite( _area, _offset, _value );
 
 		if(_area == MemArea_P && _offset < m_opcodeCache.size())
-			m_opcodeCache[_offset] = ResolveCache;
+			m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
 
 		return res;
 	}
@@ -1131,17 +1130,18 @@ namespace dsp56k
 	void DSP::clearOpcodeCache()
 	{
 		m_opcodeCache.clear();
-		m_opcodeCache.resize(mem.size(), ResolveCache);		
+		m_opcodeCache.resize(mem.size(), {&DSP::op_ResolveCache});
 	}
 
 	void DSP::clearOpcodeCache(TWord _address)
 	{
-		m_opcodeCache[_address] = ResolveCache;
+		m_opcodeCache[_address].op = &DSP::op_ResolveCache;
 	}
 	
-	TWord DSP::resolvePermutation(const Instruction _inst, const TWord _op) const
+	TInstructionFunc DSP::resolvePermutation(const Instruction _inst, const TWord _op) const
 	{
-		return g_jumptable.resolve(_inst, _op);
+		const auto funcIndex = g_jumptable.resolve(_inst, _op);
+		return g_jumptable.jumptable()[funcIndex];
 	}
 
 	void DSP::dumpRegisters() const

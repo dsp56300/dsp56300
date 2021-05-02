@@ -13,6 +13,8 @@ namespace dsp56k
 	class Memory;
 	class UnitTests;
 
+	using TInstructionFunc = void (DSP::*)(TWord op);
+
 	class DSP final
 	{
 		friend class UnitTests;
@@ -114,7 +116,15 @@ namespace dsp56k
 		RingBuffer<TWord, 1024, false>	m_pendingInterrupts;	// TODO: array is way too large
 
 		Opcodes							m_opcodes;
-		std::vector<uint32_t>			m_opcodeCache;
+
+		struct OpcodeCacheEntry
+		{
+			TInstructionFunc op;
+			TInstructionFunc opMove;
+			TInstructionFunc opAlu;
+		};
+
+		std::vector<OpcodeCacheEntry>	m_opcodeCache;
 		
 		InstructionCache				cache;
 
@@ -233,9 +243,9 @@ namespace dsp56k
 
 		void 	execOp							(TWord op);
 
-		void	exec_jump						(TWord _inst, TWord op);
+		void	exec_jump						(const TInstructionFunc& _func, TWord op);
 		
-		bool	exec_parallel					(Instruction instMove, Instruction instAlu, TWord op);
+		bool	exec_parallel					(const TInstructionFunc& instMove, const TInstructionFunc& instAlu, TWord op);
 
 		bool	alu_multiply					(TWord op);
 
@@ -874,7 +884,7 @@ namespace dsp56k
 		void op_Parallel(TWord op);
 
 		// ------------- function permutations -------------
-		TWord resolvePermutation(Instruction _inst, TWord _op) const;
+		TInstructionFunc resolvePermutation(Instruction _inst, TWord _op) const;
 
 		// ------------- operation helper methods -------------
 
