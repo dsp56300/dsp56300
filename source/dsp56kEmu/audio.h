@@ -124,7 +124,7 @@ namespace dsp56k
 				{
 					const auto in = c >> 1;
 					m_audioInputs[in].waitNotFull();
-					m_audioInputs[in].push_back(float2Dsdp(_inputs[c*i]));
+					m_audioInputs[in].push_back(float2Dsdp(*_inputs++));
 				}
 
 				m_pendingRXInterrupts += 2;
@@ -136,7 +136,7 @@ namespace dsp56k
 				if(_latency > m_latency)
 				{
 					for (size_t c = 0; c < _numDSPouts; ++c)
-						_outputs[c*i] = 0;
+						*_outputs++ = 0;
 					++m_latency;
 				}
 
@@ -156,7 +156,7 @@ namespace dsp56k
 						v = m_audioOutputs[out].pop_front();
 					}
 
-					_outputs[c*i] = dsp2Float(v);
+					*_outputs++ = dsp2Float(v);
 				}
 			}
 		}
