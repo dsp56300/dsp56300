@@ -341,8 +341,8 @@ namespace dsp56k
 
 	void DSP::setCCRDirty(bool ab, const TReg56& _alu, uint32_t _dirtyBitsMask)
 	{
-		if(ccrCache.dirty && ccrCache.ab != ab)
-			updateDirtyCCR();
+//		if(ccrCache.dirty && ccrCache.ab != ab)
+//			updateDirtyCCR();
 
 		ccrCache.dirty |= _dirtyBitsMask;
 		ccrCache.alu = _alu;
