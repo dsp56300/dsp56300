@@ -101,7 +101,7 @@ namespace dsp56k
 
 		bool				dspWrite			( EMemArea& _area, TWord& _offset, TWord _value );
 		TWord				get					( EMemArea _area, TWord _offset ) const;
-		void				get2				( EMemArea _area, TWord _offset, TWord& _wordA, TWord& _wordB);
+		void				getOpcode			( TWord _offset, TWord& _wordA, TWord& _wordB );
 
 		bool				save				( FILE* _file ) const;
 		bool				load				( FILE* _file );

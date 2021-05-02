@@ -127,18 +127,16 @@ namespace dsp56k
 		return res;
 	}
 
-	void Memory::get2(EMemArea _area, TWord _offset, TWord& _wordA, TWord& _wordB)
+	void Memory::getOpcode(TWord _offset, TWord& _wordA, TWord& _wordB)
 	{
 #if MEMORY_HEAT_MAP
-		++m_heatMap[_area][_offset];
-		++m_heatMap[_area][_offset+1];
+		++m_heatMap[MemArea_P][_offset];
+		++m_heatMap[MemArea_P][_offset+1];
 #endif
 
-		memTranslateAddress(_area, _offset);
-		
 #ifdef _DEBUG
 		assert(_offset < XIO_Reserved_High_First);
-		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
+		if(!m_memoryMap.memValidateAccess(MemArea_P, _offset, true))
 		{
 			_wordA = _wordB =  0x00badbad;
 			return;			
@@ -153,12 +151,12 @@ namespace dsp56k
 		}
 #endif
 
-		_wordA = m_mem[_area][_offset];
-		_wordB = m_mem[_area][_offset+1];
+		_wordA = p[_offset];
+		_wordB = p[_offset+1];
 
 #ifdef _DEBUG
 		if( _wordA == g_initPattern || _wordB == g_initPattern)
-			LOG_ERR_MEM_READ_UNINITIALIZED(_area,_offset);
+			LOG_ERR_MEM_READ_UNINITIALIZED(MemArea_P,_offset);
 #endif
 	}
 
@@ -249,7 +247,7 @@ namespace dsp56k
 		for(uint32_t i=_offset; i<_offset+_count;)
 		{
 			TWord opA, opB;
-			get2(MemArea_P, i, opA, opB);
+			getOpcode(i, opA, opB);
 
 			if(!opA && _skipNops)
 			{

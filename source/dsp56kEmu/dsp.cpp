@@ -146,7 +146,7 @@ namespace dsp56k
 			{
 				const auto vba = m_pendingInterrupts.pop_front();
 				TWord op0, op1;
-				memRead2(MemArea_P, vba, op0, op1);
+				memReadOpcode(vba, op0, op1);
 
 				const auto oldSP = reg.sp.var;
 
@@ -968,10 +968,10 @@ namespace dsp56k
 		return mem.get(_area, _offset);
 	}
 
-	void DSP::memRead2(EMemArea _area, TWord _offset, TWord& _wordA, TWord& _wordB) const
+	void DSP::memReadOpcode(TWord _offset, TWord& _wordA, TWord& _wordB) const
 	{
-		aarTranslate(_area, _offset);
-		mem.get2(_area, _offset, _wordA, _wordB);
+		aarTranslate(MemArea_P, _offset);
+		mem.getOpcode(_offset, _wordA, _wordB);
 	}
 
 	TWord DSP::memReadPeriph(EMemArea _area, TWord _offset) const
@@ -1253,7 +1253,7 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 	void DSP::coreDump(std::stringstream& _ss)
 	{
 		TWord opA, opB;
-		mem.get2(MemArea_P, pcCurrentInstruction, opA, opB);
+		memReadOpcode(pcCurrentInstruction, opA, opB);
 
 		std::string op;
 		m_disasm.disassemble(op, opA, opB, 0, 0, pcCurrentInstruction);
@@ -1271,7 +1271,7 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 			_ss << '$' << std::setw(2) << std::setfill('0') << std::hex << s << ": ";
 			_ss << '$' << HEX(pc) << ":$" << HEX(sr) << " - pc:$" << HEX(pc) << " - ";
 
-			mem.get2(MemArea_P, pc, opA, opB);
+			memReadOpcode(pc, opA, opB);
 			m_disasm.disassemble(op, opA, opB, 0, 0, pc);
 			_ss << op << std::endl;
 			--s;

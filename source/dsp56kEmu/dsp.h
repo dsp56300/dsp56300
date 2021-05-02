@@ -226,7 +226,7 @@ namespace dsp56k
 		TWord fetchPC()
 		{
 			TWord ret;
-			memRead2( MemArea_P, reg.pc.toWord(), ret, m_opWordB );
+			memReadOpcode(reg.pc.toWord(), ret, m_opWordB );
 			++reg.pc.var;
 			return ret;
 		}
@@ -620,7 +620,7 @@ namespace dsp56k
 		bool	memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value  );
 
 		TWord	memRead				( EMemArea _area, TWord _offset ) const;
-		void	memRead2			( EMemArea _area, TWord _offset, TWord& _wordA, TWord& _wordB ) const;
+		void	memReadOpcode		( TWord _offset, TWord& _wordA, TWord& _wordB ) const;
 		TWord	memReadPeriph		( EMemArea _area, TWord _offset ) const;
 		TWord	memReadPeriphFFFF80	( EMemArea _area, TWord _offset ) const;
 		TWord	memReadPeriphFFFFC0	( EMemArea _area, TWord _offset ) const;
