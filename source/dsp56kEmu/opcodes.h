@@ -71,7 +71,7 @@ namespace dsp56k
 
 	template<Instruction I> EMemArea getFieldValueMemArea(const TWord _op)
 	{
-		return static_cast<EMemArea>(getFieldValue<I,Field_S>(_op));
+		return static_cast<EMemArea>(getFieldValue<I,Field_S>(_op) + MemArea_X);
 	}
 	
 	static TWord getFieldValue(Instruction _instruction, const Field _field, TWord _memoryValue)
