@@ -67,7 +67,7 @@ namespace dsp56k
 		dsp.setSR(0x0800d0);
 		execOpcode(0x0c1d50);
 		assert(dsp.reg.a.var == 0x00f40000000000);
-		assert(dsp.reg.sr.var == 0x0800f0);
+		assert(dsp.getSR().var == 0x0800f0);
 	}
 
 	void UnitTests::testASR()
@@ -177,14 +177,14 @@ namespace dsp56k
 		dsp.setSR(0x0800d0);
 		execOpcode(0x200002);	// addr b,a
 		assert(dsp.reg.a.var == 0x0ffb16e12000000);
-		assert(dsp.reg.sr.var == 0x0800c8);		
+		assert(dsp.getSR().var == 0x0800c8);		
 
 		dsp.reg.a.var = 0xffb16e12000000;
 		dsp.reg.b.var = 0xff89fe13000000;
 		dsp.setSR(0x0800c8);
 		execOpcode(0x20000a);	// addr a,b
 		assert(dsp.reg.b.var == 0xff766d1b800000);
-		assert(dsp.reg.sr.var == 0x0800e9);
+		assert(dsp.getSR().var == 0x0800e9);
 	}
 
 	void UnitTests::testSub()
@@ -277,13 +277,13 @@ namespace dsp56k
 
 		// cmp x0,a
 		execOpcode(0x200045);
-		assert(dsp.reg.sr.var == 0x0800d0);
+		assert(dsp.getSR().var == 0x0800d0);
 
 		// cmp #>$aa,a
 		dsp.setSR(0x080099);
 		dsp.reg.a.var = 0xfffffc6c000000;
 		execOpcode(0x0140c5, 0x0000aa);
-		assert(dsp.reg.sr.var == 0x080098);
+		assert(dsp.getSR().var == 0x080098);
 	}
 
 	void UnitTests::testMAC()
@@ -309,7 +309,7 @@ namespace dsp56k
 		// mac y0,x0,b 
 		execOpcode(0x2000da);
 		assert(dsp.reg.b == 0x00c0e449289d6c);
-		assert(dsp.reg.sr.var == 0x0880f0);
+		assert(dsp.getSR().var == 0x0880f0);
 
 		// mac y1,y0,b x:(r5)-,y0
 		dsp.y1(0xf3aab8);
@@ -324,7 +324,7 @@ namespace dsp56k
 		assert(dsp.reg.b == 0);
 		assert(dsp.reg.r[5].var == 9);
 		assert(dsp.y0() == 0x123456);
-		assert(dsp.reg.sr.var == 0x0800d4);
+		assert(dsp.getSR().var == 0x0800d4);
 	}
 
 	void UnitTests::testLongMemoryMoves()
@@ -351,7 +351,7 @@ namespace dsp56k
 
 	void UnitTests::testDIV()
 	{
-		dsp.reg.sr.var &= 0xfe;
+		dsp.setSR(dsp.getSR().var & 0xfe);
 
 		constexpr uint64_t expectedValues[24] =
 		{
@@ -398,7 +398,7 @@ namespace dsp56k
 		// div y0,a
 		execOpcode(0x018050);
 		assert(dsp.reg.a.var == 0xffdf7214000000);
-		assert(dsp.reg.sr.var == 0x0800d4);		
+		assert(dsp.getSR().var == 0x0800d4);		
 	}
 
 	void UnitTests::testROL()
@@ -437,7 +437,7 @@ namespace dsp56k
 		// not a
 		execOpcode(0x200017);
 		assert(dsp.reg.a.var == 0xff274c74000000);
-		assert(dsp.reg.sr.var == 0x0800e0);
+		assert(dsp.getSR().var == 0x0800e0);
 	}
 
 	void UnitTests::testEXTRACTU()
@@ -458,7 +458,7 @@ namespace dsp56k
 		execOpcode(0x0c1890, 0x008028);
 
 		assert(dsp.reg.a.var == 0xf4);
-		assert(dsp.reg.sr.var == 0x0800d0);
+		assert(dsp.getSR().var == 0x0800d0);
 	}
 
 	void UnitTests::testEXTRACTU_CO()
@@ -482,7 +482,7 @@ namespace dsp56k
 		// mpy y0,x0,a
 		execOpcode(0x2000d0);
 		assert(dsp.reg.a.var == 0x00000036000000);
-		assert(dsp.reg.sr.var == 0x0800d1);
+		assert(dsp.getSR().var == 0x0800d1);
 	}
 
 	void UnitTests::testDisassembler()
