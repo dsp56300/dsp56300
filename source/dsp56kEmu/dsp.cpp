@@ -430,6 +430,9 @@ namespace dsp56k
 		sr_set( SR_LF );
 
 		traceOp();
+		TWord looplen=_addr + 1  - getPC().var;
+		uint32_t simpleguess=getInstructionCounter() + looplen;
+		if (looplen>16) simpleguess=0;
 
 		// __________________
 		//
@@ -450,6 +453,21 @@ namespace dsp56k
 				break;
 			}
 
+			if (getInstructionCounter() == simpleguess)
+			{
+				const TWord startpc=hiword(reg.ss[ssIndex()]).var;
+				while (--reg.lc.var>0) {
+					setPC(startpc);
+					for (int i=0;i<looplen;i++)
+					{
+						pcCurrentInstruction = reg.pc.toWord();
+						execOp(fetchPC());
+					}
+				}
+				setPC(reg.la.var+1);
+				do_end();
+				return true;
+			}
 			--reg.lc.var;
 			setPC(hiword(reg.ss[ssIndex()]));
 		}
