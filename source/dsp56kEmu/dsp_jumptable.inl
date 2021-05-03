@@ -321,6 +321,16 @@ namespace dsp56k
 
 		FieldPermutationType(Movex_ea, {Field_W, 0}),
 		FieldPermutationType(Movex_ea, {Field_W, 1}),
+
+		FieldPermutationType(Movex_ea, {Field_MMM, 0}),
+		FieldPermutationType(Movex_ea, {Field_MMM, 1}),
+		FieldPermutationType(Movex_ea, {Field_MMM, 2}),
+		FieldPermutationType(Movex_ea, {Field_MMM, 3}),
+		FieldPermutationType(Movex_ea, {Field_MMM, 4}),
+		FieldPermutationType(Movex_ea, {Field_MMM, 5}),
+		FieldPermutationType(Movex_ea, {Field_MMM, 6}),
+		FieldPermutationType(Movex_ea, {Field_MMM, 7}),
+
 		FieldPermutationType(Movex_aa, {Field_W, 0}),
 		FieldPermutationType(Movex_aa, {Field_W, 1}),
 
@@ -328,6 +338,15 @@ namespace dsp56k
 		FieldPermutationType(Movey_ea, {Field_W, 1}),
 		FieldPermutationType(Movey_aa, {Field_W, 0}),
 		FieldPermutationType(Movey_aa, {Field_W, 1}),
+		
+		FieldPermutationType(Movey_ea, {Field_MMM, 0}),
+		FieldPermutationType(Movey_ea, {Field_MMM, 1}),
+		FieldPermutationType(Movey_ea, {Field_MMM, 2}),
+		FieldPermutationType(Movey_ea, {Field_MMM, 3}),
+		FieldPermutationType(Movey_ea, {Field_MMM, 4}),
+		FieldPermutationType(Movey_ea, {Field_MMM, 5}),
+		FieldPermutationType(Movey_ea, {Field_MMM, 6}),
+		FieldPermutationType(Movey_ea, {Field_MMM, 7}),
 	};
 
 	constexpr size_t g_permutationTypeCount = sizeof(g_permutationTypes) / sizeof(g_permutationTypes[0]);
@@ -335,11 +354,13 @@ namespace dsp56k
 	struct FunctorAbs		{ template<TWord A>				constexpr TInstructionFunc get() const noexcept	{ return &DSP::opCE_Abs<A>;			} };
 	struct FunctorAsl		{ template<TWord A>				constexpr TInstructionFunc get() const noexcept	{ return &DSP::opCE_Asl_D<A>;		} };
 	struct FunctorAndSD		{ template<TWord A, TWord B>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_And_SD<A,B>;	} };
+
 	struct FunctorMovexy	{ template<TWord W, TWord w, TWord ee, TWord ff>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_Movexy<W,w,ee,ff>;	} };
 
-	struct FunctorMovex_ea	{ template<TWord W>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_Movex_ea<W>;	} };
+	struct FunctorMovex_ea	{ template<TWord W, TWord MMM>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_Movex_ea<W, MMM>;	} };
+	struct FunctorMovey_ea	{ template<TWord W, TWord MMM>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_Movey_ea<W, MMM>;	} };
+
 	struct FunctorMovex_aa	{ template<TWord W>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_Movex_aa<W>;	} };
-	struct FunctorMovey_ea	{ template<TWord W>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_Movey_ea<W>;	} };
 	struct FunctorMovey_aa	{ template<TWord W>	constexpr TInstructionFunc get() const noexcept { return &DSP::opCE_Movey_aa<W>;	} };
 
 	constexpr TWord permutationCount(const Instruction _inst, const Field _field) noexcept
@@ -558,9 +579,9 @@ namespace dsp56k
 			addPermutations(getFuncs<FunctorAbs, Abs, Field_d>());
 			addPermutations(getFuncs<FunctorAndSD, And_SD, Field_d, Field_JJ>());
 			addPermutations(getFuncs<FunctorMovexy, Movexy, Field_W, Field_w, Field_ee, Field_ff>());
-			addPermutations(getFuncs<FunctorMovex_ea, Movex_ea, Field_W>());
+			addPermutations(getFuncs<FunctorMovex_ea, Movex_ea, Field_W, Field_MMM>());
 			addPermutations(getFuncs<FunctorMovex_aa, Movex_aa, Field_W>());
-			addPermutations(getFuncs<FunctorMovey_ea, Movey_ea, Field_W>());
+			addPermutations(getFuncs<FunctorMovey_ea, Movey_ea, Field_W, Field_MMM>());
 			addPermutations(getFuncs<FunctorMovey_aa, Movey_aa, Field_W>());
 		}
 

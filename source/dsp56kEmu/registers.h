@@ -195,9 +195,21 @@ namespace dsp56k
 		MMMRRR_RnPlus			= 0b011'000,		
 		MMMRRR_Rn				= 0b100'000,		
 		MMMRRR_RnPlusNnUpdate	= 0b101'000,		
-		MMMRRR_MinusRn			= 0b111'000,		
 		MMMRRR_AbsAddr			= 0b110'000,
 		MMMRRR_ImmediateData	= 0b110'100,
+		MMMRRR_MinusRn			= 0b111'000,
+
+		MMM_RnMinusNn			= 0b000,		
+		MMM_RnPlusNn			= 0b001,		
+		MMM_RnMinus				= 0b010,		
+		MMM_RnPlus				= 0b011,		
+		MMM_Rn					= 0b100,		
+		MMM_RnPlusNnUpdate		= 0b101,		
+		MMM_AbsAddr				= 0b110,
+		MMM_ImmediateData		= 0b110,
+		MMM_MinusRn				= 0b111,
+
+		RRR_ImmediateData		= 0b100,
 	};
 
 	enum OnChipRegisterType

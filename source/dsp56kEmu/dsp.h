@@ -260,7 +260,9 @@ namespace dsp56k
 
 		int		decode_cccc				( TWord cccc ) const;
 
-		TWord	decode_MMMRRR_read		( TWord _mmmrrr );
+		template<TWord mmm>
+		TWord	decode_MMMRRR_read		( TWord _rrr );
+		TWord	decode_MMMRRR_read		( TWord _mmm, TWord _rrr );
 		TWord	decode_XMove_MMRRR		( TWord _mm, TWord _rrr );
 
 		TWord	decode_RRR_read			( TWord _mmmrrr ) const;
@@ -800,13 +802,13 @@ namespace dsp56k
 		void op_Move_xx(TWord op);
 		void op_Mover(TWord op);
 		void op_Move_ea(TWord op);
-		template<TWord W> void opCE_Movex_ea(TWord op);
+		template<TWord W, TWord MMM> void opCE_Movex_ea(TWord op);
 		template<TWord W> void opCE_Movex_aa(TWord op);
 		void op_Movex_Rnxxxx(TWord op);
 		void op_Movex_Rnxxx(TWord op);
 		void op_Movexr_ea(TWord op);
 		void op_Movexr_A(TWord op);
-		template<TWord W> void opCE_Movey_ea(TWord op);
+		template<TWord W, TWord MMM> void opCE_Movey_ea(TWord op);
 		template<TWord W> void opCE_Movey_aa(TWord op);
 		void op_Movey_Rnxxxx(TWord op);
 		void op_Movey_Rnxxx(TWord op);
@@ -917,6 +919,9 @@ namespace dsp56k
 		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr>
 		TWord readMem(TWord op, EMemArea area);
 
+		template <Instruction Inst, TWord MMM, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr>
+		TWord readMem(TWord op, EMemArea area);
+
 		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type* = nullptr>
 		TWord readMem(TWord op, EMemArea area) const;
 
@@ -1022,6 +1027,7 @@ namespace dsp56k
 
 		// -------------- move helper
 		template<Instruction Inst, EMemArea Area, TWord W> void move_ddddd_MMMRRR(TWord op);
+		template<Instruction Inst, EMemArea Area, TWord W, TWord MMM> void move_ddddd_MMMRRR(TWord op);
 		template<Instruction Inst> void move_L(TWord op);
 		template<Instruction Inst, EMemArea Area> void move_Rnxxxx(TWord op);
 		

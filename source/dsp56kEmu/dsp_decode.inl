@@ -412,15 +412,44 @@ namespace dsp56k
 		assert(0 && "invalid ff value");
 	}
 
-	inline TWord DSP::decode_MMMRRR_read( TWord _mmmrrr )
+	template<TWord _mmm> TWord DSP::decode_MMMRRR_read( TWord _rrr )
 	{
-		switch(_mmmrrr)
+		if constexpr(_mmm == 6)																	/* 110         */
+			return fetchOpWordB();
+
+		auto& _r = reg.r[_rrr];
+
+		auto r = _r.toWord();
+
+		if constexpr (_mmm == 4)																/* 100 (Rn)    */
+			return r;
+
+		const auto&	n  = reg.n[_rrr].var;
+		const auto&	m  = reg.m[_rrr].var;
+
+		TWord a;
+
+		if constexpr (_mmm == 0) {	a = r;	AGU::updateAddressRegister(r,-n,m);			   }	/* 000 (Rn)-Nn */
+		if constexpr (_mmm == 1) {	a = r;	AGU::updateAddressRegister(r,+n,m);			   }	/* 001 (Rn)+Nn */
+		if constexpr (_mmm == 2) {	a = r;	AGU::updateAddressRegister(r,-1,m);			   }	/* 010 (Rn)-   */
+		if constexpr (_mmm == 3) {	a = r;	AGU::updateAddressRegister(r,+1,m);			   }	/* 011 (Rn)+   */
+		if constexpr (_mmm == 5) {	a = r;	AGU::updateAddressRegister(a,+n, m);		   }	/* 101 (Rn+Nn) */
+		if constexpr (_mmm == 7) {			AGU::updateAddressRegister(r,-1,m);		a = r; }	/* 111 -(Rn)   */
+
+		_r.var = r;
+
+		return a;
+	}
+
+	inline TWord DSP::decode_MMMRRR_read( TWord _mmm, TWord _rrr )
+	{
+		switch(_mmm << 3 | _rrr)
 		{
 		case MMMRRR_AbsAddr:		return fetchOpWordB();		// absolute address
 		case MMMRRR_ImmediateData:	return fetchOpWordB();		// immediate data
 		}
 
-		const TWord regIdx = _mmmrrr & 0x7;
+		const TWord regIdx = _rrr;
 
 		const TReg24	_n = reg.n[regIdx];
 		TReg24&			_r = reg.r[regIdx];
@@ -430,15 +459,16 @@ namespace dsp56k
 
 		TWord a;
 
-		switch( _mmmrrr & 0x38 )
+		switch( _mmm )
 		{
-		case 0x00:	/* 000 (Rn)-Nn */	a = r;		AGU::updateAddressRegister(r,-_n.var,_m.var);					break;
-		case 0x08:	/* 001 (Rn)+Nn */	a = r;		AGU::updateAddressRegister(r,+_n.var,_m.var);					break;
-		case 0x10:	/* 010 (Rn)-   */	a = r;		AGU::updateAddressRegister(r,-1,_m.var);						break;
-		case 0x18:	/* 011 (Rn)+   */	a = r;		AGU::updateAddressRegister(r,+1,_m.var);						break;
-		case 0x20:	/* 100 (Rn)    */	a = r;																		break;
-		case 0x28:	/* 101 (Rn+Nn) */	a = r;		AGU::updateAddressRegister(a,+_n.var, _m.var);					break;
-		case 0x38:	/* 111 -(Rn)   */				AGU::updateAddressRegister(r,-1,_m.var);			a = r;		break;
+		case 0:	/* 000 (Rn)-Nn */	a = r;		AGU::updateAddressRegister(r,-_n.var,_m.var);					break;
+		case 1:	/* 001 (Rn)+Nn */	a = r;		AGU::updateAddressRegister(r,+_n.var,_m.var);					break;
+		case 2:	/* 010 (Rn)-   */	a = r;		AGU::updateAddressRegister(r,-1,_m.var);						break;
+		case 3:	/* 011 (Rn)+   */	a = r;		AGU::updateAddressRegister(r,+1,_m.var);						break;
+		case 4:	/* 100 (Rn)    */	a = r;																		break;
+		case 5:	/* 101 (Rn+Nn) */	a = r;		AGU::updateAddressRegister(a,+_n.var, _m.var);					break;
+		// case 6: special case handled above, either immediate data or absolute address in extension word
+		case 7:	/* 111 -(Rn)   */				AGU::updateAddressRegister(r,-1,_m.var);			a = r;		break;
 
 		default:
 			assert(0 && "impossible to happen" );
