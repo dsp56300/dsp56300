@@ -403,12 +403,12 @@ namespace dsp56k
 		{
 			if( sr_test_noCache(SR_SM) )
 			{
-				limit_arithmeticSaturation(_result);
+				const unsigned int test=(_result.var>>47)&0x13;
+				if (!(test ^ 0x13) || !(test)) sr_set(SR_V);
 			}
 			else
 			{
-				const auto neq = static_cast<int>((_notLimitedResult & 0x00ff000000000000) != (_result.var & 0x00ff000000000000));
-				sr_toggle( SRB_V, Bit(neq) );
+				sr_toggle( SR_V, ((_notLimitedResult>>48)^(_result.var>>48))&255);
 			}
 		}
 
