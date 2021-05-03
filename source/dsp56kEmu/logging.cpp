@@ -48,7 +48,7 @@ namespace Logging
 	
 	void g_logToFile( const std::string& _s )
 	{
-		g_logToConsole(_s);
+//		g_logToConsole(_s);
 
 		{
 			Guard g(g_logMutex);
