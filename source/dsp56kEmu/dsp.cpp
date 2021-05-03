@@ -902,9 +902,9 @@ namespace dsp56k
 	//
 	const char* DSP::getASM(const TWord _wordA, const TWord _wordB)
 	{
-	#ifdef _DEBUG
-		m_disasm.disassemble(m_asm, _wordA, _wordB, 0, 0, pcCurrentInstruction);
-	#endif
+//	#ifdef _DEBUG
+		if (m_trace && g_traceSupported) m_disasm.disassemble(m_asm, _wordA, _wordB, 0, 0, pcCurrentInstruction);
+//	#endif
 		return m_asm.c_str();
 	}
 
