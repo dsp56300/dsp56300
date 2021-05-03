@@ -175,4 +175,24 @@ namespace dsp56k
 
 		return d;
 	}
+
+	constexpr size_t g_cacheLineSize	= 128;
+
+	constexpr size_t alignedSize(size_t _size)
+	{
+		return (_size + g_cacheLineSize - 1) / g_cacheLineSize * g_cacheLineSize;
+	}
+
+	template<typename T>
+	T* alignedAddress(T* _ptr)
+	{
+		static_assert(sizeof(size_t) == sizeof(T*), "pointer size invalid");
+		const auto addr = reinterpret_cast<size_t>(_ptr);
+		return reinterpret_cast<T*>((addr + g_cacheLineSize - 1) / g_cacheLineSize * g_cacheLineSize);
+	}
+
+	template<typename T> constexpr size_t alignedSize()
+	{
+		return alignedSize(sizeof(T));
+	}
 }
