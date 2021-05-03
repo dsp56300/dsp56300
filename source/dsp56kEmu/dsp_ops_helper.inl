@@ -123,6 +123,21 @@ namespace dsp56k
 		return writeMem<Inst>(op, getFieldValueMemArea<Inst>(op), value);
 	}
 
+	template <Instruction Inst, TWord MMM, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
+	{
+		const TWord rrr = getFieldValue<Inst, Field_RRR>(op);
+
+		assert((MMM << 3 | rrr) != MMMRRR_ImmediateData && "can't write to immediate data");
+
+		const auto ea = decode_MMMRRR_read<MMM>(rrr);
+
+		// TODO: I don't like this. There are special instructions to access peripherals, but the decoding allows to access peripherals with regular addressing.
+		if(ea >= XIO_Reserved_High_First)
+			memWritePeriph(area, ea, value);
+		else
+			memWrite(area, ea, value);
+	}
+
 	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
 	{
 		const TWord mmm = getFieldValue<Inst, Field_MMM>(op);

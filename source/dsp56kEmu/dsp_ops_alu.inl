@@ -59,12 +59,12 @@ namespace dsp56k
 		d.var = res;
 		d.doMasking();
 
-		const bool carry = res > g_alu_max_56_u;
+		const auto carry = int(res > g_alu_max_56_u);
 
 		// S L E U N Z V C
 
 		sr_z_update(d);
-		sr_toggle(SR_C, carry);
+		sr_toggle(SRB_C, Bit(carry));
 		sr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 //		sr_l_update_by_v();
 

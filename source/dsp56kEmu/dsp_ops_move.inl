@@ -17,7 +17,7 @@ namespace dsp56k
 		else
 		{
 			const auto r = decode_ddddd_read<TWord>( ddddd );
-			writeMem<Inst>(op, Area, r);
+			writeMem<Inst, MMM>(op, Area, r);
 		}
 	}
 	template<Instruction Inst, EMemArea Area, TWord write> void DSP::move_ddddd_MMMRRR(TWord op)

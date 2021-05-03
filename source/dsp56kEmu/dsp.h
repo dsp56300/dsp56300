@@ -407,7 +407,8 @@ namespace dsp56k
 			}
 			else
 			{
-				sr_toggle( SR_V, (_notLimitedResult & 0x00ff000000000000) != (_result.var & 0x00ff000000000000) );
+				const auto neq = static_cast<int>((_notLimitedResult & 0x00ff000000000000) != (_result.var & 0x00ff000000000000));
+				sr_toggle( SRB_V, Bit(neq) );
 			}
 		}
 
@@ -539,12 +540,12 @@ namespace dsp56k
 			if( !sr_test_noCache(SR_SM) )
 				return;
 
-			const unsigned int v = (int(bittest( _dst, 55 )) << 2) | (int(bittest( _dst, 48 )) << 1) | (int(bittest(_dst,47)));
+			const auto v = (bitvalue( _dst, 55 ).bit << 2) | (bitvalue( _dst, 48 ).bit << 1) | bitvalue(_dst,47).bit;
 
 			switch( v )
 			{
 			case 0:
-			case 7:	/* do nothing */	break;
+			case 7:	/* do nothing */								break;
 			case 1:
 			case 2:
 			case 3:	_dst.var = 0x007fffffffffff;	sr_set(SR_V);	break;
@@ -939,6 +940,9 @@ namespace dsp56k
 		void writeMem(TWord op, TWord value);
 
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr>
+		void writeMem(TWord op, EMemArea area, TWord value);
+
+		template <Instruction Inst, TWord MMM, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr>
 		void writeMem(TWord op, EMemArea area, TWord value);
 
 		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type* = nullptr>
