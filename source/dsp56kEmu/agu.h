@@ -55,11 +55,10 @@ namespace dsp56k
 					}
 					else
 					{
-						const TWord rBase			= r & (~moduloMask);
 						// If (rOffset<0) then bit 31 of rOffset is set. Shift it down 31 places to get -1. Otherwise you have 0.
 						// and this value with modulo to get either modulo or zero. Add to rOffset.
 						// If (moduloTest-rOffset<0) (rOffset>moduloTest) (i.e. rOffset exceeds moduloTest), do the same trick.
-						const int32_t p				= r + n - rBase;
+						const int32_t p				= (r&moduloMask) + n;
 						const int32_t mt			= m - p;
 						r							+= n + ((p>>31) & modulo) - (((mt)>>31) & modulo);
 					}
