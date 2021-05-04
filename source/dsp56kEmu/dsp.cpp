@@ -782,14 +782,14 @@ namespace dsp56k
 		case Reg_R6:	reg.r[6] = _res;	break;
 		case Reg_R7:	reg.r[7] = _res;	break;
 							
-		case Reg_M0:	reg.m[0] = _res;	break;
-		case Reg_M1:	reg.m[1] = _res;	break;
-		case Reg_M2:	reg.m[2] = _res;	break;
-		case Reg_M3:	reg.m[3] = _res;	break;
-		case Reg_M4:	reg.m[4] = _res;	break;
-		case Reg_M5:	reg.m[5] = _res;	break;
-		case Reg_M6:	reg.m[6] = _res;	break;
-		case Reg_M7:	reg.m[7] = _res;	break;
+		case Reg_M0:	set_m(0, _res.var);		break;
+		case Reg_M1:	set_m(1, _res.var);		break;
+		case Reg_M2:	set_m(2, _res.var);		break;
+		case Reg_M3:	set_m(3, _res.var);		break;
+		case Reg_M4:	set_m(4, _res.var);		break;
+		case Reg_M5:	set_m(5, _res.var);		break;
+		case Reg_M6:	set_m(6, _res.var);		break;
+		case Reg_M7:	set_m(7, _res.var);		break;
 							
 		case Reg_A0:	a0(_res);		break;
 		case Reg_A1:	a1(_res);		break;
@@ -1111,6 +1111,27 @@ namespace dsp56k
 		sr_s_update();									// Changed according to the standard definition
 		//sr_l_update_by_v();							// Changed according to the standard definition
 	}
+
+	void DSP::set_m( const int which, const TWord val)
+	{
+		reg.m[which].var = val;
+		if (val == 0xffffff) return;
+		const TWord moduloTest = (val & 0xffff);
+		if (moduloTest == 0)
+		{
+			moduloMask[which] = 0;
+		}
+		else if( moduloTest <= 0x007fff )
+		{
+			moduloMask[which] = AGU::calcModuloMask(val);
+			modulo[which] = val + 1;
+		}
+		else
+		{
+			LOG_ERR_NOTIMPLEMENTED( "AGU multiple Wrap-Around Modulo Modifier: m=" << HEX(val) );
+		}
+	}
+
 
 	// _____________________________________________________________________________
 	// save
