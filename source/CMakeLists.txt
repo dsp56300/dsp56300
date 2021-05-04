@@ -6,5 +6,6 @@ include("base.cmake")
 
 # own
 add_subdirectory(dsp56kEmu)
+add_subdirectory(asmjit)
 
 # ----------------- command-line app
