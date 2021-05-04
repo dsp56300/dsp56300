@@ -4,7 +4,8 @@ project(dsp56kemu VERSION 0.0.1)
 
 include("base.cmake")
 
-# own
+set(ASMJIT_STATIC TRUE)
+
 add_subdirectory(dsp56kEmu)
 add_subdirectory(asmjit)
 
