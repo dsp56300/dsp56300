@@ -659,6 +659,4 @@ namespace dsp56k
 		std::vector<TInstructionFunc> m_jumpTable;
 		std::array<PermutationList, InstructionCount> m_permutationInfo;
 	};
-
-	static_assert (sizeof(TInstructionFunc) == sizeof(void*), "DSP class must be final and must not have virtual functions");
 }
