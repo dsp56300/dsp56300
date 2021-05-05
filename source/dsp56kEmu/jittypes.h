@@ -33,6 +33,20 @@ namespace dsp56k
 	enum XMMReg
 	{
 		xmmR0, xmmR1, xmmR2, xmmR3, xmmR4, xmmR5, xmmR6, xmmR7,
-		xmmA, xmmB, xmmX, xmmY
+		xmmA, xmmB,
+		xmmX, xmmY
+	};
+
+	enum GPReg
+	{
+#ifdef _MSC_VER
+		gpOP = 2,	// rax
+#else
+		gpOP = 6,	// rdi
+#endif
+		gpSR = 8,
+		gpPC = 9,
+		gpLC = 10,
+		gpLA = 11,
 	};
 }
