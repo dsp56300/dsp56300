@@ -22,6 +22,10 @@ namespace dsp56k
 		void loadALUtoXMM(int _xmm, int _alu);
 		void loadXYtoXMM(int _xmm, int _xy);
 
+		void storeAGUfromXMM(int _agu, int _xmm);
+		void storeALUfromXMM(int _alu, int _xmm);
+		void storeXYfromXMM(int _xy, int _xmm);
+
 		template<typename T>
 		void getR(T _dst, int _agu)
 		{
@@ -48,6 +52,7 @@ namespace dsp56k
 		}
 
 		void loadDSPRegs();
+		void storeDSPRegs();
 
 		asmjit::JitRuntime m_rt;
 		asmjit::CodeHolder m_code;

@@ -28,6 +28,8 @@ namespace dsp56k
 		getN(Jitmem::ptr(*m_asm, m_dsp.regs().n[7]), 0);
 		getM(Jitmem::ptr(*m_asm, m_dsp.regs().m[7]), 0);
 
+		storeDSPRegs();
+
 		m_asm->ret();
 
 		typedef void (*Func)(TWord op);
@@ -47,7 +49,7 @@ namespace dsp56k
 		m_dsp.regs().b.var = 0x00bbccddeeff0011;
 
 		m_dsp.regs().x.var = 0x00babeb00bf00d12;
-		m_dsp.regs().y.var = 0x00babeb00bbabe55;
+		m_dsp.regs().y.var = 0x00bada55c0deba5e;
 		func(0x123456);
 	}
 
@@ -84,6 +86,30 @@ namespace dsp56k
 		m_asm->movq(xmm(_xmm), Jitmem::ptr(*m_asm, xy));
 	}
 
+	void Jit::storeAGUfromXMM(int _agu, int _xmm)
+	{
+		const auto xm = xmm(_xmm);
+		m_asm->movd(Jitmem::ptr(*m_asm, m_dsp.regs().r[_agu]), xm);
+		m_asm->psrldq(xm, Imm(4));
+		m_asm->movd(Jitmem::ptr(*m_asm, m_dsp.regs().n[_agu]), xm);
+		m_asm->psrldq(xm, Imm(4));
+		m_asm->movd(Jitmem::ptr(*m_asm, m_dsp.regs().m[_agu]), xm);
+	}
+
+	void Jit::storeALUfromXMM(int _alu, int _xmm)
+	{
+		auto& alu = _alu ? m_dsp.regs().b : m_dsp.regs().a;
+
+		m_asm->movq(Jitmem::ptr(*m_asm, alu), xmm(_xmm));
+	}
+
+	void Jit::storeXYfromXMM(int _xy, int _xmm)
+	{
+		auto& xy = _xy ? m_dsp.regs().x : m_dsp.regs().y;
+
+		m_asm->movq(Jitmem::ptr(*m_asm, xy), xmm(_xmm));
+	}
+
 	void Jit::loadDSPRegs()
 	{
 		for(auto i=0; i<8; ++i)
@@ -93,6 +119,18 @@ namespace dsp56k
 		loadALUtoXMM(xmmB, 1);
 
 		loadXYtoXMM(xmmX, 0);
-		loadXYtoXMM(xmmY, 0);
+		loadXYtoXMM(xmmY, 1);
+	}
+
+	void Jit::storeDSPRegs()
+	{
+		for(auto i=0; i<8; ++i)
+			storeAGUfromXMM(i, xmmR0 + i);
+
+		storeALUfromXMM(0, xmmA);
+		storeALUfromXMM(1, xmmB);
+
+		storeXYfromXMM(0, xmmX);
+		storeXYfromXMM(1, xmmY);
 	}
 }
