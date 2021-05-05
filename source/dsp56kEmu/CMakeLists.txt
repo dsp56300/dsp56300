@@ -58,3 +58,5 @@ if(UNIX AND NOT APPLE)
 	find_package(Threads REQUIRED)
 	target_link_libraries(dsp56kEmu PUBLIC Threads::Threads)
 endif()
+
+target_link_libraries(dsp56kEmu PUBLIC asmjit)
