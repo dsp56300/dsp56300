@@ -30,6 +30,7 @@ jit.cpp jit.h
 jitblock.cpp jitblock.h
 jithelper.cpp jithelper.h
 jitmem.cpp jitmem.h
+jittypes.h
 logging.cpp logging.h
 memory.cpp memory.h
 omfloader.cpp omfloader.h
