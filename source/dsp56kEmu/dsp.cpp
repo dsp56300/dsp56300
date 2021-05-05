@@ -456,9 +456,12 @@ namespace dsp56k
 			if (getInstructionCounter() == simpleguess)
 			{
 				const TWord startpc=hiword(reg.ss[ssIndex()]).var;
-				while (--reg.lc.var>0) {
+
+				while (--reg.lc.var > 0) 
+				{
 					setPC(startpc);
-					for (int i=0;i<looplen;i++)
+
+					for (TWord i=0; i<looplen; i++)
 					{
 						pcCurrentInstruction = reg.pc.toWord();
 						execOp(fetchPC());
