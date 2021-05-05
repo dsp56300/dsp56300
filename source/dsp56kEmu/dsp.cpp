@@ -72,7 +72,7 @@ namespace dsp56k
 		if(perif[1] != perif[0])
 			perif[1]->reset();
 
-		reg.m[0] = reg.m[1] = reg.m[2] = reg.m[3] = reg.m[4] = reg.m[5] = reg.m[6] = reg.m[7] = TReg24(int(0xffffff));
+		for (int i=0;i<8;i++) set_m(i, 0xFFFFFF);
 		reg.r[0] = reg.r[1] = reg.r[2] = reg.r[3] = reg.r[4] = reg.r[5] = reg.r[6] = reg.r[7] = TReg24(int(0));
 		reg.n[0] = reg.n[1] = reg.n[2] = reg.n[3] = reg.n[4] = reg.n[5] = reg.n[6] = reg.n[7] = TReg24(int(0));
 
@@ -1115,7 +1115,11 @@ namespace dsp56k
 	void DSP::set_m( const int which, const TWord val)
 	{
 		reg.m[which].var = val;
-		if (val == 0xffffff) return;
+		if (val == 0xffffff) {
+			modulo[which]=0;
+			moduloMask[which]=0xffffff;
+			return;
+		}
 		const TWord moduloTest = (val & 0xffff);
 		if (moduloTest == 0)
 		{
