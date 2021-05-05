@@ -26,6 +26,10 @@ hdi08.cpp hdi08.h
 hi08.h
 instructioncache.cpp instructioncache.h
 interrupts.h
+jit.cpp jit.h
+jitblock.cpp jitblock.h
+jithelper.cpp jithelper.h
+jitmem.cpp jitmem.h
 logging.cpp logging.h
 memory.cpp memory.h
 omfloader.cpp omfloader.h
