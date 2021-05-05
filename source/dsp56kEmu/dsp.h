@@ -573,6 +573,10 @@ namespace dsp56k
 		void	setA			( const TReg56& _src )				{ reg.a = _src; }
 		void	setB			( const TReg56& _src )				{ reg.b = _src; }
 
+		TWord 	moduloMask[8], modulo[8];
+		void 	set_m			( const int which, const TWord val);
+
+		
 		// STACK
 		void	decSP			();
 		void	incSP			();

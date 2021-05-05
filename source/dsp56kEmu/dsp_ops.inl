@@ -338,10 +338,10 @@ namespace dsp56k
 
 		switch( mmrrr & 0x18 )
 		{
-		case 0x00:	/* 00 */	AGU::updateAddressRegister( _r, -_n.var, _m.var );		break;
-		case 0x08:	/* 01 */	AGU::updateAddressRegister( _r, +_n.var, _m.var );		break;
-		case 0x10:	/* 10 */	AGU::updateAddressRegister( _r, -1, _m.var );			break;
-		case 0x18:	/* 11 */	AGU::updateAddressRegister( _r, +1, _m.var );			break;
+		case 0x00:	/* 00 */	AGU::updateAddressRegister( _r, -_n.var, _m.var,moduloMask[regIdx],modulo[regIdx] );		break;
+		case 0x08:	/* 01 */	AGU::updateAddressRegister( _r, +_n.var, _m.var,moduloMask[regIdx],modulo[regIdx] );		break;
+		case 0x10:	/* 10 */	AGU::updateAddressRegister( _r, -1, _m.var,moduloMask[regIdx],modulo[regIdx] );			break;
+		case 0x18:	/* 11 */	AGU::updateAddressRegister( _r, +1, _m.var,moduloMask[regIdx],modulo[regIdx] );			break;
 		default:
 			assert(0 && "impossible to happen" );
 		}
