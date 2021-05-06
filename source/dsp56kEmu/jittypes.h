@@ -4,6 +4,7 @@
 
 namespace dsp56k
 {
+	// TODO: asmjit should have code for this, I can't find it
 #ifdef _MSC_VER
 	static constexpr auto regOP = asmjit::x86::rcx;
 #else
@@ -37,16 +38,30 @@ namespace dsp56k
 		xmmX, xmmY
 	};
 
+	static constexpr auto regTempMemAddr = asmjit::x86::rax;
+
 	enum GPReg
 	{
+// TODO: asmjit should have code for this, I can't find it
 #ifdef _MSC_VER
-		gpOP = 2,	// rax
+		gpOP = asmjit::x86::Gp::kIdAx,	// rax
 #else
-		gpOP = 6,	// rdi
+		gpOP = asmjit::x86::Gp::kIdDi,	// rdi
 #endif
-		gpSR = 8,
-		gpPC = 9,
-		gpLC = 10,
-		gpLA = 11,
+
+		gpSR = asmjit::x86::Gp::kIdR8,
+		gpPC = asmjit::x86::Gp::kIdR9,
+		gpLC = asmjit::x86::Gp::kIdR10,
+		gpLA = asmjit::x86::Gp::kIdR11,
 	};
+
+	static constexpr auto regSR = asmjit::x86::r8;
+	static constexpr auto regPC = asmjit::x86::r9;
+	static constexpr auto regLC = asmjit::x86::r10;
+	static constexpr auto regLA = asmjit::x86::r11;
+
+	static constexpr auto regGPTempA = asmjit::x86::rdx;
+	static constexpr auto regGPTempB = asmjit::x86::rsi;
+
+	static constexpr auto regLastModAlu = asmjit::x86::xmm12;
 }

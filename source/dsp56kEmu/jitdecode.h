@@ -2,5 +2,7 @@
 
 namespace dsp56k
 {
-	
+	namespace jitDecode
+	{
+	}
 }

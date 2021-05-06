@@ -4,6 +4,8 @@
 #include "asmjit/x86/x86assembler.h"
 #include "asmjit/x86/x86operand.h"
 
+#include "jittypes.h"
+
 namespace dsp56k
 {
 	class Jitmem
@@ -19,13 +21,13 @@ namespace dsp56k
 		static asmjit::x86::Mem ptr(asmjit::x86::Assembler& _a, const T* _t)
 		{
 			if constexpr (sizeof(T*) == sizeof(uint64_t))
-				_a.mov(asmjit::x86::rax, reinterpret_cast<uint64_t>(_t));
+				_a.mov(regTempMemAddr, reinterpret_cast<uint64_t>(_t));
 			else if constexpr (sizeof(T*) == sizeof(uint32_t))
-				_a.mov(asmjit::x86::rax, reinterpret_cast<uint32_t>(_t));
+				_a.mov(regTempMemAddr, reinterpret_cast<uint32_t>(_t));
 			else
 				static_assert(sizeof(T*) == sizeof(uint64_t) || sizeof(T*) == sizeof(uint32_t), "unknown pointer size");
 
-			return asmjit::x86::ptr(asmjit::x86::rax);
+			return asmjit::x86::ptr(regTempMemAddr);
 		}		
 	};
 }

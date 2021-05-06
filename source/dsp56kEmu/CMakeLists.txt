@@ -28,9 +28,14 @@ instructioncache.cpp instructioncache.h
 interrupts.h
 jit.cpp jit.h
 jitblock.cpp jitblock.h
+jitdecode.cpp jitdecode.h
+jitdspregs.cpp jitdspregs.h
 jithelper.cpp jithelper.h
 jitmem.cpp jitmem.h
+jitops.cpp jitops.h
+jitops_alu.inl
 jittypes.h
+jitunittests.cpp jitunittests.h
 logging.cpp logging.h
 memory.cpp memory.h
 omfloader.cpp omfloader.h

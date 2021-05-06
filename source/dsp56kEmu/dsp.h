@@ -216,6 +216,7 @@ namespace dsp56k
 
 		Memory&			memory							()											{ return mem; }
 		SRegs&			regs							()											{ return reg; }
+		const Opcodes&	opcodes							() const									{ return m_opcodes; }
 		Disassembler&	disassembler					()											{ return m_disasm; }
 
 		void			setPeriph						(size_t _index, IPeripherals* _periph)		{ perif[_index] = _periph; _periph->setDSP(this); }
