@@ -17,7 +17,11 @@ It can currently run the dspthru example in polling mode and in interrupt mode. 
 
 ### Performance
 
-Performance goal: Emulating the DSP56362 in real time, which runs at 120MHz, resulting in 120 million instructions/second. The current speed varies and improves daily, on a Core i7 4790K @ 4 GHz the emulated speed at the moment reaches about 42 MHz, i.e. 42 million instructions/second, but there is still enough potential to improve emulation speed.
+Performance goal: Emulating the DSP56362 in real time, which runs at 120MHz, resulting in 120 million instructions/second.
+
+The current implementation is a highly optimized interpreter which achieves between 40 and 90 MIPS on a Core i7 4790K @ 4 GHz.
+
+As there is not enough room left for further improvements in the interpreter, the emulator is currently being rewritten as a JIT engine which will increase the emulation speed by several magnitudes.
 
 ### Join us on Discord
 
