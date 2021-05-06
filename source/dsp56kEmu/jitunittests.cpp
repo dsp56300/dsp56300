@@ -21,8 +21,8 @@ namespace dsp56k
 			dsp.regs().a.var = 0x00ff112233445566;
 			dsp.regs().b.var = 0x0000aabbccddeeff;
 
-			ops.op_Abs(0);
-			ops.op_Abs(1);
+			ops.op_Abs(0x000000);
+			ops.op_Abs(0xffffff);
 		}
 
 		m_asm->ret();

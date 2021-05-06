@@ -138,10 +138,9 @@ namespace dsp56k
 	void JitDspRegs::getALU(const Gp _dst, const int _alu)
 	{
 		if(!isLoaded(LoadedRegA + _alu))
-		{
 			loadALU(_alu);
-			m_asm.movq(_dst, xmm(xmmA + _alu));
-		}
+
+		m_asm.movq(_dst, xmm(xmmA + _alu));
 	}
 
 	void JitDspRegs::setALU(int _alu, asmjit::x86::Gp _src)
