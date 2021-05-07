@@ -26,16 +26,6 @@ hdi08.cpp hdi08.h
 hi08.h
 instructioncache.cpp instructioncache.h
 interrupts.h
-jit.cpp jit.h
-jitblock.cpp jitblock.h
-jitdecode.cpp jitdecode.h
-jitdspregs.cpp jitdspregs.h
-jitmem.cpp jitmem.h
-jitops.cpp jitops.h
-jitops_alu.inl jitops_ccr.inl jitops_helper.inl
-jitregtracker.cpp jitregtracker.h
-jittypes.h
-jitunittests.cpp jitunittests.h
 logging.cpp logging.h
 memory.cpp memory.h
 omfloader.cpp omfloader.h
@@ -55,8 +45,22 @@ unittests.cpp unittests.h
 utils.cpp utils.h
 )
 
-target_sources(dsp56kEmu PRIVATE ${SOURCES})
+set(SOURCES_JIT
+jit.cpp jit.h
+jitblock.cpp jitblock.h
+jitdecode.cpp jitdecode.h
+jitdspregs.cpp jitdspregs.h
+jitmem.cpp jitmem.h
+jitops.cpp jitops.h
+jitops_alu.inl jitops_ccr.inl jitops_helper.inl
+jitregtracker.cpp jitregtracker.h
+jittypes.h
+jitunittests.cpp jitunittests.h
+)
+
+target_sources(dsp56kEmu PRIVATE ${SOURCES} ${SOURCES_JIT})
 source_group("source" FILES ${SOURCES})
+source_group("source\\jit" FILES ${SOURCES_JIT})
 
 if(WIN32 AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../dsp56k/CM56300.lib AND NOT ${CMAKE_VS_PLATFORM_NAME} STREQUAL "x64")
 	target_link_libraries(dsp56kEmu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../dsp56k/CM56300.lib)
