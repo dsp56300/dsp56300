@@ -1,11 +1,17 @@
 #pragma once
 
+#include "assert.h"
+
 #include <stack>
 
+
+#include "types.h"
 #include "asmjit/x86/x86operand.h"
 
 namespace dsp56k
 {
+	class JitBlock;
+
 	template<typename T>
 	class JitRegpool
 	{
@@ -67,4 +73,19 @@ namespace dsp56k
 
 	using RegGP = JitScopedReg<asmjit::x86::Gpq>;
 	using RegXMM = JitScopedReg<asmjit::x86::Xmm>;
+
+	class AluReg
+	{
+	public:
+		AluReg(JitBlock& _block, TWord _aluIndex, bool readOnly = false);
+		~AluReg();
+		asmjit::x86::Gpq get() const { return m_reg.get(); }
+		operator asmjit::x86::Gpq () const { return m_reg.get(); }
+		operator const RegGP& () const { return m_reg; }
+	private:
+		JitBlock& m_block;
+		const RegGP m_reg;
+		const TWord m_aluIndex;
+		const bool m_readOnly;
+	};
 }
