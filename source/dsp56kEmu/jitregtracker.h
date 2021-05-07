@@ -38,7 +38,7 @@ namespace dsp56k
 	public:
 		JitScopedReg() = delete;
 		JitScopedReg(JitRegpool<T>& _pool) : m_pool(_pool), m_reg(m_pool.get()) {}
-		~JitScopedReg() { m_pool.put(m_reg); }
+		~JitScopedReg() { release(); }
 
 		const T& get() const { return m_reg; }
 
@@ -52,9 +52,17 @@ namespace dsp56k
 
 		template<typename U = T> operator typename std::enable_if_t<std::is_same<U, asmjit::x86::Gpq>::value, asmjit::Imm>::type () const = delete;
 
+		void release()
+		{
+			if(!m_acquired)
+				return;
+			m_pool.put(m_reg);
+			m_acquired = false;
+		}
 	private:
 		JitRegpool<T>& m_pool;
 		T m_reg;
+		bool m_acquired = true;
 	};
 
 	using RegGP = JitScopedReg<asmjit::x86::Gpq>;
