@@ -1,6 +1,7 @@
 #include "jit.h"
 
 #include "dsp.h"
+#include "jitblock.h"
 #include "jitdspregs.h"
 #include "jitops.h"
 
@@ -13,12 +14,12 @@ using namespace x86;
 /*
 	The idea of this JIT is to keep all relevant DSP registers in X64 registers. Register allocation looks like this:
 
-	RAX	= temp memory address		               |               XMM00 = DSP AGU 0 [0,M,N,R]
+	RAX	= temp                                     |               XMM00 = DSP AGU 0 [0,M,N,R]
 	RBX							*                  |               XMM01 = DSP AGU 1 [0,M,N,R]
 	RCX	= current opcode (Microsoft)		       |               XMM02 = DSP AGU 2 [0,M,N,R]
-	RDX								               |               XMM03 = DSP AGU 3 [0,M,N,R]
+	RDX	= temp						               |               XMM03 = DSP AGU 3 [0,M,N,R]
 	RBP							*                  |               XMM04 = DSP AGU 4 [0,M,N,R]
-	RSI								               |               XMM05 = DSP AGU 5 [0,M,N,R]
+	RSI	= temp						               |               XMM05 = DSP AGU 5 [0,M,N,R]
 	RDI	= current opcode (linux)				   |               XMM06 = DSP AGU 6 [0,M,N,R]
 	RSP							*	               |               XMM07 = DSP AGU 7 [0,M,N,R]
 	R8  = DSP Status Register		               |               XMM08 = DSP A
@@ -26,9 +27,9 @@ using namespace x86;
 	R10 = DSP Loop Counter			               |               XMM10 = DSP X
 	R11 = DSP Loop Address			               |               XMM11 = DSP Y
 	R12							*                  |               XMM12 = last modified ALU for lazy SR updates
-	R13							*                  |               XMM13
-	R14							*                  |               XMM14
-	R15							*                  |               XMM15 = temp M N R load/store
+	R13							*                  |               XMM13 = temp
+	R14							*                  |               XMM14 = temp
+	R15							*                  |               XMM15 = temp
 
 	* = callee-save = we need to restore the previous register state before returning
 */
@@ -42,9 +43,9 @@ namespace dsp56k
 		m_asm = new Assembler(&m_code);
 
 		{
-			JitDspRegs regs(*m_asm, m_dsp);
+			JitBlock block(*m_asm, m_dsp);
 
-			JitOps ops(m_dsp.opcodes(), regs, *m_asm);
+			JitOps ops(block);
 
 			m_dsp.regs().a.var = 0x00ff112233445566;
 

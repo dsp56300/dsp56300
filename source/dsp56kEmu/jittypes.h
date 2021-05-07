@@ -38,8 +38,6 @@ namespace dsp56k
 		xmmX, xmmY
 	};
 
-	static constexpr auto regTempMemAddr = asmjit::x86::rax;
-
 	enum GPReg
 	{
 // TODO: asmjit should have code for this, I can't find it
@@ -60,8 +58,13 @@ namespace dsp56k
 	static constexpr auto regLC = asmjit::x86::r10;
 	static constexpr auto regLA = asmjit::x86::r11;
 
-	static constexpr auto regGPTempA = asmjit::x86::rdx;
-	static constexpr auto regGPTempB = asmjit::x86::rsi;
+	static constexpr auto regGPTempA = asmjit::x86::rax;
+	static constexpr auto regGPTempB = asmjit::x86::rdx;
+	static constexpr auto regGPTempC = asmjit::x86::rsi;
+
+	static constexpr auto regXMMTempA = asmjit::x86::xmm13;
+	static constexpr auto regXMMTempB = asmjit::x86::xmm14;
+	static constexpr auto regXMMTempC = asmjit::x86::xmm15;
 
 	static constexpr auto regLastModAlu = asmjit::x86::xmm12;
 }

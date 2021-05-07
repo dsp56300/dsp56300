@@ -1,6 +1,7 @@
 #include "jitdspregs.h"
 
 #include "jitmem.h"
+#include "jitblock.h"
 
 #include "dsp.h"
 
@@ -9,7 +10,7 @@ using namespace x86;
 
 namespace dsp56k
 {
-	JitDspRegs::JitDspRegs(Assembler& _a, DSP& _dsp): m_asm(_a), m_dsp(_dsp)
+	JitDspRegs::JitDspRegs(JitBlock& _block): m_block(_block), m_asm(_block.asm_()), m_dsp(_block.dsp())
 	{
 	}
 
@@ -22,15 +23,18 @@ namespace dsp56k
 	{
 		// TODO: we can do better by reordering the DSP registers in memory so that we can load one 128 bit word at once
 		const auto xm = xmm(xmmR0 + _agu);
-		m_asm.movd(xm, Jitmem::ptr(m_asm, m_dsp.regs().m[_agu]));
+		auto& mem = m_block.mem();
+		mem.mov(xm, m_dsp.regs().m[_agu]);
 		m_asm.pslldq(xm, Imm(4));
 
-		m_asm.movd(xmm(15), Jitmem::ptr(m_asm, m_dsp.regs().n[_agu]));
-		m_asm.movss(xm, xmm(15));
+		const RegXMM xmmTemp(m_block.xmmPool());
+		
+		mem.mov(xmmTemp.get(), m_dsp.regs().n[_agu]);
+		m_asm.movss(xm, xmmTemp.get());
 		m_asm.pslldq(xm, Imm(4));
 
-		m_asm.movd(xmm(15), Jitmem::ptr(m_asm, m_dsp.regs().r[_agu]));
-		m_asm.movss(xm, xmm(15));
+		mem.mov(xmmTemp.get(), m_dsp.regs().r[_agu]);
+		m_asm.movss(xm, xmmTemp.get());
 
 		setLoaded(LoadedRegR0 + _agu);
 	}
@@ -38,17 +42,17 @@ namespace dsp56k
 	void JitDspRegs::loadALU(int _alu)
 	{
 		auto& alu = _alu ? m_dsp.regs().b : m_dsp.regs().a;
-
-		m_asm.movq(xmm(xmmA + _alu), Jitmem::ptr(m_asm, alu));
+		
+		m_block.mem().mov(xmm(xmmA + _alu), alu);
 
 		setLoaded(LoadedRegA + _alu);
 	}
 
 	void JitDspRegs::loadXY(int _xy)
 	{
-		auto& xy = _xy ? m_dsp.regs().x : m_dsp.regs().y;
+		auto& xy = _xy ? m_dsp.regs().y : m_dsp.regs().x;
 
-		m_asm.movq(xmm(xmmX + _xy), Jitmem::ptr(m_asm, xy));
+		m_block.mem().mov(xmm(xmmX + _xy), xy);
 
 		setLoaded(LoadedRegX + _xy);
 	}
@@ -56,11 +60,15 @@ namespace dsp56k
 	void JitDspRegs::storeAGU(int _agu)
 	{
 		const auto xm = xmm(xmmR0 + _agu);
-		m_asm.movd(Jitmem::ptr(m_asm, m_dsp.regs().r[_agu]), xm);
+		auto& mem = m_block.mem();
+
+		mem.mov(m_dsp.regs().r[_agu], xm);
 		m_asm.psrldq(xm, Imm(4));
-		m_asm.movd(Jitmem::ptr(m_asm, m_dsp.regs().n[_agu]), xm);
+
+		mem.mov(m_dsp.regs().n[_agu], xm);
 		m_asm.psrldq(xm, Imm(4));
-		m_asm.movd(Jitmem::ptr(m_asm, m_dsp.regs().m[_agu]), xm);
+
+		mem.mov(m_dsp.regs().m[_agu], xm);
 
 		setUnloaded(LoadedRegR0 + _agu);
 	}
@@ -69,7 +77,7 @@ namespace dsp56k
 	{
 		auto& alu = _alu ? m_dsp.regs().b : m_dsp.regs().a;
 
-		m_asm.movq(Jitmem::ptr(m_asm, alu), xmm(xmmA + _alu));
+		m_block.mem().mov(alu, xmm(xmmA + _alu));
 
 		setUnloaded(LoadedRegA + _alu);
 	}
@@ -78,17 +86,17 @@ namespace dsp56k
 	{
 		auto& xy = _xy ? m_dsp.regs().x : m_dsp.regs().y;
 
-		m_asm.movq(Jitmem::ptr(m_asm, xy), xmm(xmmX + _xy));
+		m_block.mem().mov(xy, xmm(xmmX + _xy));
 
 		setUnloaded(LoadedRegX + _xy);
 	}
 	void JitDspRegs::load24(const Gp& _dst, TReg24& _src)
 	{
-		m_asm.mov(_dst, Jitmem::ptr(m_asm, _src));
+		m_block.mem().mov(_dst, _src);
 	}
 	void JitDspRegs::store24(TReg24& _dst, const Gp& _src)
 	{
-		m_asm.mov(Jitmem::ptr(m_asm, _dst), _src);
+		m_block.mem().mov(_dst, _src);
 	}
 
 	Gp JitDspRegs::getPC()
@@ -143,10 +151,18 @@ namespace dsp56k
 		m_asm.movq(_dst, xmm(xmmA + _alu));
 	}
 
-	void JitDspRegs::setALU(int _alu, asmjit::x86::Gp _src)
+	void JitDspRegs::setALU(int _alu, Gp _src)
 	{
 		assert(isLoaded(LoadedRegA + _alu));
 		m_asm.movq(xmm(xmmA + _alu), _src);
+	}
+
+	void JitDspRegs::getXY(Gp _dst, int _xy)
+	{
+		if(!isLoaded(LoadedRegX + _xy))
+			loadXY(_xy);
+
+		m_asm.movq(_dst, xmm(xmmX + _xy));
 	}
 
 	void JitDspRegs::loadDSPRegs()

@@ -3,6 +3,7 @@
 #include <map>
 
 #include "jitdspregs.h"
+#include "jitregtracker.h"
 #include "opcodetypes.h"
 #include "registers.h"
 #include "types.h"
@@ -15,7 +16,7 @@ namespace dsp56k
 	class JitOps
 	{
 	public:
-		JitOps(const Opcodes& _opcodes, JitDspRegs& _dspRegs, asmjit::x86::Assembler& _a) : m_opcodes(_opcodes), m_dspRegs(_dspRegs), m_asm(_a) {}
+		JitOps(JitBlock& _block);
 
 		void emit(TWord pc, TWord op);
 		void emit(Instruction _inst, TWord _op);
@@ -26,7 +27,7 @@ namespace dsp56k
 
 		void op_Abs(TWord op);
 		void op_ADC(TWord op){}
-		void op_Add_SD(TWord op){}
+		void op_Add_SD(TWord op);
 		void op_Add_xx(TWord op){}
 		void op_Add_xxxx(TWord op){}
 		void op_Addl(TWord op){}
@@ -263,12 +264,21 @@ namespace dsp56k
 		void op_Wait(TWord op){}
 
 		void signextend56to64(const asmjit::x86::Gpq& _reg) const;
+		void signextend48to56(const asmjit::x86::Gpq& _reg) const;
+		void signextend24to56(const asmjit::x86::Gpq& _reg) const;
+
 		void ccr_z_update();
 		void ccr_clear(CCRMask _mask);
 		void ccr_set(CCRMask _mask);
 		void ccr_dirty(const asmjit::x86::Gpq& _alu);
-		void alu_abs(bool ab);
+
+		void XYto56(const asmjit::x86::Gpq& _dst, int _xy);
+		void XY0to56(const asmjit::x86::Gpq& _dst, int _xy);
+		void XY1to56(const asmjit::x86::Gpq& _dst, int _xy);
+		void decode_JJJ_read_56(asmjit::x86::Gpq dst, TWord JJJ, bool b);
+
 	private:
+		JitBlock& m_block;
 		const Opcodes& m_opcodes;
 		JitDspRegs& m_dspRegs;
 		asmjit::x86::Assembler& m_asm;

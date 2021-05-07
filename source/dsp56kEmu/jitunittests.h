@@ -2,26 +2,37 @@
 
 #include "dsp.h"
 
-#include "asmjit/core/codeholder.h"
 #include "asmjit/core/jitruntime.h"
-#include "asmjit/x86/x86assembler.h"
 
 namespace dsp56k
 {
+	class JitBlock;
+	class JitOps;
+
 	class JitUnittests
 	{
 	public:
 		JitUnittests();
-		~JitUnittests();
 
 	private:
+		void runTest(void(JitUnittests::*_build)(JitBlock&, JitOps&), void( JitUnittests::*_verify)());
+
+		void abs_build(JitBlock& _block, JitOps& _ops);
+		void abs_verify();
+
+		void conversion_build(JitBlock& _block, JitOps& _ops);
+		void conversion_verify();
+
+		void signextend_build(JitBlock& _block, JitOps& _ops);
+		void signextend_verify();
+
 		DefaultMemoryValidator m_defaultMemoryValidator;
 		Peripherals56303 peripherals;
 		Memory mem;
 		DSP dsp;
 
 		asmjit::JitRuntime m_rt;
-		asmjit::CodeHolder m_code;
-		std::unique_ptr<asmjit::x86::Assembler> m_asm = nullptr;
+
+		std::array<uint64_t,32> m_checks;
 	};
 }

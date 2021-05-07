@@ -13,12 +13,13 @@ namespace asmjit
 
 namespace dsp56k
 {
+	class JitBlock;
 	class DSP;
 
 	class JitDspRegs
 	{
 	public:
-		JitDspRegs(asmjit::x86::Assembler& _a, DSP& _dsp);
+		JitDspRegs(JitBlock& _block);
 
 		~JitDspRegs();
 
@@ -57,6 +58,8 @@ namespace dsp56k
 		void getALU(asmjit::x86::Gp _dst, int _alu);
 		void setALU(int _alu, asmjit::x86::Gp _src);
 
+		void getXY(asmjit::x86::Gp _dst, int _xy);
+
 	private:
 		enum LoadedRegs
 		{
@@ -85,8 +88,10 @@ namespace dsp56k
 		void setLoaded(const uint32_t _reg)				{ m_loadedRegs |= (1<<_reg); }
 		void setUnloaded(const uint32_t _reg)			{ m_loadedRegs &= ~(1<<_reg); }
 
+		JitBlock& m_block;
 		asmjit::x86::Assembler& m_asm;
 		DSP& m_dsp;
+
 		uint32_t m_loadedRegs = 0;
 	};
 }
