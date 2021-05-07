@@ -17,14 +17,17 @@ namespace dsp56k
 	private:
 		void runTest(void(JitUnittests::*_build)(JitBlock&, JitOps&), void( JitUnittests::*_verify)());
 
-		void abs_build(JitBlock& _block, JitOps& _ops);
-		void abs_verify();
-
 		void conversion_build(JitBlock& _block, JitOps& _ops);
 		void conversion_verify();
 
 		void signextend_build(JitBlock& _block, JitOps& _ops);
 		void signextend_verify();
+
+		void abs_build(JitBlock& _block, JitOps& _ops);
+		void abs_verify();
+
+		void add_build(JitBlock& _block, JitOps& _ops);
+		void add_verify();
 
 		DefaultMemoryValidator m_defaultMemoryValidator;
 		Peripherals56303 peripherals;

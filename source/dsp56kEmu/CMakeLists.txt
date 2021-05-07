@@ -30,10 +30,9 @@ jit.cpp jit.h
 jitblock.cpp jitblock.h
 jitdecode.cpp jitdecode.h
 jitdspregs.cpp jitdspregs.h
-jithelper.cpp jithelper.h
 jitmem.cpp jitmem.h
 jitops.cpp jitops.h
-jitops_alu.inl
+jitops_alu.inl jitops_ccr.inl jitops_helper.inl
 jitregtracker.cpp jitregtracker.h
 jittypes.h
 jitunittests.cpp jitunittests.h

@@ -12,12 +12,14 @@ namespace dsp56k
 {
 	class Memory;
 	class UnitTests;
+	class JitUnittests;
 
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
 	class DSP final
 	{
 		friend class UnitTests;
+		friend class JitUnittests;
 
 		// _____________________________________________________________________________
 		// types

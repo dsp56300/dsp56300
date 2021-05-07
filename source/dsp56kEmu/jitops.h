@@ -267,7 +267,13 @@ namespace dsp56k
 		void signextend48to56(const asmjit::x86::Gpq& _reg) const;
 		void signextend24to56(const asmjit::x86::Gpq& _reg) const;
 
-		void ccr_z_update();
+		void mask56(const RegGP& _alu) const;
+		
+		void ccr_update_ifZero(CCRBit _bit);
+		void ccr_update_ifGreater(CCRBit _bit);
+
+		void ccr_update(const RegGP& _value, CCRBit _bit);
+
 		void ccr_clear(CCRMask _mask);
 		void ccr_set(CCRMask _mask);
 		void ccr_dirty(const asmjit::x86::Gpq& _alu);
@@ -277,6 +283,9 @@ namespace dsp56k
 		void XY1to56(const asmjit::x86::Gpq& _dst, int _xy);
 		void decode_JJJ_read_56(asmjit::x86::Gpq dst, TWord JJJ, bool b);
 
+		// ALU
+		void alu_add(TWord ab, RegGP& _v);
+		
 	private:
 		JitBlock& m_block;
 		const Opcodes& m_opcodes;

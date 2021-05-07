@@ -3,7 +3,10 @@
 #include "dsp.h"
 #include "jit.h"
 #include "jitblock.h"
+
 #include "jitops_alu.inl"
+#include "jitops_ccr.inl"
+#include "jitops_helper.inl"
 
 #include "opcodes.h"
 
@@ -372,41 +375,6 @@ namespace dsp56k
 	{
 	}
 
-	void JitOps::signextend56to64(const asmjit::x86::Gpq& _reg) const
-	{
-		m_asm.sal(_reg, asmjit::Imm(8));
-		m_asm.sar(_reg, asmjit::Imm(8));
-	}
-
-	void JitOps::signextend48to56(const asmjit::x86::Gpq& _reg) const
-	{
-		m_asm.sal(_reg, asmjit::Imm(16));
-		m_asm.sar(_reg, asmjit::Imm(8));
-		m_asm.shr(_reg, asmjit::Imm(8));
-	}
-
-	void JitOps::signextend24to56(const asmjit::x86::Gpq& _reg) const
-	{
-		m_asm.sal(_reg, asmjit::Imm(40));
-		m_asm.sar(_reg, asmjit::Imm(32));
-		m_asm.shr(_reg, asmjit::Imm(8));
-	}
-
-	void JitOps::ccr_clear(CCRMask _mask)
-	{
-		m_asm.and_(m_dspRegs.getSR(), asmjit::Imm(~_mask));
-	}
-
-	void JitOps::ccr_set(CCRMask _mask)
-	{
-		m_asm.or_(m_dspRegs.getSR(), asmjit::Imm(_mask));
-	}
-
-	void JitOps::ccr_dirty(const asmjit::x86::Gpq& _alu)
-	{
-		m_asm.movq(regLastModAlu, _alu);
-	}
-
 	void JitOps::XYto56(const asmjit::x86::Gpq& _dst, int _xy)
 	{
 		m_dspRegs.getXY(_dst, _xy);
@@ -427,49 +395,5 @@ namespace dsp56k
 		m_asm.shl(_dst, asmjit::Imm(40));
 		m_asm.sar(_dst, asmjit::Imm(8));
 		m_asm.shr(_dst, asmjit::Imm(8));
-	}
-
-	void JitOps::ccr_z_update()
-	{
-		RegGP ra(m_block.gpPool());
-		m_asm.setz(ra);										// set reg to 1 if last operation returned zero, 0 otherwise
-		m_asm.and_(ra, asmjit::Imm(0xff));
-		ccr_clear(SR_Z);									// clear out old Z value
-		m_asm.shl(ra, SRB_Z);								// shift left to become our Z
-		m_asm.or_(m_dspRegs.getSR(), ra.get());				// or in our new Z
-	}
-
-	void JitOps::op_Abs(TWord op)
-	{
-		const RegGP ra(m_block.gpPool());
-
-		const auto ab = getFieldValue<Abs, Field_d>(op);
-
-		m_dspRegs.getALU(ra, ab ? 1 : 0);						// Load ALU and extend to 64 bits
-		signextend56to64(ra);
-
-		{
-			const RegGP rb(m_block.gpPool());
-			m_asm.mov(rb, static_cast<asmjit::x86::Gp>(ra));	// Copy to backup location
-
-			m_asm.neg(ra);										// negate
-
-			m_asm.cmovl(ra, rb);								// if tempA is now negative, restore its saved value			
-		}
-
-//		m_asm.and_(ra, asmjit::Imm(0x00ff ffffff ffffff));		// absolute value does not need any mask
-
-		m_dspRegs.setALU(ab ? 1 : 0, ra);						// Store ALU
-
-		ccr_z_update();
-
-	//	sr_v_update(d);
-	//	sr_l_update_by_v();
-		m_srDirty = true;
-		ccr_dirty(ra);
-	}
-
-	void JitOps::op_Add_SD(TWord op)
-	{
 	}
 }
