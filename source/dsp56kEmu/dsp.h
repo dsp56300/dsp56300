@@ -403,7 +403,7 @@ namespace dsp56k
 		}
 
 		// value needs to fit into 48 or 56 bits
-		void	sr_v_update( const int64_t& _notLimitedResult, TReg56& _result )
+		void sr_v_update( const int64_t& _notLimitedResult, TReg56& _result )
 		{
 			if( sr_test_noCache(SR_SM) )
 			{

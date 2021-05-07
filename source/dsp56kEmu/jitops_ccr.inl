@@ -6,12 +6,12 @@
 
 namespace dsp56k
 {
-	inline void JitOps::ccr_clear(CCRMask _mask)
+	inline void JitOps::ccr_clear(CCRMask _mask) const
 	{
 		m_asm.and_(m_dspRegs.getSR(), asmjit::Imm(~_mask));
 	}
 
-	inline void JitOps::ccr_set(CCRMask _mask)
+	inline void JitOps::ccr_set(CCRMask _mask) const
 	{
 		m_asm.or_(m_dspRegs.getSR(), asmjit::Imm(_mask));
 	}
@@ -22,28 +22,28 @@ namespace dsp56k
 		m_srDirty = true;
 	}
 
-	inline void JitOps::ccr_update_ifZero(CCRBit _bit)
+	inline void JitOps::ccr_update_ifZero(CCRBit _bit) const
 	{
 		const RegGP ra(m_block.gpPool());
 		m_asm.setz(ra);										// set reg to 1 if last operation returned zero, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
-	inline void JitOps::ccr_update_ifGreater(CCRBit _bit)
+	inline void JitOps::ccr_update_ifGreater(CCRBit _bit) const
 	{
 		const RegGP ra(m_block.gpPool());
 		m_asm.setg(ra);										// set reg to 1 if last operation returned >, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
-	inline void JitOps::ccr_update_ifCarry(CCRBit _bit)
+	inline void JitOps::ccr_update_ifCarry(CCRBit _bit) const
 	{
 		const RegGP ra(m_block.gpPool());
 		m_asm.setc(ra);										// set reg to 1 if last operation generated carry, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
-	inline void JitOps::ccr_update(const RegGP& ra, CCRBit _bit)
+	inline void JitOps::ccr_update(const RegGP& ra, CCRBit _bit) const
 	{
 		m_asm.and_(ra, asmjit::Imm(0xff));
 		ccr_clear(static_cast<CCRMask>(1 << _bit));			// clear out old status register value

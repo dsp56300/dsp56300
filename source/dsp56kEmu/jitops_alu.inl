@@ -131,7 +131,48 @@ namespace dsp56k
 		mask56(aluD);
 
 		ccr_update_ifZero(SRB_Z);
-		ccr_clear(SR_Z);
+		ccr_clear(SR_V);	// TODO: Set if overflow has occurred in the A or B result or the MSB of the destination operand is changed as a result of the instruction’s left shift.
 		ccr_dirty(aluD);
+	}
+
+	inline void JitOps::op_Addr(TWord op)
+	{
+		// D = D/2 + S
+
+		const auto ab = getFieldValue<Addl, Field_d>(op);
+
+		const AluReg aluD(m_block, ab);
+
+		m_asm.sal(aluD, asmjit::Imm(8));
+		m_asm.sar(aluD, asmjit::Imm(1));
+		m_asm.shr(aluD, asmjit::Imm(8));
+
+		{
+			const AluReg aluS(m_block, ab ? 0 : 1, true);
+			m_asm.add(aluD, aluS.get());
+		}
+
+		{
+			const RegGP aluMax(m_block);
+			m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
+			m_asm.cmp(aluD, aluMax.get());
+		}
+
+		ccr_update_ifGreater(SRB_C);
+
+		mask56(aluD);
+
+		ccr_update_ifZero(SRB_Z);
+		ccr_clear(SR_V);	// TODO: Changed according to the standard definition.
+		ccr_dirty(aluD);
+	}
+
+	inline void JitOps::op_Clr(TWord op)
+	{
+		const auto D = getFieldValue<Clr, Field_d>(op);
+		const auto xm = regAlu(D);
+		m_asm.pxor(xm, xm);
+		ccr_clear( static_cast<CCRMask>(SR_E | SR_N | SR_V) );
+		ccr_set( static_cast<CCRMask>(SR_U | SR_Z) );
 	}
 }
