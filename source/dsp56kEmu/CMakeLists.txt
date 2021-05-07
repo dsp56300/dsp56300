@@ -34,6 +34,7 @@ jithelper.cpp jithelper.h
 jitmem.cpp jitmem.h
 jitops.cpp jitops.h
 jitops_alu.inl
+jitregtracker.cpp jitregtracker.h
 jittypes.h
 jitunittests.cpp jitunittests.h
 logging.cpp logging.h
