@@ -19,6 +19,7 @@ namespace dsp56k
 	inline void JitOps::ccr_dirty(const asmjit::x86::Gpq& _alu)
 	{
 		m_asm.movq(regLastModAlu, _alu);
+		m_srDirty = true;
 	}
 
 	inline void JitOps::ccr_update_ifZero(CCRBit _bit)
@@ -32,6 +33,13 @@ namespace dsp56k
 	{
 		const RegGP ra(m_block.gpPool());
 		m_asm.setg(ra);										// set reg to 1 if last operation returned >, 0 otherwise
+		ccr_update(ra, _bit);
+	}
+
+	inline void JitOps::ccr_update_ifCarry(CCRBit _bit)
+	{
+		const RegGP ra(m_block.gpPool());
+		m_asm.setc(ra);										// set reg to 1 if last operation generated carry, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 

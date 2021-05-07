@@ -15,6 +15,9 @@ namespace dsp56k
 
 		runTest(&JitUnittests::abs_build, &JitUnittests::abs_verify);
 		runTest(&JitUnittests::add_build, &JitUnittests::add_verify);
+		runTest(&JitUnittests::addShortImmediate_build, &JitUnittests::addShortImmediate_verify);
+		runTest(&JitUnittests::addLongImmediate_build, &JitUnittests::addLongImmediate_verify);
+		runTest(&JitUnittests::addl_build, &JitUnittests::addl_verify);
 	}
 
 	void JitUnittests::runTest(void( JitUnittests::* _build)(JitBlock&, JitOps&), void( JitUnittests::* _verify)())
@@ -127,6 +130,7 @@ namespace dsp56k
 
 		_ops.op_Abs(0x000000);
 		_ops.op_Abs(0xffffff);
+
 	}
 
 	void JitUnittests::abs_verify()
@@ -149,6 +153,56 @@ namespace dsp56k
 		assert(dsp.regs().a.var == 0);
 		assert(dsp.sr_test(SR_C));
 		assert(dsp.sr_test(SR_Z));
+		assert(!dsp.sr_test(SR_V));
+	}
+
+	void JitUnittests::addShortImmediate_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.a.var = 0;
+
+		// add #<32,a
+		_ops.emit(0, 0x017280);
+	}
+
+	void JitUnittests::addShortImmediate_verify()
+	{
+		assert(dsp.regs().a.var == 0x00000032000000);
+		assert(!dsp.sr_test(SR_C));
+		assert(!dsp.sr_test(SR_Z));
+		assert(!dsp.sr_test(SR_V));
+	}
+
+	void JitUnittests::addLongImmediate_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.a.var = 0;
+		dsp.reg.pc.var = 0;
+
+		// add #>32,a, two op add with immediate in extension word
+		dsp.mem.set(MemArea_P, 1, 0x000032);
+		_ops.emit(0, 0x0140c0);
+	}
+
+	void JitUnittests::addLongImmediate_verify()
+	{
+		assert(dsp.regs().a.var == 0x00000032000000);
+		assert(!dsp.sr_test(SR_C));
+		assert(!dsp.sr_test(SR_Z));
+		assert(!dsp.sr_test(SR_V));
+	}
+
+	void JitUnittests::addl_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.a.var = 0x222222;
+		dsp.reg.b.var = 0x333333;
+
+		_ops.emit(0, 0x20001a);
+	}
+
+	void JitUnittests::addl_verify()
+	{
+		assert(dsp.reg.b.var == 0x888888);
+		assert(!dsp.sr_test(SR_C));
+		assert(!dsp.sr_test(SR_Z));
 		assert(!dsp.sr_test(SR_V));
 	}
 }

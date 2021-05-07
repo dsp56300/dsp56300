@@ -340,10 +340,12 @@ namespace dsp56k
 
 	void JitOps::emit(const Instruction _inst, const TWord _op)
 	{
+		emitOpProlog();
+
 		const auto& func = g_opcodeFuncs[_inst];
 		(this->*func)(_op);
 
-		m_asm.inc(m_dspRegs.getPC());
+		emitOpEpilog();
 	}
 
 	void JitOps::emit(const Instruction _instMove, const Instruction _instAlu, const TWord _op)
@@ -375,25 +377,23 @@ namespace dsp56k
 	{
 	}
 
-	void JitOps::XYto56(const asmjit::x86::Gpq& _dst, int _xy)
+	void JitOps::XYto56(const asmjit::x86::Gpq& _dst, int _xy) const
 	{
 		m_dspRegs.getXY(_dst, _xy);
 		signextend48to56(_dst);
 	}
 
-	void JitOps::XY0to56(const asmjit::x86::Gpq& _dst, int _xy)
+	void JitOps::XY0to56(const asmjit::x86::Gpq& _dst, int _xy) const
 	{
 		m_dspRegs.getXY(_dst, _xy);
 		m_asm.shl(_dst, asmjit::Imm(40));
 		m_asm.sar(_dst, asmjit::Imm(16));
 	}
 
-	void JitOps::XY1to56(const asmjit::x86::Gpq& _dst, int _xy)
+	void JitOps::XY1to56(const asmjit::x86::Gpq& _dst, int _xy) const
 	{
 		m_dspRegs.getXY(_dst, _xy);
 		m_asm.shr(_dst, asmjit::Imm(24));	// remove LSWord
-		m_asm.shl(_dst, asmjit::Imm(40));
-		m_asm.sar(_dst, asmjit::Imm(8));
-		m_asm.shr(_dst, asmjit::Imm(8));
+		signed24To56(_dst);
 	}
 }

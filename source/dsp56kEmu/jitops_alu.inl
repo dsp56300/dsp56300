@@ -10,15 +10,14 @@ namespace dsp56k
 
 	inline void JitOps::op_Abs(TWord op)
 	{
-		const RegGP ra(m_block.gpPool());
-
 		const auto ab = getFieldValue<Abs, Field_d>(op);
 
-		m_dspRegs.getALU(ra, ab ? 1 : 0);						// Load ALU
+		const AluReg ra(m_block, ab);							// Load ALU
+
 		signextend56to64(ra);									// extend to 64 bits
 
 		{
-			const RegGP rb(m_block.gpPool());
+			const RegGP rb(m_block);
 			m_asm.mov(rb, static_cast<asmjit::x86::Gp>(ra));	// Copy to backup location
 
 			m_asm.neg(ra);										// negate
@@ -28,31 +27,30 @@ namespace dsp56k
 
 //		m_asm.and_(ra, asmjit::Imm(0x00ff ffffff ffffff));		// absolute value does not need any mask
 
-		m_dspRegs.setALU(ab ? 1 : 0, ra);						// Store ALU
-
 		ccr_update_ifZero(SRB_Z);
 
 	//	sr_v_update(d);
 	//	sr_l_update_by_v();
-		m_srDirty = true;
 		ccr_dirty(ra);
 	}
-	
+
+	inline void JitOps::op_ADC(TWord op)
+	{
+		assert(false && "not implemented");
+	}
+
 	inline void JitOps::alu_add(TWord ab, RegGP& _v)
 	{
-		const RegGP alu(m_block.gpPool());
-		
-		m_dspRegs.getALU(alu, ab ? 1 : 0);
+		const AluReg alu(m_block, ab);
 
 		m_asm.add(alu, _v.get());
 
 		_v.release();
 
 		{
-			const RegGP aluMax(m_block.gpPool());
+			const RegGP aluMax(m_block);
 			m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
 			m_asm.cmp(alu, aluMax.get());
-
 		}
 
 		ccr_update_ifGreater(SRB_C);
@@ -62,13 +60,22 @@ namespace dsp56k
 		mask56(alu);
 		ccr_update_ifZero(SRB_Z);
 
-		// S L E U N Z V C
-
 //		sr_l_update_by_v();
 
 		ccr_dirty(alu);
+	}
 
-		m_dspRegs.setALU(ab ? 1 : 0, alu);
+	inline void JitOps::unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const
+	{
+		m_asm.mov(_r, _i);
+		m_asm.shl(_r, asmjit::Imm(24));
+	}
+
+	inline void JitOps::alu_add(TWord ab, const asmjit::Imm& _v)
+	{
+		RegGP r(m_block);
+		unsignedImmediateToAlu(r, _v);
+		alu_add(ab, r);
 	}
 
 	void JitOps::op_Add_SD(TWord op)
@@ -76,8 +83,55 @@ namespace dsp56k
 		const auto D = getFieldValue<Add_SD, Field_d>(op);
 		const auto JJJ = getFieldValue<Add_SD, Field_JJJ>(op);
 
-		RegGP v(m_block.gpPool());
+		RegGP v(m_block);
 		decode_JJJ_read_56(v, JJJ, !D);
 		alu_add(D, v);
+	}
+
+	inline void JitOps::op_Add_xx(TWord op)
+	{
+		const auto iiiiii	= getFieldValue<Add_xx,Field_iiiiii>(op);
+		const auto ab		= getFieldValue<Add_xx,Field_d>(op);
+
+		alu_add( ab, asmjit::Imm(iiiiii) );
+	}
+
+	inline void JitOps::op_Add_xxxx(TWord op)
+	{
+		const auto ab = getFieldValue<Add_xxxx,Field_d>(op);
+
+		RegGP r(m_block);
+		m_block.mem().getOpWordB(r);
+		signed24To56(r);
+		alu_add(ab, r);
+	}
+
+	inline void JitOps::op_Addl(TWord op)
+	{
+		// D = 2 * D + S
+
+		const auto ab = getFieldValue<Addl, Field_d>(op);
+
+		const AluReg aluD(m_block, ab);
+
+		signextend56to64(aluD);
+
+		m_asm.sal(aluD, asmjit::Imm(1));
+
+		{
+			const AluReg aluS(m_block, ab ? 0 : 1, true);
+
+			signextend56to64(aluS);
+
+			m_asm.add(aluD, aluS.get());
+		}
+
+		ccr_update_ifCarry(SRB_C);
+
+		mask56(aluD);
+
+		ccr_update_ifZero(SRB_Z);
+		ccr_clear(SR_Z);
+		ccr_dirty(aluD);
 	}
 }

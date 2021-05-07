@@ -29,6 +29,15 @@ namespace dsp56k
 		void add_build(JitBlock& _block, JitOps& _ops);
 		void add_verify();
 
+		void addShortImmediate_build(JitBlock& _block, JitOps& _ops);
+		void addShortImmediate_verify();
+
+		void addLongImmediate_build(JitBlock& _block, JitOps& _ops);
+		void addLongImmediate_verify();
+
+		void addl_build(JitBlock& _block, JitOps& _ops);
+		void addl_verify();
+
 		DefaultMemoryValidator m_defaultMemoryValidator;
 		Peripherals56303 peripherals;
 		Memory mem;

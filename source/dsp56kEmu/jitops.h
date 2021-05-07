@@ -26,11 +26,11 @@ namespace dsp56k
 		void emitOpEpilog();
 
 		void op_Abs(TWord op);
-		void op_ADC(TWord op){}
+		void op_ADC(TWord op);
 		void op_Add_SD(TWord op);
-		void op_Add_xx(TWord op){}
-		void op_Add_xxxx(TWord op){}
-		void op_Addl(TWord op){}
+		void op_Add_xx(TWord op);
+		void op_Add_xxxx(TWord op);
+		void op_Addl(TWord op);
 		void op_Addr(TWord op){}
 		void op_And_SD(TWord op){}
 		void op_And_xx(TWord op){}
@@ -263,14 +263,19 @@ namespace dsp56k
 		void op_Vsl(TWord op){}
 		void op_Wait(TWord op){}
 
+		// helpers
 		void signextend56to64(const asmjit::x86::Gpq& _reg) const;
 		void signextend48to56(const asmjit::x86::Gpq& _reg) const;
 		void signextend24to56(const asmjit::x86::Gpq& _reg) const;
 
 		void mask56(const RegGP& _alu) const;
-		
+
+		void signed24To56(const asmjit::x86::Gpq& _r) const;
+
+		// CCR
 		void ccr_update_ifZero(CCRBit _bit);
 		void ccr_update_ifGreater(CCRBit _bit);
+		void ccr_update_ifCarry(CCRBit _bit);
 
 		void ccr_update(const RegGP& _value, CCRBit _bit);
 
@@ -278,13 +283,18 @@ namespace dsp56k
 		void ccr_set(CCRMask _mask);
 		void ccr_dirty(const asmjit::x86::Gpq& _alu);
 
-		void XYto56(const asmjit::x86::Gpq& _dst, int _xy);
-		void XY0to56(const asmjit::x86::Gpq& _dst, int _xy);
-		void XY1to56(const asmjit::x86::Gpq& _dst, int _xy);
+		void XYto56(const asmjit::x86::Gpq& _dst, int _xy) const;
+		void XY0to56(const asmjit::x86::Gpq& _dst, int _xy) const;
+		void XY1to56(const asmjit::x86::Gpq& _dst, int _xy) const;
+
+		// decode
 		void decode_JJJ_read_56(asmjit::x86::Gpq dst, TWord JJJ, bool b);
 
 		// ALU
 		void alu_add(TWord ab, RegGP& _v);
+		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;
+		void alu_add(TWord ab, const asmjit::Imm& _v);
+		void alu_add_epilog(TWord ab, RegGP& alu);
 		
 	private:
 		JitBlock& m_block;

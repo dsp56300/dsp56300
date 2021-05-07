@@ -32,4 +32,11 @@ namespace dsp56k
 		m_asm.shl(_alu, asmjit::Imm(8));	// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shr(_alu, asmjit::Imm(8));
 	}
+	
+	inline void JitOps::signed24To56(const asmjit::x86::Gpq& _r) const
+	{
+		m_asm.shl(_r, asmjit::Imm(40));
+		m_asm.sar(_r, asmjit::Imm(8));		// we need to work around the fact that there is no AND with 64 bit immediate operand
+		m_asm.shr(_r, asmjit::Imm(8));
+	}
 }
