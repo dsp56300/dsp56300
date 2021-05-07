@@ -30,6 +30,8 @@ namespace dsp56k
 
 	class DSP;
 
+	class Jitmem;
+
 	class IMemoryValidator
 	{
 	public:
@@ -45,6 +47,8 @@ namespace dsp56k
 
 	class Memory final
 	{
+		friend class Jitmem;
+
 		// _____________________________________________________________________________
 		// members
 		//
