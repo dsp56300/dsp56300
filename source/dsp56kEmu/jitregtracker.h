@@ -18,8 +18,8 @@ namespace dsp56k
 	public:
 		JitRegpool(std::initializer_list<T> _availableRegs)
 		{
-			for (auto allowedReg : _availableRegs)
-				m_availableRegs.push(allowedReg);
+			for (const auto& r : _availableRegs)
+				m_availableRegs.push(r);
 		}
 
 		void put(const T& _reg)
@@ -29,7 +29,7 @@ namespace dsp56k
 
 		T get()
 		{
-			assert(!m_availableRegs.empty());
+			assert(!m_availableRegs.empty() && "no more temporary registers left");
 			const auto ret = m_availableRegs.top();
 			m_availableRegs.pop();
 			return ret;

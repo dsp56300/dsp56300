@@ -28,13 +28,13 @@ namespace dsp56k
 		{
 			ccr_e_update(_alu);
 			ccr_u_update(_alu);
-			ccr_n_update(_alu);
+			ccr_n_update_by55(_alu);
 		}
 	}
 
 	inline void JitOps::sr_getBitValue(const asmjit::x86::Gpq& _dst, CCRBit _bit) const
 	{
-		m_asm.bt(regSR, asmjit::Imm(_bit));
+		m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(_bit));
 		m_asm.setc(_dst);
 	}
 
@@ -42,6 +42,13 @@ namespace dsp56k
 	{
 		const RegGP ra(m_block.gpPool());
 		m_asm.setz(ra);										// set reg to 1 if last operation returned zero, 0 otherwise
+		ccr_update(ra, _bit);
+	}
+
+	inline void JitOps::ccr_update_ifNotZero(CCRBit _bit) const
+	{
+		const RegGP ra(m_block.gpPool());
+		m_asm.setnz(ra);									// set reg to 1 if last operation returned != 0, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
@@ -193,11 +200,55 @@ namespace dsp56k
 
 	}
 
-	void JitOps::ccr_n_update(const asmjit::x86::Gpq& _alu) const
+	void JitOps::ccr_n_update_by55(const asmjit::x86::Gpq& _alu) const
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
 		m_asm.bt(_alu, asmjit::Imm(55));
 		ccr_update_ifCarry(SRB_N);
+	}
+
+	inline void JitOps::ccr_n_update_by47(const asmjit::x86::Gpq& _alu) const
+	{
+		// Negative
+		// Set if the MSB of the result is set; otherwise, this bit is cleared.
+		m_asm.bt(_alu, asmjit::Imm(47));
+		ccr_update_ifCarry(SRB_N);
+	}
+
+	inline void JitOps::ccr_s_update(const asmjit::x86::Gpq& _alu) const
+	{
+		const auto exit = m_asm.newLabel();
+
+		m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(SRB_S));
+		m_asm.jc(exit);
+
+		{
+			const RegGP bit(m_block);
+			m_asm.mov(bit, asmjit::Imm(46));
+
+			{
+				const RegGP s0s1(m_block);
+				m_asm.xor_(s0s1, s0s1.get());
+				sr_getBitValue(s0s1, SRB_S1);
+				m_asm.add(bit, s0s1.get());
+
+				sr_getBitValue(s0s1, SRB_S0);
+				m_asm.sub(bit, s0s1.get());
+			}
+
+			const RegGP bit46(m_block);
+			m_asm.bt(_alu, bit.get());
+			m_asm.setc(bit46);
+
+			m_asm.dec(bit);
+			m_asm.bt(_alu, bit.get());
+			m_asm.setc(bit);
+			m_asm.xor_(bit,bit46.get());
+		}
+
+		ccr_update_ifNotZero(SRB_S);
+
+		m_asm.bind(exit);
 	}
 }
