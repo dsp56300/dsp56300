@@ -276,12 +276,18 @@ namespace dsp56k
 		void ccr_update_ifZero(CCRBit _bit) const;
 		void ccr_update_ifGreater(CCRBit _bit) const;
 		void ccr_update_ifCarry(CCRBit _bit) const;
+		void ccr_update_ifParity(CCRBit _bit) const;
+		void ccr_update_ifNotParity(CCRBit _bit) const;
 
 		void ccr_update(const RegGP& _value, CCRBit _bit) const;
+
+		void ccr_u_update(const RegGP& _alu) const;
 
 		void ccr_clear(CCRMask _mask) const;
 		void ccr_set(CCRMask _mask) const;
 		void ccr_dirty(const asmjit::x86::Gpq& _alu);
+
+		void sr_getBitValue(const asmjit::x86::Gpq& _dst, CCRBit _bit) const;
 
 		void XYto56(const asmjit::x86::Gpq& _dst, int _xy) const;
 		void XY0to56(const asmjit::x86::Gpq& _dst, int _xy) const;
