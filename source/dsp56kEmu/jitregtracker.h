@@ -35,7 +35,7 @@ namespace dsp56k
 			return ret;
 		}
 	private:
-		std::stack<T> m_availableRegs;
+		std::stack<T> m_availableRegs;	// TODO: do we want a FIFO instead to have more register spread? Is it any better performance-wise?
 	};
 
 	template<typename T>
