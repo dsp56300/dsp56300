@@ -252,6 +252,22 @@ namespace dsp56k
 		//sr_l_update_by_v();
 	}
 
+	void DSP::alu_addl(bool ab)
+	{
+		TReg56&			d = ab ? reg.b : reg.a;
+		const TReg56&	s = ab ? reg.a : reg.b;
+
+		const TReg56 old = d;
+		const TInt64 res = (d.signextend<TInt64>() << 1) + s.signextend<TInt64>();
+		d.var = res;
+		d.doMasking();
+
+		sr_z_update(d);
+		sr_clear(SR_V);		// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
+		//sr_l_update_by_v();
+		sr_c_update_arithmetic(old,d);
+		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
+	}
 
 	void DSP::alu_addr(bool ab)
 	{
@@ -291,23 +307,6 @@ namespace dsp56k
 		sr_toggle(SR_Z, shifted == 0);						// Set if bits 47–24 of the result are 0
 		sr_clear(SR_V);										// This bit is always cleared
 		sr_toggle(SRB_C, c);								// Set if bit 47 of the destination operand is set, and cleared otherwise
-	}
-
-	void DSP::alu_addl(bool ab)
-	{
-		TReg56&			d = ab ? reg.b : reg.a;
-		const TReg56&	s = ab ? reg.a : reg.b;
-
-		const TReg56 old = d;
-		const TInt64 res = (d.signextend<TInt64>() << 1) + s.signextend<TInt64>();
-		d.var = res;
-		d.doMasking();
-
-		sr_z_update(d);
-		sr_clear(SR_V);		// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
-		//sr_l_update_by_v();
-		sr_c_update_arithmetic(old,d);
-		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
 	}
 
 	void DSP::alu_clr(bool ab)
