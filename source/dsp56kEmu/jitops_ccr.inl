@@ -183,7 +183,7 @@ namespace dsp56k
 
 	}
 
-	inline void JitOps::ccr_n_update(const RegGP& _alu) const
+	void JitOps::ccr_n_update(const RegGP& _alu) const
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
