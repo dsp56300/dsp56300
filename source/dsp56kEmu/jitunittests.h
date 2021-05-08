@@ -26,6 +26,9 @@ namespace dsp56k
 		void ccr_u_build(JitBlock& _block, JitOps& _ops);
 		void ccr_u_verify();
 
+		void ccr_e_build(JitBlock& _block, JitOps& _ops);
+		void ccr_e_verify();
+
 		void abs_build(JitBlock& _block, JitOps& _ops);
 		void abs_verify();
 

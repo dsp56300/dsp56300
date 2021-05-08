@@ -42,6 +42,27 @@ namespace dsp56k
 		ccr_update(ra, _bit);
 	}
 
+	inline void JitOps::ccr_update_ifGreaterEqual(CCRBit _bit) const
+	{
+		const RegGP ra(m_block.gpPool());
+		m_asm.setge(ra);									// set reg to 1 if last operation returned >=, 0 otherwise
+		ccr_update(ra, _bit);
+	}
+
+	inline void JitOps::ccr_update_ifLessThan(CCRBit _bit) const
+	{
+		const RegGP ra(m_block.gpPool());
+		m_asm.setl(ra);										// set reg to 1 if last operation returned <, 0 otherwise
+		ccr_update(ra, _bit);
+	}
+
+	inline void JitOps::ccr_update_ifLessEqual(CCRBit _bit) const
+	{
+		const RegGP ra(m_block.gpPool());
+		m_asm.setle(ra);									// set reg to 1 if last operation returned <=, 0 otherwise
+		ccr_update(ra, _bit);
+	}
+
 	inline void JitOps::ccr_update_ifCarry(CCRBit _bit) const
 	{
 		const RegGP ra(m_block.gpPool());
@@ -107,5 +128,66 @@ namespace dsp56k
 
 		sr_toggle( SRB_U, bitvalue(_ab,msb) == bitvalue(_ab,lsb) );
 		*/
+	}
+
+	void JitOps::ccr_e_update(const RegGP& _alu) const
+	{
+		/*
+		Extension
+		Indicates when the accumulator extension register is in use. This bit is
+		cleared if all the bits of the integer portion of the 56-bit result are all
+		ones or all zeros; otherwise, this bit is set. As shown below, the
+		Scaling mode defines the integer portion. If the E bit is cleared, then
+		the low-order fraction portion contains all the significant bits; the
+		high-order integer portion is sign extension. In this case, the
+		accumulator extension register can be ignored.
+		S1 / S0 / Scaling Mode / Integer Portion
+		0	0	No Scaling	Bits 55,54..............48,47
+		0	1	Scale Down	Bits 55,54..............49,48
+		1	0	Scale Up	Bits 55,54..............47,46
+		*/
+
+		{
+			const RegGP mask(m_block);
+
+			m_asm.mov(mask, asmjit::Imm(0x3fe));
+
+			{
+				const PushGP s0s1(m_block, asmjit::x86::rcx);
+
+				sr_getBitValue(s0s1, SRB_S0);
+				m_asm.shl(mask, s0s1.get().r8());
+				sr_getBitValue(s0s1, SRB_S1);
+				m_asm.shr(mask, s0s1.get().r8());
+			}
+
+			m_asm.and_(mask, asmjit::Imm(0x3ff));
+
+			{
+				const RegGP alu(m_block);
+				m_asm.mov(alu, _alu.get());
+				m_asm.shr(alu, asmjit::Imm(46));
+				m_asm.and_(alu, mask.get());
+
+				// res = alu != mask && alu != 0
+
+				// Don't be distracted by the names, we abuse alu & mask here to store comparison results
+				m_asm.cmp(alu, mask.get());			m_asm.setnz(mask);
+				m_asm.cmp(alu, asmjit::Imm(0));		m_asm.setnz(alu);
+
+				m_asm.and_(mask.get().r8(), alu.get().r8());
+			}
+
+			ccr_update(mask, SRB_E);
+		}
+
+	}
+
+	inline void JitOps::ccr_n_update(const RegGP& _alu) const
+	{
+		// Negative
+		// Set if the MSB of the result is set; otherwise, this bit is cleared.
+		m_asm.bt(_alu, asmjit::Imm(55));
+		ccr_update_ifCarry(SRB_N);
 	}
 }

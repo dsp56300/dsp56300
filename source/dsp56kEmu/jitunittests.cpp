@@ -13,6 +13,7 @@ namespace dsp56k
 		runTest(&JitUnittests::conversion_build, &JitUnittests::conversion_verify);
 		runTest(&JitUnittests::signextend_build, &JitUnittests::signextend_verify);
 		runTest(&JitUnittests::ccr_u_build, &JitUnittests::ccr_u_verify);
+		runTest(&JitUnittests::ccr_e_build, &JitUnittests::ccr_e_verify);
 
 		runTest(&JitUnittests::abs_build, &JitUnittests::abs_verify);
 		runTest(&JitUnittests::add_build, &JitUnittests::add_verify);
@@ -150,6 +151,36 @@ namespace dsp56k
 		assert(!(m_checks[1] & SR_U));
 		assert(!(m_checks[2] & SR_U));
 		assert((m_checks[3] & SR_U));
+	}
+
+	void JitUnittests::ccr_e_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.sr.var = 0;
+
+		m_checks[0] = 0xff812233445566;
+		m_checks[1] = 0xff712233445566;
+		m_checks[2] = 0x00712233445566;
+		m_checks[3] = 0x00812233445566;
+
+		for(auto i=0; i<4; ++i)
+		{
+			RegGP r(_block);
+
+			_block.asm_().mov(r, m_checks[i]);
+			_ops.ccr_e_update(r);
+			_block.mem().mov(m_checks[i], regSR);
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_block.asm_().nop();
+		}
+	}
+
+	void JitUnittests::ccr_e_verify()
+	{
+		assert(!(m_checks[0] & SR_E));
+		assert((m_checks[1] & SR_E));
+		assert(!(m_checks[2] & SR_E));
+		assert((m_checks[3] & SR_E));
 	}
 
 	void JitUnittests::abs_build(JitBlock& _block, JitOps& _ops)

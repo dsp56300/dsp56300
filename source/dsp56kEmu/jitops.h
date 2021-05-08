@@ -275,6 +275,9 @@ namespace dsp56k
 		// CCR
 		void ccr_update_ifZero(CCRBit _bit) const;
 		void ccr_update_ifGreater(CCRBit _bit) const;
+		void ccr_update_ifGreaterEqual(CCRBit _bit) const;
+		void ccr_update_ifLessThan(CCRBit _bit) const;
+		void ccr_update_ifLessEqual(CCRBit _bit) const;
 		void ccr_update_ifCarry(CCRBit _bit) const;
 		void ccr_update_ifParity(CCRBit _bit) const;
 		void ccr_update_ifNotParity(CCRBit _bit) const;
@@ -282,6 +285,8 @@ namespace dsp56k
 		void ccr_update(const RegGP& _value, CCRBit _bit) const;
 
 		void ccr_u_update(const RegGP& _alu) const;
+		void ccr_e_update(const RegGP& _alu) const;
+		void ccr_n_update(const RegGP& _alu) const;
 
 		void ccr_clear(CCRMask _mask) const;
 		void ccr_set(CCRMask _mask) const;
