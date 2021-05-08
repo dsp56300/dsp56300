@@ -50,6 +50,9 @@ namespace dsp56k
 		void addr_build(JitBlock& _block, JitOps& _ops);
 		void addr_verify();
 
+		void clr_build(JitBlock& _block, JitOps& _ops);
+		void clr_verify();
+
 		DefaultMemoryValidator m_defaultMemoryValidator;
 		Peripherals56303 peripherals;
 		Memory mem;

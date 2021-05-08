@@ -22,6 +22,7 @@ namespace dsp56k
 		runTest(&JitUnittests::addLongImmediate_build, &JitUnittests::addLongImmediate_verify);
 		runTest(&JitUnittests::addl_build, &JitUnittests::addl_verify);
 		runTest(&JitUnittests::addr_build, &JitUnittests::addr_verify);
+		runTest(&JitUnittests::clr_build, &JitUnittests::clr_verify);
 	}
 
 	void JitUnittests::runTest(void( JitUnittests::* _build)(JitBlock&, JitOps&), void( JitUnittests::* _verify)())
@@ -293,7 +294,7 @@ namespace dsp56k
 	{
 		dsp.reg.a.var = 0x004edffe000000;
 		dsp.reg.b.var = 0xff89fe13000000;
-		dsp.setSR(0x0800d0);
+		dsp.setSR(0x0800d0);							// (S L) U
 
 		_ops.emit(0, 0x200002);	// addr b,a
 	}
@@ -301,6 +302,23 @@ namespace dsp56k
 	void JitUnittests::addr_verify()
 	{
 		assert(dsp.reg.a.var == 0x0ffb16e12000000);
-		assert(dsp.getSR().var == 0x0800c8);		
+		assert(dsp.getSR().var == 0x0800c8);			// (S L) N
+	}
+
+	void JitUnittests::clr_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.a.var = 0xbada55c0deba5e;
+
+		// ensure that ALU is loaded, otherwise it is not written back to DSP registers
+		{
+			const RegGP dummy(_block);
+			_block.regs().getALU(dummy, 0);			
+		}
+		_ops.emit(0, 0x200013);
+	}
+
+	void JitUnittests::clr_verify()
+	{
+		assert(dsp.reg.a.var == 0);
 	}
 }
