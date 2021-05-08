@@ -342,12 +342,17 @@ namespace dsp56k
 		dsp.reg.a.var = 0xffaabbcc112233;
 		dsp.reg.x.var = 0x778899;
 
+		dsp.reg.b.var = 0xaaaabbcc334455;
+		dsp.reg.y.var = 0x667788000000;
+
 		_ops.emit(0, 0x200046);	// and x0,a
+		_ops.emit(0, 0x20007e);	// and y1,b
 	}
 
 	void JitUnittests::and_verify()
 	{
 		assert(dsp.reg.a.var == 0xff778899112233);
+		assert(dsp.reg.b.var == 0xaa667788334455);
 	}
 
 	void JitUnittests::clr_build(JitBlock& _block, JitOps& _ops)
