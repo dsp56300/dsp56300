@@ -174,17 +174,17 @@ namespace dsp56k
 	{
 		dsp.reg.a.var = 0x004edffe000000;
 		dsp.reg.b.var = 0xff89fe13000000;
-		dsp.setSR(0x0800d0);
+		dsp.setSR(0x0800d0);							// (S L) U
 		execOpcode(0x200002);	// addr b,a
 		assert(dsp.reg.a.var == 0x0ffb16e12000000);
-		assert(dsp.getSR().var == 0x0800c8);		
+		assert(dsp.getSR().var == 0x0800c8);			// (S L) N
 
 		dsp.reg.a.var = 0xffb16e12000000;
 		dsp.reg.b.var = 0xff89fe13000000;
-		dsp.setSR(0x0800c8);
+		dsp.setSR(0x0800c8);							// (S L) N
 		execOpcode(0x20000a);	// addr a,b
 		assert(dsp.reg.b.var == 0xff766d1b800000);
-		assert(dsp.getSR().var == 0x0800e9);
+		assert(dsp.getSR().var == 0x0800e9);			// (S L) E N C
 	}
 
 	void UnitTests::testSub()
