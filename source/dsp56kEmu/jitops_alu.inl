@@ -163,7 +163,7 @@ namespace dsp56k
 		mask56(aluD);
 
 		ccr_update_ifZero(SRB_Z);
-		ccr_clear(SR_V);	// TODO: Changed according to the standard definition.
+		ccr_clear(SR_V);			// TODO: Changed according to the standard definition.
 		ccr_dirty(aluD);
 	}
 

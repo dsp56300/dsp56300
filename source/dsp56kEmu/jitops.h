@@ -16,7 +16,7 @@ namespace dsp56k
 	class JitOps
 	{
 	public:
-		JitOps(JitBlock& _block);
+		JitOps(JitBlock& _block, bool _useSRCache = true);
 
 		void emit(TWord pc, TWord op);
 		void emit(Instruction _inst, TWord _op);
@@ -284,9 +284,9 @@ namespace dsp56k
 
 		void ccr_update(const RegGP& _value, CCRBit _bit) const;
 
-		void ccr_u_update(const RegGP& _alu) const;
-		void ccr_e_update(const RegGP& _alu) const;
-		void ccr_n_update(const RegGP& _alu) const;
+		void ccr_u_update(const asmjit::x86::Gpq& _alu) const;
+		void ccr_e_update(const asmjit::x86::Gpq& _alu) const;
+		void ccr_n_update(const asmjit::x86::Gpq& _alu) const;
 
 		void ccr_clear(CCRMask _mask) const;
 		void ccr_set(CCRMask _mask) const;
@@ -315,5 +315,6 @@ namespace dsp56k
 		std::map<TWord, asmjit::Label> m_pcLabels;
 		TWord m_pcCurrentOp = 0;
 		bool m_srDirty = true;
+		const bool m_useSRCache;
 	};
 }

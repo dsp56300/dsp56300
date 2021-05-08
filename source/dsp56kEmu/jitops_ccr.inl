@@ -19,7 +19,17 @@ namespace dsp56k
 	inline void JitOps::ccr_dirty(const asmjit::x86::Gpq& _alu)
 	{
 		m_asm.movq(regLastModAlu, _alu);
-		m_srDirty = true;
+
+		if(m_useSRCache)
+		{
+			m_srDirty = true;			
+		}
+		else
+		{
+			ccr_e_update(_alu);
+			ccr_u_update(_alu);
+			ccr_n_update(_alu);
+		}
 	}
 
 	inline void JitOps::sr_getBitValue(const asmjit::x86::Gpq& _dst, CCRBit _bit) const
@@ -92,7 +102,7 @@ namespace dsp56k
 		m_asm.or_(m_dspRegs.getSR(), ra.get());				// or in our new SR bit
 	}
 
-	void JitOps::ccr_u_update(const RegGP& _alu) const
+	void JitOps::ccr_u_update(const asmjit::x86::Gpq& _alu) const
 	{
 		/*
 		We want to set U if bits 47 & 46 of the ALU are identical.
@@ -113,7 +123,7 @@ namespace dsp56k
 				m_asm.sub(shift.get().r8(), s1.get().r8());
 			}
 			const RegGP r(m_block);
-			m_asm.mov(r,_alu.get());
+			m_asm.mov(r,_alu);
 			m_asm.shr(r, asmjit::Imm(32));	// thx to intel, we are only allowed to shift 32 at max. Therefore, we need to split it
 			m_asm.shr(r, shift.get().r8());
 			m_asm.and_(r, asmjit::Imm(0x3));
@@ -130,7 +140,7 @@ namespace dsp56k
 		*/
 	}
 
-	void JitOps::ccr_e_update(const RegGP& _alu) const
+	void JitOps::ccr_e_update(const asmjit::x86::Gpq& _alu) const
 	{
 		/*
 		Extension
@@ -165,7 +175,7 @@ namespace dsp56k
 
 			{
 				const RegGP alu(m_block);
-				m_asm.mov(alu, _alu.get());
+				m_asm.mov(alu, _alu);
 				m_asm.shr(alu, asmjit::Imm(46));
 				m_asm.and_(alu, mask.get());
 
@@ -183,7 +193,7 @@ namespace dsp56k
 
 	}
 
-	void JitOps::ccr_n_update(const RegGP& _alu) const
+	void JitOps::ccr_n_update(const asmjit::x86::Gpq& _alu) const
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.

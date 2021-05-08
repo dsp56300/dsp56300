@@ -34,7 +34,7 @@ namespace dsp56k
 		{
 			JitBlock block(m_asm, dsp);
 
-			JitOps ops(block);
+			JitOps ops(block, false);
 
 			(this->*_build)(block, ops);
 		}
