@@ -255,11 +255,12 @@ namespace dsp56k
 		&JitOps::op_Wait							// Wait 
 	};
 
-	JitOps::JitOps(JitBlock& _block)
+	JitOps::JitOps(JitBlock& _block, bool _useSRCache)
 	: m_block(_block)
 	, m_opcodes(_block.dsp().opcodes())
 	, m_dspRegs(_block.regs())
 	, m_asm(_block.asm_())
+	, m_useSRCache(_useSRCache)
 	{
 	}
 

@@ -2,7 +2,6 @@
 
 #include "dsp.h"
 #include "jitblock.h"
-#include "jitdspregs.h"
 #include "jitops.h"
 
 #include "asmjit/core/jitruntime.h"
