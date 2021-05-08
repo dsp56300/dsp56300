@@ -88,4 +88,18 @@ namespace dsp56k
 		const TWord m_aluIndex;
 		const bool m_readOnly;
 	};
+
+	class PushGP
+	{
+	public:
+		PushGP(JitBlock& _block, asmjit::x86::Gpq _reg);
+		~PushGP();
+
+		asmjit::x86::Gpq get() const { return m_reg; }
+		operator asmjit::x86::Gpq () const { return m_reg; }
+
+	private:
+		JitBlock& m_block;
+		const asmjit::x86::Gpq m_reg;
+	};
 }

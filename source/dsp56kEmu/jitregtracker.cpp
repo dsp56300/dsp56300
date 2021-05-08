@@ -13,4 +13,14 @@ namespace dsp56k
 		if(!m_readOnly)
 			m_block.regs().setALU(m_aluIndex, m_reg);
 	}
+
+	PushGP::PushGP(JitBlock& _block, const asmjit::x86::Gpq _reg) : m_block(_block), m_reg(_reg)
+	{
+		_block.asm_().push(m_reg);
+	}
+
+	PushGP::~PushGP()
+	{
+		m_block.asm_().pop(m_reg);
+	}
 }

@@ -23,6 +23,9 @@ namespace dsp56k
 		void signextend_build(JitBlock& _block, JitOps& _ops);
 		void signextend_verify();
 
+		void ccr_u_build(JitBlock& _block, JitOps& _ops);
+		void ccr_u_verify();
+
 		void abs_build(JitBlock& _block, JitOps& _ops);
 		void abs_verify();
 

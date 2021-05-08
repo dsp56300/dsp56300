@@ -12,6 +12,7 @@ namespace dsp56k
 	{
 		runTest(&JitUnittests::conversion_build, &JitUnittests::conversion_verify);
 		runTest(&JitUnittests::signextend_build, &JitUnittests::signextend_verify);
+		runTest(&JitUnittests::ccr_u_build, &JitUnittests::ccr_u_verify);
 
 		runTest(&JitUnittests::abs_build, &JitUnittests::abs_verify);
 		runTest(&JitUnittests::add_build, &JitUnittests::add_verify);
@@ -122,6 +123,33 @@ namespace dsp56k
 
 		assert(m_checks[4] == 0xffab123456abcdef);
 		assert(m_checks[5] == 0x0012123456abcdef);
+	}
+
+	void JitUnittests::ccr_u_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.sr.var = 0;
+	
+		m_checks[0] = 0xee012233445566;
+		m_checks[1] = 0xee412233445566;
+		m_checks[2] = 0xee812233445566;
+		m_checks[3] = 0xeec12233445566;
+
+		for(auto i=0; i<4; ++i)
+		{
+			RegGP r(_block);
+
+			_block.asm_().mov(r, m_checks[i]);
+			_ops.ccr_u_update(r);
+			_block.mem().mov(m_checks[i], regSR);
+		}
+	}
+
+	void JitUnittests::ccr_u_verify()
+	{
+		assert((m_checks[0] & SR_U));
+		assert(!(m_checks[1] & SR_U));
+		assert(!(m_checks[2] & SR_U));
+		assert((m_checks[3] & SR_U));
 	}
 
 	void JitUnittests::abs_build(JitBlock& _block, JitOps& _ops)
