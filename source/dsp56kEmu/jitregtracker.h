@@ -92,7 +92,7 @@ namespace dsp56k
 	class PushGP
 	{
 	public:
-		PushGP(JitBlock& _block, asmjit::x86::Gpq _reg);
+		PushGP(JitBlock& _block, const asmjit::x86::Gpq& _reg);
 		~PushGP();
 
 		asmjit::x86::Gpq get() const { return m_reg; }

@@ -128,7 +128,7 @@ namespace dsp56k
 	void JitUnittests::ccr_u_build(JitBlock& _block, JitOps& _ops)
 	{
 		dsp.reg.sr.var = 0;
-	
+
 		m_checks[0] = 0xee012233445566;
 		m_checks[1] = 0xee412233445566;
 		m_checks[2] = 0xee812233445566;
@@ -159,7 +159,6 @@ namespace dsp56k
 
 		_ops.op_Abs(0x000000);
 		_ops.op_Abs(0xffffff);
-
 	}
 
 	void JitUnittests::abs_verify()
