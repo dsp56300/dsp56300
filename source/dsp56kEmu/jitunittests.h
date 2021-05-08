@@ -53,6 +53,9 @@ namespace dsp56k
 		void addr_build(JitBlock& _block, JitOps& _ops);
 		void addr_verify();
 
+		void and_build(JitBlock& _block, JitOps& _ops);
+		void and_verify();
+
 		void clr_build(JitBlock& _block, JitOps& _ops);
 		void clr_verify();
 

@@ -32,7 +32,7 @@ namespace dsp56k
 		void op_Add_xxxx(TWord op);
 		void op_Addl(TWord op);
 		void op_Addr(TWord op);
-		void op_And_SD(TWord op){}
+		void op_And_SD(TWord op);
 		void op_And_xx(TWord op){}
 		void op_And_xxxx(TWord op){}
 		void op_Andi(TWord op){}
@@ -302,14 +302,18 @@ namespace dsp56k
 		void XY1to56(const asmjit::x86::Gpq& _dst, int _xy) const;
 
 		// decode
-		void decode_JJJ_read_56(asmjit::x86::Gpq dst, TWord JJJ, bool b);
+		void decode_JJJ_read_56(asmjit::x86::Gpq dst, TWord JJJ, bool b) const;
+		void decode_JJ_read(asmjit::x86::Gpq dst, TWord jj) const;
 
 		// ALU
-		void alu_add(TWord ab, RegGP& _v);
 		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;
+
+		void alu_add(TWord ab, RegGP& _v);
 		void alu_add(TWord ab, const asmjit::Imm& _v);
 		void alu_add_epilog(TWord ab, RegGP& alu);
-		
+
+		void alu_and(TWord ab, RegGP& _v) const;
+
 	private:
 		JitBlock& m_block;
 		const Opcodes& m_opcodes;

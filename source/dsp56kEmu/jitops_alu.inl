@@ -78,7 +78,31 @@ namespace dsp56k
 		alu_add(ab, r);
 	}
 
-	void JitOps::op_Add_SD(TWord op)
+	inline void JitOps::alu_and(TWord ab, RegGP& _v) const
+	{
+		m_asm.shl(_v, asmjit::Imm(24));
+		ccr_update_ifZero(SRB_Z);
+
+		const AluReg alu(m_block, ab);
+
+		{
+			const RegGP mask(m_block);
+
+			m_asm.mov(mask, asmjit::Imm(0xff000000ffffff));
+			m_asm.and_(alu, mask.get());
+			m_asm.or_(alu, _v.get());
+		}
+
+		_v.release();
+		
+		// S L E U N Z V C
+		// v - - - * * * -
+		ccr_n_update_by47(alu);
+		ccr_clear(SR_V);
+		ccr_s_update(alu);
+	}
+
+	inline void JitOps::op_Add_SD(TWord op)
 	{
 		const auto D = getFieldValue<Add_SD, Field_d>(op);
 		const auto JJJ = getFieldValue<Add_SD, Field_JJJ>(op);
@@ -165,6 +189,16 @@ namespace dsp56k
 		ccr_update_ifZero(SRB_Z);
 		ccr_clear(SR_V);			// TODO: Changed according to the standard definition.
 		ccr_dirty(aluD);
+	}
+
+	inline void JitOps::op_And_SD(TWord op)
+	{
+		const auto D = getFieldValue<And_SD, Field_d>(op);
+		const auto JJ = getFieldValue<And_SD, Field_JJ>(op);
+
+		RegGP r(m_block);
+		decode_JJ_read(r, JJ);
+		alu_and(D, r);
 	}
 
 	inline void JitOps::op_Clr(TWord op)

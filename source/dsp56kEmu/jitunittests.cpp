@@ -23,6 +23,7 @@ namespace dsp56k
 		runTest(&JitUnittests::addLongImmediate_build, &JitUnittests::addLongImmediate_verify);
 		runTest(&JitUnittests::addl_build, &JitUnittests::addl_verify);
 		runTest(&JitUnittests::addr_build, &JitUnittests::addr_verify);
+		runTest(&JitUnittests::and_build, &JitUnittests::and_verify);
 		runTest(&JitUnittests::clr_build, &JitUnittests::clr_verify);
 	}
 
@@ -334,6 +335,19 @@ namespace dsp56k
 	{
 		assert(dsp.reg.a.var == 0x0ffb16e12000000);
 		assert(dsp.getSR().var == 0x0800c8);			// (S L) N
+	}
+
+	void JitUnittests::and_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.a.var = 0xffaabbcc112233;
+		dsp.reg.x.var = 0x778899;
+
+		_ops.emit(0, 0x200046);	// and x0,a
+	}
+
+	void JitUnittests::and_verify()
+	{
+		assert(dsp.reg.a.var == 0xff778899112233);
 	}
 
 	void JitUnittests::clr_build(JitBlock& _block, JitOps& _ops)

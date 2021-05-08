@@ -4,8 +4,7 @@
 
 namespace dsp56k
 {
-
-	void JitOps::decode_JJJ_read_56(asmjit::x86::Gpq dst, TWord jjj, bool b)
+	void JitOps::decode_JJJ_read_56(const asmjit::x86::Gpq dst, TWord jjj, bool b) const
 	{
 		switch (jjj)
 		{
@@ -21,4 +20,24 @@ namespace dsp56k
 			assert(0 && "unreachable, invalid JJJ value");
 		}
 	}
+
+	void JitOps::decode_JJ_read(const asmjit::x86::Gpq dst, TWord jj) const
+	{
+		switch (jj)
+		{
+		case 0:
+		case 1: 
+			m_dspRegs.getXY(dst, jj);
+			m_asm.and_(dst, asmjit::Imm(0xffffff));
+			break;
+		case 2: 
+		case 3:
+			m_dspRegs.getXY(dst, jj - 2);
+			m_asm.shr(dst, asmjit::Imm(24));
+			break;
+		default:
+			assert(0 && "unreachable, invalid JJ value");
+		}
+	}
+
 }
