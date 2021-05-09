@@ -62,6 +62,13 @@ namespace dsp56k
 	static constexpr auto regGPTempB = asmjit::x86::rdx;
 	static constexpr auto regGPTempC = asmjit::x86::rsi;
 
+	// TODO: asmjit should have code for this, I can't find it
+#ifdef _MSC_VER
+	static constexpr auto regGPTempD = asmjit::x86::rdi;
+#else
+	static constexpr auto regGPTempD = asmjit::x86::rcx;
+#endif
+
 	static constexpr auto regXMMTempA = asmjit::x86::xmm13;
 	static constexpr auto regXMMTempB = asmjit::x86::xmm14;
 	static constexpr auto regXMMTempC = asmjit::x86::xmm15;
