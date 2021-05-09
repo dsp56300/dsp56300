@@ -21,7 +21,7 @@ namespace dsp56k
 		if(m_useCCRCache)
 		{
 			m_asm.movq(regLastModAlu, _alu);
-			m_ccrDirty = true;			
+			m_ccrDirty = true;
 		}
 		else
 		{
