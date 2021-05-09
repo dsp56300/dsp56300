@@ -270,6 +270,19 @@ namespace dsp56k
 		alu_asl(D, D, r);
 	}
 
+	inline void JitOps::op_Asl_ii(TWord op)
+	{
+		const TWord shiftAmount	= getFieldValue<Asl_ii,Field_iiiiii>(op);
+
+		const bool abDst		= getFieldValue<Asl_ii,Field_D>(op);
+		const bool abSrc		= getFieldValue<Asl_ii,Field_S>(op);
+
+		// TODO: this is far from optimal, we should use immediate data here
+		const PushGP r(m_block, asmjit::x86::rcx);
+		m_asm.mov(r, asmjit::Imm(shiftAmount));
+		alu_asl(abSrc, abDst, r);
+	}
+
 	inline void JitOps::op_Clr(TWord op)
 	{
 		const auto D = getFieldValue<Clr, Field_d>(op);

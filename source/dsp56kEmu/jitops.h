@@ -37,7 +37,7 @@ namespace dsp56k
 		void op_And_xxxx(TWord op);
 		void op_Andi(TWord op);
 		void op_Asl_D(TWord op);
-		void op_Asl_ii(TWord op){}
+		void op_Asl_ii(TWord op);
 		void op_Asl_S1S2D(TWord op){}
 		void op_Asr_D(TWord op){}
 		void op_Asr_ii(TWord op){}
