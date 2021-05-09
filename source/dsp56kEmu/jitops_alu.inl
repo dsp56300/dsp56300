@@ -102,6 +102,35 @@ namespace dsp56k
 		ccr_s_update(alu);
 	}
 
+	inline void JitOps::alu_asl(TWord abSrc, TWord abDst, const PushGP& _v)
+	{
+		const AluReg alu(m_block, abSrc, false, abDst);
+
+		m_asm.sal(alu, asmjit::Imm(8));				// we want to hit the 64 bit boundary to make use of the native carry flag so pre-shift by 8 bit (56 => 64)
+
+		m_asm.sal(alu, _v.get());					// now do the real shift
+
+		ccr_update_ifCarry(SRB_C);					// copy the host carry flag to the DSP carry flag
+		ccr_update_ifZero(SRB_Z);					// we can check for zero now, too
+
+		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
+		// The easiest way to check this is to shift back and compare if the initial alu value is identical ot the backshifted one
+		{
+			const AluReg oldAlu(m_block, abSrc, true);
+			m_asm.sal(oldAlu, asmjit::Imm(8));
+			m_asm.sar(alu, _v.get());
+			m_asm.cmp(alu, oldAlu.get());
+		}
+
+		ccr_update_ifZero(SRB_V);
+
+		m_asm.sal(alu, _v.get());					// one more time
+		m_asm.shr(alu, asmjit::Imm(8));				// correction
+
+		// S L E U N Z V C
+		ccr_dirty(alu);
+	}
+
 	inline void JitOps::op_Add_SD(TWord op)
 	{
 		const auto D = getFieldValue<Add_SD, Field_d>(op);
@@ -229,6 +258,16 @@ namespace dsp56k
 		decode_EE_read(r, ee);
 		m_asm.and_(r, asmjit::Imm(iiiiii));
 		decode_EE_write(r, ee);
+	}
+
+	inline void JitOps::op_Asl_D(TWord op)
+	{
+		const auto D = getFieldValue<Asl_D, Field_d>(op);
+
+		// TODO: this is far from optimal, we should use immediate data here
+		const PushGP r(m_block, asmjit::x86::rcx);
+		m_asm.mov(r, asmjit::Imm(1));
+		alu_asl(D, D, r);
 	}
 
 	inline void JitOps::op_Clr(TWord op)

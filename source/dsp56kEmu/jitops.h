@@ -36,7 +36,7 @@ namespace dsp56k
 		void op_And_xx(TWord op);
 		void op_And_xxxx(TWord op);
 		void op_Andi(TWord op);
-		void op_Asl_D(TWord op){}
+		void op_Asl_D(TWord op);
 		void op_Asl_ii(TWord op){}
 		void op_Asl_S1S2D(TWord op){}
 		void op_Asr_D(TWord op){}
@@ -326,6 +326,8 @@ namespace dsp56k
 		void alu_add(TWord ab, const asmjit::Imm& _v);
 
 		void alu_and(TWord ab, RegGP& _v) const;
+
+		void alu_asl(TWord abSrc, TWord abDst, const PushGP& _v);
 
 	private:
 		JitBlock& m_block;
