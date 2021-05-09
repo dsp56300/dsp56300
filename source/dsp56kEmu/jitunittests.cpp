@@ -381,10 +381,19 @@ namespace dsp56k
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)
 	{
+		dsp.reg.omr.var = 0xff1111;
+		dsp.reg.sr.var = 0xff1111;
+
+		_ops.emit(0, 0x0022fa);	// ori #$33,omr
+		_ops.emit(0, 0x0022fb);	// ori #$33,eom
+		_ops.emit(0, 0x0022f9);	// ori #$33,ccr
+		_ops.emit(0, 0x0022f8);	// ori #$33,mr
 	}
 
 	void JitUnittests::ori_verify()
 	{
+		assert(dsp.reg.omr.var == 0xff3333);
+		assert(dsp.reg.sr.var == 0xff3333);
 	}
 
 	void JitUnittests::clr_build(JitBlock& _block, JitOps& _ops)

@@ -248,7 +248,7 @@ namespace dsp56k
 
 		RegGP r(m_block);
 		decode_EE_read(r, ee);
-		m_asm.and_(r, asmjit::Imm(iiiiii));
+		m_asm.or_(r, asmjit::Imm(iiiiii));
 		decode_EE_write(r, ee);
 	}
 }
