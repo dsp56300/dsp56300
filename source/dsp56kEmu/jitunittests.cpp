@@ -32,6 +32,7 @@ namespace dsp56k
 
 		runTest(&JitUnittests::asl_D_build, &JitUnittests::asl_D_verify);
 		runTest(&JitUnittests::asl_ii_build, &JitUnittests::asl_ii_verify);
+		runTest(&JitUnittests::asl_S1S2D_build, &JitUnittests::asl_S1S2D_verify);
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -412,6 +413,26 @@ namespace dsp56k
 		assert(!dsp.sr_test_noCache(SR_Z));
 		assert(!dsp.sr_test_noCache(SR_V));
 		assert(dsp.sr_test_noCache(SR_C));
+	}
+
+	void JitUnittests::asl_S1S2D_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.x.var = ~0;
+		dsp.reg.y.var = ~0;
+		dsp.x0(0x4);
+		dsp.y1(0x8);
+
+		dsp.reg.a.var = 0x0011aabbccddeeff;
+		dsp.reg.b.var = 0x00ff112233445566;
+		
+		_ops.emit(0, 0x0c1e48);	// asl x0,a,a
+		_ops.emit(0, 0x0c1e5f);	// asl y1,b,b
+	}
+
+	void JitUnittests::asl_S1S2D_verify()
+	{
+		assert(dsp.reg.a.var == 0x001aabbccddeeff0);
+		assert(dsp.reg.b.var == 0x0011223344556600);
 	}
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)

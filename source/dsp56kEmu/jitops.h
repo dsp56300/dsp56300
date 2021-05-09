@@ -38,7 +38,7 @@ namespace dsp56k
 		void op_Andi(TWord op);
 		void op_Asl_D(TWord op);
 		void op_Asl_ii(TWord op);
-		void op_Asl_S1S2D(TWord op){}
+		void op_Asl_S1S2D(TWord op);
 		void op_Asr_D(TWord op){}
 		void op_Asr_ii(TWord op){}
 		void op_Asr_S1S2D(TWord op){}
@@ -315,9 +315,10 @@ namespace dsp56k
 
 		// decode
 		void decode_EE_read(RegGP& dst, TWord _ee);
-		void decode_EE_write(asmjit::x86::Gpq src, TWord _ee);
-		void decode_JJJ_read_56(asmjit::x86::Gpq dst, TWord JJJ, bool b) const;
-		void decode_JJ_read(asmjit::x86::Gpq dst, TWord jj) const;
+		void decode_EE_write(asmjit::x86::Gpq _src, TWord _ee);
+		void decode_JJJ_read_56(asmjit::x86::Gpq _dst, TWord JJJ, bool _b) const;
+		void decode_JJ_read(asmjit::x86::Gpq _dst, TWord jj) const;
+		void decode_sss_read(asmjit::x86::Gpq _dst, TWord _sss) const;
 
 		// ALU
 		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;

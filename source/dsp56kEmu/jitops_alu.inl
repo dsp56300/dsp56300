@@ -283,6 +283,18 @@ namespace dsp56k
 		alu_asl(abSrc, abDst, r);
 	}
 
+	inline void JitOps::op_Asl_S1S2D(TWord op)
+	{
+		const auto sss   = getFieldValue<Asl_S1S2D,Field_sss>(op);
+		const bool abDst = getFieldValue<Asl_S1S2D,Field_D>(op);
+		const bool abSrc = getFieldValue<Asl_S1S2D,Field_S>(op);
+
+		const PushGP r(m_block, asmjit::x86::rcx);
+		decode_sss_read( r.get(), sss );
+
+		alu_asl(abDst, abSrc, r);
+	}
+
 	inline void JitOps::op_Clr(TWord op)
 	{
 		const auto D = getFieldValue<Clr, Field_d>(op);

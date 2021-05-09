@@ -59,6 +59,11 @@ namespace dsp56k
 		void setALU(int _alu, asmjit::x86::Gp _src);
 
 		void getXY(asmjit::x86::Gp _dst, int _xy);
+		void getXY0(const asmjit::x86::Gpq& _dst, uint32_t _aluIndex);
+		void getXY1(const asmjit::x86::Gpq& _dst, uint32_t _aluIndex);
+		void getALU0(const asmjit::x86::Gpq& _dst, uint32_t _aluIndex);
+		void getALU1(const asmjit::x86::Gpq& _dst, uint32_t _aluIndex);
+		void getALU2(const asmjit::x86::Gpq& _dst, uint32_t _aluIndex);
 
 	private:
 		enum LoadedRegs
