@@ -84,7 +84,7 @@ namespace dsp56k
 	class AluReg
 	{
 	public:
-		AluReg(JitBlock& _block, TWord _aluIndex, bool readOnly = false);
+		AluReg(JitBlock& _block, TWord _aluIndexSrc, bool readOnly = false, TWord _aluIndexDst = ~0);
 		~AluReg();
 		asmjit::x86::Gpq get() const { return m_reg.get(); }
 		operator asmjit::x86::Gpq () const { return m_reg.get(); }
@@ -92,7 +92,7 @@ namespace dsp56k
 	private:
 		JitBlock& m_block;
 		const RegGP m_reg;
-		const TWord m_aluIndex;
+		const TWord m_aluIndexDst;
 		const bool m_readOnly;
 	};
 
