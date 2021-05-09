@@ -39,13 +39,13 @@ namespace dsp56k
 	void Jitmem::mov(const asmjit::x86::Gp& _dst, TReg24& _src)
 	{
 		const RegGP reg(m_block.gpPool());
-		m_block.asm_().mov(_dst, ptr(reg.get(), _src));
+		m_block.asm_().mov(_dst.r32(), ptr(reg.get(), _src));
 	}
 
 	void Jitmem::mov(TReg24& _dst, const asmjit::x86::Gp& _src)
 	{
 		const RegGP reg(m_block.gpPool());
-		m_block.asm_().mov(ptr(reg.get(), _dst), _src);
+		m_block.asm_().mov(ptr(reg.get(), _dst), _src.r32());
 	}
 
 	void Jitmem::mov(const asmjit::x86::Xmm& _dst, TReg56& _src)
