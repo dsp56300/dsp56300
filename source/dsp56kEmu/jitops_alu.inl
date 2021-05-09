@@ -78,7 +78,7 @@ namespace dsp56k
 		alu_add(ab, r);
 	}
 
-	inline void JitOps::alu_and(TWord ab, RegGP& _v) const
+	inline void JitOps::alu_and(const TWord ab, RegGP& _v) const
 	{
 		m_asm.shl(_v, asmjit::Imm(24));
 		ccr_update_ifZero(SRB_Z);
@@ -201,6 +201,36 @@ namespace dsp56k
 		alu_and(D, r);
 	}
 
+	inline void JitOps::op_And_xx(TWord op)
+	{
+		const auto ab	= getFieldValue<And_xx,Field_d>(op);
+		const auto xxxx	= getFieldValue<And_xx,Field_iiiiii>(op);
+
+		RegGP r(m_block);
+		m_asm.mov(r, asmjit::Imm(xxxx));
+		alu_and(ab,r);
+	}
+
+	inline void JitOps::op_And_xxxx(TWord op)
+	{
+		const auto ab = getFieldValue<And_xxxx,Field_d>(op);
+
+		RegGP r(m_block);
+		m_block.mem().getOpWordB(r);
+		alu_and(ab,r);
+	}
+
+	inline void JitOps::op_Andi(TWord op)
+	{
+		const TWord ee		= getFieldValue<Andi,Field_EE>(op);
+		const TWord iiiiii	= getFieldValue<Andi,Field_iiiiiiii>(op);
+
+		RegGP r(m_block);
+		decode_EE_read(r, ee);
+		m_asm.and_(r, asmjit::Imm(iiiiii));
+		decode_EE_write(r, ee);
+	}
+
 	inline void JitOps::op_Clr(TWord op)
 	{
 		const auto D = getFieldValue<Clr, Field_d>(op);
@@ -208,5 +238,17 @@ namespace dsp56k
 		m_asm.pxor(xm, xm);
 		ccr_clear( static_cast<CCRMask>(SR_E | SR_N | SR_V) );
 		ccr_set( static_cast<CCRMask>(SR_U | SR_Z) );
+		m_ccrDirty = false;
+	}
+
+	inline void JitOps::op_Ori(TWord op)
+	{
+		const TWord ee		= getFieldValue<Ori,Field_EE>(op);
+		const TWord iiiiii	= getFieldValue<Ori,Field_iiiiiiii>(op);
+
+		RegGP r(m_block);
+		decode_EE_read(r, ee);
+		m_asm.and_(r, asmjit::Imm(iiiiii));
+		decode_EE_write(r, ee);
 	}
 }

@@ -260,7 +260,7 @@ namespace dsp56k
 	, m_opcodes(_block.dsp().opcodes())
 	, m_dspRegs(_block.regs())
 	, m_asm(_block.asm_())
-	, m_useSRCache(_useSRCache)
+	, m_useCCRCache(_useSRCache)
 	{
 	}
 

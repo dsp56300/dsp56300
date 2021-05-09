@@ -33,9 +33,9 @@ namespace dsp56k
 		void op_Addl(TWord op);
 		void op_Addr(TWord op);
 		void op_And_SD(TWord op);
-		void op_And_xx(TWord op){}
-		void op_And_xxxx(TWord op){}
-		void op_Andi(TWord op){}
+		void op_And_xx(TWord op);
+		void op_And_xxxx(TWord op);
+		void op_Andi(TWord op);
 		void op_Asl_D(TWord op){}
 		void op_Asl_ii(TWord op){}
 		void op_Asl_S1S2D(TWord op){}
@@ -228,7 +228,7 @@ namespace dsp56k
 		void op_Or_SD(TWord op){}
 		void op_Or_xx(TWord op){}
 		void op_Or_xxxx(TWord op){}
-		void op_Ori(TWord op){}
+		void op_Ori(TWord op);
 		void op_Pflush(TWord op){}
 		void op_Pflushun(TWord op){}
 		void op_Pfree(TWord op){}
@@ -272,6 +272,16 @@ namespace dsp56k
 
 		void signed24To56(const asmjit::x86::Gpq& _r) const;
 
+		void getMR(const asmjit::x86::Gpq& _dst) const;
+		void getCCR(RegGP& _dst);
+		void getCOM(const asmjit::x86::Gpq& _dst) const;
+		void getEOM(const asmjit::x86::Gpq& _dst) const;
+
+		void setMR(const asmjit::x86::Gpq& _src) const;
+		void setCCR(const asmjit::x86::Gpq& _src);
+		void setCOM(const asmjit::x86::Gpq& _src) const;
+		void setEOM(const asmjit::x86::Gpq& _src) const;
+
 		// CCR
 		void ccr_update_ifZero(CCRBit _bit) const;
 		void ccr_update_ifNotZero(CCRBit _bit) const;
@@ -294,6 +304,8 @@ namespace dsp56k
 		void ccr_clear(CCRMask _mask) const;
 		void ccr_set(CCRMask _mask) const;
 		void ccr_dirty(const asmjit::x86::Gpq& _alu);
+		void updateDirtyCCR();
+		void updateDirtyCCR(const asmjit::x86::Gpq& _alu);
 
 		void sr_getBitValue(const asmjit::x86::Gpq& _dst, CCRBit _bit) const;
 
@@ -302,6 +314,8 @@ namespace dsp56k
 		void XY1to56(const asmjit::x86::Gpq& _dst, int _xy) const;
 
 		// decode
+		void decode_EE_read(RegGP& dst, TWord _ee);
+		void decode_EE_write(asmjit::x86::Gpq src, TWord _ee);
 		void decode_JJJ_read_56(asmjit::x86::Gpq dst, TWord JJJ, bool b) const;
 		void decode_JJ_read(asmjit::x86::Gpq dst, TWord jj) const;
 
@@ -310,7 +324,6 @@ namespace dsp56k
 
 		void alu_add(TWord ab, RegGP& _v);
 		void alu_add(TWord ab, const asmjit::Imm& _v);
-		void alu_add_epilog(TWord ab, RegGP& alu);
 
 		void alu_and(TWord ab, RegGP& _v) const;
 
@@ -321,7 +334,8 @@ namespace dsp56k
 		asmjit::x86::Assembler& m_asm;
 		std::map<TWord, asmjit::Label> m_pcLabels;
 		TWord m_pcCurrentOp = 0;
-		bool m_srDirty = true;
-		const bool m_useSRCache;
+
+		bool m_ccrDirty = false;
+		const bool m_useCCRCache;
 	};
 }

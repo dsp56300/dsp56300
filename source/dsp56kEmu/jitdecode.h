@@ -4,6 +4,32 @@
 
 namespace dsp56k
 {
+	void JitOps::decode_EE_read(RegGP& dst, TWord _ee)
+	{
+		switch (_ee)
+		{
+		case 0: return getMR(dst);
+		case 1: return getCCR(dst);
+		case 2: return getCOM(dst);
+		case 3: return getEOM(dst);
+		default:
+			assert(0 && "invalid EE value");
+		}
+	}
+
+	void JitOps::decode_EE_write(const asmjit::x86::Gpq src, TWord _ee)
+	{
+		switch (_ee)
+		{
+		case 0: return setMR(src);
+		case 1: return setCCR(src);
+		case 2: return setCOM(src);
+		case 3: return setEOM(src);
+		default:
+			assert(0 && "invalid EE value");
+		}
+	}
+
 	void JitOps::decode_JJJ_read_56(const asmjit::x86::Gpq dst, TWord jjj, bool b) const
 	{
 		switch (jjj)

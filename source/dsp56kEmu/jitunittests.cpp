@@ -12,18 +12,25 @@ namespace dsp56k
 	{
 		runTest(&JitUnittests::conversion_build, &JitUnittests::conversion_verify);
 		runTest(&JitUnittests::signextend_build, &JitUnittests::signextend_verify);
+
 		runTest(&JitUnittests::ccr_u_build, &JitUnittests::ccr_u_verify);
 		runTest(&JitUnittests::ccr_e_build, &JitUnittests::ccr_e_verify);
 		runTest(&JitUnittests::ccr_n_build, &JitUnittests::ccr_n_verify);
 		runTest(&JitUnittests::ccr_s_build, &JitUnittests::ccr_s_verify);
 
 		runTest(&JitUnittests::abs_build, &JitUnittests::abs_verify);
+		
 		runTest(&JitUnittests::add_build, &JitUnittests::add_verify);
 		runTest(&JitUnittests::addShortImmediate_build, &JitUnittests::addShortImmediate_verify);
 		runTest(&JitUnittests::addLongImmediate_build, &JitUnittests::addLongImmediate_verify);
 		runTest(&JitUnittests::addl_build, &JitUnittests::addl_verify);
 		runTest(&JitUnittests::addr_build, &JitUnittests::addr_verify);
+
 		runTest(&JitUnittests::and_build, &JitUnittests::and_verify);
+
+		runTest(&JitUnittests::andi_build, &JitUnittests::andi_verify);
+		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
+		
 		runTest(&JitUnittests::clr_build, &JitUnittests::clr_verify);
 	}
 
@@ -353,6 +360,31 @@ namespace dsp56k
 	{
 		assert(dsp.reg.a.var == 0xff778899112233);
 		assert(dsp.reg.b.var == 0xaa667788334455);
+	}
+
+	void JitUnittests::andi_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.omr.var = 0xff6666;
+		dsp.reg.sr.var = 0xff6666;
+
+		_ops.emit(0, 0x0033ba);	// andi #$33,omr
+		_ops.emit(0, 0x0033bb);	// andi #$33,eom
+		_ops.emit(0, 0x0033b9);	// andi #$33,ccr
+		_ops.emit(0, 0x0033b8);	// andi #$33,mr
+	}
+
+	void JitUnittests::andi_verify()
+	{
+		assert(dsp.reg.omr.var == 0xff2222);
+		assert(dsp.reg.sr.var == 0xff2222);
+	}
+
+	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)
+	{
+	}
+
+	void JitUnittests::ori_verify()
+	{
 	}
 
 	void JitUnittests::clr_build(JitBlock& _block, JitOps& _ops)

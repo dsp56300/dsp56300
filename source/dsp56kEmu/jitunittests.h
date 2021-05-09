@@ -56,6 +56,12 @@ namespace dsp56k
 		void and_build(JitBlock& _block, JitOps& _ops);
 		void and_verify();
 
+		void andi_build(JitBlock& _block, JitOps& _ops);
+		void andi_verify();
+
+		void ori_build(JitBlock& _block, JitOps& _ops);
+		void ori_verify();
+
 		void clr_build(JitBlock& _block, JitOps& _ops);
 		void clr_verify();
 

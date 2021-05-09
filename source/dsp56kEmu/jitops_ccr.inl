@@ -18,18 +18,33 @@ namespace dsp56k
 
 	inline void JitOps::ccr_dirty(const asmjit::x86::Gpq& _alu)
 	{
-		m_asm.movq(regLastModAlu, _alu);
-
-		if(m_useSRCache)
+		if(m_useCCRCache)
 		{
-			m_srDirty = true;			
+			m_asm.movq(regLastModAlu, _alu);
+			m_ccrDirty = true;			
 		}
 		else
 		{
-			ccr_e_update(_alu);
-			ccr_u_update(_alu);
-			ccr_n_update_by55(_alu);
+			updateDirtyCCR(_alu);
 		}
+	}
+
+	inline void JitOps::updateDirtyCCR()
+	{
+		if(!m_ccrDirty)
+			return;
+
+		const RegGP r(m_block);
+		m_asm.movq(r, regLastModAlu);
+		updateDirtyCCR(r);
+	}
+
+	inline void JitOps::updateDirtyCCR(const asmjit::x86::Gpq& _alu)
+	{
+		ccr_e_update(_alu);
+		ccr_u_update(_alu);
+		ccr_n_update_by55(_alu);
+		m_ccrDirty = false;
 	}
 
 	inline void JitOps::sr_getBitValue(const asmjit::x86::Gpq& _dst, CCRBit _bit) const
