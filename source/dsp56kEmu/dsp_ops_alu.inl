@@ -185,7 +185,7 @@ namespace dsp56k
 		d.var = res & 0x00ffffffffffffff;
 
 		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
-		// What that means for us if all bits that are shifted out need to be identical to not overflow
+		// What that means for us is that all bits that are shifted out need to be identical to not overflow
 		int64_t overflowMaskI = 0x8000000000000000;
 		overflowMaskI >>= _shiftAmount;
 		uint64_t overflowMaskU = overflowMaskI;
