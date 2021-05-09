@@ -131,6 +131,20 @@ namespace dsp56k
 		ccr_dirty(alu);
 	}
 
+	inline void JitOps::alu_asr(const TWord _abSrc, const TWord _abDst, const PushGP& _v)
+	{
+		const AluReg alu(m_block, _abSrc, false, _abDst);
+
+		m_asm.sar(alu, _v.get());
+
+		ccr_update_ifCarry(SRB_C);					// copy the host carry flag to the DSP carry flag
+		ccr_update_ifZero(SRB_Z);					// we can check for zero now, too
+		ccr_clear(SR_V);
+
+		// S L E U N Z V C
+		ccr_dirty(alu);
+	}
+
 	inline void JitOps::op_Add_SD(TWord op)
 	{
 		const auto D = getFieldValue<Add_SD, Field_d>(op);
@@ -291,8 +305,43 @@ namespace dsp56k
 
 		const PushGP r(m_block, asmjit::x86::rcx);
 		decode_sss_read( r.get(), sss );
-
+		m_asm.and_(r, asmjit::Imm(0x3f));	// "In the control register S1: bits 5–0 (LSB) are used as the #ii field, and the rest of the register is ignored." TODO: this is missing in the interpreter!
 		alu_asl(abDst, abSrc, r);
+	}
+
+	inline void JitOps::op_Asr_D(TWord op)
+	{
+		const auto D = getFieldValue<Asr_D, Field_d>(op);
+
+		// TODO: this is far from optimal, we should use immediate data here
+		const PushGP r(m_block, asmjit::x86::rcx);
+		m_asm.mov(r, asmjit::Imm(1));
+		alu_asr(D, D, r);
+	}
+
+	inline void JitOps::op_Asr_ii(TWord op)
+	{
+		const TWord shiftAmount	= getFieldValue<Asr_ii,Field_iiiiii>(op);
+
+		const bool abDst		= getFieldValue<Asr_ii,Field_D>(op);
+		const bool abSrc		= getFieldValue<Asr_ii,Field_S>(op);
+
+		// TODO: this is far from optimal, we should use immediate data here
+		const PushGP r(m_block, asmjit::x86::rcx);
+		m_asm.mov(r, asmjit::Imm(shiftAmount));
+		alu_asr(abSrc, abDst, r);
+	}
+
+	inline void JitOps::op_Asr_S1S2D(TWord op)
+	{
+		const auto sss   = getFieldValue<Asr_S1S2D,Field_sss>(op);
+		const bool abDst = getFieldValue<Asr_S1S2D,Field_D>(op);
+		const bool abSrc = getFieldValue<Asr_S1S2D,Field_S>(op);
+
+		const PushGP r(m_block, asmjit::x86::rcx);
+		decode_sss_read( r.get(), sss );
+		m_asm.and_(r, asmjit::Imm(0x3f));	// "In the control register S1: bits 5–0 (LSB) are used as the #ii field, and the rest of the register is ignored." TODO: this is missing in the interpreter!
+		alu_asr(abDst, abSrc, r);
 	}
 
 	inline void JitOps::op_Clr(TWord op)

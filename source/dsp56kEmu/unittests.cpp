@@ -76,7 +76,7 @@ namespace dsp56k
 
 		// asr a
 		execOpcode(0x200022);
-		assert(dsp.reg.a.var == 0x0002ccf9102000);		
+		assert(dsp.reg.a.var == 0x0002ccf9102000);
 	}
 
 	void UnitTests::testMultiply()

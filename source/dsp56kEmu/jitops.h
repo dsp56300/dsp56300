@@ -39,9 +39,9 @@ namespace dsp56k
 		void op_Asl_D(TWord op);
 		void op_Asl_ii(TWord op);
 		void op_Asl_S1S2D(TWord op);
-		void op_Asr_D(TWord op){}
-		void op_Asr_ii(TWord op){}
-		void op_Asr_S1S2D(TWord op){}
+		void op_Asr_D(TWord op);
+		void op_Asr_ii(TWord op);
+		void op_Asr_S1S2D(TWord op);
 		void op_Bcc_xxxx(TWord op){}
 		void op_Bcc_xxx(TWord op){}
 		void op_Bcc_Rn(TWord op){}
@@ -329,6 +329,7 @@ namespace dsp56k
 		void alu_and(TWord ab, RegGP& _v) const;
 
 		void alu_asl(TWord abSrc, TWord abDst, const PushGP& _v);
+		void alu_asr(TWord _abSrc, TWord _abDst, const PushGP& _v);
 
 	private:
 		JitBlock& m_block;

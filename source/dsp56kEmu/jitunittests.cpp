@@ -33,6 +33,9 @@ namespace dsp56k
 		runTest(&JitUnittests::asl_D_build, &JitUnittests::asl_D_verify);
 		runTest(&JitUnittests::asl_ii_build, &JitUnittests::asl_ii_verify);
 		runTest(&JitUnittests::asl_S1S2D_build, &JitUnittests::asl_S1S2D_verify);
+		runTest(&JitUnittests::asr_D_build, &JitUnittests::asr_D_verify);
+		runTest(&JitUnittests::asr_ii_build, &JitUnittests::asr_ii_verify);
+		runTest(&JitUnittests::asr_S1S2D_build, &JitUnittests::asr_S1S2D_verify);
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -433,6 +436,50 @@ namespace dsp56k
 	{
 		assert(dsp.reg.a.var == 0x001aabbccddeeff0);
 		assert(dsp.reg.b.var == 0x0011223344556600);
+	}
+
+	void JitUnittests::asr_D_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.a.var = 0x000599f2204000;
+		dsp.reg.sr.var = 0;
+
+		_ops.emit(0, 0x200022);	// asr a
+	}
+
+	void JitUnittests::asr_D_verify()
+	{
+		assert(dsp.reg.a.var == 0x0002ccf9102000);
+	}
+
+	void JitUnittests::asr_ii_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.a.var = 0x000599f2204000;
+		_ops.emit(0, 0x0c1c02);	// asr #1,a,a
+	}
+
+	void JitUnittests::asr_ii_verify()
+	{
+		assert(dsp.reg.a.var == 0x0002ccf9102000);
+	}
+
+	void JitUnittests::asr_S1S2D_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.x.var = ~0;
+		dsp.reg.y.var = ~0;
+		dsp.x0(0x4);
+		dsp.y1(0x8);
+
+		dsp.reg.a.var = 0x0011aabbccddeeff;
+		dsp.reg.b.var = 0x00ff112233445566;
+		
+		_ops.emit(0, 0x0c1e68);	// asr x0,a,a
+		_ops.emit(0, 0x0c1e7f);	// asr y1,b,b
+	}
+
+	void JitUnittests::asr_S1S2D_verify()
+	{
+		assert(dsp.reg.a.var == 0x00011aabbccddeef);
+		assert(dsp.reg.b.var == 0x0000ff1122334455);
 	}
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)

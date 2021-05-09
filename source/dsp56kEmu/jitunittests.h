@@ -68,6 +68,15 @@ namespace dsp56k
 		void asl_S1S2D_build(JitBlock& _block, JitOps& _ops);
 		void asl_S1S2D_verify();
 
+		void asr_D_build(JitBlock& _block, JitOps& _ops);
+		void asr_D_verify();
+
+		void asr_ii_build(JitBlock& _block, JitOps& _ops);
+		void asr_ii_verify();
+
+		void asr_S1S2D_build(JitBlock& _block, JitOps& _ops);
+		void asr_S1S2D_verify();
+
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();
 
