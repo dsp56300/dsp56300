@@ -26,7 +26,7 @@ namespace dsp56k
 		void emitOpEpilog();
 
 		void op_Abs(TWord op);
-		void op_ADC(TWord op);
+		void op_ADC(TWord op)			{ errNotImplemented(op); }
 		void op_Add_SD(TWord op);
 		void op_Add_xx(TWord op);
 		void op_Add_xxxx(TWord op);
@@ -45,12 +45,12 @@ namespace dsp56k
 		void op_Bcc_xxxx(TWord op){}
 		void op_Bcc_xxx(TWord op){}
 		void op_Bcc_Rn(TWord op){}
-		void op_Bchg_ea(TWord op){}
-		void op_Bchg_aa(TWord op){}
-		void op_Bchg_pp(TWord op){}
-		void op_Bchg_qq(TWord op){}
-		void op_Bchg_D(TWord op){}
-		void op_Bclr_ea(TWord op){}
+		void op_Bchg_ea(TWord op)		{ errNotImplemented(op); }
+		void op_Bchg_aa(TWord op)		{ errNotImplemented(op); }
+		void op_Bchg_pp(TWord op)		{ errNotImplemented(op); }
+		void op_Bchg_qq(TWord op)		{ errNotImplemented(op); }
+		void op_Bchg_D(TWord op)		{ errNotImplemented(op); }
+		void op_Bclr_ea(TWord op);
 		void op_Bclr_aa(TWord op){}
 		void op_Bclr_pp(TWord op){}
 		void op_Bclr_qq(TWord op){}
@@ -332,6 +332,8 @@ namespace dsp56k
 		void alu_asr(TWord _abSrc, TWord _abDst, const PushGP& _v);
 
 	private:
+		void errNotImplemented(TWord op);
+
 		JitBlock& m_block;
 		const Opcodes& m_opcodes;
 		JitDspRegs& m_dspRegs;

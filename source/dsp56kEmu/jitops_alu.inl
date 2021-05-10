@@ -34,11 +34,6 @@ namespace dsp56k
 		ccr_dirty(ra);
 	}
 
-	inline void JitOps::op_ADC(TWord op)
-	{
-		assert(false && "not implemented");
-	}
-
 	inline void JitOps::alu_add(TWord ab, RegGP& _v)
 	{
 		const AluReg alu(m_block, ab);
@@ -143,6 +138,11 @@ namespace dsp56k
 
 		// S L E U N Z V C
 		ccr_dirty(alu);
+	}
+
+	inline void JitOps::errNotImplemented(TWord op)
+	{
+		assert(0 && "instruction not implemented");
 	}
 
 	inline void JitOps::op_Add_SD(TWord op)
@@ -342,6 +342,10 @@ namespace dsp56k
 		decode_sss_read( r.get(), sss );
 		m_asm.and_(r, asmjit::Imm(0x3f));	// "In the control register S1: bits 5–0 (LSB) are used as the #ii field, and the rest of the register is ignored." TODO: this is missing in the interpreter!
 		alu_asr(abDst, abSrc, r);
+	}
+
+	inline void JitOps::op_Bclr_ea(TWord op)
+	{
 	}
 
 	inline void JitOps::op_Clr(TWord op)
