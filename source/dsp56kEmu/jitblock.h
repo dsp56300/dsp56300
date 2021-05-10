@@ -39,6 +39,7 @@ namespace dsp56k
 
 		operator JitRegpool<asmjit::x86::Gpq>& ()		{ return m_gpPool; }
 		operator JitRegpool<asmjit::x86::Xmm>& ()		{ return m_xmmPool;	}
+		operator asmjit::x86::Assembler& ()				{ return m_asm;	}
 
 	private:
 		asmjit::x86::Assembler& m_asm;

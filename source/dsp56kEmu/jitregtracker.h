@@ -1,12 +1,19 @@
 #pragma once
 
-#include "assert.h"
-
 #include <stack>
 
-
+#include "assert.h"
 #include "types.h"
+
 #include "asmjit/x86/x86operand.h"
+
+namespace asmjit
+{
+	namespace x86
+	{
+		class Assembler;
+	}
+}
 
 namespace dsp56k
 {
@@ -99,14 +106,29 @@ namespace dsp56k
 	class PushGP
 	{
 	public:
-		PushGP(JitBlock& _block, const asmjit::x86::Gpq& _reg);
+		PushGP(asmjit::x86::Assembler& _a, const asmjit::x86::Gpq& _reg);
 		~PushGP();
 
 		asmjit::x86::Gpq get() const { return m_reg; }
 		operator asmjit::x86::Gpq () const { return m_reg; }
 
 	private:
-		JitBlock& m_block;
+		asmjit::x86::Assembler& m_asm;
 		const asmjit::x86::Gpq m_reg;
 	};
+
+	class PushExchange
+	{
+	public:
+		PushExchange(asmjit::x86::Assembler& _a, const asmjit::x86::Gpq& _regA, const asmjit::x86::Gpq& _regB);
+		~PushExchange();
+
+	private:
+		void swap() const;
+
+		asmjit::x86::Assembler& m_asm;
+		const asmjit::x86::Gpq m_regA;
+		const asmjit::x86::Gpq m_regB;
+	};
+
 }

@@ -27,7 +27,7 @@ namespace dsp56k
 		mem.mov(xm, m_dsp.regs().m[_agu]);
 		m_asm.pslldq(xm, Imm(4));
 
-		const RegXMM xmmTemp(m_block.xmmPool());
+		const RegXMM xmmTemp(m_block);
 		
 		mem.mov(xmmTemp.get(), m_dsp.regs().n[_agu]);
 		m_asm.movss(xm, xmmTemp.get());

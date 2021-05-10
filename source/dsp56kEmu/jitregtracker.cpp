@@ -18,13 +18,29 @@ namespace dsp56k
 			m_block.regs().setALU(m_aluIndexDst, m_reg);
 	}
 
-	PushGP::PushGP(JitBlock& _block, const asmjit::x86::Gpq& _reg) : m_block(_block), m_reg(_reg)
+	PushGP::PushGP(asmjit::x86::Assembler& _a, const asmjit::x86::Gpq& _reg) : m_asm(_a), m_reg(_reg)
 	{
-		_block.asm_().push(m_reg);
+		_a.push(m_reg);
 	}
 
 	PushGP::~PushGP()
 	{
-		m_block.asm_().pop(m_reg);
+		m_asm.pop(m_reg);
+	}
+
+	PushExchange::PushExchange(asmjit::x86::Assembler& _a, const asmjit::x86::Gpq& _regA, const asmjit::x86::Gpq& _regB) : m_asm(_a), m_regA(_regA), m_regB(_regB)
+	{
+		swap();
+	}
+
+	PushExchange::~PushExchange()
+	{
+		swap();
+	}
+
+	void PushExchange::swap() const
+	{
+		if(m_regA != m_regB)
+			m_asm.xchg(m_regA, m_regB);
 	}
 }
