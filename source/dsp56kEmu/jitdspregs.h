@@ -57,6 +57,9 @@ namespace dsp56k
 			m_asm.pshufd(xm, xm, asmjit::Imm(0xc6));		// swap back
 		}
 
+		void setR(int _agu, asmjit::x86::Gpq _src);
+
+
 		asmjit::x86::Gp getPC();
 		asmjit::x86::Gp getSR();
 		asmjit::x86::Gp getLC();

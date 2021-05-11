@@ -199,15 +199,15 @@ namespace dsp56k
 		MMMRRR_ImmediateData	= 0b110'100,
 		MMMRRR_MinusRn			= 0b111'000,
 
-		MMM_RnMinusNn			= 0b000,		
-		MMM_RnPlusNn			= 0b001,		
-		MMM_RnMinus				= 0b010,		
-		MMM_RnPlus				= 0b011,		
-		MMM_Rn					= 0b100,		
-		MMM_RnPlusNnUpdate		= 0b101,		
+		MMM_RnMinusNn			= 0b000,	/* 000 (Rn)-Nn */		
+		MMM_RnPlusNn			= 0b001,	/* 001 (Rn)+Nn */		
+		MMM_RnMinus				= 0b010,	/* 010 (Rn)-   */		
+		MMM_RnPlus				= 0b011,	/* 011 (Rn)+   */		
+		MMM_Rn					= 0b100,	/* 100 (Rn)    */
+		MMM_RnPlusNnUpdate		= 0b101,	/* 101 (Rn+Nn) */		
 		MMM_AbsAddr				= 0b110,
 		MMM_ImmediateData		= 0b110,
-		MMM_MinusRn				= 0b111,
+		MMM_MinusRn				= 0b111,	/* 111 -(Rn)   */		
 
 		RRR_ImmediateData		= 0b100,
 	};

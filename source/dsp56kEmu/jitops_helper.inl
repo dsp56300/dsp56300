@@ -27,6 +27,185 @@ namespace dsp56k
 		m_asm.shr(_reg, asmjit::Imm(8));
 	}
 
+	void JitOps::updateAddressRegister(const asmjit::x86::Gpq& _r, const TWord _mmm, const TWord _rrr)
+	{
+		if(_mmm == 6)													/* 110         */
+		{
+			m_block.mem().getOpWordB(_r);
+			return;
+		}
+
+		if(_mmm == 4)													/* 100 (Rn)    */
+		{
+			m_block.regs().getR(_r, _rrr);
+			return;
+		}
+
+		const RegGP m(m_block);
+		m_block.regs().getM(m, _rrr);
+
+		if(_mmm == 7)													/* 111 -(Rn)   */
+		{
+			const RegGP n(m_block);
+			m_asm.mov(n.get().r32(), asmjit::Imm(-1));
+			m_dspRegs.getR(_r, _rrr);
+			updateAddressRegister(_r,n,m);
+		}
+
+		m_dspRegs.getR(_r, _rrr);
+
+		if(_mmm == 5)													/* 101 (Rn+Nn) */
+		{
+			const RegGP n(m_block);
+			m_dspRegs.getN(n, _rrr);
+			updateAddressRegister(_r,n, m);
+			return;
+		}
+
+		PushGP r(m_block, _r);
+
+		if(_mmm == 0)													/* 000 (Rn)-Nn */
+		{
+			const RegGP n(m_block);
+			m_dspRegs.getN(n, _rrr);
+			m_asm.neg(n);
+			updateAddressRegister(_r,n,m);
+		}	
+		if(_mmm == 1)													/* 001 (Rn)+Nn */
+		{
+			const RegGP n(m_block);
+			m_dspRegs.getN(n, _rrr);
+			updateAddressRegister(_r,n,m);
+		}
+		if(_mmm == 2)													/* 010 (Rn)-   */
+		{
+			const RegGP n(m_block);
+			m_asm.mov(n.get().r32(), asmjit::Imm(-1));
+			updateAddressRegister(_r,n,m);
+		}
+		if(_mmm == 3)													/* 011 (Rn)+   */
+		{
+			const RegGP n(m_block);
+			m_asm.mov(n.get().r32(), asmjit::Imm(1));
+			updateAddressRegister(_r,n,m);
+		}
+
+		m_block.regs().setR(_rrr, _r);
+	}
+
+	inline void JitOps::updateAddressRegister(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m)
+	{
+		const auto linear = m_asm.newLabel();
+		const auto bitreverse = m_asm.newLabel();
+		const auto modulo = m_asm.newLabel();
+		const auto multipleWrapModulo = m_asm.newLabel();
+		const auto end = m_asm.newLabel();
+
+		m_asm.cmp(_m.r32(), asmjit::Imm(0xffffff));
+		m_asm.jz(linear);
+
+		RegGP moduloTest(m_block);
+		m_asm.or_(_m.r16(), _m.r16());
+		m_asm.jz(bitreverse);
+
+		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));
+		m_asm.jle(modulo);
+
+		// multiple-wrap modulo:
+		m_asm.bind(multipleWrapModulo);
+		updateAddressRegisterMultipleWrapModulo(_r, _n, _m);
+		m_asm.jmp(end);
+
+		// modulo:
+		m_asm.bind(modulo);
+		updateAddressRegisterModulo(_r, _n, _m);
+		m_asm.jmp(end);
+
+		// bitreverse:
+		m_asm.bind(bitreverse);
+		updateAddressRegisterBitreverse(_r, _n, _m);
+		m_asm.jmp(end);
+
+		// linear:
+		m_asm.bind(linear);
+		m_asm.add(_r, _n);
+
+		m_asm.bind(end);
+		m_asm.and_(_r, asmjit::Imm(0xffffff));
+	}
+
+	inline void JitOps::updateAddressRegisterModulo(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m) const
+	{
+		/*
+				const int32_t p				= (r&moduloMask) + n;
+				const int32_t mt			= m - p;
+				r							+= n + ((p>>31) & modulo) - (((mt)>>31) & modulo);
+		 */
+
+		const auto r = _r.r32();
+		const auto n = _n.r32();
+		const auto m = _m.r32();
+
+
+		// Compute p
+		{
+			const PushGP moduloMask(m_block, regLC);
+			/* modulo mask mm = m
+			mm |= mm >> 1;
+			mm |= mm >> 2;
+			mm |= mm >> 4;
+			mm |= mm >> 8;
+			*/
+
+			const PushGP temp(m_block, regLA);
+
+			m_asm.mov(moduloMask, m);
+			m_asm.mov(temp, moduloMask.get());			m_asm.shr(temp, asmjit::Imm(1));	m_asm.or_(moduloMask, temp.get());
+			m_asm.mov(temp.get(), moduloMask.get());	m_asm.shr(temp, asmjit::Imm(2));	m_asm.or_(moduloMask, temp.get());
+			m_asm.mov(temp.get(), moduloMask.get());	m_asm.shr(temp, asmjit::Imm(4));	m_asm.or_(moduloMask, temp.get());
+			m_asm.mov(temp.get(), moduloMask.get());	m_asm.shr(temp, asmjit::Imm(8));	m_asm.or_(moduloMask, temp.get());
+
+			/*
+			rOffset = r & moduloMask
+			p = rOffset + n
+
+			we store it in n as n is no longer needed now
+			*/
+			const PushGP p64(m_block, regLA);
+			const auto p = p64.get().r32();
+			m_asm.mov(p, r);
+			m_asm.and_(p, moduloMask.get());
+			m_asm.add(r, n);		// Increment r by n here.
+			m_asm.add(n, p);
+		}
+
+		// r += ((p>>31) & modulo) - (((mt-p)>>31) & modulo);
+		const auto p = n;		// We hid p in n.
+		const auto modulo = m;	// and modulo is m+1
+		const PushGP mtMinusP64(m_block, regSR);
+		const auto mtMinusP = mtMinusP64.get().r32();
+
+		m_asm.mov(mtMinusP, m);
+		m_asm.sub(mtMinusP, p);
+		m_asm.sar(mtMinusP, asmjit::Imm(31));
+		m_asm.inc(modulo);
+		m_asm.and_(mtMinusP, modulo);
+
+		m_asm.sar(p, asmjit::Imm(31));
+		m_asm.and_(p, modulo);
+
+		m_asm.add(_r.r32(), p);
+		m_asm.sub(_r.r32(), mtMinusP);
+	}
+
+	inline void JitOps::updateAddressRegisterMultipleWrapModulo(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n,	const asmjit::x86::Gpq& _m)
+	{
+	}
+
+	inline void JitOps::updateAddressRegisterBitreverse(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m)
+	{
+	}
+
 	inline void JitOps::mask56(const RegGP& _alu) const
 	{
 		m_asm.shl(_alu, asmjit::Imm(8));	// we need to work around the fact that there is no AND with 64 bit immediate operand

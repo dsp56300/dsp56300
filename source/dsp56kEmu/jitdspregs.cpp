@@ -99,6 +99,19 @@ namespace dsp56k
 		m_block.mem().mov(_dst, _src);
 	}
 
+	void JitDspRegs::setR(int _agu, Gpq _src)
+	{
+		if (!isLoaded(LoadedRegR0 + _agu))
+			loadAGU(_agu);
+
+		const RegXMM xmmTemp(m_block);
+
+		const auto xm(xmm(xmmR0 + _agu));
+
+		m_asm.movd(xmmTemp.get(), _src);
+		m_asm.movss(xm, xmmTemp.get());
+	}
+
 	Gp JitDspRegs::getPC()
 	{
 		if(!isLoaded(LoadedRegPC))

@@ -268,6 +268,12 @@ namespace dsp56k
 		void signextend48to56(const asmjit::x86::Gpq& _reg) const;
 		void signextend24to56(const asmjit::x86::Gpq& _reg) const;
 
+		void updateAddressRegister(const asmjit::x86::Gpq& _r, TWord _mmm, TWord _rrr);
+		void updateAddressRegister(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m);
+		void updateAddressRegisterModulo(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m) const;
+		void updateAddressRegisterMultipleWrapModulo(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m);
+		static void updateAddressRegisterBitreverse(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m);
+
 		void mask56(const RegGP& _alu) const;
 
 		void signed24To56(const asmjit::x86::Gpq& _r) const;

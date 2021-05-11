@@ -19,6 +19,9 @@ namespace dsp56k
 		runTest(&JitUnittests::ccr_n_build, &JitUnittests::ccr_n_verify);
 		runTest(&JitUnittests::ccr_s_build, &JitUnittests::ccr_s_verify);
 
+		runTest(&JitUnittests::agu_build, &JitUnittests::agu_verify);
+		runTest(&JitUnittests::agu_modulo_build, &JitUnittests::agu_modulo_verify);
+
 		runTest(&JitUnittests::abs_build, &JitUnittests::abs_verify);
 		
 		runTest(&JitUnittests::add_build, &JitUnittests::add_verify);
@@ -256,6 +259,94 @@ namespace dsp56k
 		assert(m_checks[1] == SR_S);
 		assert(m_checks[2] == SR_S);
 		assert(m_checks[3] == 0);
+	}
+
+	void JitUnittests::agu_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.r[0].var = 0x1000;
+		dsp.reg.n[0].var = 0x10;
+		dsp.reg.m[0].var = 0xffffff;
+
+		uint32_t ci=0;
+
+		const RegGP temp(_block);
+
+		_ops.updateAddressRegister(temp.get(), MMM_Rn, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+		_block.regs().getR(temp, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+
+		_ops.updateAddressRegister(temp.get(), MMM_RnPlus, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+		_block.regs().getR(temp, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+
+		_ops.updateAddressRegister(temp.get(), MMM_RnMinus, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+		_block.regs().getR(temp, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+
+		_ops.updateAddressRegister(temp.get(), MMM_RnPlusNn, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+		_block.regs().getR(temp, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+
+		_ops.updateAddressRegister(temp.get(), MMM_RnMinusNn, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+		_block.regs().getR(temp, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+
+		_ops.updateAddressRegister(temp.get(), MMM_RnPlusNnUpdate, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+		_block.regs().getR(temp, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+	}
+
+	void JitUnittests::agu_verify()
+	{
+		assert(m_checks[0 ] == 0x1000);	assert(m_checks[1 ] == 0x1000);
+		assert(m_checks[2 ] == 0x1000);	assert(m_checks[3 ] == 0x1001);
+		assert(m_checks[4 ] == 0x1001);	assert(m_checks[5 ] == 0x1000);
+		assert(m_checks[6 ] == 0x1000);	assert(m_checks[7 ] == 0x1010);
+		assert(m_checks[8 ] == 0x1010);	assert(m_checks[9 ] == 0x1000);
+		assert(m_checks[10] == 0x1010);	assert(m_checks[11] == 0x1000);
+	}
+
+
+	void JitUnittests::agu_modulo_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.r[0].var = 0x100;
+		dsp.reg.n[0].var = 0x200;
+		dsp.reg.m[0].var = 0xfff;
+
+		const RegGP temp(_block);
+
+		for(size_t i=0; i<8; ++i)
+		{
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_ops.updateAddressRegister(temp.get(), MMM_RnPlusNn, 0);
+			_block.regs().getR(temp, 0);
+			_block.mem().mov(m_checks[i], temp);
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_block.asm_().nop();
+		}
+	}
+
+	void JitUnittests::agu_modulo_verify()
+	{
+		assert(m_checks[0] == 0x300);
+		assert(m_checks[1] == 0x500);
+		assert(m_checks[2] == 0x700);
+		assert(m_checks[3] == 0x900);
+		assert(m_checks[4] == 0xb00);
+		assert(m_checks[5] == 0xd00);
+		assert(m_checks[6] == 0xf00);
+		assert(m_checks[7] == 0x100);
 	}
 
 	void JitUnittests::abs_build(JitBlock& _block, JitOps& _ops)
