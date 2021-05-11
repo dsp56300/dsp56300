@@ -90,6 +90,38 @@ namespace dsp56k
 		m_block.asm_().inc(pc);
 	}
 
+	TWord callDSPMemReadPeriph(DSP* _dsp, TWord _area, TWord _offset)
+	{
+		return _dsp->getPeriph(_area)->read(_offset);
+	}
+
+	void Jitmem::readPeriph(const asmjit::x86::Gpq& _dst, EMemArea _area, const asmjit::x86::Gpq& _offset) const
+	{
+		PushGP r2(m_block, regArg2);
+		PushGP rPadding(m_block, regArg2);	// 16 byte alignment
+
+		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
+		m_block.asm_().mov(regArg1, _area);
+		m_block.asm_().mov(regArg2, _offset);
+
+		m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
+
+		m_block.asm_().mov(_dst, regReturnVal);
+	}
+
+	void Jitmem::writePeriph(EMemArea _area, const asmjit::x86::Gpq& _offset, const asmjit::x86::Gpq& _value) const
+	{
+		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
+		m_block.asm_().mov(regArg1, _area);
+
+		PushGP r2(m_block, regArg2);
+		PushGP r3(m_block, regArg3);
+
+		m_block.asm_().mov(regArg2, _offset);
+		m_block.asm_().mov(regArg3, _value);
+		m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
+	}
+
 	template<typename T>
 	asmjit::x86::Mem Jitmem::ptr(const asmjit::x86::Gpq& _temp, const T* _t) const
 	{

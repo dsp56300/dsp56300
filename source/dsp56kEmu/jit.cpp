@@ -13,22 +13,22 @@ using namespace x86;
 /*
 	The idea of this JIT is to keep all relevant DSP registers in X64 registers. Register allocation looks like this:
 
-	RAX	= temp                                     |               XMM00 = DSP AGU 0 [0,M,N,R]
+	RAX	= func ret val                             |               XMM00 = DSP AGU 0 [0,M,N,R]
 	RBX							*                  |               XMM01 = DSP AGU 1 [0,M,N,R]
-	RCX	= current opcode (Microsoft)		       |               XMM02 = DSP AGU 2 [0,M,N,R]
-	RDX	= temp						               |               XMM03 = DSP AGU 3 [0,M,N,R]
+	RCX	= func arg 0 (Microsoft)                   |               XMM02 = DSP AGU 2 [0,M,N,R]
+	RDX	= func arg 1 / temp			               |               XMM03 = DSP AGU 3 [0,M,N,R]
 	RBP							*                  |               XMM04 = DSP AGU 4 [0,M,N,R]
 	RSI	= temp						               |               XMM05 = DSP AGU 5 [0,M,N,R]
-	RDI	= current opcode (linux)				   |               XMM06 = DSP AGU 6 [0,M,N,R]
+	RDI	= func arg 0 (linux)    				   |               XMM06 = DSP AGU 6 [0,M,N,R]
 	RSP							*	               |               XMM07 = DSP AGU 7 [0,M,N,R]
-	R8  = DSP Status Register		               |               XMM08 = DSP A
-	R9  = DSP Program Counter		               |               XMM09 = DSP B
+	R8  = func arg 2 / DSP Status Register		   |               XMM08 = DSP A
+	R9  = func arg 3 / DSP Program Counter		   |               XMM09 = DSP B
 	R10 = DSP Loop Counter			               |               XMM10 = DSP X
 	R11 = DSP Loop Address			               |               XMM11 = DSP Y
-	R12							*                  |               XMM12 = last modified ALU for lazy SR updates
-	R13							*                  |               XMM13 = temp
-	R14							*                  |               XMM14 = temp
-	R15							*                  |               XMM15 = temp
+	R12	= temp                  *                  |               XMM12 = last modified ALU for lazy SR updates
+	R13	= temp                  *                  |               XMM13 = temp
+	R14	= temp                  *                  |               XMM14 = temp
+	R15	= temp                  *                  |               XMM15 = temp
 
 	* = callee-save = we need to restore the previous register state before returning
 */

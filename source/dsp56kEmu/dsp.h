@@ -222,6 +222,7 @@ namespace dsp56k
 		Disassembler&	disassembler					()											{ return m_disasm; }
 
 		void			setPeriph						(size_t _index, IPeripherals* _periph)		{ perif[_index] = _periph; _periph->setDSP(this); }
+		IPeripherals*	getPeriph						(size_t _index)								{ return perif[_index]; }
 		
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
 	private:
