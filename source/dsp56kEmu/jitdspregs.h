@@ -35,6 +35,9 @@ namespace dsp56k
 		template<typename T>
 		void getN(const T& _dst, int _agu)
 		{
+			if(!isLoaded(LoadedRegR0 + _agu))
+				loadAGU(_agu);
+
 			const auto xm(asmjit::x86::xmm(xmmR0+_agu));
 
 			m_asm.pshufd(xm, xm, asmjit::Imm(0xe1));		// swap lower two words to get N in word 0
@@ -45,6 +48,9 @@ namespace dsp56k
 		template<typename T>
 		void getM(const T& _dst, int _agu)
 		{
+			if(!isLoaded(LoadedRegR0 + _agu))
+				loadAGU(_agu);
+
 			const auto xm(asmjit::x86::xmm(xmmR0+_agu));
 			m_asm.pshufd(xm, xm, asmjit::Imm(0xc6));		// swap words 0 and 2 to ret M in word 0
 			m_asm.movd(_dst, xm);

@@ -99,6 +99,7 @@ namespace dsp56k
 		asmjit::x86::Gpq get() const { return m_reg.get(); }
 		operator asmjit::x86::Gpq () const { return m_reg.get(); }
 		operator const RegGP& () const { return m_reg; }
+
 	private:
 		JitBlock& m_block;
 		const RegGP m_reg;
