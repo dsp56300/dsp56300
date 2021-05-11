@@ -78,7 +78,7 @@ namespace dsp56k
 		m_block.asm_().mov(_dst, ptr(reg, &_src));
 	}
 
-	void Jitmem::getOpWordB(RegGP& _dst) const
+	void Jitmem::getOpWordB(const asmjit::x86::Gpq& _dst) const
 	{
 		auto pc = m_block.regs().getPC();
 		DSP& dsp = m_block.dsp();

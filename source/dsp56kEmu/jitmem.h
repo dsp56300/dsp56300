@@ -43,7 +43,7 @@ namespace dsp56k
 		template<typename T>
 		void ptrToReg(const asmjit::x86::Gpq& _r, const T* _t) const;
 
-		void getOpWordB(RegGP& _dst) const;
+		void getOpWordB(const asmjit::x86::Gpq& _dst) const;
 
 		void readPeriph(const asmjit::x86::Gpq& _dst, EMemArea _area, const asmjit::x86::Gpq& _offset) const;
 		void writePeriph(EMemArea _area, const asmjit::x86::Gpq& _offset, const asmjit::x86::Gpq& _value) const;
