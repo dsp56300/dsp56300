@@ -24,7 +24,7 @@ namespace dsp56k
 		~JitDspRegs();
 
 		template<typename T>
-		void getR(T _dst, int _agu)
+		void getR(const T& _dst, int _agu)
 		{
 			if(!isLoaded(LoadedRegR0 + _agu))
 				loadAGU(_agu);
@@ -33,7 +33,7 @@ namespace dsp56k
 		}
 
 		template<typename T>
-		void getN(T _dst, int _agu)
+		void getN(const T& _dst, int _agu)
 		{
 			const auto xm(asmjit::x86::xmm(xmmR0+_agu));
 
@@ -43,7 +43,7 @@ namespace dsp56k
 		}
 
 		template<typename T>
-		void getM(T _dst, int _agu)
+		void getM(const T& _dst, int _agu)
 		{
 			const auto xm(asmjit::x86::xmm(xmmR0+_agu));
 			m_asm.pshufd(xm, xm, asmjit::Imm(0xc6));		// swap words 0 and 2 to ret M in word 0
