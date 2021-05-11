@@ -1,5 +1,7 @@
 #include "unittests.h"
 
+
+#include "agu.h"
 #include "disasm.h"
 #include "dsp.h"
 #include "memory.h"
@@ -30,6 +32,7 @@ namespace dsp56k
 		testEXTRACTU();
 		testEXTRACTU_CO();
 		testMPY();
+		testAgu();
 
 //		testDisassembler();		// will take a few minutes in debug, so commented out for now
 	}
@@ -483,6 +486,13 @@ namespace dsp56k
 		execOpcode(0x2000d0);
 		assert(dsp.reg.a.var == 0x00000036000000);
 		assert(dsp.getSR().var == 0x0800d1);
+	}
+
+	void UnitTests::testAgu()
+	{
+		TWord r = 0xf00;
+		AGU::updateAddressRegister(r, 0x200, 0xfff, 0xfff, 0x1000);
+		assert(r == 0x100);		
 	}
 
 	void UnitTests::testDisassembler()
