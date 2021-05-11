@@ -370,17 +370,9 @@ namespace dsp56k
 
 		for(size_t i=0; i<8; ++i)
 		{
-			_block.asm_().nop();
-			_block.asm_().nop();
-			_block.asm_().nop();
-			_block.asm_().nop();
 			_ops.updateAddressRegister(temp.get(), MMM_RnMinusNn, 0);
 			_block.regs().getR(temp, 0);
 			_block.mem().mov(m_checks[i], temp);
-			_block.asm_().nop();
-			_block.asm_().nop();
-			_block.asm_().nop();
-			_block.asm_().nop();
 		}
 	}
 
