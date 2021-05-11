@@ -312,6 +312,11 @@ namespace dsp56k
 		_block.mem().mov(m_checks[ci++], temp);
 		_block.regs().getR(temp, 0);
 		_block.mem().mov(m_checks[ci++], temp);
+
+		_ops.updateAddressRegister(temp.get(), MMM_MinusRn, 0);
+		_block.mem().mov(m_checks[ci++], temp);
+		_block.regs().getR(temp, 0);
+		_block.mem().mov(m_checks[ci++], temp);
 	}
 
 	void JitUnittests::agu_verify()
@@ -322,6 +327,7 @@ namespace dsp56k
 		assert(m_checks[6 ] == 0x1000);	assert(m_checks[7 ] == 0x1010);
 		assert(m_checks[8 ] == 0x1010);	assert(m_checks[9 ] == 0x1000);
 		assert(m_checks[10] == 0x1010);	assert(m_checks[11] == 0x1000);
+		assert(m_checks[12] == 0x0fff);	assert(m_checks[13] == 0x0fff);
 	}
 
 	void JitUnittests::agu_modulo_build(JitBlock& _block, JitOps& _ops)

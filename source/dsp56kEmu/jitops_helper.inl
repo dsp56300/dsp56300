@@ -50,6 +50,8 @@ namespace dsp56k
 			m_asm.mov(n.get().r32(), asmjit::Imm(-1));
 			m_dspRegs.getR(_r, _rrr);
 			updateAddressRegister(_r,n,m);
+			m_block.regs().setR(_rrr, _r);
+			return;
 		}
 
 		m_dspRegs.getR(_r, _rrr);
