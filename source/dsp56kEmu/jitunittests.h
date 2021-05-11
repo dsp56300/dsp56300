@@ -41,6 +41,9 @@ namespace dsp56k
 		void agu_modulo_build(JitBlock& _block, JitOps& _ops);
 		void agu_modulo_verify();
 		
+		void agu_modulo2_build(JitBlock& _block, JitOps& _ops);
+		void agu_modulo2_verify();
+		
 		void abs_build(JitBlock& _block, JitOps& _ops);
 		void abs_verify();
 

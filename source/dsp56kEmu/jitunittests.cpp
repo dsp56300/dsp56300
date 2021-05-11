@@ -21,6 +21,7 @@ namespace dsp56k
 
 		runTest(&JitUnittests::agu_build, &JitUnittests::agu_verify);
 		runTest(&JitUnittests::agu_modulo_build, &JitUnittests::agu_modulo_verify);
+		runTest(&JitUnittests::agu_modulo2_build, &JitUnittests::agu_modulo2_verify);
 
 		runTest(&JitUnittests::abs_build, &JitUnittests::abs_verify);
 		
@@ -312,7 +313,6 @@ namespace dsp56k
 		assert(m_checks[10] == 0x1010);	assert(m_checks[11] == 0x1000);
 	}
 
-
 	void JitUnittests::agu_modulo_build(JitBlock& _block, JitOps& _ops)
 	{
 		dsp.reg.r[0].var = 0x100;
@@ -347,6 +347,42 @@ namespace dsp56k
 		assert(m_checks[5] == 0xd00);
 		assert(m_checks[6] == 0xf00);
 		assert(m_checks[7] == 0x100);
+	}
+
+	void JitUnittests::agu_modulo2_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.r[0].var = 0x70;
+		dsp.reg.n[0].var = 0x20;
+		dsp.reg.m[0].var = 0x100;
+
+		const RegGP temp(_block);
+
+		for(size_t i=0; i<8; ++i)
+		{
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_ops.updateAddressRegister(temp.get(), MMM_RnMinusNn, 0);
+			_block.regs().getR(temp, 0);
+			_block.mem().mov(m_checks[i], temp);
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_block.asm_().nop();
+			_block.asm_().nop();
+		}
+	}
+
+	void JitUnittests::agu_modulo2_verify()
+	{
+		assert(m_checks[0] == 0x50);
+		assert(m_checks[1] == 0x30);
+		assert(m_checks[2] == 0x10);
+		assert(m_checks[3] == 0xf1);
+		assert(m_checks[4] == 0xd1);
+		assert(m_checks[5] == 0xb1);
+		assert(m_checks[6] == 0x91);
+		assert(m_checks[7] == 0x71);
 	}
 
 	void JitUnittests::abs_build(JitBlock& _block, JitOps& _ops)

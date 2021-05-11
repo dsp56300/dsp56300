@@ -492,7 +492,10 @@ namespace dsp56k
 	{
 		TWord r = 0xf00;
 		AGU::updateAddressRegister(r, 0x200, 0xfff, 0xfff, 0x1000);
-		assert(r == 0x100);		
+		assert(r == 0x100);
+		r = 0xf00;
+		AGU::updateAddressRegister(r, 0x200, 0xfff, 0xfff, 0x100);
+		assert(r == 0x1100);
 	}
 
 	void UnitTests::testDisassembler()
