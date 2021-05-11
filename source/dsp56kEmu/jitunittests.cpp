@@ -2,6 +2,7 @@
 
 #include "jitblock.h"
 #include "jitops.h"
+#include "asmjit/core/logger.h"
 
 namespace dsp56k
 {
@@ -45,7 +46,9 @@ namespace dsp56k
 	void JitUnittests::runTest(void( JitUnittests::* _build)(JitBlock&, JitOps&), void( JitUnittests::* _verify)())
 	{
 		asmjit::CodeHolder code;
+		asmjit::FileLogger logger(stdout);
 		code.init(m_rt.environment());
+		code.setLogger(&logger);
 
 		asmjit::x86::Assembler m_asm(&code);
 
