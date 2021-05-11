@@ -174,14 +174,14 @@ namespace dsp56k
 			const PushGP p64(m_block, regLA);
 			const auto p = p64.get().r32();
 			m_asm.mov(p, r);
-			m_asm.and_(p, moduloMask.get());
+			m_asm.and_(p, moduloMask.get().r32());
 			m_asm.add(r, n);		// Increment r by n here.
 			m_asm.add(n, p);
 		}
 
 		// r += ((p>>31) & modulo) - (((mt-p)>>31) & modulo);
 		const auto p = n;		// We hid p in n.
-		const auto modulo = m;	// and modulo is m+1
+		const auto& modulo = m;	// and modulo is m+1
 		const PushGP mtMinusP64(m_block, regSR);
 		const auto mtMinusP = mtMinusP64.get().r32();
 
