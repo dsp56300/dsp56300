@@ -6,12 +6,23 @@
 
 namespace dsp56k
 {
-	class ErrorHandler : public asmjit::ErrorHandler
+	class AsmJitErrorHandler : public asmjit::ErrorHandler
 	{
 		void handleError(asmjit::Error err, const char* message, asmjit::BaseEmitter* origin) override
 		{
 			LOG("Error: " << err << " - " << message);
 			assert(false);
+		}
+	};
+	class AsmJitLogger : public asmjit::Logger
+	{
+		asmjit::Error _log(const char* data, size_t size) noexcept override
+		{
+			std::string temp(data);
+			if(temp.back() == '\n')
+				temp.pop_back();
+			LOG(temp);
+			return asmjit::kErrorOk;
 		}
 	};
 
@@ -58,9 +69,9 @@ namespace dsp56k
 
 	void JitUnittests::runTest(void( JitUnittests::* _build)(JitBlock&, JitOps&), void( JitUnittests::* _verify)())
 	{
-		ErrorHandler errorHandler;
+		AsmJitErrorHandler errorHandler;
 		asmjit::CodeHolder code;
-		asmjit::FileLogger logger(stdout);
+		AsmJitLogger logger;
 		code.init(m_rt.environment());
 		code.setLogger(&logger);
 		code.setErrorHandler(&errorHandler);

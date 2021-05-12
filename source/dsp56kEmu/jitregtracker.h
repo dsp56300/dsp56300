@@ -114,8 +114,8 @@ namespace dsp56k
 		PushGP(asmjit::x86::Assembler& _a, const JitReg64& _reg);
 		~PushGP();
 
-		JitReg64 get() const { return m_reg; }
-		operator JitReg64 () const { return m_reg; }
+		const JitReg64& get() const { return m_reg; }
+		operator const JitReg64& () const { return m_reg; }
 
 	private:
 		asmjit::x86::Assembler& m_asm;
