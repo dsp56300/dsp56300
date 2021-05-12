@@ -101,8 +101,8 @@ namespace dsp56k
 		dsp.regs().x.var = 0xffeedd112233;
 		dsp.regs().y.var = 0x112233445566;
 
-		const RegGP r0(_block.gpPool());
-		const RegGP r1(_block.gpPool());
+		const RegGP r0(_block);
+		const RegGP r1(_block);
 
 		_ops.XY0to56(r0, 0);
 		_ops.XY1to56(r1, 0);
@@ -126,8 +126,8 @@ namespace dsp56k
 		m_checks[4] = 0xab123456abcdef;
 		m_checks[5] = 0x12123456abcdef;
 
-		const RegGP ra(_block.gpPool());
-		const RegGP rb(_block.gpPool());
+		const RegGP ra(_block);
+		const RegGP rb(_block);
 
 		_block.mem().mov(regPC, m_checks[0]);
 		_block.mem().mov(regLC, m_checks[1]);

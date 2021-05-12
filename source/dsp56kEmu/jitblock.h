@@ -32,20 +32,20 @@ namespace dsp56k
 
 		asmjit::x86::Assembler& asm_() { return m_asm; }
 		DSP& dsp() { return m_dsp; }
-		JitRegpool<asmjit::x86::Gpq>& gpPool() { return m_gpPool; }
-		JitRegpool<asmjit::x86::Xmm>& xmmPool() { return m_xmmPool; }
+		JitRegpool<JitReg64>& gpPool() { return m_gpPool; }
+		JitRegpool<JitReg128>& xmmPool() { return m_xmmPool; }
 		JitDspRegs& regs() { return m_dspRegs; }
 		Jitmem& mem() { return m_mem; }
 
-		operator JitRegpool<asmjit::x86::Gpq>& ()		{ return m_gpPool; }
-		operator JitRegpool<asmjit::x86::Xmm>& ()		{ return m_xmmPool;	}
+		operator JitRegpool<JitReg64>& ()		{ return m_gpPool; }
+		operator JitRegpool<JitReg128>& ()		{ return m_xmmPool;	}
 		operator asmjit::x86::Assembler& ()				{ return m_asm;	}
 
 	private:
 		asmjit::x86::Assembler& m_asm;
 		DSP& m_dsp;
-		JitRegpool<asmjit::x86::Xmm> m_xmmPool;
-		JitRegpool<asmjit::x86::Gpq> m_gpPool;
+		JitRegpool<JitReg128> m_xmmPool;
+		JitRegpool<JitReg64> m_gpPool;
 		JitDspRegs m_dspRegs;
 		Jitmem m_mem;
 	};

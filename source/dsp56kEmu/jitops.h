@@ -264,29 +264,29 @@ namespace dsp56k
 		void op_Wait(TWord op){}
 
 		// helpers
-		void signextend56to64(const asmjit::x86::Gpq& _reg) const;
-		void signextend48to56(const asmjit::x86::Gpq& _reg) const;
-		void signextend24to56(const asmjit::x86::Gpq& _reg) const;
+		void signextend56to64(const JitReg64& _reg) const;
+		void signextend48to56(const JitReg64& _reg) const;
+		void signextend24to56(const JitReg64& _reg) const;
 
-		void updateAddressRegister(const asmjit::x86::Gpq& _r, TWord _mmm, TWord _rrr);
-		void updateAddressRegister(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m);
-		void updateAddressRegisterModulo(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m) const;
-		void updateAddressRegisterMultipleWrapModulo(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m);
-		static void updateAddressRegisterBitreverse(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m);
+		void updateAddressRegister(const JitReg64& _r, TWord _mmm, TWord _rrr);
+		void updateAddressRegister(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
+		void updateAddressRegisterModulo(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m) const;
+		void updateAddressRegisterMultipleWrapModulo(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
+		static void updateAddressRegisterBitreverse(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
 
 		void mask56(const RegGP& _alu) const;
 
-		void signed24To56(const asmjit::x86::Gpq& _r) const;
+		void signed24To56(const JitReg64& _r) const;
 
-		void getMR(const asmjit::x86::Gpq& _dst) const;
+		void getMR(const JitReg64& _dst) const;
 		void getCCR(RegGP& _dst);
-		void getCOM(const asmjit::x86::Gpq& _dst) const;
-		void getEOM(const asmjit::x86::Gpq& _dst) const;
+		void getCOM(const JitReg64& _dst) const;
+		void getEOM(const JitReg64& _dst) const;
 
-		void setMR(const asmjit::x86::Gpq& _src) const;
-		void setCCR(const asmjit::x86::Gpq& _src);
-		void setCOM(const asmjit::x86::Gpq& _src) const;
-		void setEOM(const asmjit::x86::Gpq& _src) const;
+		void setMR(const JitReg64& _src) const;
+		void setCCR(const JitReg64& _src);
+		void setCOM(const JitReg64& _src) const;
+		void setEOM(const JitReg64& _src) const;
 
 		// CCR
 		void ccr_update_ifZero(CCRBit _bit) const;
@@ -301,30 +301,30 @@ namespace dsp56k
 
 		void ccr_update(const RegGP& _value, CCRBit _bit) const;
 
-		void ccr_u_update(const asmjit::x86::Gpq& _alu) const;
-		void ccr_e_update(const asmjit::x86::Gpq& _alu) const;
-		void ccr_n_update_by55(const asmjit::x86::Gpq& _alu) const;
-		void ccr_n_update_by47(const asmjit::x86::Gpq& _alu) const;
-		void ccr_s_update(const asmjit::x86::Gpq& _alu) const;
+		void ccr_u_update(const JitReg64& _alu) const;
+		void ccr_e_update(const JitReg64& _alu) const;
+		void ccr_n_update_by55(const JitReg64& _alu) const;
+		void ccr_n_update_by47(const JitReg64& _alu) const;
+		void ccr_s_update(const JitReg64& _alu) const;
 
 		void ccr_clear(CCRMask _mask) const;
 		void ccr_set(CCRMask _mask) const;
-		void ccr_dirty(const asmjit::x86::Gpq& _alu);
+		void ccr_dirty(const JitReg64& _alu);
 		void updateDirtyCCR();
-		void updateDirtyCCR(const asmjit::x86::Gpq& _alu);
+		void updateDirtyCCR(const JitReg64& _alu);
 
-		void sr_getBitValue(const asmjit::x86::Gpq& _dst, CCRBit _bit) const;
+		void sr_getBitValue(const JitReg64& _dst, CCRBit _bit) const;
 
-		void XYto56(const asmjit::x86::Gpq& _dst, int _xy) const;
-		void XY0to56(const asmjit::x86::Gpq& _dst, int _xy) const;
-		void XY1to56(const asmjit::x86::Gpq& _dst, int _xy) const;
+		void XYto56(const JitReg64& _dst, int _xy) const;
+		void XY0to56(const JitReg64& _dst, int _xy) const;
+		void XY1to56(const JitReg64& _dst, int _xy) const;
 
 		// decode
 		void decode_EE_read(RegGP& dst, TWord _ee);
-		void decode_EE_write(asmjit::x86::Gpq _src, TWord _ee);
-		void decode_JJJ_read_56(asmjit::x86::Gpq _dst, TWord JJJ, bool _b) const;
-		void decode_JJ_read(asmjit::x86::Gpq _dst, TWord jj) const;
-		void decode_sss_read(asmjit::x86::Gpq _dst, TWord _sss) const;
+		void decode_EE_write(const JitReg64& _src, TWord _ee);
+		void decode_JJJ_read_56(JitReg64 _dst, TWord JJJ, bool _b) const;
+		void decode_JJ_read(JitReg64 _dst, TWord jj) const;
+		void decode_sss_read(JitReg64 _dst, TWord _sss) const;
 
 		// ALU
 		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;

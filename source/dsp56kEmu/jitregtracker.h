@@ -4,6 +4,7 @@
 
 #include "assert.h"
 #include "types.h"
+#include "jittypes.h"
 
 #include "asmjit/x86/x86operand.h"
 
@@ -59,12 +60,12 @@ namespace dsp56k
 		operator const T& () const { return get(); }
 
 		template<typename U = T>
-		operator typename std::enable_if_t<std::is_same<U, asmjit::x86::Gpq>::value, asmjit::x86::Gp>::type () const
+		operator typename std::enable_if_t<std::is_same<U, JitReg64>::value, asmjit::x86::Gp>::type () const
 		{
 			return get();
 		}
 
-		template<typename U = T> operator typename std::enable_if_t<std::is_same<U, asmjit::x86::Gpq>::value, asmjit::Imm>::type () const = delete;
+		template<typename U = T> operator typename std::enable_if_t<std::is_same<U, JitReg64>::value, asmjit::Imm>::type () const = delete;
 
 		JitScopedReg& operator = (const JitScopedReg&) = delete;
 
@@ -88,16 +89,16 @@ namespace dsp56k
 		bool m_acquired = false;
 	};
 
-	using RegGP = JitScopedReg<asmjit::x86::Gpq>;
-	using RegXMM = JitScopedReg<asmjit::x86::Xmm>;
+	using RegGP = JitScopedReg<JitReg64>;
+	using RegXMM = JitScopedReg<JitReg128>;
 
 	class AluReg
 	{
 	public:
 		AluReg(JitBlock& _block, TWord _aluIndexSrc, bool readOnly = false, TWord _aluIndexDst = ~0);
 		~AluReg();
-		asmjit::x86::Gpq get() const { return m_reg.get(); }
-		operator asmjit::x86::Gpq () const { return m_reg.get(); }
+		JitReg64 get() const { return m_reg.get(); }
+		operator JitReg64 () const { return m_reg.get(); }
 		operator const RegGP& () const { return m_reg; }
 
 	private:
@@ -110,29 +111,29 @@ namespace dsp56k
 	class PushGP
 	{
 	public:
-		PushGP(asmjit::x86::Assembler& _a, const asmjit::x86::Gpq& _reg);
+		PushGP(asmjit::x86::Assembler& _a, const JitReg64& _reg);
 		~PushGP();
 
-		asmjit::x86::Gpq get() const { return m_reg; }
-		operator asmjit::x86::Gpq () const { return m_reg; }
+		JitReg64 get() const { return m_reg; }
+		operator JitReg64 () const { return m_reg; }
 
 	private:
 		asmjit::x86::Assembler& m_asm;
-		const asmjit::x86::Gpq m_reg;
+		const JitReg64 m_reg;
 	};
 
 	class PushExchange
 	{
 	public:
-		PushExchange(asmjit::x86::Assembler& _a, const asmjit::x86::Gpq& _regA, const asmjit::x86::Gpq& _regB);
+		PushExchange(asmjit::x86::Assembler& _a, const JitReg64& _regA, const JitReg64& _regB);
 		~PushExchange();
 
 	private:
 		void swap() const;
 
 		asmjit::x86::Assembler& m_asm;
-		const asmjit::x86::Gpq m_regA;
-		const asmjit::x86::Gpq m_regB;
+		const JitReg64 m_regA;
+		const JitReg64 m_regB;
 	};
 
 }

@@ -7,27 +7,27 @@
 
 namespace dsp56k
 {
-	inline void JitOps::signextend56to64(const asmjit::x86::Gpq& _reg) const
+	inline void JitOps::signextend56to64(const JitReg64& _reg) const
 	{
 		m_asm.sal(_reg, asmjit::Imm(8));
 		m_asm.sar(_reg, asmjit::Imm(8));
 	}
 
-	inline void JitOps::signextend48to56(const asmjit::x86::Gpq& _reg) const
+	inline void JitOps::signextend48to56(const JitReg64& _reg) const
 	{
 		m_asm.sal(_reg, asmjit::Imm(16));
 		m_asm.sar(_reg, asmjit::Imm(8));	// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shr(_reg, asmjit::Imm(8));
 	}
 
-	void JitOps::signextend24to56(const asmjit::x86::Gpq& _reg) const
+	void JitOps::signextend24to56(const JitReg64& _reg) const
 	{
 		m_asm.sal(_reg, asmjit::Imm(40));
 		m_asm.sar(_reg, asmjit::Imm(32));	// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shr(_reg, asmjit::Imm(8));
 	}
 
-	void JitOps::updateAddressRegister(const asmjit::x86::Gpq& _r, const TWord _mmm, const TWord _rrr)
+	void JitOps::updateAddressRegister(const JitReg64& _r, const TWord _mmm, const TWord _rrr)
 	{
 		if(_mmm == 6)													/* 110         */
 		{
@@ -95,7 +95,7 @@ namespace dsp56k
 		m_block.regs().setR(_rrr, _r);
 	}
 
-	inline void JitOps::updateAddressRegister(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m)
+	inline void JitOps::updateAddressRegister(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m)
 	{
 		const auto linear = m_asm.newLabel();
 		const auto bitreverse = m_asm.newLabel();
@@ -136,7 +136,7 @@ namespace dsp56k
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
 	}
 
-	inline void JitOps::updateAddressRegisterModulo(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m) const
+	inline void JitOps::updateAddressRegisterModulo(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m) const
 	{
 		/*
 				const int32_t p				= (r&moduloMask) + n;
@@ -200,11 +200,11 @@ namespace dsp56k
 		m_asm.sub(_r.r32(), mtMinusP);
 	}
 
-	inline void JitOps::updateAddressRegisterMultipleWrapModulo(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n,	const asmjit::x86::Gpq& _m)
+	inline void JitOps::updateAddressRegisterMultipleWrapModulo(const JitReg64& _r, const JitReg64& _n,	const JitReg64& _m)
 	{
 	}
 
-	inline void JitOps::updateAddressRegisterBitreverse(const asmjit::x86::Gpq& _r, const asmjit::x86::Gpq& _n, const asmjit::x86::Gpq& _m)
+	inline void JitOps::updateAddressRegisterBitreverse(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m)
 	{
 	}
 
@@ -214,14 +214,14 @@ namespace dsp56k
 		m_asm.shr(_alu, asmjit::Imm(8));
 	}
 	
-	inline void JitOps::signed24To56(const asmjit::x86::Gpq& _r) const
+	inline void JitOps::signed24To56(const JitReg64& _r) const
 	{
 		m_asm.shl(_r, asmjit::Imm(40));
 		m_asm.sar(_r, asmjit::Imm(8));		// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shr(_r, asmjit::Imm(8));
 	}
 
-	void JitOps::getMR(const asmjit::x86::Gpq& _dst) const
+	void JitOps::getMR(const JitReg64& _dst) const
 	{
 		m_asm.mov(_dst, m_dspRegs.getSR());
 		m_asm.shr(_dst, asmjit::Imm(8));
@@ -237,20 +237,20 @@ namespace dsp56k
 		m_asm.and_(_dst, asmjit::Imm(0xff));
 	}
 
-	void JitOps::getCOM(const asmjit::x86::Gpq& _dst) const
+	void JitOps::getCOM(const JitReg64& _dst) const
 	{
 		m_block.mem().mov(_dst, m_block.dsp().regs().omr);
 		m_asm.and_(_dst, asmjit::Imm(0xff));
 	}
 
-	void JitOps::getEOM(const asmjit::x86::Gpq& _dst) const
+	void JitOps::getEOM(const JitReg64& _dst) const
 	{
 		m_block.mem().mov(_dst, m_block.dsp().regs().omr);
 		m_asm.shr(_dst, asmjit::Imm(8));
 		m_asm.and_(_dst, asmjit::Imm(0xff));
 	}
 
-	void JitOps::setMR(const asmjit::x86::Gpq& _src) const
+	void JitOps::setMR(const JitReg64& _src) const
 	{
 		const RegGP r(m_block);
 		m_asm.mov(r, m_dspRegs.getSR());
@@ -261,14 +261,14 @@ namespace dsp56k
 		m_asm.mov(m_dspRegs.getSR(), r.get());
 	}
 
-	void JitOps::setCCR(const asmjit::x86::Gpq& _src)
+	void JitOps::setCCR(const JitReg64& _src)
 	{
 		m_ccrDirty = false;
 		m_asm.and_(m_dspRegs.getSR(), asmjit::Imm(0xffff00));
 		m_asm.or_(m_dspRegs.getSR(), _src);
 	}
 
-	void JitOps::setCOM(const asmjit::x86::Gpq& _src) const
+	void JitOps::setCOM(const JitReg64& _src) const
 	{
 		const RegGP r(m_block);
 		m_block.mem().mov(r, m_block.dsp().regs().omr);
@@ -277,7 +277,7 @@ namespace dsp56k
 		m_block.mem().mov(m_block.dsp().regs().omr, r);
 	}
 
-	void JitOps::setEOM(const asmjit::x86::Gpq& _src) const
+	void JitOps::setEOM(const JitReg64& _src) const
 	{
 		const RegGP r(m_block);
 		m_block.mem().mov(r, m_block.dsp().regs().omr);

@@ -16,7 +16,7 @@ namespace dsp56k
 		m_asm.or_(m_dspRegs.getSR(), asmjit::Imm(_mask));
 	}
 
-	inline void JitOps::ccr_dirty(const asmjit::x86::Gpq& _alu)
+	inline void JitOps::ccr_dirty(const JitReg64& _alu)
 	{
 		if(m_useCCRCache)
 		{
@@ -39,7 +39,7 @@ namespace dsp56k
 		updateDirtyCCR(r);
 	}
 
-	inline void JitOps::updateDirtyCCR(const asmjit::x86::Gpq& _alu)
+	inline void JitOps::updateDirtyCCR(const JitReg64& _alu)
 	{
 		ccr_e_update(_alu);
 		ccr_u_update(_alu);
@@ -47,7 +47,7 @@ namespace dsp56k
 		m_ccrDirty = false;
 	}
 
-	inline void JitOps::sr_getBitValue(const asmjit::x86::Gpq& _dst, CCRBit _bit) const
+	inline void JitOps::sr_getBitValue(const JitReg64& _dst, CCRBit _bit) const
 	{
 		m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(_bit));
 		m_asm.setc(_dst);
@@ -55,63 +55,63 @@ namespace dsp56k
 
 	inline void JitOps::ccr_update_ifZero(CCRBit _bit) const
 	{
-		const RegGP ra(m_block.gpPool());
+		const RegGP ra(m_block);
 		m_asm.setz(ra);										// set reg to 1 if last operation returned zero, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifNotZero(CCRBit _bit) const
 	{
-		const RegGP ra(m_block.gpPool());
+		const RegGP ra(m_block);
 		m_asm.setnz(ra);									// set reg to 1 if last operation returned != 0, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifGreater(CCRBit _bit) const
 	{
-		const RegGP ra(m_block.gpPool());
+		const RegGP ra(m_block);
 		m_asm.setg(ra);										// set reg to 1 if last operation returned >, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifGreaterEqual(CCRBit _bit) const
 	{
-		const RegGP ra(m_block.gpPool());
+		const RegGP ra(m_block);
 		m_asm.setge(ra);									// set reg to 1 if last operation returned >=, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifLessThan(CCRBit _bit) const
 	{
-		const RegGP ra(m_block.gpPool());
+		const RegGP ra(m_block);
 		m_asm.setl(ra);										// set reg to 1 if last operation returned <, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifLessEqual(CCRBit _bit) const
 	{
-		const RegGP ra(m_block.gpPool());
+		const RegGP ra(m_block);
 		m_asm.setle(ra);									// set reg to 1 if last operation returned <=, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifCarry(CCRBit _bit) const
 	{
-		const RegGP ra(m_block.gpPool());
+		const RegGP ra(m_block);
 		m_asm.setc(ra);										// set reg to 1 if last operation generated carry, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifParity(CCRBit _bit) const
 	{
-		const RegGP ra(m_block.gpPool());
+		const RegGP ra(m_block);
 		m_asm.setp(ra);										// set reg to 1 if number of 1 bits is even, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifNotParity(CCRBit _bit) const
 	{
-		const RegGP ra(m_block.gpPool());
+		const RegGP ra(m_block);
 		m_asm.setnp(ra);									// set reg to 1 if number of 1 bits is odd, 0 otherwise
 		ccr_update(ra, _bit);
 	}
@@ -124,7 +124,7 @@ namespace dsp56k
 		m_asm.or_(m_dspRegs.getSR(), ra.get());				// or in our new SR bit
 	}
 
-	void JitOps::ccr_u_update(const asmjit::x86::Gpq& _alu) const
+	void JitOps::ccr_u_update(const JitReg64& _alu) const
 	{
 		/*
 		We want to set U if bits 47 & 46 of the ALU are identical.
@@ -162,7 +162,7 @@ namespace dsp56k
 		*/
 	}
 
-	void JitOps::ccr_e_update(const asmjit::x86::Gpq& _alu) const
+	void JitOps::ccr_e_update(const JitReg64& _alu) const
 	{
 		/*
 		Extension
@@ -215,7 +215,7 @@ namespace dsp56k
 
 	}
 
-	void JitOps::ccr_n_update_by55(const asmjit::x86::Gpq& _alu) const
+	void JitOps::ccr_n_update_by55(const JitReg64& _alu) const
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
@@ -223,7 +223,7 @@ namespace dsp56k
 		ccr_update_ifCarry(SRB_N);
 	}
 
-	inline void JitOps::ccr_n_update_by47(const asmjit::x86::Gpq& _alu) const
+	inline void JitOps::ccr_n_update_by47(const JitReg64& _alu) const
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
@@ -231,7 +231,7 @@ namespace dsp56k
 		ccr_update_ifCarry(SRB_N);
 	}
 
-	inline void JitOps::ccr_s_update(const asmjit::x86::Gpq& _alu) const
+	inline void JitOps::ccr_s_update(const JitReg64& _alu) const
 	{
 		const auto exit = m_asm.newLabel();
 

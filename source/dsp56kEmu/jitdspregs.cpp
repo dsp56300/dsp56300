@@ -99,7 +99,7 @@ namespace dsp56k
 		m_block.mem().mov(_dst, _src);
 	}
 
-	void JitDspRegs::setR(int _agu, Gpq _src)
+	void JitDspRegs::setR(int _agu, JitReg64 _src)
 	{
 		if (!isLoaded(LoadedRegR0 + _agu))
 			loadAGU(_agu);
@@ -178,32 +178,32 @@ namespace dsp56k
 		m_asm.movq(_dst, xmm(xmmX + _xy));
 	}
 
-	void JitDspRegs::getXY0(const Gpq& _dst, const uint32_t _aluIndex)
+	void JitDspRegs::getXY0(const JitReg64& _dst, const uint32_t _aluIndex)
 	{
 		getXY(_dst, _aluIndex);
 		m_asm.and_(_dst, Imm(0xffffff));
 	}
 
-	void JitDspRegs::getXY1(const Gpq& _dst, const uint32_t _aluIndex)
+	void JitDspRegs::getXY1(const JitReg64& _dst, const uint32_t _aluIndex)
 	{
 		getXY(_dst, _aluIndex);
 		m_asm.shr(_dst, Imm(24));
 	}
 
-	void JitDspRegs::getALU0(const asmjit::x86::Gpq& _dst, uint32_t _aluIndex)
+	void JitDspRegs::getALU0(const JitReg64& _dst, uint32_t _aluIndex)
 	{
 		getALU(_dst, _aluIndex);
 		m_asm.and_(_dst, Imm(0xffffff));
 	}
 
-	void JitDspRegs::getALU1(const asmjit::x86::Gpq& _dst, uint32_t _aluIndex)
+	void JitDspRegs::getALU1(const JitReg64& _dst, uint32_t _aluIndex)
 	{
 		getALU(_dst, _aluIndex);
 		m_asm.shr(_dst, Imm(24));
 		m_asm.and_(_dst, Imm(0xffffff));
 	}
 
-	void JitDspRegs::getALU2(const asmjit::x86::Gpq& _dst, uint32_t _aluIndex)
+	void JitDspRegs::getALU2(const JitReg64& _dst, uint32_t _aluIndex)
 	{
 		getALU(_dst, _aluIndex);
 		m_asm.shr(_dst, Imm(48));

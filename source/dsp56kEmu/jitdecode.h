@@ -17,7 +17,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::decode_EE_write(const asmjit::x86::Gpq _src, TWord _ee)
+	void JitOps::decode_EE_write(const JitReg64& _src, TWord _ee)
 	{
 		switch (_ee)
 		{
@@ -30,7 +30,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::decode_JJJ_read_56(const asmjit::x86::Gpq _dst, const TWord _jjj, const bool _b) const
+	void JitOps::decode_JJJ_read_56(const JitReg64 _dst, const TWord _jjj, const bool _b) const
 	{
 		switch (_jjj)
 		{
@@ -47,7 +47,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::decode_JJ_read(const asmjit::x86::Gpq _dst, TWord jj) const
+	void JitOps::decode_JJ_read(const JitReg64 _dst, TWord jj) const
 	{
 		switch (jj)
 		{
@@ -64,7 +64,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::decode_sss_read(const asmjit::x86::Gpq _dst, const TWord _sss) const
+	void JitOps::decode_sss_read(const JitReg64 _dst, const TWord _sss) const
 	{
 		switch( _sss )
 		{

@@ -378,20 +378,20 @@ namespace dsp56k
 	{
 	}
 
-	void JitOps::XYto56(const asmjit::x86::Gpq& _dst, int _xy) const
+	void JitOps::XYto56(const JitReg64& _dst, int _xy) const
 	{
 		m_dspRegs.getXY(_dst, _xy);
 		signextend48to56(_dst);
 	}
 
-	void JitOps::XY0to56(const asmjit::x86::Gpq& _dst, int _xy) const
+	void JitOps::XY0to56(const JitReg64& _dst, int _xy) const
 	{
 		m_dspRegs.getXY(_dst, _xy);
 		m_asm.shl(_dst, asmjit::Imm(40));
 		m_asm.sar(_dst, asmjit::Imm(16));
 	}
 
-	void JitOps::XY1to56(const asmjit::x86::Gpq& _dst, int _xy) const
+	void JitOps::XY1to56(const JitReg64& _dst, int _xy) const
 	{
 		m_dspRegs.getXY(_dst, _xy);
 		m_asm.shr(_dst, asmjit::Imm(24));	// remove LSWord
