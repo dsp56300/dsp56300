@@ -90,26 +90,35 @@ namespace dsp56k
 
 		setUnloaded(LoadedRegX + _xy);
 	}
-	void JitDspRegs::load24(const Gp& _dst, TReg24& _src)
-	{
-		m_block.mem().mov(_dst, _src);
-	}
-	void JitDspRegs::store24(TReg24& _dst, const Gp& _src)
+
+	void JitDspRegs::load24(const Gp& _dst, TReg24& _src) const
 	{
 		m_block.mem().mov(_dst, _src);
 	}
 
-	void JitDspRegs::setR(int _agu, JitReg64 _src)
+	void JitDspRegs::store24(TReg24& _dst, const Gp& _src) const
+	{
+		m_block.mem().mov(_dst, _src);
+	}
+
+	void JitDspRegs::setR(int _agu, const JitReg64& _src)
 	{
 		if (!isLoaded(LoadedRegR0 + _agu))
 			loadAGU(_agu);
 
-		const RegXMM xmmTemp(m_block);
-
 		const auto xm(xmm(xmmR0 + _agu));
 
-		m_asm.movd(xmmTemp.get(), _src);
-		m_asm.movss(xm, xmmTemp.get());
+		if(CpuInfo::host().hasFeature(Features::kSSE4_1))
+		{
+			m_asm.pinsrd(xm, _src, Imm(0));
+		}
+		else
+		{
+			const RegXMM xmmTemp(m_block);
+
+			m_asm.movd(xmmTemp.get(), _src);
+			m_asm.movss(xm, xmmTemp.get());
+		}
 	}
 
 	JitReg JitDspRegs::getPC()

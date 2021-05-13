@@ -2,6 +2,7 @@
 
 #include "jittypes.h"
 #include "types.h"
+#include "asmjit/x86/x86features.h"
 
 namespace asmjit
 {
@@ -40,9 +41,16 @@ namespace dsp56k
 
 			const auto xm(asmjit::x86::xmm(xmmR0+_agu));
 
-			m_asm.pshufd(xm, xm, asmjit::Imm(0xe1));		// swap lower two words to get N in word 0
-			m_asm.movd(_dst, xm);
-			m_asm.pshufd(xm, xm, asmjit::Imm(0xe1));		// swap back
+			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kSSE4_1))
+			{
+				m_asm.pextrd(_dst, xm, asmjit::Imm(1));
+			}
+			else
+			{
+				m_asm.pshufd(xm, xm, asmjit::Imm(0xe1));		// swap lower two words to get N in word 0
+				m_asm.movd(_dst, xm);
+				m_asm.pshufd(xm, xm, asmjit::Imm(0xe1));		// swap back
+			}
 		}
 
 		template<typename T>
@@ -52,12 +60,20 @@ namespace dsp56k
 				loadAGU(_agu);
 
 			const auto xm(asmjit::x86::xmm(xmmR0+_agu));
-			m_asm.pshufd(xm, xm, asmjit::Imm(0xc6));		// swap words 0 and 2 to ret M in word 0
-			m_asm.movd(_dst, xm);
-			m_asm.pshufd(xm, xm, asmjit::Imm(0xc6));		// swap back
+
+			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kSSE4_1))
+			{
+				m_asm.pextrd(_dst, xm, asmjit::Imm(2));
+			}
+			else
+			{
+				m_asm.pshufd(xm, xm, asmjit::Imm(0xc6));		// swap words 0 and 2 to ret M in word 0
+				m_asm.movd(_dst, xm);
+				m_asm.pshufd(xm, xm, asmjit::Imm(0xc6));		// swap back
+			}
 		}
 
-		void setR(int _agu, JitReg64 _src);
+		void setR(int _agu, const JitReg64& _src);
 
 
 		JitReg getPC();
@@ -112,8 +128,8 @@ namespace dsp56k
 		void storeALU(int _alu);
 		void storeXY(int _xy);
 
-		void load24(const asmjit::x86::Gp& _dst, TReg24& _src);
-		void store24(TReg24& _dst, const asmjit::x86::Gp& _src);
+		void load24(const asmjit::x86::Gp& _dst, TReg24& _src) const;
+		void store24(TReg24& _dst, const asmjit::x86::Gp& _src) const;
 
 		bool isLoaded(const uint32_t _reg) const		{ return m_loadedRegs & (1<<_reg); }
 		void setLoaded(const uint32_t _reg)				{ m_loadedRegs |= (1<<_reg); }
