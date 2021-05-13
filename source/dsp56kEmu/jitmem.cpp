@@ -78,6 +78,12 @@ namespace dsp56k
 		m_block.asm_().mov(_dst, ptr(reg, &_src));
 	}
 
+	void Jitmem::mov(const asmjit::x86::Gp& _dst, const uint8_t& _src) const
+	{
+		const RegGP reg(m_block);
+		m_block.asm_().movzx(_dst, ptr(reg, &_src));
+	}
+
 	void Jitmem::getOpWordB(const JitReg& _dst) const
 	{
 		auto pc = m_block.regs().getPC();
@@ -229,4 +235,8 @@ namespace dsp56k
 		else
 			static_assert(sizeof(T*) == sizeof(uint64_t) || sizeof(T*) == sizeof(uint32_t), "unknown pointer size");
 	}
+
+	template void Jitmem::ptrToReg<uint8_t>(const JitReg64&, const uint8_t*) const;
+	template void Jitmem::ptrToReg<uint32_t>(const JitReg64&, const uint32_t*) const;
+	template void Jitmem::ptrToReg<uint64_t>(const JitReg64&, const uint64_t*) const;
 }
