@@ -136,4 +136,13 @@ namespace dsp56k
 		const JitReg64 m_regB;
 	};
 
+	class PushShadowSpace
+	{
+	public:
+		PushShadowSpace(JitBlock& _block);
+		~PushShadowSpace();
+	private:
+		JitBlock& m_block;
+	};
+
 }

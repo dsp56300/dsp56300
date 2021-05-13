@@ -56,6 +56,7 @@ namespace dsp56k
 
 		void readPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset) const;
 		void writePeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value) const;
+		void writePeriph(EMemArea _area, const TWord& _offset, const JitReg64& _value) const;
 
 	private:
 		void getMemAreaPtr(const JitReg64& _dst, EMemArea _area, TWord offset = 0) const;

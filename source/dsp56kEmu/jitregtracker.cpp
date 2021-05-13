@@ -43,4 +43,25 @@ namespace dsp56k
 		if(m_regA != m_regB)
 			m_asm.xchg(m_regA, m_regB);
 	}
+
+	PushShadowSpace::PushShadowSpace(JitBlock& _block) : m_block(_block)
+	{
+#ifdef _MSC_VER
+		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
+		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
+		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
+		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
+#endif
+		}
+
+	PushShadowSpace::~PushShadowSpace()
+	{
+#ifdef _MSC_VER
+		const RegGP temp(m_block);
+		m_block.asm_().pop(temp);
+		m_block.asm_().pop(temp);
+		m_block.asm_().pop(temp);
+		m_block.asm_().pop(temp);
+#endif
+	}
 }
