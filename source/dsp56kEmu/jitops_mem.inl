@@ -25,6 +25,34 @@ namespace dsp56k
 		readMemOrPeriph(_dst, _area, _dst);
 	}
 
+	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, TWord op) const
+	{
+		const auto area = getFieldValueMemArea<Inst>(op);
+		const auto offset = getFieldValue<Inst,Field_qqqqqq>(op);
+		m_asm.mov(_dst, asmjit::Imm(offset + 0xffff80));
+		m_block.mem().readPeriph(_dst, area, _dst);
+	}
+	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, TWord op) const
+	{
+		const auto area = getFieldValueMemArea<Inst>(op);
+		const auto offset = getFieldValue<Inst,Field_pppppp>(op);
+		m_asm.mov(_dst, asmjit::Imm(offset + 0xffffc0));
+		m_block.mem().readPeriph(_dst, area, _dst);	
+	}
+
+	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> void JitOps::writeMem(TWord op, const JitReg64& _src)
+	{
+		const auto area = getFieldValueMemArea<Inst>(op);
+		const auto offset = getFieldValue<Inst,Field_qqqqqq>(op);
+		m_block.mem().writePeriph(area, static_cast<TWord>(offset + 0xffff80), _src);
+	}
+	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type*> void JitOps::writeMem(TWord op, const JitReg64& _src)
+	{
+		const auto area = getFieldValueMemArea<Inst>(op);
+		const auto offset = getFieldValue<Inst,Field_pppppp>(op);
+		m_block.mem().writePeriph(area, static_cast<TWord>(offset + 0xffffc0), _src);
+	}
+
 	template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::writeMem(const TWord _op, const EMemArea _area, const JitReg64& _src)
 	{
 		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);

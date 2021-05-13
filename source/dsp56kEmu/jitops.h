@@ -52,9 +52,9 @@ namespace dsp56k
 		void op_Bchg_qq(TWord op)		{ errNotImplemented(op); }
 		void op_Bchg_D(TWord op)		{ errNotImplemented(op); }
 		void op_Bclr_ea(TWord op);
-		void op_Bclr_aa(TWord op){}
-		void op_Bclr_pp(TWord op){}
-		void op_Bclr_qq(TWord op){}
+		void op_Bclr_aa(TWord op)		{ errNotImplemented(op); }
+		void op_Bclr_pp(TWord op);
+		void op_Bclr_qq(TWord op);
 		void op_Bclr_D(TWord op){}
 		void op_Bra_xxxx(TWord op){}
 		void op_Bra_xxx(TWord op){}
@@ -281,8 +281,15 @@ namespace dsp56k
 
 		// DSP memory access
 		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void effectiveAddress(const JitReg64& _dst, TWord _op, EMemArea _area);
+
 		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord _op, EMemArea _area);
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;
+
 		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void writeMem(TWord _op, EMemArea _area, const JitReg64& _src);
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void writeMem(TWord op, const JitReg64& _src);
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void writeMem(TWord op, const JitReg64& _src);
+
 		void readMemOrPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset);
 		void writeMemOrPeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value);
 

@@ -89,6 +89,9 @@ namespace dsp56k
 		void bclr_ea_build(JitBlock& _block, JitOps& _ops);
 		void bclr_ea_verify();
 
+		void bclr_qqpp_build(JitBlock& _block, JitOps& _ops);
+		void bclr_qqpp_verify();
+
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();
 

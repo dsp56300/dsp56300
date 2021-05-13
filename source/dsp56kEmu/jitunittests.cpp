@@ -63,6 +63,7 @@ namespace dsp56k
 		runTest(&JitUnittests::asr_S1S2D_build, &JitUnittests::asr_S1S2D_verify);
 
 		runTest(&JitUnittests::bclr_ea_build, &JitUnittests::bclr_ea_verify);
+		runTest(&JitUnittests::bclr_qqpp_build, &JitUnittests::bclr_qqpp_verify);
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -641,6 +642,23 @@ namespace dsp56k
 		const auto y = dsp.mem.get(MemArea_Y, 0x22);
 		assert(x == 0xefffff);
 		assert(y == 0xfeffff);
+	}
+
+	void JitUnittests::bclr_qqpp_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.getPeriph(0)->write(0xffff90, 0x334455);
+		dsp.getPeriph(0)->write(0xffffd0, 0x556677);
+
+		_ops.emit(0, 0x11002);	// bclr #$2,x:<<$ffff90	- bclr_qq
+		_ops.emit(0, 0xa9004);	// bclr #$4,x:<<$ffffd0 - bclr_pp
+	}
+
+	void JitUnittests::bclr_qqpp_verify()
+	{
+		const auto a = dsp.getPeriph(0)->read(0xffff90);
+		const auto b = dsp.getPeriph(0)->read(0xffffd0);
+		assert(a == 0x334451);	// bit 2 cleared
+		assert(b == 0x556667);	// bit 4 cleared
 	}
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)

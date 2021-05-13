@@ -354,15 +354,29 @@ namespace dsp56k
 	{
 		const auto area = getFieldValueMemArea<Bclr_ea>(op);
 
-		const auto bbbbb = getBit<Bclr_qq>(op);
-
 		const RegGP offset(m_block);
 		effectiveAddress<Bclr_ea>(offset, op, area);
 
 		const RegGP regMem(m_block);
 		readMemOrPeriph(regMem, area, offset);
-		alu_bclr(regMem, bbbbb);			
+		alu_bclr(regMem, getBit<Bclr_qq>(op));			
 		writeMemOrPeriph(area, offset, regMem);
+	}
+
+	inline void JitOps::op_Bclr_pp(TWord op)
+	{
+		RegGP r(m_block);
+		readMem<Bclr_pp>(r, op);
+		alu_bclr(r, getBit<Bclr_pp>(op));
+		writeMem<Bclr_pp>(op, r);
+	}
+
+	inline void JitOps::op_Bclr_qq(TWord op)
+	{
+		RegGP r(m_block);
+		readMem<Bclr_qq>(r, op);
+		alu_bclr(r, getBit<Bclr_qq>(op));
+		writeMem<Bclr_qq>(op, r);
 	}
 
 	inline void JitOps::op_Clr(TWord op)
