@@ -217,9 +217,7 @@ namespace dsp56k
 			RegGP r(_block);
 
 			_block.asm_().mov(r, m_checks[i]);
-			_block.asm_().nop();
 			_ops.ccr_e_update(r);
-			_block.asm_().nop();
 			_block.mem().mov(m_checks[i], regSR);
 
 		}
@@ -243,9 +241,7 @@ namespace dsp56k
 			RegGP r(_block);
 
 			_block.asm_().mov(r, m_checks[i]);
-			_block.asm_().nop();
 			_ops.ccr_n_update_by55(r);
-			_block.asm_().nop();
 			_block.mem().mov(m_checks[i], regSR);
 		}
 	}
@@ -271,9 +267,7 @@ namespace dsp56k
 
 			_block.asm_().mov(r, m_checks[i]);
 			_block.asm_().mov(regSR, asmjit::Imm(0));
-			_block.asm_().nop();
 			_ops.ccr_s_update(r);
-			_block.asm_().nop();
 			_block.mem().mov(m_checks[i], regSR);
 		}
 	}
@@ -353,17 +347,9 @@ namespace dsp56k
 
 		for(size_t i=0; i<8; ++i)
 		{
-			_block.asm_().nop();
-			_block.asm_().nop();
-			_block.asm_().nop();
-			_block.asm_().nop();
 			_ops.updateAddressRegister(temp.get(), MMM_RnPlusNn, 0);
 			_block.regs().getR(temp, 0);
 			_block.mem().mov(m_checks[i], temp);
-			_block.asm_().nop();
-			_block.asm_().nop();
-			_block.asm_().nop();
-			_block.asm_().nop();
 		}
 	}
 
