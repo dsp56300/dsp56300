@@ -30,6 +30,7 @@ namespace dsp56k
 
 		void mov(uint64_t& _dst, const asmjit::x86::Gp& _src) const;
 		void mov(uint32_t& _dst, const asmjit::x86::Gp& _src) const;
+		void mov(uint8_t& _dst, const asmjit::x86::Gp& _src) const;
 
 		void mov(const asmjit::x86::Gp& _dst, const uint64_t& _src) const;
 		void mov(const asmjit::x86::Gp& _dst, const uint32_t& _src) const;

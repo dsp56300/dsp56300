@@ -46,6 +46,7 @@ namespace dsp56k
 		runTest(&JitUnittests::transferSaturation_build, &JitUnittests::transferSaturation_verify);
 
 		runTest(&JitUnittests::getSS_build, &JitUnittests::getSS_verify);
+		runTest(&JitUnittests::getSetRegs_build, &JitUnittests::getSetRegs_verify);
 
 		runTest(&JitUnittests::abs_build, &JitUnittests::abs_verify);
 		
@@ -452,6 +453,80 @@ namespace dsp56k
 	{
 		for(size_t i=0; i<dsp.reg.ss.eSize; ++i)
 			assert(dsp.reg.ss[i].var == 0x111111111111 * i);
+	}
+
+	void JitUnittests::getSetRegs_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.reg.ep.var = 0x112233;
+		dsp.reg.vba.var = 0x223344;
+		dsp.reg.sc.var = 0x33;
+		dsp.reg.sz.var = 0x556677;
+		dsp.reg.omr.var = 0x667788;
+		dsp.reg.sp.var = 0x778899;
+		dsp.reg.la.var = 0x8899aa;
+		dsp.reg.lc.var = 0x99aabb;
+
+		dsp.reg.a.var = 0x00ffaabbcc112233;
+		dsp.reg.b.var = 0x00ee112233445566;
+
+		dsp.reg.x.var = 0x0000aabbccddeeff;
+		dsp.reg.y.var = 0x0000112233445566;
+
+		const RegGP temp(_block);
+		const auto r = temp.get().r32();
+
+		auto& regs = _block.regs();
+
+		auto modify = [&]()
+		{
+			_block.asm_().shl(temp, asmjit::Imm(4));
+			_block.asm_().and_(temp, asmjit::Imm(0xffffff));
+		};
+
+		auto modify64 = [&]()
+		{
+			_block.asm_().shl(temp, asmjit::Imm(4));
+		};
+
+		regs.getEP(r);				modify();		regs.setEP(r);
+		regs.getVBA(r);				modify();		regs.setVBA(r);
+		regs.getSC(r);				modify();		regs.setSC(r);
+		regs.getSZ(r);				modify();		regs.setSZ(r);
+		regs.getOMR(r);				modify();		regs.setOMR(r);
+		regs.getSP(r);				modify();		regs.setSP(r);
+		regs.getLA(r);				modify();		regs.setLA(r);
+		regs.getLC(r);				modify();		regs.setLC(r);
+
+		regs.getALU0(r, 0);			modify64();		regs.setALU0(0,r);
+		regs.getALU1(r, 0);			modify64();		regs.setALU1(0,r);
+		regs.getALU2signed(r, 0);	modify64();		regs.setALU2(0,r);
+
+		regs.getALU(temp, 1);		modify64();		regs.setALU(1, temp);
+
+		regs.getXY0(r, 0);			modify();		regs.setXY0(0, r);
+		regs.getXY1(r, 0);			modify();		regs.setXY1(0, r);
+
+		regs.getXY(r, 1);			modify64();		regs.setXY(1, r);
+	}
+
+	void JitUnittests::getSetRegs_verify()
+	{
+		auto& r = dsp.regs();
+
+		assert(r.ep.var == 0x122330);
+		assert(r.vba.var == 0x233440);
+		assert(r.sc.var == 0x30);
+		assert(r.sz.var == 0x566770);
+		assert(r.omr.var == 0x677880);
+		assert(r.sp.var == 0x788990);
+		assert(r.la.var == 0x899aa0);
+		assert(r.lc.var == 0x9aabb0);
+
+		assert(r.a.var == 0x00f0abbcc0122330);
+		assert(r.b.var == 0x00e1122334455660);
+
+		assert(r.x.var == 0x0000abbcc0deeff0);
+		assert(r.y.var == 0x0000122334455660);
 	}
 
 	void JitUnittests::abs_build(JitBlock& _block, JitOps& _ops)

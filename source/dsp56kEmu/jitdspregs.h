@@ -2,7 +2,6 @@
 
 #include "jittypes.h"
 #include "types.h"
-#include "asmjit/x86/x86features.h"
 
 namespace asmjit
 {
@@ -24,88 +23,68 @@ namespace dsp56k
 
 		~JitDspRegs();
 
-		template<typename T>
-		void getR(const T& _dst, int _agu)
-		{
-			if(!isLoaded(LoadedRegR0 + _agu))
-				loadAGU(_agu);
+		void getR(const JitReg& _dst, int _agu);
+		void getN(const JitReg& _dst, int _agu);
+		void getM(const JitReg& _dst, int _agu);
 
-			m_asm.movd(_dst, asmjit::x86::xmm(xmmR0+_agu));
-		}
-
-		template<typename T>
-		void getN(const T& _dst, int _agu)
-		{
-			if(!isLoaded(LoadedRegR0 + _agu))
-				loadAGU(_agu);
-
-			const auto xm(asmjit::x86::xmm(xmmR0+_agu));
-
-			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kSSE4_1))
-			{
-				m_asm.pextrd(_dst, xm, asmjit::Imm(1));
-			}
-			else
-			{
-				m_asm.pshufd(xm, xm, asmjit::Imm(0xe1));		// swap lower two words to get N in word 0
-				m_asm.movd(_dst, xm);
-				m_asm.pshufd(xm, xm, asmjit::Imm(0xe1));		// swap back
-			}
-		}
-
-		template<typename T>
-		void getM(const T& _dst, int _agu)
-		{
-			if(!isLoaded(LoadedRegR0 + _agu))
-				loadAGU(_agu);
-
-			const auto xm(asmjit::x86::xmm(xmmR0+_agu));
-
-			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kSSE4_1))
-			{
-				m_asm.pextrd(_dst, xm, asmjit::Imm(2));
-			}
-			else
-			{
-				m_asm.pshufd(xm, xm, asmjit::Imm(0xc6));		// swap words 0 and 2 to ret M in word 0
-				m_asm.movd(_dst, xm);
-				m_asm.pshufd(xm, xm, asmjit::Imm(0xc6));		// swap back
-			}
-		}
-
-		void setR(int _agu, const JitReg64& _src);
-
+		void setR(int _agu, const JitReg& _src);
+		void setN(int _agu, const JitReg& _src);
+		void setM(int _agu, const JitReg& _src);
 
 		JitReg getPC();
 		JitReg getSR();
 		JitReg getLC();
 		JitReg getExtMemAddr();
-		void getALU(asmjit::x86::Gp _dst, int _alu);
-		void setALU(int _alu, asmjit::x86::Gp _src);
 
-		void getXY(asmjit::x86::Gp _dst, int _xy);
+		void getALU(const JitReg& _dst, int _alu);
+		void setALU(int _alu, const JitReg& _src);
+
+		void getXY(const JitReg& _dst, int _xy);
+		void setXY(uint32_t _xy, const JitReg& _src);
+
 		void getXY0(const JitReg& _dst, uint32_t _aluIndex);
+		void setXY0(uint32_t _xy, const JitReg& _src);
 		void getXY1(const JitReg& _dst, uint32_t _aluIndex);
+		void setXY1(uint32_t _xy, const JitReg& _src);
+
 		void getALU0(const JitReg& _dst, uint32_t _aluIndex);
+		void setALU0(uint32_t _aluIndex, const JitReg& _src);
 		void getALU1(const JitReg& _dst, uint32_t _aluIndex);
-		void getALU2(const JitReg& _dst, uint32_t _aluIndex);
+		void setALU1(uint32_t _aluIndex, const JitReg32& _src);
+		void getALU2signed(const JitReg& _dst, uint32_t _aluIndex);
+		void setALU2(uint32_t _aluIndex, const JitReg32& _src);
 
-		void getEP(const JitReg32& _dst);
-		void getVBA(const JitReg32& _dst);
-		void getSC(const JitReg32& _dst);
-		void getSZ(const JitReg32& _dst);
+		void getEP(const JitReg32& _dst) const;
+		void setEP(const JitReg32& _src) const;
+		void getVBA(const JitReg32& _dst) const;
+		void setVBA(const JitReg32& _src) const;
+		void getSC(const JitReg32& _dst) const;
+		void setSC(const JitReg32& _src) const;
+		void getSZ(const JitReg32& _dst) const;
+		void setSZ(const JitReg32& _src) const;
 		void getSR(const JitReg32& _dst);
-		void getOMR(const JitReg32& _dst);
-		void getSP(const JitReg32& _dst);
-		void getSSH(const JitReg32& _dst);
-		void getSSL(const JitReg32& _dst);
+		void setSR(const JitReg32& _src);
+		void getOMR(const JitReg32& _dst) const;
+		void setOMR(const JitReg32& _src) const;
+		void getSP(const JitReg32& _dst) const;
+		void setSP(const JitReg32& _src) const;
+		void getSSH(const JitReg32& _dst) const;
+		void setSSH(const JitReg32& _src) const;
+		void getSSL(const JitReg32& _dst) const;
+		void setSSL(const JitReg32& _src) const;
 		void getLA(const JitReg32& _dst) const;
+		void setLA(const JitReg32& _src) const;
 		void getLC(const JitReg32& _dst) const;
+		void setLC(const JitReg32& _src) const;
 
-		void getSS(const JitReg64& _dst);
+		void getSS(const JitReg64& _dst) const;
+		void setSS(const JitReg64& _src) const;
 
 		void decSP() const;
 		void incSP() const;
+
+		void mask56(const JitReg& _alu) const;
+		void mask48(const JitReg& _alu) const;
 
 	private:
 		enum LoadedRegs

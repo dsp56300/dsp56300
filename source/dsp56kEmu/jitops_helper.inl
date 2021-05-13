@@ -208,12 +208,6 @@ namespace dsp56k
 	{
 	}
 
-	inline void JitOps::mask56(const RegGP& _alu) const
-	{
-		m_asm.shl(_alu, asmjit::Imm(8));	// we need to work around the fact that there is no AND with 64 bit immediate operand
-		m_asm.shr(_alu, asmjit::Imm(8));
-	}
-	
 	inline void JitOps::signed24To56(const JitReg64& _r) const
 	{
 		m_asm.shl(_r, asmjit::Imm(40));
@@ -291,6 +285,18 @@ namespace dsp56k
 		m_asm.or_(r, _src);
 		m_block.mem().mov(m_block.dsp().regs().omr, r);
 		m_asm.shr(_src, asmjit::Imm(8));	// TODO: we don't wanna be destructive to the input for now
+	}
+
+	void JitOps::getSR(const JitReg32& _dst)
+	{
+		updateDirtyCCR();
+		m_dspRegs.getSR(_dst);
+	}
+
+	void JitOps::setSR(const JitReg32& _src)
+	{
+		m_ccrDirty = false;
+		m_dspRegs.setSR(_src);
 	}
 
 	void JitOps::transferAluTo24(const JitReg& _dst, int _alu)

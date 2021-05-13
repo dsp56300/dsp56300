@@ -48,8 +48,12 @@ namespace dsp56k
 		void transferSaturation_build(JitBlock& _block, JitOps& _ops);
 		void transferSaturation_verify();
 
+		// register access tests
 		void getSS_build(JitBlock& _block, JitOps& _ops);
 		void getSS_verify();
+
+		void getSetRegs_build(JitBlock& _block, JitOps& _ops);
+		void getSetRegs_verify();
 
 		// opcode tests
 		void abs_build(JitBlock& _block, JitOps& _ops);

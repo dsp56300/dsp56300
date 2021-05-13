@@ -66,6 +66,12 @@ namespace dsp56k
 		m_block.asm_().mov(ptr(reg, &_dst), _src);
 	}
 
+	void Jitmem::mov(uint8_t& _dst, const asmjit::x86::Gp& _src) const
+	{
+		const RegGP reg(m_block);
+		m_block.asm_().mov(ptr(reg, &_dst), _src);
+	}
+
 	void Jitmem::mov(const asmjit::x86::Gp& _dst, const uint64_t& _src) const
 	{
 		const RegGP reg(m_block);

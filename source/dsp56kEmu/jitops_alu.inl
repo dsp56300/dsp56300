@@ -52,7 +52,7 @@ namespace dsp56k
 
 		ccr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
-		mask56(alu);
+		m_dspRegs.mask56(alu);
 		ccr_update_ifZero(SRB_Z);
 
 //		sr_l_update_by_v();
@@ -195,7 +195,7 @@ namespace dsp56k
 
 		ccr_update_ifCarry(SRB_C);
 
-		mask56(aluD);
+		m_dspRegs.mask56(aluD);
 
 		ccr_update_ifZero(SRB_Z);
 		ccr_clear(SR_V);	// TODO: Set if overflow has occurred in the A or B result or the MSB of the destination operand is changed as a result of the instruction’s left shift.
@@ -227,7 +227,7 @@ namespace dsp56k
 
 		ccr_update_ifGreater(SRB_C);
 
-		mask56(aluD);
+		m_dspRegs.mask56(aluD);
 
 		ccr_update_ifZero(SRB_Z);
 		ccr_clear(SR_V);			// TODO: Changed according to the standard definition.
