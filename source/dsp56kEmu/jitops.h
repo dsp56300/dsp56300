@@ -304,8 +304,8 @@ namespace dsp56k
 		void setCOM(const JitReg64& _src) const;
 		void setEOM(const JitReg64& _src) const;
 
-		void transferAluTo24(const JitReg64& _dst, int _alu);
-		void transferSaturation(const JitReg64& _dst);
+		void transferAluTo24(const JitReg& _dst, int _alu);
+		void transferSaturation(const JitReg& _dst);
 
 		// CCR
 		void ccr_update_ifZero(CCRBit _bit) const;
@@ -339,6 +339,7 @@ namespace dsp56k
 		void XY1to56(const JitReg64& _dst, int _xy) const;
 
 		// decode
+		void decode_dddddd_read(JitReg32& _dst, TWord _dddddd);
 		void decode_EE_read(RegGP& dst, TWord _ee);
 		void decode_EE_write(const JitReg64& _src, TWord _ee);
 		void decode_JJJ_read_56(JitReg64 _dst, TWord JJJ, bool _b) const;

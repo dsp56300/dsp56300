@@ -293,13 +293,13 @@ namespace dsp56k
 		m_asm.shr(_src, asmjit::Imm(8));	// TODO: we don't wanna be destructive to the input for now
 	}
 
-	void JitOps::transferAluTo24(const JitReg64& _dst, int _alu)
+	void JitOps::transferAluTo24(const JitReg& _dst, int _alu)
 	{
 		m_dspRegs.getALU(_dst, _alu);
 		transferSaturation(_dst);
 	}
 
-	void JitOps::transferSaturation(const JitReg64& _dst)
+	void JitOps::transferSaturation(const JitReg& _dst)
 	{
 		// scaling
 

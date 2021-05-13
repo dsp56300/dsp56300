@@ -17,6 +17,7 @@ namespace dsp56k
 	private:
 		void runTest(void(JitUnittests::*_build)(JitBlock&, JitOps&), void( JitUnittests::*_verify)());
 
+		// helper function tests
 		void conversion_build(JitBlock& _block, JitOps& _ops);
 		void conversion_verify();
 
@@ -47,6 +48,10 @@ namespace dsp56k
 		void transferSaturation_build(JitBlock& _block, JitOps& _ops);
 		void transferSaturation_verify();
 
+		void getSS_build(JitBlock& _block, JitOps& _ops);
+		void getSS_verify();
+
+		// opcode tests
 		void abs_build(JitBlock& _block, JitOps& _ops);
 		void abs_verify();
 

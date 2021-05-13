@@ -45,6 +45,8 @@ namespace dsp56k
 
 		runTest(&JitUnittests::transferSaturation_build, &JitUnittests::transferSaturation_verify);
 
+		runTest(&JitUnittests::getSS_build, &JitUnittests::getSS_verify);
+
 		runTest(&JitUnittests::abs_build, &JitUnittests::abs_verify);
 		
 		runTest(&JitUnittests::add_build, &JitUnittests::add_verify);
@@ -418,6 +420,28 @@ namespace dsp56k
 		assert(m_checks[0] == 0x800000);
 		assert(m_checks[1] == 0x7fffff);
 		assert(m_checks[2] == 0x334455);
+	}
+
+	void JitUnittests::getSS_build(JitBlock& _block, JitOps& _ops)
+	{
+		const RegGP temp(_block);
+
+		dsp.reg.sp.var = 0xf0;
+
+		for(size_t i=0; i<dsp.reg.ss.eSize; ++i)
+		{			
+			dsp.reg.ss[i].var = 0x111111111111 * i;
+
+			_block.regs().getSS(temp);
+			_block.regs().incSP();
+			_block.mem().mov(m_checks[i], temp);
+		}
+	}
+
+	void JitUnittests::getSS_verify()
+	{
+		for(size_t i=0; i<dsp.reg.ss.eSize; ++i)
+			assert(dsp.reg.ss[i].var == 0x111111111111 * i);
 	}
 
 	void JitUnittests::abs_build(JitBlock& _block, JitOps& _ops)

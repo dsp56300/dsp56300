@@ -178,36 +178,123 @@ namespace dsp56k
 		m_asm.movq(_dst, xmm(xmmX + _xy));
 	}
 
-	void JitDspRegs::getXY0(const JitReg64& _dst, const uint32_t _aluIndex)
+	void JitDspRegs::getXY0(const JitReg& _dst, const uint32_t _aluIndex)
 	{
 		getXY(_dst, _aluIndex);
 		m_asm.and_(_dst, Imm(0xffffff));
 	}
 
-	void JitDspRegs::getXY1(const JitReg64& _dst, const uint32_t _aluIndex)
+	void JitDspRegs::getXY1(const JitReg& _dst, const uint32_t _aluIndex)
 	{
 		getXY(_dst, _aluIndex);
 		m_asm.shr(_dst, Imm(24));
 	}
 
-	void JitDspRegs::getALU0(const JitReg64& _dst, uint32_t _aluIndex)
+	void JitDspRegs::getALU0(const JitReg& _dst, uint32_t _aluIndex)
 	{
 		getALU(_dst, _aluIndex);
 		m_asm.and_(_dst, Imm(0xffffff));
 	}
 
-	void JitDspRegs::getALU1(const JitReg64& _dst, uint32_t _aluIndex)
+	void JitDspRegs::getALU1(const JitReg& _dst, uint32_t _aluIndex)
 	{
 		getALU(_dst, _aluIndex);
 		m_asm.shr(_dst, Imm(24));
 		m_asm.and_(_dst, Imm(0xffffff));
 	}
 
-	void JitDspRegs::getALU2(const JitReg64& _dst, uint32_t _aluIndex)
+	void JitDspRegs::getALU2(const JitReg& _dst, uint32_t _aluIndex)
 	{
 		getALU(_dst, _aluIndex);
 		m_asm.shr(_dst, Imm(48));
 		m_asm.and_(_dst, Imm(0xff));
+	}
+
+	void JitDspRegs::getEP(const JitReg32& _dst)
+	{
+		m_block.mem().mov(_dst, m_dsp.regs().ep);
+	}
+
+	void JitDspRegs::getVBA(const JitReg32& _dst)
+	{
+		m_block.mem().mov(_dst, m_dsp.regs().vba);
+	}
+
+	void JitDspRegs::getSC(const JitReg32& _dst)
+	{
+		m_block.mem().mov(_dst.r8(), m_dsp.regs().sc.var);
+	}
+
+	void JitDspRegs::getSZ(const JitReg32& _dst)
+	{
+		m_block.mem().mov(_dst, m_dsp.regs().sz);
+	}
+
+	void JitDspRegs::getSR(const JitReg32& _dst)
+	{
+		m_asm.mov(_dst, getSR());
+	}
+
+	void JitDspRegs::getOMR(const JitReg32& _dst)
+	{
+		m_block.mem().mov(_dst, m_dsp.regs().omr);
+	}
+
+	void JitDspRegs::getSP(const JitReg32& _dst)
+	{
+		m_block.mem().mov(_dst, m_dsp.regs().sp);
+	}
+
+	void JitDspRegs::getSSH(const JitReg32& _dst)
+	{
+		getSS(_dst.r64());
+		m_asm.shr(_dst.r64(), Imm(24));
+		m_asm.and_(_dst.r64(), Imm(0x00ffffff));
+		decSP();
+	}
+
+	void JitDspRegs::getSSL(const JitReg32& _dst)
+	{
+		getSS(_dst.r64());
+		m_asm.and_(_dst.r64(), 0x00ffffff);
+	}
+
+	void JitDspRegs::getLA(const JitReg32& _dst) const
+	{
+		m_block.mem().mov(_dst, m_dsp.regs().la);
+	}
+
+	void JitDspRegs::getLC(const JitReg32& _dst) const
+	{
+		m_block.mem().mov(_dst, m_dsp.regs().lc);
+	}
+
+	void JitDspRegs::getSS(const JitReg64& _dst)
+	{
+		auto* first = &m_dsp.regs().ss[0].var;
+
+		const RegGP ssIndex(m_block);
+		getSP(ssIndex.get().r32());
+		m_asm.and_(ssIndex, Imm(0xf));
+
+		m_block.mem().ptrToReg(_dst, first);
+		m_asm.mov(_dst, ptr(_dst, ssIndex, 3, 0, 8));
+	}
+
+	void JitDspRegs::decSP() const
+	{
+		const RegGP temp(m_block);
+
+		m_asm.dec(m_block.mem().ptr(temp, &m_dsp.regs().sp.var));
+		m_asm.dec(m_block.mem().ptr(temp, &m_dsp.regs().sc.var));
+	}
+
+	void JitDspRegs::incSP() const
+	{
+		const RegGP temp(m_block);
+
+		m_asm.inc(m_block.mem().ptr(temp, &m_dsp.regs().sp.var));
+		m_asm.inc(m_block.mem().ptr(temp, &m_dsp.regs().sc.var));
 	}
 
 	void JitDspRegs::loadDSPRegs()

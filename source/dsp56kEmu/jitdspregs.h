@@ -68,11 +68,28 @@ namespace dsp56k
 		void setALU(int _alu, asmjit::x86::Gp _src);
 
 		void getXY(asmjit::x86::Gp _dst, int _xy);
-		void getXY0(const JitReg64& _dst, uint32_t _aluIndex);
-		void getXY1(const JitReg64& _dst, uint32_t _aluIndex);
-		void getALU0(const JitReg64& _dst, uint32_t _aluIndex);
-		void getALU1(const JitReg64& _dst, uint32_t _aluIndex);
-		void getALU2(const JitReg64& _dst, uint32_t _aluIndex);
+		void getXY0(const JitReg& _dst, uint32_t _aluIndex);
+		void getXY1(const JitReg& _dst, uint32_t _aluIndex);
+		void getALU0(const JitReg& _dst, uint32_t _aluIndex);
+		void getALU1(const JitReg& _dst, uint32_t _aluIndex);
+		void getALU2(const JitReg& _dst, uint32_t _aluIndex);
+
+		void getEP(const JitReg32& _dst);
+		void getVBA(const JitReg32& _dst);
+		void getSC(const JitReg32& _dst);
+		void getSZ(const JitReg32& _dst);
+		void getSR(const JitReg32& _dst);
+		void getOMR(const JitReg32& _dst);
+		void getSP(const JitReg32& _dst);
+		void getSSH(const JitReg32& _dst);
+		void getSSL(const JitReg32& _dst);
+		void getLA(const JitReg32& _dst) const;
+		void getLC(const JitReg32& _dst) const;
+
+		void getSS(const JitReg64& _dst);
+
+		void decSP() const;
+		void incSP() const;
 
 	private:
 		enum LoadedRegs
