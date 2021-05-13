@@ -31,7 +31,7 @@ namespace dsp56k
 	{
 		if(_mmm == 6)													/* 110         */
 		{
-			m_block.mem().getOpWordB(_r);
+			getOpWordB(_r);
 			return;
 		}
 
@@ -219,6 +219,11 @@ namespace dsp56k
 		m_asm.shl(_r, asmjit::Imm(40));
 		m_asm.sar(_r, asmjit::Imm(8));		// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shr(_r, asmjit::Imm(8));
+	}
+	
+	inline void JitOps::getOpWordB(const JitReg64& _dst) const
+	{
+		m_block.mem().getOpWordB(_dst);
 	}
 
 	void JitOps::getMR(const JitReg64& _dst) const

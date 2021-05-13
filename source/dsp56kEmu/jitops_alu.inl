@@ -168,7 +168,7 @@ namespace dsp56k
 		const auto ab = getFieldValue<Add_xxxx,Field_d>(op);
 
 		RegGP r(m_block);
-		m_block.mem().getOpWordB(r);
+		getOpWordB(r);
 		signed24To56(r);
 		alu_add(ab, r);
 	}
@@ -259,14 +259,14 @@ namespace dsp56k
 		const auto ab = getFieldValue<And_xxxx,Field_d>(op);
 
 		RegGP r(m_block);
-		m_block.mem().getOpWordB(r);
+		getOpWordB(r);
 		alu_and(ab,r);
 	}
 
 	inline void JitOps::op_Andi(TWord op)
 	{
-		const TWord ee		= getFieldValue<Andi,Field_EE>(op);
-		const TWord iiiiii	= getFieldValue<Andi,Field_iiiiiiii>(op);
+		const auto ee		= getFieldValue<Andi,Field_EE>(op);
+		const auto iiiiii	= getFieldValue<Andi,Field_iiiiiiii>(op);
 
 		RegGP r(m_block);
 		decode_EE_read(r, ee);

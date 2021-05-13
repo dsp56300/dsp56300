@@ -60,10 +60,10 @@ namespace dsp56k
 		void setR(int _agu, JitReg64 _src);
 
 
-		asmjit::x86::Gp getPC();
-		asmjit::x86::Gp getSR();
-		asmjit::x86::Gp getLC();
-		asmjit::x86::Gp getLA();
+		JitReg getPC();
+		JitReg getSR();
+		JitReg getLC();
+		JitReg getLA();
 		void getALU(asmjit::x86::Gp _dst, int _alu);
 		void setALU(int _alu, asmjit::x86::Gp _src);
 

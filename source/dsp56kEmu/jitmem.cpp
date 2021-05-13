@@ -78,30 +78,44 @@ namespace dsp56k
 		m_block.asm_().mov(_dst, ptr(reg, &_src));
 	}
 
-	void Jitmem::getOpWordB(const JitReg64& _dst) const
+	void Jitmem::getOpWordB(const JitReg& _dst) const
 	{
 		auto pc = m_block.regs().getPC();
-		DSP& dsp = m_block.dsp();
-		auto& mem = dsp.memory();
 
-		const RegGP t(m_block);
-		ptrToReg(t, mem.p);
-		m_block.asm_().mov(_dst, asmjit::x86::ptr(t, pc, 2, 0, sizeof(mem.p[0])));
+		readDspMemory(_dst, MemArea_P, pc);
 		m_block.asm_().inc(pc);
 	}
 
-	TWord callDSPMemReadPeriph(DSP* _dsp, TWord _area, TWord _offset)
+	void Jitmem::readDspMemory(const JitReg& _dst, const EMemArea _area, const JitReg& _offset) const
+	{
+		const RegGP t(m_block);
+
+		getMemAreaBasePtr(t.get(), _area);
+
+		m_block.asm_().mov(_dst.r32(), asmjit::x86::ptr(t, _offset, 2, 0, sizeof(TWord)));
+	}
+
+	void Jitmem::writeDspMemory(const EMemArea _area, const JitReg& _offset, const JitReg& _src) const
+	{
+		const RegGP t(m_block);
+
+		getMemAreaBasePtr(t.get(), _area);
+
+		m_block.asm_().mov(asmjit::x86::ptr(t, _offset, 2, 0, sizeof(TWord)), _src.r32());
+	}
+
+	TWord callDSPMemReadPeriph(DSP* const _dsp, const TWord _area, const TWord _offset)
 	{
 		return _dsp->getPeriph(_area)->read(_offset);
 	}
 
-	void Jitmem::readPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset) const
+	void Jitmem::readPeriph(const JitReg64& _dst, const EMemArea _area, const JitReg64& _offset) const
 	{
 		PushGP r2(m_block, regArg2);
 		PushGP rPadding(m_block, regArg2);	// 16 byte alignment
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
-		m_block.asm_().mov(regArg1, _area);
+		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
 		m_block.asm_().mov(regArg2, _offset);
 
 		m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
@@ -112,7 +126,7 @@ namespace dsp56k
 	void Jitmem::writePeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value) const
 	{
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
-		m_block.asm_().mov(regArg1, _area);
+		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
 
 		PushGP r2(m_block, regArg2);
 		PushGP r3(m_block, regArg3);
@@ -120,6 +134,21 @@ namespace dsp56k
 		m_block.asm_().mov(regArg2, _offset);
 		m_block.asm_().mov(regArg3, _value);
 		m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
+	}
+
+	void Jitmem::getMemAreaBasePtr(const JitReg64& _dst, EMemArea _area) const
+	{
+		auto& mem = m_block.dsp().memory();
+
+		switch (_area)
+		{
+		case MemArea_X:		ptrToReg(_dst, mem.x);	break;
+		case MemArea_Y:		ptrToReg(_dst, mem.y);	break;
+		case MemArea_P:		ptrToReg(_dst, mem.p);	break;
+		default:
+			assert(0 && "invalid memory area");
+			break;
+		}
 	}
 
 	template<typename T>

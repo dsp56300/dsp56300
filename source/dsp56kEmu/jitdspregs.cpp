@@ -112,7 +112,7 @@ namespace dsp56k
 		m_asm.movss(xm, xmmTemp.get());
 	}
 
-	Gp JitDspRegs::getPC()
+	JitReg JitDspRegs::getPC()
 	{
 		if(!isLoaded(LoadedRegPC))
 		{
@@ -123,7 +123,7 @@ namespace dsp56k
 		return regPC;
 	}
 
-	Gp JitDspRegs::getSR()
+	JitReg JitDspRegs::getSR()
 	{
 		if(!isLoaded(LoadedRegSR))
 		{
@@ -134,7 +134,7 @@ namespace dsp56k
 		return regSR;
 	}
 
-	Gp JitDspRegs::getLC()
+	JitReg JitDspRegs::getLC()
 	{
 		if(!isLoaded(LoadedRegLC))
 		{
@@ -145,7 +145,7 @@ namespace dsp56k
 		return regLC;
 	}
 
-	Gp JitDspRegs::getLA()
+	JitReg JitDspRegs::getLA()
 	{
 		if(!isLoaded(LoadedRegLA))
 		{

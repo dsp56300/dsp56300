@@ -4,6 +4,7 @@
 
 #include "jitdspregs.h"
 #include "jitregtracker.h"
+#include "opcodes.h"
 #include "opcodetypes.h"
 #include "registers.h"
 #include "types.h"
@@ -278,6 +279,11 @@ namespace dsp56k
 
 		void signed24To56(const JitReg64& _r) const;
 
+		// DSP memory access
+		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord _op, EMemArea _area);
+		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void writeMem(TWord _op, EMemArea _area, const JitReg64& _src);
+
+		// DSP register access
 		void getMR(const JitReg64& _dst) const;
 		void getCCR(RegGP& _dst);
 		void getCOM(const JitReg64& _dst) const;
@@ -325,6 +331,8 @@ namespace dsp56k
 		void decode_JJJ_read_56(JitReg64 _dst, TWord JJJ, bool _b) const;
 		void decode_JJ_read(JitReg64 _dst, TWord jj) const;
 		void decode_sss_read(JitReg64 _dst, TWord _sss) const;
+
+		void getOpWordB(const JitReg64& _dst) const;
 
 		// ALU
 		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;

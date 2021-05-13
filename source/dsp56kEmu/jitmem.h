@@ -2,6 +2,8 @@
 
 #include "jitregtracker.h"
 #include "jittypes.h"
+#include "opcodes.h"
+#include "opcodetypes.h"
 #include "types.h"
 
 #include "asmjit/x86/x86operand.h"
@@ -44,12 +46,16 @@ namespace dsp56k
 		template<typename T>
 		void ptrToReg(const JitReg64& _r, const T* _t) const;
 
-		void getOpWordB(const JitReg64& _dst) const;
+		void getOpWordB(const JitReg& _dst) const;
+
+		void readDspMemory(const JitReg& _dst, EMemArea _area, const JitReg& _offset) const;
+		void writeDspMemory(EMemArea _area, const JitReg& _offset, const JitReg& _src) const;
 
 		void readPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset) const;
 		void writePeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value) const;
 
 	private:
+		void getMemAreaBasePtr(const JitReg64& _dst, EMemArea _area) const;
 		JitBlock& m_block;
 	};
 }

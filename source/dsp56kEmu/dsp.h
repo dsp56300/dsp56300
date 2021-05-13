@@ -967,10 +967,6 @@ namespace dsp56k
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void writeMem(TWord op, TWord value);
 
 		// bit manipulation
-		template <Instruction Inst> TWord getBit(TWord op) const
-		{
-			return getFieldValue<Inst, Field_bbbbb>(op);
-		}
 		template <Instruction Inst> bool bitTest(TWord op, TWord toBeTested)
 		{
 			const auto bit = getBit<Inst>(op);

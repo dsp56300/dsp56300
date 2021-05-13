@@ -69,6 +69,11 @@ namespace dsp56k
 		return getFieldValue<I,MSB>(_memValue) << fb.len | getFieldValue<I,LSB>(_memValue);
 	}
 
+	template <Instruction Inst> TWord getBit(TWord op)
+	{
+		return getFieldValue<Inst, Field_bbbbb>(op);
+	}
+
 	template<Instruction I> EMemArea getFieldValueMemArea(const TWord _op)
 	{
 		return static_cast<EMemArea>(getFieldValue<I,Field_S>(_op) + MemArea_X);

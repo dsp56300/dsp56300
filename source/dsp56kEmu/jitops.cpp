@@ -7,6 +7,7 @@
 #include "jitops_alu.inl"
 #include "jitops_ccr.inl"
 #include "jitops_helper.inl"
+#include "jitops_mem.inl"
 
 #include "opcodes.h"
 

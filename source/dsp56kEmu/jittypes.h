@@ -76,5 +76,8 @@ namespace dsp56k
 	static constexpr auto regLastModAlu = asmjit::x86::xmm12;
 
 	using JitReg64 = asmjit::x86::Gpq;
+	using JitReg32 = asmjit::x86::Gpd;
+	using JitReg = asmjit::x86::Gp;
+
 	using JitReg128 = asmjit::x86::Xmm;
 }
