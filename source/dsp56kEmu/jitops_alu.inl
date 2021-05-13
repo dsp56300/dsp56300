@@ -344,8 +344,25 @@ namespace dsp56k
 		alu_asr(abDst, abSrc, r);
 	}
 
+	inline void JitOps::alu_bclr(const JitReg64& _dst, const TWord _bit)
+	{
+		m_asm.btr(_dst, asmjit::Imm(_bit));
+		ccr_update_ifCarry(SRB_C);
+	}
+
 	inline void JitOps::op_Bclr_ea(TWord op)
 	{
+		const auto area = getFieldValueMemArea<Bclr_ea>(op);
+
+		const auto bbbbb = getBit<Bclr_qq>(op);
+
+		const RegGP offset(m_block);
+		effectiveAddress<Bclr_ea>(offset, op, area);
+
+		const RegGP regMem(m_block);
+		readMemOrPeriph(regMem, area, offset);
+		alu_bclr(regMem, bbbbb);			
+		writeMemOrPeriph(area, offset, regMem);
 	}
 
 	inline void JitOps::op_Clr(TWord op)

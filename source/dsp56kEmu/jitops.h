@@ -348,6 +348,8 @@ namespace dsp56k
 		void alu_asl(TWord abSrc, TWord abDst, const PushGP& _v);
 		void alu_asr(TWord _abSrc, TWord _abDst, const PushGP& _v);
 
+		void alu_bclr(const JitReg64& _dst, TWord _bit);
+
 	private:
 		void errNotImplemented(TWord op);
 

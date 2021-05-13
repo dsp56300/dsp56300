@@ -62,6 +62,8 @@ namespace dsp56k
 		runTest(&JitUnittests::asr_ii_build, &JitUnittests::asr_ii_verify);
 		runTest(&JitUnittests::asr_S1S2D_build, &JitUnittests::asr_S1S2D_verify);
 
+		runTest(&JitUnittests::bclr_ea_build, &JitUnittests::bclr_ea_verify);
+
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
 		runTest(&JitUnittests::clr_build, &JitUnittests::clr_verify);
@@ -630,6 +632,29 @@ namespace dsp56k
 	{
 		assert(dsp.reg.a.var == 0x00011aabbccddeef);
 		assert(dsp.reg.b.var == 0x0000ff1122334455);
+	}
+
+	void JitUnittests::bclr_ea_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.mem.set(MemArea_X, 0x11, 0xffffff);
+		dsp.mem.set(MemArea_Y, 0x22, 0xffffff);
+
+		dsp.reg.r[0].var = 0x11;
+		dsp.reg.r[1].var = 0x22;
+
+		dsp.reg.n[0].var = dsp.reg.n[1].var = 0;
+		dsp.reg.m[0].var = dsp.reg.m[1].var = 0xffffff;
+
+		_ops.emit(0, 0xa6014);	// bclr #$14,x:(r0)
+		_ops.emit(0, 0xa6150);	// bclr #$10,y:(r1)
+	}
+
+	void JitUnittests::bclr_ea_verify()
+	{
+		const auto x = dsp.mem.get(MemArea_X, 0x11);
+		const auto y = dsp.mem.get(MemArea_Y, 0x22);
+		assert(x == 0xefffff);
+		assert(y == 0xfeffff);
 	}
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)
