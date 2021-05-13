@@ -63,7 +63,7 @@ namespace dsp56k
 		JitReg getPC();
 		JitReg getSR();
 		JitReg getLC();
-		JitReg getLA();
+		JitReg getExtMemAddr();
 		void getALU(asmjit::x86::Gp _dst, int _alu);
 		void setALU(int _alu, asmjit::x86::Gp _src);
 
@@ -80,7 +80,7 @@ namespace dsp56k
 			LoadedRegR0,	LoadedRegR1,	LoadedRegR2,	LoadedRegR3,	LoadedRegR4,	LoadedRegR5,	LoadedRegR6,	LoadedRegR7,
 			LoadedRegA,		LoadedRegB,
 			LoadedRegX,		LoadedRegY,
-			LoadedRegLC,	LoadedRegLA,
+			LoadedRegLC,	LoadedRegExtMem,
 			LoadedRegSR,	LoadedRegPC,
 		};
 

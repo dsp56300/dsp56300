@@ -159,7 +159,7 @@ namespace dsp56k
 			mm |= mm >> 8;
 			*/
 
-			const PushGP temp(m_block, regLA);
+			const PushGP temp(m_block, regExtMem);
 
 			m_asm.mov(moduloMask, m);
 			m_asm.mov(temp, moduloMask.get());			m_asm.shr(temp, asmjit::Imm(1));	m_asm.or_(moduloMask, temp.get());
@@ -173,7 +173,7 @@ namespace dsp56k
 
 			we store it in n as n is no longer needed now
 			*/
-			const PushGP p64(m_block, regLA);
+			const auto& p64 = temp;
 			const auto p = p64.get().r32();
 			m_asm.mov(p, r);
 			m_asm.and_(p, moduloMask.get().r32());

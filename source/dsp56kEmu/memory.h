@@ -132,6 +132,8 @@ namespace dsp56k
 			m_bridgedMemoryAddress = _isExternalMemoryBridged ? _address : 0;
 		}
 
+		const TWord&		getBridgedMemoryAddress() const { return m_bridgedMemoryAddress; }
+
 	private:
 		void				fillWithInitPattern	();
 		void				memTranslateAddress	(EMemArea& _area, TWord& _addr) const;

@@ -31,8 +31,8 @@ namespace dsp56k
 		void mov(uint64_t& _dst, const asmjit::x86::Gp& _src) const;
 		void mov(uint32_t& _dst, const asmjit::x86::Gp& _src) const;
 
-		void mov(const asmjit::x86::Gp& _dst, uint64_t& _src) const;
-		void mov(const asmjit::x86::Gp& _dst, uint32_t& _src) const;
+		void mov(const asmjit::x86::Gp& _dst, const uint64_t& _src) const;
+		void mov(const asmjit::x86::Gp& _dst, const uint32_t& _src) const;
 
 		template<typename T, unsigned int B>
 		asmjit::x86::Mem ptr(const JitReg64& _temp, RegType<T, B>& _reg)
@@ -51,11 +51,15 @@ namespace dsp56k
 		void readDspMemory(const JitReg& _dst, EMemArea _area, const JitReg& _offset) const;
 		void writeDspMemory(EMemArea _area, const JitReg& _offset, const JitReg& _src) const;
 
+		void readDspMemory(const JitReg& _dst, EMemArea _area, TWord _offset) const;
+		void writeDspMemory(EMemArea _area, TWord _offset, const JitReg& _src) const;
+
 		void readPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset) const;
 		void writePeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value) const;
 
 	private:
-		void getMemAreaBasePtr(const JitReg64& _dst, EMemArea _area) const;
+		void getMemAreaPtr(const JitReg64& _dst, EMemArea _area, TWord offset = 0) const;
+		void getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitReg& _offset) const;
 		JitBlock& m_block;
 	};
 }

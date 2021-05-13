@@ -66,13 +66,13 @@ namespace dsp56k
 		m_block.asm_().mov(ptr(reg, &_dst), _src);
 	}
 
-	void Jitmem::mov(const asmjit::x86::Gp& _dst, uint64_t& _src) const
+	void Jitmem::mov(const asmjit::x86::Gp& _dst, const uint64_t& _src) const
 	{
 		const RegGP reg(m_block);
 		m_block.asm_().mov(_dst, ptr(reg, &_src));
 	}
 
-	void Jitmem::mov(const asmjit::x86::Gp& _dst, uint32_t& _src) const
+	void Jitmem::mov(const asmjit::x86::Gp& _dst, const uint32_t& _src) const
 	{
 		const RegGP reg(m_block);
 		m_block.asm_().mov(_dst, ptr(reg, &_src));
@@ -89,8 +89,7 @@ namespace dsp56k
 	void Jitmem::readDspMemory(const JitReg& _dst, const EMemArea _area, const JitReg& _offset) const
 	{
 		const RegGP t(m_block);
-
-		getMemAreaBasePtr(t.get(), _area);
+		getMemAreaPtr(t.get(), _area, _offset);
 
 		m_block.asm_().mov(_dst.r32(), asmjit::x86::ptr(t, _offset, 2, 0, sizeof(TWord)));
 	}
@@ -99,9 +98,31 @@ namespace dsp56k
 	{
 		const RegGP t(m_block);
 
-		getMemAreaBasePtr(t.get(), _area);
+		getMemAreaPtr(t.get(), _area, _offset);
 
 		m_block.asm_().mov(asmjit::x86::ptr(t, _offset, 2, 0, sizeof(TWord)), _src.r32());
+	}
+
+	void Jitmem::readDspMemory(const JitReg& _dst, EMemArea _area, TWord _offset) const
+	{
+		const RegGP t(m_block);
+
+		m_block.dsp().memory().memTranslateAddress(_area, _offset);
+
+		getMemAreaPtr(t.get(), _area, _offset);
+
+		m_block.asm_().mov(_dst.r32(), asmjit::x86::ptr(t));
+	}
+
+	void Jitmem::writeDspMemory(EMemArea _area, TWord _offset, const JitReg& _src) const
+	{
+		const RegGP t(m_block);
+
+		m_block.dsp().memory().memTranslateAddress(_area, _offset);
+
+		getMemAreaPtr(t.get(), _area, _offset);
+
+		m_block.asm_().mov(asmjit::x86::ptr(t), _src.r32());
 	}
 
 	TWord callDSPMemReadPeriph(DSP* const _dsp, const TWord _area, const TWord _offset)
@@ -136,18 +157,32 @@ namespace dsp56k
 		m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
 	}
 
-	void Jitmem::getMemAreaBasePtr(const JitReg64& _dst, EMemArea _area) const
+	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, TWord offset/* = 0*/) const
 	{
 		auto& mem = m_block.dsp().memory();
 
 		switch (_area)
 		{
-		case MemArea_X:		ptrToReg(_dst, mem.x);	break;
-		case MemArea_Y:		ptrToReg(_dst, mem.y);	break;
-		case MemArea_P:		ptrToReg(_dst, mem.p);	break;
+		case MemArea_X:		ptrToReg(_dst, mem.x + offset);	break;
+		case MemArea_Y:		ptrToReg(_dst, mem.y + offset);	break;
+		case MemArea_P:		ptrToReg(_dst, mem.p + offset);	break;
 		default:
 			assert(0 && "invalid memory area");
 			break;
+		}
+	}
+
+	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitReg& _offset) const
+	{
+		getMemAreaPtr(_dst, _area);
+
+		{
+			// use P memory for all bridged external memory
+			const auto extMem = m_block.regs().getExtMemAddr();
+			const RegGP p(m_block);
+			getMemAreaPtr(p.get(), MemArea_P);
+			m_block.asm_().cmp(_offset.r32(), extMem.r32());
+			m_block.asm_().cmovge(_dst, p);
 		}
 	}
 

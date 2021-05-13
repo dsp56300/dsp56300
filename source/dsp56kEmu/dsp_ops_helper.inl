@@ -22,12 +22,12 @@ namespace dsp56k
 
 	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type*> TWord DSP::effectiveAddress(const TWord op) const
 	{
-		return getFieldValue<Inst, Field_aaaaaaaaaaaa>(op);
+		return getEffectiveAddress<Inst>(op);
 	}
 
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst, Field_aaaaaa>()>::type*> TWord DSP::effectiveAddress(const TWord op) const
 	{
-		return getFieldValue<Inst, Field_aaaaaa>(op);
+		return getEffectiveAddress<Inst>(op);
 	}
 
 	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_a, Field_RRR>()>::type*> TWord DSP::effectiveAddress(const TWord op) const

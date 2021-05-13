@@ -145,15 +145,15 @@ namespace dsp56k
 		return regLC;
 	}
 
-	JitReg JitDspRegs::getLA()
+	JitReg JitDspRegs::getExtMemAddr()
 	{
-		if(!isLoaded(LoadedRegLA))
+		if(!isLoaded(LoadedRegExtMem))
 		{
-			load24(regLA, m_dsp.regs().la);
-			setLoaded(LoadedRegLA);			
+			m_block.mem().mov(regExtMem, m_dsp.memory().getBridgedMemoryAddress());
+			setLoaded(LoadedRegExtMem);			
 		}
 
-		return regLA;
+		return regExtMem;
 	}
 
 	void JitDspRegs::getALU(const Gp _dst, const int _alu)
@@ -241,6 +241,5 @@ namespace dsp56k
 		if(isLoaded(LoadedRegPC))			store24(m_dsp.regs().pc, regPC);
 		if(isLoaded(LoadedRegSR))			store24(m_dsp.regs().sr, regSR);
 		if(isLoaded(LoadedRegLC))			store24(m_dsp.regs().lc, regLC);
-		if(isLoaded(LoadedRegLA))			store24(m_dsp.regs().la, regLA);
 	}
 }

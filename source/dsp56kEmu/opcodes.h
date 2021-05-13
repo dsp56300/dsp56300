@@ -69,16 +69,6 @@ namespace dsp56k
 		return getFieldValue<I,MSB>(_memValue) << fb.len | getFieldValue<I,LSB>(_memValue);
 	}
 
-	template <Instruction Inst> TWord getBit(TWord op)
-	{
-		return getFieldValue<Inst, Field_bbbbb>(op);
-	}
-
-	template<Instruction I> EMemArea getFieldValueMemArea(const TWord _op)
-	{
-		return static_cast<EMemArea>(getFieldValue<I,Field_S>(_op) + MemArea_X);
-	}
-	
 	static TWord getFieldValue(Instruction _instruction, const Field _field, TWord _memoryValue)
 	{
 		const auto& fi = getFieldInfo(_instruction, _field);
@@ -285,4 +275,27 @@ namespace dsp56k
 		std::vector<const OpcodeInfo*> m_opcodesMove;
 		std::vector<const OpcodeInfo*> m_opcodesAlu;
 	};
+
+	// _____________________________________________
+	// higher level field extraction
+
+	template <Instruction Inst> TWord getBit(TWord op)
+	{
+		return getFieldValue<Inst, Field_bbbbb>(op);
+	}
+
+	template<Instruction I> EMemArea getFieldValueMemArea(const TWord _op)
+	{
+		return static_cast<EMemArea>(getFieldValue<I,Field_S>(_op) + MemArea_X);
+	}
+	
+	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type* = nullptr> TWord getEffectiveAddress(const TWord op)
+	{
+		return getFieldValue<Inst, Field_aaaaaaaaaaaa>(op);
+	}
+
+	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst, Field_aaaaaa>()>::type* = nullptr> TWord getEffectiveAddress(const TWord op)
+	{
+		return getFieldValue<Inst, Field_aaaaaa>(op);
+	}
 }
