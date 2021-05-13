@@ -292,4 +292,86 @@ namespace dsp56k
 		m_block.mem().mov(m_block.dsp().regs().omr, r);
 		m_asm.shr(_src, asmjit::Imm(8));	// TODO: we don't wanna be destructive to the input for now
 	}
+
+	void JitOps::transferAluTo24(const JitReg64& _dst, int _alu)
+	{
+		m_dspRegs.getALU(_dst, _alu);
+		transferSaturation(_dst);
+	}
+
+	void JitOps::transferSaturation(const JitReg64& _dst)
+	{
+		// scaling
+
+		/*
+		if( sr_test_noCache(SR_S1) )
+			_scale.var <<= 1;
+		else if( sr_test_noCache(SR_S0) )
+			_scale.var >>= 1;
+		*/
+
+		{
+			const PushGP s0s1(m_block, asmjit::x86::rcx);
+			m_asm.xor_(s0s1, s0s1.get());
+
+			m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(SRB_S1));
+			m_asm.setc(s0s1);
+			m_asm.shl(_dst, s0s1.get());
+
+			m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(SRB_S0));
+			m_asm.setc(s0s1);
+			m_asm.shr(_dst, s0s1.get());
+		}
+
+		// saturated transfer
+		/*
+		const int64_t& test = _src.signextend<int64_t>();
+
+		if( test < -140737488355328 )			// ff ff 800000 000000
+		{
+			sr_set( SR_L );
+			_dst = 0x800000;
+		}
+		else if( test > 140737471578112 )		// 00 00 7fffff 000000
+		{
+			sr_set( SR_L );
+			_dst = 0x7FFFFF;
+		}
+		else
+			_dst = static_cast<int>(_src.var >> 24) & 0xffffff;
+		*/
+		const RegGP tester(m_block);
+		m_asm.mov(tester, _dst);
+		signextend56to64(tester);
+
+		// non-limited default
+		m_asm.shr(_dst, asmjit::Imm(24));
+		m_asm.and_(_dst, asmjit::Imm(0x00ffffff));
+
+		// lower limit
+		{
+			const RegGP limit(m_block);
+			m_asm.mov(limit, asmjit::Imm(0xffff800000000000));
+			m_asm.cmp(tester, limit.get());
+		}
+		{
+			const RegGP minmax(m_block);
+			m_asm.mov(minmax, 0x800000);
+			m_asm.cmovl(_dst, minmax);			
+		}
+		ccr_update_ifLess(SRB_L);
+
+		// upper limit
+		{
+			const RegGP limit(m_block);
+			m_asm.mov(limit, asmjit::Imm(0x00007fffff000000));
+			m_asm.cmp(tester, limit.get());
+		}
+		{
+			const RegGP minmax(m_block);
+			m_asm.mov(minmax, 0x7fffff);
+			m_asm.cmovg(_dst, minmax);
+		}
+		ccr_update_ifGreater(SRB_L);
+	}
 }

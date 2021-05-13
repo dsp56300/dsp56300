@@ -81,7 +81,7 @@ namespace dsp56k
 		ccr_update(ra, _bit);
 	}
 
-	inline void JitOps::ccr_update_ifLessThan(CCRBit _bit) const
+	inline void JitOps::ccr_update_ifLess(CCRBit _bit) const
 	{
 		const RegGP ra(m_block);
 		m_asm.setl(ra);										// set reg to 1 if last operation returned <, 0 otherwise

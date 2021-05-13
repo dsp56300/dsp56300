@@ -304,12 +304,15 @@ namespace dsp56k
 		void setCOM(const JitReg64& _src) const;
 		void setEOM(const JitReg64& _src) const;
 
+		void transferAluTo24(const JitReg64& _dst, int _alu);
+		void transferSaturation(const JitReg64& _dst);
+
 		// CCR
 		void ccr_update_ifZero(CCRBit _bit) const;
 		void ccr_update_ifNotZero(CCRBit _bit) const;
 		void ccr_update_ifGreater(CCRBit _bit) const;
 		void ccr_update_ifGreaterEqual(CCRBit _bit) const;
-		void ccr_update_ifLessThan(CCRBit _bit) const;
+		void ccr_update_ifLess(CCRBit _bit) const;
 		void ccr_update_ifLessEqual(CCRBit _bit) const;
 		void ccr_update_ifCarry(CCRBit _bit) const;
 		void ccr_update_ifParity(CCRBit _bit) const;

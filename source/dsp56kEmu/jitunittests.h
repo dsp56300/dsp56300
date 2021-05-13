@@ -44,6 +44,9 @@ namespace dsp56k
 		void agu_modulo2_build(JitBlock& _block, JitOps& _ops);
 		void agu_modulo2_verify();
 		
+		void transferSaturation_build(JitBlock& _block, JitOps& _ops);
+		void transferSaturation_verify();
+
 		void abs_build(JitBlock& _block, JitOps& _ops);
 		void abs_verify();
 

@@ -43,6 +43,8 @@ namespace dsp56k
 		runTest(&JitUnittests::agu_modulo_build, &JitUnittests::agu_modulo_verify);
 		runTest(&JitUnittests::agu_modulo2_build, &JitUnittests::agu_modulo2_verify);
 
+		runTest(&JitUnittests::transferSaturation_build, &JitUnittests::transferSaturation_verify);
+
 		runTest(&JitUnittests::abs_build, &JitUnittests::abs_verify);
 		
 		runTest(&JitUnittests::add_build, &JitUnittests::add_verify);
@@ -392,6 +394,30 @@ namespace dsp56k
 		assert(m_checks[5] == 0xb1);
 		assert(m_checks[6] == 0x91);
 		assert(m_checks[7] == 0x71);
+	}
+
+	void JitUnittests::transferSaturation_build(JitBlock& _block, JitOps& _ops)
+	{
+		const RegGP temp(_block);
+
+		_block.asm_().mov(temp, asmjit::Imm(0x00ff700000555555));
+		_ops.transferSaturation(temp);
+		_block.mem().mov(m_checks[0], temp);
+
+		_block.asm_().mov(temp, asmjit::Imm(0x00008abbcc555555));
+		_ops.transferSaturation(temp);
+		_block.mem().mov(m_checks[1], temp);
+
+		_block.asm_().mov(temp, asmjit::Imm(0x0000334455667788));
+		_ops.transferSaturation(temp);
+		_block.mem().mov(m_checks[2], temp);
+	}
+
+	void JitUnittests::transferSaturation_verify()
+	{
+		assert(m_checks[0] == 0x800000);
+		assert(m_checks[1] == 0x7fffff);
+		assert(m_checks[2] == 0x334455);
 	}
 
 	void JitUnittests::abs_build(JitBlock& _block, JitOps& _ops)
