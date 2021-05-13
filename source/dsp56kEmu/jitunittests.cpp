@@ -85,6 +85,11 @@ namespace dsp56k
 
 		asmjit::x86::Assembler m_asm(&code);
 
+		m_asm.push(asmjit::x86::r12);
+		m_asm.push(asmjit::x86::r13);
+		m_asm.push(asmjit::x86::r14);
+		m_asm.push(asmjit::x86::r15);
+
 		{
 			JitBlock block(m_asm, dsp);
 
@@ -92,6 +97,11 @@ namespace dsp56k
 
 			(this->*_build)(block, ops);
 		}
+
+		m_asm.pop(asmjit::x86::r15);
+		m_asm.pop(asmjit::x86::r14);
+		m_asm.pop(asmjit::x86::r13);
+		m_asm.pop(asmjit::x86::r12);
 
 		m_asm.ret();
 
