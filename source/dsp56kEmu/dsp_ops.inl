@@ -63,7 +63,14 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bclr_pp(const TWord op)
 	{
-		errNotImplemented("BCLR");
+		const TWord bit = getBit<Bclr_pp>(op);
+		const TWord ea	= getFieldValue<Bclr_pp,Field_pppppp>(op);
+
+		const EMemArea S = getFieldValueMemArea<Bclr_pp>(op);
+
+		const TWord res = alu_bclr( bit, memReadPeriphFFFFC0( S, ea ) );
+
+		memWritePeriphFFFFC0( S, ea, res );			
 	}
 	inline void DSP::op_Bclr_qq(const TWord op)
 	{
