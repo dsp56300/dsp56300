@@ -64,7 +64,7 @@ namespace dsp56k
 		void op_Brclr_pp(TWord op){}
 		void op_Brclr_qq(TWord op){}
 		void op_Brclr_S(TWord op){}
-		void op_BRKcc(TWord op){}
+		void op_BRKcc(TWord op)			{ errNotImplemented(op); }
 		void op_Brset_ea(TWord op){}
 		void op_Brset_aa(TWord op){}
 		void op_Brset_pp(TWord op){}
@@ -91,20 +91,20 @@ namespace dsp56k
 		void op_Bsset_pp(TWord op){}
 		void op_Bsset_qq(TWord op){}
 		void op_Bsset_S(TWord op){}
-		void op_Btst_ea(TWord op){}
-		void op_Btst_aa(TWord op){}
-		void op_Btst_pp(TWord op){}
-		void op_Btst_qq(TWord op){}
-		void op_Btst_D(TWord op){}
-		void op_Clb(TWord op){}
+		void op_Btst_ea(TWord op);
+		void op_Btst_aa(TWord op);
+		void op_Btst_pp(TWord op);
+		void op_Btst_qq(TWord op);
+		void op_Btst_D(TWord op);
+		void op_Clb(TWord op)				{ errNotImplemented(op); }
 		void op_Clr(TWord op);
 		void op_Cmp_S1S2(TWord op){}
 		void op_Cmp_xxS2(TWord op){}
 		void op_Cmp_xxxxS2(TWord op){}
 		void op_Cmpm_S1S2(TWord op){}
 		void op_Cmpu_S1S2(TWord op){}
-		void op_Debug(TWord op){}
-		void op_Debugcc(TWord op){}
+		void op_Debug(TWord op)				{}
+		void op_Debugcc(TWord op)			{}
 		void op_Dec(TWord op){}
 		void op_Div(TWord op){}
 		void op_Dmac(TWord op){}
@@ -280,11 +280,13 @@ namespace dsp56k
 		void signed24To56(const JitReg64& _r) const;
 
 		// DSP memory access
-		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void effectiveAddress(const JitReg64& _dst, TWord _op, EMemArea _area);
+		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void effectiveAddress(const JitReg64& _dst, TWord _op);
 
-		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord _op, EMemArea _area);
+		template <Instruction Inst, typename std::enable_if<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord _op);
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord _op, EMemArea _area);
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;
+		template <Instruction Inst, typename std::enable_if<!hasField<Inst, Field_s>() && hasFields<Inst, Field_aaaaaa, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;
 
 		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void writeMem(TWord _op, EMemArea _area, const JitReg64& _src);
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void writeMem(TWord op, const JitReg64& _src);

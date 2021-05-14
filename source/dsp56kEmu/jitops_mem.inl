@@ -12,14 +12,21 @@
 
 namespace dsp56k
 {
-	template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::effectiveAddress(const JitReg64& _dst, const TWord _op, const EMemArea _area)
+	template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::effectiveAddress(const JitReg64& _dst, const TWord _op)
 	{
 		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);
 		const TWord rrr = getFieldValue<Inst, Field_RRR>(_op);
 		updateAddressRegister(_dst, mmm, rrr);
 	}
 
-	template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::readMem(const JitReg64& _dst, const TWord _op, const EMemArea _area)
+	template <Instruction Inst, typename std::enable_if<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, const TWord _op)
+	{
+		const auto area = getFieldValueMemArea<Inst>(_op);
+		effectiveAddress<Inst>(_dst, _op);
+		readMemOrPeriph(_dst, area, _dst);
+	}
+
+	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::readMem(const JitReg64& _dst, const TWord _op, const EMemArea _area)
 	{
 		effectiveAddress<Inst>(_dst, _op, _area);
 		readMemOrPeriph(_dst, _area, _dst);
@@ -39,7 +46,12 @@ namespace dsp56k
 		m_asm.mov(_dst, asmjit::Imm(offset + 0xffffc0));
 		m_block.mem().readPeriph(_dst, area, _dst);	
 	}
-
+	template <Instruction Inst, typename std::enable_if<!hasField<Inst, Field_s>() && hasFields<Inst, Field_aaaaaa, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, TWord op) const
+	{
+		const auto area = getFieldValueMemArea<Inst>(op);
+		const auto offset = getFieldValue<Inst,Field_aaaaaa>(op);
+		m_block.mem().readDspMemory(_dst, area, offset);
+	}
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> void JitOps::writeMem(TWord op, const JitReg64& _src)
 	{
 		const auto area = getFieldValueMemArea<Inst>(op);

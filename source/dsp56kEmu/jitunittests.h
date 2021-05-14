@@ -116,6 +116,9 @@ namespace dsp56k
 		void bset_aa_build(JitBlock& _block, JitOps& _ops);
 		void bset_aa_verify();
 
+		void btst_aa_build(JitBlock& _block, JitOps& _ops);
+		void btst_aa_verify();
+
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();
 

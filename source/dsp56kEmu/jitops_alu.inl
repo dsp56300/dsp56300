@@ -367,7 +367,7 @@ namespace dsp56k
 		const auto area = getFieldValueMemArea<Inst>(op);
 
 		const RegGP offset(m_block);
-		effectiveAddress<Inst>(offset, op, area);
+		effectiveAddress<Inst>(offset, op);
 
 		const RegGP regMem(m_block);
 		readMemOrPeriph(regMem, area, offset);
@@ -421,6 +421,50 @@ namespace dsp56k
 	inline void JitOps::op_Bset_pp(TWord op)	{ bitmod_ppqq<Bset_pp>(op, &JitOps::alu_bset); }
 	inline void JitOps::op_Bset_qq(TWord op)	{ bitmod_ppqq<Bset_qq>(op, &JitOps::alu_bset); }
 	inline void JitOps::op_Bset_D(TWord op)		{ bitmod_D<Bset_D>(op, &JitOps::alu_bset); }
+
+	inline void JitOps::op_Btst_ea(TWord op)
+	{
+		RegGP r(m_block);
+		readMem<Btst_ea>(r, op);
+		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_ea>(op)));
+		ccr_update_ifCarry(SRB_C);
+	}
+
+	inline void JitOps::op_Btst_aa(TWord op)
+	{
+		RegGP r(m_block);
+		readMem<Btst_aa>(r, op);
+		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_aa>(op)));
+		ccr_update_ifCarry(SRB_C);
+	}
+
+	inline void JitOps::op_Btst_pp(TWord op)
+	{
+		RegGP r(m_block);
+		readMem<Btst_pp>(r, op);
+		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_pp>(op)));
+		ccr_update_ifCarry(SRB_C);
+	}
+
+	inline void JitOps::op_Btst_qq(TWord op)
+	{
+		RegGP r(m_block);
+		readMem<Btst_qq>(r, op);
+		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_qq>(op)));
+		ccr_update_ifCarry(SRB_C);
+	}
+
+	inline void JitOps::op_Btst_D(TWord op)
+	{
+		const auto dddddd	= getFieldValue<Btst_D,Field_DDDDDD>(op);
+		const auto bit		= getBit<Btst_D>(op);
+
+		const RegGP r(m_block);
+		decode_dddddd_read(r.get().r32(), dddddd);
+
+		m_asm.bt(r.get().r32(), asmjit::Imm(bit));
+		ccr_update_ifCarry(SRB_C);
+	}
 
 	inline void JitOps::op_Clr(TWord op)
 	{

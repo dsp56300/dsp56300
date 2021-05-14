@@ -76,6 +76,8 @@ namespace dsp56k
 
 		runTest(&JitUnittests::bset_aa_build, &JitUnittests::bset_aa_verify);
 
+		runTest(&JitUnittests::btst_aa_build, &JitUnittests::btst_aa_verify);
+
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
 		runTest(&JitUnittests::clr_build, &JitUnittests::clr_verify);
@@ -862,6 +864,22 @@ namespace dsp56k
 		const auto y = dsp.mem.get(MemArea_Y, 0x3);
 		assert(x == 0x55667f);
 		assert(y == 0xddeef8);
+	}
+
+	void JitUnittests::btst_aa_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.mem.set(MemArea_X, 0x2, 0xaabbc4);
+
+		_ops.emit(0, 0x0b0222);	// bset #$2,x:<$2
+		_block.asm_().mov(_block.regs().getSR(), m_checks[0]);
+		_ops.emit(0, 0x0b0223);	// bset #$3,x:<$2
+		_block.asm_().mov(_block.regs().getSR(), m_checks[1]);
+	}
+
+	void JitUnittests::btst_aa_verify()
+	{
+		assert((m_checks[0] & SR_C) == 0);
+		assert((m_checks[1] & SR_C) != 0);
 	}
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)
