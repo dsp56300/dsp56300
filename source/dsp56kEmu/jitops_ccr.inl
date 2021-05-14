@@ -47,7 +47,7 @@ namespace dsp56k
 		m_ccrDirty = false;
 	}
 
-	inline void JitOps::sr_getBitValue(const JitReg64& _dst, CCRBit _bit) const
+	inline void JitOps::sr_getBitValue(const JitReg& _dst, CCRBit _bit) const
 	{
 		m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(_bit));
 		m_asm.setc(_dst);

@@ -1,9 +1,130 @@
 #pragma once
 #include "jitops.h"
 #include "types.h"
+#include "jitblock.h"
 
 namespace dsp56k
 {
+	void JitOps::decode_cccc(JitReg& _dst, const TWord cccc)
+	{
+		switch( cccc )
+		{
+		case CCCC_CarrySet:									// CC(LO)		Carry Set	(lower)
+			sr_getBitValue(_dst, SRB_C);
+			break;
+		case CCCC_CarryClear:								// CC(HS)		Carry Clear (higher or same)	
+			sr_getBitValue(_dst, SRB_C);
+			m_asm.xor_(_dst, asmjit::Imm(1));
+			break;
+		case CCCC_ExtensionSet:								// ES			Extension set	
+			sr_getBitValue(_dst, SRB_E);
+			break;
+		case CCCC_ExtensionClear:							// EC			Extension clear	
+			sr_getBitValue(_dst, SRB_E);
+			m_asm.xor_(_dst, asmjit::Imm(1));
+			break;
+		case CCCC_Equal:									// EQ			Equal	
+			sr_getBitValue(_dst, SRB_Z);
+			break;
+		case CCCC_NotEqual:									// NE			Not Equal
+			sr_getBitValue(_dst, SRB_Z);
+			m_asm.xor_(_dst, asmjit::Imm(1));
+			break;
+		case CCCC_LimitSet:									// LS			Limit set
+			sr_getBitValue(_dst, SRB_L);
+			break;
+		case CCCC_LimitClear:								// LC			Limit clear
+			sr_getBitValue(_dst, SRB_L);
+			m_asm.xor_(_dst, asmjit::Imm(1));
+			break;
+		case CCCC_Minus:									// MI			Minus
+			sr_getBitValue(_dst, SRB_N);
+			break;
+		case CCCC_Plus:										// PL			Plus
+			sr_getBitValue(_dst, SRB_N);
+			m_asm.xor_(_dst, asmjit::Imm(1));
+			break;
+		case CCCC_GreaterEqual:								// GE			Greater than or equal
+			{
+				// SRB_N == SRB_V
+				sr_getBitValue(_dst, SRB_N);
+				const RegGP r(m_block);
+				sr_getBitValue(r, SRB_V);
+				m_asm.cmp(_dst.r8(), r.get().r8());
+				m_asm.sete(_dst);
+			}
+			break;
+		case CCCC_LessThan:									// LT			Less than
+			{
+				// SRB_N != SRB_V
+				sr_getBitValue(_dst, SRB_N);
+				const RegGP r(m_block);
+				sr_getBitValue(r, SRB_V);
+				m_asm.cmp(_dst.r8(), r.get().r8());
+				m_asm.setne(_dst);
+			}
+			break;
+		case CCCC_Normalized:								// NR			Normalized
+			{
+				// (SRB_Z + ((!SRB_U) | (!SRB_E))) == 1
+				sr_getBitValue(_dst, SRB_U);
+				m_asm.xor_(_dst, asmjit::Imm(1));
+				const RegGP r(m_block);
+				sr_getBitValue(r, SRB_E);
+				m_asm.xor_(r, asmjit::Imm(1));
+				m_asm.and_(_dst.r8(), r.get().r8());
+				sr_getBitValue(r, SRB_Z);
+				m_asm.add(_dst.r8(), r.get().r8());
+				m_asm.cmp(_dst.r8(), asmjit::Imm(1));
+				m_asm.sete(_dst);
+			}
+			break;
+		case CCCC_NotNormalized:							// NN			Not normalized
+			{
+				// (SRB_Z + ((!SRB_U) | !SRB_E)) == 0
+				sr_getBitValue(_dst, SRB_U);
+				m_asm.xor_(_dst, asmjit::Imm(1));
+				const RegGP r(m_block);
+				sr_getBitValue(r, SRB_E);
+				m_asm.xor_(r, asmjit::Imm(1));
+				m_asm.and_(_dst.r8(), r.get().r8());
+				sr_getBitValue(r, SRB_Z);
+				m_asm.add(_dst.r8(), r.get().r8());
+				m_asm.cmp(_dst.r8(), asmjit::Imm(0));
+				m_asm.sete(_dst);
+			}
+			break;
+		case CCCC_GreaterThan:								// GT			Greater than
+			{
+				// (SRB_Z + (SRB_N != SRB_V)) == 0
+				sr_getBitValue(_dst, SRB_N);
+				const RegGP r(m_block);
+				sr_getBitValue(r, SRB_V);
+				m_asm.xor_(_dst.r8(), r.get().r8());
+				sr_getBitValue(r, SRB_Z);
+				m_asm.add(_dst.r8(), r.get().r8());
+				m_asm.cmp(_dst.r8(), asmjit::Imm(0));
+				m_asm.sete(_dst);
+			}
+			break;
+		case CCCC_LessEqual:								// LE			Less than or equal
+			{
+				// (SRB_Z + (SRB_N != SRB_V)) == 1
+				sr_getBitValue(_dst, SRB_N);
+				const RegGP r(m_block);
+				sr_getBitValue(r, SRB_V);
+				m_asm.xor_(_dst.r8(), r.get().r8());
+				sr_getBitValue(r, SRB_Z);
+				m_asm.add(_dst.r8(), r.get().r8());
+				m_asm.cmp(_dst.r8(), asmjit::Imm(1));
+				m_asm.sete(_dst);
+			}
+			break;
+		default:
+			assert( 0 && "invalid CCCC value" );
+		}
+	}
+
 	void JitOps::decode_dddddd_read( const JitReg32& _dst, const TWord _dddddd )
 	{
 		const auto i = _dddddd & 0x3f;
