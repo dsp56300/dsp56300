@@ -4,7 +4,7 @@
 
 namespace dsp56k
 {
-	void JitOps::decode_dddddd_read( JitReg32& _dst, const TWord _dddddd )
+	void JitOps::decode_dddddd_read( const JitReg32& _dst, const TWord _dddddd )
 	{
 		const auto i = _dddddd & 0x3f;
 		switch( i )
@@ -90,7 +90,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::decode_dddddd_write(const TWord _dddddd, JitReg32& _dst)
+	void JitOps::decode_dddddd_write(const TWord _dddddd, const JitReg32& _dst)
 	{
 		const auto i = _dddddd & 0x3f;
 		switch( i )

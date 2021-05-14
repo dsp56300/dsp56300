@@ -55,7 +55,7 @@ namespace dsp56k
 		void op_Bclr_aa(TWord op)		{ errNotImplemented(op); }
 		void op_Bclr_pp(TWord op);
 		void op_Bclr_qq(TWord op);
-		void op_Bclr_D(TWord op){}
+		void op_Bclr_D(TWord op);
 		void op_Bra_xxxx(TWord op){}
 		void op_Bra_xxx(TWord op){}
 		void op_Bra_Rn(TWord op){}
@@ -342,8 +342,8 @@ namespace dsp56k
 		void XY1to56(const JitReg64& _dst, int _xy) const;
 
 		// decode
-		void decode_dddddd_read(JitReg32& _dst, TWord _dddddd);
-		void decode_dddddd_write(TWord _dddddd, JitReg32& _dst);
+		void decode_dddddd_read(const JitReg32& _dst, TWord _dddddd);
+		void decode_dddddd_write(TWord _dddddd, const JitReg32& _dst);
 		void decode_EE_read(RegGP& dst, TWord _ee);
 		void decode_EE_write(const JitReg64& _src, TWord _ee);
 		void decode_JJJ_read_56(JitReg64 _dst, TWord JJJ, bool _b) const;

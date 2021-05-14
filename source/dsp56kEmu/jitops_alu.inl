@@ -379,6 +379,17 @@ namespace dsp56k
 		writeMem<Bclr_qq>(op, r);
 	}
 
+	inline void JitOps::op_Bclr_D(TWord op)
+	{
+		const auto bit		= getBit<Bclr_D>(op);
+		const auto dddddd	= getFieldValue<Bclr_D,Field_DDDDDD>(op);
+
+		RegGP d(m_block);
+		decode_dddddd_read(d.get().r32(), dddddd);
+		alu_bclr(d, bit);
+		decode_dddddd_write(dddddd, d.get().r32());
+	}
+
 	inline void JitOps::op_Clr(TWord op)
 	{
 		const auto D = getFieldValue<Clr, Field_d>(op);
