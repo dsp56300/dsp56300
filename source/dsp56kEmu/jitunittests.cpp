@@ -67,10 +67,14 @@ namespace dsp56k
 		runTest(&JitUnittests::asr_ii_build, &JitUnittests::asr_ii_verify);
 		runTest(&JitUnittests::asr_S1S2D_build, &JitUnittests::asr_S1S2D_verify);
 
+		runTest(&JitUnittests::bchg_aa_build, &JitUnittests::bchg_aa_verify);
+
 		runTest(&JitUnittests::bclr_ea_build, &JitUnittests::bclr_ea_verify);
 		runTest(&JitUnittests::bclr_aa_build, &JitUnittests::bclr_aa_verify);
 		runTest(&JitUnittests::bclr_qqpp_build, &JitUnittests::bclr_qqpp_verify);
 		runTest(&JitUnittests::bclr_D_build, &JitUnittests::bclr_D_verify);
+
+		runTest(&JitUnittests::bset_aa_build, &JitUnittests::bset_aa_verify);
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -758,6 +762,23 @@ namespace dsp56k
 		assert(dsp.reg.b.var == 0x0000ff1122334455);
 	}
 
+	void JitUnittests::bchg_aa_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.mem.set(MemArea_X, 0x2, 0x556677);
+		dsp.mem.set(MemArea_Y, 0x3, 0xddeeff);
+
+		_ops.emit(0, 0x0b0203);	// bchg #$3,x:<$2
+		_ops.emit(0, 0x0b0343);	// bchg #$3,y:<$3
+	}
+
+	void JitUnittests::bchg_aa_verify()
+	{
+		const auto x = dsp.mem.get(MemArea_X, 0x2);
+		const auto y = dsp.mem.get(MemArea_Y, 0x3);
+		assert(x == 0x55667f);
+		assert(y == 0xddeef7);
+	}
+
 	void JitUnittests::bclr_ea_build(JitBlock& _block, JitOps& _ops)
 	{
 		dsp.mem.set(MemArea_X, 0x11, 0xffffff);
@@ -824,6 +845,23 @@ namespace dsp56k
 	void JitUnittests::bclr_D_verify()
 	{
 		assert(dsp.reg.omr.var == 0xddee7f);
+	}
+
+	void JitUnittests::bset_aa_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.mem.set(MemArea_X, 0x2, 0x55667f);
+		dsp.mem.set(MemArea_Y, 0x3, 0xddeef0);
+
+		_ops.emit(0, 0x0a0223);	// bset #$3,x:<$2
+		_ops.emit(0, 0x0a0363);	// bset #$3,y:<$3
+	}
+
+	void JitUnittests::bset_aa_verify()
+	{
+		const auto x = dsp.mem.get(MemArea_X, 0x2);
+		const auto y = dsp.mem.get(MemArea_Y, 0x3);
+		assert(x == 0x55667f);
+		assert(y == 0xddeef8);
 	}
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)

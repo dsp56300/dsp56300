@@ -98,6 +98,9 @@ namespace dsp56k
 		void asr_S1S2D_build(JitBlock& _block, JitOps& _ops);
 		void asr_S1S2D_verify();
 
+		void bchg_aa_build(JitBlock& _block, JitOps& _ops);
+		void bchg_aa_verify();
+
 		void bclr_ea_build(JitBlock& _block, JitOps& _ops);
 		void bclr_ea_verify();
 
@@ -109,6 +112,9 @@ namespace dsp56k
 
 		void bclr_D_build(JitBlock& _block, JitOps& _ops);
 		void bclr_D_verify();
+
+		void bset_aa_build(JitBlock& _block, JitOps& _ops);
+		void bset_aa_verify();
 
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();
