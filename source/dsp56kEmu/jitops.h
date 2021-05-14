@@ -52,7 +52,7 @@ namespace dsp56k
 		void op_Bchg_qq(TWord op)		{ errNotImplemented(op); }
 		void op_Bchg_D(TWord op)		{ errNotImplemented(op); }
 		void op_Bclr_ea(TWord op);
-		void op_Bclr_aa(TWord op)		{ errNotImplemented(op); }
+		void op_Bclr_aa(TWord op);
 		void op_Bclr_pp(TWord op);
 		void op_Bclr_qq(TWord op);
 		void op_Bclr_D(TWord op);

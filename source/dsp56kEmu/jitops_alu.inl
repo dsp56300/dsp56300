@@ -363,6 +363,16 @@ namespace dsp56k
 		writeMemOrPeriph(area, offset, regMem);
 	}
 
+	inline void JitOps::op_Bclr_aa(TWord op)
+	{
+		const auto area = getFieldValueMemArea<Bclr_aa>(op);
+		const auto addr = getFieldValue<Bclr_aa, Field_aaaaaa>(op);
+		const RegGP regMem(m_block);
+		m_block.mem().readDspMemory(regMem, area, addr);
+		alu_bclr(regMem, getBit<Bclr_aa>(op));			
+		m_block.mem().writeDspMemory(area, addr, regMem);
+	}
+
 	inline void JitOps::op_Bclr_pp(TWord op)
 	{
 		RegGP r(m_block);

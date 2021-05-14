@@ -68,6 +68,7 @@ namespace dsp56k
 		runTest(&JitUnittests::asr_S1S2D_build, &JitUnittests::asr_S1S2D_verify);
 
 		runTest(&JitUnittests::bclr_ea_build, &JitUnittests::bclr_ea_verify);
+		runTest(&JitUnittests::bclr_aa_build, &JitUnittests::bclr_aa_verify);
 		runTest(&JitUnittests::bclr_qqpp_build, &JitUnittests::bclr_qqpp_verify);
 		runTest(&JitUnittests::bclr_D_build, &JitUnittests::bclr_D_verify);
 
@@ -778,6 +779,23 @@ namespace dsp56k
 		const auto y = dsp.mem.get(MemArea_Y, 0x22);
 		assert(x == 0xefffff);
 		assert(y == 0xfeffff);
+	}
+
+	void JitUnittests::bclr_aa_build(JitBlock& _block, JitOps& _ops)
+	{
+		dsp.mem.set(MemArea_X, 0x11, 0xffaaaa);
+		dsp.mem.set(MemArea_Y, 0x22, 0xffbbbb);
+
+		_ops.emit(0, 0xa1114);	// bclr #$14,x:<$11
+		_ops.emit(0, 0xa2250);	// bclr #$10,y:<$22
+	}
+
+	void JitUnittests::bclr_aa_verify()
+	{
+		const auto x = dsp.mem.get(MemArea_X, 0x11);
+		const auto y = dsp.mem.get(MemArea_Y, 0x22);
+		assert(x == 0xefaaaa);
+		assert(y == 0xfebbbb);
 	}
 
 	void JitUnittests::bclr_qqpp_build(JitBlock& _block, JitOps& _ops)
