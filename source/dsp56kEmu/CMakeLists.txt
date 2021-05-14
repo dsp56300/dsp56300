@@ -48,11 +48,11 @@ utils.cpp utils.h
 set(SOURCES_JIT
 jit.cpp jit.h
 jitblock.cpp jitblock.h
-jitdecode.cpp jitdecode.h
+
 jitdspregs.cpp jitdspregs.h
 jitmem.cpp jitmem.h
 jitops.cpp jitops.h
-jitops_alu.inl jitops_ccr.inl jitops_helper.inl jitops_mem.inl
+jitops_alu.inl jitops_ccr.inl jitops_decode.inl jitops_helper.inl jitops_mem.inl
 jitregtracker.cpp jitregtracker.h
 jittypes.h
 jitunittests.cpp jitunittests.h

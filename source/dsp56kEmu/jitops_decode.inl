@@ -1,7 +1,6 @@
 #pragma once
 #include "jitops.h"
 #include "types.h"
-#include "jitblock.h"
 
 namespace dsp56k
 {
