@@ -46,11 +46,11 @@ namespace dsp56k
 		void op_Bcc_xxxx(TWord op){}
 		void op_Bcc_xxx(TWord op){}
 		void op_Bcc_Rn(TWord op){}
-		void op_Bchg_ea(TWord op)		{ errNotImplemented(op); }
-		void op_Bchg_aa(TWord op)		{ errNotImplemented(op); }
-		void op_Bchg_pp(TWord op)		{ errNotImplemented(op); }
-		void op_Bchg_qq(TWord op)		{ errNotImplemented(op); }
-		void op_Bchg_D(TWord op)		{ errNotImplemented(op); }
+		void op_Bchg_ea(TWord op);
+		void op_Bchg_aa(TWord op);
+		void op_Bchg_pp(TWord op);
+		void op_Bchg_qq(TWord op);
+		void op_Bchg_D(TWord op);
 		void op_Bclr_ea(TWord op);
 		void op_Bclr_aa(TWord op);
 		void op_Bclr_pp(TWord op);
@@ -78,11 +78,11 @@ namespace dsp56k
 		void op_Bsclr_pp(TWord op){}
 		void op_Bsclr_qq(TWord op){}
 		void op_Bsclr_S(TWord op){}
-		void op_Bset_ea(TWord op){}
-		void op_Bset_aa(TWord op){}
-		void op_Bset_pp(TWord op){}
-		void op_Bset_qq(TWord op){}
-		void op_Bset_D(TWord op){}
+		void op_Bset_ea(TWord op);
+		void op_Bset_aa(TWord op);
+		void op_Bset_pp(TWord op);
+		void op_Bset_qq(TWord op);
+		void op_Bset_D(TWord op);
 		void op_Bsr_xxxx(TWord op){}
 		void op_Bsr_xxx(TWord op){}
 		void op_Bsr_Rn(TWord op){}
@@ -363,8 +363,15 @@ namespace dsp56k
 		void alu_asl(TWord abSrc, TWord abDst, const PushGP& _v);
 		void alu_asr(TWord _abSrc, TWord _abDst, const PushGP& _v);
 
-		void alu_bclr(const JitReg64& _dst, TWord _bit);
+		void alu_bclr(const JitReg64& _dst, TWord _bit) const;
+		void alu_bset(const JitReg64& _dst, TWord _bit) const;
+		void alu_bchg(const JitReg64& _dst, TWord _bit) const;
 
+		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
+		template<Instruction Inst> void bitmod_aa(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
+		template<Instruction Inst> void bitmod_ppqq(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
+		template<Instruction Inst> void bitmod_D(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
+		
 	private:
 		void errNotImplemented(TWord op);
 

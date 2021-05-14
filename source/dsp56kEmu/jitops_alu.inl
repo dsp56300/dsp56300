@@ -344,61 +344,83 @@ namespace dsp56k
 		alu_asr(abDst, abSrc, r);
 	}
 
-	inline void JitOps::alu_bclr(const JitReg64& _dst, const TWord _bit)
+	inline void JitOps::alu_bclr(const JitReg64& _dst, const TWord _bit) const
 	{
 		m_asm.btr(_dst, asmjit::Imm(_bit));
 		ccr_update_ifCarry(SRB_C);
 	}
 
-	inline void JitOps::op_Bclr_ea(TWord op)
+	inline void JitOps::alu_bset(const JitReg64& _dst, const TWord _bit) const
 	{
-		const auto area = getFieldValueMemArea<Bclr_ea>(op);
+		m_asm.bts(_dst, asmjit::Imm(_bit));
+		ccr_update_ifCarry(SRB_C);
+	}
+
+	inline void JitOps::alu_bchg(const JitReg64& _dst, const TWord _bit) const
+	{
+		m_asm.btc(_dst, asmjit::Imm(_bit));
+		ccr_update_ifCarry(SRB_C);
+	}
+
+	template<Instruction Inst> void JitOps::bitmod_ea(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
+	{
+		const auto area = getFieldValueMemArea<Inst>(op);
 
 		const RegGP offset(m_block);
-		effectiveAddress<Bclr_ea>(offset, op, area);
+		effectiveAddress<Inst>(offset, op, area);
 
 		const RegGP regMem(m_block);
 		readMemOrPeriph(regMem, area, offset);
-		alu_bclr(regMem, getBit<Bclr_qq>(op));			
+		(this->*_bitmodFunc)(regMem, getBit<Inst>(op));
 		writeMemOrPeriph(area, offset, regMem);
 	}
-
-	inline void JitOps::op_Bclr_aa(TWord op)
+	
+	template<Instruction Inst> void JitOps::bitmod_aa(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
 	{
-		const auto area = getFieldValueMemArea<Bclr_aa>(op);
-		const auto addr = getFieldValue<Bclr_aa, Field_aaaaaa>(op);
+		const auto area = getFieldValueMemArea<Inst>(op);
+		const auto addr = getFieldValue<Inst, Field_aaaaaa>(op);
 		const RegGP regMem(m_block);
 		m_block.mem().readDspMemory(regMem, area, addr);
-		alu_bclr(regMem, getBit<Bclr_aa>(op));			
+		(this->*_bitmodFunc)(regMem, getBit<Inst>(op));
 		m_block.mem().writeDspMemory(area, addr, regMem);
 	}
 
-	inline void JitOps::op_Bclr_pp(TWord op)
+	template<Instruction Inst> void JitOps::bitmod_ppqq(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
 	{
-		RegGP r(m_block);
-		readMem<Bclr_pp>(r, op);
-		alu_bclr(r, getBit<Bclr_pp>(op));
-		writeMem<Bclr_pp>(op, r);
+		const RegGP r(m_block);
+		readMem<Inst>(r, op);
+		(this->*_bitmodFunc)(r, getBit<Inst>(op));
+		writeMem<Inst>(op, r);
 	}
 
-	inline void JitOps::op_Bclr_qq(TWord op)
+	template<Instruction Inst> void JitOps::bitmod_D(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
 	{
-		RegGP r(m_block);
-		readMem<Bclr_qq>(r, op);
-		alu_bclr(r, getBit<Bclr_qq>(op));
-		writeMem<Bclr_qq>(op, r);
-	}
+		const auto bit		= getBit<Inst>(op);
+		const auto dddddd	= getFieldValue<Inst,Field_DDDDDD>(op);
 
-	inline void JitOps::op_Bclr_D(TWord op)
-	{
-		const auto bit		= getBit<Bclr_D>(op);
-		const auto dddddd	= getFieldValue<Bclr_D,Field_DDDDDD>(op);
-
-		RegGP d(m_block);
+		const RegGP d(m_block);
 		decode_dddddd_read(d.get().r32(), dddddd);
-		alu_bclr(d, bit);
+		(this->*_bitmodFunc)(d, getBit<Inst>(op));
 		decode_dddddd_write(dddddd, d.get().r32());
 	}
+	
+	inline void JitOps::op_Bchg_ea(TWord op)	{ bitmod_ea<Bclr_ea>(op, &JitOps::alu_bchg); }
+	inline void JitOps::op_Bchg_aa(TWord op)	{ bitmod_aa<Bclr_aa>(op, &JitOps::alu_bchg); }
+	inline void JitOps::op_Bchg_pp(TWord op)	{ bitmod_ppqq<Bclr_pp>(op, &JitOps::alu_bchg); }
+	inline void JitOps::op_Bchg_qq(TWord op)	{ bitmod_ppqq<Bclr_qq>(op, &JitOps::alu_bchg); }
+	inline void JitOps::op_Bchg_D(TWord op)		{ bitmod_D<Bclr_D>(op, &JitOps::alu_bchg); }
+
+	inline void JitOps::op_Bclr_ea(TWord op)	{ bitmod_ea<Bclr_ea>(op, &JitOps::alu_bclr); }
+	inline void JitOps::op_Bclr_aa(TWord op)	{ bitmod_aa<Bclr_aa>(op, &JitOps::alu_bclr); }
+	inline void JitOps::op_Bclr_pp(TWord op)	{ bitmod_ppqq<Bclr_pp>(op, &JitOps::alu_bclr); }
+	inline void JitOps::op_Bclr_qq(TWord op)	{ bitmod_ppqq<Bclr_qq>(op, &JitOps::alu_bclr); }
+	inline void JitOps::op_Bclr_D(TWord op)		{ bitmod_D<Bclr_D>(op, &JitOps::alu_bclr); }
+
+	inline void JitOps::op_Bset_ea(TWord op)	{ bitmod_ea<Bset_ea>(op, &JitOps::alu_bset); }
+	inline void JitOps::op_Bset_aa(TWord op)	{ bitmod_aa<Bset_aa>(op, &JitOps::alu_bset); }
+	inline void JitOps::op_Bset_pp(TWord op)	{ bitmod_ppqq<Bset_pp>(op, &JitOps::alu_bset); }
+	inline void JitOps::op_Bset_qq(TWord op)	{ bitmod_ppqq<Bset_qq>(op, &JitOps::alu_bset); }
+	inline void JitOps::op_Bset_D(TWord op)		{ bitmod_D<Bset_D>(op, &JitOps::alu_bset); }
 
 	inline void JitOps::op_Clr(TWord op)
 	{
