@@ -48,8 +48,6 @@ namespace dsp56k
 		template<typename T>
 		void ptrToReg(const JitReg64& _r, const T* _t) const;
 
-		void getOpWordB(const JitReg& _dst) const;
-
 		void readDspMemory(const JitReg& _dst, EMemArea _area, const JitReg& _offset) const;
 		void writeDspMemory(EMemArea _area, const JitReg& _offset, const JitReg& _src) const;
 

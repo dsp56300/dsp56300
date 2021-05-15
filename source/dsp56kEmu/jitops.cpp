@@ -266,38 +266,48 @@ namespace dsp56k
 	{
 	}
 
-	void JitOps::emit(TWord pc, TWord op)
+	void JitOps::emit(const TWord _pc)
 	{
-		m_pcCurrentOp = pc;
+		TWord op;
+		TWord opB;
+		m_block.dsp().memory().getOpcode(_pc, op, opB);
+		emit(_pc, op, opB);
+	}
 
-		if(Opcodes::isNonParallelOpcode(op))
+	void JitOps::emit(const TWord _pc, const TWord _op, const TWord _opB)
+	{
+		m_pcCurrentOp = _pc;
+		m_opWordA = _op;
+		m_opWordB = _opB;
+
+		if(Opcodes::isNonParallelOpcode(_op))
 		{
-			const auto* oi = m_opcodes.findNonParallelOpcodeInfo(op);
+			const auto* oi = m_opcodes.findNonParallelOpcodeInfo(_op);
 
 			if(!oi)
 			{
-				m_opcodes.findNonParallelOpcodeInfo(op);		// retry here to help debugging
+				m_opcodes.findNonParallelOpcodeInfo(_op);		// retry here to help debugging
 				assert(0 && "illegal instruction");
 			}
 
-			emit(oi->m_instruction, op);
+			emit(oi->m_instruction, _op);
 			return;
 		}
-		const auto* oiMove = m_opcodes.findParallelMoveOpcodeInfo(op);
+		const auto* oiMove = m_opcodes.findParallelMoveOpcodeInfo(_op);
 		if(!oiMove)
 		{
-			m_opcodes.findParallelMoveOpcodeInfo(op);		// retry here to help debugging
+			m_opcodes.findParallelMoveOpcodeInfo(_op);		// retry here to help debugging
 			assert(0 && "illegal instruction");
 		}
 
 		const OpcodeInfo* oiAlu = nullptr;
 
-		if(op & 0xff)
+		if(_op & 0xff)
 		{
-			oiAlu = m_opcodes.findParallelAluOpcodeInfo(op);
+			oiAlu = m_opcodes.findParallelAluOpcodeInfo(_op);
 			if(!oiAlu)
 			{
-				m_opcodes.findParallelAluOpcodeInfo(op);	// retry here to help debugging
+				m_opcodes.findParallelAluOpcodeInfo(_op);	// retry here to help debugging
 				assert(0 && "invalid instruction");						
 			}
 		}
@@ -308,11 +318,11 @@ namespace dsp56k
 			// Only ALU, no parallel move
 			if(oiAlu)
 			{
-				emit(oiAlu->m_instruction, op);
+				emit(oiAlu->m_instruction, _op);
 			}
 			else
 			{
-				op_Nop(op);
+				op_Nop(_op);
 			}
 			break;
 		case Ifcc:
@@ -320,23 +330,23 @@ namespace dsp56k
 			// IFcc executes the ALU instruction if the condition is met, therefore no ALU exec by us
 			if(oiAlu)
 			{
-				emit(oiMove->m_instruction, op);
+				emit(oiMove->m_instruction, _op);
 			}
 			else
 			{
-				op_Nop(op);						
+				op_Nop(_op);						
 			}
 			break;
 		default:
 			if(!oiAlu)
 			{
 				// if there is no ALU instruction, do only the move
-				emit(oiMove->m_instruction, op);
+				emit(oiMove->m_instruction, _op);
 			}
 			else
 			{
 				// call special function that simulates latch registers for alu op + parallel move
-				emit(oiMove->m_instruction, oiAlu->m_instruction, op);
+				emit(oiMove->m_instruction, oiAlu->m_instruction, _op);
 			}
 		}
 	}

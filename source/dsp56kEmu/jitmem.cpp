@@ -90,14 +90,6 @@ namespace dsp56k
 		m_block.asm_().movzx(_dst, ptr(reg, &_src));
 	}
 
-	void Jitmem::getOpWordB(const JitReg& _dst) const
-	{
-		auto pc = m_block.regs().getPC();
-
-		readDspMemory(_dst, MemArea_P, pc);
-		m_block.asm_().inc(pc);
-	}
-
 	void Jitmem::readDspMemory(const JitReg& _dst, const EMemArea _area, const JitReg& _offset) const
 	{
 		const RegGP t(m_block);

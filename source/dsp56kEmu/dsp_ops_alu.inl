@@ -720,7 +720,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Cmpu_S1S2(const TWord op)
 	{
-		errNotImplemented("CMPU");		
+		errNotImplemented("CMPU");
 	}
 	inline void DSP::op_Dec(const TWord op)
 	{

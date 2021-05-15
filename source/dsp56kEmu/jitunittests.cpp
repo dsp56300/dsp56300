@@ -591,8 +591,7 @@ namespace dsp56k
 		dsp.reg.pc.var = 0;
 
 		// add #>32,a, two op add with immediate in extension word
-		dsp.mem.set(MemArea_P, 1, 0x000032);
-		_ops.emit(0, 0x0140c0);
+		_ops.emit(0, 0x0140c0, 0x000032);
 	}
 
 	void JitUnittests::addLongImmediate_verify()

@@ -214,10 +214,10 @@ namespace dsp56k
 		m_asm.sar(_r, asmjit::Imm(8));		// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shr(_r, asmjit::Imm(8));
 	}
-	
-	inline void JitOps::getOpWordB(const JitReg64& _dst) const
+
+	inline void JitOps::getOpWordB(const JitReg& _dst) const
 	{
-		m_block.mem().getOpWordB(_dst);
+		m_asm.mov(_dst.r32(), asmjit::Imm(getOpWordB()));
 	}
 
 	void JitOps::getMR(const JitReg64& _dst) const

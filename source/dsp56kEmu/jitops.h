@@ -19,7 +19,8 @@ namespace dsp56k
 	public:
 		JitOps(JitBlock& _block, bool _useSRCache = true);
 
-		void emit(TWord pc, TWord op);
+		void emit(TWord _pc);
+		void emit(TWord _pc, TWord _op, TWord _opB = 0);
 		void emit(Instruction _inst, TWord _op);
 		void emit(Instruction _instMove, Instruction _instAlu, TWord _op);
 
@@ -353,7 +354,8 @@ namespace dsp56k
 		void decode_JJ_read(JitReg64 _dst, TWord jj) const;
 		void decode_sss_read(JitReg64 _dst, TWord _sss) const;
 
-		void getOpWordB(const JitReg64& _dst) const;
+		TWord getOpWordB() const			{ return m_opWordB; }
+		void getOpWordB(const JitReg& _dst) const;
 
 		// ALU
 		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;
@@ -383,9 +385,12 @@ namespace dsp56k
 		JitDspRegs& m_dspRegs;
 		asmjit::x86::Assembler& m_asm;
 		std::map<TWord, asmjit::Label> m_pcLabels;
-		TWord m_pcCurrentOp = 0;
 
 		bool m_ccrDirty = false;
 		const bool m_useCCRCache;
+
+		TWord m_pcCurrentOp = 0;
+		TWord m_opWordA = 0;
+		TWord m_opWordB = 0;
 	};
 }
