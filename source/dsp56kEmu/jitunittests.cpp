@@ -85,6 +85,17 @@ namespace dsp56k
 
 	void JitUnittests::runTest(void( JitUnittests::* _build)(JitBlock&, JitOps&), void( JitUnittests::* _verify)())
 	{
+		runTest([&](JitBlock& _b, JitOps& _o)
+		{
+			(this->*_build)(_b, _o);			
+		},[&]()
+		{
+			(this->*_verify)();
+		});
+	}
+
+	void JitUnittests::runTest(std::function<void(JitBlock&, JitOps&)> _build, std::function<void()> _verify)
+	{
 		AsmJitErrorHandler errorHandler;
 		asmjit::CodeHolder code;
 		AsmJitLogger logger;
@@ -104,7 +115,7 @@ namespace dsp56k
 
 			JitOps ops(block, false);
 
-			(this->*_build)(block, ops);
+			_build(block, ops);
 		}
 
 		m_asm.pop(asmjit::x86::r15);
@@ -126,7 +137,7 @@ namespace dsp56k
 
 		func();
 
-		(this->*_verify)();
+		_verify();
 
 		m_rt.release(&func);
 	}
