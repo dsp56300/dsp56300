@@ -108,7 +108,7 @@ namespace dsp56k
 		void op_Debugcc(TWord op)			{}
 		void op_Dec(TWord op);
 		void op_Div(TWord op);
-		void op_Dmac(TWord op){}
+		void op_Dmac(TWord op);
 		void op_Do_ea(TWord op){}
 		void op_Do_aa(TWord op){}
 		void op_Do_xxx(TWord op){}
@@ -270,6 +270,7 @@ namespace dsp56k
 		void signextend48to64(const JitReg64& _reg) const;
 		void signextend48to56(const JitReg64& _reg) const;
 		void signextend24to56(const JitReg64& _reg) const;
+		void signextend24to64(const JitReg64& _reg) const;
 
 		void updateAddressRegister(const JitReg64& _r, TWord _mmm, TWord _rrr);
 		void updateAddressRegister(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
@@ -331,6 +332,7 @@ namespace dsp56k
 		void ccr_n_update_by55(const JitReg64& _alu) const;
 		void ccr_n_update_by47(const JitReg64& _alu) const;
 		void ccr_s_update(const JitReg64& _alu) const;
+		void ccr_l_update_by_v() const;
 
 		void ccr_clear(CCRMask _mask) const;
 		void ccr_set(CCRMask _mask) const;
@@ -352,7 +354,7 @@ namespace dsp56k
 		void decode_EE_write(const JitReg64& _src, TWord _ee);
 		void decode_JJJ_read_56(JitReg64 _dst, TWord JJJ, bool _b) const;
 		void decode_JJ_read(JitReg64 _dst, TWord jj) const;
-		void decode_QQQQ_read(JitReg& _s1, JitReg& _s2, TWord _qqqq) const;
+		void decode_QQQQ_read(const JitReg& _s1, const JitReg& _s2, TWord _qqqq) const;
 		void decode_sss_read(JitReg64 _dst, TWord _sss) const;
 
 		TWord getOpWordB() const			{ return m_opWordB; }

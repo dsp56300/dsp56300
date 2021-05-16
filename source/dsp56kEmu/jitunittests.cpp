@@ -91,6 +91,7 @@ namespace dsp56k
 		cmp();
 		dec();
 		div();
+		dmac();
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -1090,6 +1091,32 @@ namespace dsp56k
 			assert(dsp.reg.a.var == 0xffdf7214000000);
 			assert(dsp.getSR().var == 0x0800d4);		
 		});		
+	}
+
+	void JitUnittests::dmac()
+	{
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.a.var = 0;
+			dsp.x1(0x000020);
+			dsp.y1(0x000020);
+			_ops.emit(0, 0x01248f);		// dmacss x1,y1,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x800);
+		});
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.a.var = 0xfff00000000000;
+			dsp.x1(0x000020);
+			dsp.y1(0x000020);
+			_ops.emit(0, 0x01248f);		// dmacss x1,y1,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0xfffffffff00800);
+		});
 	}
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)

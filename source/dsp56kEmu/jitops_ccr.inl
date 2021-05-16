@@ -273,4 +273,13 @@ namespace dsp56k
 
 		m_asm.bind(exit);
 	}
+
+	inline void JitOps::ccr_l_update_by_v() const
+	{
+		RegGP r(m_block);
+		m_asm.xor_(r,r.get());
+		sr_getBitValue(r, SRB_V);
+		m_asm.shl(r, SRB_L);
+		m_asm.or_(regSR, r.get());
+	}
 }

@@ -359,7 +359,7 @@ namespace dsp56k
 		}
 	}
 
-	inline void JitOps::decode_QQQQ_read(JitReg& _s1, JitReg& _s2, TWord _qqqq) const
+	inline void JitOps::decode_QQQQ_read(const JitReg& _s1, const JitReg& _s2, TWord _qqqq) const
 	{
 		switch (_qqqq)
 		{
@@ -382,6 +382,7 @@ namespace dsp56k
 		case 13: m_dspRegs.getX0(_s1);	m_dspRegs.getY0(_s2);	return;
 		case 14: m_dspRegs.getY0(_s1);	m_dspRegs.getX1(_s2);	return;
 		case 15: m_dspRegs.getX1(_s1);	m_dspRegs.getY1(_s2);	return;
+
 		default: assert(0 && "invalid QQQQ value");				return;
 		}
 	}

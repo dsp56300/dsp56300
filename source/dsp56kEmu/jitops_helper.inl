@@ -33,6 +33,12 @@ namespace dsp56k
 		m_asm.shr(_reg, asmjit::Imm(8));
 	}
 
+	inline void JitOps::signextend24to64(const JitReg64& _reg) const
+	{
+		m_asm.sal(_reg, asmjit::Imm(40));
+		m_asm.sar(_reg, asmjit::Imm(40));
+	}
+
 	void JitOps::updateAddressRegister(const JitReg64& _r, const TWord _mmm, const TWord _rrr)
 	{
 		if(_mmm == 6)													/* 110         */

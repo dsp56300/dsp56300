@@ -646,6 +646,60 @@ namespace dsp56k
 		ccr_update_ifNotCarry(SRB_C);
 	}
 
+	inline void JitOps::op_Dmac(TWord op)
+	{
+		const auto ss			= getFieldValue<Dmac,Field_S, Field_s>(op);
+		const bool ab			= getFieldValue<Dmac,Field_d>(op);
+		const bool negate		= getFieldValue<Dmac,Field_k>(op);
+
+		const auto qqqq			= getFieldValue<Dmac,Field_QQQQ>(op);
+
+		const auto s1Unsigned	= ss > 1;
+		const auto s2Unsigned	= ss > 0;
+
+		RegGP s1(m_block);
+
+		const RegGP s2(m_block);
+
+		decode_QQQQ_read( s1, s2.get(), qqqq );
+
+		if(s1Unsigned)	signextend24to64(s1);
+		if(s2Unsigned)	signextend24to64(s2);
+
+		m_asm.imul(s1, s2.get());
+
+		// fractional multiplication requires one post-shift to be correct
+		m_asm.sal(s1, asmjit::Imm(1));
+
+		if( negate )
+			m_asm.neg(s1);
+
+		const AluReg d(m_block, ab);
+
+		signextend56to64(d);
+		m_asm.sar(d, asmjit::Imm(24));
+
+		m_asm.add(d, s1.get());
+		s1.release();
+
+		const auto& dOld = s2;
+		m_asm.mov(dOld, d.get());
+
+		m_dspRegs.mask56(d);
+
+		// Update SR
+		ccr_update_ifZero(SRB_Z);
+
+		// detect overflow by sign-extending the actual result and comparing VS the non-sign-extended one. We've got overflow if they are different
+		m_asm.cmp(dOld, d.get());
+
+		ccr_update_ifNotZero(SRB_V);
+
+		ccr_l_update_by_v();
+
+		ccr_dirty(d);
+	}
+
 	inline void JitOps::op_Ori(TWord op)
 	{
 		const auto ee		= getFieldValue<Ori,Field_EE>(op);
