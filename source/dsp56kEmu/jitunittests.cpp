@@ -45,6 +45,16 @@ namespace dsp56k
 
 		runTest(&JitUnittests::transferSaturation_build, &JitUnittests::transferSaturation_verify);
 
+		{
+			constexpr auto T=true;
+			constexpr auto F=false;
+
+			//                            <  <= =  >= >  != 
+			testCCCC(0xff000000000000, 0, T, T, F, F, F, T);
+			testCCCC(0x00ff0000000000, 0, F, F, F, T, T, T);
+			testCCCC(0x00000000000000, 0, F, T, T, T ,F ,F);
+		}
+
 		runTest(&JitUnittests::getSS_build, &JitUnittests::getSS_verify);
 		runTest(&JitUnittests::getSetRegs_build, &JitUnittests::getSetRegs_verify);
 
@@ -456,6 +466,28 @@ namespace dsp56k
 		assert(m_checks[0] == 0x800000);
 		assert(m_checks[1] == 0x7fffff);
 		assert(m_checks[2] == 0x334455);
+	}
+
+	void JitUnittests::testCCCC(const int64_t _value, const int64_t _compareValue, const bool _lt, bool _le, bool _eq, bool _ge, bool _gt, bool _neq)
+	{
+		dsp.reg.a.var = _value;
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			const RegGP r(_block);
+			_block.asm_().mov(r, asmjit::Imm(_compareValue));
+			nop(_block, 15);
+			_ops.alu_cmp(0, r, false);
+			nop(_block, 15);
+		}, [&]()
+		{
+			assert(_lt == (dsp.decode_cccc(CCCC_LessThan) != 0));
+			assert(_le == (dsp.decode_cccc(CCCC_LessEqual) != 0));
+			assert(_eq == (dsp.decode_cccc(CCCC_Equal) != 0));
+			assert(_ge == (dsp.decode_cccc(CCCC_GreaterEqual) != 0));
+			assert(_gt == (dsp.decode_cccc(CCCC_GreaterThan) != 0));
+			assert(_neq == (dsp.decode_cccc(CCCC_NotEqual) != 0));	
+		}
+		);
 	}
 
 	void JitUnittests::getSS_build(JitBlock& _block, JitOps& _ops)

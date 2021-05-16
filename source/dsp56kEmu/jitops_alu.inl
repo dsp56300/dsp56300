@@ -16,14 +16,7 @@ namespace dsp56k
 
 		signextend56to64(ra);									// extend to 64 bits
 
-		{
-			const RegGP rb(m_block);
-			m_asm.mov(rb, static_cast<asmjit::x86::Gp>(ra));	// Copy to backup location
-
-			m_asm.neg(ra);										// negate
-
-			m_asm.cmovl(ra, rb);								// if tempA is now negative, restore its saved value
-		}
+		alu_abs(ra);
 
 //		m_asm.and_(ra, asmjit::Imm(0x00ff ffffff ffffff));		// absolute value does not need any mask
 
@@ -64,6 +57,18 @@ namespace dsp56k
 	{
 		m_asm.mov(_r, _i);
 		m_asm.shl(_r, asmjit::Imm(24));
+	}
+
+	inline void JitOps::alu_abs(const JitReg& _r)
+	{
+		const RegGP rb(m_block);
+
+
+		m_asm.mov(rb, _r);		// Copy to backup location
+
+		m_asm.neg(_r);			// negate
+
+		m_asm.cmovl(_r, rb);	// if now negative, restore its saved value
 	}
 
 	inline void JitOps::alu_add(TWord ab, const asmjit::Imm& _v)
@@ -362,6 +367,34 @@ namespace dsp56k
 		ccr_update_ifCarry(SRB_C);
 	}
 
+	inline void JitOps::alu_cmp(TWord ab, const JitReg64& _v, bool _magnitude)
+	{
+		AluReg d(m_block, ab, true);
+
+		m_asm.sal(d.get(), asmjit::Imm(8));
+		m_asm.sal(_v, asmjit::Imm(8));
+
+		if( _magnitude )
+		{
+			alu_abs(d);
+			alu_abs(_v);
+		}
+
+		m_asm.sub(d, _v);
+
+		ccr_update_ifCarry(SRB_C);
+
+		m_asm.cmp(d, asmjit::Imm(0));
+		ccr_update_ifZero(SRB_Z);
+
+		ccr_clear(SR_V);			// as cmp is identical to sub, the same for the V bit applies (see sub for details)
+
+		m_asm.shr(d, asmjit::Imm(8));
+		m_asm.shr(_v, asmjit::Imm(8));
+
+		ccr_dirty(d);
+	}
+
 	template<Instruction Inst> void JitOps::bitmod_ea(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
 	{
 		const auto area = getFieldValueMemArea<Inst>(op);
@@ -474,6 +507,52 @@ namespace dsp56k
 		ccr_clear( static_cast<CCRMask>(SR_E | SR_N | SR_V) );
 		ccr_set( static_cast<CCRMask>(SR_U | SR_Z) );
 		m_ccrDirty = false;
+	}
+
+	inline void JitOps::op_Cmp_S1S2(TWord op)
+	{
+		const auto D = getFieldValue<Cmp_S1S2, Field_d>(op);
+		const auto JJJ = getFieldValue<Cmp_S1S2, Field_JJJ>(op);
+		const RegGP regJ(m_block);
+		decode_JJJ_read_56(regJ, JJJ, !D);
+		alu_cmp(D, regJ, false);
+	}
+
+	inline void JitOps::op_Cmp_xxS2(TWord op)
+	{
+		const auto D = getFieldValue<Cmp_xxS2, Field_d>(op);
+		const auto iiiiii = getFieldValue<Cmp_xxS2,Field_iiiiii>(op);
+		
+		TReg56 r56;
+		convert( r56, TReg24(iiiiii) );
+
+		const RegGP v(m_block);
+		m_asm.mov(v, asmjit::Imm(r56.var));
+		alu_cmp( D, v, false);
+	}
+
+	inline void JitOps::op_Cmp_xxxxS2(TWord op)
+	{
+		const auto D = getFieldValue<Cmp_xxxxS2, Field_d>(op);
+
+		const TReg24 s( signextend<int,24>( getOpWordB() ) );
+
+		TReg56 r56;
+		convert( r56, s );
+
+		const RegGP v(m_block);
+		m_asm.mov(v, asmjit::Imm(r56.var));
+
+		alu_cmp( D, v, false );
+	}
+
+	inline void JitOps::op_Cmpm_S1S2(TWord op)
+	{
+		const auto D = getFieldValue<Cmpm_S1S2, Field_d>(op);
+		const auto JJJ = getFieldValue<Cmpm_S1S2, Field_JJJ>(op);
+		const RegGP r(m_block);
+		decode_JJJ_read_56(r, JJJ, !D);
+		alu_cmp(D, r, true);
 	}
 
 	inline void JitOps::op_Ori(TWord op)

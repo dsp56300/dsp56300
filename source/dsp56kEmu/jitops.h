@@ -99,11 +99,11 @@ namespace dsp56k
 		void op_Btst_D(TWord op);
 		void op_Clb(TWord op)				{ errNotImplemented(op); }
 		void op_Clr(TWord op);
-		void op_Cmp_S1S2(TWord op){}
-		void op_Cmp_xxS2(TWord op){}
-		void op_Cmp_xxxxS2(TWord op){}
-		void op_Cmpm_S1S2(TWord op){}
-		void op_Cmpu_S1S2(TWord op){}
+		void op_Cmp_S1S2(TWord op);
+		void op_Cmp_xxS2(TWord op);
+		void op_Cmp_xxxxS2(TWord op);
+		void op_Cmpm_S1S2(TWord op);
+		void op_Cmpu_S1S2(TWord op)			{ errNotImplemented(op); }
 		void op_Debug(TWord op)				{}
 		void op_Debugcc(TWord op)			{}
 		void op_Dec(TWord op){}
@@ -360,6 +360,8 @@ namespace dsp56k
 		// ALU
 		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;
 
+		void alu_abs(const JitReg& _r);
+		
 		void alu_add(TWord ab, RegGP& _v);
 		void alu_add(TWord ab, const asmjit::Imm& _v);
 
@@ -372,6 +374,8 @@ namespace dsp56k
 		void alu_bset(const JitReg64& _dst, TWord _bit) const;
 		void alu_bchg(const JitReg64& _dst, TWord _bit) const;
 
+		void alu_cmp(TWord ab, const JitReg64& _v, bool magnitude);
+		
 		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
 		template<Instruction Inst> void bitmod_aa(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
 		template<Instruction Inst> void bitmod_ppqq(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
