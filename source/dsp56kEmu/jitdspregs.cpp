@@ -597,7 +597,12 @@ namespace dsp56k
 		if(isLoaded(LoadedRegY))			storeXY(1);
 
 		if(isLoaded(LoadedRegPC))			store24(m_dsp.regs().pc, regPC);
-		if(isLoaded(LoadedRegSR))			store24(m_dsp.regs().sr, regSR);
+		if(isLoaded(LoadedRegSR))
+		{
+			store24(m_dsp.regs().sr, regSR);
+			m_dsp.resetCCRCache();
+		}
+
 		if(isLoaded(LoadedRegLC))			store24(m_dsp.regs().lc, regLC);
 	}
 }
