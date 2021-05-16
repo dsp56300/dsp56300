@@ -88,6 +88,8 @@ namespace dsp56k
 
 		runTest(&JitUnittests::btst_aa_build, &JitUnittests::btst_aa_verify);
 
+		cmp();
+
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
 		runTest(&JitUnittests::clr_build, &JitUnittests::clr_verify);
@@ -943,6 +945,48 @@ namespace dsp56k
 	{
 		assert((m_checks[0] & SR_C) == 0);
 		assert((m_checks[1] & SR_C) != 0);
+	}
+
+	void JitUnittests::cmp()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.b.var = 0;
+			dsp.b1(TReg24(0x123456));
+
+			dsp.reg.x.var = 0;
+			dsp.x0(TReg24(0x123456));
+
+			_ops.emit(0, 0x20004d);		// cmp x0,b
+		},
+		[&]()
+		{
+			assert(dsp.sr_test(SR_Z));
+			assert(!dsp.sr_test(static_cast<CCRMask>(SR_N | SR_E | SR_V | SR_C)));			
+		});
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.x0(0xf00000);
+			dsp.reg.a.var = 0xfff40000000000;
+			dsp.setSR(0x0800d8);
+
+			_ops.emit(0, 0x200045);	// cmp x0,a
+		},
+		[&]()
+		{
+			assert(dsp.getSR().var == 0x0800d0);
+		});
+		runTest([&](auto& _block, auto& _ops)
+		{
+			
+			dsp.setSR(0x080099);
+			dsp.reg.a.var = 0xfffffc6c000000;
+			_ops.emit(0, 0x0140c5, 0x0000aa);	// cmp #>$aa,a
+		},
+		[&]()
+		{
+			assert(dsp.getSR().var == 0x080098);
+		});
 	}
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)

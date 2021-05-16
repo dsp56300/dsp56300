@@ -123,6 +123,8 @@ namespace dsp56k
 		void btst_aa_build(JitBlock& _block, JitOps& _ops);
 		void btst_aa_verify();
 
+		void cmp();
+
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();
 
