@@ -18,6 +18,11 @@ namespace dsp56k
 			m_block.regs().setALU(m_aluIndexDst, m_reg);
 	}
 
+	void AluReg::release()
+	{
+		m_reg.release();
+	}
+
 	PushGP::PushGP(asmjit::x86::Assembler& _a, const JitReg64& _reg) : m_asm(_a), m_reg(_reg)
 	{
 		_a.push(m_reg);

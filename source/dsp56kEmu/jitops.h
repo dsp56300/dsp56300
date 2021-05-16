@@ -120,12 +120,12 @@ namespace dsp56k
 		void op_Dor_S(TWord op){}
 		void op_DorForever(TWord op){}
 		void op_Enddo(TWord op){}
-		void op_Eor_SD(TWord op){}
-		void op_Eor_xx(TWord op){}
-		void op_Eor_xxxx(TWord op){}
-		void op_Extract_S1S2(TWord op){}
-		void op_Extract_CoS2(TWord op){}
-		void op_Extractu_S1S2(TWord op){}
+		void op_Eor_SD(TWord op)			{ errNotImplemented(op); }
+		void op_Eor_xx(TWord op)			{ errNotImplemented(op); }
+		void op_Eor_xxxx(TWord op)			{ errNotImplemented(op); }
+		void op_Extract_S1S2(TWord op)		{ errNotImplemented(op); }
+		void op_Extract_CoS2(TWord op)		{ errNotImplemented(op); }
+		void op_Extractu_S1S2(TWord op);
 		void op_Extractu_CoS2(TWord op){}
 		void op_Ifcc(TWord op){}
 		void op_Ifcc_U(TWord op){}

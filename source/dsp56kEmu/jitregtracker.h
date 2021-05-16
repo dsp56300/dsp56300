@@ -105,10 +105,11 @@ namespace dsp56k
 		JitReg64 get() const { return m_reg.get(); }
 		operator JitReg64 () const { return m_reg.get(); }
 		operator const RegGP& () const { return m_reg; }
+		void release();
 
 	private:
 		JitBlock& m_block;
-		const RegGP m_reg;
+		RegGP m_reg;
 		const TWord m_aluIndexDst;
 		const bool m_readOnly;
 	};

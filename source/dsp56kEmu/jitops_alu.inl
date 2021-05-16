@@ -700,6 +700,49 @@ namespace dsp56k
 		ccr_dirty(d);
 	}
 
+	inline void JitOps::op_Extractu_S1S2(TWord op)
+	{
+		const auto sss		= getFieldValue<Extractu_S1S2, Field_SSS>(op);
+		const bool abDst	= getFieldValue<Extractu_S1S2, Field_D>(op);
+		const bool abSrc	= getFieldValue<Extractu_S1S2, Field_s>(op);
+
+		ccr_clear(SR_C);
+		ccr_clear(SR_V);
+
+		const RegGP widthOffset(m_block);
+		decode_sss_read(widthOffset, sss);
+
+		RegGP width(m_block);
+		m_asm.mov(width, widthOffset.get());
+		m_asm.shr(width, asmjit::Imm(12));
+		m_asm.and_(width, asmjit::Imm(0x3f));
+
+		RegGP offset(m_block);
+		m_asm.mov(offset, widthOffset.get());
+		m_asm.and_(offset, asmjit::Imm(0x3f));
+
+		m_asm.neg(width);
+		m_asm.add(width, asmjit::Imm(56));
+
+		const auto& mask = widthOffset;
+		m_asm.mov(mask, asmjit::Imm(0xffffffffffffff));
+		m_asm.shrx(mask, mask, width.get());
+		width.release();
+
+		AluReg s(m_block, abSrc, true);
+		m_asm.shrx(s, s, offset.get());
+		m_asm.and_(s, mask.get());
+		offset.release();
+
+		AluReg d(m_block, abDst);
+		m_asm.mov(d, s.get());
+		m_asm.cmp(d, asmjit::Imm(0));
+		s.release();
+
+		ccr_update_ifZero(SRB_Z);
+		ccr_dirty(d);
+	}
+
 	inline void JitOps::op_Ori(TWord op)
 	{
 		const auto ee		= getFieldValue<Ori,Field_EE>(op);
