@@ -345,7 +345,7 @@ namespace dsp56k
 		void XY1to56(const JitReg64& _dst, int _xy) const;
 
 		// decode
-		void decode_cccc(JitReg& _dst, TWord cccc);
+		void decode_cccc(const JitReg& _dst, TWord cccc);
 		void decode_dddddd_read(const JitReg32& _dst, TWord _dddddd);
 		void decode_dddddd_write(TWord _dddddd, const JitReg32& _dst);
 		void decode_EE_read(RegGP& dst, TWord _ee);

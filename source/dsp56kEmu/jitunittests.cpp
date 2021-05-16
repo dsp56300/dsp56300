@@ -477,6 +477,14 @@ namespace dsp56k
 			_block.asm_().mov(r, asmjit::Imm(_compareValue));
 			nop(_block, 15);
 			_ops.alu_cmp(0, r, false);
+
+			_ops.decode_cccc(r.get(), CCCC_LessThan);			_block.mem().mov(m_checks[0], r.get());
+			_ops.decode_cccc(r.get(), CCCC_LessEqual);			_block.mem().mov(m_checks[1], r.get());
+			_ops.decode_cccc(r.get(), CCCC_Equal);				_block.mem().mov(m_checks[2], r.get());
+			_ops.decode_cccc(r.get(), CCCC_GreaterEqual);		_block.mem().mov(m_checks[3], r.get());
+			_ops.decode_cccc(r.get(), CCCC_GreaterThan);		_block.mem().mov(m_checks[4], r.get());
+			_ops.decode_cccc(r.get(), CCCC_NotEqual);			_block.mem().mov(m_checks[5], r.get());
+
 			nop(_block, 15);
 		}, [&]()
 		{
@@ -486,6 +494,13 @@ namespace dsp56k
 			assert(_ge == (dsp.decode_cccc(CCCC_GreaterEqual) != 0));
 			assert(_gt == (dsp.decode_cccc(CCCC_GreaterThan) != 0));
 			assert(_neq == (dsp.decode_cccc(CCCC_NotEqual) != 0));	
+
+			assert(_lt  == (m_checks[0] != 0));
+			assert(_le  == (m_checks[1] != 0));
+			assert(_eq  == (m_checks[2] != 0));
+			assert(_ge  == (m_checks[3] != 0));
+			assert(_gt  == (m_checks[4] != 0));
+			assert(_neq == (m_checks[5] != 0));	
 		}
 		);
 	}

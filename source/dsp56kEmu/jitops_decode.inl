@@ -4,7 +4,7 @@
 
 namespace dsp56k
 {
-	void JitOps::decode_cccc(JitReg& _dst, const TWord cccc)
+	void JitOps::decode_cccc(const JitReg& _dst, const TWord cccc)
 	{
 		switch( cccc )
 		{
