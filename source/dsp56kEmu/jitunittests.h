@@ -17,7 +17,8 @@ namespace dsp56k
 	private:
 		void runTest(void(JitUnittests::*_build)(JitBlock&, JitOps&), void( JitUnittests::*_verify)());
 		void runTest(std::function<void(JitBlock&, JitOps&)> _build, std::function<void()> _verify);
-
+		static void nop(JitBlock& _block, size_t _count = 1);
+		
 		// helper function tests
 		void conversion_build(JitBlock& _block, JitOps& _ops);
 		void conversion_verify();

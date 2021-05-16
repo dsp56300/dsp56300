@@ -142,6 +142,12 @@ namespace dsp56k
 		m_rt.release(&func);
 	}
 
+	void JitUnittests::nop(JitBlock& _block, size_t _count)
+	{
+		for(size_t i=0; i<_count; ++i)
+			_block.asm_().nop();
+	}
+
 	void JitUnittests::conversion_build(JitBlock& _block, JitOps& _ops)
 	{
 		_block.asm_().bind(_block.asm_().newNamedLabel("test_conv"));
