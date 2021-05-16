@@ -725,7 +725,7 @@ namespace dsp56k
 		m_asm.add(width, asmjit::Imm(56));
 
 		const auto& mask = widthOffset;
-		m_asm.mov(mask, asmjit::Imm(0xffffffffffffff));
+		m_asm.mov(mask, asmjit::Imm(g_alu_max_56_u));
 		m_asm.shrx(mask, mask, width.get());
 		width.release();
 
@@ -753,7 +753,7 @@ namespace dsp56k
 		const auto width = (widthOffset >> 12) & 0x3f;
 		const auto offset = widthOffset & 0x3f;
 
-		const auto mask = 0xffffffffffffff >> (56 - width);
+		const auto mask = g_alu_max_56_u >> (56 - width);
 
 		const AluReg d(m_block, abDst);
 
