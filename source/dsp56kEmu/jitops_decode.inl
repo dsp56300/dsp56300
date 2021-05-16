@@ -359,6 +359,33 @@ namespace dsp56k
 		}
 	}
 
+	inline void JitOps::decode_QQQQ_read(JitReg& _s1, JitReg& _s2, TWord _qqqq) const
+	{
+		switch (_qqqq)
+		{
+		case 0:  m_dspRegs.getX0(_s1);	m_dspRegs.getX0(_s2);	return;
+		case 1:  m_dspRegs.getY0(_s1);	m_dspRegs.getY0(_s2);	return;
+		case 2:  m_dspRegs.getX1(_s1);	m_dspRegs.getX0(_s2);	return;
+		case 3:  m_dspRegs.getY1(_s1);	m_dspRegs.getY0(_s2);	return;
+
+		case 4:  m_dspRegs.getX0(_s1);	m_dspRegs.getY1(_s2);	return;
+		case 5:  m_dspRegs.getY0(_s1);	m_dspRegs.getX0(_s2);	return;
+		case 6:  m_dspRegs.getX1(_s1);	m_dspRegs.getY0(_s2);	return;
+		case 7:  m_dspRegs.getY1(_s1);	m_dspRegs.getX1(_s2);	return;
+
+		case 8:  m_dspRegs.getX1(_s1);	m_dspRegs.getX1(_s2);	return;
+		case 9:  m_dspRegs.getY1(_s1);	m_dspRegs.getY1(_s2);	return;
+		case 10: m_dspRegs.getX0(_s1);	m_dspRegs.getX1(_s2);	return;
+		case 11: m_dspRegs.getY0(_s1);	m_dspRegs.getY1(_s2);	return;
+
+		case 12: m_dspRegs.getY1(_s1);	m_dspRegs.getX0(_s2);	return;
+		case 13: m_dspRegs.getX0(_s1);	m_dspRegs.getY0(_s2);	return;
+		case 14: m_dspRegs.getY0(_s1);	m_dspRegs.getX1(_s2);	return;
+		case 15: m_dspRegs.getX1(_s1);	m_dspRegs.getY1(_s2);	return;
+		default: assert(0 && "invalid QQQQ value");				return;
+		}
+	}
+
 	void JitOps::decode_sss_read(const JitReg64 _dst, const TWord _sss) const
 	{
 		switch( _sss )

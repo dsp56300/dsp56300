@@ -47,6 +47,11 @@ namespace dsp56k
 		void getXY1(const JitReg& _dst, uint32_t _aluIndex);
 		void setXY1(uint32_t _xy, const JitReg& _src);
 
+		void getX0(const JitReg& _dst) { return getXY0(_dst, 0); }
+		void getY0(const JitReg& _dst) { return getXY0(_dst, 1); }
+		void getX1(const JitReg& _dst) { return getXY1(_dst, 0); }
+		void getY1(const JitReg& _dst) { return getXY1(_dst, 1); }
+
 		void getALU0(const JitReg& _dst, uint32_t _aluIndex);
 		void setALU0(uint32_t _aluIndex, const JitReg& _src);
 		void getALU1(const JitReg& _dst, uint32_t _aluIndex);
