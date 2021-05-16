@@ -13,6 +13,12 @@ namespace dsp56k
 		m_asm.sar(_reg, asmjit::Imm(8));
 	}
 
+	inline void JitOps::signextend48to64(const JitReg64& _reg) const
+	{
+		m_asm.sal(_reg, asmjit::Imm(16));
+		m_asm.sar(_reg, asmjit::Imm(16));
+	}
+
 	inline void JitOps::signextend48to56(const JitReg64& _reg) const
 	{
 		m_asm.sal(_reg, asmjit::Imm(16));

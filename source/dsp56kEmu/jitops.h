@@ -107,7 +107,7 @@ namespace dsp56k
 		void op_Debug(TWord op)				{}
 		void op_Debugcc(TWord op)			{}
 		void op_Dec(TWord op);
-		void op_Div(TWord op){}
+		void op_Div(TWord op);
 		void op_Dmac(TWord op){}
 		void op_Do_ea(TWord op){}
 		void op_Do_aa(TWord op){}
@@ -267,6 +267,7 @@ namespace dsp56k
 
 		// helpers
 		void signextend56to64(const JitReg64& _reg) const;
+		void signextend48to64(const JitReg64& _reg) const;
 		void signextend48to56(const JitReg64& _reg) const;
 		void signextend24to56(const JitReg64& _reg) const;
 

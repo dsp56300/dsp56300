@@ -90,6 +90,7 @@ namespace dsp56k
 
 		cmp();
 		dec();
+		div();
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -1021,6 +1022,74 @@ namespace dsp56k
 			assert(dsp.sr_test(static_cast<CCRMask>(SR_N | SR_C)));
 			assert(!dsp.sr_test(static_cast<CCRMask>(SR_Z | SR_E | SR_V)));
 		});
+	}
+
+	void JitUnittests::div()
+	{
+		constexpr uint64_t expectedValues[24] =
+		{
+			0xffef590e000000,
+			0xffef790e000000,
+			0xffefb90e000000,
+			0xfff0390e000000,
+			0xfff1390e000000,
+			0xfff3390e000000,
+			0xfff7390e000000,
+			0xffff390e000000,
+			0x000f390e000000,
+			0x000dab2a000001,
+			0x000a8f62000003,
+			0x000457d2000007,
+			0xfff7e8b200000f,
+			0x0000985600001e,
+			0xfff069ba00003d,
+			0xfff19a6600007a,
+			0xfff3fbbe0000f4,
+			0xfff8be6e0001e8,
+			0x000243ce0003d0,
+			0xfff3c0aa0007a1,
+			0xfff84846000f42,
+			0x0001577e001e84,
+			0xfff1e80a003d09,
+			0xfff49706007a12
+		};
+
+		dsp.setSR(dsp.getSR().var & 0xfe);
+		dsp.reg.a.var = 0x00001000000000;
+		dsp.reg.y.var =   0x04444410c6f2;
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			for(size_t i=0; i<24; ++i)
+			{
+				nop(_block, 3);
+				_ops.emit(0, 0x018050);		// div y0,a
+				nop(_block, 5);
+				RegGP r(_block);
+				_block.regs().getALU(r, 0);
+				_block.mem().mov(m_checks[i], r.get());
+			}
+		},
+		[&]()
+		{
+			for(size_t i=0; i<24; ++i)
+			{
+				assert(m_checks[i] == expectedValues[i]);
+			}
+		});
+
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.y0(0x218dec);
+			dsp.reg.a.var = 0x00008000000000;
+			dsp.setSR(0x0800d4);
+			_ops.emit(0, 0x018050);		// div y0,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0xffdf7214000000);
+			assert(dsp.getSR().var == 0x0800d4);		
+		});		
 	}
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)

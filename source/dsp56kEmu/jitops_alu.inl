@@ -573,6 +573,79 @@ namespace dsp56k
 		ccr_dirty(r);
 	}
 
+	inline void JitOps::op_Div(TWord op)
+	{
+		const auto ab	= getFieldValue<Div,Field_d>(op);
+		const auto jj	= getFieldValue<Div,Field_JJ>(op);
+
+		const AluReg d(m_block, ab);
+
+		{
+			// V and L updates
+			// V: Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
+			// L: Set if the Overflow bit (V) is set.
+			// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
+			// Nearly identical for L but L is only set, not cleared as it is sticky
+			const RegGP r(m_block);
+			m_asm.mov(r, d.get());
+			m_asm.shr(r, asmjit::Imm(54));
+			m_asm.and_(r, asmjit::Imm(0x3));
+			m_asm.setnp(r.get().r8());
+			ccr_update(r, SRB_V);
+			m_asm.shl(r, asmjit::Imm(SRB_L));
+			m_asm.or_(m_dspRegs.getSR(), r.get());
+		}
+
+		{
+			const RegGP s(m_block);
+			decode_JJ_read(s, jj);
+
+			const RegGP addOrSub(m_block);
+			m_asm.xor_(addOrSub, addOrSub.get());
+			m_asm.bt(d, asmjit::Imm(55));
+			m_asm.setc(addOrSub);
+			m_asm.bt(s, asmjit::Imm(23));
+			m_asm.adc(addOrSub, asmjit::Imm(0));
+
+			m_asm.shl(d, asmjit::Imm(1));
+			{
+				const RegGP carry(m_block);
+				m_asm.xor_(carry, carry.get());
+				sr_getBitValue(carry, SRB_C);
+				m_asm.or_(d, carry.get());
+			}
+
+			m_asm.shl(s, asmjit::Imm(24));
+			signextend48to64(s);
+
+			const RegGP dLsWord(m_block);
+			m_asm.mov(dLsWord, d.get());
+			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
+
+			m_asm.cmp(addOrSub, asmjit::Imm(0));
+
+			const asmjit::Label sub = m_asm.newLabel();
+			const asmjit::Label end = m_asm.newLabel();		
+
+			m_asm.jz(sub);
+			m_asm.add(d, s.get());
+			m_asm.jmp(end);
+
+			m_asm.bind(sub);
+			m_asm.sub(d, s.get());
+
+			m_asm.bind(end);
+			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
+
+			m_asm.or_(d, dLsWord.get());
+		}
+		m_dspRegs.mask56(d);
+
+		// C is set if bit 55 of the result is cleared
+		m_asm.bt(d, asmjit::Imm(55));
+		ccr_update_ifNotCarry(SRB_C);
+	}
+
 	inline void JitOps::op_Ori(TWord op)
 	{
 		const auto ee		= getFieldValue<Ori,Field_EE>(op);
