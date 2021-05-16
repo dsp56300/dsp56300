@@ -42,6 +42,11 @@ namespace dsp56k
 			m_availableRegs.pop();
 			return ret;
 		}
+
+		bool empty() const
+		{
+			return m_availableRegs.empty();
+		}
 	private:
 		std::stack<T> m_availableRegs;	// TODO: do we want a FIFO instead to have more register spread? Is it any better performance-wise?
 	};
@@ -143,6 +148,29 @@ namespace dsp56k
 		~PushShadowSpace();
 	private:
 		JitBlock& m_block;
+	};
+
+	class TempGP
+	{
+	public:
+		TempGP(JitBlock& _block, const JitReg64& _spilledReg);
+		~TempGP();
+
+		const JitReg64& get() const { return m_reg; }
+		operator const JitReg64& () const { return get(); }
+	private:
+		enum Mode
+		{
+			ModeTemp,
+			ModePushToXMM,
+			ModePushToStack,
+		};
+
+		JitBlock& m_block;
+		const JitReg64 m_spilledReg;
+		Mode m_mode = ModeTemp;
+		JitReg64 m_reg;
+		JitReg128 m_regXMM;
 	};
 
 }

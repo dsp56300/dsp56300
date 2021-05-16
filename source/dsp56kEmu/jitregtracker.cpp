@@ -64,4 +64,43 @@ namespace dsp56k
 		m_block.asm_().pop(temp);
 #endif
 	}
+
+	TempGP::TempGP(JitBlock& _block, const JitReg64& _spilledReg): m_block(_block), m_spilledReg(_spilledReg)
+	{
+		if(!_block.gpPool().empty())
+		{
+			m_reg = _block.gpPool().get();
+			m_mode = ModeTemp;
+		}
+		else if(!_block.xmmPool().empty())
+		{
+			m_regXMM = _block.xmmPool().get();
+			_block.asm_().movd(m_regXMM, _spilledReg);
+			m_reg = _spilledReg;
+			m_mode = ModePushToXMM;
+		}
+		else
+		{
+			_block.asm_().push(_spilledReg);
+			m_reg = _spilledReg;
+			m_mode = ModePushToStack;
+		}
+	}
+
+	TempGP::~TempGP()
+	{
+		if(m_mode == ModeTemp)
+		{
+			m_block.gpPool().put(m_reg);
+		}
+		else if(m_mode == ModePushToXMM)
+		{
+			m_block.asm_().movd(m_spilledReg, m_regXMM);
+			m_block.xmmPool().put(m_regXMM);
+		}
+		else
+		{
+			m_block.asm_().pop(m_spilledReg);
+		}
+	}
 }
