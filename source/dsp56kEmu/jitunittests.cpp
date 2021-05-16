@@ -89,6 +89,7 @@ namespace dsp56k
 		runTest(&JitUnittests::btst_aa_build, &JitUnittests::btst_aa_verify);
 
 		cmp();
+		dec();
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -986,6 +987,39 @@ namespace dsp56k
 		[&]()
 		{
 			assert(dsp.getSR().var == 0x080098);
+		});
+	}
+
+	void JitUnittests::dec()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 2;
+			_ops.emit(0, 0x00000a);		// dec a
+		},
+		[&]()
+		{
+			assert(!dsp.sr_test(static_cast<CCRMask>(SR_Z | SR_N | SR_E | SR_V | SR_C)));
+		});
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 1;
+			_ops.emit(0, 0x00000a);		// dec a
+		},
+		[&]()
+		{
+			assert(dsp.sr_test(SR_Z));
+			assert(!dsp.sr_test(static_cast<CCRMask>(SR_N | SR_E | SR_V | SR_C)));
+		});
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 0;
+			_ops.emit(0, 0x00000a);		// dec a
+		},
+		[&]()
+		{
+			assert(dsp.sr_test(static_cast<CCRMask>(SR_N | SR_C)));
+			assert(!dsp.sr_test(static_cast<CCRMask>(SR_Z | SR_E | SR_V)));
 		});
 	}
 

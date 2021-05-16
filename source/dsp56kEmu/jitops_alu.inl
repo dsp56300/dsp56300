@@ -555,6 +555,24 @@ namespace dsp56k
 		alu_cmp(D, r, true);
 	}
 
+	inline void JitOps::op_Dec(TWord op)
+	{
+		const auto ab = getFieldValue<Dec,Field_d>(op);
+		const AluReg r(m_block, ab);
+
+		m_asm.shl(r, asmjit::Imm(8));	// shift left by 8 bits to enable using the host carry bit
+		m_asm.dec(r);
+
+		ccr_update_ifCarry(SRB_C);
+
+		m_asm.shr(r, asmjit::Imm(8));
+		ccr_update_ifZero(SRB_Z);
+		ccr_clear(SR_V);				// never set in the simulator, even when wrapping around. Carry is set instead
+		ccr_n_update_by55(r);
+
+		ccr_dirty(r);
+	}
+
 	inline void JitOps::op_Ori(TWord op)
 	{
 		const auto ee		= getFieldValue<Ori,Field_EE>(op);

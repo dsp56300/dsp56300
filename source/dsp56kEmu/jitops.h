@@ -106,7 +106,7 @@ namespace dsp56k
 		void op_Cmpu_S1S2(TWord op)			{ errNotImplemented(op); }
 		void op_Debug(TWord op)				{}
 		void op_Debugcc(TWord op)			{}
-		void op_Dec(TWord op){}
+		void op_Dec(TWord op);
 		void op_Div(TWord op){}
 		void op_Dmac(TWord op){}
 		void op_Do_ea(TWord op){}

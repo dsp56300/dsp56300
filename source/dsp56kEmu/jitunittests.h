@@ -125,6 +125,8 @@ namespace dsp56k
 
 		void cmp();
 
+		void dec();
+
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();
 
