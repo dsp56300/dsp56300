@@ -321,6 +321,7 @@ namespace dsp56k
 		void ccr_update_ifLess(CCRBit _bit) const;
 		void ccr_update_ifLessEqual(CCRBit _bit) const;
 		void ccr_update_ifCarry(CCRBit _bit) const;
+		void ccr_update_ifNotCarry(CCRBit _bit) const;
 		void ccr_update_ifParity(CCRBit _bit) const;
 		void ccr_update_ifNotParity(CCRBit _bit) const;
 

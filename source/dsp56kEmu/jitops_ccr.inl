@@ -102,6 +102,13 @@ namespace dsp56k
 		ccr_update(ra, _bit);
 	}
 
+	inline void JitOps::ccr_update_ifNotCarry(CCRBit _bit) const
+	{
+		const RegGP ra(m_block);
+		m_asm.setnc(ra);									// set reg to 1 if last operation did NOT generate carry, 0 otherwise
+		ccr_update(ra, _bit);
+	}
+
 	inline void JitOps::ccr_update_ifParity(CCRBit _bit) const
 	{
 		const RegGP ra(m_block);
