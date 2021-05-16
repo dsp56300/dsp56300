@@ -276,8 +276,6 @@ namespace dsp56k
 		void updateAddressRegisterMultipleWrapModulo(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
 		static void updateAddressRegisterBitreverse(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
 
-		void mask56(const RegGP& _alu) const;
-
 		void signed24To56(const JitReg64& _r) const;
 
 		// DSP memory access
