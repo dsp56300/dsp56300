@@ -1135,6 +1135,21 @@ namespace dsp56k
 		{
 			assert(dsp.reg.b.var == 0xf);
 		});
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.a.var = 0;
+			dsp.reg.b.var = 0xfff47555000000;
+			dsp.setSR(0x0800d9);
+
+			// extractu $8028,b,a
+			_ops.emit(0, 0x0c1890, 0x008028);
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0xf4);
+			assert(dsp.getSR().var == 0x0800d0);
+		});
 	}
 
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)

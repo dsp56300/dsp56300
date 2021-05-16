@@ -126,7 +126,7 @@ namespace dsp56k
 		void op_Extract_S1S2(TWord op)		{ errNotImplemented(op); }
 		void op_Extract_CoS2(TWord op)		{ errNotImplemented(op); }
 		void op_Extractu_S1S2(TWord op);
-		void op_Extractu_CoS2(TWord op){}
+		void op_Extractu_CoS2(TWord op);
 		void op_Ifcc(TWord op){}
 		void op_Ifcc_U(TWord op){}
 		void op_Illegal(TWord op){}

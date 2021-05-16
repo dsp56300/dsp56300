@@ -734,12 +734,42 @@ namespace dsp56k
 		m_asm.and_(s, mask.get());
 		offset.release();
 
-		AluReg d(m_block, abDst);
+		const AluReg d(m_block, abDst);
 		m_asm.mov(d, s.get());
-		m_asm.cmp(d, asmjit::Imm(0));
 		s.release();
 
+		m_asm.cmp(d, asmjit::Imm(0));
 		ccr_update_ifZero(SRB_Z);
+
+		ccr_dirty(d);
+	}
+
+	inline void JitOps::op_Extractu_CoS2(TWord op)
+	{
+		const bool abDst = getFieldValue<Extractu_CoS2, Field_D>(op);
+		const bool abSrc = getFieldValue<Extractu_CoS2, Field_s>(op);
+
+		const auto widthOffset = getOpWordB();
+		const auto width = (widthOffset >> 12) & 0x3f;
+		const auto offset = widthOffset & 0x3f;
+
+		const auto mask = 0xffffffffffffff >> (56 - width);
+
+		const AluReg d(m_block, abDst);
+
+		{
+			const AluReg s(m_block, abSrc, true);
+			m_asm.shr(s, asmjit::Imm(offset));
+			m_asm.and_(s, asmjit::Imm(mask));
+
+			m_asm.mov(d, s.get());
+		}
+
+		m_asm.cmp(d, asmjit::Imm(0));
+		ccr_update_ifZero(SRB_Z);
+
+		ccr_clear(SR_C);
+		ccr_clear(SR_V);
 		ccr_dirty(d);
 	}
 
