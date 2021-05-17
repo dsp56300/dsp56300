@@ -124,16 +124,12 @@ namespace dsp56k
 		void btst_aa_verify();
 
 		void cmp();
-
 		void dec();
-
 		void div();
-
 		void dmac();
-
 		void extractu();
-
 //		void ifcc();
+		void inc();
 
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();

@@ -94,6 +94,7 @@ namespace dsp56k
 		dmac();
 		extractu();
 //		ifcc();
+		inc();
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -1003,6 +1004,7 @@ namespace dsp56k
 		},
 		[&]()
 		{
+			assert(dsp.reg.a.var == 1);
 			assert(!dsp.sr_test(static_cast<CCRMask>(SR_Z | SR_N | SR_E | SR_V | SR_C)));
 		});
 		runTest([&](auto& _block, auto& _ops)
@@ -1012,6 +1014,7 @@ namespace dsp56k
 		},
 		[&]()
 		{
+			assert(dsp.reg.a.var == 0);
 			assert(dsp.sr_test(SR_Z));
 			assert(!dsp.sr_test(static_cast<CCRMask>(SR_N | SR_E | SR_V | SR_C)));
 		});
@@ -1152,6 +1155,32 @@ namespace dsp56k
 			assert(dsp.getSR().var == 0x0800d0);
 		});
 	}
+
+	void JitUnittests::inc()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 0x00ffffffffffffff;
+			_ops.emit(0, 0x000008);		// inc a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0);
+			assert(dsp.sr_test(static_cast<CCRMask>(SR_C | SR_Z)));
+			assert(!dsp.sr_test(static_cast<CCRMask>(SR_N | SR_E | SR_V)));
+		});
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 1;
+			_ops.emit(0, 0x000008);		// inc a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 2);
+			assert(!dsp.sr_test(static_cast<CCRMask>(SR_Z | SR_N | SR_E | SR_V | SR_C)));
+		});
+	}
+
 	/*
 	void JitUnittests::ifcc()
 	{

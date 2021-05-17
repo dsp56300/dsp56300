@@ -128,8 +128,8 @@ namespace dsp56k
 		void op_Extractu_S1S2(TWord op);
 		void op_Extractu_CoS2(TWord op);
 		template<bool BackupCCR> void op_Ifcc(TWord op);
-		void op_Illegal(TWord op){}
-		void op_Inc(TWord op){}
+		void op_Illegal(TWord op)			{ errNotImplemented(op); }
+		void op_Inc(TWord op);
 		void op_Insert_S1S2(TWord op){}
 		void op_Insert_CoS2(TWord op){}
 		void op_Jcc_xxx(TWord op){}
