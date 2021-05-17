@@ -166,8 +166,8 @@ namespace dsp56k
 		void op_Lsl_D(TWord op);
 		void op_Lsl_ii(TWord op);
 		void op_Lsl_SD(TWord op)		{ errNotImplemented(op); }
-		void op_Lsr_D(TWord op){}
-		void op_Lsr_ii(TWord op){}
+		void op_Lsr_D(TWord op);
+		void op_Lsr_ii(TWord op);
 		void op_Lsr_SD(TWord op){}
 		void op_Lua_ea(TWord op){}
 		void op_Lua_Rn(TWord op){}
@@ -387,6 +387,7 @@ namespace dsp56k
 		void alu_cmp(TWord ab, const JitReg64& _v, bool magnitude);
 
 		void alu_lsl(TWord ab, int _shiftAmount) const;
+		void alu_lsr(TWord ab, int _shiftAmount) const;
 		
 		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
 		template<Instruction Inst> void bitmod_aa(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
