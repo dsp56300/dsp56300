@@ -169,7 +169,7 @@ namespace dsp56k
 		void op_Lsr_D(TWord op);
 		void op_Lsr_ii(TWord op);
 		void op_Lsr_SD(TWord op){}
-		void op_Lua_ea(TWord op){}
+		void op_Lua_ea(TWord _op);
 		void op_Lua_Rn(TWord op){}
 		void op_Mac_S1S2(TWord op){}
 		void op_Mac_S(TWord op){}
@@ -272,7 +272,7 @@ namespace dsp56k
 		void signextend24to56(const JitReg64& _reg) const;
 		void signextend24to64(const JitReg64& _reg) const;
 
-		void updateAddressRegister(const JitReg64& _r, TWord _mmm, TWord _rrr);
+		void updateAddressRegister(const JitReg64& _r, TWord _mmm, TWord _rrr, bool _writeR = true, bool _returnPostR = false);
 		void updateAddressRegister(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
 		void updateAddressRegisterModulo(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m) const;
 		void updateAddressRegisterMultipleWrapModulo(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);

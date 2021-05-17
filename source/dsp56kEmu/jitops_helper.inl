@@ -39,7 +39,7 @@ namespace dsp56k
 		m_asm.sar(_reg, asmjit::Imm(40));
 	}
 
-	void JitOps::updateAddressRegister(const JitReg64& _r, const TWord _mmm, const TWord _rrr)
+	void JitOps::updateAddressRegister(const JitReg64& _r, const TWord _mmm, const TWord _rrr, bool _writeR/* = true*/, bool _returnPostR/* = false*/)
 	{
 		if(_mmm == 6)													/* 110         */
 		{
@@ -62,7 +62,8 @@ namespace dsp56k
 			m_asm.mov(n.get().r32(), asmjit::Imm(-1));
 			m_dspRegs.getR(_r, _rrr);
 			updateAddressRegister(_r,n,m);
-			m_block.regs().setR(_rrr, _r);
+			if(_writeR)
+				m_block.regs().setR(_rrr, _r);
 			return;
 		}
 
@@ -76,7 +77,8 @@ namespace dsp56k
 			return;
 		}
 
-		PushGP r(m_block, _r);
+		if(!_returnPostR)
+			m_asm.push(_r);
 
 		if(_mmm == 0)													/* 000 (Rn)-Nn */
 		{
@@ -104,7 +106,11 @@ namespace dsp56k
 			updateAddressRegister(_r,n,m);
 		}
 
-		m_block.regs().setR(_rrr, _r);
+		if(_writeR)
+			m_block.regs().setR(_rrr, _r);
+
+		if(!_returnPostR)
+			m_asm.pop(_r);
 	}
 
 	inline void JitOps::updateAddressRegister(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m)

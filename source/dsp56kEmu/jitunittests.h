@@ -133,6 +133,7 @@ namespace dsp56k
 		void lra();
 		void lsl();
 		void lsr();
+		void lua();
 
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();

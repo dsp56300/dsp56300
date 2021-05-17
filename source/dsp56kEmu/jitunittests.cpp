@@ -98,6 +98,7 @@ namespace dsp56k
 		lra();
 		lsl();
 		lsr();
+		lua();
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -1245,6 +1246,33 @@ namespace dsp56k
 		{
 			assert(dsp.reg.a.var == 0xff0aabbc112233);
 			assert(dsp.sr_test(SR_C));
+		});
+	}
+
+	void JitUnittests::lua()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.r[0].var = 0x112233;
+			dsp.reg.n[0].var = 0x001111;
+			_ops.emit(0, 0x045818);				// lua (r0)+,n0
+		},
+		[&]()
+		{
+			assert(dsp.reg.r[0].var == 0x112233);
+			assert(dsp.reg.n[0].var == 0x112234);
+		});
+
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.r[0].var = 0x112233;
+			dsp.reg.n[0].var = 0x001111;
+			_ops.emit(0, 0x044818);				// lua (r0)+n0,n0
+		},
+		[&]()
+		{
+			assert(dsp.reg.r[0].var == 0x112233);
+			assert(dsp.reg.n[0].var == 0x113344);
 		});
 	}
 

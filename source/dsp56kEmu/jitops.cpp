@@ -451,4 +451,17 @@ namespace dsp56k
 		m_asm.bind(end);
 		*/
 	}
+
+	inline void JitOps::op_Lua_ea(const TWord _op)
+	{
+		const auto mm		= getFieldValue<Lua_ea,Field_MM>(_op);
+		const auto rrr		= getFieldValue<Lua_ea,Field_RRR>(_op);
+		const auto ddddd	= getFieldValue<Lua_ea,Field_ddddd>(_op);
+
+		const RegGP r(m_block);
+
+		updateAddressRegister( r, mm, rrr, false, true);
+
+		decode_dddddd_write( ddddd, r.get().r32());
+	}
 }
