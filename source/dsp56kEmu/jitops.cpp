@@ -464,4 +464,33 @@ namespace dsp56k
 
 		decode_dddddd_write( ddddd, r.get().r32());
 	}
+
+	void JitOps::op_Lua_Rn(TWord op)
+	{
+		const auto dddd		= getFieldValue<Lua_Rn,Field_dddd>(op);
+		const auto a		= getFieldValue<Lua_Rn,Field_aaa, Field_aaaa>(op);
+		const auto rrr		= getFieldValue<Lua_Rn,Field_RRR>(op);
+
+		const auto aSigned = signextend<int,7>(a);
+
+		const RegGP r(m_block);
+		m_dspRegs.getR(r, rrr);
+
+		const RegGP n(m_block);
+		m_asm.mov(n, asmjit::Imm(aSigned));
+
+		const RegGP m(m_block);
+		m_dspRegs.getM(m, rrr);
+
+		updateAddressRegister(r, n, m);
+
+		if( dddd < 8 )									// r0-r7
+		{
+			m_dspRegs.setR(dddd, r);
+		}
+		else
+		{
+			m_dspRegs.setN(dddd & 7, r);
+		}
+	}
 }

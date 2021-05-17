@@ -170,7 +170,7 @@ namespace dsp56k
 		void op_Lsr_ii(TWord op);
 		void op_Lsr_SD(TWord op){}
 		void op_Lua_ea(TWord _op);
-		void op_Lua_Rn(TWord op){}
+		void op_Lua_Rn(TWord op);
 		void op_Mac_S1S2(TWord op){}
 		void op_Mac_S(TWord op){}
 		void op_Maci_xxxx(TWord op){}

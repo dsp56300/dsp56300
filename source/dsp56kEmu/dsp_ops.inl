@@ -365,6 +365,7 @@ namespace dsp56k
 
 		const int aSigned = signextend<int,7>(a);
 
+		// TODO: modulo not taken into account, but it IS USED, it tested this in the simulator
 		const TReg24 val = TReg24(_r.var + aSigned);
 
 		if( dddd < 8 )									// r0-r7

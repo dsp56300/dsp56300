@@ -98,7 +98,8 @@ namespace dsp56k
 		lra();
 		lsl();
 		lsr();
-		lua();
+		lua_ea();
+		lua_rn();
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -1249,7 +1250,7 @@ namespace dsp56k
 		});
 	}
 
-	void JitUnittests::lua()
+	void JitUnittests::lua_ea()
 	{
 		runTest([&](auto& _block, auto& _ops)
 		{
@@ -1276,6 +1277,33 @@ namespace dsp56k
 		});
 	}
 
+	void JitUnittests::lua_rn()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.r[0].var = 0x0000f0;
+			dsp.reg.m[0].var = 0xffffff;
+
+			_ops.emit(0, 0x04180b);				// lua (r0+$30),n3
+		},
+		[&]()
+		{
+			assert(dsp.reg.r[0].var == 0x0000f0);
+			assert(dsp.reg.n[3].var == 0x000120);
+		});
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.r[0].var = 0x0000f0;
+			dsp.reg.m[0].var = 0x0000ff;
+
+			_ops.emit(0, 0x04180b);				// lua (r0+$30),n3
+		},
+		[&]()
+		{
+			assert(dsp.reg.r[0].var == 0x0000f0);
+			assert(dsp.reg.n[3].var == 0x000020);
+		});
+	}
 	/*
 	void JitUnittests::ifcc()
 	{
