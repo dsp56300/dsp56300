@@ -95,6 +95,7 @@ namespace dsp56k
 		extractu();
 //		ifcc();
 		inc();
+		lsl();
 
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -1178,6 +1179,31 @@ namespace dsp56k
 		{
 			assert(dsp.reg.a.var == 2);
 			assert(!dsp.sr_test(static_cast<CCRMask>(SR_Z | SR_N | SR_E | SR_V | SR_C)));
+		});
+	}
+
+	void JitUnittests::lsl()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 0xffaabbcc112233;
+			_ops.emit(0, 0x200033);				// lsl a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0xff557798112233);
+			assert(dsp.sr_test(SR_C));
+		});
+
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 0xffaabbcc112233;
+			_ops.emit(0, 0x0c1e88);				// lsl #$4,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0xffabbcc0112233);
+			assert(!dsp.sr_test(SR_C));
 		});
 	}
 

@@ -8,6 +8,7 @@
 #include "opcodetypes.h"
 #include "registers.h"
 #include "types.h"
+#include "utils.h"
 
 namespace dsp56k
 {
@@ -104,8 +105,8 @@ namespace dsp56k
 		void op_Cmp_xxxxS2(TWord op);
 		void op_Cmpm_S1S2(TWord op);
 		void op_Cmpu_S1S2(TWord op)			{ errNotImplemented(op); }
-		void op_Debug(TWord op)				{}
-		void op_Debugcc(TWord op)			{}
+		void op_Debug(TWord op)				{ errNotImplemented(op); }
+		void op_Debugcc(TWord op)			{ errNotImplemented(op); }
 		void op_Dec(TWord op);
 		void op_Div(TWord op);
 		void op_Dmac(TWord op);
@@ -130,8 +131,8 @@ namespace dsp56k
 		template<bool BackupCCR> void op_Ifcc(TWord op);
 		void op_Illegal(TWord op)			{ errNotImplemented(op); }
 		void op_Inc(TWord op);
-		void op_Insert_S1S2(TWord op){}
-		void op_Insert_CoS2(TWord op){}
+		void op_Insert_S1S2(TWord op)		{ errNotImplemented(op); }
+		void op_Insert_CoS2(TWord op)		{ errNotImplemented(op); }
 		void op_Jcc_xxx(TWord op){}
 		void op_Jcc_ea(TWord op){}
 		void op_Jclr_ea(TWord op){}
@@ -160,11 +161,11 @@ namespace dsp56k
 		void op_Jsset_pp(TWord op){}
 		void op_Jsset_qq(TWord op){}
 		void op_Jsset_S(TWord op){}
-		void op_Lra_Rn(TWord op){}
-		void op_Lra_xxxx(TWord op){}
-		void op_Lsl_D(TWord op){}
-		void op_Lsl_ii(TWord op){}
-		void op_Lsl_SD(TWord op){}
+		void op_Lra_Rn(TWord op)		{ errNotImplemented(op); }
+		void op_Lra_xxxx(TWord op);
+		void op_Lsl_D(TWord op);
+		void op_Lsl_ii(TWord op);
+		void op_Lsl_SD(TWord op)		{ errNotImplemented(op); }
 		void op_Lsr_D(TWord op){}
 		void op_Lsr_ii(TWord op){}
 		void op_Lsr_SD(TWord op){}
@@ -278,6 +279,12 @@ namespace dsp56k
 		static void updateAddressRegisterBitreverse(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
 
 		void signed24To56(const JitReg64& _r) const;
+		
+		template<Instruction Inst> int pcRelativeAddressExt() const
+		{
+			static_assert(g_opcodes[Inst].m_extensionWordType & PCRelativeAddressExt, "opcode does not have a PC-relative address extension word");
+			return signextend<int,24>(m_opWordB);
+		}
 
 		// DSP memory access
 		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void effectiveAddress(const JitReg64& _dst, TWord _op);
@@ -378,6 +385,8 @@ namespace dsp56k
 		void alu_bchg(const JitReg64& _dst, TWord _bit) const;
 
 		void alu_cmp(TWord ab, const JitReg64& _v, bool magnitude);
+
+		void alu_lsl(TWord ab, int _shiftAmount) const;
 		
 		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
 		template<Instruction Inst> void bitmod_aa(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);

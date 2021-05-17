@@ -395,6 +395,20 @@ namespace dsp56k
 		ccr_dirty(d);
 	}
 
+	inline void JitOps::alu_lsl(TWord ab, int _shiftAmount) const
+	{
+		const RegGP d(m_block);
+		m_dspRegs.getALU1(d, ab);
+		m_asm.shl(d.get().r32(), _shiftAmount + 8);	// + 8 to use native carry flag
+		ccr_update_ifCarry(SRB_C);
+		m_asm.shr(d.get().r32(), 8);				// revert shift by 8
+		ccr_update_ifZero(SRB_Z);
+		m_asm.bt(d.get().r32(), asmjit::Imm(23));
+		ccr_update_ifCarry(SRB_N);
+		ccr_clear(SR_V);
+		m_dspRegs.setALU1(ab, d.get().r32());
+	}
+
 	template<Instruction Inst> void JitOps::bitmod_ea(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
 	{
 		const auto area = getFieldValueMemArea<Inst>(op);
@@ -789,6 +803,30 @@ namespace dsp56k
 		ccr_n_update_by55(r);
 
 		ccr_dirty(r);
+	}
+
+	inline void JitOps::op_Lra_xxxx(TWord op)
+	{
+		const auto ddddd = getFieldValue<Lra_xxxx, Field_ddddd>(op);
+		const auto ea = m_pcCurrentOp + pcRelativeAddressExt<Lra_xxxx>();
+
+		const RegGP r(m_block);
+		m_asm.mov(r.get().r32(), asmjit::Imm(ea));
+		decode_dddddd_write(ddddd, r.get().r32());
+	}
+
+	inline void JitOps::op_Lsl_D(TWord op)
+	{
+		const auto D = getFieldValue<Lsl_D,Field_D>(op);
+		alu_lsl(D, 1);
+	}
+
+	inline void JitOps::op_Lsl_ii(TWord op)
+	{
+		const auto shiftAmount = getFieldValue<Lsl_ii,Field_iiiii>(op);
+		const auto D = getFieldValue<Lsl_ii,Field_D>(op);
+
+		alu_lsl(D, shiftAmount);
 	}
 
 	inline void JitOps::op_Ori(TWord op)

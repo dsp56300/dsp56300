@@ -995,7 +995,7 @@ namespace dsp56k
 			static_assert(g_opcodes[Inst].m_extensionWordType & PCRelativeAddressExt, "opcode does not have a PC-relative address extension word");
 			return signextend<int,24>(fetchOpWordB());
 		}
-		
+
 		enum ExpectedBitValue
 		{
 			BitClear = false,
