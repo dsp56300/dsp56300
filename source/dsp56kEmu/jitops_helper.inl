@@ -305,6 +305,12 @@ namespace dsp56k
 		m_dspRegs.getSR(_dst);
 	}
 
+	inline JitReg JitOps::getSR()
+	{
+		updateDirtyCCR();
+		return m_dspRegs.getSR();
+	}
+
 	void JitOps::setSR(const JitReg32& _src)
 	{
 		m_ccrDirty = false;

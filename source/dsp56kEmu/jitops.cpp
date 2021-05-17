@@ -119,8 +119,8 @@ namespace dsp56k
 		&JitOps::op_Extract_CoS2,					// Extract_CoS2 
 		&JitOps::op_Extractu_S1S2,					// Extractu_S1S2 
 		&JitOps::op_Extractu_CoS2,					// Extractu_CoS2 
-		&JitOps::op_Ifcc,							// Ifcc 
-		&JitOps::op_Ifcc_U,							// Ifcc_U 
+		&JitOps::op_Ifcc<true>,						// Ifcc 
+		&JitOps::op_Ifcc<false>,					// Ifcc_U 
 		&JitOps::op_Illegal,						// Illegal 
 		&JitOps::op_Inc,							// Inc 
 		&JitOps::op_Insert_S1S2,					// Insert_S1S2 
@@ -408,5 +408,47 @@ namespace dsp56k
 		m_dspRegs.getXY(_dst, _xy);
 		m_asm.shr(_dst, asmjit::Imm(24));	// remove LSWord
 		signed24To56(_dst);
+	}
+
+	template<bool BackupCCR> void JitOps::op_Ifcc(TWord op)
+	{
+		/*
+		const TWord cccc = getFieldValue<Ifcc,Field_CCCC>(op);
+
+		const auto end = m_asm.newLabel();
+
+		{
+			const RegGP test(m_block);
+			decode_cccc(test, cccc);
+			m_asm.cmp(test.get().r8(), asmjit::Imm(1));
+			m_asm.jne(end);
+		}
+
+		auto emitAluOp = [&](const TWord _op)
+		{
+			const auto* oiAlu = m_opcodes.findParallelAluOpcodeInfo(_op);
+			emit(oiAlu->getInstruction(), _op);
+		};
+
+		if constexpr(BackupCCR)
+		{
+			const RegXMM ccrBackup(m_block);
+			m_asm.movd(ccrBackup, getSR());
+
+			emitAluOp(op);
+
+			const RegGP r(m_block);
+			m_asm.movd(r.get(), ccrBackup);
+			m_asm.and_(r, asmjit::Imm(0xff));
+			m_asm.and_(getSR(), asmjit::Imm(0xffff00));
+			m_asm.or_(getSR(), r.get());
+		}
+		else
+		{
+			emitAluOp(op);
+		}
+
+		m_asm.bind(end);
+		*/
 	}
 }

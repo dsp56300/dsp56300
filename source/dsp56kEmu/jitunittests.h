@@ -133,6 +133,8 @@ namespace dsp56k
 
 		void extractu();
 
+//		void ifcc();
+
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();
 

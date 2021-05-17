@@ -127,8 +127,7 @@ namespace dsp56k
 		void op_Extract_CoS2(TWord op)		{ errNotImplemented(op); }
 		void op_Extractu_S1S2(TWord op);
 		void op_Extractu_CoS2(TWord op);
-		void op_Ifcc(TWord op){}
-		void op_Ifcc_U(TWord op){}
+		template<bool BackupCCR> void op_Ifcc(TWord op);
 		void op_Illegal(TWord op){}
 		void op_Inc(TWord op){}
 		void op_Insert_S1S2(TWord op){}
@@ -308,6 +307,7 @@ namespace dsp56k
 		void setEOM(const JitReg64& _src) const;
 
 		void getSR(const JitReg32& _dst);
+		JitReg getSR();
 		void setSR(const JitReg32& _src);
 
 		void transferAluTo24(const JitReg& _dst, int _alu);
