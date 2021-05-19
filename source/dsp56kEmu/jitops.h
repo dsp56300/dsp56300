@@ -390,7 +390,7 @@ namespace dsp56k
 
 		void alu_lsl(TWord ab, int _shiftAmount) const;
 		void alu_lsr(TWord ab, int _shiftAmount) const;
-		void alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate);
+		void alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate, bool _s1Unsigned = false, bool _s2Unsigned = false);
 		void alu_multiply(TWord op);
 		void alu_rnd(TWord ab);
 		

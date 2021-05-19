@@ -423,12 +423,15 @@ namespace dsp56k
 		m_dspRegs.setALU1(ab, d.get().r32());
 	}
 
-	void JitOps::alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate )
+	void JitOps::alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate, bool _s1Unsigned/* = false*/, bool _s2Unsigned/* = false*/)
 	{
 	//	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
-		
-		signextend24to64(_s1.get());
-		signextend24to64(_s2.get());
+
+		if(!_s1Unsigned)
+			signextend24to64(_s1.get());
+
+		if(!_s2Unsigned)
+			signextend24to64(_s2.get());
 
 		m_asm.imul(_s1.get(), _s2.get());
 
