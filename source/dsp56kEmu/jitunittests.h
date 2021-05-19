@@ -135,6 +135,7 @@ namespace dsp56k
 		void lsr();
 		void lua_ea();
 		void lua_rn();
+		void mac_S();
 		void mpy();
 		void mpy_SD();
 		void rnd();

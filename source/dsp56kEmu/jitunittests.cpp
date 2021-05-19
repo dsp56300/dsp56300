@@ -100,6 +100,7 @@ namespace dsp56k
 		lsr();
 		lua_ea();
 		lua_rn();
+		mac_S();
 		mpy();
 		mpy_SD();
 		rnd();
@@ -1305,6 +1306,21 @@ namespace dsp56k
 		{
 			assert(dsp.reg.r[0].var == 0x0000f0);
 			assert(dsp.reg.n[3].var == 0x000020);
+		});
+	}
+
+	void JitUnittests::mac_S()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.x1(0x2);
+			dsp.reg.a.var = 0x100;
+
+			_ops.emit(0, 0x0102f2);				// mac x1,#$2,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x00000000800100);
 		});
 	}
 
