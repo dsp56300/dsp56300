@@ -14,6 +14,7 @@ namespace dsp56k
 	class UnitTests;
 	class JitUnittests;
 	class JitDspRegs;
+	class JitOps;
 	
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
@@ -22,6 +23,7 @@ namespace dsp56k
 		friend class UnitTests;
 		friend class JitUnittests;
 		friend class JitDspRegs;
+		friend class JitOps;
 
 		// _____________________________________________________________________________
 		// types

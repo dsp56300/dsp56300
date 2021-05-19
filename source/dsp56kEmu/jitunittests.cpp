@@ -101,6 +101,7 @@ namespace dsp56k
 		lua_ea();
 		lua_rn();
 		mpy();
+		mpy_SD();
 		rnd();
 		
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
@@ -1332,6 +1333,21 @@ namespace dsp56k
 		{
 			assert(dsp.reg.a.var == 0x2);
 		});		
+	}
+
+	void JitUnittests::mpy_SD()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.x1(0x2);
+			dsp.reg.a.var = 0;
+
+			_ops.emit(0, 0x0102f0);				// mpy x1,#$2,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x00000000800000);
+		});
 	}
 
 	void JitUnittests::rnd()

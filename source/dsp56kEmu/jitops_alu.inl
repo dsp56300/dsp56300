@@ -991,6 +991,38 @@ namespace dsp56k
 		alu_lsr(abDst, shiftAmount);
 	}
 
+	void JitOps::op_Mac_S(TWord op)
+	{
+		const auto sssss	= getFieldValue<Mac_S,Field_sssss>(op);
+		const auto qq		= getFieldValue<Mac_S,Field_QQ>(op);
+		const auto	ab		= getFieldValue<Mac_S,Field_d>(op);
+		const auto	negate	= getFieldValue<Mac_S,Field_k>(op);
+
+		RegGP s1(m_block);
+		decode_QQ_read(s1, qq);
+
+		RegGP s2(m_block);
+		m_asm.mov(s2, asmjit::Imm(DSP::decode_sssss(sssss)));
+
+		alu_mpy(ab, s1, s2, negate, true);
+	}
+
+	inline void JitOps::op_Mpy_SD(TWord op)
+	{
+		const auto sssss	= getFieldValue<Mpy_SD,Field_sssss>(op);
+		const auto qq		= getFieldValue<Mpy_SD,Field_QQ>(op);
+		const auto ab		= getFieldValue<Mpy_SD,Field_d>(op);
+		const auto negate	= getFieldValue<Mpy_SD,Field_k>(op);
+
+		RegGP s1(m_block);
+		decode_QQ_read(s1, qq);
+
+		RegGP s2(m_block);
+		m_asm.mov(s2, asmjit::Imm(DSP::decode_sssss(sssss)));
+
+		alu_mpy(ab, s1, s2, negate, false);
+	}
+
 	inline void JitOps::op_Ori(TWord op)
 	{
 		const auto ee		= getFieldValue<Ori,Field_EE>(op);
