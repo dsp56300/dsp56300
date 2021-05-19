@@ -168,19 +168,19 @@ namespace dsp56k
 		void op_Lsl_SD(TWord op)		{ errNotImplemented(op); }
 		void op_Lsr_D(TWord op);
 		void op_Lsr_ii(TWord op);
-		void op_Lsr_SD(TWord op){}
+		void op_Lsr_SD(TWord op)		{ errNotImplemented(op); }
 		void op_Lua_ea(TWord _op);
 		void op_Lua_Rn(TWord op);
 		void op_Mac_S1S2(TWord op){}
 		void op_Mac_S(TWord op){}
-		void op_Maci_xxxx(TWord op){}
+		void op_Maci_xxxx(TWord op)		{ errNotImplemented(op); }
 		void op_Macsu(TWord op){}
 		void op_Macr_S1S2(TWord op){}
 		void op_Macr_S(TWord op){}
-		void op_Macri_xxxx(TWord op){}
-		void op_Max(TWord op){}
-		void op_Maxm(TWord op){}
-		void op_Merge(TWord op){}
+		void op_Macri_xxxx(TWord op)	{ errNotImplemented(op); }
+		void op_Max(TWord op)			{ errNotImplemented(op); }
+		void op_Maxm(TWord op)			{ errNotImplemented(op); }
+		void op_Merge(TWord op)			{ errNotImplemented(op); }
 		void op_Move_Nop(TWord op){}
 		void op_Move_xx(TWord op){}
 		void op_Mover(TWord op){}
@@ -206,12 +206,12 @@ namespace dsp56k
 		void op_Movec_S1D2(TWord op){}
 		void op_Movec_xx(TWord op){}
 		void op_Movem_ea(TWord op){}
-		void op_Movem_aa(TWord op){}
+		void op_Movem_aa(TWord op)				{ errNotImplemented(op); }
 		void op_Movep_ppea(TWord op){}
 		void op_Movep_Xqqea(TWord op){}
 		void op_Movep_Yqqea(TWord op){}
-		void op_Movep_eapp(TWord op){}
-		void op_Movep_eaqq(TWord op){}
+		void op_Movep_eapp(TWord op)			{ errNotImplemented(op); }
+		void op_Movep_eaqq(TWord op)			{ errNotImplemented(op); }
 		void op_Movep_Spp(TWord op){}
 		void op_Movep_SXqq(TWord op){}
 		void op_Movep_SYqq(TWord op){}
@@ -220,16 +220,16 @@ namespace dsp56k
 		void op_Mpy_su(TWord op){}
 		void op_Mpyi(TWord op){}
 		void op_Mpyr_S1S2D(TWord op){}
-		void op_Mpyr_SD(TWord op){}
-		void op_Mpyri(TWord op){}
+		void op_Mpyr_SD(TWord op)				{ errNotImplemented(op); }
+		void op_Mpyri(TWord op)					{ errNotImplemented(op); }
 		void op_Neg(TWord op){}
 		void op_Nop(TWord op){}
 		void op_Norm(TWord op){}
 		void op_Normf(TWord op){}
 		void op_Not(TWord op){}
 		void op_Or_SD(TWord op){}
-		void op_Or_xx(TWord op){}
-		void op_Or_xxxx(TWord op){}
+		void op_Or_xx(TWord op)					{ errNotImplemented(op); }
+		void op_Or_xxxx(TWord op)				{ errNotImplemented(op); }
 		void op_Ori(TWord op);
 		void op_Pflush(TWord op){}
 		void op_Pflushun(TWord op){}
@@ -245,16 +245,16 @@ namespace dsp56k
 		void op_Reset(TWord op){}
 		void op_Rnd(TWord op){}
 		void op_Rol(TWord op){}
-		void op_Ror(TWord op){}
+		void op_Ror(TWord op)					{ errNotImplemented(op); }
 		void op_Rti(TWord op){}
 		void op_Rts(TWord op){}
-		void op_Sbc(TWord op){}
+		void op_Sbc(TWord op)					{ errNotImplemented(op); }
 		void op_Stop(TWord op){}
 		void op_Sub_SD(TWord op){}
 		void op_Sub_xx(TWord op){}
 		void op_Sub_xxxx(TWord op){}
-		void op_Subl(TWord op){}
-		void op_subr(TWord op){}
+		void op_Subl(TWord op)					{ errNotImplemented(op); }
+		void op_subr(TWord op)					{ errNotImplemented(op); }
 		void op_Tcc_S1D1(TWord op){}
 		void op_Tcc_S1D1S2D2(TWord op){}
 		void op_Tcc_S2D2(TWord op){}
@@ -263,7 +263,7 @@ namespace dsp56k
 		void op_Trapcc(TWord op){}
 		void op_Tst(TWord op){}
 		void op_Vsl(TWord op){}
-		void op_Wait(TWord op){}
+		void op_Wait(TWord op)					{ errNotImplemented(op); }
 
 		// helpers
 		void signextend56to64(const JitReg64& _reg) const;
