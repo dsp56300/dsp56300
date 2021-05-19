@@ -423,6 +423,137 @@ namespace dsp56k
 		m_dspRegs.setALU1(ab, d.get().r32());
 	}
 
+	void JitOps::alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate )
+	{
+	//	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
+		
+		signextend24to64(_s1.get());
+		signextend24to64(_s2.get());
+
+		m_asm.imul(_s1.get(), _s2.get());
+
+		// fractional multiplication requires one post-shift to be correct
+		m_asm.shl(_s1, asmjit::Imm(1));
+
+		if(_negate)
+			m_asm.neg(_s1);
+
+		const AluReg d(m_block, ab);
+
+		if( _accumulate )
+		{
+			signextend56to64(d);
+			m_asm.add(d, _s1.get());
+		}
+		else
+		{
+			m_asm.mov(d, _s1.get());
+		}
+
+		_s1.release();
+		_s2.release();
+
+		// Update SR
+		ccr_v_update(d.get());
+
+		m_dspRegs.mask56(d);
+		ccr_update_ifZero(SRB_Z);
+
+		ccr_dirty(d);
+	}
+	
+	inline void JitOps::alu_multiply(TWord op)
+	{
+		const auto round = op & 0x1;
+		const auto mulAcc = (op>>1) & 0x1;
+		const auto negative = (op>>2) & 0x1;
+		const auto ab = (op>>3) & 0x1;
+		const auto qqq = (op>>4) & 0x7;
+
+		{
+			RegGP s1(m_block);
+			RegGP s2(m_block);
+
+			decode_QQQQ_read(s1, s2, qqq);
+
+			alu_mpy(ab, s1, s2, negative, mulAcc);
+		}
+
+		if(round)
+		{
+			alu_rnd(ab);
+		}
+	}
+
+	inline void JitOps::alu_rnd(TWord ab)
+	{
+		RegGP rounder(m_block);
+		m_asm.mov(rounder, asmjit::Imm(0x800000));
+
+		const auto shifter = asmjit::x86::rcx;
+		m_asm.xor_(shifter, shifter);
+		sr_getBitValue(asmjit::x86::rcx, SRB_S1);
+		m_asm.shr(rounder, shifter);
+		sr_getBitValue(asmjit::x86::rcx, SRB_S0);
+		m_asm.shl(rounder, shifter);
+
+		const AluReg d(m_block, ab);
+		m_asm.add(d, rounder.get());
+
+		m_asm.shl(rounder, asmjit::Imm(1));
+
+		{
+			// mask = all the bits to the right of, and including the rounding position
+			const RegGP mask(m_block);
+			m_asm.mov(mask, rounder.get());
+			m_asm.dec(mask);
+
+			const auto skipNoScalingMode = m_asm.newLabel();
+
+			// if (!sr_test_noCache(SR_RM))
+			m_asm.bt(regSR, asmjit::Imm(SR_SM));
+			m_asm.jnz(skipNoScalingMode);
+
+			// convergent rounding. If all mask bits are cleared
+
+			// then the bit to the left of the rounding position is cleared in the result
+			// if (!(_alu.var & mask)) 
+			//	_alu.var&=~(rounder<<1);
+			m_asm.not_(rounder);
+
+			{
+				const RegGP aluIfAndWithMaskIsZero(m_block);
+				m_asm.mov(aluIfAndWithMaskIsZero, d.get());
+				m_asm.and_(aluIfAndWithMaskIsZero, rounder.get());
+
+				rounder.release();
+
+				{
+					const RegGP temp(m_block);
+					m_asm.mov(temp, d.get());
+					m_asm.and_(temp, mask.get());
+					m_asm.cmovz(d, aluIfAndWithMaskIsZero.get());
+				}
+			}
+
+			m_asm.bind(skipNoScalingMode);
+
+			// all bits to the right of and including the rounding position are cleared.
+			// _alu.var&=~mask;
+			m_asm.not_(mask);
+			m_asm.and_(d, mask.get());
+		}
+
+		ccr_v_update(d.get());
+
+		m_dspRegs.mask56(d);
+		ccr_update_ifZero(SRB_Z);
+
+		ccr_l_update_by_v();
+
+		ccr_dirty(d);
+	}
+
 	template<Instruction Inst> void JitOps::bitmod_ea(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
 	{
 		const auto area = getFieldValueMemArea<Inst>(op);
@@ -866,5 +997,11 @@ namespace dsp56k
 		decode_EE_read(r, ee);
 		m_asm.or_(r, asmjit::Imm(iiiiii));
 		decode_EE_write(r, ee);
+	}
+
+	inline void JitOps::op_Rnd(TWord op)
+	{
+		const auto d = getFieldValue<Rnd, Field_d>(op);
+		alu_rnd(d);		
 	}
 }

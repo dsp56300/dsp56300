@@ -135,6 +135,7 @@ namespace dsp56k
 		void lsr();
 		void lua_ea();
 		void lua_rn();
+		void mpy();
 
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();

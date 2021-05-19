@@ -282,4 +282,17 @@ namespace dsp56k
 		m_asm.shl(r, SRB_L);
 		m_asm.or_(regSR, r.get());
 	}
+
+	inline void JitOps::ccr_v_update(const JitReg64& _nonMaskedResult) const
+	{
+		{
+			const RegGP signextended(m_block);
+			m_asm.mov(signextended, _nonMaskedResult);
+			signextend56to64(signextended);
+			m_asm.cmp(signextended, _nonMaskedResult);
+		}
+
+		ccr_update_ifNotZero(SRB_V);
+		ccr_l_update_by_v();
+	}
 }

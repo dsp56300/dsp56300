@@ -171,11 +171,11 @@ namespace dsp56k
 		void op_Lsr_SD(TWord op)		{ errNotImplemented(op); }
 		void op_Lua_ea(TWord _op);
 		void op_Lua_Rn(TWord op);
-		void op_Mac_S1S2(TWord op){}
+		void op_Mac_S1S2(TWord op)		{ alu_multiply(op); }
 		void op_Mac_S(TWord op){}
 		void op_Maci_xxxx(TWord op)		{ errNotImplemented(op); }
 		void op_Macsu(TWord op){}
-		void op_Macr_S1S2(TWord op){}
+		void op_Macr_S1S2(TWord op)		{ alu_multiply(op); }
 		void op_Macr_S(TWord op){}
 		void op_Macri_xxxx(TWord op)	{ errNotImplemented(op); }
 		void op_Max(TWord op)			{ errNotImplemented(op); }
@@ -215,11 +215,11 @@ namespace dsp56k
 		void op_Movep_Spp(TWord op){}
 		void op_Movep_SXqq(TWord op){}
 		void op_Movep_SYqq(TWord op){}
-		void op_Mpy_S1S2D(TWord op){}
+		void op_Mpy_S1S2D(TWord op)				{ alu_multiply(op); }
 		void op_Mpy_SD(TWord op){}
 		void op_Mpy_su(TWord op){}
 		void op_Mpyi(TWord op){}
-		void op_Mpyr_S1S2D(TWord op){}
+		void op_Mpyr_S1S2D(TWord op)			{ alu_multiply(op); }
 		void op_Mpyr_SD(TWord op)				{ errNotImplemented(op); }
 		void op_Mpyri(TWord op)					{ errNotImplemented(op); }
 		void op_Neg(TWord op){}
@@ -243,7 +243,7 @@ namespace dsp56k
 		void op_Rep_xxx(TWord op){}
 		void op_Rep_S(TWord op){}
 		void op_Reset(TWord op){}
-		void op_Rnd(TWord op){}
+		void op_Rnd(TWord op);
 		void op_Rol(TWord op){}
 		void op_Ror(TWord op)					{ errNotImplemented(op); }
 		void op_Rti(TWord op){}
@@ -340,6 +340,7 @@ namespace dsp56k
 		void ccr_n_update_by47(const JitReg64& _alu) const;
 		void ccr_s_update(const JitReg64& _alu) const;
 		void ccr_l_update_by_v() const;
+		void ccr_v_update(const JitReg64& _nonMaskedResult) const;
 
 		void ccr_clear(CCRMask _mask) const;
 		void ccr_set(CCRMask _mask) const;
@@ -388,6 +389,9 @@ namespace dsp56k
 
 		void alu_lsl(TWord ab, int _shiftAmount) const;
 		void alu_lsr(TWord ab, int _shiftAmount) const;
+		void alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate);
+		void alu_multiply(TWord op);
+		void alu_rnd(TWord ab);
 		
 		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
 		template<Instruction Inst> void bitmod_aa(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);

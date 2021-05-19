@@ -491,7 +491,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// alu_rnd
 	//
-	void DSP::alu_rnd( bool ab)
+	void DSP::alu_rnd(bool ab)
 	{
 		auto& _alu = ab ? reg.b : reg.a;
 
