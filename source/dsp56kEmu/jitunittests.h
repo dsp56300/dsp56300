@@ -138,6 +138,7 @@ namespace dsp56k
 		void mac_S();
 		void mpy();
 		void mpy_SD();
+		void neg();
 		void rnd();
 
 		void ori_build(JitBlock& _block, JitOps& _ops);

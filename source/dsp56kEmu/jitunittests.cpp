@@ -103,6 +103,7 @@ namespace dsp56k
 		mac_S();
 		mpy();
 		mpy_SD();
+		neg();
 		rnd();
 		
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
@@ -1363,6 +1364,31 @@ namespace dsp56k
 		[&]()
 		{
 			assert(dsp.reg.a.var == 0x00000000800000);
+		});
+	}
+
+	void JitUnittests::neg()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 1;
+
+			_ops.emit(0, 0x200036);				// neg a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0xffffffffffffff);
+		});
+
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 0xfffffffffffffe;
+
+			_ops.emit(0, 0x200036);				// neg a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 2);
 		});
 	}
 

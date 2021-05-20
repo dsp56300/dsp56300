@@ -222,8 +222,8 @@ namespace dsp56k
 		void op_Mpyr_S1S2D(TWord op)			{ alu_multiply(op); }
 //		void op_Mpyr_SD(TWord op)				{ errNotImplemented(op); }
 		void op_Mpyri(TWord op)					{ errNotImplemented(op); }
-		void op_Neg(TWord op){}
-		void op_Nop(TWord op){}
+		void op_Neg(TWord op);
+		void op_Nop(TWord op);
 		void op_Norm(TWord op){}
 		void op_Normf(TWord op){}
 		void op_Not(TWord op){}
