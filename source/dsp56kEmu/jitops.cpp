@@ -164,11 +164,11 @@ namespace dsp56k
 		&JitOps::op_Lua_ea,							// Lua_ea 
 		&JitOps::op_Lua_Rn,							// Lua_Rn 
 		&JitOps::op_Mac_S1S2,						// Mac_S1S2 
-		&JitOps::op_Mac_S,							// Mac_S 
+		&JitOps::op_Mac_S<Mac_S, true, false>,		// Mac_S 
 		&JitOps::op_Maci_xxxx,						// Maci_xxxx 
 		&JitOps::op_Macsu,							// Macsu 
 		&JitOps::op_Macr_S1S2,						// Macr_S1S2 
-		&JitOps::op_Macr_S,							// Macr_S 
+		&JitOps::op_Mac_S<Mac_S, true, true>,		// Macr_S 
 		&JitOps::op_Macri_xxxx,						// Macri_xxxx 
 		&JitOps::op_Max,							// Max 
 		&JitOps::op_Maxm,							// Maxm 
@@ -207,11 +207,11 @@ namespace dsp56k
 		&JitOps::op_Movep_SXqq,						// Movep_SXqq 
 		&JitOps::op_Movep_SYqq,						// Movep_SYqq 
 		&JitOps::op_Mpy_S1S2D,						// Mpy_S1S2D 
-		&JitOps::op_Mpy_SD,							// Mpy_SD 
+		&JitOps::op_Mac_S<Mpy_SD, false, false>,	// Mpy_SD 
 		&JitOps::op_Mpy_su,							// Mpy_su 
 		&JitOps::op_Mpyi,							// Mpyi 
 		&JitOps::op_Mpyr_S1S2D,						// Mpyr_S1S2D 
-		&JitOps::op_Mpyr_SD,						// Mpyr_SD 
+		&JitOps::op_Mac_S<Mpyr_SD, false, true>,	// Mpyr_SD 
 		&JitOps::op_Mpyri,							// Mpyri 
 		&JitOps::op_Neg,							// Neg 
 		&JitOps::op_Nop,							// Nop 
