@@ -1034,6 +1034,32 @@ namespace dsp56k
 	{
 	}
 
+	inline void JitOps::op_Not(TWord op)
+	{
+		const auto ab = getFieldValue<Not, Field_d>(op);
+
+		{
+			const RegGP d(m_block);
+			m_dspRegs.getALU1(d, ab);
+			m_asm.not_(d.get().r32());
+			m_asm.and_(d, asmjit::Imm(0xffffff));
+			m_dspRegs.setALU1(ab, d.get().r32());
+
+			m_asm.bt(d, asmjit::Imm(23));
+			ccr_update_ifCarry(SRB_N);					// Set if bit 47 of the result is set
+
+			m_asm.cmp(d, asmjit::Imm(0));
+			ccr_update_ifZero(SRB_Z);					// Set if bits 47–24 of the result are 0
+		}
+
+		ccr_clear(SR_V);								// Always cleared
+
+		const AluReg d(m_block, ab, true);
+		ccr_dirty(d);
+		//sr_s_update();								// Changed according to the standard definition
+		//sr_l_update_by_v();							// Changed according to the standard definition
+	}
+
 	inline void JitOps::op_Ori(TWord op)
 	{
 		const auto ee		= getFieldValue<Ori,Field_EE>(op);

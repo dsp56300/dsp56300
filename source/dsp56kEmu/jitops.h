@@ -226,7 +226,7 @@ namespace dsp56k
 		void op_Nop(TWord op);
 		void op_Norm(TWord op){}
 		void op_Normf(TWord op){}
-		void op_Not(TWord op){}
+		void op_Not(TWord op);
 		void op_Or_SD(TWord op){}
 		void op_Or_xx(TWord op)					{ errNotImplemented(op); }
 		void op_Or_xxxx(TWord op)				{ errNotImplemented(op); }
