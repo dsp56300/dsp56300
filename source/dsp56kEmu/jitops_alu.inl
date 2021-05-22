@@ -22,6 +22,8 @@ namespace dsp56k
 
 		ccr_update_ifZero(SRB_Z);
 
+		ccr_n_update_by55(ra);
+
 	//	sr_v_update(d);
 	//	sr_l_update_by_v();
 		ccr_dirty(ra);
@@ -50,6 +52,8 @@ namespace dsp56k
 
 //		sr_l_update_by_v();
 
+		ccr_n_update_by55(alu);
+
 		ccr_dirty(alu);
 	}
 
@@ -59,10 +63,9 @@ namespace dsp56k
 		m_asm.shl(_r, asmjit::Imm(24));
 	}
 
-	inline void JitOps::alu_abs(const JitReg& _r)
+	inline void JitOps::alu_abs(const JitReg& _r) const
 	{
 		const RegGP rb(m_block);
-
 
 		m_asm.mov(rb, _r);		// Copy to backup location
 
@@ -124,6 +127,8 @@ namespace dsp56k
 
 		ccr_update_ifZero(SRB_V);
 
+		ccr_n_update_by55(alu);
+
 		m_asm.sal(alu, _v.get());					// one more time
 		m_asm.shr(alu, asmjit::Imm(8));				// correction
 
@@ -140,6 +145,8 @@ namespace dsp56k
 		ccr_update_ifCarry(SRB_C);					// copy the host carry flag to the DSP carry flag
 		ccr_update_ifZero(SRB_Z);					// we can check for zero now, too
 		ccr_clear(SR_V);
+
+		ccr_n_update_by55(alu);
 
 		// S L E U N Z V C
 		ccr_dirty(alu);
@@ -204,6 +211,7 @@ namespace dsp56k
 
 		ccr_update_ifZero(SRB_Z);
 		ccr_clear(SR_V);	// TODO: Set if overflow has occurred in the A or B result or the MSB of the destination operand is changed as a result of the instruction’s left shift.
+		ccr_n_update_by55(aluD);
 		ccr_dirty(aluD);
 	}
 
@@ -236,6 +244,7 @@ namespace dsp56k
 
 		ccr_update_ifZero(SRB_Z);
 		ccr_clear(SR_V);			// TODO: Changed according to the standard definition.
+		ccr_n_update_by55(aluD);
 		ccr_dirty(aluD);
 	}
 
@@ -392,6 +401,8 @@ namespace dsp56k
 		m_asm.shr(d, asmjit::Imm(8));
 		m_asm.shr(_v, asmjit::Imm(8));
 
+		ccr_n_update_by55(d);
+
 		ccr_dirty(d);
 	}
 
@@ -461,6 +472,8 @@ namespace dsp56k
 
 		m_dspRegs.mask56(d);
 		ccr_update_ifZero(SRB_Z);
+
+		ccr_n_update_by55(d);
 
 		ccr_dirty(d);
 	}
@@ -554,6 +567,7 @@ namespace dsp56k
 
 		ccr_l_update_by_v();
 
+		ccr_n_update_by55(d);
 		ccr_dirty(d);
 	}
 
@@ -859,6 +873,8 @@ namespace dsp56k
 
 		ccr_l_update_by_v();
 
+		ccr_n_update_by55(d);
+
 		ccr_dirty(d);
 	}
 
@@ -903,6 +919,8 @@ namespace dsp56k
 		m_asm.cmp(d, asmjit::Imm(0));
 		ccr_update_ifZero(SRB_Z);
 
+		ccr_n_update_by55(d);
+
 		ccr_dirty(d);
 	}
 
@@ -932,6 +950,7 @@ namespace dsp56k
 
 		ccr_clear(SR_C);
 		ccr_clear(SR_V);
+		ccr_n_update_by55(d);
 		ccr_dirty(d);
 	}
 
@@ -1055,8 +1074,8 @@ namespace dsp56k
 		ccr_clear(SR_V);								// Always cleared
 
 		const AluReg d(m_block, ab, true);
-		ccr_dirty(d);
-		//sr_s_update();								// Changed according to the standard definition
+
+		ccr_s_update(d);								// Changed according to the standard definition
 		//sr_l_update_by_v();							// Changed according to the standard definition
 	}
 

@@ -372,7 +372,7 @@ namespace dsp56k
 		// ALU
 		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;
 
-		void alu_abs(const JitReg& _r);
+		void alu_abs(const JitReg& _r) const;
 		
 		void alu_add(TWord ab, RegGP& _v);
 		void alu_add(TWord ab, const asmjit::Imm& _v);

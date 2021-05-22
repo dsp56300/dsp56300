@@ -43,7 +43,6 @@ namespace dsp56k
 	{
 		ccr_e_update(_alu);
 		ccr_u_update(_alu);
-		ccr_n_update_by55(_alu);	// TODO: needs to be removed, some ALU ops update N based on bit 47!
 		m_ccrDirty = false;
 	}
 
