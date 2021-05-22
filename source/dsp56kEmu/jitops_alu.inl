@@ -29,9 +29,9 @@ namespace dsp56k
 		ccr_dirty(ra);
 	}
 
-	inline void JitOps::alu_add(TWord ab, RegGP& _v)
+	inline void JitOps::alu_add(const TWord _ab, RegGP& _v)
 	{
-		const AluReg alu(m_block, ab);
+		const AluReg alu(m_block, _ab);
 
 		m_asm.add(alu, _v.get());
 
@@ -43,7 +43,7 @@ namespace dsp56k
 			m_asm.cmp(alu, aluMax.get());
 		}
 
-		ccr_update_ifGreater(SRB_C);
+		ccr_update_ifAbove(SRB_C);
 
 		ccr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
@@ -55,6 +55,48 @@ namespace dsp56k
 		ccr_n_update_by55(alu);
 
 		ccr_dirty(alu);
+	}
+
+	inline void JitOps::alu_add(const TWord _ab, const asmjit::Imm& _v)
+	{
+		RegGP r(m_block);
+		unsignedImmediateToAlu(r, _v);
+		alu_add(_ab, r);
+	}
+
+	inline void JitOps::alu_sub(const TWord _ab, RegGP& _v)
+	{
+		const AluReg alu(m_block, _ab);
+
+		m_asm.sub(alu, _v.get());
+
+		_v.release();
+
+		{
+			const RegGP aluMax(m_block);
+			m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
+			m_asm.cmp(alu, aluMax.get());
+		}
+
+		ccr_update_ifAbove(SRB_C);
+
+		ccr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
+
+		m_dspRegs.mask56(alu);
+		ccr_update_ifZero(SRB_Z);
+
+//		sr_l_update_by_v();
+
+		ccr_n_update_by55(alu);
+
+		ccr_dirty(alu);
+	}
+
+	inline void JitOps::alu_sub(const TWord _ab, const asmjit::Imm& _v)
+	{
+		RegGP r(m_block);
+		unsignedImmediateToAlu(r, _v);
+		alu_sub(_ab, r);
 	}
 
 	inline void JitOps::unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const
@@ -72,13 +114,6 @@ namespace dsp56k
 		m_asm.neg(_r);			// negate
 
 		m_asm.cmovl(_r, rb);	// if now negative, restore its saved value
-	}
-
-	inline void JitOps::alu_add(TWord ab, const asmjit::Imm& _v)
-	{
-		RegGP r(m_block);
-		unsignedImmediateToAlu(r, _v);
-		alu_add(ab, r);
 	}
 
 	inline void JitOps::alu_and(const TWord ab, RegGP& _v) const
@@ -1150,5 +1185,33 @@ namespace dsp56k
 		m_dspRegs.setALU1(D, r.get().r32());
 
 		ccr_clear(SR_V);									// This bit is always cleared
+	}
+
+	inline void JitOps::op_Sub_SD(TWord op)
+	{
+		const auto D = getFieldValue<Sub_SD, Field_d>(op);
+		const auto JJJ = getFieldValue<Sub_SD, Field_JJJ>(op);
+
+		RegGP v(m_block);
+		decode_JJJ_read_56(v, JJJ, !D);
+		alu_sub(D, v);
+	}
+
+	inline void JitOps::op_Sub_xx(TWord op)
+	{
+		const auto ab		= getFieldValue<Sub_xx,Field_d>(op);
+		const TWord iiiiii	= getFieldValue<Sub_xx,Field_iiiiii>(op);
+
+		alu_sub( ab, asmjit::Imm(iiiiii) );
+	}
+
+	inline void JitOps::op_Sub_xxxx(TWord op)
+	{
+		const auto ab = getFieldValue<Sub_xxxx,Field_d>(op);
+
+		RegGP r(m_block);
+		getOpWordB(r.get());
+		signed24To56(r);
+		alu_sub( ab, r );		// TODO use immediate data
 	}
 }

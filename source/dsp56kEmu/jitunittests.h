@@ -143,6 +143,7 @@ namespace dsp56k
 		void or();
 		void rnd();
 		void rol();
+		void sub();
 
 		void ori_build(JitBlock& _block, JitOps& _ops);
 		void ori_verify();

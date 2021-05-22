@@ -249,10 +249,10 @@ namespace dsp56k
 		void op_Rti(TWord op){}
 		void op_Rts(TWord op){}
 		void op_Sbc(TWord op)					{ errNotImplemented(op); }
-		void op_Stop(TWord op){}
-		void op_Sub_SD(TWord op){}
-		void op_Sub_xx(TWord op){}
-		void op_Sub_xxxx(TWord op){}
+		void op_Stop(TWord op)					{ errNotImplemented(op); }
+		void op_Sub_SD(TWord op);
+		void op_Sub_xx(TWord op);
+		void op_Sub_xxxx(TWord op);
 		void op_Subl(TWord op)					{ errNotImplemented(op); }
 		void op_subr(TWord op)					{ errNotImplemented(op); }
 		void op_Tcc_S1D1(TWord op){}
@@ -331,6 +331,8 @@ namespace dsp56k
 		void ccr_update_ifNotCarry(CCRBit _bit) const;
 		void ccr_update_ifParity(CCRBit _bit) const;
 		void ccr_update_ifNotParity(CCRBit _bit) const;
+		void ccr_update_ifAbove(CCRBit _bit) const;
+		void ccr_update_ifBelow(CCRBit _bit) const;
 
 		void ccr_update(const RegGP& _value, CCRBit _bit) const;
 
@@ -375,8 +377,11 @@ namespace dsp56k
 
 		void alu_abs(const JitReg& _r) const;
 		
-		void alu_add(TWord ab, RegGP& _v);
-		void alu_add(TWord ab, const asmjit::Imm& _v);
+		void alu_add(TWord _ab, RegGP& _v);
+		void alu_add(TWord _ab, const asmjit::Imm& _v);
+
+		void alu_sub(TWord _ab, RegGP& _v);
+		void alu_sub(TWord _ab, const asmjit::Imm& _v);
 
 		void alu_and(TWord ab, RegGP& _v) const;
 

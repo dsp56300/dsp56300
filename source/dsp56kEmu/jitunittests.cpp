@@ -108,6 +108,7 @@ namespace dsp56k
 		or();
 		rnd();
 		rol();
+		sub();
 		
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -1475,6 +1476,36 @@ namespace dsp56k
 		});		
 	}
 
+	void JitUnittests::sub()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 0x00000000000001;
+			dsp.reg.b.var = 0x00000000000002;
+
+			_ops.emit(0, 0x200014);		// sub b,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0xffffffffffffff);
+			assert(dsp.sr_test(SR_C));
+			assert(!dsp.sr_test(SR_V));
+		});		
+
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 0x80000000000000;
+			dsp.reg.b.var = 0x00000000000001;
+
+			_ops.emit(0, 0x200014);		// sub b,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x7fffffffffffff);
+			assert(!dsp.sr_test(SR_C));
+			assert(!dsp.sr_test(SR_V));
+		});
+	}
 	/*
 	void JitUnittests::ifcc()
 	{

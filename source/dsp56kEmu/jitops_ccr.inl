@@ -122,6 +122,20 @@ namespace dsp56k
 		ccr_update(ra, _bit);
 	}
 
+	inline void JitOps::ccr_update_ifAbove(CCRBit _bit) const
+	{
+		const RegGP ra(m_block);
+		m_asm.seta(ra);
+		ccr_update(ra, _bit);
+	}
+
+	inline void JitOps::ccr_update_ifBelow(CCRBit _bit) const
+	{
+		const RegGP ra(m_block);
+		m_asm.setb(ra);
+		ccr_update(ra, _bit);
+	}
+
 	inline void JitOps::ccr_update(const RegGP& ra, CCRBit _bit) const
 	{
 		m_asm.and_(ra, asmjit::Imm(0xff));
