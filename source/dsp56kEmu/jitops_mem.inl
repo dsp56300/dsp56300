@@ -28,7 +28,7 @@ namespace dsp56k
 
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::readMem(const JitReg64& _dst, const TWord _op, const EMemArea _area)
 	{
-		effectiveAddress<Inst>(_dst, _op, _area);
+		effectiveAddress<Inst>(_dst, _op);
 		readMemOrPeriph(_dst, _area, _dst);
 	}
 
@@ -51,6 +51,11 @@ namespace dsp56k
 		const auto area = getFieldValueMemArea<Inst>(op);
 		const auto offset = getFieldValue<Inst,Field_aaaaaa>(op);
 		m_block.mem().readDspMemory(_dst, area, offset);
+	}
+	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>::type*> void JitOps::readMem(const JitReg64& _dst, TWord op, EMemArea _area) const
+	{
+		const auto offset = getFieldValue<Inst,Field_aaaaaa>(op);
+		m_block.mem().readDspMemory(_dst, _area, offset);
 	}
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> void JitOps::writeMem(TWord op, const JitReg64& _src)
 	{
@@ -79,6 +84,11 @@ namespace dsp56k
 		const RegGP offset(m_block);
 		updateAddressRegister(offset, mmm, rrr);
 		writeMemOrPeriph(_area, offset, _src);
+	}
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>::type*> void JitOps::writeMem(TWord op, EMemArea _area, const JitReg64& _src) const
+	{
+		const auto offset = getFieldValue<Inst,Field_aaaaaa>(op);
+		m_block.mem().writeDspMemory(_area, offset, _src);
 	}
 
 	void JitOps::readMemOrPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset)

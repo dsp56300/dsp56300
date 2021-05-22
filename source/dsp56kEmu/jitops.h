@@ -294,10 +294,12 @@ namespace dsp56k
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;
 		template <Instruction Inst, typename std::enable_if<!hasField<Inst, Field_s>() && hasFields<Inst, Field_aaaaaa, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op, EMemArea _area) const;
 
 		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void writeMem(TWord _op, EMemArea _area, const JitReg64& _src);
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void writeMem(TWord op, const JitReg64& _src);
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void writeMem(TWord op, const JitReg64& _src);
+		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>::type* = nullptr> void writeMem(TWord op, EMemArea _area, const JitReg64& _src) const;
 
 		void readMemOrPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset);
 		void writeMemOrPeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value);
