@@ -181,8 +181,8 @@ namespace dsp56k
 		void op_Max(TWord op)			{ errNotImplemented(op); }
 		void op_Maxm(TWord op)			{ errNotImplemented(op); }
 		void op_Merge(TWord op)			{ errNotImplemented(op); }
-		void op_Move_Nop(TWord op){}
-		void op_Move_xx(TWord op){}
+		void op_Move_Nop(TWord op);
+		void op_Move_xx(TWord op);
 		void op_Mover(TWord op){}
 		void op_Move_ea(TWord op){}
 		void op_Movex_ea(TWord op){}

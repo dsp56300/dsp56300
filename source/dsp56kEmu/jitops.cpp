@@ -9,6 +9,7 @@
 #include "jitops_decode.inl"
 #include "jitops_helper.inl"
 #include "jitops_mem.inl"
+#include "jitops_move.inl"
 
 #include "opcodes.h"
 
