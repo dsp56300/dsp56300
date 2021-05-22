@@ -183,16 +183,16 @@ namespace dsp56k
 		void op_Merge(TWord op)			{ errNotImplemented(op); }
 		void op_Move_Nop(TWord op);
 		void op_Move_xx(TWord op);
-		void op_Mover(TWord op){}
-		void op_Move_ea(TWord op){}
-		void op_Movex_ea(TWord op){}
-		void op_Movex_aa(TWord op){}
+		void op_Mover(TWord op);
+		void op_Move_ea(TWord op);
+		void op_Movex_ea(TWord op);
+		void op_Movex_aa(TWord op);
 		void op_Movex_Rnxxxx(TWord op){}
 		void op_Movex_Rnxxx(TWord op){}
 		void op_Movexr_ea(TWord op){}
 		void op_Movexr_A(TWord op){}
-		void op_Movey_ea(TWord op){}
-		void op_Movey_aa(TWord op){}
+		void op_Movey_ea(TWord op);
+		void op_Movey_aa(TWord op);
 		void op_Movey_Rnxxxx(TWord op){}
 		void op_Movey_Rnxxx(TWord op){}
 		void op_Moveyr_ea(TWord op){}
@@ -407,7 +407,11 @@ namespace dsp56k
 		template<Instruction Inst> void bitmod_aa(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
 		template<Instruction Inst> void bitmod_ppqq(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
 		template<Instruction Inst> void bitmod_D(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
-		
+
+		// move
+		template<Instruction Inst> void move_ddddd_MMMRRR(TWord _op, EMemArea _area);
+		template<Instruction Inst> void move_ddddd_absAddr(TWord _op, EMemArea _area);
+
 	private:
 		void errNotImplemented(TWord op);
 
