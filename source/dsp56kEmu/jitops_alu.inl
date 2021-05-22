@@ -1126,4 +1126,29 @@ namespace dsp56k
 		const auto d = getFieldValue<Rnd, Field_d>(op);
 		alu_rnd(d);		
 	}
+
+	inline void JitOps::op_Rol(TWord op)
+	{
+		const auto D = getFieldValue<Rol, Field_d>(op);
+
+		RegGP r(m_block);
+		m_dspRegs.getALU1(r, D);
+
+		const RegGP prevCarry(m_block);
+		m_asm.xor_(prevCarry, prevCarry.get());
+
+		sr_getBitValue(prevCarry, SRB_C);
+
+		m_asm.bt(r, asmjit::Imm(23));						// Set if bit 47 of the destination operand is set, and cleared otherwise
+		ccr_update_ifCarry(SRB_C);
+
+		m_asm.shl(r.get(), asmjit::Imm(1));
+		ccr_n_update_by23(r.get());							// Set if bit 47 of the result is set
+
+		m_asm.or_(r, prevCarry.get());						// Set if bits 47–24 of the result are 0
+		ccr_update_ifZero(SRB_Z);
+		m_dspRegs.setALU1(D, r.get().r32());
+
+		ccr_clear(SR_V);									// This bit is always cleared
+	}
 }
