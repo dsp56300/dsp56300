@@ -93,4 +93,74 @@ namespace dsp56k
 	{
 		move_ddddd_absAddr<Movey_aa>(op, MemArea_Y);
 	}
+
+	template<Instruction Inst> void JitOps::move_Rnxxxx(TWord op, EMemArea _area)
+	{
+		const TWord DDDDDD	= getFieldValue<Inst,Field_DDDDDD>(op);
+		const auto	write	= getFieldValue<Inst,Field_W>(op);
+		const TWord rrr		= getFieldValue<Inst,Field_RRR>(op);
+
+		const int shortDisplacement = pcRelativeAddressExt<Inst>();
+		RegGP ea(m_block);
+		decode_RRR_read(ea.get(), rrr, shortDisplacement);
+
+		const RegGP r(m_block);
+
+		if( write )
+		{
+			readMemOrPeriph(r, _area, ea);
+			decode_dddddd_write(DDDDDD, r.get().r32());
+		}
+		else
+		{
+			decode_dddddd_read(r.get().r32(), DDDDDD);
+			writeMemOrPeriph(_area, ea, r);
+		}
+	}
+
+	void JitOps::op_Movex_Rnxxxx(TWord op)
+	{
+		move_Rnxxxx<Movex_Rnxxxx>(op, MemArea_X);
+	}
+
+	void JitOps::op_Movey_Rnxxxx(TWord op)
+	{
+		move_Rnxxxx<Movey_Rnxxxx>(op, MemArea_Y);
+	}
+
+	template<Instruction Inst> void JitOps::move_Rnxxx(TWord op, EMemArea _area)
+	{
+		const TWord ddddd	= getFieldValue<Inst,Field_DDDD>(op);
+		const auto write	= getFieldValue<Inst,Field_W>(op);
+		const auto aaaaaaa	= getFieldValue<Inst,Field_aaaaaa, Field_a>(op);
+		const auto rrr		= getFieldValue<Inst,Field_RRR>(op);
+
+		const int shortDisplacement = signextend<int,7>(aaaaaaa);
+
+		RegGP ea(m_block);
+		decode_RRR_read( ea, rrr, shortDisplacement );
+
+		RegGP r(m_block);
+
+		if( write )
+		{
+			readMemOrPeriph(r, _area, ea);
+			decode_dddddd_write(ddddd, r.get().r32());
+		}
+		else
+		{
+			decode_dddddd_read(r.get().r32(), ddddd);
+			writeMemOrPeriph(_area, ea, r);
+		}		
+	}
+
+	void JitOps::op_Movex_Rnxxx(TWord op)
+	{
+		move_Rnxxx<Movex_Rnxxx>(op, MemArea_X);
+	}
+
+	void JitOps::op_Movey_Rnxxx(TWord op)
+	{
+		move_Rnxxx<Movey_Rnxxx>(op, MemArea_Y);
+	}
 }

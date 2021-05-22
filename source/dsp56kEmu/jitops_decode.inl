@@ -359,6 +359,19 @@ namespace dsp56k
 		}
 	}
 
+	void JitOps::decode_RRR_read( const JitReg& _dst, TWord _mmmrrr, int _shortDisplacement/* = 0*/)
+	{
+		const auto regIdx = _mmmrrr & 0x07;
+
+		m_dspRegs.getR(_dst, regIdx);
+
+		if(_shortDisplacement)
+		{
+			m_asm.add(_dst, asmjit::Imm(_shortDisplacement));
+			m_asm.and_(_dst, asmjit::Imm(0xffffff));
+		}
+	}
+
 	inline void JitOps::decode_QQ_read(const JitReg& _dst, TWord _qq)
 	{
 		switch (_qq)
