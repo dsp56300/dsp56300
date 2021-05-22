@@ -227,7 +227,7 @@ namespace dsp56k
 		void op_Norm(TWord op){}
 		void op_Normf(TWord op){}
 		void op_Not(TWord op);
-		void op_Or_SD(TWord op){}
+		void op_Or_SD(TWord op);
 		void op_Or_xx(TWord op)					{ errNotImplemented(op); }
 		void op_Or_xxxx(TWord op)				{ errNotImplemented(op); }
 		void op_Ori(TWord op);
@@ -338,6 +338,7 @@ namespace dsp56k
 		void ccr_e_update(const JitReg64& _alu) const;
 		void ccr_n_update_by55(const JitReg64& _alu) const;
 		void ccr_n_update_by47(const JitReg64& _alu) const;
+		void ccr_n_update_by23(const JitReg64& _alu) const;
 		void ccr_s_update(const JitReg64& _alu) const;
 		void ccr_l_update_by_v() const;
 		void ccr_v_update(const JitReg64& _nonMaskedResult) const;
@@ -392,6 +393,7 @@ namespace dsp56k
 		void alu_lsr(TWord ab, int _shiftAmount) const;
 		void alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate, bool _s1Unsigned = false, bool _s2Unsigned = false);
 		void alu_multiply(TWord op);
+		void alu_or(TWord ab, const JitReg& _v);
 		void alu_rnd(TWord ab);
 		
 		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);

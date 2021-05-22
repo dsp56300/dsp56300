@@ -501,6 +501,28 @@ namespace dsp56k
 		}
 	}
 
+	inline void JitOps::alu_or(TWord ab, const JitReg& _v)
+	{
+		RegGP r(m_block);
+		m_dspRegs.getALU(r, ab);
+
+		m_asm.shl(_v, asmjit::Imm(24));
+
+		m_asm.or_(r, _v);
+
+		m_dspRegs.setALU(ab, r);
+
+		// S L E U N Z V C
+		// v - - - * * * -
+		ccr_n_update_by47(r);
+
+		m_asm.shr(r, asmjit::Imm(24));
+		m_asm.and_(r, asmjit::Imm(0xffffff));
+		ccr_update_ifZero(SRB_Z);
+		
+		ccr_clear(SR_V);
+	}
+
 	inline void JitOps::alu_rnd(TWord ab)
 	{
 		RegGP rounder(m_block);
@@ -1077,6 +1099,15 @@ namespace dsp56k
 
 		ccr_s_update(d);								// Changed according to the standard definition
 		//sr_l_update_by_v();							// Changed according to the standard definition
+	}
+
+	inline void JitOps::op_Or_SD(TWord op)
+	{
+		const auto D = getFieldValue<Or_SD, Field_d>(op);
+		const auto JJ = getFieldValue<Or_SD, Field_JJ>(op);
+		RegGP r(m_block);
+		decode_JJ_read(r, JJ);
+		alu_or(D, r.get());
 	}
 
 	inline void JitOps::op_Ori(TWord op)

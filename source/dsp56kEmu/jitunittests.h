@@ -140,6 +140,7 @@ namespace dsp56k
 		void mpy_SD();
 		void neg();
 		void not();
+		void or();
 		void rnd();
 
 		void ori_build(JitBlock& _block, JitOps& _ops);

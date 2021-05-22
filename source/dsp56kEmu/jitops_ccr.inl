@@ -237,6 +237,14 @@ namespace dsp56k
 		ccr_update_ifCarry(SRB_N);
 	}
 
+	inline void JitOps::ccr_n_update_by23(const JitReg64& _alu) const
+	{
+		// Negative
+		// Set if the MSB of the result is set; otherwise, this bit is cleared.
+		m_asm.bt(_alu, asmjit::Imm(23));
+		ccr_update_ifCarry(SRB_N);
+	}
+
 	inline void JitOps::ccr_s_update(const JitReg64& _alu) const
 	{
 		const auto exit = m_asm.newLabel();
