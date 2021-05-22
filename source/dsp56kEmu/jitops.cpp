@@ -246,7 +246,7 @@ namespace dsp56k
 		&JitOps::op_Sub_xx,							// Sub_xx 
 		&JitOps::op_Sub_xxxx,						// Sub_xxxx 
 		&JitOps::op_Subl,							// Subl 
-		&JitOps::op_subr,							// subr 
+		&JitOps::op_Subr,							// subr 
 		&JitOps::op_Tcc_S1D1,						// Tcc_S1D1 
 		&JitOps::op_Tcc_S1D1S2D2,					// Tcc_S1D1S2D2 
 		&JitOps::op_Tcc_S2D2,						// Tcc_S2D2 

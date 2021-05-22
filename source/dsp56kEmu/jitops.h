@@ -254,7 +254,7 @@ namespace dsp56k
 		void op_Sub_xx(TWord op);
 		void op_Sub_xxxx(TWord op);
 		void op_Subl(TWord op)					{ errNotImplemented(op); }
-		void op_subr(TWord op)					{ errNotImplemented(op); }
+		void op_Subr(TWord op)					{ errNotImplemented(op); }
 		void op_Tcc_S1D1(TWord op){}
 		void op_Tcc_S1D1S2D2(TWord op){}
 		void op_Tcc_S2D2(TWord op){}
