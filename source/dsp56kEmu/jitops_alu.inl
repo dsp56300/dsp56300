@@ -1214,4 +1214,12 @@ namespace dsp56k
 		signed24To56(r);
 		alu_sub( ab, r );		// TODO use immediate data
 	}
+
+	inline void JitOps::op_Tst(TWord op)
+	{
+		const auto D = getFieldValue<Tst, Field_d>(op);
+		const RegGP zero(m_block);
+		m_asm.xor_(zero, zero.get());
+		alu_cmp(D, zero, false);
+	}
 }

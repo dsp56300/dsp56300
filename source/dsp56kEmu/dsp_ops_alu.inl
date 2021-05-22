@@ -1118,7 +1118,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Tst(const TWord op)
 	{
-		const auto D = getFieldValue<Tfr, Field_d>(op);
+		const auto D = getFieldValue<Tst, Field_d>(op);
 		alu_tst(D);
 	}
 	inline void DSP::op_Vsl(const TWord op)
