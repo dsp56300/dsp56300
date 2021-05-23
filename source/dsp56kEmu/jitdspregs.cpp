@@ -515,7 +515,7 @@ namespace dsp56k
 
 	void JitDspRegs::getSS(const JitReg64& _dst) const
 	{
-		auto* first = &m_dsp.regs().ss[0].var;
+		const auto first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
 
 		const RegGP ssIndex(m_block);
 		getSP(ssIndex.get().r32());
@@ -527,7 +527,7 @@ namespace dsp56k
 
 	void JitDspRegs::setSS(const JitReg64& _src) const
 	{
-		auto* first = &m_dsp.regs().ss[0].var;
+		const auto first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
 
 		const RegGP ssIndex(m_block);
 		getSP(ssIndex.get().r32());
@@ -542,16 +542,16 @@ namespace dsp56k
 	{
 		const RegGP temp(m_block);
 
-		m_asm.dec(m_block.mem().ptr(temp, &m_dsp.regs().sp.var));
-		m_asm.dec(m_block.mem().ptr(temp, &m_dsp.regs().sc.var));
+		m_asm.dec(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sp.var)));
+		m_asm.dec(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sc.var)));
 	}
 
 	void JitDspRegs::incSP() const
 	{
 		const RegGP temp(m_block);
 
-		m_asm.inc(m_block.mem().ptr(temp, &m_dsp.regs().sp.var));
-		m_asm.inc(m_block.mem().ptr(temp, &m_dsp.regs().sc.var));
+		m_asm.inc(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sp.var)));
+		m_asm.inc(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sc.var)));
 	}
 
 	void JitDspRegs::mask56(const JitReg& _alu) const

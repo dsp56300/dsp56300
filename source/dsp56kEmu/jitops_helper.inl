@@ -7,19 +7,19 @@
 
 namespace dsp56k
 {
-	inline void JitOps::signextend56to64(const JitReg64& _reg) const
+	void JitOps::signextend56to64(const JitReg64& _reg) const
 	{
 		m_asm.sal(_reg, asmjit::Imm(8));
 		m_asm.sar(_reg, asmjit::Imm(8));
 	}
 
-	inline void JitOps::signextend48to64(const JitReg64& _reg) const
+	void JitOps::signextend48to64(const JitReg64& _reg) const
 	{
 		m_asm.sal(_reg, asmjit::Imm(16));
 		m_asm.sar(_reg, asmjit::Imm(16));
 	}
 
-	inline void JitOps::signextend48to56(const JitReg64& _reg) const
+	void JitOps::signextend48to56(const JitReg64& _reg) const
 	{
 		m_asm.sal(_reg, asmjit::Imm(16));
 		m_asm.sar(_reg, asmjit::Imm(8));	// we need to work around the fact that there is no AND with 64 bit immediate operand
@@ -33,7 +33,7 @@ namespace dsp56k
 		m_asm.shr(_reg, asmjit::Imm(8));
 	}
 
-	inline void JitOps::signextend24to64(const JitReg64& _reg) const
+	void JitOps::signextend24to64(const JitReg64& _reg) const
 	{
 		m_asm.sal(_reg, asmjit::Imm(40));
 		m_asm.sar(_reg, asmjit::Imm(40));

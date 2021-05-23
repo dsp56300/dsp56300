@@ -728,7 +728,7 @@ namespace dsp56k
 		return res;
 	}
 
-	inline TWord DSP::decode_sssss(const TWord _sssss)
+	TWord DSP::decode_sssss(const TWord _sssss)
 	{
 		return 0x800000 >> _sssss;
 	}

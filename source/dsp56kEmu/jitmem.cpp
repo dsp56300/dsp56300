@@ -237,4 +237,8 @@ namespace dsp56k
 	template asmjit::x86::Mem Jitmem::ptr<uint8_t>(const JitReg64&, const uint8_t*) const;
 	template asmjit::x86::Mem Jitmem::ptr<uint32_t>(const JitReg64&, const uint32_t*) const;
 	template asmjit::x86::Mem Jitmem::ptr<uint64_t>(const JitReg64&, const uint64_t*) const;
+
+	template void Jitmem::ptrToReg<uint8_t>(const JitReg64&, const uint8_t*) const;
+	template void Jitmem::ptrToReg<uint32_t>(const JitReg64&, const uint32_t*) const;
+	template void Jitmem::ptrToReg<uint64_t>(const JitReg64&, const uint64_t*) const;
 }
