@@ -18,7 +18,7 @@ using namespace x86;
 	RCX	= func arg 0 (Microsoft)                   |               XMM02 = DSP AGU 2 [0,M,N,R]
 	RDX	= func arg 1 / temp			               |               XMM03 = DSP AGU 3 [0,M,N,R]
 	RBP							*                  |               XMM04 = DSP AGU 4 [0,M,N,R]
-	RSI	= temp						               |               XMM05 = DSP AGU 5 [0,M,N,R]
+	RSI	=    						               |               XMM05 = DSP AGU 5 [0,M,N,R]
 	RDI	= func arg 0 (linux)    				   |               XMM06 = DSP AGU 6 [0,M,N,R]
 	RSP							*	               |               XMM07 = DSP AGU 7 [0,M,N,R]
 	R8  = func arg 2 / DSP Status Register		   |               XMM08 = DSP A
