@@ -350,6 +350,8 @@ namespace dsp56k
 	template<TWord ee>
 	void DSP::decode_ee_write(const TReg24& _value)
 	{
+		static_assert(ee >= 0 && ee <= 3, "invalid ee value");
+
 		if constexpr (ee == 0)	x0(_value);
 		if constexpr (ee == 1)	x1(_value);
 		if constexpr (ee == 2)	setA(_value);
