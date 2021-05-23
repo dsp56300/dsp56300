@@ -163,4 +163,40 @@ namespace dsp56k
 	{
 		move_Rnxxx<Movey_Rnxxx>(op, MemArea_Y);
 	}
+
+	void JitOps::op_Movexr_ea(TWord op)
+	{
+		const TWord F		= getFieldValue<Movexr_ea,Field_F>(op);	// true:Y1, false:Y0
+		const TWord ff		= getFieldValue<Movexr_ea,Field_ff>(op);
+		const TWord write	= getFieldValue<Movexr_ea,Field_W>(op);
+		const TWord d		= getFieldValue<Movexr_ea,Field_d>(op);
+
+		{
+			// S2 D2 move
+			const RegGP ab(m_block);
+			transferAluTo24(ab, d);
+
+			if(F)		m_dspRegs.setXY1(1, ab);
+			else		m_dspRegs.setXY0(1, ab);			
+		}
+		
+		RegGP r(m_block);
+
+		// S1/D1 move
+		if( write )
+		{
+			readMem<Movexr_ea>(r, op, MemArea_X);
+
+			decode_ee_write(ff, r);
+		}
+		else
+		{
+			
+			decode_ff_read(r, ff);
+			
+			RegGP ea(m_block);
+			effectiveAddress<Movexr_ea>(ea, op);
+			writeMemOrPeriph(MemArea_X, ea, r);
+		}
+	}
 }

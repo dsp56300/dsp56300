@@ -283,6 +283,32 @@ namespace dsp56k
 		}
 	}
 
+	inline void JitOps::decode_ee_write(const TWord _ee, const JitReg& _value)
+	{
+		switch (_ee)
+		{
+		case 0: m_dspRegs.setXY0(0, _value); return;
+		case 1: m_dspRegs.setXY1(0, _value); return;
+		case 2: transfer24ToAlu(0, _value);	return;
+		case 3: transfer24ToAlu(1, _value);	return;
+		}
+		assert(0 && "invalid ee value");
+	}
+
+	void JitOps::decode_ff_read(const JitReg& _dst, TWord _ff)
+	{
+		switch (_ff)
+		{
+		case 0: m_dspRegs.getY0(_dst); break;
+		case 1: m_dspRegs.getY1(_dst); break;
+		case 2: transferAluTo24(_dst, 0); break;
+		case 3: transferAluTo24(_dst, 1); break;
+		default:
+			assert(0 && "invalid ff value");
+			break;
+		}
+	}
+
 	void JitOps::decode_EE_read(RegGP& dst, TWord _ee)
 	{
 		switch (_ee)

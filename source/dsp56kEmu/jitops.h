@@ -189,7 +189,7 @@ namespace dsp56k
 		void op_Movex_aa(TWord op);
 		void op_Movex_Rnxxxx(TWord op);
 		void op_Movex_Rnxxx(TWord op);
-		void op_Movexr_ea(TWord op){}
+		void op_Movexr_ea(TWord op);
 		void op_Movexr_A(TWord op){}
 		void op_Movey_ea(TWord op);
 		void op_Movey_aa(TWord op);
@@ -320,6 +320,7 @@ namespace dsp56k
 		void setSR(const JitReg32& _src);
 
 		void transferAluTo24(const JitReg& _dst, int _alu);
+		void transfer24ToAlu(int _alu, const JitReg& _src);
 		void transferSaturation(const JitReg& _dst);
 
 		// CCR
@@ -363,8 +364,10 @@ namespace dsp56k
 		void decode_cccc(const JitReg& _dst, TWord cccc);
 		void decode_dddddd_read(const JitReg32& _dst, TWord _dddddd);
 		void decode_dddddd_write(TWord _dddddd, const JitReg32& _src);
+		void decode_ee_write(TWord _ee, const JitReg& _value);
 		void decode_EE_read(RegGP& dst, TWord _ee);
 		void decode_EE_write(const JitReg64& _src, TWord _ee);
+		void decode_ff_read(const JitReg& _dst, TWord _ff);
 		void decode_JJJ_read_56(JitReg64 _dst, TWord JJJ, bool _b) const;
 		void decode_JJ_read(JitReg64 _dst, TWord jj) const;
 		void decode_RRR_read(const JitReg& _dst, TWord _mmmrrr, int _shortDisplacement = 0);
