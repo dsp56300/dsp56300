@@ -210,6 +210,8 @@ namespace dsp56k
 		{
 			// S2 D2 move
 			const RegGP ab(m_block);
+			transferAluTo24(ab, d);
+
 			if( e )		m_dspRegs.setXY1(0, ab);
 			else		m_dspRegs.setXY0(0, ab);
 		}
