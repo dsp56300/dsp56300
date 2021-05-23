@@ -309,6 +309,18 @@ namespace dsp56k
 		}
 	}
 
+	void JitOps::decode_ff_write(const TWord _ff, const JitReg& _value)
+	{
+		switch (_ff)
+		{
+		case 0: m_dspRegs.setXY0(1, _value); break;
+		case 1: m_dspRegs.setXY1(1, _value); break;
+		case 2: transfer24ToAlu(0, _value); break;
+		case 3: transfer24ToAlu(1, _value); break;
+		default: assert(false && "invalid ff value"); break;
+		}
+	}
+
 	void JitOps::decode_EE_read(RegGP& dst, TWord _ee)
 	{
 		switch (_ee)

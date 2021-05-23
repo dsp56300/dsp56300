@@ -195,7 +195,7 @@ namespace dsp56k
 		void op_Movey_aa(TWord op);
 		void op_Movey_Rnxxxx(TWord op);
 		void op_Movey_Rnxxx(TWord op);
-		void op_Moveyr_ea(TWord op){}
+		void op_Moveyr_ea(TWord op);
 		void op_Moveyr_A(TWord op){}
 		void op_Movel_ea(TWord op){}
 		void op_Movel_aa(TWord op){}
@@ -368,6 +368,7 @@ namespace dsp56k
 		void decode_EE_read(RegGP& dst, TWord _ee);
 		void decode_EE_write(const JitReg64& _src, TWord _ee);
 		void decode_ff_read(const JitReg& _dst, TWord _ff);
+		void decode_ff_write(TWord _ff, const JitReg& _value);
 		void decode_JJJ_read_56(JitReg64 _dst, TWord JJJ, bool _b) const;
 		void decode_JJ_read(JitReg64 _dst, TWord jj) const;
 		void decode_RRR_read(const JitReg& _dst, TWord _mmmrrr, int _shortDisplacement = 0);

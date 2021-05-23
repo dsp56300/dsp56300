@@ -199,4 +199,33 @@ namespace dsp56k
 			writeMemOrPeriph(MemArea_X, ea, r);
 		}
 	}
+
+	void JitOps::op_Moveyr_ea(TWord op)
+	{
+		const bool e		= getFieldValue<Moveyr_ea,Field_e>(op);	// true:X1, false:X0
+		const TWord ff		= getFieldValue<Moveyr_ea,Field_ff>(op);
+		const bool write	= getFieldValue<Moveyr_ea,Field_W>(op);
+		const bool d		= getFieldValue<Moveyr_ea,Field_d>(op);
+
+		{
+			// S2 D2 move
+			const RegGP ab(m_block);
+			if( e )		m_dspRegs.setXY1(0, ab);
+			else		m_dspRegs.setXY0(0, ab);
+		}
+	
+		// S1/D1 move
+		RegGP r(m_block);
+		if( write )
+		{
+			readMem<Moveyr_ea>(r, op, MemArea_Y);
+			decode_ff_write( ff, r );
+		}
+		else
+		{
+			RegGP ea(m_block);
+			effectiveAddress<Moveyr_ea>(ea, op);
+			writeMemOrPeriph(MemArea_Y, ea, r);
+		}
+	}
 }
