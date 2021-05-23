@@ -104,8 +104,8 @@ namespace dsp56k
 		mpy();
 		mpy_SD();
 		neg();
-		not();
-		or();
+		not_();
+		or_();
 		rnd();
 		rol();
 		sub();
@@ -1396,7 +1396,7 @@ namespace dsp56k
 		});
 	}
 
-	void JitUnittests::not()
+	void JitUnittests::not_()
 	{
 		runTest([&](auto& _block, auto& _ops)
 		{
@@ -1421,7 +1421,7 @@ namespace dsp56k
 		});
 	}
 
-	void JitUnittests::or()
+	void JitUnittests::or_()
 	{
 		runTest([&](auto& _block, auto& _ops)
 		{

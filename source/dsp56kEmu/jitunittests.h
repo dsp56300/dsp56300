@@ -139,8 +139,8 @@ namespace dsp56k
 		void mpy();
 		void mpy_SD();
 		void neg();
-		void not();
-		void or();
+		void not_();
+		void or_();
 		void rnd();
 		void rol();
 		void sub();
