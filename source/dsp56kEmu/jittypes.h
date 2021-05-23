@@ -7,12 +7,15 @@ namespace dsp56k
 	// TODO: asmjit should have code for this, I can't find it
 #ifdef _MSC_VER
 	static constexpr auto regArg0 = asmjit::x86::rcx;
+	static constexpr auto regArg1 = asmjit::x86::rdx;
+	static constexpr auto regArg2 = asmjit::x86::r8;
+	static constexpr auto regArg3 = asmjit::x86::r9;
 #else
 	static constexpr auto regArg0 = asmjit::x86::rdi;
+	static constexpr auto regArg1 = asmjit::x86::rsi;
+	static constexpr auto regArg2 = asmjit::x86::rdx;
+	static constexpr auto regArg3 = asmjit::x86::rcx;
 #endif
-	constexpr auto regArg1 = asmjit::x86::rdx;
-	constexpr auto regArg2 = asmjit::x86::r8;
-	constexpr auto regArg3 = asmjit::x86::r9;
 
 	static constexpr auto regReturnVal = asmjit::x86::rax;
 
