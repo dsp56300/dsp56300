@@ -190,17 +190,16 @@ namespace dsp56k
 		void op_Movex_Rnxxxx(TWord op);
 		void op_Movex_Rnxxx(TWord op);
 		void op_Movexr_ea(TWord op);
-		void op_Movexr_A(TWord op){}
+		void op_Movexr_A(TWord op);
 		void op_Movey_ea(TWord op);
 		void op_Movey_aa(TWord op);
 		void op_Movey_Rnxxxx(TWord op);
 		void op_Movey_Rnxxx(TWord op);
 		void op_Moveyr_ea(TWord op);
-		void op_Moveyr_A(TWord op){}
+		void op_Moveyr_A(TWord op);
 		void op_Movel_ea(TWord op){}
 		void op_Movel_aa(TWord op){}
 		void op_Movexy(TWord op){}
-		void opCE_Movexy(TWord op){}
 		void op_Movec_ea(TWord op){}
 		void op_Movec_aa(TWord op){}
 		void op_Movec_S1D2(TWord op){}

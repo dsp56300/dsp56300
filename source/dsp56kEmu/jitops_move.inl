@@ -230,4 +230,48 @@ namespace dsp56k
 			writeMemOrPeriph(MemArea_Y, ea, r);
 		}
 	}
+
+	void JitOps::op_Movexr_A(TWord op)
+	{
+		const auto d = getFieldValue<Movexr_A,Field_d>(op);
+
+		{
+			// S1/D1 move
+
+			RegGP ea(m_block);
+			effectiveAddress<Movexr_A>(ea, op);
+
+			const RegGP ab(m_block);
+			transferAluTo24(ab, d);
+			writeMemOrPeriph(MemArea_X, ea, ab);
+		}
+
+		{
+			// S2/D2 move
+			RegGP x0(m_block);
+			m_dspRegs.getX0(x0);
+			transfer24ToAlu(d, x0);
+		}
+	}
+
+	void JitOps::op_Moveyr_A(TWord op)
+	{
+		const auto d = getFieldValue<Moveyr_A,Field_d>(op);
+
+		{
+			RegGP ea(m_block);
+			effectiveAddress<Moveyr_A>(ea, op);
+
+			const RegGP ab(m_block);
+			transferAluTo24(ab, d);
+
+			writeMemOrPeriph(MemArea_Y, ea, ab);
+		}
+
+		{
+			RegGP y0(m_block);
+			m_dspRegs.getY0(y0);
+			transfer24ToAlu(d, y0);
+		}
+	}
 }
