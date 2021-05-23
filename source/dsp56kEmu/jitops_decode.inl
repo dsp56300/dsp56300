@@ -152,13 +152,9 @@ namespace dsp56k
 			break;
 		case 0x0c:	m_dspRegs.getALU1(_dst, 0);	break;
 		case 0x0d:	m_dspRegs.getALU1(_dst, 1);	break;
-		case 0x0e:	
-		case 0x0f:
-			{
-				const auto aluIndex = i - 0x0e;
-				transferAluTo24(_dst, aluIndex);
-			}
-			break;
+		case 0x0e:	transferAluTo24(_dst, 0);	break;
+		case 0x0f:	transferAluTo24(_dst, 1);	break;
+
 		// 010TTT - 8 address registers in AGU
 		case 0x10:	m_dspRegs.getR(_dst, 0); break;
 		case 0x11:	m_dspRegs.getR(_dst, 1); break;
@@ -228,26 +224,14 @@ namespace dsp56k
 
 		// 001DDD - 8 accumulators in data ALU
 		case 0x08:	m_dspRegs.setALU0(0, _src);	break;
-		case 0x09:	m_dspRegs.setALU0(0, _src);	break;
-		case 0x0a:
-		case 0x0b:
-			{
-				const auto aluIndex = i - 0x0a;
-				m_dspRegs.setALU(aluIndex, _src);
-				m_asm.sal(_src, asmjit::Imm(8));
-				m_asm.sar(_src, asmjit::Imm(40));
-				m_asm.and_(_src, asmjit::Imm(0xffffff));
-			}
-			break;
+		case 0x09:	m_dspRegs.setALU0(1, _src);	break;
+		case 0x0a:	m_dspRegs.setALU2(1, _src);	break;
+		case 0x0b:	m_dspRegs.setALU2(1, _src);	break;
 		case 0x0c:	m_dspRegs.setALU1(0, _src);	break;
 		case 0x0d:	m_dspRegs.setALU1(1, _src);	break;
-		case 0x0e:	
-		case 0x0f:
-			{
-				const auto aluIndex = i - 0x0e;
-				transferAluTo24(_src, aluIndex);
-			}
-			break;
+		case 0x0e:	transfer24ToAlu(0, _src);	break;	
+		case 0x0f:	transfer24ToAlu(1, _src);	break;
+
 		// 010TTT - 8 address registers in AGU
 		case 0x10:	m_dspRegs.setR(0, _src); break;
 		case 0x11:	m_dspRegs.setR(1, _src); break;
