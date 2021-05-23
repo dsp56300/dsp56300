@@ -370,6 +370,7 @@ namespace dsp56k
 		emitOpProlog();
 
 		// TODO: latch registers
+		// use _mm_move_sd to pack two 64 bits LSB XMM regs into one XMM reg
 
 		(this->*funcMove)(_op);
 		(this->*funcAlu)(_op);
