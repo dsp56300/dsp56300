@@ -187,22 +187,30 @@ namespace dsp56k
 		ccr_dirty(alu);
 	}
 
+	inline void JitOps::jmp(const JitReg32& _absAddr)
+	{
+		m_block.mem().mov(m_nextPC, _absAddr);
+	}
+
+	inline void JitOps::jsr(const JitReg32& _absAddr)
+	{
+		m_dspRegs.setSSH(_absAddr);
+		m_dspRegs.setSSL(m_dspRegs.getSR().r32());
+		jmp(_absAddr);
+	}
+
 	inline void JitOps::jmp(TWord _absAddr)
 	{
 		const RegGP r(m_block);
 		m_asm.mov(r, asmjit::Imm(_absAddr));
-		m_block.mem().mov(m_nextPC, r.get().r32());
+		jmp(r.get().r32());
 	}
 
 	inline void JitOps::jsr(const TWord _absAddr)
 	{
-		{
-			const RegGP r(m_block);
-			m_asm.mov(r.get().r32(), asmjit::Imm(_absAddr));
-			m_dspRegs.setSSH(r.get().r32());
-		}
-		m_dspRegs.setSSL(m_dspRegs.getSR().r32());
-		jmp(_absAddr);
+		const RegGP r(m_block);
+		m_asm.mov(r.get().r32(), asmjit::Imm(_absAddr));
+		jsr(r.get().r32());
 	}
 
 	inline void JitOps::errNotImplemented(TWord op)

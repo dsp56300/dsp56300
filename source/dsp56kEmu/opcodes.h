@@ -6,6 +6,7 @@
 #include "opcodeinfo.h"
 #include "opcodetypes.h"
 #include "types.h"
+#include "utils.h"
 
 namespace dsp56k
 {
@@ -297,5 +298,11 @@ namespace dsp56k
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst, Field_aaaaaa>()>::type* = nullptr> TWord getEffectiveAddress(const TWord op)
 	{
 		return getFieldValue<Inst, Field_aaaaaa>(op);
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaa, Field_aaaaa>()>::type* = nullptr> int getRelativeAddressOffset(const TWord op)
+	{
+		const TWord a = getFieldValue<Inst,Field_aaaa, Field_aaaaa>(op);
+		return signextend<int,9>( a );
 	}
 }

@@ -45,9 +45,9 @@ namespace dsp56k
 		void op_Asr_D(TWord op);
 		void op_Asr_ii(TWord op);
 		void op_Asr_S1S2D(TWord op);
-		void op_Bcc_xxxx(TWord op){}
-		void op_Bcc_xxx(TWord op){}
-		void op_Bcc_Rn(TWord op){}
+		void op_Bcc_xxxx(TWord op);
+		void op_Bcc_xxx(TWord op);
+		void op_Bcc_Rn(TWord op);
 		void op_Bchg_ea(TWord op);
 		void op_Bchg_aa(TWord op);
 		void op_Bchg_pp(TWord op);
@@ -58,9 +58,9 @@ namespace dsp56k
 		void op_Bclr_pp(TWord op);
 		void op_Bclr_qq(TWord op);
 		void op_Bclr_D(TWord op);
-		void op_Bra_xxxx(TWord op){}
-		void op_Bra_xxx(TWord op){}
-		void op_Bra_Rn(TWord op){}
+		void op_Bra_xxxx(TWord op);
+		void op_Bra_xxx(TWord op);
+		void op_Bra_Rn(TWord op);
 		void op_Brclr_ea(TWord op);
 		void op_Brclr_aa(TWord op);
 		void op_Brclr_pp(TWord op);
@@ -72,9 +72,9 @@ namespace dsp56k
 		void op_Brset_pp(TWord op);
 		void op_Brset_qq(TWord op);
 		void op_Brset_S(TWord op);
-		void op_BScc_xxxx(TWord op){}
-		void op_BScc_xxx(TWord op){}
-		void op_BScc_Rn(TWord op){}
+		void op_BScc_xxxx(TWord op);
+		void op_BScc_xxx(TWord op);
+		void op_BScc_Rn(TWord op);
 		void op_Bsclr_ea(TWord op);
 		void op_Bsclr_aa(TWord op);
 		void op_Bsclr_pp(TWord op);
@@ -85,9 +85,9 @@ namespace dsp56k
 		void op_Bset_pp(TWord op);
 		void op_Bset_qq(TWord op);
 		void op_Bset_D(TWord op);
-		void op_Bsr_xxxx(TWord op){}
-		void op_Bsr_xxx(TWord op){}
-		void op_Bsr_Rn(TWord op){}
+		void op_Bsr_xxxx(TWord op);
+		void op_Bsr_xxx(TWord op);
+		void op_Bsr_Rn(TWord op);
 		void op_Bsset_ea(TWord op);
 		void op_Bsset_aa(TWord op);
 		void op_Bsset_pp(TWord op);
@@ -274,7 +274,8 @@ namespace dsp56k
 		static void updateAddressRegisterBitreverse(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
 
 		void signed24To56(const JitReg64& _r) const;
-		
+
+		// extension word access
 		template<Instruction Inst> int pcRelativeAddressExt() const
 		{
 			static_assert(g_opcodes[Inst].m_extensionWordType & PCRelativeAddressExt, "opcode does not have a PC-relative address extension word");
@@ -439,11 +440,9 @@ namespace dsp56k
 
 		// -------------- bra variants
 		template<BraMode Bmode> void braOrBsr(int offset);
-		template<BraMode Bmode> void braOrBsr(const JitReg32& _absAddr);
+		template<BraMode Bmode> void braOrBsr(const JitReg32& _offset);
 
-		template<Instruction Inst, BraMode Bmode> void braIfCC(TWord op);
-
-		template<Instruction Inst, BraMode Bmode> void braIfCC(TWord op, int offset);
+		template<Instruction Inst, BraMode Bmode, typename TOff> void braIfCC(TWord op, const TOff& offset);
 
 		template<Instruction Inst, BraMode Bmode, ExpectedBitValue BitValue> void braIfBitTestMem(TWord op);
 		template<Instruction Inst, BraMode Bmode, ExpectedBitValue BitValue> void braIfBitTestDDDDDD(TWord op);
@@ -459,6 +458,9 @@ namespace dsp56k
 		
 		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestMem(TWord op);
 		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestDDDDDD(TWord op);
+
+		void jmp(const JitReg32& _absAddr);
+		void jsr(const JitReg32& _absAddr);
 
 		void jmp(TWord _absAddr);
 		void jsr(TWord _absAddr);
