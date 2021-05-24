@@ -332,7 +332,7 @@ namespace dsp56k
 		}
 	}
 	
-	void JitOps::decode_ee_read(JitReg& _dst, const TWord _ee)
+	void JitOps::decode_ee_read(const JitReg& _dst, const TWord _ee)
 	{
 		switch (_ee)
 		{
@@ -594,6 +594,17 @@ namespace dsp56k
 		default:
 			assert(0 && "invalid LLL value");
 			break;
+		}
+	}
+
+	inline void JitOps::decode_XMove_MMRRR(const JitReg64& _dst, TWord _mm, TWord _rrr)
+	{
+		switch (_mm)
+		{
+		case 0: updateAddressRegister(_dst, MMM_Rn, _rrr); break;
+		case 1: updateAddressRegister(_dst, MMM_RnPlusNn, _rrr); break;
+		case 2: updateAddressRegister(_dst, MMM_RnPlus, _rrr); break;
+		case 3: updateAddressRegister(_dst, MMM_RnMinus, _rrr); break;
 		}
 	}
 }

@@ -199,7 +199,7 @@ namespace dsp56k
 		void op_Moveyr_A(TWord op);
 		void op_Movel_ea(TWord op);
 		void op_Movel_aa(TWord op);
-		void op_Movexy(TWord op){}
+		void op_Movexy(TWord op);
 		void op_Movec_ea(TWord op){}
 		void op_Movec_aa(TWord op){}
 		void op_Movec_S1D2(TWord op){}
@@ -365,7 +365,7 @@ namespace dsp56k
 		void decode_dddddd_write(TWord _dddddd, const JitReg32& _src);
 		void decode_ddddd_pcr_read(const JitReg32& _dst, TWord _ddddd);
 		void decode_ddddd_pcr_write(TWord _ddddd, const JitReg32& _src);
-		void decode_ee_read(JitReg& _dst, TWord _ee);
+		void decode_ee_read(const JitReg& _dst, TWord _ee);
 		void decode_ee_write(TWord _ee, const JitReg& _value);
 		void decode_EE_read(RegGP& dst, TWord _ee);
 		void decode_EE_write(const JitReg64& _src, TWord _ee);
@@ -379,6 +379,7 @@ namespace dsp56k
 		void decode_sss_read(JitReg64 _dst, TWord _sss) const;
 		void decode_LLL_read(TWord _lll, const JitReg32& x, const JitReg32& y);
 		void decode_LLL_write(TWord _lll, const JitReg32& x, const JitReg32& y);
+		void decode_XMove_MMRRR(const JitReg64& _dst, TWord _mm, TWord _rrr);
 		
 		TWord getOpWordB() const			{ return m_opWordB; }
 		void getOpWordB(const JitReg& _dst) const;

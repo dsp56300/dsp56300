@@ -331,4 +331,50 @@ namespace dsp56k
 			m_block.mem().writeDspMemory(MemArea_Y, ea, y);
 		}
 	}
+
+	inline void JitOps::op_Movexy(TWord op)
+	{
+		const auto MM		= getFieldValue<Movexy,Field_MM>(op);
+		const auto RRR		= getFieldValue<Movexy,Field_RRR>(op);
+		const auto mm		= getFieldValue<Movexy,Field_mm>(op);
+		const auto rr		= getFieldValue<Movexy,Field_rr>(op);
+		const auto writeX	= getFieldValue<Movexy,Field_W>(op);
+		const auto writeY	= getFieldValue<Movexy,Field_w>(op);
+		const auto ee		= getFieldValue<Movexy,Field_ee>(op);
+		const auto ff		= getFieldValue<Movexy,Field_ff>(op);
+
+		RegGP eaX(m_block);
+		decode_XMove_MMRRR( eaX, MM, RRR );
+
+		const TWord regIdxOffset = RRR >= 4 ? 0 : 4;
+
+		const RegGP eaY(m_block);
+		decode_XMove_MMRRR( eaY, mm, (rr + regIdxOffset) & 7 );
+
+		if(!writeX)
+		{
+			const RegGP r(m_block);
+			decode_ee_read( r, ee );
+			writeMemOrPeriph(MemArea_X, eaX, r);
+		}
+		if(!writeY)
+		{
+			const RegGP r(m_block);
+			decode_ff_read( r, ff );
+			writeMemOrPeriph( MemArea_Y, eaY, r);
+		}
+
+		if( writeX )
+		{
+			const RegGP r(m_block);
+			readMemOrPeriph(r, MemArea_X, eaX);
+			decode_ee_write( ee, r );
+		}
+		if( writeY )
+		{
+			const RegGP r(m_block);
+			readMemOrPeriph(r, MemArea_Y, eaY);
+			decode_ff_write( ff, r);
+		}
+	}
 }
