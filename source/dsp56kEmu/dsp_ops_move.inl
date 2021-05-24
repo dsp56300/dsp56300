@@ -366,9 +366,9 @@ namespace dsp56k
 		{
 			// TODO: remove the if here, use helper templates instead
 			if( mmmrrr == MMMRRR_ImmediateData )
-				memWritePeriphFFFFC0( S, pp, ea );
+				memWritePeriphFFFFC0( s, pp, ea );
 			else
-				memWritePeriphFFFFC0( S, pp, memRead( s, ea ) );
+				memWritePeriphFFFFC0( s, pp, memRead( S, ea ) );
 		}
 		else
 			memWrite( S, ea, memReadPeriphFFFFC0( s, pp ) );
