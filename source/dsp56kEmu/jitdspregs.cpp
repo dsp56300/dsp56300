@@ -515,7 +515,7 @@ namespace dsp56k
 
 	void JitDspRegs::getSS(const JitReg64& _dst) const
 	{
-		const auto first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
+		const auto* first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
 
 		const RegGP ssIndex(m_block);
 		getSP(ssIndex.get().r32());
@@ -527,7 +527,7 @@ namespace dsp56k
 
 	void JitDspRegs::setSS(const JitReg64& _src) const
 	{
-		const auto first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
+		const auto* first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
 
 		const RegGP ssIndex(m_block);
 		getSP(ssIndex.get().r32());

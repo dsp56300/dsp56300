@@ -1087,6 +1087,35 @@ namespace dsp56k
 		}
 	}
 
+	template<Instruction Inst, bool Accumulate> void JitOps::op_Mpy_su(TWord op)
+	{
+		const bool ab		= getFieldValue<Inst,Field_d>(op);
+		const bool negate	= getFieldValue<Inst,Field_k>(op);
+		const bool uu		= getFieldValue<Inst,Field_s>(op);
+		const TWord qqqq	= getFieldValue<Inst,Field_QQQQ>(op);
+
+		RegGP s1(m_block);
+		RegGP s2(m_block);
+		decode_QQQQ_read( s1, s2, qqqq );
+
+		alu_mpy(ab, s1, s2, negate, Accumulate, !uu, true);
+	}
+
+	inline void JitOps::op_Mpyi(TWord op)
+	{
+		const bool	ab		= getFieldValue<Mpyi,Field_d>(op);
+		const bool	negate	= getFieldValue<Mpyi,Field_k>(op);
+		const TWord qq		= getFieldValue<Mpyi,Field_qq>(op);
+
+		RegGP s(m_block);
+		m_asm.mov(s, asmjit::Imm(m_block.dsp().immediateDataExt<Mpyi>()));
+
+		RegGP reg(m_block);
+		decode_qq_read(reg, qq);
+
+		alu_mpy( ab, reg, s, negate, false );
+	}
+
 	inline void JitOps::op_Neg(TWord op)
 	{
 		const auto D = getFieldValue<Neg, Field_d>(op);

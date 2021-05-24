@@ -167,7 +167,7 @@ namespace dsp56k
 		&JitOps::op_Mac_S1S2,						// Mac_S1S2 
 		&JitOps::op_Mac_S<Mac_S, true, false>,		// Mac_S 
 		&JitOps::op_Maci_xxxx,						// Maci_xxxx 
-		&JitOps::op_Macsu,							// Macsu 
+		&JitOps::op_Mpy_su<Macsu, true>,			// Macsu 
 		&JitOps::op_Macr_S1S2,						// Macr_S1S2 
 		&JitOps::op_Mac_S<Mac_S, true, true>,		// Macr_S 
 		&JitOps::op_Macri_xxxx,						// Macri_xxxx 
@@ -209,7 +209,7 @@ namespace dsp56k
 		&JitOps::op_Movep_SYqq,						// Movep_SYqq 
 		&JitOps::op_Mpy_S1S2D,						// Mpy_S1S2D 
 		&JitOps::op_Mac_S<Mpy_SD, false, false>,	// Mpy_SD 
-		&JitOps::op_Mpy_su,							// Mpy_su 
+		&JitOps::op_Mpy_su<Mpy_su,false>,			// Mpy_su 
 		&JitOps::op_Mpyi,							// Mpyi 
 		&JitOps::op_Mpyr_S1S2D,						// Mpyr_S1S2D 
 		&JitOps::op_Mac_S<Mpyr_SD, false, true>,	// Mpyr_SD 
