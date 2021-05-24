@@ -85,7 +85,25 @@ namespace dsp56k
 		updateAddressRegister(offset, mmm, rrr);
 		writeMemOrPeriph(_area, offset, _src);
 	}
-		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>::type*> void JitOps::writeMem(TWord op, EMemArea _area, const JitReg64& _src) const
+
+	template <Instruction Inst, typename std::enable_if<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type*> void JitOps::writeMem(const TWord _op, const JitReg64& _src)
+	{
+		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);
+		const TWord rrr = getFieldValue<Inst, Field_RRR>(_op);
+		const auto area = getFieldValueMemArea<Inst>(_op);
+
+		if ((mmm << 3 | rrr) == MMMRRR_ImmediateData)
+		{
+			assert(0 && "unable to write to immediate data");
+			return;
+		}
+
+		const RegGP offset(m_block);
+		updateAddressRegister(offset, mmm, rrr);
+		writeMemOrPeriph(area, offset, _src);
+	}
+
+	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>::type*> void JitOps::writeMem(TWord op, EMemArea _area, const JitReg64& _src) const
 	{
 		const auto offset = getFieldValue<Inst,Field_aaaaaa>(op);
 		m_block.mem().writeDspMemory(_area, offset, _src);

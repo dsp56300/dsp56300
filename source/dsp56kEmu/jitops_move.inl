@@ -480,8 +480,8 @@ namespace dsp56k
 		const TWord pp		= getFieldValue<Movep_ppea,Field_pppppp>(op);
 		const TWord mmmrrr	= getFieldValue<Movep_ppea,Field_MMM, Field_RRR>(op);
 		const auto write	= getFieldValue<Movep_ppea,Field_W>(op);
-		const EMemArea s	= getFieldValue<Movep_ppea,Field_s>(op) ? MemArea_Y : MemArea_X;
-		const EMemArea S	= getFieldValueMemArea<Movep_ppea>(op);
+		const EMemArea sp	= getFieldValue<Movep_ppea,Field_s>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea sm	= getFieldValueMemArea<Movep_ppea>(op);
 
 		RegGP ea(m_block);
 		effectiveAddress<Movep_ppea>(ea, op);
@@ -490,20 +490,49 @@ namespace dsp56k
 		{
 			if( mmmrrr == MMMRRR_ImmediateData )
 			{
-				m_block.mem().writePeriph(s, pp + 0xffffc0, ea);
+				m_block.mem().writePeriph(sp, pp + 0xffffc0, ea);
 			}
 			else
 			{
 				const RegGP r(m_block);
-				readMemOrPeriph(r, S, ea);
-				m_block.mem().writePeriph(s, pp + 0xffffc0, r);
+				readMemOrPeriph(r, sm, ea);
+				m_block.mem().writePeriph(sp, pp + 0xffffc0, r);
 			}
 		}
 		else
 		{
 			const RegGP r(m_block);
-			m_block.mem().readPeriph(r, s, pp + 0xffffc0);
-			writeMemOrPeriph(S, ea, r);
+			m_block.mem().readPeriph(r, sp, pp + 0xffffc0);
+			writeMemOrPeriph(sm, ea, r);
 		}
 	}
+
+	template <Instruction Inst> void JitOps::movep_qqea(TWord op, const EMemArea _area)
+	{
+		const auto qAddr	= getFieldValue<Inst,Field_qqqqqq>(op) + 0xffff80;
+		const auto write	= getFieldValue<Inst,Field_W>(op);
+
+		if( write )
+		{
+			const RegGP r(m_block);
+			readMem<Inst>(r, op);
+			m_block.mem().writePeriph(_area, qAddr, r );
+		}
+		else
+		{
+			const RegGP r(m_block);			
+			m_block.mem().readPeriph(r, _area, qAddr);
+			writeMem<Inst>(op, r);
+		}
+	}
+
+	inline void JitOps::op_Movep_Xqqea(TWord op)
+	{
+		movep_qqea<Movep_Xqqea>(op, MemArea_X);
+	}
+	inline void JitOps::op_Movep_Yqqea(TWord op)
+	{
+		movep_qqea<Movep_Yqqea>(op, MemArea_Y);
+	}
+
 }

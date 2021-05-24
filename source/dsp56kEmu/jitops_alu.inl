@@ -669,7 +669,7 @@ namespace dsp56k
 		(this->*_bitmodFunc)(d, getBit<Inst>(op));
 		decode_dddddd_write(dddddd, d.get().r32());
 	}
-	
+
 	inline void JitOps::op_Bchg_ea(TWord op)	{ bitmod_ea<Bclr_ea>(op, &JitOps::alu_bchg); }
 	inline void JitOps::op_Bchg_aa(TWord op)	{ bitmod_aa<Bclr_aa>(op, &JitOps::alu_bchg); }
 	inline void JitOps::op_Bchg_pp(TWord op)	{ bitmod_ppqq<Bclr_pp>(op, &JitOps::alu_bchg); }
