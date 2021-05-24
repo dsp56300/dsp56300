@@ -535,4 +535,54 @@ namespace dsp56k
 		movep_qqea<Movep_Yqqea>(op, MemArea_Y);
 	}
 
+	template <Instruction Inst> void JitOps::movep_sqq(TWord op, const EMemArea _area)
+	{
+		const TWord addr	= getFieldValue<Inst,Field_q, Field_qqqqq>(op) + 0xffff80;
+		const TWord dddddd	= getFieldValue<Inst,Field_dddddd>(op);
+		const auto	write	= getFieldValue<Inst,Field_W>(op);
+
+		const RegGP r(m_block);
+
+		if( write )
+		{
+			decode_dddddd_read( r.get().r32(), dddddd );
+			m_block.mem().writePeriph(_area, addr, r);
+		}
+		else
+		{
+			m_block.mem().readPeriph(r,_area, addr);
+			decode_dddddd_write( dddddd, r.get().r32());
+		}
+	}
+
+	inline void JitOps::op_Movep_SXqq(TWord op)
+	{
+		movep_sqq<Movep_SXqq>(op, MemArea_X);
+	}
+
+	inline void JitOps::op_Movep_SYqq(TWord op)
+	{
+		movep_sqq<Movep_SYqq>(op, MemArea_Y);
+	}
+
+	inline void JitOps::op_Movep_Spp(TWord op)
+	{
+		const TWord pppppp	= getFieldValue<Movep_Spp,Field_pppppp>(op) + 0xffffc0;
+		const TWord dddddd	= getFieldValue<Movep_Spp,Field_dddddd>(op);
+		const EMemArea area = getFieldValue<Movep_Spp,Field_s>(op) ? MemArea_Y : MemArea_X;
+		const auto	write	= getFieldValue<Movep_Spp,Field_W>(op);
+
+		const RegGP r(m_block);
+
+		if( write )
+		{
+			decode_dddddd_read( r.get().r32(), dddddd );
+			m_block.mem().writePeriph(area, pppppp, r);
+		}
+		else
+		{
+			m_block.mem().readPeriph(r, area, pppppp);
+			decode_dddddd_write(dddddd, r.get().r32());
+		}
+	}
 }

@@ -211,9 +211,9 @@ namespace dsp56k
 		void op_Movep_Yqqea(TWord op);
 		void op_Movep_eapp(TWord op)			{ errNotImplemented(op); }
 		void op_Movep_eaqq(TWord op)			{ errNotImplemented(op); }
-		void op_Movep_Spp(TWord op){}
-		void op_Movep_SXqq(TWord op){}
-		void op_Movep_SYqq(TWord op){}
+		void op_Movep_Spp(TWord op);
+		void op_Movep_SXqq(TWord op);
+		void op_Movep_SYqq(TWord op);
 		void op_Mpy_S1S2D(TWord op)				{ alu_multiply(op); }
 //		void op_Mpy_SD(TWord op);
 		void op_Mpy_su(TWord op){}
@@ -375,6 +375,7 @@ namespace dsp56k
 		void decode_JJJ_read_56(JitReg64 _dst, TWord JJJ, bool _b) const;
 		void decode_JJ_read(JitReg64 _dst, TWord jj) const;
 		void decode_RRR_read(const JitReg& _dst, TWord _mmmrrr, int _shortDisplacement = 0);
+		void decode_qq_read(const JitReg& _dst, TWord _qq);
 		void decode_QQ_read(const JitReg& _dst, TWord _qq);
 		void decode_QQQQ_read(const JitReg& _s1, const JitReg& _s2, TWord _qqqq) const;
 		void decode_sss_read(JitReg64 _dst, TWord _sss) const;
@@ -426,6 +427,7 @@ namespace dsp56k
 		template<Instruction Inst> void move_Rnxxx(TWord op, EMemArea _area);
 		template<Instruction Inst> void move_L(TWord op);
 		template<Instruction Inst> void movep_qqea(TWord op, EMemArea _area);
+		template<Instruction Inst> void movep_sqq(TWord op, EMemArea _area);
 	private:
 		void errNotImplemented(TWord op);
 

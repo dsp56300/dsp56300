@@ -455,6 +455,18 @@ namespace dsp56k
 		}
 	}
 
+	void JitOps::decode_qq_read(const JitReg& _dst, TWord _qq)
+	{
+		switch (_qq)
+		{
+		case 0: m_dspRegs.getX0(_dst); break;
+		case 1: m_dspRegs.getY0(_dst); break;
+		case 2: m_dspRegs.getX1(_dst); break;
+		case 3: m_dspRegs.getY1(_dst); break;
+		default: assert(0 && "invalid qq value"); break;
+		}
+	}
+
 	inline void JitOps::decode_QQ_read(const JitReg& _dst, TWord _qq)
 	{
 		switch (_qq)
