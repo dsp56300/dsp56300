@@ -9,6 +9,7 @@ namespace dsp56k
 	};
 }
 
+#ifdef _WIN32
 #ifdef assert
 #	undef assert
 #endif
@@ -19,4 +20,8 @@ namespace dsp56k
 #else
 #define assert( expr )			{}
 #define assertf( expr, msg )	{}
+#endif
+#else
+#include <cassert>
+#	define assertf( expr, msg )	assert( (expr) && #msg )
 #endif
