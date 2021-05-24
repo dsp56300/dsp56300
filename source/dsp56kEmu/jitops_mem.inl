@@ -93,6 +93,12 @@ namespace dsp56k
 
 	void JitOps::readMemOrPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset)
 	{
+		if(_area == MemArea_P)
+		{
+			m_block.mem().readDspMemory(_dst, MemArea_P, _offset);
+			return;
+		}
+
 		// I don't like this. There are special instructions to access peripherals, but the decoding allows to access peripherals with regular addressing so we're lost here
 		const auto readPeriph = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
@@ -110,6 +116,12 @@ namespace dsp56k
 	}
 	void JitOps::writeMemOrPeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value)
 	{
+		if(_area == MemArea_P)
+		{
+			m_block.mem().writeDspMemory(MemArea_P, _offset, _value);
+			return;
+		}
+
 		// I don't like this. There are special instructions to access peripherals, but the decoding allows to access peripherals with regular addressing so we're lost here
 		const auto readPeriph = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
