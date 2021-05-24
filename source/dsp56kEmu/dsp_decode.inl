@@ -495,7 +495,7 @@ namespace dsp56k
 
 		switch( _mm )
 		{
-		case 0:	/* 00 */	a = r;													break;
+		case 0:	/* 00 */	a = r;																				break;
 		case 1:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var,moduloMask[_rrr],modulo[_rrr]);	break;
 		case 2:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var,moduloMask[_rrr],modulo[_rrr]);		break;
 		case 3:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var,moduloMask[_rrr],modulo[_rrr]);		break;

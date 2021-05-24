@@ -331,6 +331,18 @@ namespace dsp56k
 		default: assert( 0 && "invalid ddddd value" ); break;
 		}
 	}
+	
+	void JitOps::decode_ee_read(JitReg& _dst, const TWord _ee)
+	{
+		switch (_ee)
+		{
+		case 0: m_dspRegs.getX0(_dst); break;
+		case 1: m_dspRegs.getX1(_dst); break;
+		case 2: transferAluTo24(_dst, 0); break;
+		case 3: transferAluTo24(_dst, 1); break;
+		default: assert(0 && "invalid ee value");
+		}
+	}
 
 	inline void JitOps::decode_ee_write(const TWord _ee, const JitReg& _value)
 	{
