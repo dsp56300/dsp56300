@@ -363,6 +363,8 @@ namespace dsp56k
 		void decode_cccc(const JitReg& _dst, TWord cccc);
 		void decode_dddddd_read(const JitReg32& _dst, TWord _dddddd);
 		void decode_dddddd_write(TWord _dddddd, const JitReg32& _src);
+		void decode_ddddd_pcr_read(const JitReg32& _dst, TWord _ddddd);
+		void decode_ddddd_pcr_write(TWord _ddddd, const JitReg32& _src);
 		void decode_ee_write(TWord _ee, const JitReg& _value);
 		void decode_EE_read(RegGP& dst, TWord _ee);
 		void decode_EE_write(const JitReg64& _src, TWord _ee);

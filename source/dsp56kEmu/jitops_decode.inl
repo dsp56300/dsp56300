@@ -283,6 +283,55 @@ namespace dsp56k
 		}
 	}
 
+	void JitOps::decode_ddddd_pcr_read(const JitReg32& _dst, TWord _ddddd)
+	{
+		if( (_ddddd & 0x18) == 0x00 )
+		{
+			return m_dspRegs.getM(_dst, _ddddd&0x07);
+		}
+
+		switch( _ddddd )
+		{
+		case 0xa:	m_dspRegs.getEP(_dst);	break;
+		case 0x10:	m_dspRegs.getVBA(_dst); break;
+		case 0x11:	m_dspRegs.getSC(_dst); break;
+		case 0x18:	m_dspRegs.getSZ(_dst); break;
+		case 0x19:	getSR(_dst); break;
+		case 0x1a:	m_dspRegs.getOMR(_dst); break;
+		case 0x1b:	m_dspRegs.getSP(_dst); break;
+		case 0x1c:	m_dspRegs.getSSH(_dst); break;
+		case 0x1d:	m_dspRegs.getSSL(_dst); break;
+		case 0x1e:	m_dspRegs.getLA(_dst); break;
+		case 0x1f:	m_dspRegs.getLC(_dst); break;
+		default: assert( 0 && "invalid ddddd value" ); break;
+		}
+	}
+
+	void JitOps::decode_ddddd_pcr_write(TWord _ddddd, const JitReg32& _src)
+	{
+		if( (_ddddd & 0x18) == 0x00 )
+		{
+			m_dspRegs.setM(_ddddd&0x07, _src);
+			return;
+		}
+
+		switch( _ddddd )
+		{
+		case 0xa:	m_dspRegs.setEP(_src); break;
+		case 0x10:	m_dspRegs.setVBA(_src); break;
+		case 0x11:	m_dspRegs.setSC(_src); break;
+		case 0x18:	m_dspRegs.setSZ(_src); break;
+		case 0x19:	setSR(_src); break;
+		case 0x1a:	m_dspRegs.setOMR(_src); break;
+		case 0x1b:	m_dspRegs.setSP(_src); break;
+		case 0x1c:	m_dspRegs.setSSH(_src); break;
+		case 0x1d:	m_dspRegs.setSSL(_src); break;
+		case 0x1e:	m_dspRegs.setLA(_src); break;
+		case 0x1f:	m_dspRegs.setLC(_src); break;
+		default: assert( 0 && "invalid ddddd value" ); break;
+		}
+	}
+
 	inline void JitOps::decode_ee_write(const TWord _ee, const JitReg& _value)
 	{
 		switch (_ee)
