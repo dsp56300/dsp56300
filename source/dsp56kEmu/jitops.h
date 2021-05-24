@@ -204,7 +204,7 @@ namespace dsp56k
 		void op_Movec_aa(TWord op);
 		void op_Movec_S1D2(TWord op);
 		void op_Movec_xx(TWord op);
-		void op_Movem_ea(TWord op){}
+		void op_Movem_ea(TWord op);
 		void op_Movem_aa(TWord op)				{ errNotImplemented(op); }
 		void op_Movep_ppea(TWord op){}
 		void op_Movep_Xqqea(TWord op){}

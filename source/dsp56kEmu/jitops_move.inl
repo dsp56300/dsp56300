@@ -453,4 +453,25 @@ namespace dsp56k
 		m_asm.mov(r.get().r32(), asmjit::Imm(iiiiiiii));
 		decode_ddddd_pcr_write( ddddd, r.get().r32());
 	}
+
+	inline void JitOps::op_Movem_ea(TWord op)
+	{
+		const auto write	= getFieldValue<Movem_ea,Field_W>(op);
+		const auto dddddd	= getFieldValue<Movem_ea,Field_dddddd>(op);
+
+		if( write )
+		{
+			RegGP r(m_block);
+			readMem<Movem_ea>(r, op, MemArea_P);
+			decode_dddddd_write( dddddd, r.get().r32());
+		}
+		else
+		{
+			RegGP ea(m_block);
+			effectiveAddress<Movem_ea>(ea, op);
+			RegGP r(m_block);
+			decode_dddddd_read(r.get().r32(), dddddd);
+			m_block.mem().writeDspMemory(MemArea_P, ea, r);	// TODO: block termination
+		}
+	}
 }
