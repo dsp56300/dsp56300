@@ -296,9 +296,9 @@ namespace dsp56k
 	}
 	inline void DSP::op_Movec_aa(const TWord op)
 	{
-		const TWord ddddd	= getFieldValue<Movec_aa,Field_DDDDD>(op);
+		const auto ddddd	= getFieldValue<Movec_aa,Field_DDDDD>(op);
 		const auto write	= getFieldValue<Movec_aa,Field_W>(op);
-		
+
 		if( write )
 		{
 			const auto m = readMem<Movec_aa>(op);
@@ -312,7 +312,7 @@ namespace dsp56k
 			const EMemArea area = getFieldValueMemArea<Movec_aa>(op);
 
 			memWrite( area, addr, decode_ddddd_pcr_read(ddddd).toWord() );
-		}		
+		}
 	}
 	inline void DSP::op_Movec_S1D2(const TWord op)
 	{

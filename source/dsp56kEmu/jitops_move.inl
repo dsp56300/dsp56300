@@ -377,4 +377,80 @@ namespace dsp56k
 			decode_ff_write( ff, r);
 		}
 	}
+
+	inline void JitOps::op_Movec_ea(TWord op)
+	{
+		const auto ddddd = getFieldValue<Movec_ea,Field_DDDDD>(op);
+		const auto write = getFieldValue<Movec_ea,Field_W>(op);
+
+		if( write )
+		{
+			const RegGP r(m_block);
+			readMem<Movec_ea>(r, op);
+
+			decode_ddddd_pcr_write( ddddd, r.get().r32());
+		}
+		else
+		{
+			const auto area = getFieldValueMemArea<Movec_ea>(op);
+
+			RegGP ea(m_block);
+			effectiveAddress<Movec_ea>(ea, op);
+
+			const RegGP r(m_block);
+			decode_ddddd_pcr_read(r.get().r32(), ddddd);
+
+			writeMemOrPeriph(area, ea, r);
+		}
+	}
+	inline void JitOps::op_Movec_aa(TWord op)
+	{
+		const auto ddddd	= getFieldValue<Movec_aa,Field_DDDDD>(op);
+		const auto write	= getFieldValue<Movec_aa,Field_W>(op);
+
+		if( write )
+		{
+			RegGP r(m_block);
+			readMem<Movec_aa>(r, op);
+			decode_ddddd_pcr_write( ddddd, r.get().r32() );
+		}
+		else
+		{
+			const auto addr = getFieldValue<Movec_aa,Field_aaaaaa>(op);
+			const auto area = getFieldValueMemArea<Movec_aa>(op);
+
+			const RegGP r(m_block);
+			decode_ddddd_pcr_read(r.get().r32(), ddddd);
+			m_block.mem().writeDspMemory(area, addr, r);
+		}
+	}
+	inline void JitOps::op_Movec_S1D2(TWord op)
+	{
+		const auto write	= getFieldValue<Movec_S1D2,Field_W>(op);
+		const auto eeeeee	= getFieldValue<Movec_S1D2,Field_eeeeee>(op);
+		const auto ddddd	= getFieldValue<Movec_S1D2,Field_DDDDD>(op);
+
+		const RegGP r(m_block);
+
+		if( write )
+		{
+			decode_dddddd_read(r.get().r32(), eeeeee);
+			decode_ddddd_pcr_write(ddddd, r.get().r32());
+		}
+		else
+		{
+			decode_ddddd_pcr_read(r.get().r32(), ddddd);
+			decode_dddddd_write(eeeeee, r.get().r32());
+		}
+	}
+
+	inline void JitOps::op_Movec_xx(TWord op)
+	{
+		const auto iiiiiiii	= getFieldValue<Movec_xx, Field_iiiiiiii>(op);
+		const auto ddddd	= getFieldValue<Movec_xx,Field_DDDDD>(op);
+
+		const RegGP r(m_block);
+		m_asm.mov(r.get().r32(), asmjit::Imm(iiiiiiii));
+		decode_ddddd_pcr_write( ddddd, r.get().r32());
+	}
 }
