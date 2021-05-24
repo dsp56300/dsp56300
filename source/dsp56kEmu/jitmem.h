@@ -2,11 +2,7 @@
 
 #include "jitregtracker.h"
 #include "jittypes.h"
-#include "opcodes.h"
-#include "opcodetypes.h"
 #include "types.h"
-
-#include "asmjit/x86/x86operand.h"
 
 namespace dsp56k
 {
