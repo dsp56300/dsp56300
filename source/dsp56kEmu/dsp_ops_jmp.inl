@@ -7,22 +7,22 @@
 
 namespace dsp56k
 {
-	template <> inline void DSP::jumpOrJSR<DSP::Jump>(const TWord _ea)	{ setPC(_ea); }
-	template <> inline void DSP::jumpOrJSR<DSP::JSR>(const TWord _ea)	{ jsr(_ea); }
+	template <> inline void DSP::jumpOrJSR<Jump>(const TWord _ea)	{ setPC(_ea); }
+	template <> inline void DSP::jumpOrJSR<JSR>(const TWord _ea)	{ jsr(_ea); }
 
-	template<Instruction Inst, DSP::JumpMode Jsr> void DSP::jumpIfCC(const TWord op, const TWord ea)
+	template<Instruction Inst, JumpMode Jsr> void DSP::jumpIfCC(const TWord op, const TWord ea)
 	{
 		if(checkCondition<Inst>(op))
 			jumpOrJSR<Jsr>(ea);
 	}
 
-	template<Instruction Inst, DSP::JumpMode Jsr> void DSP::jumpIfCC(const TWord op)
+	template<Instruction Inst, JumpMode Jsr> void DSP::jumpIfCC(const TWord op)
 	{
 		const auto ea = effectiveAddress<Inst>(op);
 		jumpIfCC<Inst,Jsr>(op, ea);
 	}
 
-	template<Instruction Inst, DSP::JumpMode Jsr, DSP::ExpectedBitValue BitValue> void DSP::jumpIfBitTestMem(const TWord op)
+	template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void DSP::jumpIfBitTestMem(const TWord op)
 	{
 		const auto addr = absAddressExt<Inst>();
 
@@ -30,7 +30,7 @@ namespace dsp56k
 			jumpOrJSR<Jsr>(addr);
 	}
 
-	template<Instruction Inst, DSP::JumpMode Jsr, DSP::ExpectedBitValue BitValue> void DSP::jumpIfBitTestDDDDDD(const TWord op)
+	template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void DSP::jumpIfBitTestDDDDDD(const TWord op)
 	{
 		const auto addr = absAddressExt<Inst>();
 

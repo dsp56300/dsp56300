@@ -5,22 +5,22 @@
 
 namespace dsp56k
 {
-	template <> inline void DSP::braOrBsr<DSP::Bra>(const int _offset)	{ setPC(pcCurrentInstruction + _offset); }
-	template <> inline void DSP::braOrBsr<DSP::Bsr>(const int _offset)	{ jsr(pcCurrentInstruction + _offset); }
+	template <> inline void DSP::braOrBsr<Bra>(const int _offset)	{ setPC(pcCurrentInstruction + _offset); }
+	template <> inline void DSP::braOrBsr<Bsr>(const int _offset)	{ jsr(pcCurrentInstruction + _offset); }
 
-	template<Instruction Inst, DSP::BraMode Bmode> void DSP::braIfCC(const TWord op, const int offset)
+	template<Instruction Inst, BraMode Bmode> void DSP::braIfCC(const TWord op, const int offset)
 	{
 		if(checkCondition<Inst>(op))
 			braOrBsr<Bmode>(offset);
 	}
 
-	template<Instruction Inst, DSP::BraMode BMode> void DSP::braIfCC(const TWord op)
+	template<Instruction Inst, BraMode BMode> void DSP::braIfCC(const TWord op)
 	{
 		const auto offset = relativeAddressOffset<Inst>(op);
 		braIfCC<Inst,BMode>(op, offset);
 	}
 
-	template<Instruction Inst, DSP::BraMode BMode, DSP::ExpectedBitValue BitValue> void DSP::braIfBitTestMem(const TWord op)
+	template<Instruction Inst, BraMode BMode, ExpectedBitValue BitValue> void DSP::braIfBitTestMem(const TWord op)
 	{
 		const auto addr = pcRelativeAddressExt<Inst>();
 
@@ -28,7 +28,7 @@ namespace dsp56k
 			braOrBsr<BMode>(addr);
 	}
 
-	template<Instruction Inst, DSP::BraMode BMode, DSP::ExpectedBitValue BitValue> void DSP::braIfBitTestDDDDDD(const TWord op)
+	template<Instruction Inst, BraMode BMode, ExpectedBitValue BitValue> void DSP::braIfBitTestDDDDDD(const TWord op)
 	{
 		const auto addr = pcRelativeAddressExt<Inst>();
 

@@ -165,4 +165,22 @@ namespace dsp56k
 	};
 
 	extern const char g_memAreaNames[MemArea_COUNT];
+
+	enum BraMode
+	{
+		Bra,
+		Bsr
+	};
+
+	enum JumpMode
+	{
+		Jump,
+		JSR
+	};
+
+	enum ExpectedBitValue
+	{
+		BitClear = false,
+		BitSet = true
+	};
 }

@@ -998,19 +998,7 @@ namespace dsp56k
 			return signextend<int,24>(fetchOpWordB());
 		}
 
-		enum ExpectedBitValue
-		{
-			BitClear = false,
-			BitSet = true
-		};
-
 		// -------------- bra variants
-		enum BraMode
-		{
-			Bra,
-			Bsr
-		};
-
 		template<BraMode Bmode> void braOrBsr(int offset);
 
 		template<Instruction Inst, BraMode Bmode> void braIfCC(TWord op);
@@ -1019,14 +1007,8 @@ namespace dsp56k
 
 		template<Instruction Inst, BraMode Bmode, ExpectedBitValue BitValue> void braIfBitTestMem(TWord op);
 		template<Instruction Inst, BraMode Bmode, ExpectedBitValue BitValue> void braIfBitTestDDDDDD(TWord op);
-		
-		// -------------- jmp variants
-		enum JumpMode
-		{
-			Jump,
-			JSR
-		};
 
+		// -------------- jmp variants
 		template<JumpMode Jsr> void jumpOrJSR(TWord ea);
 
 		template<Instruction Inst, JumpMode Jsr>
