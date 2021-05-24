@@ -499,4 +499,89 @@ namespace dsp56k
 			assert( 0 && "invalid sss value" );
 		}
 	}
+	void JitOps::decode_LLL_read(TWord _lll, const JitReg32& x, const JitReg32& y)
+	{
+		switch (_lll)
+		{
+		case 0:
+		case 1:
+		case 4:
+		case 5:
+			{
+				const auto alu = _lll & 3;
+				m_dspRegs.getALU(y, alu);
+				m_asm.mov(x.r64(), y.r64());
+				m_asm.shr(x, asmjit::Imm(24));
+				m_asm.and_(x, asmjit::Imm(0xffffff));
+				m_asm.and_(y, asmjit::Imm(0xffffff));
+			}
+			break;
+		case 2:
+		case 3:
+			{
+				const auto xy = _lll - 2;
+				m_dspRegs.getXY(y, xy);
+				m_asm.mov(x.r64(), y.r64());
+				m_asm.shr(x, asmjit::Imm(24));
+				m_asm.and_(x, asmjit::Imm(0xffffff));
+				m_asm.and_(y, asmjit::Imm(0xffffff));
+			}
+			break;
+		case 6:
+			transferAluTo24(x, 0);
+			transferAluTo24(y, 1);
+			break;
+		case 7:
+			transferAluTo24(x, 1);
+			transferAluTo24(y, 0);
+			break;
+		default:
+			assert(0 && "invalid LLL value");
+			break;
+		}
+	}
+
+	void JitOps::decode_LLL_write(TWord _lll, const JitReg32& x, const JitReg32& y)
+	{
+		switch (_lll)
+		{
+		case 0:
+		case 1:
+		case 4:
+		case 5:
+			{
+				const auto alu = _lll & 3;
+				const AluReg r(m_block, alu);
+				m_asm.shr(r, asmjit::Imm(48));
+				m_asm.shl(r, asmjit::Imm(24));
+				m_asm.and_(r, x.r64());
+				m_asm.shl(r, asmjit::Imm(24));
+				m_asm.and_(r, y.r64());
+			}
+			break;
+		case 2:
+		case 3:
+			{
+				const auto xy = _lll - 2;
+
+				RegGP r(m_block);
+				m_asm.mov(r, x);
+				m_asm.shl(r, asmjit::Imm(24));
+				m_asm.and_(r, y);
+				m_dspRegs.setXY(xy, r);
+			}
+			break;
+		case 6:
+			transfer24ToAlu(0, x);
+			transfer24ToAlu(1, y);
+			break;
+		case 7:
+			transfer24ToAlu(1, x);
+			transfer24ToAlu(0, y);
+			break;
+		default:
+			assert(0 && "invalid LLL value");
+			break;
+		}
+	}
 }

@@ -197,8 +197,8 @@ namespace dsp56k
 		void op_Movey_Rnxxx(TWord op);
 		void op_Moveyr_ea(TWord op);
 		void op_Moveyr_A(TWord op);
-		void op_Movel_ea(TWord op){}
-		void op_Movel_aa(TWord op){}
+		void op_Movel_ea(TWord op);
+		void op_Movel_aa(TWord op);
 		void op_Movexy(TWord op){}
 		void op_Movec_ea(TWord op){}
 		void op_Movec_aa(TWord op){}
@@ -376,7 +376,9 @@ namespace dsp56k
 		void decode_QQ_read(const JitReg& _dst, TWord _qq);
 		void decode_QQQQ_read(const JitReg& _s1, const JitReg& _s2, TWord _qqqq) const;
 		void decode_sss_read(JitReg64 _dst, TWord _sss) const;
-
+		void decode_LLL_read(TWord _lll, const JitReg32& x, const JitReg32& y);
+		void decode_LLL_write(TWord _lll, const JitReg32& x, const JitReg32& y);
+		
 		TWord getOpWordB() const			{ return m_opWordB; }
 		void getOpWordB(const JitReg& _dst) const;
 
@@ -419,7 +421,7 @@ namespace dsp56k
 		template<Instruction Inst> void move_ddddd_absAddr(TWord _op, EMemArea _area);
 		template<Instruction Inst> void move_Rnxxxx(TWord op, EMemArea _area);
 		template<Instruction Inst> void move_Rnxxx(TWord op, EMemArea _area);
-
+		template<Instruction Inst> void move_L(TWord op);
 	private:
 		void errNotImplemented(TWord op);
 

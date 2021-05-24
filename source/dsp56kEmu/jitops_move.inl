@@ -274,4 +274,61 @@ namespace dsp56k
 			transfer24ToAlu(d, y0);
 		}
 	}
+
+	template<Instruction Inst> void JitOps::move_L(TWord op)
+	{
+		const auto LLL		= getFieldValue<Inst,Field_L, Field_LL>(op);
+		const auto write	= getFieldValue<Inst,Field_W>(op);
+
+		const RegGP ea(m_block);
+		effectiveAddress<Inst>(ea, op);
+
+		const RegGP x(m_block);
+		const RegGP y(m_block);
+
+		if( write )
+		{
+			readMemOrPeriph(x, MemArea_X, ea);
+			readMemOrPeriph(y, MemArea_Y, ea);
+
+			decode_LLL_write(LLL,  x.get().r32(),y.get().r32());
+		}
+		else
+		{
+			decode_LLL_read(LLL, x.get().r32(),y.get().r32());
+
+			writeMemOrPeriph(MemArea_X, ea, x);
+			writeMemOrPeriph(MemArea_Y, ea, y);
+		}
+	}
+
+	inline void JitOps::op_Movel_ea(TWord op)
+	{
+		move_L<Movel_ea>(op);
+	}
+
+	inline void JitOps::op_Movel_aa(TWord op)
+	{
+		const auto LLL		= getFieldValue<Movel_aa,Field_L, Field_LL>(op);
+		const auto write	= getFieldValue<Movel_aa,Field_W>(op);
+		const auto ea		= getFieldValue<Movel_aa,Field_aaaaaa>(op);
+
+		const RegGP x(m_block);
+		const RegGP y(m_block);
+
+		if( write )
+		{
+			m_block.mem().readDspMemory(x, MemArea_X, ea);
+			m_block.mem().readDspMemory(y, MemArea_Y, ea);
+
+			decode_LLL_write(LLL,  x.get().r32(),y.get().r32());
+		}
+		else
+		{
+			decode_LLL_read(LLL, x.get().r32(),y.get().r32());
+
+			m_block.mem().writeDspMemory(MemArea_X, ea, x);
+			m_block.mem().writeDspMemory(MemArea_Y, ea, y);
+		}
+	}
 }
