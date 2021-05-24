@@ -10,21 +10,21 @@ namespace dsp56k
 
 		Reg_A, Reg_B,		// 56bit
 
-		Reg_X0,		Reg_X1,		
-		Reg_Y0,		Reg_Y1,		
+		Reg_X0,		Reg_X1,
+		Reg_Y0,		Reg_Y1,
 
-		Reg_A0,		Reg_A1,		Reg_A2,		
-		Reg_B0,		Reg_B1,		Reg_B2,		
+		Reg_A0,		Reg_A1,		Reg_A2,	
+		Reg_B0,		Reg_B1,		Reg_B2,	
 
-		Reg_PC,		Reg_SR,		Reg_OMR,	
+		Reg_PC,		Reg_SR,		Reg_OMR,
 
-		Reg_LA,		Reg_LC,		
+		Reg_LA,		Reg_LC,	
 
-		Reg_SSH,	Reg_SSL,	Reg_SP,		
+		Reg_SSH,	Reg_SSL,	Reg_SP,	
 
-		Reg_EP,		Reg_SZ,		Reg_SC,		Reg_VBA,	
+		Reg_EP,		Reg_SZ,		Reg_SC,		Reg_VBA,
 
-		Reg_IPRC,	Reg_IPRP,	Reg_BCR,	Reg_DCR,	
+		Reg_IPRC,	Reg_IPRP,	Reg_BCR,	Reg_DCR,
 
 		Reg_AAR0,	Reg_AAR1,	Reg_AAR2,	Reg_AAR3,	
 
@@ -33,10 +33,10 @@ namespace dsp56k
 		Reg_M0,	Reg_M1,	Reg_M2,	Reg_M3,	Reg_M4,	Reg_M5,	Reg_M6,	Reg_M7,		
 
 		Reg_HIT, Reg_MISS,
-		Reg_REPLACE,	
-		Reg_CYC,		
-		Reg_ICTR,		
-		Reg_CNT1, Reg_CNT2, Reg_CNT3, Reg_CNT4,		
+		Reg_REPLACE,
+		Reg_CYC,
+		Reg_ICTR,
+		Reg_CNT1, Reg_CNT2, Reg_CNT3, Reg_CNT4,
 
 		Reg_COUNT
 	};
