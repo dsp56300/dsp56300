@@ -61,25 +61,25 @@ namespace dsp56k
 		void op_Bra_xxxx(TWord op){}
 		void op_Bra_xxx(TWord op){}
 		void op_Bra_Rn(TWord op){}
-		void op_Brclr_ea(TWord op){}
-		void op_Brclr_aa(TWord op){}
-		void op_Brclr_pp(TWord op){}
-		void op_Brclr_qq(TWord op){}
-		void op_Brclr_S(TWord op){}
+		void op_Brclr_ea(TWord op);
+		void op_Brclr_aa(TWord op);
+		void op_Brclr_pp(TWord op);
+		void op_Brclr_qq(TWord op);
+		void op_Brclr_S(TWord op);
 		void op_BRKcc(TWord op)			{ errNotImplemented(op); }
-		void op_Brset_ea(TWord op){}
-		void op_Brset_aa(TWord op){}
-		void op_Brset_pp(TWord op){}
-		void op_Brset_qq(TWord op){}
-		void op_Brset_S(TWord op){}
+		void op_Brset_ea(TWord op);
+		void op_Brset_aa(TWord op);
+		void op_Brset_pp(TWord op);
+		void op_Brset_qq(TWord op);
+		void op_Brset_S(TWord op);
 		void op_BScc_xxxx(TWord op){}
 		void op_BScc_xxx(TWord op){}
 		void op_BScc_Rn(TWord op){}
-		void op_Bsclr_ea(TWord op){}
-		void op_Bsclr_aa(TWord op){}
-		void op_Bsclr_pp(TWord op){}
-		void op_Bsclr_qq(TWord op){}
-		void op_Bsclr_S(TWord op){}
+		void op_Bsclr_ea(TWord op);
+		void op_Bsclr_aa(TWord op);
+		void op_Bsclr_pp(TWord op);
+		void op_Bsclr_qq(TWord op);
+		void op_Bsclr_S(TWord op);
 		void op_Bset_ea(TWord op);
 		void op_Bset_aa(TWord op);
 		void op_Bset_pp(TWord op);
@@ -88,11 +88,11 @@ namespace dsp56k
 		void op_Bsr_xxxx(TWord op){}
 		void op_Bsr_xxx(TWord op){}
 		void op_Bsr_Rn(TWord op){}
-		void op_Bsset_ea(TWord op){}
-		void op_Bsset_aa(TWord op){}
-		void op_Bsset_pp(TWord op){}
-		void op_Bsset_qq(TWord op){}
-		void op_Bsset_S(TWord op){}
+		void op_Bsset_ea(TWord op);
+		void op_Bsset_aa(TWord op);
+		void op_Bsset_pp(TWord op);
+		void op_Bsset_qq(TWord op);
+		void op_Bsset_S(TWord op);
 		void op_Btst_ea(TWord op);
 		void op_Btst_aa(TWord op);
 		void op_Btst_pp(TWord op);
@@ -309,6 +309,9 @@ namespace dsp56k
 		void readMemOrPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset);
 		void writeMemOrPeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value);
 
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type* = nullptr> void bitTestMemory(TWord op);
+		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_bbbbb>()>::type* = nullptr> void bitTest(TWord op, const JitReg& _value) const;
+
 		// DSP register access
 		void getMR(const JitReg64& _dst) const;
 		void getCCR(RegGP& _dst);
@@ -433,6 +436,33 @@ namespace dsp56k
 		template<Instruction Inst> void move_L(TWord op);
 		template<Instruction Inst> void movep_qqea(TWord op, EMemArea _area);
 		template<Instruction Inst> void movep_sqq(TWord op, EMemArea _area);
+
+		// -------------- bra variants
+		template<BraMode Bmode> void braOrBsr(int offset);
+		template<BraMode Bmode> void braOrBsr(const JitReg32& _absAddr);
+
+		template<Instruction Inst, BraMode Bmode> void braIfCC(TWord op);
+
+		template<Instruction Inst, BraMode Bmode> void braIfCC(TWord op, int offset);
+
+		template<Instruction Inst, BraMode Bmode, ExpectedBitValue BitValue> void braIfBitTestMem(TWord op);
+		template<Instruction Inst, BraMode Bmode, ExpectedBitValue BitValue> void braIfBitTestDDDDDD(TWord op);
+
+		// -------------- jmp variants
+		template<JumpMode Jsr> void jumpOrJSR(TWord ea);
+
+		template<Instruction Inst, JumpMode Jsr>
+		void jumpIfCC(TWord op);
+
+		template<Instruction Inst, JumpMode Jsr>
+		void jumpIfCC(TWord op, TWord ea);
+		
+		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestMem(TWord op);
+		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestDDDDDD(TWord op);
+
+		void jmp(TWord _absAddr);
+		void jsr(TWord _absAddr);
+
 	private:
 		void errNotImplemented(TWord op);
 
@@ -447,5 +477,7 @@ namespace dsp56k
 		TWord m_pcCurrentOp = 0;
 		TWord m_opWordA = 0;
 		TWord m_opWordB = 0;
+
+		TWord m_nextPC = ~0;
 	};
 }

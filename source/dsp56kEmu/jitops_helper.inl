@@ -410,4 +410,19 @@ namespace dsp56k
 		}
 		ccr_update_ifGreater(SRB_L);
 	}
+
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type*> void JitOps::bitTestMemory(TWord op)
+	{
+		const auto bit = getBit<Inst>(op);
+
+		RegGP r(m_block);
+		readMem<Inst>(r, op);
+		m_asm.bt(r, asmjit::Imm(bit));
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_bbbbb>()>::type*> void JitOps::bitTest(TWord op, const JitReg& _value) const
+	{
+		const auto bit = getBit<Inst>(op);
+		m_asm.bt(_value, asmjit::Imm(bit));
+	}
 }

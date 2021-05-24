@@ -8,6 +8,7 @@
 #include "jitops_ccr.inl"
 #include "jitops_decode.inl"
 #include "jitops_helper.inl"
+#include "jitops_jmp.inl"
 #include "jitops_mem.inl"
 #include "jitops_move.inl"
 

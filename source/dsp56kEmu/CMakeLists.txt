@@ -52,7 +52,7 @@ jitblock.cpp jitblock.h
 jitdspregs.cpp jitdspregs.h
 jitmem.cpp jitmem.h
 jitops.cpp jitops.h
-jitops_alu.inl jitops_ccr.inl jitops_decode.inl jitops_helper.inl jitops_mem.inl jitops_move.inl
+jitops_alu.inl jitops_ccr.inl jitops_decode.inl jitops_helper.inl jitops_jmp.inl jitops_mem.inl jitops_move.inl
 jitregtracker.cpp jitregtracker.h
 jittypes.h
 jitunittests.cpp jitunittests.h
