@@ -139,6 +139,23 @@ namespace dsp56k
 		_dsp->getPeriph(_area)->write(_offset, _value);
 	}
 
+	void Jitmem::readPeriph(const JitReg64& _dst, EMemArea _area, const TWord& _offset) const
+	{
+		PushGP r2(m_block, regArg2);
+		PushGP rPadding(m_block, regArg2);	// 16 byte alignment
+
+		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
+		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
+		m_block.asm_().mov(regArg2, asmjit::Imm(_offset));
+
+		{
+			PushShadowSpace ss(m_block);
+			m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
+		}
+
+		m_block.asm_().mov(_dst, regReturnVal);
+	}
+
 	void Jitmem::readPeriph(const JitReg64& _dst, const EMemArea _area, const JitReg64& _offset) const
 	{
 		PushGP r2(m_block, regArg2);

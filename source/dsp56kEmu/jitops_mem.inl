@@ -12,7 +12,7 @@
 
 namespace dsp56k
 {
-	template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::effectiveAddress(const JitReg64& _dst, const TWord _op)
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::effectiveAddress(const JitReg64& _dst, const TWord _op)
 	{
 		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);
 		const TWord rrr = getFieldValue<Inst, Field_RRR>(_op);

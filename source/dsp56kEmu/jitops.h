@@ -206,7 +206,7 @@ namespace dsp56k
 		void op_Movec_xx(TWord op);
 		void op_Movem_ea(TWord op);
 		void op_Movem_aa(TWord op)				{ errNotImplemented(op); }
-		void op_Movep_ppea(TWord op){}
+		void op_Movep_ppea(TWord op);
 		void op_Movep_Xqqea(TWord op){}
 		void op_Movep_Yqqea(TWord op){}
 		void op_Movep_eapp(TWord op)			{ errNotImplemented(op); }
@@ -286,7 +286,7 @@ namespace dsp56k
 		}
 
 		// DSP memory access
-		template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void effectiveAddress(const JitReg64& _dst, TWord _op);
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void effectiveAddress(const JitReg64& _dst, TWord _op);
 
 		template <Instruction Inst, typename std::enable_if<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord _op);
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord _op, EMemArea _area);

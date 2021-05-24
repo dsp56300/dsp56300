@@ -474,4 +474,36 @@ namespace dsp56k
 			m_block.mem().writeDspMemory(MemArea_P, ea, r);	// TODO: block termination
 		}
 	}
+
+	inline void JitOps::op_Movep_ppea(TWord op)
+	{
+		const TWord pp		= getFieldValue<Movep_ppea,Field_pppppp>(op);
+		const TWord mmmrrr	= getFieldValue<Movep_ppea,Field_MMM, Field_RRR>(op);
+		const auto write	= getFieldValue<Movep_ppea,Field_W>(op);
+		const EMemArea s	= getFieldValue<Movep_ppea,Field_s>(op) ? MemArea_Y : MemArea_X;
+		const EMemArea S	= getFieldValueMemArea<Movep_ppea>(op);
+
+		RegGP ea(m_block);
+		effectiveAddress<Movep_ppea>(ea, op);
+
+		if( write )
+		{
+			if( mmmrrr == MMMRRR_ImmediateData )
+			{
+				m_block.mem().writePeriph(s, pp + 0xffffc0, ea);
+			}
+			else
+			{
+				const RegGP r(m_block);
+				readMemOrPeriph(r, S, ea);
+				m_block.mem().writePeriph(s, pp + 0xffffc0, r);
+			}
+		}
+		else
+		{
+			const RegGP r(m_block);
+			m_block.mem().readPeriph(r, s, pp + 0xffffc0);
+			writeMemOrPeriph(S, ea, r);
+		}
+	}
 }

@@ -54,6 +54,7 @@ namespace dsp56k
 		void readDspMemory(const JitReg& _dst, EMemArea _area, TWord _offset) const;
 		void writeDspMemory(EMemArea _area, TWord _offset, const JitReg& _src) const;
 
+		void readPeriph(const JitReg64& _dst, EMemArea _area, const TWord& _offset) const;
 		void readPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset) const;
 		void writePeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value) const;
 		void writePeriph(EMemArea _area, const TWord& _offset, const JitReg64& _value) const;
