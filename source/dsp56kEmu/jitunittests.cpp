@@ -93,7 +93,7 @@ namespace dsp56k
 		div();
 		dmac();
 		extractu();
-//		ifcc();
+		ifcc();
 		inc();
 		lra();
 		lsl();
@@ -1506,7 +1506,7 @@ namespace dsp56k
 			assert(!dsp.sr_test(SR_V));
 		});
 	}
-	/*
+
 	void JitUnittests::ifcc()
 	{
 		runTest([&](JitBlock& _block, JitOps& _ops)
@@ -1537,7 +1537,7 @@ namespace dsp56k
 			assert(dsp.reg.a.var == 1);
 		});
 	}
-	*/
+
 	void JitUnittests::ori_build(JitBlock& _block, JitOps& _ops)
 	{
 		dsp.reg.omr.var = 0xff1111;

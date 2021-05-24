@@ -149,6 +149,11 @@ namespace dsp56k
 		m_block.mem().mov(_dst, _src);
 	}
 
+	bool JitDspRegs::isLoaded(const uint32_t _reg) const
+	{
+		return m_loadedRegs & (1 << _reg);
+	}
+
 	void JitDspRegs::setR(int _agu, const JitReg& _src)
 	{
 		if (!isLoaded(LoadedRegR0 + _agu))
@@ -215,17 +220,6 @@ namespace dsp56k
 		}
 	}
 
-	JitReg JitDspRegs::getPC()
-	{
-		if(!isLoaded(LoadedRegPC))
-		{
-			load24(regPC, m_dsp.regs().pc);
-			setLoaded(LoadedRegPC);
-		}
-
-		return regPC;
-	}
-
 	JitReg JitDspRegs::getSR()
 	{
 		if(!isLoaded(LoadedRegSR))
@@ -235,17 +229,6 @@ namespace dsp56k
 		}
 
 		return regSR;
-	}
-
-	JitReg JitDspRegs::getLC()
-	{
-		if(!isLoaded(LoadedRegLC))
-		{
-			load24(regLC, m_dsp.regs().lc);			
-			setLoaded(LoadedRegLC);
-		}
-
-		return regLC;
 	}
 
 	JitReg JitDspRegs::getExtMemAddr()
@@ -571,19 +554,26 @@ namespace dsp56k
 	void JitDspRegs::loadDSPRegs()
 	{
 		for(auto i=0; i<8; ++i)
-			loadAGU(i);
+		{
+			if(!isLoaded(LoadedRegR0 + i))
+				loadAGU(i);
+		}
 
-		loadALU(0);
-		loadALU(1);
+		if(!isLoaded(LoadedRegA))
+			loadALU(0);
+		if(!isLoaded(LoadedRegB))
+			loadALU(1);
 
-		loadXY(0);
-		loadXY(1);
+		if(!isLoaded(LoadedRegX))
+			loadXY(0);
+		if(!isLoaded(LoadedRegY))
+			loadXY(1);
+
+		getSR();
 	}
 
 	void JitDspRegs::storeDSPRegs()
 	{
-		// TODO: we should skip all registers that have not been written but only read
-
 		for(auto i=0; i<8; ++i)
 		{
 			if(isLoaded(LoadedRegR0 + i))
@@ -596,13 +586,10 @@ namespace dsp56k
 		if(isLoaded(LoadedRegX))			storeXY(0);
 		if(isLoaded(LoadedRegY))			storeXY(1);
 
-		if(isLoaded(LoadedRegPC))			store24(m_dsp.regs().pc, regPC);
 		if(isLoaded(LoadedRegSR))
 		{
 			store24(m_dsp.regs().sr, regSR);
 			m_dsp.resetCCRCache();
 		}
-
-		if(isLoaded(LoadedRegLC))			store24(m_dsp.regs().lc, regLC);
 	}
 }

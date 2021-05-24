@@ -250,9 +250,9 @@ namespace dsp56k
 		void op_Sub_xxxx(TWord op);
 		void op_Subl(TWord op)					{ errNotImplemented(op); }
 		void op_Subr(TWord op)					{ errNotImplemented(op); }
-		void op_Tcc_S1D1(TWord op){}
-		void op_Tcc_S1D1S2D2(TWord op){}
-		void op_Tcc_S2D2(TWord op){}
+		void op_Tcc_S1D1(TWord op);
+		void op_Tcc_S1D1S2D2(TWord op);
+		void op_Tcc_S2D2(TWord op);
 		void op_Tfr(TWord op){}
 		void op_Trap(TWord op)					{ errNotImplemented(op); }
 		void op_Trapcc(TWord op)				{ errNotImplemented(op); }
@@ -279,6 +279,15 @@ namespace dsp56k
 		{
 			static_assert(g_opcodes[Inst].m_extensionWordType & PCRelativeAddressExt, "opcode does not have a PC-relative address extension word");
 			return signextend<int,24>(m_opWordB);
+		}
+
+		// Check Condition
+		template <Instruction Inst> void checkCondition(const TWord _op)
+		{
+			const TWord cccc = getFieldValue<Inst,Field_CCCC>(_op);
+			const RegGP r(m_block);
+			decode_cccc(r, cccc);
+			m_asm.cmp(r, asmjit::Imm(0));
 		}
 
 		// DSP memory access
@@ -431,7 +440,6 @@ namespace dsp56k
 		const Opcodes& m_opcodes;
 		JitDspRegs& m_dspRegs;
 		asmjit::x86::Assembler& m_asm;
-		std::map<TWord, asmjit::Label> m_pcLabels;
 
 		bool m_ccrDirty = false;
 		const bool m_useCCRCache;

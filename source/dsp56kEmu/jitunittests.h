@@ -128,7 +128,7 @@ namespace dsp56k
 		void div();
 		void dmac();
 		void extractu();
-//		void ifcc();
+		void ifcc();
 		void inc();
 		void lra();
 		void lsl();

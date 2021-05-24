@@ -1244,6 +1244,79 @@ namespace dsp56k
 		alu_sub( ab, r );		// TODO use immediate data
 	}
 
+	inline void JitOps::op_Tcc_S1D1(TWord op)
+	{
+		const auto JJJ = getFieldValue<Tcc_S1D1,Field_JJJ>(op);
+		const bool ab = getFieldValue<Tcc_S1D1,Field_d>(op);
+
+		m_dspRegs.notifyBeginBranch();
+
+		const auto end = m_asm.newLabel();
+		checkCondition<Tcc_S1D1>(op);
+		m_asm.jz(end);
+
+		const RegGP r(m_block);
+		decode_JJJ_read_56(r, JJJ, !ab);
+		m_dspRegs.setALU(ab, r);
+
+		m_asm.bind(end);
+	}
+
+	inline void JitOps::op_Tcc_S1D1S2D2(TWord op)
+	{
+		const auto TTT		= getFieldValue<Tcc_S1D1S2D2,Field_TTT>(op);
+		const auto JJJ		= getFieldValue<Tcc_S1D1S2D2,Field_JJJ>(op);
+		const auto ttt		= getFieldValue<Tcc_S1D1S2D2,Field_ttt>(op);
+		const auto ab		= getFieldValue<Tcc_S1D1S2D2,Field_d>(op);
+
+		const auto end = m_asm.newLabel();
+
+		m_dspRegs.notifyBeginBranch();
+
+		checkCondition<Tcc_S1D1S2D2>(op);
+		m_asm.jz(end);
+		
+		{
+			{
+				const RegGP r(m_block);
+				decode_JJJ_read_56(r, JJJ, !ab);
+				m_dspRegs.setALU(ab, r);
+			}
+
+			if(TTT != ttt)
+			{
+				RegGP r(m_block);
+				m_dspRegs.getR(r, ttt);
+				m_dspRegs.setR(TTT, r);
+			}
+		}
+
+		m_asm.bind(end);
+	}
+
+	inline void JitOps::op_Tcc_S2D2(TWord op)
+	{
+		const auto TTT	= getFieldValue<Tcc_S2D2,Field_TTT>(op);
+		const auto ttt	= getFieldValue<Tcc_S2D2,Field_ttt>(op);
+
+		if(TTT == ttt)
+			return;
+
+		m_dspRegs.notifyBeginBranch();
+
+		const auto end = m_asm.newLabel();
+
+		checkCondition<Tcc_S2D2>(op);
+
+		m_asm.jz(end);
+		{
+			RegGP r(m_block);
+			m_dspRegs.getR(r, ttt);
+			m_dspRegs.setR(TTT, r);
+		}
+		m_asm.bind(end);
+	}
+
 	inline void JitOps::op_Tst(TWord op)
 	{
 		const auto D = getFieldValue<Tst, Field_d>(op);

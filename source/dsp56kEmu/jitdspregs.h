@@ -31,9 +31,7 @@ namespace dsp56k
 		void setN(int _agu, const JitReg& _src);
 		void setM(int _agu, const JitReg& _src);
 
-		JitReg getPC();
 		JitReg getSR();
-		JitReg getLC();
 		JitReg getExtMemAddr();
 
 		void getALU(const JitReg& _dst, int _alu);
@@ -91,14 +89,26 @@ namespace dsp56k
 		void mask56(const JitReg& _alu) const;
 		void mask48(const JitReg& _alu) const;
 
+		void notifyBeginBranch()
+		{
+			/*
+			If code is generated which uses the DspRegs state machine and this is NOT executed because of a branch,
+			the state machine will emit register restore in its destructor but the load of these registers is missing.
+			The only workaround currently available is to emit loading code for all registers. Can be improved later
+			by only emitting loading code for register that have actually been loaded in the code that has not been
+			executed.
+			*/
+
+			loadDSPRegs();
+		}
 	private:
 		enum LoadedRegs
 		{
 			LoadedRegR0,	LoadedRegR1,	LoadedRegR2,	LoadedRegR3,	LoadedRegR4,	LoadedRegR5,	LoadedRegR6,	LoadedRegR7,
 			LoadedRegA,		LoadedRegB,
 			LoadedRegX,		LoadedRegY,
-			LoadedRegLC,	LoadedRegExtMem,
-			LoadedRegSR,	LoadedRegPC,
+			LoadedRegExtMem,
+			LoadedRegSR,
 		};
 
 		void loadDSPRegs();
@@ -115,9 +125,10 @@ namespace dsp56k
 		void load24(const asmjit::x86::Gp& _dst, TReg24& _src) const;
 		void store24(TReg24& _dst, const asmjit::x86::Gp& _src) const;
 
-		bool isLoaded(const uint32_t _reg) const		{ return m_loadedRegs & (1<<_reg); }
+		bool isLoaded(uint32_t _reg) const;
 		void setLoaded(const uint32_t _reg)				{ m_loadedRegs |= (1<<_reg); }
 		void setUnloaded(const uint32_t _reg)			{ m_loadedRegs &= ~(1<<_reg); }
+		uint32_t getLoadedRegs() const					{ return m_loadedRegs; }
 
 		JitBlock& m_block;
 		asmjit::x86::Assembler& m_asm;

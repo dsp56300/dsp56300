@@ -380,12 +380,6 @@ namespace dsp56k
 
 	void JitOps::emitOpProlog()
 	{
-		const auto label = m_asm.newLabel();
-		m_asm.bind(label);
-
-		m_pcLabels.insert(std::make_pair(m_pcCurrentOp, label));
-
-		m_asm.inc(m_dspRegs.getPC());
 	}
 
 	void JitOps::emitOpEpilog()
@@ -414,10 +408,11 @@ namespace dsp56k
 
 	template<bool BackupCCR> void JitOps::op_Ifcc(TWord op)
 	{
-		/*
 		const TWord cccc = getFieldValue<Ifcc,Field_CCCC>(op);
 
 		const auto end = m_asm.newLabel();
+
+		m_dspRegs.notifyBeginBranch();
 
 		{
 			const RegGP test(m_block);
@@ -451,7 +446,6 @@ namespace dsp56k
 		}
 
 		m_asm.bind(end);
-		*/
 	}
 
 	inline void JitOps::op_Lua_ea(const TWord _op)
