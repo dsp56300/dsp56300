@@ -310,8 +310,8 @@ namespace dsp56k
 		void readMemOrPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset);
 		void writeMemOrPeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value);
 
-		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type* = nullptr> void bitTestMemory(TWord op);
-		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_bbbbb>()>::type* = nullptr> void bitTest(TWord op, const JitReg& _value) const;
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type* = nullptr> void bitTestMemory(TWord _op, ExpectedBitValue _bitValue, asmjit::Label _skip);
+		template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_bbbbb>()>::type* = nullptr> void bitTest(TWord op, const JitReg& _value, ExpectedBitValue _bitValue, asmjit::Label _skip) const;
 
 		// DSP register access
 		void getMR(const JitReg64& _dst) const;

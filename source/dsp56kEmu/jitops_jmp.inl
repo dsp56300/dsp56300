@@ -21,12 +21,7 @@ namespace dsp56k
 
 		m_dspRegs.notifyBeginBranch();
 
-		bitTestMemory<Inst>(op);
-
-		if(BitValue == BitSet)
-			m_asm.jnc(end);
-		else if(BitValue == BitClear)
-			m_asm.jc(end);
+		bitTestMemory<Inst>(op, BitValue, end);
 
 		braOrBsr<BMode>(addr);
 
@@ -46,12 +41,7 @@ namespace dsp56k
 
 		m_dspRegs.notifyBeginBranch();
 
-		bitTest<Inst>(op, r);
-
-		if(BitValue == BitSet)
-			m_asm.jnc(end);
-		else if(BitValue == BitClear)
-			m_asm.jc(end);
+		bitTest<Inst>(op, r, BitValue, end);
 
 		braOrBsr<BMode>(addr);
 

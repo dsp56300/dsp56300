@@ -411,18 +411,22 @@ namespace dsp56k
 		ccr_update_ifGreater(SRB_L);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type*> void JitOps::bitTestMemory(TWord op)
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type*> void JitOps::bitTestMemory(const TWord _op, const ExpectedBitValue _bitValue, const asmjit::Label _skip)
 	{
-		const auto bit = getBit<Inst>(op);
+		const RegGP r(m_block);
+		readMem<Inst>(r, _op);
 
-		RegGP r(m_block);
-		readMem<Inst>(r, op);
-		m_asm.bt(r, asmjit::Imm(bit));
+		bitTest<Inst>(_op, r, _bitValue, _skip);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_bbbbb>()>::type*> void JitOps::bitTest(TWord op, const JitReg& _value) const
+	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_bbbbb>()>::type*> void JitOps::bitTest(TWord op, const JitReg& _value, const ExpectedBitValue _bitValue, const asmjit::Label _skip) const
 	{
 		const auto bit = getBit<Inst>(op);
 		m_asm.bt(_value, asmjit::Imm(bit));
+
+		if(_bitValue == BitSet)
+			m_asm.jnc(_skip);
+		else if(_bitValue == BitClear)
+			m_asm.jc(_skip);
 	}
 }
