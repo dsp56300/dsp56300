@@ -251,7 +251,7 @@ namespace dsp56k
 		void op_Tcc_S1D1(TWord op);
 		void op_Tcc_S1D1S2D2(TWord op);
 		void op_Tcc_S2D2(TWord op);
-		void op_Tfr(TWord op){}
+		void op_Tfr(TWord op);
 		void op_Trap(TWord op)					{ errNotImplemented(op); }
 		void op_Trapcc(TWord op)				{ errNotImplemented(op); }
 		void op_Tst(TWord op);

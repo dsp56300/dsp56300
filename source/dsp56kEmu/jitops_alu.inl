@@ -1343,6 +1343,17 @@ namespace dsp56k
 		m_asm.bind(end);
 	}
 
+	inline void JitOps::op_Tfr(TWord op)
+	{
+		const auto D = getFieldValue<Tfr, Field_d>(op);
+		const auto JJJ = getFieldValue<Tfr, Field_JJJ>(op);
+
+		const RegGP r(m_block);
+
+		decode_JJJ_read_56(r, JJJ, !D);
+		m_dspRegs.setALU(D, r);
+	}
+
 	inline void JitOps::op_Tst(TWord op)
 	{
 		const auto D = getFieldValue<Tst, Field_d>(op);
