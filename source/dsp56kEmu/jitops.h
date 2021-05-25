@@ -1,7 +1,5 @@
 #pragma once
 
-#include <map>
-
 #include "jitdspregs.h"
 #include "jitregtracker.h"
 #include "opcodes.h"
@@ -133,34 +131,34 @@ namespace dsp56k
 		void op_Inc(TWord op);
 		void op_Insert_S1S2(TWord op)		{ errNotImplemented(op); }
 		void op_Insert_CoS2(TWord op)		{ errNotImplemented(op); }
-		void op_Jcc_xxx(TWord op){}
-		void op_Jcc_ea(TWord op){}
-		void op_Jclr_ea(TWord op){}
-		void op_Jclr_aa(TWord op){}
-		void op_Jclr_pp(TWord op){}
-		void op_Jclr_qq(TWord op){}
-		void op_Jclr_S(TWord op){}
-		void op_Jmp_ea(TWord op){}
-		void op_Jmp_xxx(TWord op){}
-		void op_Jscc_xxx(TWord op){}
-		void op_Jscc_ea(TWord op){}
-		void op_Jsclr_ea(TWord op){}
-		void op_Jsclr_aa(TWord op){}
-		void op_Jsclr_pp(TWord op){}
-		void op_Jsclr_qq(TWord op){}
-		void op_Jsclr_S(TWord op){}
-		void op_Jset_ea(TWord op){}
-		void op_Jset_aa(TWord op){}
-		void op_Jset_pp(TWord op){}
-		void op_Jset_qq(TWord op){}
-		void op_Jset_S(TWord op){}
-		void op_Jsr_ea(TWord op){}
-		void op_Jsr_xxx(TWord op){}
-		void op_Jsset_ea(TWord op){}
-		void op_Jsset_aa(TWord op){}
-		void op_Jsset_pp(TWord op){}
-		void op_Jsset_qq(TWord op){}
-		void op_Jsset_S(TWord op){}
+		void op_Jcc_xxx(TWord op);
+		void op_Jcc_ea(TWord op);
+		void op_Jclr_ea(TWord op);
+		void op_Jclr_aa(TWord op);
+		void op_Jclr_pp(TWord op);
+		void op_Jclr_qq(TWord op);
+		void op_Jclr_S(TWord op);
+		void op_Jmp_ea(TWord op);
+		void op_Jmp_xxx(TWord op);
+		void op_Jscc_xxx(TWord op);
+		void op_Jscc_ea(TWord op);
+		void op_Jsclr_ea(TWord op);
+		void op_Jsclr_aa(TWord op);
+		void op_Jsclr_pp(TWord op);
+		void op_Jsclr_qq(TWord op);
+		void op_Jsclr_S(TWord op);
+		void op_Jset_ea(TWord op);
+		void op_Jset_aa(TWord op);
+		void op_Jset_pp(TWord op);
+		void op_Jset_qq(TWord op);
+		void op_Jset_S(TWord op);
+		void op_Jsr_ea(TWord op);
+		void op_Jsr_xxx(TWord op);
+		void op_Jsset_ea(TWord op);
+		void op_Jsset_aa(TWord op);
+		void op_Jsset_pp(TWord op);
+		void op_Jsset_qq(TWord op);
+		void op_Jsset_S(TWord op);
 		void op_Lra_Rn(TWord op)		{ errNotImplemented(op); }
 		void op_Lra_xxxx(TWord op);
 		void op_Lsl_D(TWord op);
@@ -289,6 +287,12 @@ namespace dsp56k
 			const RegGP r(m_block);
 			decode_cccc(r, cccc);
 			m_asm.cmp(r, asmjit::Imm(0));
+		}
+
+		template<Instruction Inst> TWord absAddressExt() const
+		{
+			static_assert(g_opcodes[Inst].m_extensionWordType & AbsoluteAddressExt, "opcode does not have an absolute address extension word");
+			return m_opWordB;
 		}
 
 		// DSP memory access
@@ -449,14 +453,11 @@ namespace dsp56k
 
 		// -------------- jmp variants
 		template<JumpMode Jsr> void jumpOrJSR(TWord ea);
+		template<JumpMode Jsr> void jumpOrJSR(const JitReg32& ea);
 
-		template<Instruction Inst, JumpMode Jsr>
-		void jumpIfCC(TWord op);
-
-		template<Instruction Inst, JumpMode Jsr>
-		void jumpIfCC(TWord op, TWord ea);
+		template<Instruction Inst, JumpMode Jsr, typename TAbsAddr> void jumpIfCC(TWord op, const TAbsAddr& ea);
 		
-		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestMem(TWord op);
+		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestMem(TWord _op);
 		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestDDDDDD(TWord op);
 
 		void jmp(const JitReg32& _absAddr);

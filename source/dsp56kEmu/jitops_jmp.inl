@@ -181,4 +181,135 @@ namespace dsp56k
 
 	// ________________________________________________
 	// JMP (absolute jumps)
+
+	template <> inline void JitOps::jumpOrJSR<Jump>(const TWord _ea)		{ jmp(_ea); }
+	template <> inline void JitOps::jumpOrJSR<JSR>(const TWord _ea)			{ jsr(_ea); }
+
+	template <> inline void JitOps::jumpOrJSR<Jump>(const JitReg32& _ea)	{ jmp(_ea); }
+	template <> inline void JitOps::jumpOrJSR<JSR>(const JitReg32& _ea)		{ jsr(_ea); }
+	
+	template<Instruction Inst, JumpMode Bmode, typename TAbsAddr> void JitOps::jumpIfCC(const TWord op, const TAbsAddr& offset)
+	{
+		const auto end = m_asm.newLabel();
+
+		m_dspRegs.notifyBeginBranch();
+
+		checkCondition<Inst>(op);
+
+		m_asm.jz(end);
+
+		jumpOrJSR<Bmode>(offset);
+
+		m_asm.bind(end);
+	}
+
+	template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void JitOps::jumpIfBitTestMem(const TWord _op)
+	{
+		const auto addr = absAddressExt<Inst>();
+
+		const auto end = m_asm.newLabel();
+
+		m_dspRegs.notifyBeginBranch();
+
+		bitTestMemory<Inst>(_op, BitValue, end);
+
+		jumpOrJSR<Jsr>(addr);
+
+		m_asm.bind(end);
+	}
+
+	template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void JitOps::jumpIfBitTestDDDDDD(const TWord op)
+	{
+		const auto addr = absAddressExt<Inst>();
+
+		const auto end = m_asm.newLabel();
+
+		const auto dddddd = getFieldValue<Inst,Field_DDDDDD>(op);
+
+		const RegGP r(m_block);
+		decode_dddddd_read(r.get().r32(), dddddd);
+
+		m_dspRegs.notifyBeginBranch();
+
+		bitTest<Inst>(op, r, BitValue, end);
+
+		jumpOrJSR<Jsr>(addr);
+
+		m_asm.bind(end);
+	}
+
+	inline void JitOps::op_Jclr_ea(const TWord op)		{ jumpIfBitTestMem<Jclr_ea, Jump, BitClear>(op); }
+	inline void JitOps::op_Jclr_aa(const TWord op)		{ jumpIfBitTestMem<Jclr_aa, Jump, BitClear>(op); }
+	inline void JitOps::op_Jclr_pp(const TWord op)		{ jumpIfBitTestMem<Jclr_pp, Jump, BitClear>(op); }
+	inline void JitOps::op_Jclr_qq(const TWord op)		{ jumpIfBitTestMem<Jclr_qq, Jump, BitClear>(op); }
+	inline void JitOps::op_Jclr_S(const TWord op)		{ jumpIfBitTestDDDDDD<Jclr_S, Jump, BitClear>(op); }
+
+	inline void JitOps::op_Jsclr_ea(const TWord op)		{ jumpIfBitTestMem<Jsclr_ea, JSR, BitClear>(op); }
+	inline void JitOps::op_Jsclr_aa(const TWord op)		{ jumpIfBitTestMem<Jsclr_aa, JSR, BitClear>(op); }
+	inline void JitOps::op_Jsclr_pp(const TWord op)		{ jumpIfBitTestMem<Jsclr_pp, JSR, BitClear>(op); }
+	inline void JitOps::op_Jsclr_qq(const TWord op)		{ jumpIfBitTestMem<Jsclr_qq, JSR, BitClear>(op); }
+	inline void JitOps::op_Jsclr_S(const TWord op)		{ jumpIfBitTestDDDDDD<Jsclr_S, JSR, BitClear>(op); }
+	inline void JitOps::op_Jset_ea(const TWord op)		{ jumpIfBitTestMem<Jset_ea, Jump, BitSet>(op); }
+	inline void JitOps::op_Jset_aa(const TWord op)		{ jumpIfBitTestMem<Jset_aa, Jump, BitSet>(op); }
+	inline void JitOps::op_Jset_pp(const TWord op)		{ jumpIfBitTestMem<Jset_pp, Jump, BitSet>(op); }
+	inline void JitOps::op_Jset_qq(const TWord op)		{ jumpIfBitTestMem<Jset_qq, Jump, BitSet>(op); }
+	inline void JitOps::op_Jset_S(const TWord op)		{ jumpIfBitTestDDDDDD<Jset_S, Jump, BitSet>(op); }
+
+	inline void JitOps::op_Jsset_ea(const TWord op)		{ jumpIfBitTestMem<Jsset_ea, JSR, BitSet>(op); }
+	inline void JitOps::op_Jsset_aa(const TWord op)		{ jumpIfBitTestMem<Jsset_aa, JSR, BitSet>(op); }
+	inline void JitOps::op_Jsset_pp(const TWord op)		{ jumpIfBitTestMem<Jsset_pp, JSR, BitSet>(op); }
+	inline void JitOps::op_Jsset_qq(const TWord op)		{ jumpIfBitTestMem<Jsset_qq, JSR, BitSet>(op); }
+	inline void JitOps::op_Jsset_S(const TWord op)		{ jumpIfBitTestDDDDDD<Jsset_S, JSR, BitSet>(op); }
+
+	inline void JitOps::op_Jcc_ea(TWord op)
+	{
+		RegGP ea(m_block);
+		effectiveAddress<Jcc_ea>(ea, op);
+		jumpIfCC<Jcc_ea, Jump>(op, ea.get().r32());
+	}
+
+	inline void JitOps::op_Jcc_xxx(TWord op)
+	{
+		const auto addr = getFieldValue<Jcc_xxx, Field_aaaaaaaaaaaa>(op);
+		jumpIfCC<Jcc_xxx, Jump>(op, addr);
+	}
+
+	inline void JitOps::op_Jmp_ea(TWord op)
+	{
+		RegGP ea(m_block);
+		effectiveAddress<Jmp_ea>(ea, op);
+		jumpOrJSR<Jump>(ea.get().r32());
+	}
+
+	inline void JitOps::op_Jmp_xxx(TWord op)
+	{
+		const auto addr = getFieldValue<Jmp_xxx, Field_aaaaaaaaaaaa>(op);
+		jumpOrJSR<Jump>(addr);
+	}
+
+	inline void JitOps::op_Jscc_ea(TWord op)
+	{
+		RegGP ea(m_block);
+		effectiveAddress<Jscc_ea>(ea, op);
+		jumpIfCC<Jscc_ea, JSR>(op, ea.get().r32());
+	}
+
+	inline void JitOps::op_Jscc_xxx(TWord op)
+	{
+		const auto addr = getFieldValue<Jscc_xxx, Field_aaaaaaaaaaaa>(op);
+		jumpIfCC<Jscc_xxx,JSR>(op, addr);
+	}
+
+	inline void JitOps::op_Jsr_ea(TWord op)
+	{
+		RegGP ea(m_block);
+		effectiveAddress<Jsr_ea>(ea, op);
+		jumpOrJSR<JSR>(ea.get().r32());
+	}
+
+	inline void JitOps::op_Jsr_xxx(TWord op)
+	{
+		const auto addr = getFieldValue<Jsr_xxx, Field_aaaaaaaaaaaa>(op);
+		jumpOrJSR<JSR>(addr);
+	}
 }
