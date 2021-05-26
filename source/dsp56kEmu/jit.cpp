@@ -43,22 +43,7 @@ namespace dsp56k
 
 		{
 			JitBlock block(*m_asm, m_dsp);
-
 			JitOps ops(block);
-
-			m_dsp.regs().a.var = 0x00ff112233445566;
-
-			ops.op_Abs(0);
-
-			/*
-			regs.getR(rax, 0);
-			regs.getN(rcx, 0);
-			regs.getM(rdx, 0);
-
-			regs.getR(Jitmem::ptr(*m_asm, m_dsp.regs().r[7]), 0);
-			regs.getN(Jitmem::ptr(*m_asm, m_dsp.regs().n[7]), 0);
-			regs.getM(Jitmem::ptr(*m_asm, m_dsp.regs().m[7]), 0);
-			*/
 		}
 
 		m_asm->ret();
