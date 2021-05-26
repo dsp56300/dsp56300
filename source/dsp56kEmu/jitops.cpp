@@ -281,6 +281,7 @@ namespace dsp56k
 		m_pcCurrentOp = _pc;
 		m_opWordA = _op;
 		m_opWordB = _opB;
+		m_opSize = 1;
 
 		if(Opcodes::isNonParallelOpcode(_op))
 		{

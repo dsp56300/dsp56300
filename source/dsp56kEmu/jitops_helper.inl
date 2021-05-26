@@ -233,7 +233,14 @@ namespace dsp56k
 		m_asm.shr(_r, asmjit::Imm(8));
 	}
 
-	inline void JitOps::getOpWordB(const JitReg& _dst) const
+	inline TWord JitOps::getOpWordB()
+	{
+		++m_opSize;
+		assert(m_opSize == 2);
+		return m_opWordB;
+	}
+
+	inline void JitOps::getOpWordB(const JitReg& _dst)
 	{
 		m_asm.mov(_dst.r32(), asmjit::Imm(getOpWordB()));
 	}

@@ -274,10 +274,10 @@ namespace dsp56k
 		void signed24To56(const JitReg64& _r) const;
 
 		// extension word access
-		template<Instruction Inst> int pcRelativeAddressExt() const
+		template<Instruction Inst> int pcRelativeAddressExt()
 		{
 			static_assert(g_opcodes[Inst].m_extensionWordType & PCRelativeAddressExt, "opcode does not have a PC-relative address extension word");
-			return signextend<int,24>(m_opWordB);
+			return signextend<int,24>(getOpWordB());
 		}
 
 		// Check Condition
@@ -289,10 +289,10 @@ namespace dsp56k
 			m_asm.cmp(r, asmjit::Imm(0));
 		}
 
-		template<Instruction Inst> TWord absAddressExt() const
+		template<Instruction Inst> TWord absAddressExt()
 		{
 			static_assert(g_opcodes[Inst].m_extensionWordType & AbsoluteAddressExt, "opcode does not have an absolute address extension word");
-			return m_opWordB;
+			return getOpWordB();
 		}
 
 		// DSP memory access
@@ -395,9 +395,9 @@ namespace dsp56k
 		void decode_LLL_read(TWord _lll, const JitReg32& x, const JitReg32& y);
 		void decode_LLL_write(TWord _lll, const JitReg32& x, const JitReg32& y);
 		void decode_XMove_MMRRR(const JitReg64& _dst, TWord _mm, TWord _rrr);
-		
-		TWord getOpWordB() const			{ return m_opWordB; }
-		void getOpWordB(const JitReg& _dst) const;
+
+		TWord getOpWordB();
+		void getOpWordB(const JitReg& _dst);
 
 		// ALU
 		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;
@@ -482,5 +482,6 @@ namespace dsp56k
 		TWord m_opWordB = 0;
 
 		TWord m_nextPC = ~0;
+		TWord m_opSize = 0;
 	};
 }
