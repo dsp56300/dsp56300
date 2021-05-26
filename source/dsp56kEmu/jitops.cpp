@@ -370,11 +370,77 @@ namespace dsp56k
 
 		emitOpProlog();
 
-		// TODO: latch registers
-		// use _mm_move_sd to pack two 64 bits LSB XMM regs into one XMM reg
+		// Backup of X Y A B, pack two DSP registers into one XMM register each
+		const RegXMM preMoveAB(m_block);
+		const RegXMM preMoveXY(m_block);
+
+		m_asm.movdqa(preMoveXY, regX());
+		m_asm.pslldq(preMoveXY, asmjit::Imm(8));
+		m_asm.movsd(preMoveXY, regY());
+
+		m_asm.movdqa(preMoveAB, regA());
+		m_asm.pslldq(preMoveAB, asmjit::Imm(8));
+		m_asm.movsd(preMoveAB, regB());
 
 		(this->*funcMove)(_op);
+
+		// now get X Y A B after the move, too
+		const RegXMM postMoveAB(m_block);
+		m_asm.movdqa(postMoveAB, regA());
+		m_asm.pslldq(postMoveAB, asmjit::Imm(8));
+		m_asm.movsd(postMoveAB, regB());
+
+		// loop registers are not used in parallel ALU operations
+		const PushGP postMoveX(m_asm, regLC);
+		const PushGP postMoveY(m_asm, regPC);
+
+		m_dspRegs.getXY(postMoveX, 0);
+		m_dspRegs.getXY(postMoveY, 1);
+
 		(this->*funcAlu)(_op);
+
+		// now check what has changed and get the final values for all registers
+		const RegGP preMove(m_block);
+		{
+			const RegGP r(m_block);
+
+			m_asm.movd(preMove, preMoveXY);
+			m_dspRegs.getXY(r, 0);
+			m_asm.cmp(preMove, postMoveX.get());
+			m_asm.cmovnz(r, postMoveX.get());
+			m_dspRegs.setXY(0, r);
+
+			m_asm.psrldq(preMoveXY, asmjit::Imm(8));
+			m_asm.movd(preMove, preMoveXY);
+			m_dspRegs.getXY(r, 1);
+			m_asm.cmp(preMove, postMoveY.get());
+			m_asm.cmovnz(r, postMoveY.get());
+			m_dspRegs.setXY(1, r);
+		}
+
+		{
+			const RegGP postMove(m_block);
+			{
+				const AluReg r(m_block, 0);
+
+				m_asm.movd(preMove, preMoveAB);
+				m_asm.movd(postMove, postMoveAB);
+				m_asm.cmp(preMove, postMove.get());
+				m_asm.cmovnz(r, postMove.get());
+			}
+
+			m_asm.psrldq(preMoveAB, asmjit::Imm(8));
+			m_asm.psrldq(postMoveAB, asmjit::Imm(8));
+
+			{
+				const AluReg r(m_block, 1);
+
+				m_asm.movd(preMove, preMoveAB);
+				m_asm.movd(postMove, postMoveAB);
+				m_asm.cmp(preMove, postMove.get());
+				m_asm.cmovnz(r, postMove.get());
+			}
+		}
 
 		emitOpEpilog();
 	}
