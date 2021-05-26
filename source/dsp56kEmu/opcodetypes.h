@@ -205,4 +205,12 @@ namespace dsp56k
 
 		EAandID					= EffectiveAddress | ImmediateData
 	};
+
+	enum OpcodeFlags
+	{
+		OpFlagBranch	= (1<<0),
+		OpFlagLoop		= (1<<1),
+		OpFlagCondition	= (1<<2),
+		OpFlagCacheMod	= (1<<3),
+	};
 }
