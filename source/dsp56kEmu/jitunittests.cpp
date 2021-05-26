@@ -215,21 +215,21 @@ namespace dsp56k
 		const RegGP ra(_block);
 		const RegGP rb(_block);
 
-		_block.mem().mov(regPC, m_checks[0]);
+		_block.mem().mov(regLA, m_checks[0]);
 		_block.mem().mov(regLC, m_checks[1]);
 		_block.mem().mov(regSR, m_checks[2]);
 		_block.mem().mov(regExtMem, m_checks[3]);
 		_block.mem().mov(ra, m_checks[4]);
 		_block.mem().mov(rb, m_checks[5]);
 
-		_ops.signextend24to56(regPC);
+		_ops.signextend24to56(regLA);
 		_ops.signextend24to56(regLC);
 		_ops.signextend48to56(regSR);
 		_ops.signextend48to56(regExtMem);
 		_ops.signextend56to64(ra);
 		_ops.signextend56to64(rb);
 
-		_block.mem().mov(m_checks[0], regPC);
+		_block.mem().mov(m_checks[0], regLA);
 		_block.mem().mov(m_checks[1], regLC);
 		_block.mem().mov(m_checks[2], regSR);
 		_block.mem().mov(m_checks[3], regExtMem);

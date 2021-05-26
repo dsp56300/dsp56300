@@ -242,6 +242,26 @@ namespace dsp56k
 		return regExtMem;
 	}
 
+	JitReg JitDspRegs::getLA()
+	{
+		if(!isLoaded(LoadedRegLA))
+		{
+			load24(regLA, m_dsp.regs().la);
+			setLoaded(LoadedRegLA);
+		}
+		return regLA;
+	}
+
+	JitReg JitDspRegs::getLC()
+	{
+		if(!isLoaded(LoadedRegLC))
+		{
+			load24(regLC, m_dsp.regs().lc);
+			setLoaded(LoadedRegLC);
+		}
+		return regLC;
+	}
+
 	void JitDspRegs::getALU(const JitReg& _dst, const int _alu)
 	{
 		if(!isLoaded(LoadedRegA + _alu))
@@ -476,24 +496,26 @@ namespace dsp56k
 		setSS(temp);
 	}
 
-	void JitDspRegs::getLA(const JitReg32& _dst) const
+	void JitDspRegs::getLA(const JitReg32& _dst)
 	{
-		m_block.mem().mov(_dst, m_dsp.regs().la);
+		m_asm.mov(_dst, getLA().r32());
 	}
 
-	void JitDspRegs::setLA(const JitReg32& _src) const
+	void JitDspRegs::setLA(const JitReg32& _src)
 	{
-		m_block.mem().mov(m_dsp.regs().la, _src);
+		m_asm.mov(regLA, _src);
+		setLoaded(LoadedRegLA);
 	}
 
-	void JitDspRegs::getLC(const JitReg32& _dst) const
+	void JitDspRegs::getLC(const JitReg32& _dst)
 	{
-		m_block.mem().mov(_dst, m_dsp.regs().lc);
+		m_asm.mov(_dst, getLC().r32());
 	}
 
-	void JitDspRegs::setLC(const JitReg32& _src) const
+	void JitDspRegs::setLC(const JitReg32& _src)
 	{
-		m_block.mem().mov(m_dsp.regs().lc, _src);
+		m_asm.mov(regLC, _src);
+		setLoaded(LoadedRegLC);
 	}
 
 	void JitDspRegs::getSS(const JitReg64& _dst) const
@@ -570,6 +592,8 @@ namespace dsp56k
 			loadXY(1);
 
 		getSR();
+		getLA();
+		getLC();
 	}
 
 	void JitDspRegs::storeDSPRegs()
@@ -591,5 +615,11 @@ namespace dsp56k
 			store24(m_dsp.regs().sr, regSR);
 			m_dsp.resetCCRCache();
 		}
+
+		if(isLoaded(LoadedRegLA))
+			store24(m_dsp.regs().la, regLA);
+
+		if(isLoaded(LoadedRegLC))
+			store24(m_dsp.regs().lc, regLC);
 	}
 }

@@ -63,7 +63,7 @@ namespace dsp56k
 	};
 
 	static constexpr auto regSR = asmjit::x86::r8;
-	static constexpr auto regPC = asmjit::x86::r9;
+	static constexpr auto regLA = asmjit::x86::r9;
 	static constexpr auto regLC = asmjit::x86::r10;
 	static constexpr auto regExtMem = asmjit::x86::r11;
 

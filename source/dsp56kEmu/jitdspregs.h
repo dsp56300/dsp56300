@@ -33,6 +33,8 @@ namespace dsp56k
 
 		JitReg getSR();
 		JitReg getExtMemAddr();
+		JitReg getLA();
+		JitReg getLC();
 
 		void getALU(const JitReg& _dst, int _alu);
 		void setALU(int _alu, const JitReg& _src);
@@ -75,10 +77,10 @@ namespace dsp56k
 		void setSSH(const JitReg32& _src) const;
 		void getSSL(const JitReg32& _dst) const;
 		void setSSL(const JitReg32& _src) const;
-		void getLA(const JitReg32& _dst) const;
-		void setLA(const JitReg32& _src) const;
-		void getLC(const JitReg32& _dst) const;
-		void setLC(const JitReg32& _src) const;
+		void getLA(const JitReg32& _dst);
+		void setLA(const JitReg32& _src);
+		void getLC(const JitReg32& _dst);
+		void setLC(const JitReg32& _src);
 
 		void getSS(const JitReg64& _dst) const;
 		void setSS(const JitReg64& _src) const;
@@ -109,6 +111,8 @@ namespace dsp56k
 			LoadedRegX,		LoadedRegY,
 			LoadedRegExtMem,
 			LoadedRegSR,
+			LoadedRegLC,
+			LoadedRegLA
 		};
 
 		void loadDSPRegs();

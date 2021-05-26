@@ -392,7 +392,7 @@ namespace dsp56k
 
 		// loop registers are not used in parallel ALU operations
 		const PushGP postMoveX(m_asm, regLC);
-		const PushGP postMoveY(m_asm, regPC);
+		const PushGP postMoveY(m_asm, regLA);
 
 		m_dspRegs.getXY(postMoveX, 0);
 		m_dspRegs.getXY(postMoveY, 1);
