@@ -4,6 +4,7 @@
 #include "jitmem.h"
 #include "jitregtracker.h"
 #include "jittypes.h"
+#include "opcodetypes.h"
 
 namespace asmjit
 {
@@ -20,6 +21,8 @@ namespace dsp56k
 	class JitBlock
 	{
 	public:
+		typedef void (*JitEntry)();
+
 		JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp)
 		: m_asm(_a)
 		, m_dsp(_dsp)
@@ -41,12 +44,29 @@ namespace dsp56k
 		operator JitRegpool<JitReg128>& ()		{ return m_xmmPool;	}
 		operator asmjit::x86::Assembler& ()		{ return m_asm;	}
 
+		Instruction emitOne(TWord _pc);
+		bool emit(TWord _pc);
+		bool empty() const { return m_pMemSize == 0; }
+		TWord getPCFirst() const { return m_pcFirst; }
+		TWord getPMemSize() const { return m_pMemSize; }
+
+		void setFunc(const JitEntry _func) { m_func = _func; }
+		const JitEntry& getFunc() const { return m_func; }
+
+		void exec() { m_func(); }
+
 	private:
+		JitEntry m_func = nullptr;
+
 		asmjit::x86::Assembler& m_asm;
 		DSP& m_dsp;
 		JitRegpool<JitReg128> m_xmmPool;
 		JitRegpool<JitReg64> m_gpPool;
 		JitDspRegs m_dspRegs;
 		Jitmem m_mem;
+
+		TWord m_pcFirst = 0;
+		TWord m_pMemSize = 0;
+		TWord m_instructionCount = 0;
 	};
 }

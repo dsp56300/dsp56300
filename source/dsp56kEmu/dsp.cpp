@@ -22,6 +22,8 @@
 
 #include "dsp_jumptable.inl"
 
+#include "jit.h"
+
 #if 0
 #	define LOGSC(F)	logSC(F)
 #else
@@ -118,11 +120,18 @@ namespace dsp56k
 
 		(this->*m_interruptFunc)();
 
-		pcCurrentInstruction = reg.pc.toWord();
+		if(m_jit)
+		{
+			m_jit->exec();
+		}
+		else
+		{
+			pcCurrentInstruction = reg.pc.toWord();
 
-		const auto op = fetchPC();
+			const auto op = fetchPC();
 
-		execOp(op);
+			execOp(op);
+		}
 	}
 
 	void DSP::execPeriph()

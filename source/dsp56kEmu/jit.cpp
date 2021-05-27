@@ -37,22 +37,65 @@ namespace dsp56k
 {
 	Jit::Jit(DSP& _dsp) : m_dsp(_dsp)
 	{
-		m_code.init(m_rt.environment());
+		m_jitCache.resize(_dsp.memory().size(), nullptr);
+	}
 
-		m_asm = new Assembler(&m_code);
-
+	Jit::~Jit()
+	{
+		for(size_t i=0; i<m_jitCache.size(); ++i)
 		{
-			JitBlock block(*m_asm, m_dsp);
-			JitOps ops(block);
+			auto* entry = m_jitCache[i];
+			if(entry)
+				destroy(entry);
+		}
+	}
+
+	void Jit::exec()
+	{
+		const auto pc = static_cast<TWord>(m_dsp.getPC().var);
+
+		auto& cacheEntry = m_jitCache[pc];
+
+		if(cacheEntry == nullptr)
+		{
+			LOG("Generating new JIT block for PC " << HEX(pc));
+			emit(pc);
+		}
+		else
+		{
+			if(cacheEntry->getPCFirst() < pc)
+			{
+				LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
+				destroy(cacheEntry);
+				emit(pc);
+			}
+		}
+		assert(cacheEntry);
+		cacheEntry->exec();
+	}
+
+	void Jit::emit(const TWord _pc)
+	{
+		CodeHolder code;
+
+		code.init(m_rt.environment());
+
+		Assembler m_asm(&code);
+
+		m_asm.ret();
+
+		auto* b = new JitBlock(m_asm, m_dsp);
+
+		if(!b->emit(_pc))
+		{
+			LOG("FATAL: code generation failed for PC " << HEX(_pc));
+			delete b;
+			return;
 		}
 
-		m_asm->ret();
+		JitBlock::JitEntry func;
 
-		typedef void (*Func)(TWord op);
-
-		Func func;
-
-		const auto err = m_rt.add(&func, &m_code);
+		const auto err = m_rt.add(&func, &code);
 
 		if(err)
 		{
@@ -61,11 +104,25 @@ namespace dsp56k
 			return;
 		}
 
-		func(0x123456);
+		b->setFunc(func);
+
+		const auto first = b->getPCFirst();
+		const auto last = first + b->getPMemSize();
+
+		for(auto i=first; i<last; ++i)
+			m_jitCache[i] = b;
 	}
 
-	Jit::~Jit()
+	void Jit::destroy(JitBlock* _block)
 	{
-		delete m_asm;
+		const auto first = _block->getPCFirst();
+		const auto last = first + _block->getPMemSize();
+
+		for(auto i=first; i<last; ++i)
+			m_jitCache[i] = nullptr;
+
+		m_rt.release(_block->getFunc());
+
+		delete _block;
 	}
 }

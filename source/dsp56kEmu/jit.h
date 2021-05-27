@@ -1,27 +1,32 @@
 #pragma once
 
-#include "asmjit/core/codeholder.h"
-#include "asmjit/core/jitruntime.h"
+#include <vector>
 
-#include "jittypes.h"
+#include "types.h"
+
+#include "asmjit/core/jitruntime.h"
 
 namespace dsp56k
 {
 	class DSP;
+	class JitBlock;
 
 	class Jit
 	{
 	public:
-		Jit(DSP& _dsp);
+		explicit Jit(DSP& _dsp);
 		~Jit();
 
 		DSP& dsp() { return m_dsp; }
+		void exec();
 
 	private:
+		void emit(TWord _pc);
+		void destroy(JitBlock* _block);
+
 		DSP& m_dsp;
 
 		asmjit::JitRuntime m_rt;
-		asmjit::CodeHolder m_code;
-		asmjit::x86::Assembler* m_asm = nullptr;
+		std::vector<JitBlock*> m_jitCache;
 	};
 }

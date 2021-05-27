@@ -15,6 +15,7 @@ namespace dsp56k
 	class JitUnittests;
 	class JitDspRegs;
 	class JitOps;
+	class Jit;
 	
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
@@ -159,6 +160,8 @@ namespace dsp56k
 		std::string		m_asm;
 		Disassembler	m_disasm;
 
+		Jit* m_jit = nullptr;
+
 		// _____________________________________________________________________________
 		// implementation
 		//
@@ -229,6 +232,9 @@ namespace dsp56k
 		IPeripherals*	getPeriph						(size_t _index)								{ return perif[_index]; }
 		
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
+
+		void			setJit							(Jit* _jit) { m_jit = _jit; }
+		Jit*			getJit							() { return m_jit; }
 	private:
 
 		std::string getSSindent() const;
