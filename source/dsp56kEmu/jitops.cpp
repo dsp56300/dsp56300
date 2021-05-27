@@ -362,6 +362,8 @@ namespace dsp56k
 
 	void JitOps::emit(const Instruction _inst, const TWord _op)
 	{
+		m_instruction = _inst;
+
 		emitOpProlog();
 
 		const auto& func = g_opcodeFuncs[_inst];
@@ -372,6 +374,8 @@ namespace dsp56k
 
 	void JitOps::emit(const Instruction _instMove, const Instruction _instAlu, const TWord _op)
 	{
+		m_instruction = Parallel;
+
 		const auto& funcMove = g_opcodeFuncs[_instMove];
 		const auto& funcAlu = g_opcodeFuncs[_instAlu];
 

@@ -466,6 +466,8 @@ namespace dsp56k
 		void jmp(TWord _absAddr);
 		void jsr(TWord _absAddr);
 
+		TWord getOpSize() const { return m_opSize; }
+		Instruction getInstruction() const { return m_instruction; }
 	private:
 		void errNotImplemented(TWord op);
 
@@ -483,5 +485,6 @@ namespace dsp56k
 
 		TWord m_nextPC = ~0;
 		TWord m_opSize = 0;
+		Instruction m_instruction = InstructionCount;
 	};
 }
