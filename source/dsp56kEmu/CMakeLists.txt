@@ -48,7 +48,7 @@ utils.cpp utils.h
 set(SOURCES_JIT
 jit.cpp jit.h
 jitblock.cpp jitblock.h
-
+jithelper.cpp jithelper.h
 jitdspregs.cpp jitdspregs.h
 jitmem.cpp jitmem.h
 jitops.cpp jitops.h

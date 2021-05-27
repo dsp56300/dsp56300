@@ -2,30 +2,10 @@
 
 #include "jitblock.h"
 #include "jitops.h"
-#include "asmjit/core/logger.h"
+#include "jithelper.h"
 
 namespace dsp56k
 {
-	class AsmJitErrorHandler : public asmjit::ErrorHandler
-	{
-		void handleError(asmjit::Error err, const char* message, asmjit::BaseEmitter* origin) override
-		{
-			LOG("Error: " << err << " - " << message);
-			assert(false);
-		}
-	};
-	class AsmJitLogger : public asmjit::Logger
-	{
-		asmjit::Error _log(const char* data, size_t size) noexcept override
-		{
-			std::string temp(data);
-			if(temp.back() == '\n')
-				temp.pop_back();
-			LOG(temp);
-			return asmjit::kErrorOk;
-		}
-	};
-
 	JitUnittests::JitUnittests()
 	: mem(m_defaultMemoryValidator, 0x100)
 	, dsp(mem, &peripherals, &peripherals)
