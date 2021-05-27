@@ -23,6 +23,8 @@ namespace dsp56k
 
 		~JitDspRegs();
 
+		void clear() { storeDSPRegs(); assert(m_loadedRegs == 0); }
+
 		void getR(const JitReg& _dst, int _agu);
 		void getN(const JitReg& _dst, int _agu);
 		void getM(const JitReg& _dst, int _agu);

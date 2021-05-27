@@ -601,25 +601,52 @@ namespace dsp56k
 		for(auto i=0; i<8; ++i)
 		{
 			if(isLoaded(LoadedRegR0 + i))
+			{
 				storeAGU(i);
+				setUnloaded(LoadedRegR0 + i);
+			}
 		}
 
-		if(isLoaded(LoadedRegA))			storeALU(0);
-		if(isLoaded(LoadedRegB))			storeALU(1);
+		if(isLoaded(LoadedRegA))
+		{
+			storeALU(0);
+			setUnloaded(LoadedRegA);
+		}
+		
+		if(isLoaded(LoadedRegB))
+		{
+			storeALU(1);
+			setUnloaded(LoadedRegB);
+		}	
 
-		if(isLoaded(LoadedRegX))			storeXY(0);
-		if(isLoaded(LoadedRegY))			storeXY(1);
+		if(isLoaded(LoadedRegX))
+		{
+			storeXY(0);			
+			setUnloaded(LoadedRegX);
+		}
+		if(isLoaded(LoadedRegY))
+		{
+			storeXY(1);
+			setUnloaded(LoadedRegY);
+		}
 
 		if(isLoaded(LoadedRegSR))
 		{
 			store24(m_dsp.regs().sr, regSR);
 			m_dsp.resetCCRCache();
+			setUnloaded(LoadedRegSR);
 		}
 
 		if(isLoaded(LoadedRegLA))
+		{
 			store24(m_dsp.regs().la, regLA);
+			setUnloaded(LoadedRegLA);
+		}
 
 		if(isLoaded(LoadedRegLC))
+		{
 			store24(m_dsp.regs().lc, regLC);
+			setUnloaded(LoadedRegLC);
+		}
 	}
 }
