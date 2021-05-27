@@ -472,6 +472,7 @@ namespace dsp56k
 			RegGP r(m_block);
 			decode_dddddd_read(r.get().r32(), dddddd);
 			m_block.mem().writeDspMemory(MemArea_P, ea, r);	// TODO: block termination
+			assert(false && "P memory write");
 		}
 	}
 
