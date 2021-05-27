@@ -283,6 +283,12 @@ namespace dsp56k
 		m_opWordB = _opB;
 		m_opSize = 1;
 
+		if(!_op)
+		{
+			emit(Nop, 0);
+			return;
+		}
+
 		if(Opcodes::isNonParallelOpcode(_op))
 		{
 			const auto* oi = m_opcodes.findNonParallelOpcodeInfo(_op);
