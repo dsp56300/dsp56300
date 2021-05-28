@@ -2,6 +2,7 @@
 
 #include "assert.h"
 #include "logging.h"
+#include "asmjit/x86/x86assembler.h"
 
 namespace dsp56k
 {
@@ -25,5 +26,14 @@ namespace dsp56k
 		{
 			return asmjit::kErrorInvalidArgument;
 		}
+	}
+
+	SkipLabel::SkipLabel(asmjit::x86::Assembler& _a): m_asm(_a), m_label(_a.newLabel())
+	{
+	}
+
+	SkipLabel::~SkipLabel()
+	{
+		m_asm.bind(m_label);
 	}
 }
