@@ -148,6 +148,7 @@ namespace dsp56k
 		m_block.asm_().mov(regArg2, asmjit::Imm(_offset));
 
 		{
+			PushXMMRegs xmms(m_block);
 			PushShadowSpace ss(m_block);
 			m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
 		}
@@ -164,6 +165,7 @@ namespace dsp56k
 		m_block.asm_().mov(regArg2, _offset);
 
 		{
+			PushXMMRegs xmms(m_block);
 			PushShadowSpace ss(m_block);
 			m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
 		}
@@ -183,8 +185,11 @@ namespace dsp56k
 		m_block.asm_().mov(regArg2, _offset);
 		m_block.asm_().mov(regArg3, _value);
 
-		PushShadowSpace ss(m_block);
-		m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
+		{
+			PushXMMRegs xmms(m_block);
+			PushShadowSpace ss(m_block);
+			m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
+		}
 	}
 
 	void Jitmem::writePeriph(EMemArea _area, const TWord& _offset, const JitReg64& _value) const
@@ -200,6 +205,7 @@ namespace dsp56k
 		m_block.asm_().mov(regArg3, _value);
 
 		{
+			PushXMMRegs xmms(m_block);
 			PushShadowSpace ss(m_block);
 			m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
 		}
