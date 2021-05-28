@@ -17,7 +17,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// Memory
 	//
-	Memory::Memory(const IMemoryValidator& _memoryMap, size_t _memSize/* = 0xc00000*/, TWord* _externalBuffer/* = nullptr*/)
+	Memory::Memory(const IMemoryValidator& _memoryMap, TWord _memSize/* = 0xc00000*/, TWord* _externalBuffer/* = nullptr*/)
 		: m_memoryMap(_memoryMap)
 		, m_size(_memSize)
 		, m_dsp(nullptr)

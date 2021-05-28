@@ -55,8 +55,8 @@ namespace dsp56k
 
 		const IMemoryValidator&								m_memoryMap;
 		
-		// 768k words of 24-bit data for 3 banks (XYP)
-		const size_t										m_size;
+		// number of words of 24-bit data for 3 banks (XYP)
+		const TWord											m_size;
 		std::vector<TWord>									m_buffer;
 		StaticArray< TWord*, MemArea_COUNT >				m_mem;
 
@@ -95,7 +95,7 @@ namespace dsp56k
 		// implementation
 		//
 	public:
-		Memory(const IMemoryValidator& _memoryMap, size_t _memSize = 0xc00000, TWord* _externalBuffer = nullptr);
+		Memory(const IMemoryValidator& _memoryMap, TWord _memSize = 0xc00000, TWord* _externalBuffer = nullptr);
 		Memory(const Memory&) = delete;
 		Memory& operator = (const Memory&) = delete;
 
@@ -125,7 +125,7 @@ namespace dsp56k
 		const std::string&	getSymbol			(EMemArea _memArea, TWord addr);
 		const std::map<char, std::map<TWord, SSymbol>>& getSymbols() const { return m_symbols; }
 
-		size_t				size				() const	{ return m_size; }
+		TWord				size				() const	{ return m_size; }
 
 		void				setExternalMemory	(const TWord _address, bool _isExternalMemoryBridged)
 		{
