@@ -142,7 +142,6 @@ namespace dsp56k
 	void Jitmem::readPeriph(const JitReg64& _dst, EMemArea _area, const TWord& _offset) const
 	{
 		PushGP r2(m_block, regArg2);
-		PushGP rPadding(m_block, regArg2);	// 16 byte alignment
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
@@ -159,7 +158,6 @@ namespace dsp56k
 	void Jitmem::readPeriph(const JitReg64& _dst, const EMemArea _area, const JitReg64& _offset) const
 	{
 		PushGP r2(m_block, regArg2);
-		PushGP rPadding(m_block, regArg2);	// 16 byte alignment
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
@@ -180,6 +178,7 @@ namespace dsp56k
 
 		PushGP r2(m_block, regArg2);
 		PushGP r3(m_block, regArg3);
+		PushGP rPadding(m_block, regArg3);
 
 		m_block.asm_().mov(regArg2, _offset);
 		m_block.asm_().mov(regArg3, _value);
@@ -195,6 +194,7 @@ namespace dsp56k
 
 		PushGP r2(m_block, regArg2);
 		PushGP r3(m_block, regArg3);
+		PushGP rPadding(m_block, regArg3);
 
 		m_block.asm_().mov(regArg2, asmjit::Imm(_offset));
 		m_block.asm_().mov(regArg3, _value);
