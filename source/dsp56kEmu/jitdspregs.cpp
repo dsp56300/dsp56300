@@ -476,7 +476,7 @@ namespace dsp56k
 		getSS(temp);
 		m_asm.ror(temp, Imm(24));
 		m_asm.and_(temp, Imm(0xffffffffff000000));
-		m_asm.or_(temp, _src);
+		m_asm.or_(temp, _src.r64());
 		m_asm.rol(temp, Imm(24));
 		setSS(temp);
 	}
@@ -492,7 +492,7 @@ namespace dsp56k
 		const RegGP temp(m_block);
 		getSS(temp);
 		m_asm.and_(temp, Imm(0xffffffffff000000));
-		m_asm.or_(temp, _src);
+		m_asm.or_(temp, _src.r64());
 		setSS(temp);
 	}
 
