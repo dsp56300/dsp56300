@@ -53,17 +53,36 @@ namespace dsp56k
 
 	void Jit::exec()
 	{
+		// loop processing
+		if(m_dsp.sr_test(SR_LF) && m_dsp.getPC().var == m_dsp.regs().la.var)
+		{
+			if(m_dsp.regs().lc.var <= 0)
+			{
+				m_dsp.do_end();					
+			}
+			else
+			{
+				--m_dsp.regs().lc.var;
+				m_dsp.setPC(hiword(m_dsp.regs().ss[m_dsp.ssIndex()]));
+			}
+		}
+
 		const auto pc = static_cast<TWord>(m_dsp.getPC().var);
 
+		LOG("Exec @ " << HEX(pc));
+
+		// get JIT code
 		auto& cacheEntry = m_jitCache[pc];
 
 		if(cacheEntry == nullptr)
 		{
+			// No code preset, generate
 			LOG("Generating new JIT block for PC " << HEX(pc));
 			emit(pc);
 		}
 		else
 		{
+			// there is code, but the JIT block does not start at the PC position that we want to run. We need to throw the block away and regenerate
 			if(cacheEntry->getPCFirst() < pc)
 			{
 				LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
@@ -71,16 +90,24 @@ namespace dsp56k
 				emit(pc);
 			}
 		}
-		assert(cacheEntry);
 
+		assert(cacheEntry);
+		
+		// run JIT code
 		cacheEntry->exec();
+
+		// if JIT code has written to P memory, destroy a JIT block if present at the write location
+		if(cacheEntry->pMemWriteAddress() != g_pcInvalid)
+			destroy(cacheEntry->pMemWriteAddress());
 
 		if(cacheEntry->nextPC() != g_pcInvalid)
 		{
+			// If the JIt block executed a branch, point PC to the new location
 			m_dsp.setPC(cacheEntry->nextPC());
 		}
 		else
 		{
+			// Otherwise, move PC forward
 			m_dsp.setPC(pc + cacheEntry->getPMemSize());
 		}
 	}

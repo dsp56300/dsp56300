@@ -25,6 +25,7 @@ namespace dsp56k
 		friend class JitUnittests;
 		friend class JitDspRegs;
 		friend class JitOps;
+		friend class Jit;
 
 		// _____________________________________________________________________________
 		// types
