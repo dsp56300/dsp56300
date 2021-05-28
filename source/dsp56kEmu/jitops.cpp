@@ -485,7 +485,7 @@ namespace dsp56k
 		signed24To56(_dst);
 	}
 
-	inline void JitOps::do_exec(const JitReg& _lc, TWord _addr)
+	inline void JitOps::do_exec(RegGP& _lc, TWord _addr)
 	{
 		const SkipLabel end(m_asm);
 
@@ -499,7 +499,13 @@ namespace dsp56k
 			m_dspRegs.setSSL(m_dspRegs.getLC().r32());
 
 			m_asm.mov(m_dspRegs.getLA(), asmjit::Imm(_addr));
-			m_asm.mov(m_dspRegs.getLC(), _lc);
+			m_asm.mov(m_dspRegs.getLC(), _lc.get());
+
+			_lc.release();
+
+			pushPCSR();
+
+			m_asm.or_(m_dspRegs.getSR(), asmjit::Imm(SR_LF));
 
 			m_asm.jmp(end.get());
 		}
@@ -534,7 +540,7 @@ namespace dsp56k
 	void JitOps::op_Do_ea(TWord op)
 	{
 		const auto addr = absAddressExt<Do_ea>();
-		const RegGP lc(m_block);
+		RegGP lc(m_block);
 		readMem<Do_ea>(lc, op);
 		do_exec(lc, addr);
 	}
@@ -542,7 +548,7 @@ namespace dsp56k
 	void JitOps::op_Do_aa(TWord op)
 	{
 		const auto addr = absAddressExt<Do_aa>();
-		const RegGP lc(m_block);
+		RegGP lc(m_block);
 		readMem<Do_aa>(lc, op);
 		do_exec(lc, addr);
 	}
@@ -552,7 +558,7 @@ namespace dsp56k
 		const TWord addr = absAddressExt<Do_xxx>();
 		const TWord loopcount = getFieldValue<Do_xxx,Field_hhhh, Field_iiiiiiii>(op);
 
-        const RegGP lc(m_block);
+        RegGP lc(m_block);
 		m_asm.mov(lc, asmjit::Imm(loopcount));
 
 		do_exec( lc, addr );
@@ -563,7 +569,7 @@ namespace dsp56k
 		const auto addr = absAddressExt<Do_S>();
 		const auto dddddd = getFieldValue<Do_S,Field_DDDDDD>(op);
 
-		const RegGP lc(m_block);
+		RegGP lc(m_block);
 		decode_dddddd_read(lc.get().r32(), dddddd );
 
 		do_exec( lc, addr );
@@ -574,7 +580,7 @@ namespace dsp56k
         const auto loopcount = getFieldValue<Dor_xxx,Field_hhhh, Field_iiiiiiii>(op);
         const auto displacement = pcRelativeAddressExt<Dor_xxx>();
 
-        const RegGP lc(m_block);
+        RegGP lc(m_block);
 		m_asm.mov(lc, asmjit::Imm(loopcount));
 		
         do_exec(lc, m_pcCurrentOp + displacement);
@@ -584,7 +590,7 @@ namespace dsp56k
 	{
 		const auto dddddd = getFieldValue<Dor_S,Field_DDDDDD>(op);
 
-		const RegGP lc(m_block);
+		RegGP lc(m_block);
 		decode_dddddd_read(lc.get().r32(), dddddd );
 		
 		const auto displacement = pcRelativeAddressExt<Dor_S>();

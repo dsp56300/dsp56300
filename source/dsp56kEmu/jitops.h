@@ -449,7 +449,7 @@ namespace dsp56k
 		template<Instruction Inst> void movep_sqq(TWord op, EMemArea _area);
 
 		// loops
-		void do_exec(const JitReg& _lc, TWord _addr);
+		void do_exec(RegGP& _lc, TWord _addr);
 		void do_end();
 
 		// -------------- bra variants
