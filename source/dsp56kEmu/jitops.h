@@ -489,7 +489,6 @@ namespace dsp56k
 		TWord m_opWordA = 0;
 		TWord m_opWordB = 0;
 
-		TWord m_nextPC = ~0;
 		TWord m_opSize = 0;
 		Instruction m_instruction = InstructionCount;
 	};
