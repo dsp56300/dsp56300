@@ -35,9 +35,8 @@ namespace dsp56k
 			return;
 		}
 
-		const RegGP offset(m_block);
-		updateAddressRegister(offset, mmm, rrr);
-		readMemOrPeriph(_dst, _area, offset);
+		updateAddressRegister(_dst, mmm, rrr);
+		readMemOrPeriph(_dst, _area, _dst);
 	}
 
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, TWord op) const
