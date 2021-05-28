@@ -484,6 +484,118 @@ namespace dsp56k
 		signed24To56(_dst);
 	}
 
+	inline void JitOps::do_exec(const JitReg& _lc, TWord _addr)
+	{
+		const SkipLabel end(m_asm);
+
+		{
+			const SkipLabel lcIsZero(m_asm);
+
+			m_asm.cmp(_lc, asmjit::Imm(0));
+			m_asm.jz(lcIsZero.get());
+
+			m_dspRegs.setSSH(m_dspRegs.getLA().r32());
+			m_dspRegs.setSSL(m_dspRegs.getLC().r32());
+
+			m_asm.mov(m_dspRegs.getLA(), asmjit::Imm(_addr));
+			m_asm.mov(m_dspRegs.getLC(), _lc);
+
+			m_asm.jmp(end.get());
+		}
+
+		jmp(_addr+1);		
+	}
+
+	void JitOps::do_end()
+	{
+		// restore previous loop flag
+		{
+			const RegGP r(m_block);
+			m_dspRegs.getSSL(r.get().r32());
+			m_asm.and_(r, asmjit::Imm(SR_LF));
+			m_asm.and_(m_dspRegs.getSR(), asmjit::Imm(~SR_LF));
+			m_asm.or_(m_dspRegs.getSR(), r.get());
+		}
+
+		// decrement SP twice, restoring old loop settings
+		m_dspRegs.decSP();
+
+		const RegGP r(m_block);
+		m_dspRegs.getSSL(r.get().r32());
+		m_dspRegs.setLC(r.get().r32());
+
+		m_dspRegs.getSSH(r.get().r32());
+		m_dspRegs.setLA(r.get().r32());
+
+	//	LOG( "DO END: loop flag = " << sr_test(SR_LF) << " sc=" << (int)sc.var << " lc:" << std::hex << lc.var << " la:" << std::hex << la.var );
+	}
+
+	void JitOps::op_Do_ea(TWord op)
+	{
+		const auto addr = absAddressExt<Do_ea>();
+		const RegGP lc(m_block);
+		readMem<Do_ea>(lc, op);
+		do_exec(lc, addr);
+	}
+
+	void JitOps::op_Do_aa(TWord op)
+	{
+		const auto addr = absAddressExt<Do_aa>();
+		const RegGP lc(m_block);
+		readMem<Do_aa>(lc, op);
+		do_exec(lc, addr);
+	}
+
+	void JitOps::op_Do_xxx(TWord op)
+	{
+		const TWord addr = absAddressExt<Do_xxx>();
+		const TWord loopcount = getFieldValue<Do_xxx,Field_hhhh, Field_iiiiiiii>(op);
+
+        const RegGP lc(m_block);
+		m_asm.mov(lc, asmjit::Imm(loopcount));
+
+		do_exec( lc, addr );
+	}
+
+	void JitOps::op_Do_S(TWord op)
+	{
+		const auto addr = absAddressExt<Do_S>();
+		const auto dddddd = getFieldValue<Do_S,Field_DDDDDD>(op);
+
+		const RegGP lc(m_block);
+		decode_dddddd_read(lc.get().r32(), dddddd );
+
+		do_exec( lc, addr );
+	}
+
+	void JitOps::op_Dor_xxx(TWord op)
+	{
+        const auto loopcount = getFieldValue<Dor_xxx,Field_hhhh, Field_iiiiiiii>(op);
+        const auto displacement = pcRelativeAddressExt<Dor_xxx>();
+
+        const RegGP lc(m_block);
+		m_asm.mov(lc, asmjit::Imm(loopcount));
+		
+        do_exec(lc, m_pcCurrentOp + displacement);
+	}
+
+	void JitOps::op_Dor_S(TWord op)
+	{
+		const auto dddddd = getFieldValue<Dor_S,Field_DDDDDD>(op);
+
+		const RegGP lc(m_block);
+		decode_dddddd_read(lc.get().r32(), dddddd );
+		
+		const auto displacement = pcRelativeAddressExt<Dor_S>();
+
+		do_exec( lc, m_pcCurrentOp + displacement);
+	}
+
+	void JitOps::op_Enddo(TWord op)
+	{
+		do_end();
+	}
+
 	template<bool BackupCCR> void JitOps::op_Ifcc(TWord op)
 	{
 		const TWord cccc = getFieldValue<Ifcc,Field_CCCC>(op);

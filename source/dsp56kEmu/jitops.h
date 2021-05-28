@@ -108,17 +108,17 @@ namespace dsp56k
 		void op_Dec(TWord op);
 		void op_Div(TWord op);
 		void op_Dmac(TWord op);
-		void op_Do_ea(TWord op){}
-		void op_Do_aa(TWord op){}
-		void op_Do_xxx(TWord op){}
-		void op_Do_S(TWord op){}
-		void op_DoForever(TWord op){}
-		void op_Dor_ea(TWord op){}
-		void op_Dor_aa(TWord op){}
-		void op_Dor_xxx(TWord op){}
-		void op_Dor_S(TWord op){}
-		void op_DorForever(TWord op){}
-		void op_Enddo(TWord op){}
+		void op_Do_ea(TWord op);
+		void op_Do_aa(TWord op);
+		void op_Do_xxx(TWord op);
+		void op_Do_S(TWord op);
+		void op_DoForever(TWord op)			{ errNotImplemented(op); }
+		void op_Dor_ea(TWord op)			{ errNotImplemented(op); }
+		void op_Dor_aa(TWord op)			{ errNotImplemented(op); }
+		void op_Dor_xxx(TWord op);
+		void op_Dor_S(TWord op);
+		void op_DorForever(TWord op)		{ errNotImplemented(op); }
+		void op_Enddo(TWord op);
 		void op_Eor_SD(TWord op)			{ errNotImplemented(op); }
 		void op_Eor_xx(TWord op)			{ errNotImplemented(op); }
 		void op_Eor_xxxx(TWord op)			{ errNotImplemented(op); }
@@ -447,6 +447,10 @@ namespace dsp56k
 		template<Instruction Inst> void move_L(TWord op);
 		template<Instruction Inst> void movep_qqea(TWord op, EMemArea _area);
 		template<Instruction Inst> void movep_sqq(TWord op, EMemArea _area);
+
+		// loops
+		void do_exec(const JitReg& _lc, TWord _addr);
+		void do_end();
 
 		// -------------- bra variants
 		template<BraMode Bmode> void braOrBsr(int offset);
