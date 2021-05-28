@@ -46,7 +46,6 @@ namespace dsp56k
 		operator JitRegpool<JitReg128>& ()		{ return m_xmmPool;	}
 		operator asmjit::x86::Assembler& ()		{ return m_asm;	}
 
-		Instruction emitOne(TWord _pc);
 		bool emit(TWord _pc);
 		bool empty() const { return m_pMemSize == 0; }
 		TWord getPCFirst() const { return m_pcFirst; }
@@ -57,7 +56,11 @@ namespace dsp56k
 
 		void exec();
 		size_t getInstructionCount() const { return m_instructionCount; }
+
+		// JIT code writes these
 		TWord& nextPC() { return m_nextPC; }
+		uint32_t& pMemWriteAddress() { return m_pMemWriteAddress; }
+		uint32_t& pMemWriteValue() { return m_pMemWriteValue; }
 
 	private:
 		JitEntry m_func = nullptr;
@@ -72,6 +75,9 @@ namespace dsp56k
 		TWord m_pcFirst = 0;
 		TWord m_pMemSize = 0;
 		TWord m_instructionCount = 0;
+
 		TWord m_nextPC = g_pcInvalid;
+		TWord m_pMemWriteAddress = g_pcInvalid;
+		TWord m_pMemWriteValue = 0;
 	};
 }

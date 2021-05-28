@@ -471,8 +471,13 @@ namespace dsp56k
 			effectiveAddress<Movem_ea>(ea, op);
 			RegGP r(m_block);
 			decode_dddddd_read(r.get().r32(), dddddd);
-			m_block.mem().writeDspMemory(MemArea_P, ea, r);	// TODO: block termination
-			assert(false && "P memory write");
+
+			m_block.mem().writeDspMemory(MemArea_P, ea, r);
+
+			m_block.mem().mov(m_block.pMemWriteAddress(), ea.get().r32());
+			m_block.mem().mov(m_block.pMemWriteValue(), r.get().r32());
+
+			m_pMemoryWritten = true;
 		}
 	}
 

@@ -12,7 +12,19 @@ namespace dsp56k
 
 		while(true)
 		{
-			const auto res = emitOne(m_pcFirst + m_pMemSize);
+			JitOps ops(*this, g_useSRCache);
+
+			const auto pc = m_pcFirst + m_pMemSize;
+			ops.emit(pc);
+
+			m_pMemSize += ops.getOpSize();
+			++m_instructionCount;
+
+			const auto res = ops.getInstruction();
+			assert(res != InstructionCount);
+
+			if(ops.hasWrittenToPMemory())
+				break;
 
 			if(res != Parallel)
 			{
@@ -26,8 +38,6 @@ namespace dsp56k
 
 				if(oi.flag(OpFlagPopPC))
 					break;
-
-				// TODO: P memory writes
 			}
 		}
 
@@ -40,19 +50,5 @@ namespace dsp56k
 	{
 		m_nextPC = g_pcInvalid;
 		m_func();
-	}
-
-	Instruction JitBlock::emitOne(const TWord _pc)
-	{
-		JitOps ops(*this, g_useSRCache);
-
-		ops.emit(_pc);
-
-		m_pMemSize += ops.getOpSize();
-		++m_instructionCount;
-
-		const auto inst = ops.getInstruction();
-		assert(inst != InstructionCount);
-		return inst;
 	}
 }

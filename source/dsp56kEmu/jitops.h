@@ -478,6 +478,8 @@ namespace dsp56k
 
 		TWord getOpSize() const { return m_opSize; }
 		Instruction getInstruction() const { return m_instruction; }
+		bool hasWrittenToPMemory() const { return m_pMemoryWritten; }
+
 	private:
 		void errNotImplemented(TWord op);
 
@@ -495,5 +497,6 @@ namespace dsp56k
 
 		TWord m_opSize = 0;
 		Instruction m_instruction = InstructionCount;
+		bool m_pMemoryWritten = false;
 	};
 }
