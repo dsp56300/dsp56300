@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jitregtracker.h"
 #include "jittypes.h"
 #include "types.h"
 
@@ -105,6 +106,9 @@ namespace dsp56k
 
 			loadDSPRegs();
 		}
+
+		void setPC(const JitReg& _pc);
+		
 	private:
 		enum LoadedRegs
 		{

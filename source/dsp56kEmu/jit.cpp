@@ -2,6 +2,7 @@
 
 #include "dsp.h"
 #include "jitblock.h"
+#include "jithelper.h"
 #include "jitops.h"
 
 #include "asmjit/core/jitruntime.h"
@@ -71,7 +72,17 @@ namespace dsp56k
 			}
 		}
 		assert(cacheEntry);
+
 		cacheEntry->exec();
+
+		if(cacheEntry->nextPC() != g_pcInvalid)
+		{
+			m_dsp.setPC(cacheEntry->nextPC());
+		}
+		else
+		{
+			m_dsp.setPC(pc + cacheEntry->getPMemSize());
+		}
 	}
 
 	void Jit::emit(const TWord _pc)
@@ -125,6 +136,8 @@ namespace dsp56k
 
 		for(auto i=first; i<last; ++i)
 			m_jitCache[i] = b;
+
+		LOG("New block generated @ " << HEX(_pc) << " up to " << HEX(_pc + b->getPMemSize() - 1) << ", instruction count " << b->getInstructionCount());
 	}
 
 	void Jit::destroy(JitBlock* _block)

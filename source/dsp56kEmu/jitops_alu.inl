@@ -189,7 +189,7 @@ namespace dsp56k
 
 	inline void JitOps::jmp(const JitReg32& _absAddr)
 	{
-		m_block.mem().mov(m_block.dsp().regs().pc, _absAddr);
+		m_dspRegs.setPC(_absAddr);
 	}
 
 	inline void JitOps::jsr(const JitReg32& _absAddr)

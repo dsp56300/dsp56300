@@ -256,7 +256,7 @@ namespace dsp56k
 	{
 		RegGP pc(m_block);
 		m_dspRegs.getSSH(pc.get().r32());
-		m_block.mem().mov(m_block.dsp().regs().pc, pc.get());
+		m_dspRegs.setPC(pc);
 	}
 
 	inline TWord JitOps::getOpWordB()

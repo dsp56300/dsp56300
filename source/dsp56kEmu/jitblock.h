@@ -18,6 +18,8 @@ namespace dsp56k
 {
 	class DSP;
 
+	constexpr TWord g_pcInvalid = 0xffffffff;
+
 	class JitBlock
 	{
 	public:
@@ -53,7 +55,9 @@ namespace dsp56k
 		void setFunc(const JitEntry _func) { m_func = _func; }
 		const JitEntry& getFunc() const { return m_func; }
 
-		void exec() { m_func(); }
+		void exec();
+		size_t getInstructionCount() const { return m_instructionCount; }
+		TWord& nextPC() { return m_nextPC; }
 
 	private:
 		JitEntry m_func = nullptr;
@@ -68,5 +72,6 @@ namespace dsp56k
 		TWord m_pcFirst = 0;
 		TWord m_pMemSize = 0;
 		TWord m_instructionCount = 0;
+		TWord m_nextPC = g_pcInvalid;
 	};
 }

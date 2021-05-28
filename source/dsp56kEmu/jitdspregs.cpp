@@ -573,6 +573,11 @@ namespace dsp56k
 		m_asm.shr(_alu.r64(), Imm(16));
 	}
 
+	void JitDspRegs::setPC(const JitReg& _pc)
+	{
+		m_block.mem().mov(m_block.nextPC(), _pc);
+	}
+
 	void JitDspRegs::loadDSPRegs()
 	{
 		for(auto i=0; i<8; ++i)
