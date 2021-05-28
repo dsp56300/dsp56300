@@ -76,8 +76,12 @@ namespace dsp56k
 
 	void Jit::emit(const TWord _pc)
 	{
+		AsmJitLogger logger;
+		AsmJitErrorHandler errorHandler;
 		CodeHolder code;
 
+		code.setLogger(&logger);
+		code.setErrorHandler(&errorHandler);
 		code.init(m_rt.environment());
 
 		Assembler m_asm(&code);
