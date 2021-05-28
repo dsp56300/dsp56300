@@ -194,8 +194,7 @@ namespace dsp56k
 
 	inline void JitOps::jsr(const JitReg32& _absAddr)
 	{
-		m_dspRegs.setSSH(_absAddr);
-		m_dspRegs.setSSL(m_dspRegs.getSR().r32());
+		pushPCSR();
 		jmp(_absAddr);
 	}
 
