@@ -233,6 +233,32 @@ namespace dsp56k
 		m_asm.shr(_r, asmjit::Imm(8));
 	}
 
+	void JitOps::pushPCSR()
+	{
+		{
+			const RegGP pc(m_block);
+			m_asm.mov(pc, asmjit::Imm(m_pcCurrentOp + m_opSize));
+			m_dspRegs.setSSH(pc.get().r32());
+		}
+
+		m_dspRegs.setSSL(m_dspRegs.getSR().r32());
+	}
+	void JitOps::popPCSR()
+	{
+		{
+			const RegGP sr(m_block);
+			m_dspRegs.getSSL(sr.get().r32());
+			setSR(sr.get().r32());
+		}
+		popPC();
+	}
+	void JitOps::popPC()
+	{
+		RegGP pc(m_block);
+		m_dspRegs.getSSH(pc.get().r32());
+		m_block.mem().mov(m_block.dsp().regs().pc, pc.get());
+	}
+
 	inline TWord JitOps::getOpWordB()
 	{
 		++m_opSize;

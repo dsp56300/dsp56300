@@ -295,6 +295,12 @@ namespace dsp56k
 			return getOpWordB();
 		}
 
+		// stack
+		void	pushPCSR();
+		void	popPCSR();
+		void	popPC();
+
+
 		// DSP memory access
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void effectiveAddress(const JitReg64& _dst, TWord _op);
 
