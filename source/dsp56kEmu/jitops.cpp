@@ -3,6 +3,7 @@
 #include "dsp.h"
 #include "jit.h"
 #include "jitblock.h"
+#include "jithelper.h"
 
 #include "jitops_alu.inl"
 #include "jitops_ccr.inl"
@@ -678,5 +679,15 @@ namespace dsp56k
 		{
 			m_dspRegs.setN(dddd & 7, r);
 		}
+	}
+
+	inline void JitOps::op_Rti(TWord op)
+	{
+		popPCSR();
+	}
+
+	inline void JitOps::op_Rts(TWord op)
+	{
+		popPC();
 	}
 }

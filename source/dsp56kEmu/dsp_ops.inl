@@ -447,7 +447,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Rts(const TWord op)
 	{
-		popPC();		
+		popPC();
 	}
 	inline void DSP::op_Stop(const TWord op)
 	{

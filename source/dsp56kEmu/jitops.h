@@ -239,8 +239,8 @@ namespace dsp56k
 		void op_Rnd(TWord op);
 		void op_Rol(TWord op);
 		void op_Ror(TWord op)					{ errNotImplemented(op); }
-		void op_Rti(TWord op){}
-		void op_Rts(TWord op){}
+		void op_Rti(TWord op);
+		void op_Rts(TWord op);
 		void op_Sbc(TWord op)					{ errNotImplemented(op); }
 		void op_Stop(TWord op)					{ errNotImplemented(op); }
 		void op_Sub_SD(TWord op);
