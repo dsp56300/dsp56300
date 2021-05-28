@@ -82,7 +82,10 @@ namespace dsp56k
 
 		Assembler m_asm(&code);
 
-		m_asm.ret();
+		m_asm.push(r12);
+		m_asm.push(r13);
+		m_asm.push(r14);
+		m_asm.push(r15);
 
 		auto* b = new JitBlock(m_asm, m_dsp);
 
@@ -92,6 +95,13 @@ namespace dsp56k
 			delete b;
 			return;
 		}
+
+		m_asm.pop(r15);
+		m_asm.pop(r14);
+		m_asm.pop(r13);
+		m_asm.pop(r12);
+
+		m_asm.ret();
 
 		JitBlock::JitEntry func;
 
