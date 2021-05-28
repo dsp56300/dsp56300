@@ -305,7 +305,7 @@ namespace dsp56k
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void effectiveAddress(const JitReg64& _dst, TWord _op);
 
 		template <Instruction Inst, typename std::enable_if<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord _op);
-		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord _op, EMemArea _area);
+		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord _op, EMemArea _area);
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;
 		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;
 		template <Instruction Inst, typename std::enable_if<!hasField<Inst, Field_s>() && hasFields<Inst, Field_aaaaaa, Field_S>()>::type* = nullptr> void readMem(const JitReg64& _dst, TWord op) const;

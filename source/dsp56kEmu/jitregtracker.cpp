@@ -108,4 +108,35 @@ namespace dsp56k
 			m_block.asm_().pop(m_spilledReg);
 		}
 	}
+
+	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex)
+	{
+		const RegGP r(_block);
+
+		const auto xm = asmjit::x86::xmm(_xmmIndex);
+		
+		_block.asm_().movd(r, xm);
+		_block.asm_().push(r.get());
+		_block.asm_().psrldq(xm, asmjit::Imm(8));
+
+		_block.asm_().movd(r, xm);
+		_block.asm_().push(r.get());
+	}
+
+	PushXMM::~PushXMM()
+	{
+		const RegGP r(m_block);
+
+		const auto xm = asmjit::x86::xmm(m_xmmIndex);
+
+		m_block.asm_().pop(r.get());
+		m_block.asm_().movd(xm, r);
+		m_block.asm_().pslldq(xm, asmjit::Imm(8));
+
+		m_block.asm_().pop(r.get());
+
+		RegXMM xt(m_block);
+		m_block.asm_().movd(xt, r);
+		m_block.asm_().movsd(xm, xt);
+	}
 }
