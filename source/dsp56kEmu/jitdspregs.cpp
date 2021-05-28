@@ -197,7 +197,7 @@ namespace dsp56k
 		}
 	}
 
-		void JitDspRegs::setM(int _agu, const JitReg& _src)
+	void JitDspRegs::setM(int _agu, const JitReg& _src)
 	{
 		if (!isLoaded(LoadedRegR0 + _agu))
 			loadAGU(_agu);
@@ -648,5 +648,7 @@ namespace dsp56k
 			store24(m_dsp.regs().lc, regLC);
 			setUnloaded(LoadedRegLC);
 		}
+
+		setUnloaded(LoadedRegExtMem);
 	}
 }
