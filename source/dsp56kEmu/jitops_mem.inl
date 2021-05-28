@@ -21,15 +21,23 @@ namespace dsp56k
 
 	template <Instruction Inst, typename std::enable_if<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, const TWord _op)
 	{
-		const auto area = getFieldValueMemArea<Inst>(_op);
-		effectiveAddress<Inst>(_dst, _op);
-		readMemOrPeriph(_dst, area, _dst);
+		readMem<Inst>(_dst, _op, getFieldValueMemArea<Inst>(_op));
 	}
 
-	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::readMem(const JitReg64& _dst, const TWord _op, const EMemArea _area)
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::readMem(const JitReg64& _dst, const TWord _op, const EMemArea _area)
 	{
-		effectiveAddress<Inst>(_dst, _op);
-		readMemOrPeriph(_dst, _area, _dst);
+		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);
+		const TWord rrr = getFieldValue<Inst, Field_RRR>(_op);
+
+		if ((mmm << 3 | rrr) == MMMRRR_ImmediateData)
+		{
+			updateAddressRegister(_dst, mmm, rrr);
+			return;
+		}
+
+		const RegGP offset(m_block);
+		updateAddressRegister(offset, mmm, rrr);
+		readMemOrPeriph(_dst, _area, offset);
 	}
 
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, TWord op) const
