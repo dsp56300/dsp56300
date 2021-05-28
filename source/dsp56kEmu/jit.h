@@ -23,6 +23,7 @@ namespace dsp56k
 	private:
 		void emit(TWord _pc);
 		void destroy(JitBlock* _block);
+		void destroy(TWord _pc);
 
 		DSP& m_dsp;
 

@@ -145,11 +145,21 @@ namespace dsp56k
 		const auto first = _block->getPCFirst();
 		const auto last = first + _block->getPMemSize();
 
+		LOG("Destroying JIT block at PC " << HEX(first) << ", length " << _block->getPMemSize());
+
 		for(auto i=first; i<last; ++i)
 			m_jitCache[i] = nullptr;
 
 		m_rt.release(_block->getFunc());
 
 		delete _block;
+	}
+
+	void Jit::destroy(TWord _pc)
+	{
+		const auto cacheEntry = m_jitCache[_pc];
+		if(!cacheEntry)
+			return;
+		destroy(cacheEntry);
 	}
 }
