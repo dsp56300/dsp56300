@@ -212,5 +212,6 @@ namespace dsp56k
 		OpFlagLoop		= (1<<1),
 		OpFlagCondition	= (1<<2),
 		OpFlagCacheMod	= (1<<3),
+		OpFlagPopPC		= (1<<4),
 	};
 }

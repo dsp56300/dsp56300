@@ -187,7 +187,7 @@ namespace dsp56k
 		OpcodeInfo(Dor_S,			"0000011011DDDDDD00010000",	"DOR S, label", PCRelativeAddressExt, OpFlagLoop),
 		OpcodeInfo(DorForever,		"000000000000001000000010",	"DOR FOREVER", PCRelativeAddressExt, OpFlagLoop),
 
-		OpcodeInfo(Enddo,			"00000000000000001o0o1100",	"ENDDO"),
+		OpcodeInfo(Enddo,			"00000000000000001o0o1100",	"ENDDO", None, OpFlagPopPC),
 
 		OpcodeInfo(Eor_SD,			"????????????????01JJd011",	"EOR S,D"),
 		OpcodeInfo(Eor_xx,			"0000000101iiiiii10ood011",	"EOR #xx,D"),
@@ -356,8 +356,8 @@ namespace dsp56k
 		OpcodeInfo(Rnd,				"????????????????0001d001",	"RND D"),
 		OpcodeInfo(Rol,				"????????????????0011d111",	"ROL D"),
 		OpcodeInfo(Ror,				"????????????????0010d111",	"ROR D"),
-		OpcodeInfo(Rti,				"000000000000000000000100",	"RTI"),
-		OpcodeInfo(Rts,				"000000000000000000001100",	"RTS"),
+		OpcodeInfo(Rti,				"000000000000000000000100",	"RTI", None, OpFlagPopPC),
+		OpcodeInfo(Rts,				"000000000000000000001100",	"RTS", None, OpFlagPopPC),
 
 		OpcodeInfo(Sbc,				"????????????????001Jd101",	"SBC S,D"),
 
