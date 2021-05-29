@@ -286,7 +286,7 @@ namespace dsp56k
 			const TWord cccc = getFieldValue<Inst,Field_CCCC>(_op);
 			const RegGP r(m_block);
 			decode_cccc(r, cccc);
-			m_asm.cmp(r, asmjit::Imm(0));
+			m_asm.cmp(r.get().r8(), asmjit::Imm(0));
 		}
 
 		template<Instruction Inst> TWord absAddressExt()
