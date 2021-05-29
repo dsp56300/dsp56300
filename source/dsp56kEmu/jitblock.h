@@ -79,5 +79,6 @@ namespace dsp56k
 		TWord m_nextPC = g_pcInvalid;
 		TWord m_pMemWriteAddress = g_pcInvalid;
 		TWord m_pMemWriteValue = 0;
+		std::string m_dspAsm;
 	};
 }

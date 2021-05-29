@@ -1,5 +1,7 @@
 #include "jitblock.h"
 #include "jitops.h"
+#include "dsp.h"
+#include "memory.h"
 
 namespace dsp56k
 {
@@ -9,6 +11,7 @@ namespace dsp56k
 	{
 		m_pcFirst = _pc;
 		m_pMemSize = 0;
+		m_dspAsm.clear();
 
 		while(true)
 		{
@@ -16,6 +19,15 @@ namespace dsp56k
 
 			const auto pc = m_pcFirst + m_pMemSize;
 			ops.emit(pc);
+
+			{
+				std::string disasm;
+				TWord opA;
+				TWord opB;
+				m_dsp.memory().getOpcode(pc, opA, opB);
+				m_dsp.disassembler().disassemble(disasm, opA, opB, 0, 0, 0);
+				m_dspAsm += disasm + '\n';
+			}
 
 			m_pMemSize += ops.getOpSize();
 			++m_instructionCount;
