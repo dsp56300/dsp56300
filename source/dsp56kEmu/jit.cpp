@@ -118,7 +118,7 @@ namespace dsp56k
 		AsmJitErrorHandler errorHandler;
 		CodeHolder code;
 
-		code.setLogger(&logger);
+//		code.setLogger(&logger);
 		code.setErrorHandler(&errorHandler);
 		code.init(m_rt.environment());
 
