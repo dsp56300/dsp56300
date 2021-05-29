@@ -522,8 +522,8 @@ namespace dsp56k
 	{
 		const auto* first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
 
-		const RegGP ssIndex(m_block);
-		getSP(ssIndex.get().r32());
+		const auto ssIndex = regArg0;//		const RegGP ssIndex(m_block);
+		getSP(ssIndex.r32());
 		m_asm.and_(ssIndex, Imm(0xf));
 
 		m_block.mem().ptrToReg(_dst, first);
@@ -534,8 +534,8 @@ namespace dsp56k
 	{
 		const auto* first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
 
-		const RegGP ssIndex(m_block);
-		getSP(ssIndex.get().r32());
+		const auto ssIndex = regArg0;
+		getSP(ssIndex.r32());
 		m_asm.and_(ssIndex, Imm(0xf));
 
 		const RegGP addr(m_block);
