@@ -55,7 +55,7 @@ namespace dsp56k
 		const JitEntry& getFunc() const { return m_func; }
 
 		void exec();
-		size_t getInstructionCount() const { return m_instructionCount; }
+		TWord getInstructionCount() const { return m_instructionCount; }
 
 		// JIT code writes these
 		TWord& nextPC() { return m_nextPC; }
