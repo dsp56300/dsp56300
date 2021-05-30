@@ -29,13 +29,13 @@ namespace dsp56k
 		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);
 		const TWord rrr = getFieldValue<Inst, Field_RRR>(_op);
 
-		if ((mmm << 3 | rrr) == MMMRRR_ImmediateData)
-		{
-			updateAddressRegister(_dst, mmm, rrr);
-			return;
-		}
-
 		updateAddressRegister(_dst, mmm, rrr);
+
+		if ((mmm << 3 | rrr) == MMMRRR_ImmediateData)
+			return;
+
+		// TODO: if the MMMRRR is absolute address, we know at compile time if we need to read periph or memory
+
 		readMemOrPeriph(_dst, _area, _dst);
 	}
 
