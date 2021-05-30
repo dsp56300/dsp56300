@@ -124,7 +124,6 @@ namespace dsp56k
 		m_asm.cmp(_m.r32(), asmjit::Imm(0xffffff));
 		m_asm.jz(linear);
 
-		RegGP moduloTest(m_block);
 		m_asm.or_(_m.r16(), _m.r16());
 		m_asm.jz(bitreverse);
 
