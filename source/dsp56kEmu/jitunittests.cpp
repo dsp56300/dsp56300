@@ -1534,6 +1534,16 @@ namespace dsp56k
 			assert(dsp.y1() == 0x223344);
 		});
 
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.a.var = 0;
+			dsp.mem.set(MemArea_X, 0x10, 0x223344);
+			_ops.emit(0, 0x56f000, 0x000010);	// move x:<<$10,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x00223344000000);
+		});
 	}
 
 	void JitUnittests::ifcc()
