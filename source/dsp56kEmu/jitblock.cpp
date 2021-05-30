@@ -18,16 +18,18 @@ namespace dsp56k
 			JitOps ops(*this, g_useSRCache);
 
 			const auto pc = m_pcFirst + m_pMemSize;
-			ops.emit(pc);
+
+			std::string disasm;
 
 			{
-				std::string disasm;
 				TWord opA;
 				TWord opB;
 				m_dsp.memory().getOpcode(pc, opA, opB);
 				m_dsp.disassembler().disassemble(disasm, opA, opB, 0, 0, 0);
 				m_dspAsm += disasm + '\n';
 			}
+
+			ops.emit(pc);
 
 			m_pMemSize += ops.getOpSize();
 			++m_instructionCount;
