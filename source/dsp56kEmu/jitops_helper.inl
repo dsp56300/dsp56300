@@ -364,8 +364,8 @@ namespace dsp56k
 
 	void JitOps::transfer24ToAlu(int _alu, const JitReg& _src)
 	{
-		m_asm.shl(_src, asmjit::Imm(24));
-		m_dspRegs.setALU(_alu, _src);
+		m_asm.shl(_src.r64(), asmjit::Imm(24));
+		m_dspRegs.setALU(_alu, _src.r64());
 	}
 
 	void JitOps::transferSaturation(const JitReg& _dst)
