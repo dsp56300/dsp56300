@@ -272,9 +272,9 @@ namespace dsp56k
 
 	void JitDspRegs::setALU(int _alu, const JitReg& _src)
 	{
-		assert(isLoaded(LoadedRegA + _alu));
 		mask56(_src);
 		m_asm.movq(xmm(xmmA + _alu), _src);
+		setLoaded(LoadedRegA + _alu);
 	}
 
 	void JitDspRegs::getXY(const JitReg& _dst, int _xy)
