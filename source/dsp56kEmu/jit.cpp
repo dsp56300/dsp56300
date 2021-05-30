@@ -96,6 +96,8 @@ namespace dsp56k
 		// run JIT code
 		cacheEntry->exec();
 
+		m_dsp.m_instructions += cacheEntry->getInstructionCount();
+
 		// if JIT code has written to P memory, destroy a JIT block if present at the write location
 		if(cacheEntry->pMemWriteAddress() != g_pcInvalid)
 			destroy(cacheEntry->pMemWriteAddress());
