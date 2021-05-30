@@ -9,8 +9,8 @@ agu.cpp agu.h
 audio.cpp audio.h
 bitfield.h
 buildconfig.h
-assert.cpp assert.h
 disasm.cpp disasm.h
+dspassert.cpp dspassert.h
 dspconfig.h
 dsp.cpp dsp.h 
 dsp_decode.inl

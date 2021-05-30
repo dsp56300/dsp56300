@@ -1,6 +1,6 @@
 #pragma once
 
-#include "assert.h"
+#include "dspassert.h"
 #include "logging.h"
 
 namespace dsp56k

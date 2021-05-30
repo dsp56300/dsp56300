@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include "assert.h"
+#include "dspassert.h"
 
 #ifndef CHAR_BIT
 #define CHAR_BIT 8

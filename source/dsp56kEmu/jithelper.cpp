@@ -1,6 +1,6 @@
 #include "jithelper.h"
 
-#include "assert.h"
+#include "dspassert.h"
 #include "logging.h"
 #include "asmjit/x86/x86assembler.h"
 

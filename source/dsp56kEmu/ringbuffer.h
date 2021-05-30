@@ -3,8 +3,9 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <cassert>
 #include <thread>
+
+#include "dspassert.h"
 
 #include "semaphore.h"
 

@@ -2,7 +2,7 @@
 
 #include <stack>
 
-#include "assert.h"
+#include "dspassert.h"
 #include "types.h"
 #include "jittypes.h"
 
