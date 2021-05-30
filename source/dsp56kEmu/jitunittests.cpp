@@ -1180,8 +1180,7 @@ namespace dsp56k
 	{
 		runTest([&](auto& _block, auto& _ops)
 		{
-			dsp.reg.n[0].var = 0;
-			dsp.reg.a.var = 0xffaabbcc112233;
+			dsp.reg.n[0].var = 0x4711;
 			_ops.emit(0x20, 0x044058, 0x00000a);				// lra >*+$a,n0
 		},
 		[&]()
@@ -1510,6 +1509,18 @@ namespace dsp56k
 		[&]()
 		{
 			assert(dsp.reg.r[0].var == 0x445566);
+		});
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[2].var = 0xa;
+			dsp.reg.n[2].var = 0x5;
+			dsp.mem.set(MemArea_P, 0xa + 0x5, 0x123456);
+			_ops.emit(0, 0x07ea92);	// move p:(r2+n2),r2
+		},
+		[&]()
+		{
+			assert(dsp.reg.r[2].var == 0x123456);
 		});
 	}
 
