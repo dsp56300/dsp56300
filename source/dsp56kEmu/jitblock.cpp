@@ -15,12 +15,13 @@ namespace dsp56k
 
 		while(true)
 		{
-			JitOps ops(*this, g_useSRCache);
-
 			const auto pc = m_pcFirst + m_pMemSize;
 
+			// TODO: this is not enough, block needs to be terminated if LA is written, too
 			if(pc == static_cast<TWord>(m_dsp.regs().la.var + 1))
 				break;
+
+			JitOps ops(*this, g_useSRCache);
 
 			std::string disasm;
 
