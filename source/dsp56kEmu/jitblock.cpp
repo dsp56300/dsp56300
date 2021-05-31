@@ -19,6 +19,9 @@ namespace dsp56k
 
 			const auto pc = m_pcFirst + m_pMemSize;
 
+			if(pc == static_cast<TWord>(m_dsp.regs().la.var + 1))
+				break;
+
 			std::string disasm;
 
 			{

@@ -54,16 +54,20 @@ namespace dsp56k
 	void Jit::exec()
 	{
 		// loop processing
-		if(m_dsp.sr_test(SR_LF) && m_dsp.getPC().var == m_dsp.regs().la.var)
+		if(m_dsp.sr_test(SR_LF))
 		{
-			if(m_dsp.regs().lc.var <= 0)
+			if(m_dsp.getPC().var == m_dsp.regs().la.var + 1)
 			{
-				m_dsp.do_end();					
-			}
-			else
-			{
-				--m_dsp.regs().lc.var;
-				m_dsp.setPC(hiword(m_dsp.regs().ss[m_dsp.ssIndex()]));
+				auto& lc = m_dsp.regs().lc.var;
+				if(lc <= 0)
+				{
+					m_dsp.do_end();					
+				}
+				else
+				{
+					--lc;
+					m_dsp.setPC(hiword(m_dsp.regs().ss[m_dsp.ssIndex()]));
+				}
 			}
 		}
 
