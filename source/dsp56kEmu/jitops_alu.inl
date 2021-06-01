@@ -127,8 +127,8 @@ namespace dsp56k
 			const RegGP mask(m_block);
 
 			m_asm.mov(mask, asmjit::Imm(0xff000000ffffff));
-			m_asm.and_(alu, mask.get());
-			m_asm.or_(alu, _v.get());
+			m_asm.or_(_v, mask.get());
+			m_asm.and_(alu, _v.get());
 		}
 
 		_v.release();
