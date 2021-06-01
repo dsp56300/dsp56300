@@ -102,10 +102,6 @@ namespace dsp56k
 
 		m_dsp.m_instructions += cacheEntry->getInstructionCount();
 
-		// if JIT code has written to P memory, destroy a JIT block if present at the write location
-		if(cacheEntry->pMemWriteAddress() != g_pcInvalid)
-			destroy(cacheEntry->pMemWriteAddress());
-
 		if(cacheEntry->nextPC() != g_pcInvalid)
 		{
 			// If the JIt block executed a branch, point PC to the new location
@@ -116,6 +112,17 @@ namespace dsp56k
 			// Otherwise, move PC forward
 			m_dsp.setPC(pc + cacheEntry->getPMemSize());
 		}
+
+		if(false)
+		{
+			TWord op, opB;
+			m_dsp.mem.getOpcode(pc, op, opB);
+			m_dsp.traceOp(pc, op, opB, cacheEntry->getPMemSize());
+		}
+
+		// if JIT code has written to P memory, destroy a JIT block if present at the write location
+		if(cacheEntry->pMemWriteAddress() != g_pcInvalid)
+			destroy(cacheEntry->pMemWriteAddress());
 	}
 
 	void Jit::emit(const TWord _pc)
