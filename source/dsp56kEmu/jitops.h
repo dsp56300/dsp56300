@@ -233,13 +233,13 @@ namespace dsp56k
 		void op_Or_xx(TWord op)					{ errNotImplemented(op); }
 		void op_Or_xxxx(TWord op)				{ errNotImplemented(op); }
 		void op_Ori(TWord op);
-		void op_Pflush(TWord op){}
+		void op_Pflush(TWord op)				{ errNotImplemented(op); }
 		void op_Pflushun(TWord op){}
 		void op_Pfree(TWord op){}
 		void op_Plock(TWord op){}
-		void op_Plockr(TWord op){}
-		void op_Punlock(TWord op){}
-		void op_Punlockr(TWord op){}
+		void op_Plockr(TWord op)				{ errNotImplemented(op); }
+		void op_Punlock(TWord op)				{ errNotImplemented(op); }
+		void op_Punlockr(TWord op)				{ errNotImplemented(op); }
 		void op_Rep_ea(TWord op)				{ errNotImplemented(op); }
 		void op_Rep_aa(TWord op)				{ errNotImplemented(op); }
 		void op_Rep_xxx(TWord op){errNotImplemented(op);}
