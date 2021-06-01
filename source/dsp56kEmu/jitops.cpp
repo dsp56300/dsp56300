@@ -465,24 +465,9 @@ namespace dsp56k
 	{
 	}
 
-	void JitOps::XYto56(const JitReg64& _dst, int _xy) const
+	inline void JitOps::errNotImplemented(TWord op)
 	{
-		m_dspRegs.getXY(_dst, _xy);
-		signextend48to56(_dst);
-	}
-
-	void JitOps::XY0to56(const JitReg64& _dst, int _xy) const
-	{
-		m_dspRegs.getXY(_dst, _xy);
-		m_asm.shl(_dst, asmjit::Imm(40));
-		m_asm.sar(_dst, asmjit::Imm(16));
-	}
-
-	void JitOps::XY1to56(const JitReg64& _dst, int _xy) const
-	{
-		m_dspRegs.getXY(_dst, _xy);
-		m_asm.shr(_dst, asmjit::Imm(24));	// remove LSWord
-		signed24To56(_dst);
+		assert(0 && "instruction not implemented");
 	}
 
 	inline void JitOps::do_exec(RegGP& _lc, TWord _addr)

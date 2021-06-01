@@ -8,6 +8,26 @@ namespace dsp56k
 	constexpr int64_t g_alu_min_56		= -0x80000000000000;
 	constexpr uint64_t g_alu_max_56_u	=  0xffffffffffffff;
 
+	void JitOps::XYto56(const JitReg64& _dst, int _xy) const
+	{
+		m_dspRegs.getXY(_dst, _xy);
+		signextend48to56(_dst);
+	}
+
+	void JitOps::XY0to56(const JitReg64& _dst, int _xy) const
+	{
+		m_dspRegs.getXY(_dst, _xy);
+		m_asm.shl(_dst, asmjit::Imm(40));
+		m_asm.sar(_dst, asmjit::Imm(16));
+	}
+
+	void JitOps::XY1to56(const JitReg64& _dst, int _xy) const
+	{
+		m_dspRegs.getXY(_dst, _xy);
+		m_asm.shr(_dst, asmjit::Imm(24));	// remove LSWord
+		signed24To56(_dst);
+	}
+
 	inline void JitOps::op_Abs(TWord op)
 	{
 		const auto ab = getFieldValue<Abs, Field_d>(op);
@@ -211,11 +231,6 @@ namespace dsp56k
 		const RegGP r(m_block);
 		m_asm.mov(r.get().r32(), asmjit::Imm(_absAddr));
 		jsr(r.get().r32());
-	}
-
-	inline void JitOps::errNotImplemented(TWord op)
-	{
-		assert(0 && "instruction not implemented");
 	}
 
 	inline void JitOps::op_Add_SD(TWord op)
