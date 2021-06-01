@@ -244,7 +244,7 @@ namespace dsp56k
 		void op_Rep_aa(TWord op)				{ errNotImplemented(op); }
 		void op_Rep_xxx(TWord op){}
 		void op_Rep_S(TWord op){}
-		void op_Reset(TWord op){}
+		void op_Reset(TWord op);
 		void op_Rnd(TWord op);
 		void op_Rol(TWord op);
 		void op_Ror(TWord op)					{ errNotImplemented(op); }
