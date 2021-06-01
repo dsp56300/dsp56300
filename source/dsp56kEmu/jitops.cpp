@@ -524,6 +524,14 @@ namespace dsp56k
 	//	LOG( "DO END: loop flag = " << sr_test(SR_LF) << " sc=" << (int)sc.var << " lc:" << std::hex << lc.var << " la:" << std::hex << la.var );
 	}
 
+	inline void JitOps::op_Debug(TWord op)
+	{
+	}
+
+	inline void JitOps::op_Debugcc(TWord op)
+	{
+	}
+
 	void JitOps::op_Do_ea(TWord op)
 	{
 		const auto addr = absAddressExt<Do_ea>();
