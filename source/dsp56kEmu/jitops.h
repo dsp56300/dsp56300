@@ -282,13 +282,6 @@ namespace dsp56k
 
 		void signed24To56(const JitReg64& _r) const;
 
-		// extension word access
-		template<Instruction Inst> int pcRelativeAddressExt()
-		{
-			static_assert(g_opcodes[Inst].m_extensionWordType & PCRelativeAddressExt, "opcode does not have a PC-relative address extension word");
-			return signextend<int,24>(getOpWordB());
-		}
-
 		// Check Condition
 		template <Instruction Inst> void checkCondition(const TWord _op)
 		{
@@ -296,6 +289,13 @@ namespace dsp56k
 			const RegGP r(m_block);
 			decode_cccc(r, cccc);
 			m_asm.cmp(r.get().r8(), asmjit::Imm(0));
+		}
+
+		// extension word access
+		template<Instruction Inst> int pcRelativeAddressExt()
+		{
+			static_assert(g_opcodes[Inst].m_extensionWordType & PCRelativeAddressExt, "opcode does not have a PC-relative address extension word");
+			return signextend<int,24>(getOpWordB());
 		}
 
 		template<Instruction Inst> TWord absAddressExt()
