@@ -119,7 +119,6 @@ namespace dsp56k
 	inline void JitOps::alu_and(const TWord ab, RegGP& _v) const
 	{
 		m_asm.shl(_v, asmjit::Imm(24));
-		ccr_update_ifZero(SRB_Z);
 
 		const AluReg alu(m_block, ab);
 
@@ -132,6 +131,8 @@ namespace dsp56k
 		}
 
 		_v.release();
+
+		ccr_update_ifZero(SRB_Z);
 		
 		// S L E U N Z V C
 		// v - - - * * * -
