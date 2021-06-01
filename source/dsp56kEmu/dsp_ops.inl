@@ -395,11 +395,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Pflushun(const TWord op)
 	{
-		cache.pflushun();		
+		cache.pflushun();
 	}
 	inline void DSP::op_Pfree(const TWord op)
 	{
-		cache.pfree();		
+		cache.pfree();
 	}
 	inline void DSP::op_Plock(const TWord op)
 	{
