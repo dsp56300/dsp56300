@@ -12,7 +12,7 @@ using namespace asmjit;
 using namespace x86;
 
 /*
-	The idea of this JIT is to keep all relevant DSP registers in X64 registers. Register allocation looks like this:
+	The idea of this JIT is to keep all relevant DSP registers in x64 registers. Register allocation looks like this:
 
 	RAX	= func ret val                             |               XMM00 = DSP AGU 0 [0,M,N,R]
 	RBX							*                  |               XMM01 = DSP AGU 1 [0,M,N,R]
