@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "logging.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -16,6 +18,7 @@ namespace dsp56k
 	void Assert::show( const char* _msg )
 	{
 #ifdef _WIN32
+		LOG("DSP ASSERT: " << _msg);
 		int res = ::MessageBoxA( NULL, (std::string(_msg) + "\n\nBreak into the debugger?").c_str(), "DSP 56300 Emulator: ASSERTION FAILED", MB_YESNOCANCEL );
 		switch( res )
 		{
