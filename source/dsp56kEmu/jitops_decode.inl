@@ -276,8 +276,8 @@ namespace dsp56k
 		case 0x3b:	m_dspRegs.setSP(_src);	break;
 		case 0x3c:	m_dspRegs.setSSH(_src);	break;
 		case 0x3d:	m_dspRegs.setSSL(_src);	break;
-		case 0x3e:	m_dspRegs.setLA(_src);	break;
-		case 0x3f:	m_dspRegs.setLC(_src);	break;
+		case 0x3e:	m_dspRegs.setLA(_src);	m_resultFlags |= WriteToLA; break;
+		case 0x3f:	m_dspRegs.setLC(_src);	m_resultFlags |= WriteToLC; break;
 		default:
 			assert(0 && "invalid dddddd value");
 		}

@@ -17,7 +17,7 @@ namespace dsp56k
 		{
 			const auto pc = m_pcFirst + m_pMemSize;
 
-			// TODO: this is not enough, block needs to be terminated if LA is written, too
+			// always terminate block if loop end has reached
 			if(pc == static_cast<TWord>(m_dsp.regs().la.var + 1))
 				break;
 
@@ -41,7 +41,7 @@ namespace dsp56k
 			const auto res = ops.getInstruction();
 			assert(res != InstructionCount);
 
-			if(ops.hasWrittenToPMemory())
+			if(ops.checkResultFlag(JitOps::WritePMem) || ops.checkResultFlag(JitOps::WriteToLA) || ops.checkResultFlag(JitOps::WriteToLC))
 				break;
 
 			if(res != Parallel)

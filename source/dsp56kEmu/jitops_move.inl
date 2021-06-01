@@ -477,7 +477,7 @@ namespace dsp56k
 			m_block.mem().mov(m_block.pMemWriteAddress(), ea.get().r32());
 			m_block.mem().mov(m_block.pMemWriteValue(), r.get().r32());
 
-			m_pMemoryWritten = true;
+			m_resultFlags |= WritePMem;
 		}
 	}
 

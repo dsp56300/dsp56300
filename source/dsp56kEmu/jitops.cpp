@@ -519,6 +519,8 @@ namespace dsp56k
 		m_dspRegs.getSSH(r.get().r32());
 		m_dspRegs.setLA(r.get().r32());
 
+		m_resultFlags |= WriteToLC | WriteToLA;
+
 	//	LOG( "DO END: loop flag = " << sr_test(SR_LF) << " sc=" << (int)sc.var << " lc:" << std::hex << lc.var << " la:" << std::hex << la.var );
 	}
 

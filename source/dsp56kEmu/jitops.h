@@ -16,6 +16,15 @@ namespace dsp56k
 	class JitOps
 	{
 	public:
+		enum ResultFlags
+		{
+			None				= 0,
+
+			WritePMem			= 0x01,
+			WriteToLC			= 0x02,
+			WriteToLA			= 0x04
+		};
+
 		JitOps(JitBlock& _block, bool _useSRCache = true);
 
 		void emit(TWord _pc);
@@ -300,7 +309,6 @@ namespace dsp56k
 		void	popPCSR();
 		void	popPC();
 
-
 		// DSP memory access
 		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> void effectiveAddress(const JitReg64& _dst, TWord _op);
 
@@ -478,7 +486,8 @@ namespace dsp56k
 
 		TWord getOpSize() const { return m_opSize; }
 		Instruction getInstruction() const { return m_instruction; }
-		bool hasWrittenToPMemory() const { return m_pMemoryWritten; }
+
+		bool checkResultFlag(const ResultFlags _flag) const { return (m_resultFlags & _flag) != 0; }
 
 	private:
 		void errNotImplemented(TWord op);
@@ -497,6 +506,7 @@ namespace dsp56k
 
 		TWord m_opSize = 0;
 		Instruction m_instruction = InstructionCount;
-		bool m_pMemoryWritten = false;
+
+		uint32_t m_resultFlags = None;
 	};
 }
