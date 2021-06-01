@@ -234,10 +234,13 @@ namespace dsp56k
 
 		exec_jump(opCache.op, op);
 
-		++m_instructions;
+		if(pcCurrentInstruction == currentOp)
+		{
+			++m_instructions;
 
-		if(g_traceSupported && pcCurrentInstruction == currentOp)
-			traceOp();
+			if(g_traceSupported && pcCurrentInstruction == currentOp)
+				traceOp();
+		}
 	}
 
 	void DSP::exec_jump(const TInstructionFunc& _func, TWord op)
@@ -438,7 +441,10 @@ namespace dsp56k
 		
 		sr_set( SR_LF );
 
+		++m_instructions;
+
 		traceOp();
+
 		TWord looplen=_addr + 1  - getPC().var;
 		uint32_t simpleguess=getInstructionCounter() + looplen;
 		if (looplen>16) simpleguess=0;
@@ -509,6 +515,8 @@ namespace dsp56k
 	{
 		const auto lcBackup = reg.lc;
 		reg.lc.var = loopCount;
+
+		++m_instructions;
 
 		traceOp();
 
