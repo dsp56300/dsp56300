@@ -550,16 +550,25 @@ namespace dsp56k
 
 		const auto op = memRead(MemArea_P, pcCurrentInstruction);
 
+		traceOp(pcCurrentInstruction, op, m_opWordB, m_currentOpLen);
+	}
+
+	void DSP::traceOp(const TWord pc, const TWord op, const TWord opB, const TWord opLen)
+	{
 		std::stringstream ss;
-		ss << "p:$" << HEX(pcCurrentInstruction) << ' ' << HEX(op);
-		if(m_currentOpLen > 1)
-			ss << ' ' << HEX(m_opWordB);
+		ss << "p:$" << HEX(pc) << ' ' << HEX(op);
+		if(opLen > 1)
+			ss << ' ' << HEX(opB);
 		else
 			ss << "       ";
 		ss << " = ";
 		if(m_trace & StackIndent)
 			ss << getSSindent();
-		ss << m_asm;
+
+		std::string disasm;
+		m_disasm.disassemble(disasm, op, opB, reg.sr.var, reg.omr.var, pc);
+		
+		ss << disasm;
 		const std::string str(ss.str());
 		LOGF(str);
 

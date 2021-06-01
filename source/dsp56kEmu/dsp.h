@@ -271,6 +271,7 @@ namespace dsp56k
 		bool	rep_exec						(TWord loopCount);
 
 		void	traceOp							();
+		void	traceOp							(TWord pc, TWord opA, TWord opB, TWord opLen);
 
 		// -- decoding helper functions
 
