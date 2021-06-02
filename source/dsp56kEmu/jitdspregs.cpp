@@ -277,6 +277,13 @@ namespace dsp56k
 		setLoaded(LoadedRegA + _alu);
 	}
 
+	void JitDspRegs::clrALU(const TWord _aluIndex)
+	{
+		setLoaded(LoadedRegA + _aluIndex);
+		const auto xm = regAlu(_aluIndex);
+		m_asm.pxor(xm, xm);
+	}
+
 	void JitDspRegs::getXY(const JitReg& _dst, int _xy)
 	{
 		if(!isLoaded(LoadedRegX + _xy))

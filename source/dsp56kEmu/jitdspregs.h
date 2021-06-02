@@ -41,6 +41,7 @@ namespace dsp56k
 
 		void getALU(const JitReg& _dst, int _alu);
 		void setALU(int _alu, const JitReg& _src);
+		void clrALU(const TWord _aluIndex);
 
 		void getXY(const JitReg& _dst, int _xy);
 		void setXY(uint32_t _xy, const JitReg& _src);
@@ -108,7 +109,7 @@ namespace dsp56k
 		}
 
 		void setPC(const JitReg& _pc);
-		
+
 	private:
 		enum LoadedRegs
 		{

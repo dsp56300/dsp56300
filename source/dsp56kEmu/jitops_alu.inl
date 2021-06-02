@@ -776,8 +776,7 @@ namespace dsp56k
 	inline void JitOps::op_Clr(TWord op)
 	{
 		const auto D = getFieldValue<Clr, Field_d>(op);
-		const auto xm = regAlu(D);
-		m_asm.pxor(xm, xm);
+		m_dspRegs.clrALU(D);
 		ccr_clear( static_cast<CCRMask>(SR_E | SR_N | SR_V) );
 		ccr_set( static_cast<CCRMask>(SR_U | SR_Z) );
 		m_ccrDirty = false;
