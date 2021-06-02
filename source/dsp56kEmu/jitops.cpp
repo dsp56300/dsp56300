@@ -682,6 +682,38 @@ namespace dsp56k
 		}
 	}
 
+	void callDSPPflushun(DSP* const _dsp, const TWord op)
+	{
+		_dsp->op_Pflushun(op);
+	}
+
+	void callDSPPfree(DSP* const _dsp, const TWord op)
+	{
+		_dsp->op_Pfree(op);
+	}
+
+	void callDSPPlock(DSP* const _dsp, const TWord ea)
+	{
+		_dsp->cachePlock(ea);
+	}
+
+	inline void JitOps::op_Pflushun(TWord op)
+	{
+		callDSPFunc(&callDSPPflushun, op);
+	}
+
+	inline void JitOps::op_Pfree(TWord op)
+	{
+		callDSPFunc(&callDSPPfree, op);
+	}
+
+	inline void JitOps::op_Plock(TWord op)
+	{
+		RegGP r(m_block);
+		effectiveAddress<Plock>(r, op);
+		callDSPFunc(&callDSPPlock, r);
+	}
+
 	inline void JitOps::op_Rti(TWord op)
 	{
 		popPCSR();

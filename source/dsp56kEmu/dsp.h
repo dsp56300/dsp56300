@@ -874,6 +874,7 @@ namespace dsp56k
 		void op_Pflush(TWord op);
 		void op_Pflushun(TWord op);
 		void op_Pfree(TWord op);
+		void cachePlock(TWord _effectiveAddress);
 		void op_Plock(TWord op);
 		void op_Plockr(TWord op);
 		void op_Punlock(TWord op);
