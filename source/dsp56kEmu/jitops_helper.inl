@@ -462,4 +462,27 @@ namespace dsp56k
 		else if(_bitValue == BitClear)
 			m_asm.jc(_skip);
 	}
+
+	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord)) const
+	{
+		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
+
+		{
+			PushXMMRegs xmms(m_block);
+			PushShadowSpace ss(m_block);
+			m_block.asm_().call(asmjit::func_as_ptr(_func));
+		}
+	}
+
+	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord), TWord _arg) const
+	{
+		m_block.asm_().mov(regArg1, asmjit::Imm(_arg));
+		callDSPFunc(_func);
+	}
+
+	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord), const JitReg& _arg) const
+	{
+		m_block.asm_().mov(regArg1, _arg);
+		callDSPFunc(_func);
+	}
 }

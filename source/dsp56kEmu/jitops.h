@@ -282,6 +282,10 @@ namespace dsp56k
 
 		void signed24To56(const JitReg64& _r) const;
 
+		void callDSPFunc(void(* _func)(DSP*, TWord)) const;
+		void callDSPFunc(void(* _func)(DSP*, TWord), TWord _arg) const;
+		void callDSPFunc(void(* _func)(DSP*, TWord), const JitReg& _arg) const;
+
 		// Check Condition
 		template <Instruction Inst> void checkCondition(const TWord _op)
 		{
