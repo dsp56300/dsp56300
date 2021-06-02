@@ -792,13 +792,6 @@ namespace dsp56k
 
 	inline void JitOps::op_Reset(TWord op)
 	{
-		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
-		m_block.asm_().mov(regArg1, asmjit::Imm(op));
-
-		{
-			PushXMMRegs xmms(m_block);
-			PushShadowSpace ss(m_block);
-			m_block.asm_().call(asmjit::func_as_ptr(&callDSPReset));
-		}
+		callDSPFunc(&callDSPReset, op);
 	}
 }
