@@ -702,7 +702,7 @@ namespace dsp56k
 
 	void JitUnittests::and_build(JitBlock& _block, JitOps& _ops)
 	{
-		dsp.reg.a.var = 0xcccccccc112233;
+		dsp.reg.a.var = 0xffcccccc112233;
 		dsp.reg.x.var = 0x777777;
 
 		dsp.reg.b.var = 0xaaaabbcc334455;
@@ -715,7 +715,7 @@ namespace dsp56k
 	void JitUnittests::and_verify()
 	{
 		assert(dsp.reg.a.var == 0xff444444112233);
-		assert(dsp.reg.b.var == 0xaa667788334455);
+		assert(dsp.reg.b.var == 0xaa223388334455);
 	}
 
 	void JitUnittests::andi_build(JitBlock& _block, JitOps& _ops)
