@@ -588,10 +588,10 @@ namespace dsp56k
 			{
 				const auto xy = _lll - 2;
 
-				RegGP r(m_block);
+				const RegGP r(m_block);
 				m_asm.mov(r, x);
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.and_(r, y);
+				m_asm.and_(r, y.r64());
 				m_dspRegs.setXY(xy, r);
 			}
 			break;
