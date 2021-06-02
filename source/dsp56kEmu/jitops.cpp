@@ -729,6 +729,67 @@ namespace dsp56k
 		_dsp->op_Reset(op);
 	}
 
+	void JitOps::rep_exec(TWord _lc)
+	{
+		// TODO: optimize me, we know the LC at compile time, which gives lots of optimization potential such as loop unrolling etc
+		RegGP lc(m_block);
+		m_asm.mov(lc, asmjit::Imm(_lc));
+		rep_exec(lc);
+	}
+
+	void JitOps::rep_exec(RegGP& _lc)
+	{
+		const auto lc = m_dspRegs.getLC().r32();
+
+		// backup LC
+		const RegXMM lcBackup(m_block);
+		m_asm.movd(lcBackup, lc);
+		m_asm.mov(lc, _lc.get().r32());
+		_lc.release();
+
+		const auto opSize = m_opSize;
+		const auto pc = m_pcCurrentOp + m_opSize;	// remember old op size as it gets overwritten by the child instruction
+		
+		const auto start = m_asm.newLabel();
+		const auto end = m_asm.newLabel();
+
+		// execute it once without being part of the loop to fill register cache, needed only once
+		m_asm.dec(lc);
+		emit(pc);
+		m_asm.cmp(m_dspRegs.getLC().r32(), asmjit::Imm(0));
+		m_asm.jz(end);
+
+		m_asm.bind(start);
+
+		m_asm.dec(lc);
+		emit(pc);
+		m_asm.cmp(m_dspRegs.getLC().r32(), asmjit::Imm(0));
+		m_asm.jnz(start);
+
+		m_asm.bind(end);
+
+		// restore previous LC
+		m_asm.movd(m_dspRegs.getLC(), lcBackup);
+
+		// op size is the sum of the rep plus the child op
+		assert(m_opSize == 1 && "repeated instruction needs to be a single word instruction");
+		m_opSize += opSize;
+	}
+
+	void JitOps::op_Rep_xxx(TWord op)
+	{
+		const auto loopcount = getFieldValue<Rep_xxx,Field_hhhh, Field_iiiiiiii>(op);
+		rep_exec(loopcount);
+	}
+
+	void JitOps::op_Rep_S(TWord op)
+	{
+		const auto dddddd = getFieldValue<Rep_S,Field_dddddd>(op);
+		RegGP lc(m_block);
+		decode_dddddd_read(lc.get().r32(), dddddd);
+		rep_exec(lc);
+	}
+
 	inline void JitOps::op_Reset(TWord op)
 	{
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));

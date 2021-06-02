@@ -242,8 +242,8 @@ namespace dsp56k
 		void op_Punlockr(TWord op)				{ errNotImplemented(op); }
 		void op_Rep_ea(TWord op)				{ errNotImplemented(op); }
 		void op_Rep_aa(TWord op)				{ errNotImplemented(op); }
-		void op_Rep_xxx(TWord op){errNotImplemented(op);}
-		void op_Rep_S(TWord op){errNotImplemented(op);}
+		void op_Rep_xxx(TWord op);
+		void op_Rep_S(TWord op);
 		void op_Reset(TWord op);
 		void op_Rnd(TWord op);
 		void op_Rol(TWord op);
@@ -463,6 +463,8 @@ namespace dsp56k
 		// loops
 		void do_exec(RegGP& _lc, TWord _addr);
 		void do_end();
+		void rep_exec(TWord _lc);
+		void rep_exec(RegGP& _lc);
 
 		// -------------- bra variants
 		template<BraMode Bmode> void braOrBsr(int offset);
