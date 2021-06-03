@@ -39,10 +39,12 @@ namespace dsp56k
 		JitReg getLA();
 		JitReg getLC();
 
+		JitReg128 getALU(int _ab);
 		void getALU(const JitReg& _dst, int _alu);
 		void setALU(int _alu, const JitReg& _src);
 		void clrALU(const TWord _aluIndex);
 
+		JitReg128 getXY(int _xy);
 		void getXY(const JitReg& _dst, int _xy);
 		void setXY(uint32_t _xy, const JitReg& _src);
 

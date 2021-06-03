@@ -262,12 +262,17 @@ namespace dsp56k
 		return regLC;
 	}
 
+	JitReg128 JitDspRegs::getALU(int _ab)
+	{
+		if(!isLoaded(LoadedRegA + _ab))
+			loadALU(_ab);
+
+		return xmm(xmmA + _ab);
+	}
+
 	void JitDspRegs::getALU(const JitReg& _dst, const int _alu)
 	{
-		if(!isLoaded(LoadedRegA + _alu))
-			loadALU(_alu);
-
-		m_asm.movq(_dst, xmm(xmmA + _alu));
+		m_asm.movq(_dst, getALU(_alu));
 	}
 
 	void JitDspRegs::setALU(int _alu, const JitReg& _src)
@@ -284,12 +289,16 @@ namespace dsp56k
 		m_asm.pxor(xm, xm);
 	}
 
-	void JitDspRegs::getXY(const JitReg& _dst, int _xy)
+	JitReg128 JitDspRegs::getXY(int _xy)
 	{
 		if(!isLoaded(LoadedRegX + _xy))
 			loadXY(_xy);
+		return xmm(xmmX + _xy);
+	}
 
-		m_asm.movq(_dst, xmm(xmmX + _xy));
+	void JitDspRegs::getXY(const JitReg& _dst, int _xy)
+	{
+		m_asm.movq(_dst, getXY(_xy));
 	}
 
 	void JitDspRegs::getXY0(const JitReg& _dst, const uint32_t _aluIndex)
