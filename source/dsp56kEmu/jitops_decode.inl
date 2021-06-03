@@ -206,21 +206,28 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::decode_dddddd_write(const TWord _dddddd, const JitReg32& _src)
+	void JitOps::decode_dddddd_write(const TWord _dddddd, const JitReg32& _src, bool _sourceIs8Bit/* = false*/)
 	{
+		const auto signedFraction = [&](const auto& _s)
+		{
+			if(_sourceIs8Bit)
+				m_asm.shl(_s, asmjit::Imm(16));
+			return _s;
+		};
+
 		const auto i = _dddddd & 0x3f;
 		switch( i )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-		case 0x00:	m_dspRegs.setXY0(0, _src);	break;
-		case 0x01:	m_dspRegs.setXY1(0, _src);	break;
-		case 0x02:	m_dspRegs.setXY0(1, _src);	break;
-		case 0x03:	m_dspRegs.setXY1(1, _src);	break;
+		case 0x00:	m_dspRegs.setXY0(0, signedFraction(_src));	break;
+		case 0x01:	m_dspRegs.setXY1(0, signedFraction(_src));	break;
+		case 0x02:	m_dspRegs.setXY0(1, signedFraction(_src));	break;
+		case 0x03:	m_dspRegs.setXY1(1, signedFraction(_src));	break;
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	m_dspRegs.setXY0(0, _src);	break;;
-		case 0x05:	m_dspRegs.setXY1(0, _src);	break;;
-		case 0x06:	m_dspRegs.setXY0(1, _src);	break;;
-		case 0x07:	m_dspRegs.setXY1(1, _src);	break;;
+		case 0x04:	m_dspRegs.setXY0(0, signedFraction(_src));	break;;
+		case 0x05:	m_dspRegs.setXY1(0, signedFraction(_src));	break;;
+		case 0x06:	m_dspRegs.setXY0(1, signedFraction(_src));	break;;
+		case 0x07:	m_dspRegs.setXY1(1, signedFraction(_src));	break;;
 
 		// 001DDD - 8 accumulators in data ALU
 		case 0x08:	m_dspRegs.setALU0(0, _src);	break;
@@ -229,8 +236,8 @@ namespace dsp56k
 		case 0x0b:	m_dspRegs.setALU2(1, _src);	break;
 		case 0x0c:	m_dspRegs.setALU1(0, _src);	break;
 		case 0x0d:	m_dspRegs.setALU1(1, _src);	break;
-		case 0x0e:	transfer24ToAlu(0, _src);	break;	
-		case 0x0f:	transfer24ToAlu(1, _src);	break;
+		case 0x0e:	transfer24ToAlu(0, signedFraction(_src));	break;	
+		case 0x0f:	transfer24ToAlu(1, signedFraction(_src));	break;
 
 		// 010TTT - 8 address registers in AGU
 		case 0x10:	m_dspRegs.setR(0, _src); break;

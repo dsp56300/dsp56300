@@ -13,7 +13,7 @@ namespace dsp56k
 
 		const RegGP i(m_block);
 		m_asm.mov(i.get().r32(), asmjit::Imm(iiiiiiii));
-		decode_dddddd_write(ddddd, i.get().r32());
+		decode_dddddd_write(ddddd, i.get().r32(), true);
 	}
 
 	void JitOps::op_Mover(TWord op)
