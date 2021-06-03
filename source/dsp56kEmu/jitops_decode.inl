@@ -583,11 +583,11 @@ namespace dsp56k
 			{
 				const auto alu = _lll & 3;
 				const AluReg r(m_block, alu);
-				m_asm.shr(r, asmjit::Imm(48));
+				m_asm.shr(r, asmjit::Imm(48));	// clear 48 LSBs
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.and_(r, x.r64());
+				m_asm.or_(r, x.r64());
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.and_(r, y.r64());
+				m_asm.or_(r, y.r64());
 			}
 			break;
 		case 2:
@@ -598,7 +598,7 @@ namespace dsp56k
 				const RegGP r(m_block);
 				m_asm.mov(r, x);
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.and_(r, y.r64());
+				m_asm.or_(r, y.r64());
 				m_dspRegs.setXY(xy, r);
 			}
 			break;
