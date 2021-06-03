@@ -2,6 +2,7 @@
 
 #include "dsp.h"
 #include "jitblock.h"
+#include "jithelper.h"
 #include "jitregtracker.h"
 
 namespace dsp56k
@@ -94,6 +95,11 @@ namespace dsp56k
 
 	void Jitmem::readDspMemory(const JitReg& _dst, const EMemArea _area, const JitReg& _offset) const
 	{
+		const SkipLabel skip(m_block.asm_());
+
+		m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().size()));
+		m_block.asm_().jge(skip.get());
+		
 		const RegGP t(m_block);
 		getMemAreaPtr(t.get(), _area, _offset);
 
@@ -102,6 +108,11 @@ namespace dsp56k
 
 	void Jitmem::writeDspMemory(const EMemArea _area, const JitReg& _offset, const JitReg& _src) const
 	{
+		const SkipLabel skip(m_block.asm_());
+
+		m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().size()));
+		m_block.asm_().jge(skip.get());
+
 		const RegGP t(m_block);
 
 		getMemAreaPtr(t.get(), _area, _offset);
@@ -111,9 +122,15 @@ namespace dsp56k
 
 	void Jitmem::readDspMemory(const JitReg& _dst, EMemArea _area, TWord _offset) const
 	{
-		const RegGP t(m_block);
+		auto& mem = m_block.dsp().memory();
+		mem.memTranslateAddress(_area, _offset);
 
-		m_block.dsp().memory().memTranslateAddress(_area, _offset);
+		assert(_offset < mem.size() && "memory address out of range");
+
+		if(_offset >= mem.size())
+			return;
+
+		const RegGP t(m_block);
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
@@ -122,9 +139,15 @@ namespace dsp56k
 
 	void Jitmem::writeDspMemory(EMemArea _area, TWord _offset, const JitReg& _src) const
 	{
-		const RegGP t(m_block);
+		auto& mem = m_block.dsp().memory();
+		mem.memTranslateAddress(_area, _offset);
 
-		m_block.dsp().memory().memTranslateAddress(_area, _offset);
+		assert(_offset < mem.size() && "memory address out of range");
+
+		if(_offset >= mem.size())
+			return;
+
+		const RegGP t(m_block);
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
