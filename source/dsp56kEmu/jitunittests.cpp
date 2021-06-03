@@ -91,6 +91,7 @@ namespace dsp56k
 		sub();
 		move();
 		jclr();
+		parallel();
 		
 		runTest(&JitUnittests::ori_build, &JitUnittests::ori_verify);
 		
@@ -1590,6 +1591,26 @@ namespace dsp56k
 			assert(dsp.reg.r[2].var == 3);
 			assert(dsp.reg.n[2].var == 4);
 			assert(dsp.reg.m[2].var == 5);
+		});
+	}
+
+	void JitUnittests::parallel()
+	{
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			_block.dsp().reg.x.var =   0x000000010000;
+			_block.dsp().reg.a.var = 0x006c0000000000;
+			_block.dsp().reg.b.var = 0xbbbbbbbbbbbbbb;
+			_block.dsp().reg.y.var =   0x222222222222;
+
+			_ops.emit(0, 0x243c44);	// sub x0,a #$3c,x0
+		},
+		[&]()
+		{
+			assert(dsp.x0().var  ==   0x3c0000);
+			assert(dsp.reg.a.var == 0x006b0000000000);
+			assert(dsp.reg.b.var == 0xbbbbbbbbbbbbbb);
+			assert(dsp.reg.y.var ==   0x222222222222);
 		});
 	}
 

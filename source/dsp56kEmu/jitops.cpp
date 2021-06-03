@@ -386,21 +386,21 @@ namespace dsp56k
 		const RegXMM preMoveAB(m_block);
 		const RegXMM preMoveXY(m_block);
 
-		m_asm.movdqa(preMoveXY, regX());
+		m_asm.movdqa(preMoveXY, m_dspRegs.getXY(1));
 		m_asm.pslldq(preMoveXY, asmjit::Imm(8));
-		m_asm.movsd(preMoveXY, regY());
+		m_asm.movsd(preMoveXY, m_dspRegs.getXY(0));
 
-		m_asm.movdqa(preMoveAB, regA());
+		m_asm.movdqa(preMoveAB, m_dspRegs.getALU(1));
 		m_asm.pslldq(preMoveAB, asmjit::Imm(8));
-		m_asm.movsd(preMoveAB, regB());
+		m_asm.movsd(preMoveAB, m_dspRegs.getALU(0));
 
 		(this->*funcMove)(_op);
 
 		// now get X Y A B after the move, too
 		const RegXMM postMoveAB(m_block);
-		m_asm.movdqa(postMoveAB, regA());
+		m_asm.movdqa(postMoveAB, m_dspRegs.getALU(1));
 		m_asm.pslldq(postMoveAB, asmjit::Imm(8));
-		m_asm.movsd(postMoveAB, regB());
+		m_asm.movsd(postMoveAB, m_dspRegs.getALU(0));
 
 		// loop registers are not used in parallel ALU operations
 		const PushGP postMoveX(m_asm, regLC);
@@ -408,6 +408,15 @@ namespace dsp56k
 
 		m_dspRegs.getXY(postMoveX, 0);
 		m_dspRegs.getXY(postMoveY, 1);
+
+		// restore previous XYAB values for the ALU op
+		m_asm.movdqa(m_dspRegs.getXY(0), preMoveXY);
+		m_asm.movdqa(m_dspRegs.getXY(1), preMoveXY);
+		m_asm.psrldq(m_dspRegs.getXY(1), asmjit::Imm(8));
+
+		m_asm.movdqa(m_dspRegs.getALU(0), preMoveAB);
+		m_asm.movdqa(m_dspRegs.getALU(1), preMoveAB);
+		m_asm.psrldq(m_dspRegs.getALU(1), asmjit::Imm(8));
 
 		(this->*funcAlu)(_op);
 
