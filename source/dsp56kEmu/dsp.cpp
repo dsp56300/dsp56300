@@ -35,6 +35,7 @@
 namespace dsp56k
 {
 	constexpr bool g_traceSupported = false;
+	constexpr bool g_useJIT = true;
 
 	Jumptable g_jumptable;
 
@@ -120,7 +121,7 @@ namespace dsp56k
 
 		(this->*m_interruptFunc)();
 
-		if(m_jit)
+		if(g_useJIT && m_jit)
 		{
 			m_jit->exec();
 		}
