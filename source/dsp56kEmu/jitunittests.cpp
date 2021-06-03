@@ -1611,6 +1611,23 @@ namespace dsp56k
 			assert(dsp.reg.b.var == 0xbbbbbbbbbbbbbb);
 			assert(dsp.reg.y.var ==   0x222222222222);
 		});
+		
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			_block.dsp().reg.x.var =   0x100000080000;
+			_block.dsp().reg.y.var =   0x000000200000;
+			_block.dsp().reg.a.var = 0x0002cdd6000000;
+			_block.dsp().reg.b.var = 0x0002a0a5000000;
+
+			_ops.emit(0, 0x210541);	// tfr x0,a a0,x1
+		},
+		[&]()
+		{
+			assert(dsp.reg.x.var ==   0x000000080000);
+			assert(dsp.reg.y.var ==   0x000000200000);
+			assert(dsp.reg.a.var == 0x00080000000000);
+			assert(dsp.reg.b.var == 0x0002a0a5000000);
+		});
 	}
 
 	void JitUnittests::ifcc()

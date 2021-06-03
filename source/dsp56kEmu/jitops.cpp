@@ -403,8 +403,8 @@ namespace dsp56k
 		m_asm.movsd(postMoveAB, m_dspRegs.getALU(0));
 
 		// loop registers are not used in parallel ALU operations
-		const PushGP postMoveX(m_asm, regLC);
-		const PushGP postMoveY(m_asm, regLA);
+		const PushGP postMoveX(m_asm, regLA);
+		const PushGP postMoveY(m_asm, regLC);
 
 		m_dspRegs.getXY(postMoveX, 0);
 		m_dspRegs.getXY(postMoveY, 1);
@@ -426,23 +426,24 @@ namespace dsp56k
 			const RegGP r(m_block);
 
 			m_asm.movd(preMove, preMoveXY);
-			m_dspRegs.getXY(r, 0);
-			m_asm.cmp(preMove, postMoveX.get());
-			m_asm.cmovnz(r, postMoveX.get());
-			m_dspRegs.setXY(0, r);
-
-			m_asm.psrldq(preMoveXY, asmjit::Imm(8));
-			m_asm.movd(preMove, preMoveXY);
 			m_dspRegs.getXY(r, 1);
 			m_asm.cmp(preMove, postMoveY.get());
 			m_asm.cmovnz(r, postMoveY.get());
 			m_dspRegs.setXY(1, r);
+
+			m_asm.psrldq(preMoveXY, asmjit::Imm(8));
+
+			m_asm.movd(preMove, preMoveXY);
+			m_dspRegs.getXY(r, 0);
+			m_asm.cmp(preMove, postMoveX.get());
+			m_asm.cmovnz(r, postMoveX.get());
+			m_dspRegs.setXY(0, r);
 		}
 
 		{
 			const RegGP postMove(m_block);
 			{
-				const AluReg r(m_block, 0);
+				const AluReg r(m_block, 1);
 
 				m_asm.movd(preMove, preMoveAB);
 				m_asm.movd(postMove, postMoveAB);
@@ -454,7 +455,7 @@ namespace dsp56k
 			m_asm.psrldq(postMoveAB, asmjit::Imm(8));
 
 			{
-				const AluReg r(m_block, 1);
+				const AluReg r(m_block, 0);
 
 				m_asm.movd(preMove, preMoveAB);
 				m_asm.movd(postMove, postMoveAB);
