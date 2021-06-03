@@ -1582,9 +1582,8 @@ namespace dsp56k
 			dsp.reg.r[2].var = 3;
 			dsp.reg.n[2].var = 4;
 			dsp.reg.m[2].var = 5;
-			nop(_block, 5);
+
 			_ops.emit(0, 0x01b3ad, 0x02c142);	// jset #$d,x:<<$ffffb3,$2c142
-			nop(_block, 5);
 		},
 		[&]()
 		{
