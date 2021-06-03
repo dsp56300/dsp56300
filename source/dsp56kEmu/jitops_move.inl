@@ -370,6 +370,9 @@ namespace dsp56k
 			readMemOrPeriph(r, MemArea_X, eaX);
 			decode_ee_write( ee, r );
 		}
+
+		eaX.release();
+
 		if( writeY )
 		{
 			const RegGP r(m_block);
