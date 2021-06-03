@@ -1545,6 +1545,17 @@ namespace dsp56k
 		{
 			assert(dsp.reg.a.var == 0x00223344000000);
 		});
+
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.x.var = 0;
+			_ops.emit(0, 0x24ff00);	// move #$ff,x0
+		},
+		[&]()
+		{
+			assert(dsp.reg.x.var == 0x000000ff0000);
+		});
 	}
 
 	void JitUnittests::jclr()
