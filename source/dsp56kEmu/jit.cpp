@@ -36,6 +36,8 @@ using namespace x86;
 
 namespace dsp56k
 {
+	constexpr bool g_traceOps = false;
+
 	Jit::Jit(DSP& _dsp) : m_dsp(_dsp)
 	{
 		m_jitCache.resize(_dsp.memory().size(), nullptr);
@@ -113,7 +115,7 @@ namespace dsp56k
 			m_dsp.setPC(pc + cacheEntry->getPMemSize());
 		}
 
-		if(false)
+		if(g_traceOps)
 		{
 			TWord op, opB;
 			m_dsp.mem.getOpcode(pc, op, opB);
