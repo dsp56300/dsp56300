@@ -1573,6 +1573,18 @@ namespace dsp56k
 			assert(dsp.reg.x.var == 0xaabbccddeeff);
 			assert(dsp.reg.r[1].var == 0x11);
 		});
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.a.var = 0x44aabbccddeeff;
+			dsp.reg.b.var = 0;
+			_ops.emit(0, 0x21cf00);	// move a,b
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x44aabbccddeeff);
+			assert(dsp.reg.b.var == 0x007fffff000000);
+		});
 	}
 
 	void JitUnittests::jclr()
@@ -1627,6 +1639,25 @@ namespace dsp56k
 			assert(dsp.reg.y.var ==   0x000000200000);
 			assert(dsp.reg.a.var == 0x00080000000000);
 			assert(dsp.reg.b.var == 0x0002a0a5000000);
+		});
+		
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			_block.dsp().reg.x.var =   0x000000003339;
+			_block.dsp().reg.y.var =   0x65a1cb000000;
+			_block.dsp().reg.a.var = 0x00000000000000;
+			_block.dsp().reg.b.var = 0x00196871f4bc6a;
+
+			nop(_block, 5);
+			_ops.emit(0, 0x21cf51);	// tfr y0,a a,b
+			nop(_block, 5);
+		},
+		[&]()
+		{
+			assert(dsp.reg.x.var ==   0x000000003339);
+			assert(dsp.reg.y.var ==   0x65a1cb000000);
+			assert(dsp.reg.a.var == 0x00000000000000);
+			assert(dsp.reg.b.var == 0x00000000000000);
 		});
 	}
 
