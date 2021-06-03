@@ -80,7 +80,7 @@ namespace dsp56k
 		else if(!_block.xmmPool().empty())
 		{
 			m_regXMM = _block.xmmPool().get();
-			_block.asm_().movd(m_regXMM, _spilledReg);
+			_block.asm_().movq(m_regXMM, _spilledReg);
 			m_reg = _spilledReg;
 			m_mode = ModePushToXMM;
 		}
@@ -100,7 +100,7 @@ namespace dsp56k
 		}
 		else if(m_mode == ModePushToXMM)
 		{
-			m_block.asm_().movd(m_spilledReg, m_regXMM);
+			m_block.asm_().movq(m_spilledReg, m_regXMM);
 			m_block.xmmPool().put(m_regXMM);
 		}
 		else
@@ -115,11 +115,11 @@ namespace dsp56k
 
 		const auto xm = asmjit::x86::xmm(_xmmIndex);
 		
-		_block.asm_().movd(r, xm);
+		_block.asm_().movq(r, xm);
 		_block.asm_().push(r.get());
 		_block.asm_().psrldq(xm, asmjit::Imm(8));
 
-		_block.asm_().movd(r, xm);
+		_block.asm_().movq(r, xm);
 		_block.asm_().push(r.get());
 	}
 
@@ -130,13 +130,13 @@ namespace dsp56k
 		const auto xm = asmjit::x86::xmm(m_xmmIndex);
 
 		m_block.asm_().pop(r.get());
-		m_block.asm_().movd(xm, r);
+		m_block.asm_().movq(xm, r);
 		m_block.asm_().pslldq(xm, asmjit::Imm(8));
 
 		m_block.asm_().pop(r.get());
 
 		RegXMM xt(m_block);
-		m_block.asm_().movd(xt, r);
+		m_block.asm_().movq(xt, r);
 		m_block.asm_().movsd(xm, xt);
 	}
 }
