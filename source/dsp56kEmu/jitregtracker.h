@@ -203,4 +203,25 @@ namespace dsp56k
 		PushXMM m_xmm4;
 		PushXMM m_xmm5;
 	};
+
+	class PushTemps
+	{
+	public:
+		explicit PushTemps(asmjit::x86::Assembler& _a)
+		: m_tempA(_a, regGPTempA)
+		, m_tempB(_a, regGPTempB)
+		, m_tempC(_a, regGPTempC)
+		, m_tempD(_a, regGPTempD)
+		, m_tempE(_a, regGPTempE)
+		, m_tempPadding16byte(_a, regGPTempE)
+		{
+		}
+
+		PushGP m_tempA;
+		PushGP m_tempB;
+		PushGP m_tempC;
+		PushGP m_tempD;
+		PushGP m_tempE;
+		PushGP m_tempPadding16byte;
+	};
 }

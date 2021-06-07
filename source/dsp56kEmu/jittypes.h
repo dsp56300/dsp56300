@@ -71,6 +71,7 @@ namespace dsp56k
 	static constexpr auto regGPTempB = asmjit::x86::r13;
 	static constexpr auto regGPTempC = asmjit::x86::r14;
 	static constexpr auto regGPTempD = asmjit::x86::r15;
+	static constexpr auto regGPTempE = asmjit::x86::rbp;
 
 	static constexpr auto regXMMTempA = asmjit::x86::xmm13;
 	static constexpr auto regXMMTempB = asmjit::x86::xmm14;
