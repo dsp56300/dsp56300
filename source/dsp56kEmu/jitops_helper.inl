@@ -409,37 +409,39 @@ namespace dsp56k
 		else
 			_dst = static_cast<int>(_src.var >> 24) & 0xffffff;
 		*/
-		const RegGP tester(m_block);
-		m_asm.mov(tester, _dst);
-		signextend56to64(tester);
+		{
+			const RegGP tester(m_block);
+			m_asm.mov(tester, _dst);
+			signextend56to64(tester);
 
-		// non-limited default
-		m_asm.shr(_dst, asmjit::Imm(24));
-		m_asm.and_(_dst, asmjit::Imm(0x00ffffff));
+			// non-limited default
+			m_asm.shr(_dst, asmjit::Imm(24));
+			m_asm.and_(_dst, asmjit::Imm(0x00ffffff));
 
-		// lower limit
-		{
-			const RegGP limit(m_block);
-			m_asm.mov(limit, asmjit::Imm(0xffff800000000000));
-			m_asm.cmp(tester, limit.get());
-		}
-		{
-			const RegGP minmax(m_block);
-			m_asm.mov(minmax, 0x800000);
-			m_asm.cmovl(_dst, minmax);			
-		}
-		ccr_update_ifLess(SRB_L);
+			// lower limit
+			{
+				const auto limit = regReturnVal;
+				m_asm.mov(limit, asmjit::Imm(0xffff800000000000));
+				m_asm.cmp(tester, limit);
+			}
+			{
+				const auto minmax = regReturnVal;
+				m_asm.mov(minmax, 0x800000);
+				m_asm.cmovl(_dst, minmax);
+			}
+			ccr_update_ifLess(SRB_L);
 
-		// upper limit
-		{
-			const RegGP limit(m_block);
-			m_asm.mov(limit, asmjit::Imm(0x00007fffff000000));
-			m_asm.cmp(tester, limit.get());
-		}
-		{
-			const RegGP minmax(m_block);
-			m_asm.mov(minmax, 0x7fffff);
-			m_asm.cmovg(_dst, minmax);
+			// upper limit
+			{
+				const auto limit = regReturnVal;
+				m_asm.mov(limit, asmjit::Imm(0x00007fffff000000));
+				m_asm.cmp(tester, limit);
+			}
+			{
+				const auto minmax = regReturnVal;
+				m_asm.mov(minmax, 0x7fffff);
+				m_asm.cmovg(_dst, minmax);
+			}
 		}
 		ccr_update_ifGreater(SRB_L);
 	}

@@ -368,7 +368,7 @@ namespace dsp56k
 		void ccr_update_ifAbove(CCRBit _bit) const;
 		void ccr_update_ifBelow(CCRBit _bit) const;
 
-		void ccr_update(const RegGP& _value, CCRBit _bit) const;
+		void ccr_update(const JitReg& _value, CCRBit _bit) const;
 
 		void ccr_u_update(const JitReg64& _alu) const;
 		void ccr_e_update(const JitReg64& _alu) const;

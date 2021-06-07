@@ -136,12 +136,12 @@ namespace dsp56k
 		ccr_update(ra, _bit);
 	}
 
-	inline void JitOps::ccr_update(const RegGP& ra, CCRBit _bit) const
+	inline void JitOps::ccr_update(const JitReg& ra, CCRBit _bit) const
 	{
 		m_asm.and_(ra, asmjit::Imm(0xff));
 		ccr_clear(static_cast<CCRMask>(1 << _bit));			// clear out old status register value
 		m_asm.shl(ra, _bit);								// shift left to become our new SR bit
-		m_asm.or_(m_dspRegs.getSR(), ra.get());				// or in our new SR bit
+		m_asm.or_(m_dspRegs.getSR(), ra);					// or in our new SR bit
 	}
 
 	void JitOps::ccr_u_update(const JitReg64& _alu) const
