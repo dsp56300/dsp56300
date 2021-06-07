@@ -832,7 +832,7 @@ namespace dsp56k
 	void JitUnittests::asr_S1S2D_verify()
 	{
 		assert(dsp.reg.a.var == 0x00011aabbccddeef);
-		assert(dsp.reg.b.var == 0x0000ff1122334455);
+		assert(dsp.reg.b.var == 0x00ffff1122334455);
 	}
 
 	void JitUnittests::bchg_aa_build(JitBlock& _block, JitOps& _ops)
