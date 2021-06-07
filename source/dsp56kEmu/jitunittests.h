@@ -147,8 +147,6 @@ namespace dsp56k
 
 		void move();
 
-		void jclr();
-
 		void parallel();
 
 		void ori_build(JitBlock& _block, JitOps& _ops);
