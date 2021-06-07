@@ -196,10 +196,13 @@ namespace dsp56k
 	{
 		const AluReg alu(m_block, _abSrc, false, _abDst);
 
+		m_asm.sal(alu, asmjit::Imm(8));
 		m_asm.sar(alu, _v.get());
-
+		m_asm.sar(alu, asmjit::Imm(8));
 		ccr_update_ifCarry(SRB_C);					// copy the host carry flag to the DSP carry flag
+		m_dspRegs.mask56(alu);
 		ccr_update_ifZero(SRB_Z);					// we can check for zero now, too
+
 		ccr_clear(SR_V);
 
 		ccr_n_update_by55(alu);

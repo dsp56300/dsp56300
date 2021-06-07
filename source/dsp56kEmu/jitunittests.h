@@ -96,8 +96,7 @@ namespace dsp56k
 		void asr_D_build(JitBlock& _block, JitOps& _ops);
 		void asr_D_verify();
 
-		void asr_ii_build(JitBlock& _block, JitOps& _ops);
-		void asr_ii_verify();
+		void asr_ii();
 
 		void asr_S1S2D_build(JitBlock& _block, JitOps& _ops);
 		void asr_S1S2D_verify();
