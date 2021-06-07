@@ -487,6 +487,8 @@ namespace dsp56k
 		{
 			const SkipLabel lcIsZero(m_asm);
 
+			m_dspRegs.notifyBeginBranch();
+
 			m_asm.cmp(_lc, asmjit::Imm(0));
 			m_asm.jz(lcIsZero.get());
 
