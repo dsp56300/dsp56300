@@ -1369,6 +1369,7 @@ namespace dsp56k
 
 		decode_JJJ_read_56(r, JJJ, !D);
 		m_dspRegs.setALU(D, r);
+		ccr_dirty(r.get());
 	}
 
 	inline void JitOps::op_Tst(TWord op)
