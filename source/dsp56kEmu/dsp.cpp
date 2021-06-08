@@ -119,14 +119,16 @@ namespace dsp56k
 		// we do not support 16-bit compatibility mode
 		assert( (reg.sr.var & SR_SC) == 0 && "16 bit compatibility mode is not supported");
 
-		(this->*m_interruptFunc)();
-
 		if(g_useJIT && m_jit)
 		{
 			m_jit->exec();
+			execPeriph();
+			execInterrupts();
 		}
 		else
 		{
+			(this->*m_interruptFunc)();
+
 			pcCurrentInstruction = reg.pc.toWord();
 
 			const auto op = fetchPC();
