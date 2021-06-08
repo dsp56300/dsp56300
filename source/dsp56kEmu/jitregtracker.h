@@ -57,7 +57,7 @@ namespace dsp56k
 	public:
 		JitScopedReg() = delete;
 		JitScopedReg(const JitScopedReg&) = delete;
-		JitScopedReg(JitRegpool<T>& _pool) : m_pool(_pool), m_reg({}) { acquire(); }
+		JitScopedReg(JitRegpool<T>& _pool) : m_pool(_pool), m_reg({}) { acquire(); }	// TODO: move acquire() to (first) get, will greatly reduce register pressure if the RegGP is passed in as parameter
 		~JitScopedReg() { release(); }
 
 		const T& get() const { return m_reg; }
