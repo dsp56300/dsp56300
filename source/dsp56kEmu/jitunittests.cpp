@@ -1645,9 +1645,7 @@ namespace dsp56k
 			_block.dsp().reg.a.var = 0x00000000000000;
 			_block.dsp().reg.b.var = 0x00196871f4bc6a;
 
-			nop(_block, 5);
 			_ops.emit(0, 0x21cf51);	// tfr y0,a a,b
-			nop(_block, 5);
 		},
 		[&]()
 		{
@@ -1655,6 +1653,23 @@ namespace dsp56k
 			assert(dsp.reg.y.var ==   0x65a1cb000000);
 			assert(dsp.reg.a.var == 0x00000000000000);
 			assert(dsp.reg.b.var == 0x00000000000000);
+		});
+		
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			_block.dsp().reg.x.var =   0x111111222222;
+			_block.dsp().reg.y.var =   0x333333444444;
+			_block.dsp().reg.a.var = 0x55666666777777;
+			_block.dsp().reg.b.var = 0x88999999aaaaaa;
+
+			_ops.emit(0, 0x21ee59);	// tfr y0,b b,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.x.var ==   0x111111222222);
+			assert(dsp.reg.y.var ==   0x333333444444);
+			assert(dsp.reg.a.var == 0xff800000000000);
+			assert(dsp.reg.b.var == 0x00444444000000);
 		});
 	}
 
