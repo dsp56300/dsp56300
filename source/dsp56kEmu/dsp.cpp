@@ -1307,14 +1307,14 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 
 			if( !r )
 				continue;
-			//			assert( r && "failed to read register" );
+//			assert( r && "failed to read register" );
 
 			if( regVal != m_prevRegStates[i].val )
 			{
 				SRegChange regChange;
-				regChange.reg = (EReg)i;
-				regChange.valOld.var = (int)m_prevRegStates[i].val;
-				regChange.valNew.var = (int)regVal;
+				regChange.reg = static_cast<EReg>(i);
+				regChange.valOld.var = static_cast<int>(m_prevRegStates[i].val);
+				regChange.valNew.var = static_cast<int>(regVal);
 				regChange.pc = pcCurrentInstruction;
 				regChange.ictr = m_instructions & 0xffffff;
 
