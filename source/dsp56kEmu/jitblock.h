@@ -60,7 +60,7 @@ namespace dsp56k
 		TWord& nextPC() { return m_nextPC; }
 		uint32_t& pMemWriteAddress() { return m_pMemWriteAddress; }
 		uint32_t& pMemWriteValue() { return m_pMemWriteValue; }
-		std::string getDisasm() const { return m_dspAsm; }
+		const std::string& getDisasm() const { return m_dspAsm; }
 
 	private:
 		JitEntry m_func = nullptr;
