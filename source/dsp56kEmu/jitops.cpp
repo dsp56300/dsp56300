@@ -729,6 +729,14 @@ namespace dsp56k
 	inline void JitOps::op_Rti(TWord op)
 	{
 		popPCSR();
+
+		const RegGP r(m_block);
+		m_asm.mov(r.get().r32(), asmjit::Imm(DSP::DefaultPreventInterrupt));
+
+		if constexpr (sizeof(m_block.dsp().m_processingMode) == sizeof(uint32_t))
+			m_block.mem().mov(reinterpret_cast<uint32_t&>(m_block.dsp().m_processingMode), r);
+		else if constexpr (sizeof(m_block.dsp().m_processingMode) == sizeof(uint64_t))
+			m_block.mem().mov(reinterpret_cast<uint64_t&>(m_block.dsp().m_processingMode), r);
 	}
 
 	inline void JitOps::op_Rts(TWord op)
