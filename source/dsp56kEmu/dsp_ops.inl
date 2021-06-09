@@ -401,7 +401,7 @@ namespace dsp56k
 	{
 		cache.pfree();
 	}
-	inline void DSP::cachePlock(const TWord _effectiveAddress)
+	void DSP::cachePlock(const TWord _effectiveAddress)
 	{
 		cache.plock(_effectiveAddress);
 	}
