@@ -909,7 +909,7 @@ namespace dsp56k
 		void op_Parallel(TWord op);
 
 		// ------------- function permutations -------------
-		TInstructionFunc resolvePermutation(Instruction _inst, TWord _op) const;
+		static TInstructionFunc resolvePermutation(Instruction _inst, TWord _op);
 
 		// ------------- operation helper methods -------------
 

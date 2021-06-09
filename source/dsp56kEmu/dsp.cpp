@@ -1213,7 +1213,7 @@ namespace dsp56k
 		m_opcodeCache[_address].op = &DSP::op_ResolveCache;
 	}
 	
-	TInstructionFunc DSP::resolvePermutation(const Instruction _inst, const TWord _op) const
+	TInstructionFunc DSP::resolvePermutation(const Instruction _inst, const TWord _op)
 	{
 		const auto funcIndex = g_jumptable.resolve(_inst, _op);
 		return g_jumptable.jumptable()[funcIndex];
