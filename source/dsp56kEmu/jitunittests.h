@@ -143,6 +143,7 @@ namespace dsp56k
 		void rnd();
 		void rol();
 		void sub();
+		void tfr();
 
 		void move();
 

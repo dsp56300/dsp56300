@@ -89,6 +89,7 @@ namespace dsp56k
 		rnd();
 		rol();
 		sub();
+		tfr();
 		move();
 		parallel();
 		
@@ -1492,6 +1493,21 @@ namespace dsp56k
 		});
 	}
 
+	void JitUnittests::tfr()
+	{
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.a.var = 0x11223344556677;
+			dsp.reg.b.var = 0;
+			_ops.emit(0, 0x200009);	// tfr a,b
+		},
+		[&]()
+		{
+			assert(dsp.reg.b.var == 0x11223344556677);
+		});
+
+	}
+
 	void JitUnittests::move()
 	{
 		runTest([&](JitBlock& _block, JitOps& _ops)
@@ -1670,6 +1686,23 @@ namespace dsp56k
 			assert(dsp.reg.y.var ==   0x333333444444);
 			assert(dsp.reg.a.var == 0xff800000000000);
 			assert(dsp.reg.b.var == 0x00444444000000);
+		});
+		
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			_block.dsp().reg.x.var =   0x111111222222;
+			_block.dsp().reg.y.var =   0x333333444444;
+			_block.dsp().reg.a.var = 0x55666666777777;
+			_block.dsp().reg.b.var = 0x88999999aaaaaa;
+
+			_ops.emit(0, 0x210741);	// tfr x0,a a0,y1
+		},
+		[&]()
+		{
+			assert(dsp.reg.x.var ==   0x111111222222);
+			assert(dsp.reg.y.var ==   0x777777444444);
+			assert(dsp.reg.a.var == 0x00222222000000);
+			assert(dsp.reg.b.var == 0x88999999aaaaaa);
 		});
 	}
 
