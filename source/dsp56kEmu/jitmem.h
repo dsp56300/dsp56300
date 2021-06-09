@@ -32,6 +32,19 @@ namespace dsp56k
 		void mov(const asmjit::x86::Gp& _dst, const uint32_t& _src) const;
 		void mov(const asmjit::x86::Gp& _dst, const uint8_t& _src) const;
 
+		template<typename T> void mov(T& _dst, const JitReg& _src)
+		{
+			mov(&_dst, _src, sizeof(T));
+		}
+
+		template<typename T> void mov(T& _dst, const T& _src)
+		{
+			mov(&_dst, &_src, sizeof(T));
+		}
+
+		void mov(void* _dst, void* _src, size_t _size);
+		void mov(void* _dst, const JitReg& _src, size_t _size);
+
 		template<typename T, unsigned int B>
 		asmjit::x86::Mem ptr(const JitReg64& _temp, RegType<T, B>& _reg)
 		{
