@@ -5,6 +5,7 @@
 
 namespace dsp56k
 {
+	constexpr bool g_maxInstructionsPerBlock = 1;	// TODO: should be null for release, is one for testing purposes
 	constexpr bool g_useSRCache = false;
 
 	bool JitBlock::emit(const TWord _pc)
@@ -57,6 +58,9 @@ namespace dsp56k
 				if(oi.flag(OpFlagPopPC))
 					break;
 			}
+
+			if(g_maxInstructionsPerBlock > 0 && m_instructionCount >= g_maxInstructionsPerBlock)
+				break;
 		}
 
 		m_dspRegs.clear();
