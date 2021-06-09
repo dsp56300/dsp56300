@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jitblock.h"
 #include "jitdspregs.h"
 #include "jitregtracker.h"
 #include "opcodes.h"
