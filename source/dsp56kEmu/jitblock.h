@@ -5,6 +5,8 @@
 #include "jitregtracker.h"
 #include "jittypes.h"
 
+#include <string>
+
 namespace asmjit
 {
 	namespace x86
