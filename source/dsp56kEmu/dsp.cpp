@@ -1101,7 +1101,6 @@ namespace dsp56k
 		auto& d = ab ? reg.b : reg.a;
 		d = src;
 		sr_s_update();
-		sr_v_update(src.var, d);
 	}
 
 	void DSP::alu_tst(bool ab)
