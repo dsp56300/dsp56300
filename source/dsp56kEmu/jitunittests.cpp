@@ -1510,6 +1510,7 @@ namespace dsp56k
 
 	void JitUnittests::move()
 	{
+		// op_Mover
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
 			dsp.reg.a.var = 0x00112233445566;
@@ -1534,6 +1535,19 @@ namespace dsp56k
 
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
+			dsp.reg.a.var = 0;
+			dsp.reg.b.var = 0x44aabbccddeeff;
+			_ops.emit(0, 0x21ee00);	// move b,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x007fffff000000);
+			assert(dsp.reg.b.var == 0x44aabbccddeeff);
+		});
+
+		// op_Movem_ea
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
 			dsp.reg.r[2].var = 0xa;
 			dsp.reg.n[2].var = 0x5;
 			dsp.mem.set(MemArea_P, 0xa + 0x5, 0x123456);
@@ -1555,6 +1569,7 @@ namespace dsp56k
 			assert(dsp.y1() == 0x223344);
 		});
 
+		// op_Movex_ea
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
 			dsp.reg.a.var = 0;
@@ -1566,7 +1581,7 @@ namespace dsp56k
 			assert(dsp.reg.a.var == 0x00223344000000);
 		});
 
-
+		// op_Move_xx
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
 			dsp.reg.x.var = 0;
@@ -1577,6 +1592,7 @@ namespace dsp56k
 			assert(dsp.reg.x.var == 0x000000ff0000);
 		});
 
+		// op_Movel_ea
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
 			dsp.reg.x.var = 0xbadbadbadbad;
@@ -1593,19 +1609,22 @@ namespace dsp56k
 			assert(dsp.reg.r[1].var == 0x11);
 		});
 
+		// op_Movel_aa
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
-			dsp.reg.a.var = 0x44aabbccddeeff;
+			dsp.reg.a.var = 0;
 			dsp.reg.b.var = 0;
-			_ops.emit(0, 0x21cf00);	// move a,b
+			dsp.mem.set(MemArea_X, 0x3, 0x123456);
+			dsp.mem.set(MemArea_Y, 0x3, 0x789abc);
+			_ops.emit(0, 0x4a8300);	// move l:<$3,ab
 		},
 		[&]()
 		{
-			assert(dsp.reg.a.var == 0x44aabbccddeeff);
-			assert(dsp.reg.b.var == 0x007fffff000000);
+			assert(dsp.reg.a.var == 0x00123456000000);
+			assert(dsp.reg.b.var == 0x00789abc000000);
 		});
 
-
+		// op_Movey_ea
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
 			dsp.mem.set(MemArea_Y, 0x20, 0x334455);
@@ -1615,7 +1634,266 @@ namespace dsp56k
 		{
 			assert(dsp.mem.get(MemArea_Y, 0x20) == 0x334455);
 		});
-		
+
+		// op_Move_ea
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[4].var = 0x10;
+			dsp.reg.n[4].var = 0x3;
+			_ops.emit(0, 0x204c00);	// move (r4)+n4
+		},
+		[&]()
+		{
+			assert(dsp.reg.r[4].var == 0x13);
+		});
+
+		// op_Movex_aa
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.mem.set(MemArea_X, 0x7, 0x654321);
+			dsp.reg.r[2].var = 0;
+			_ops.emit(0, 0x628700);	// move x:<$7,r2
+		},
+		[&]()
+		{
+			assert(dsp.reg.r[2].var == 0x654321);
+		});
+
+		// op_Movey_aa
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[2].var = 0xfedcba;
+			dsp.mem.set(MemArea_Y, 0x6, 0);
+			_ops.emit(0, 0x6a0600);	// move r2,y:<$6
+		},
+		[&]()
+		{
+			assert(dsp.mem.get(MemArea_Y, 0x6) == 0xfedcba);
+		});
+
+		// op_Movex_Rnxxxx
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[3].var = 0x3;
+			dsp.reg.n[5].var = 0;
+			dsp.mem.set(MemArea_X, 0x7, 0x223344);
+			_ops.emit(0, 0x0a73dd, 000004);	// move x:(r3+$4),n5
+		},
+		[&]()
+		{
+			assert(dsp.reg.r[3].var == 0x3);
+			assert(dsp.reg.n[5].var == 0x223344);
+		});
+
+		// op_Movey_Rnxxxx
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[2].var = 0x5;
+			dsp.reg.n[3].var = 0x778899;
+			dsp.mem.set(MemArea_Y, 0x9, 0);
+			_ops.emit(0, 0x0b729b, 000004);	// move n3,y:(r2+$4)
+		},
+		[&]()
+		{
+			assert(dsp.reg.r[2].var == 0x5);
+			assert(dsp.mem.get(MemArea_Y, 0x9) == 0x778899);
+		});
+
+		// op_Movex_Rnxxx
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[3].var = 0x3;
+			dsp.reg.a.var = 0;
+			dsp.mem.set(MemArea_X, 0x7, 0x223344);
+			_ops.emit(0, 0x02139e);	// move x:(r3+$4),a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x00223344000000);
+		});
+
+		// op_Movey_Rnxxx
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[2].var = 0x5;
+			dsp.reg.a.var = 0x00334455667788;
+			dsp.mem.set(MemArea_Y, 0x9, 0);
+			_ops.emit(0, 0x0212ae);	// move a,y:(r2+$4)
+		},
+		[&]()
+		{
+			assert(dsp.mem.get(MemArea_Y, 0x9) == 0x334455);
+		});
+
+		// op_Movexr_ea
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[2].var = 0x5;
+			dsp.reg.a.var = 0;
+			dsp.reg.b.var = 0x00223344556677;
+			dsp.reg.y.var =   0x111111222222;
+			dsp.mem.set(MemArea_X, 0x5, 0xaabbcc);
+			_ops.emit(0, 0x1a9a00);	// move x:(r2)+,a b,y0
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0xffaabbcc000000);
+			assert(dsp.reg.y.var ==   0x111111223344);
+			assert(dsp.reg.r[2].var == 0x6);
+		});
+
+		// op_Moveyr_ea
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[2].var = 0x5;
+			dsp.reg.a.var = 0;
+			dsp.reg.b.var = 0x00223344556677;
+			dsp.reg.x.var =   0x111111222222;
+			dsp.mem.set(MemArea_Y, 0x5, 0xddeeff);
+			_ops.emit(0, 0x1ada00);	// move b,x0 y:(r2)+,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0xffddeeff000000);
+			assert(dsp.reg.x.var ==   0x111111223344);
+			assert(dsp.reg.r[2].var == 0x6);
+		});
+
+		// op_Movexr_A
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[1].var = 0x3;
+			dsp.reg.a.var = 0x00223344556677;
+			dsp.reg.x.var =   0x111111222222;
+			dsp.mem.set(MemArea_X, 3, 0);
+			_ops.emit(0, 0x082100);	// move a,x:(r1) x0,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x00222222000000);
+			assert(dsp.mem.get(MemArea_X, 3) == 0x223344);
+		});
+
+		// op_Moveyr_A
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[6].var = 0x4;
+			dsp.reg.b.var = 0x00334455667788;
+			dsp.reg.y.var =   0x444444555555;
+			dsp.mem.set(MemArea_Y, 4, 0);
+			_ops.emit(0, 0x09a600);	// move b,y:(r6) y0,b
+		},
+		[&]()
+		{
+			assert(dsp.reg.b.var == 0x00555555000000);
+			assert(dsp.mem.get(MemArea_Y, 4) == 0x334455);
+		});
+
+		// op_Movexy
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[2].var = 0x2;
+			dsp.reg.r[6].var = 0x3;
+			dsp.x0(0);
+			dsp.y0(0);
+			dsp.mem.set(MemArea_X, 2, 0x223344);
+			dsp.mem.set(MemArea_Y, 3, 0xccddee);
+
+			_ops.emit(0, 0xc0c200);	// move x:(r2),x0 y:(r6),y0
+		},
+		[&]()
+		{
+			assert(dsp.x0() == 0x223344);
+			assert(dsp.y0() == 0xccddee);
+		});
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[3].var = 0x6;
+			dsp.reg.r[7].var = 0x7;
+			dsp.x0(0x112233);
+			dsp.y0(0x445566);
+			dsp.mem.set(MemArea_X, 6, 0);
+			dsp.mem.set(MemArea_Y, 7, 0);
+
+			_ops.emit(0, 0x806300);	// move x0,x:(r3) y0,y:(r7)
+		},
+		[&]()
+		{
+			assert(dsp.mem.get(MemArea_X, 6) == 0x112233);
+			assert(dsp.mem.get(MemArea_Y, 7) == 0x445566);
+		});
+
+		// op_Movec_ea
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[0].var = 3;
+			dsp.reg.omr.var = 0;
+			dsp.mem.set(MemArea_X, 3, 0x112233);
+			_ops.emit(0, 0x05e03a);	// move x:(r0),omr
+		},
+		[&]()
+		{
+			assert(dsp.reg.omr == 0x112233);
+		});
+
+		// op_Movec_aa
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.sr.var = 0;
+			dsp.mem.set(MemArea_X, 3, 0x223344);
+			_ops.emit(0, 0x058339);	// move x:<$3,sr
+		},
+		[&]()
+		{
+			assert(dsp.reg.sr == 0x223344);
+		});
+
+		// op_Movec_S1D2
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.vba.var = 0;
+			dsp.y1(0x334455);
+			_ops.emit(0, 0x04c7b0);	// move y1,vba
+		},
+		[&]()
+		{
+			assert(dsp.reg.vba.var == 0x334455);
+		});
+
+		// op_Movec_S1D2
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.ep.var = 0xaabbdd;
+			dsp.x1(0);
+			_ops.emit(0, 0x445aa);	// move ep,x1
+		},
+		[&]()
+		{
+			assert(dsp.x1() == 0xaabbdd);
+		});
+
+		// op_Movec_ea with immediate data
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.lc.var = 0;
+			_ops.emit(0, 0x05f43f, 0xaabbcc);	// move #$aabbcc,lc
+		},
+		[&]()
+		{
+			assert(dsp.reg.lc.var == 0xaabbcc);
+		});
+
+		// op_Movec_xx
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.la.var = 0;
+			_ops.emit(0, 0x0555be);	// move #$55,la
+		},
+		[&]()
+		{
+			assert(dsp.reg.la.var == 0x55);
+		});
 	}
 
 	void JitUnittests::parallel()
