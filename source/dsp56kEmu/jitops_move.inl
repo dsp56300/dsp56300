@@ -171,30 +171,32 @@ namespace dsp56k
 		const TWord write	= getFieldValue<Movexr_ea,Field_W>(op);
 		const TWord d		= getFieldValue<Movexr_ea,Field_d>(op);
 
-		{
-			// S2 D2 move
-			const RegGP ab(m_block);
-			transferAluTo24(ab, d);
+		// S2 D2 read
+		RegGP ab(m_block);
+		transferAluTo24(ab, d);
 
-			if(F)		m_dspRegs.setXY1(1, ab);
-			else		m_dspRegs.setXY0(1, ab);			
-		}
-		
-		RegGP r(m_block);
+		const RegGP r(m_block);
 
-		// S1/D1 move
+		// S1 D1 read
 		if( write )
-		{
 			readMem<Movexr_ea>(r, op, MemArea_X);
+		else
+			decode_ff_read(r, ff);
 
+		// S2 D2 write
+		if(F)		m_dspRegs.setXY1(1, ab);
+		else		m_dspRegs.setXY0(1, ab);
+
+		ab.release();
+
+		// S1 D1 write
+		if(write)
+		{
 			decode_ee_write(ff, r);
 		}
 		else
 		{
-			
-			decode_ff_read(r, ff);
-			
-			RegGP ea(m_block);
+			const RegGP ea(m_block);
 			effectiveAddress<Movexr_ea>(ea, op);
 			writeMemOrPeriph(MemArea_X, ea, r);
 		}
@@ -207,26 +209,34 @@ namespace dsp56k
 		const bool write	= getFieldValue<Moveyr_ea,Field_W>(op);
 		const bool d		= getFieldValue<Moveyr_ea,Field_d>(op);
 
-		{
-			// S2 D2 move
-			const RegGP ab(m_block);
-			transferAluTo24(ab, d);
+		// S2 D2 read
+		const RegGP ab(m_block);
+		transferAluTo24(ab, d);
 
-			if( e )		m_dspRegs.setXY1(0, ab);
-			else		m_dspRegs.setXY0(0, ab);
-		}
-	
-		// S1/D1 move
+		// S1 D1 read
 		RegGP r(m_block);
 		if( write )
 		{
 			readMem<Moveyr_ea>(r, op, MemArea_Y);
-			decode_ff_write( ff, r );
 		}
 		else
 		{
 			decode_ff_read(r, ff);
+		}
 
+		// S2 D2 write
+		{
+			if( e )		m_dspRegs.setXY1(0, ab);
+			else		m_dspRegs.setXY0(0, ab);
+		}
+	
+		// S1 D1 write
+		if( write )
+		{
+			decode_ff_write( ff, r );
+		}
+		else
+		{
 			RegGP ea(m_block);
 			effectiveAddress<Moveyr_ea>(ea, op);
 			writeMemOrPeriph(MemArea_Y, ea, r);
