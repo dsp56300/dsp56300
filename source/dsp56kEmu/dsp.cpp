@@ -968,7 +968,11 @@ namespace dsp56k
 		const auto res = mem.dspWrite( _area, _offset, _value );
 
 		if(_area == MemArea_P && _offset < m_opcodeCache.size())
-			m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
+		{
+			notifyProgramMemWrite(_offset);
+			if(m_jit)
+				m_jit->notifyProgramMemWrite(_offset);
+		}
 
 		return res;
 	}
@@ -985,6 +989,11 @@ namespace dsp56k
 	bool DSP::memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value )
 	{
 		return memWritePeriph( _area, _offset + 0xffffc0, _value );
+	}
+
+	void DSP::notifyProgramMemWrite(TWord _offset)
+	{
+		m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
 	}
 
 	// _____________________________________________________________________________

@@ -653,6 +653,8 @@ namespace dsp56k
 		bool	memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value  );
 		bool	memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value  );
 
+		void	notifyProgramMemWrite(TWord _offset);
+		
 		TWord	memRead				( EMemArea _area, TWord _offset ) const;
 		void	memReadOpcode		( TWord _offset, TWord& _wordA, TWord& _wordB ) const;
 		TWord	memReadPeriph		( EMemArea _area, TWord _offset ) const;

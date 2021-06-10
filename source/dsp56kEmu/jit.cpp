@@ -124,7 +124,15 @@ namespace dsp56k
 
 		// if JIT code has written to P memory, destroy a JIT block if present at the write location
 		if(cacheEntry->pMemWriteAddress() != g_pcInvalid)
-			destroy(cacheEntry->pMemWriteAddress());
+		{
+			notifyProgramMemWrite(cacheEntry->pMemWriteAddress());
+			m_dsp.notifyProgramMemWrite(cacheEntry->pMemWriteAddress());
+		}
+	}
+
+	void Jit::notifyProgramMemWrite(TWord _offset)
+	{
+		destroy(_offset);
 	}
 
 	void Jit::emit(const TWord _pc)

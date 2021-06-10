@@ -20,6 +20,8 @@ namespace dsp56k
 		DSP& dsp() { return m_dsp; }
 		void exec();
 
+		void notifyProgramMemWrite(TWord _offset);
+
 	private:
 		void emit(TWord _pc);
 		void destroy(JitBlock* _block);
