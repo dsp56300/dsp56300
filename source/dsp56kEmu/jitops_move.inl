@@ -225,6 +225,8 @@ namespace dsp56k
 		}
 		else
 		{
+			decode_ff_read(r, ff);
+
 			RegGP ea(m_block);
 			effectiveAddress<Moveyr_ea>(ea, op);
 			writeMemOrPeriph(MemArea_Y, ea, r);
