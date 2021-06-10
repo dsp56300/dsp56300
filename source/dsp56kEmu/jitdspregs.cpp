@@ -599,18 +599,33 @@ namespace dsp56k
 		for(auto i=0; i<8; ++i)
 		{
 			if(!isLoaded(LoadedRegR0 + i))
+			{
 				loadAGU(i);
+				setLoaded(LoadedRegR0 + i);				
+			}
 		}
 
 		if(!isLoaded(LoadedRegA))
+		{
 			loadALU(0);
+			setLoaded(LoadedRegA);
+		}
 		if(!isLoaded(LoadedRegB))
+		{
 			loadALU(1);
+			setLoaded(LoadedRegB);
+		}
 
 		if(!isLoaded(LoadedRegX))
-			loadXY(0);
+		{
+			loadXY(0);			
+			setLoaded(LoadedRegX);
+		}
 		if(!isLoaded(LoadedRegY))
+		{
 			loadXY(1);
+			setLoaded(LoadedRegY);
+		}
 
 		getSR();
 		getLA();
