@@ -498,7 +498,7 @@ namespace dsp56k
 
 	inline void JitOps::op_Movep_ppea(TWord op)
 	{
-		const TWord pp		= getFieldValue<Movep_ppea,Field_pppppp>(op);
+		const TWord pp		= getFieldValue<Movep_ppea,Field_pppppp>(op) + 0xffffc0;
 		const TWord mmmrrr	= getFieldValue<Movep_ppea,Field_MMM, Field_RRR>(op);
 		const auto write	= getFieldValue<Movep_ppea,Field_W>(op);
 		const EMemArea sp	= getFieldValue<Movep_ppea,Field_s>(op) ? MemArea_Y : MemArea_X;
@@ -511,19 +511,19 @@ namespace dsp56k
 		{
 			if( mmmrrr == MMMRRR_ImmediateData )
 			{
-				m_block.mem().writePeriph(sp, pp + 0xffffc0, ea);
+				m_block.mem().writePeriph(sp, pp, ea);
 			}
 			else
 			{
 				const RegGP r(m_block);
 				readMemOrPeriph(r, sm, ea);
-				m_block.mem().writePeriph(sp, pp + 0xffffc0, r);
+				m_block.mem().writePeriph(sp, pp, r);
 			}
 		}
 		else
 		{
 			const RegGP r(m_block);
-			m_block.mem().readPeriph(r, sp, pp + 0xffffc0);
+			m_block.mem().readPeriph(r, sp, pp);
 			writeMemOrPeriph(sm, ea, r);
 		}
 	}
