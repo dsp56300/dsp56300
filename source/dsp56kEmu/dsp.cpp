@@ -121,9 +121,19 @@ namespace dsp56k
 
 		if(g_useJIT && m_jit)
 		{
+			if(m_processingMode == Default)
+			{
+				if(m_pendingInterrupts.empty())
+					execNoPendingInterrupts();
+				else
+					execInterrupts();				
+			}
+			else if(m_processingMode == DefaultPreventInterrupt)
+			{
+				execDefaultPreventInterrupt();				
+			}
+
 			m_jit->exec();
-			execPeriph();
-			execInterrupts();
 		}
 		else
 		{
