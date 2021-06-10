@@ -1894,6 +1894,75 @@ namespace dsp56k
 		{
 			assert(dsp.reg.la.var == 0x55);
 		});
+
+		// op_Movep_ppea
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.memWritePeriph(MemArea_X, 0xffffc0, 0);
+			_ops.emit(0, 0x08f485, 0xffeeff);	// movep #>$112233,x:<<$ffffc5
+		},
+		[&]()
+		{
+			assert(dsp.memReadPeriph(MemArea_X, 0xffffc5) == 0xffeeff);
+		});
+
+		// op_Movep_Xqqea
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.memWritePeriph(MemArea_X, 0xffff85, 0);
+			_ops.emit(0, 0x07f405, 0x334455);	// movep #>$334455,x:<<$ffff85
+		},
+		[&]()
+		{
+			assert(dsp.memReadPeriph(MemArea_X, 0xffff85) == 0x334455);
+		});
+
+		// op_Movep_Yqqea
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.memWritePeriph(MemArea_Y, 0xffff82, 0);
+			_ops.emit(0, 0x07b482, 0x556677);	// movep #>$556677,y:<<$ffff82
+		},
+		[&]()
+		{
+			assert(dsp.memReadPeriph(MemArea_Y, 0xffff82) == 0x556677);
+		});
+
+		// op_Movep_SXqq
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.memWritePeriph(MemArea_X, 0xffff84, 0);
+			dsp.y1(0x334455);
+			_ops.emit(0, 0x04c784);	// movep y1,x:<<$ffff84
+		},
+		[&]()
+		{
+			assert(dsp.memReadPeriph(MemArea_X, 0xffff84) == 0x334455);
+		});
+
+		// op_Movep_SYqq
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.memWritePeriph(MemArea_Y, 0xffff86, 0x112233);
+			dsp.reg.b.var = 0;
+			_ops.emit(0, 0x044f26);	// movep y:<<$ffff86,b
+		},
+		[&]()
+		{
+			assert(dsp.reg.b.var == 0x00112233000000);
+		});
+
+		// op_Movep_Spp
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.memWritePeriph(MemArea_Y, 0xffffc5, 0x8899aa);
+			dsp.y1(0);
+			_ops.emit(0, 0x094705);	// asm movep y:<<$ffffc5,y1
+		},
+		[&]()
+		{
+			assert(dsp.y1() == 0x8899aa);
+		});
 	}
 
 	void JitUnittests::parallel()
