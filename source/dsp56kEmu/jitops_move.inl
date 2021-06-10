@@ -333,11 +333,11 @@ namespace dsp56k
 			m_block.mem().readDspMemory(x, MemArea_X, ea);
 			m_block.mem().readDspMemory(y, MemArea_Y, ea);
 
-			decode_LLL_write(LLL,  x.get().r32(),y.get().r32());
+			decode_LLL_write(LLL, x.get().r32(), y.get().r32());
 		}
 		else
 		{
-			decode_LLL_read(LLL, x.get().r32(),y.get().r32());
+			decode_LLL_read(LLL, x.get().r32(), y.get().r32());
 
 			m_block.mem().writeDspMemory(MemArea_X, ea, x);
 			m_block.mem().writeDspMemory(MemArea_Y, ea, y);
