@@ -975,7 +975,7 @@ namespace dsp56k
 
 	bool DSP::memWritePeriph( EMemArea _area, TWord _offset, TWord _value )
 	{
-		perif[_area]->write(_offset, _value );
+		perif[_area - MemArea_X]->write(_offset, _value );
 		return true;
 	}
 	bool DSP::memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value )
@@ -1025,7 +1025,7 @@ namespace dsp56k
 
 	TWord DSP::memReadPeriph(EMemArea _area, TWord _offset) const
 	{
-		return perif[_area]->read(_offset);
+		return perif[_area - MemArea_X]->read(_offset);
 	}
 	TWord DSP::memReadPeriphFFFF80(EMemArea _area, TWord _offset) const
 	{

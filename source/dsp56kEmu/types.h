@@ -164,6 +164,8 @@ namespace dsp56k
 		MemArea_COUNT,
 	};
 
+	static_assert(MemArea_Y == (MemArea_X+1), "Y area enumeration value needs to come straight after X");
+	
 	extern const char g_memAreaNames[MemArea_COUNT];
 
 	enum BraMode
