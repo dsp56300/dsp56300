@@ -1384,6 +1384,8 @@ namespace dsp56k
 		[&]()
 		{
 			assert(dsp.reg.a.var == 0xffffffffffffff);
+			assert(dsp.sr_test(SR_N));
+			assert(!dsp.sr_test(SR_Z));
 		});
 
 		runTest([&](auto& _block, auto& _ops)
@@ -1395,6 +1397,8 @@ namespace dsp56k
 		[&]()
 		{
 			assert(dsp.reg.a.var == 2);
+			assert(!dsp.sr_test(SR_N));
+			assert(!dsp.sr_test(SR_Z));
 		});
 	}
 

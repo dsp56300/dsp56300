@@ -1170,12 +1170,11 @@ namespace dsp56k
 
 		signextend56to64(r);
 		m_asm.neg(r);
-		m_dspRegs.mask56(r);
+		ccr_update_ifLess(SRB_N);
 
+		m_dspRegs.mask56(r);
 		ccr_update_ifZero(SRB_Z);
 
-		m_asm.cmp(r, asmjit::Imm(0));
-		ccr_update_ifLess(SRB_N);
 		ccr_clear(SR_V);
 
 		ccr_dirty(r);
