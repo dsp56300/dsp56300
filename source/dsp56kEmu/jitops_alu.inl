@@ -171,7 +171,6 @@ namespace dsp56k
 		m_asm.sal(alu, _v.get());					// now do the real shift
 
 		ccr_update_ifCarry(SRB_C);					// copy the host carry flag to the DSP carry flag
-		ccr_update_ifZero(SRB_Z);					// we can check for zero now, too
 
 		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
 		// The easiest way to check this is to shift back and compare if the initial alu value is identical ot the backshifted one
@@ -182,12 +181,14 @@ namespace dsp56k
 			m_asm.cmp(alu, oldAlu.get());
 		}
 
-		ccr_update_ifZero(SRB_V);
+		ccr_update_ifNotZero(SRB_V);
 
 		ccr_n_update_by55(alu);
 
 		m_asm.sal(alu, _v.get());					// one more time
 		m_asm.shr(alu, asmjit::Imm(8));				// correction
+
+		ccr_update_ifZero(SRB_Z);
 
 		// S L E U N Z V C
 		ccr_dirty(alu);
