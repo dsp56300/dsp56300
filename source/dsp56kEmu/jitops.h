@@ -438,7 +438,7 @@ namespace dsp56k
 		void alu_bset(const JitReg64& _dst, TWord _bit) const;
 		void alu_bchg(const JitReg64& _dst, TWord _bit) const;
 
-		void alu_cmp(TWord ab, const JitReg64& _v, bool magnitude);
+		void alu_cmp(TWord ab, const JitReg64& _v, bool magnitude, bool updateCarry = true);
 
 		void alu_lsl(TWord ab, int _shiftAmount) const;
 		void alu_lsr(TWord ab, int _shiftAmount) const;

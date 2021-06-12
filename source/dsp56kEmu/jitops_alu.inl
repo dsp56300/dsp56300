@@ -457,7 +457,7 @@ namespace dsp56k
 		ccr_update_ifCarry(SRB_C);
 	}
 
-	inline void JitOps::alu_cmp(TWord ab, const JitReg64& _v, bool _magnitude)
+	inline void JitOps::alu_cmp(TWord ab, const JitReg64& _v, bool _magnitude, bool updateCarry/* = true*/)
 	{
 		AluReg d(m_block, ab, true);
 
@@ -472,7 +472,8 @@ namespace dsp56k
 
 		m_asm.sub(d, _v);
 
-		ccr_update_ifCarry(SRB_C);
+		if(updateCarry)
+			ccr_update_ifCarry(SRB_C);
 
 		m_asm.cmp(d, asmjit::Imm(0));
 		ccr_update_ifZero(SRB_Z);
@@ -1378,6 +1379,6 @@ namespace dsp56k
 		const auto D = getFieldValue<Tst, Field_d>(op);
 		const RegGP zero(m_block);
 		m_asm.xor_(zero, zero.get());
-		alu_cmp(D, zero, false);
+		alu_cmp(D, zero, false, false);
 	}
 }
