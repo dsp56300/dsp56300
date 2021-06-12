@@ -1511,6 +1511,20 @@ namespace dsp56k
 			assert(!dsp.sr_test(SR_C));
 			assert(!dsp.sr_test(SR_V));
 		});
+
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.a.var = 0;
+			dsp.x0(0x800000);
+
+			_ops.emit(0, 0x200044);		// sub x0,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x00800000000000);
+			assert(dsp.sr_test(SR_C));
+			assert(!dsp.sr_test(SR_N));
+		});
 	}
 
 	void JitUnittests::tfr()
