@@ -18,7 +18,8 @@ namespace dsp56k
 	{
 		m_dspRegs.getXY(_dst, _xy);
 		m_asm.shl(_dst, asmjit::Imm(40));
-		m_asm.sar(_dst, asmjit::Imm(16));
+		m_asm.sar(_dst, asmjit::Imm(8));
+		m_asm.shr(_dst, asmjit::Imm(8));
 	}
 
 	void JitOps::XY1to56(const JitReg64& _dst, int _xy) const
