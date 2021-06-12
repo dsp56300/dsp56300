@@ -622,8 +622,8 @@ namespace dsp56k
 		{
 		case 0: updateAddressRegister(_dst, MMM_Rn, _rrr); break;
 		case 1: updateAddressRegister(_dst, MMM_RnPlusNn, _rrr); break;
-		case 2: updateAddressRegister(_dst, MMM_RnPlus, _rrr); break;
-		case 3: updateAddressRegister(_dst, MMM_RnMinus, _rrr); break;
+		case 2: updateAddressRegister(_dst, MMM_RnMinus, _rrr); break;
+		case 3: updateAddressRegister(_dst, MMM_RnPlus, _rrr); break;
 		}
 	}
 }

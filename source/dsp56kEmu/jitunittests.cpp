@@ -1814,17 +1814,20 @@ namespace dsp56k
 		{
 			dsp.reg.r[2].var = 0x2;
 			dsp.reg.r[6].var = 0x3;
+			dsp.reg.n[2].var = 0x3;
 			dsp.x0(0);
 			dsp.y0(0);
 			dsp.mem.set(MemArea_X, 2, 0x223344);
 			dsp.mem.set(MemArea_Y, 3, 0xccddee);
 
-			_ops.emit(0, 0xc0c200);	// move x:(r2),x0 y:(r6),y0
+			_ops.emit(0, 0xf0ca00);	// move x:(r2)+n2,x0 y:(r6)+,y0
 		},
 		[&]()
 		{
 			assert(dsp.x0() == 0x223344);
 			assert(dsp.y0() == 0xccddee);
+			assert(dsp.reg.r[2].var == 0x5);
+			assert(dsp.reg.r[6].var == 0x4);
 		});
 
 		runTest([&](JitBlock& _block, JitOps& _ops)
