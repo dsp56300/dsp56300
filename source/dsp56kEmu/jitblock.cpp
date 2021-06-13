@@ -72,5 +72,6 @@ namespace dsp56k
 	{
 		m_nextPC = g_pcInvalid;
 		m_func();
+		m_dspRegs.updateDspMRegisters();
 	}
 }

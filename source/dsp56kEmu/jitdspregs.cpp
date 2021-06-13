@@ -14,6 +14,7 @@ namespace dsp56k
 {
 	JitDspRegs::JitDspRegs(JitBlock& _block): m_block(_block), m_asm(_block.asm_()), m_dsp(_block.dsp())
 	{
+		m_AguMchanged.fill(0);
 	}
 
 	JitDspRegs::~JitDspRegs()
@@ -116,8 +117,20 @@ namespace dsp56k
 		mem.mov(m_dsp.regs().n[_agu], xm);
 		m_asm.psrldq(xm, Imm(4));
 
-		mem.mov(m_dsp.regs().m[_agu], xm);
+		const RegGP oldM(m_block);
+		mem.mov(oldM, m_dsp.regs().m[_agu]);
 
+		const RegGP newM(m_block);
+		m_asm.movd(newM, xm);
+
+		m_asm.cmp(oldM, newM.get());
+		m_asm.setnz(newM);
+		m_asm.movzx(newM.get().r32(), newM.get().r8());
+
+		mem.mov(m_AguMchanged[_agu], newM.get().r32());
+
+		mem.mov(m_dsp.regs().m[_agu], xm);
+		
 		setUnloaded(LoadedRegR0 + _agu);
 	}
 
@@ -592,6 +605,15 @@ namespace dsp56k
 	void JitDspRegs::setPC(const JitReg& _pc)
 	{
 		m_block.mem().mov(m_block.nextPC(), _pc);
+	}
+
+	void JitDspRegs::updateDspMRegisters()
+	{
+		for(auto i=0; i<m_AguMchanged.size(); ++i)
+		{
+			if(m_AguMchanged[i])
+				m_dsp.set_m(i, m_dsp.regs().m[i].var);
+		}
 	}
 
 	void JitDspRegs::loadDSPRegs()

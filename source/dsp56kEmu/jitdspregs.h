@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "jitregtracker.h"
 #include "jittypes.h"
 #include "types.h"
@@ -111,6 +113,7 @@ namespace dsp56k
 		}
 
 		void setPC(const JitReg& _pc);
+		void updateDspMRegisters();
 
 	private:
 		enum LoadedRegs
@@ -148,5 +151,6 @@ namespace dsp56k
 		DSP& m_dsp;
 
 		uint32_t m_loadedRegs = 0;
+		std::array<uint32_t, 8> m_AguMchanged;
 	};
 }
