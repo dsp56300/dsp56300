@@ -93,7 +93,7 @@ namespace dsp56k
 		m_block.asm_().movzx(_dst, ptr(reg, &_src));
 	}
 
-	void Jitmem::mov(void* _dst, void* _src, size_t _size)
+	void Jitmem::mov(void* _dst, void* _src, uint32_t _size)
 	{
 		const RegGP a(m_block);
 		const RegGP v(m_block);
@@ -104,7 +104,7 @@ namespace dsp56k
 		m_block.asm_().mov(asmjit::x86::ptr(a, 0, _size), v.get());
 	}
 
-	void Jitmem::mov(void* _dst, const JitReg& _src, size_t _size)
+	void Jitmem::mov(void* _dst, const JitReg& _src, uint32_t _size)
 	{
 		const RegGP a(m_block);
 		m_block.asm_().mov(a, asmjit::Imm(_dst));

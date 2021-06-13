@@ -42,8 +42,8 @@ namespace dsp56k
 			mov(&_dst, &_src, sizeof(T));
 		}
 
-		void mov(void* _dst, void* _src, size_t _size);
-		void mov(void* _dst, const JitReg& _src, size_t _size);
+		void mov(void* _dst, void* _src, uint32_t _size);
+		void mov(void* _dst, const JitReg& _src, uint32_t _size);
 
 		template<typename T, unsigned int B>
 		asmjit::x86::Mem ptr(const JitReg64& _temp, RegType<T, B>& _reg)
