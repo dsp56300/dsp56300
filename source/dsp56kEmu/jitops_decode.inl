@@ -224,15 +224,15 @@ namespace dsp56k
 		case 0x02:	m_dspRegs.setXY0(1, signedFraction(_src));	break;
 		case 0x03:	m_dspRegs.setXY1(1, signedFraction(_src));	break;
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	m_dspRegs.setXY0(0, signedFraction(_src));	break;;
-		case 0x05:	m_dspRegs.setXY1(0, signedFraction(_src));	break;;
-		case 0x06:	m_dspRegs.setXY0(1, signedFraction(_src));	break;;
-		case 0x07:	m_dspRegs.setXY1(1, signedFraction(_src));	break;;
+		case 0x04:	m_dspRegs.setXY0(0, signedFraction(_src));	break;
+		case 0x05:	m_dspRegs.setXY1(0, signedFraction(_src));	break;
+		case 0x06:	m_dspRegs.setXY0(1, signedFraction(_src));	break;
+		case 0x07:	m_dspRegs.setXY1(1, signedFraction(_src));	break;
 
 		// 001DDD - 8 accumulators in data ALU
 		case 0x08:	m_dspRegs.setALU0(0, _src);	break;
 		case 0x09:	m_dspRegs.setALU0(1, _src);	break;
-		case 0x0a:	m_dspRegs.setALU2(1, _src);	break;
+		case 0x0a:	m_dspRegs.setALU2(0, _src);	break;
 		case 0x0b:	m_dspRegs.setALU2(1, _src);	break;
 		case 0x0c:	m_dspRegs.setALU1(0, _src);	break;
 		case 0x0d:	m_dspRegs.setALU1(1, _src);	break;
