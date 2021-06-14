@@ -1154,7 +1154,7 @@ namespace dsp56k
 		const TWord qq		= getFieldValue<Mpyi,Field_qq>(op);
 
 		RegGP s(m_block);
-		m_asm.mov(s, asmjit::Imm(m_block.dsp().immediateDataExt<Mpyi>()));
+		getOpWordB(s);
 
 		RegGP reg(m_block);
 		decode_qq_read(reg, qq);
