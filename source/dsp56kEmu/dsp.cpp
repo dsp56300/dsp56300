@@ -126,11 +126,11 @@ namespace dsp56k
 				if(m_pendingInterrupts.empty())
 					execNoPendingInterrupts();
 				else
-					execInterrupts();				
+					execInterrupts();
 			}
 			else if(m_processingMode == DefaultPreventInterrupt)
 			{
-				execDefaultPreventInterrupt();				
+				execDefaultPreventInterrupt();
 			}
 
 			m_jit->exec();
