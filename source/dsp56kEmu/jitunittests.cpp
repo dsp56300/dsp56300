@@ -1706,6 +1706,19 @@ namespace dsp56k
 			assert(dsp.reg.b.var == 0x44aabbccddeeff);
 		});
 
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.a.var = 0xff000000000000;
+			dsp.reg.b.var = 0x77000000000000;
+			_ops.emit(0, 0x214400);	// move a2,x0
+			_ops.emit(0, 0x216600);	// move b2,y0
+		},
+		[&]()
+		{
+			assert(dsp.x0() == 0xffffff);
+			assert(dsp.y0() == 0x000077);
+		});
+
 		// op_Movem_ea
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
