@@ -1785,6 +1785,18 @@ namespace dsp56k
 			assert(dsp.reg.b.var == 0x00789abc000000);
 		});
 
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.y.var = 0;
+			dsp.mem.set(MemArea_X, 0x4, 0x123456);
+			dsp.mem.set(MemArea_Y, 0x4, 0x789abc);
+			_ops.emit(0, 0x438400);	// move l:<$4,y
+		},
+		[&]()
+		{
+			assert(dsp.reg.y.var == 0x00123456789abc);
+		});
+
 		// op_Movey_ea
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
