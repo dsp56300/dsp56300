@@ -48,6 +48,16 @@ namespace Logging
 	
 	void g_logToFile( const std::string& _s )
 	{
+		// enable this to have synchronous logging, in case of a crash where you'll lose the latest logs otherwise
+#if 0
+		std::ofstream o(g_outfilename, std::ios::app);
+
+		if(o.is_open())
+		{
+			o << _s << std::endl;
+			return;
+		}
+#endif
 //		g_logToConsole(_s);
 
 		{
