@@ -1461,6 +1461,20 @@ namespace dsp56k
 		{
 			assert(dsp.reg.a.var == 0x00222223000000);
 		});		
+
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.reg.b.var = 0xffff9538000000;
+
+			_ops.emit(0, 0x200019);				// rnd b
+		},
+		[&]()
+		{
+			assert(dsp.reg.b.var == 0xffff9538000000);
+			assert(dsp.sr_test(SR_N));
+			assert(!dsp.sr_test(SR_Z));
+			assert(!dsp.sr_test(SR_V));
+		});		
 	}
 
 	void JitUnittests::rol()

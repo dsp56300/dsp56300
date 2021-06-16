@@ -618,6 +618,7 @@ namespace dsp56k
 		m_asm.shl(rounder, shifter);
 
 		const AluReg d(m_block, ab);
+		signextend56to64(d);
 		m_asm.add(d, rounder.get());
 
 		m_asm.shl(rounder, asmjit::Imm(1));
