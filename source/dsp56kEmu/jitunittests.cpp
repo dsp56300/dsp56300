@@ -35,6 +35,8 @@ namespace dsp56k
 			testCCCC(0x00000000000000, 0, F, T, T, T ,F ,F);
 		}
 
+		decode_dddddd_write();
+
 		runTest(&JitUnittests::getSS_build, &JitUnittests::getSS_verify);
 		runTest(&JitUnittests::getSetRegs_build, &JitUnittests::getSetRegs_verify);
 
@@ -497,6 +499,120 @@ namespace dsp56k
 			assert(_neq == (m_checks[5] != 0));	
 		}
 		);
+	}
+
+	void JitUnittests::decode_dddddd_write()
+	{
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			m_checks.fill(0);
+
+			const RegGP r(_block);
+
+			for(int i=0; i<8; ++i)
+			{
+				const TWord inc = i * 0x10000;
+
+				_ops.emit(0, 0x60f400 + inc, 0x110000 * (i+1));		// move #$110000,ri
+				_block.regs().getR(r, i);
+				_block.mem().mov(m_checks[i], r.get().r32());
+
+				_ops.emit(0, 0x70f400 + inc, 0x001100 * (i+1));		// move #$001100,ni
+				_block.regs().getN(r, i);
+				_block.mem().mov(m_checks[i+8], r.get().r32());
+
+				_ops.emit(0, 0x05f420 + i, 0x000011 * (i+1));		// move #$000011,mi
+				_block.regs().getM(r, i);
+				_block.mem().mov(m_checks[i+16], r.get().r32());
+			}
+		}, [&]()
+		{
+			for(size_t i=0; i<8; ++i)
+			{
+				assert(m_checks[i   ] == 0x110000 * (i+1));
+				assert(m_checks[i+8 ] == 0x001100 * (i+1));
+				assert(m_checks[i+16] == 0x000011 * (i+1));
+			}
+		});
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			m_checks.fill(0);
+
+			int i=0;
+			const RegGP r(_block);
+
+			_ops.emit(0, 0x50f400, 0x111111);	// move #$111111,a0
+			_ops.emit(0, 0x51f400, 0x222222);	// move #$222222,b0
+
+			_block.regs().getALU(r, 0);	_block.mem().mov(m_checks[i++], r.get());
+			_block.regs().getALU(r, 1);	_block.mem().mov(m_checks[i++], r.get());
+
+			_ops.emit(0, 0x54f400, 0x111111);	// move #$111111,a1
+			_ops.emit(0, 0x55f400, 0x222222);	// move #$222222,b1
+
+			_block.regs().getALU(r, 0);	_block.mem().mov(m_checks[i++], r.get());
+			_block.regs().getALU(r, 1);	_block.mem().mov(m_checks[i++], r.get());
+
+			_ops.emit(0, 0x56f400, 0x111111);	// move #$111111,a
+			_ops.emit(0, 0x57f400, 0x222222);	// move #$222222,b
+
+			_block.regs().getALU(r, 0);	_block.mem().mov(m_checks[i++], r.get());
+			_block.regs().getALU(r, 1);	_block.mem().mov(m_checks[i++], r.get());
+
+			_ops.emit(0, 0x52f400, 0x111111);	// move #$111111,a2
+			_ops.emit(0, 0x53f400, 0x222222);	// move #$222222,b2
+
+			_block.regs().getALU(r, 0);	_block.mem().mov(m_checks[i++], r.get());
+			_block.regs().getALU(r, 1);	_block.mem().mov(m_checks[i++], r.get());
+		}, [&]()
+		{
+			int i=0;
+			assert(m_checks[i++] == 0x00000000111111);
+			assert(m_checks[i++] == 0x00000000222222);
+			assert(m_checks[i++] == 0x00111111111111);
+			assert(m_checks[i++] == 0x00222222222222);
+			assert(m_checks[i++] == 0x00111111000000);
+			assert(m_checks[i++] == 0x00222222000000);
+			assert(m_checks[i++] == 0x11111111000000);
+			assert(m_checks[i++] == 0x22222222000000);
+		});
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			m_checks.fill(0);
+			dsp.x0(0xaaaaaa);
+			dsp.x1(0xbbbbbb);
+			dsp.y0(0xcccccc);
+			dsp.y1(0xdddddd);
+
+			int i=0;
+			const RegGP r(_block);
+
+			_ops.emit(0, 0x44f400, 0x111111);	// move #$111111,x0
+			_block.regs().getXY(r, 0);
+			_block.mem().mov(m_checks[i++], r.get());
+
+			_ops.emit(0, 0x45f400, 0x222222);	// move #$222222,x1
+			_block.regs().getXY(r, 0);
+			_block.mem().mov(m_checks[i++], r.get());
+
+			_ops.emit(0, 0x46f400, 0x333333);	// move #$333333,y0
+			_block.regs().getXY(r, 1);
+			_block.mem().mov(m_checks[i++], r.get());
+
+			_ops.emit(0, 0x47f400, 0x444444);	// move #$444444,y1
+			_block.regs().getXY(r, 1);
+			_block.mem().mov(m_checks[i++], r.get());
+
+		}, [&]()
+		{
+			int i=0;
+			assert(m_checks[i++] == 0xbbbbbb111111);
+			assert(m_checks[i++] == 0x222222111111);
+			assert(m_checks[i++] == 0xdddddd333333);
+			assert(m_checks[i++] == 0x444444333333);
+		});
 	}
 
 	void JitUnittests::getSS_build(JitBlock& _block, JitOps& _ops)

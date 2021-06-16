@@ -52,6 +52,8 @@ namespace dsp56k
 
 		void testCCCC(const int64_t _value, const int64_t _compareValue, const bool _lt, bool _le, bool _eq, bool _ge, bool _gt, bool _neq);
 
+		void decode_dddddd_write();
+		
 		// register access tests
 		void getSS_build(JitBlock& _block, JitOps& _ops);
 		void getSS_verify();
