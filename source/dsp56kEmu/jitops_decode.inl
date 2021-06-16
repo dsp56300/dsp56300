@@ -135,10 +135,10 @@ namespace dsp56k
 		case 0x02:	m_dspRegs.getXY0(_dst, 1);	break;
 		case 0x03:	m_dspRegs.getXY1(_dst, 1);	break;
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	m_dspRegs.getXY0(_dst, 0);	break;;
-		case 0x05:	m_dspRegs.getXY1(_dst, 0);	break;;
-		case 0x06:	m_dspRegs.getXY0(_dst, 1);	break;;
-		case 0x07:	m_dspRegs.getXY1(_dst, 1);	break;;
+		case 0x04:	m_dspRegs.getXY0(_dst, 0);	break;
+		case 0x05:	m_dspRegs.getXY1(_dst, 0);	break;
+		case 0x06:	m_dspRegs.getXY0(_dst, 1);	break;
+		case 0x07:	m_dspRegs.getXY1(_dst, 1);	break;
 
 		// 001DDD - 8 accumulators in data ALU
 		case 0x08:	m_dspRegs.getALU0(_dst, 0);	break;
