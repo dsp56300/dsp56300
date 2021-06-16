@@ -472,7 +472,6 @@ namespace dsp56k
 		{
 			const RegGP r(_block);
 			_block.asm_().mov(r, asmjit::Imm(_compareValue));
-			nop(_block, 15);
 			_ops.alu_cmp(0, r, false);
 
 			_ops.decode_cccc(r.get(), CCCC_LessThan);			_block.mem().mov(m_checks[0], r.get());
@@ -481,8 +480,6 @@ namespace dsp56k
 			_ops.decode_cccc(r.get(), CCCC_GreaterEqual);		_block.mem().mov(m_checks[3], r.get());
 			_ops.decode_cccc(r.get(), CCCC_GreaterThan);		_block.mem().mov(m_checks[4], r.get());
 			_ops.decode_cccc(r.get(), CCCC_NotEqual);			_block.mem().mov(m_checks[5], r.get());
-
-			nop(_block, 15);
 		}, [&]()
 		{
 			assert(_lt == (dsp.decode_cccc(CCCC_LessThan) != 0));
