@@ -1755,6 +1755,30 @@ namespace dsp56k
 			assert(dsp.reg.a.var == 0x00223344000000);
 		});
 
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.r[0].var = 0x11;
+			dsp.mem.set(MemArea_X, 0x19, 0x11abcd);
+			_ops.emit(0, 0x02209f);	// move x:(r0+$8),b
+		},
+		[&]()
+		{
+			assert(dsp.reg.b.var == 0x0011abcd000000);
+		});
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.b.var = 0x0011aabb000000;
+			dsp.mem.set(MemArea_X, 0x07, 0);
+			dsp.reg.r[0].var = 0x3;
+			_ops.emit(0, 0x02108f);	// move b,x:(r0+$4)
+		},
+		[&]()
+		{
+			const auto r = dsp.mem.get(MemArea_X, 0x7);
+			assert(r == 0x11aabb);
+		});
+
 		// op_Move_xx
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
