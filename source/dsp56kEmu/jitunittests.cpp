@@ -1818,7 +1818,7 @@ namespace dsp56k
 		},
 		[&]()
 		{
-			assert(dsp.mem.get(MemArea_Y, 0x20) == 0x334455);
+			assert(dsp.y1() == 0x334455);
 		});
 
 		// op_Move_ea
@@ -2097,7 +2097,7 @@ namespace dsp56k
 		// op_Movep_ppea
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
-			dsp.memWritePeriph(MemArea_X, 0xffffc0, 0);
+			dsp.memWritePeriph(MemArea_X, 0xffffc5, 0);
 			_ops.emit(0, 0x08f485, 0xffeeff);	// movep #>$112233,x:<<$ffffc5
 		},
 		[&]()
