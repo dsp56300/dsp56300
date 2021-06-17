@@ -162,8 +162,6 @@ namespace dsp56k
 		}
 
 		_v.release();
-
-		ccr_update_ifZero(SRB_Z);
 		
 		// S L E U N Z V C
 		// v - - - * * * -
