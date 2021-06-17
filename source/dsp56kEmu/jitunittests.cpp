@@ -1942,6 +1942,33 @@ namespace dsp56k
 			assert(dsp.reg.r[1].var == 0x11);
 		});
 
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			dsp.reg.x.var = 0xaabbccddeeff;
+			dsp.reg.y.var = 0x112233445566;
+			dsp.reg.a.var = 0x00abcdef123456;
+			dsp.reg.b.var = 0x00654321fedcba;
+			dsp.reg.r[1].var = 0x10;
+			dsp.reg.r[2].var = 0x15;
+			dsp.reg.r[3].var = 0x20;
+			dsp.reg.r[4].var = 0x25;
+			dsp.mem.set(MemArea_X, 0x10, 0);	dsp.mem.set(MemArea_Y, 0x10, 0);
+			dsp.mem.set(MemArea_X, 0x15, 0);	dsp.mem.set(MemArea_Y, 0x15, 0);
+			dsp.mem.set(MemArea_X, 0x20, 0);	dsp.mem.set(MemArea_Y, 0x20, 0);
+			dsp.mem.set(MemArea_X, 0x25, 0);	dsp.mem.set(MemArea_Y, 0x25, 0);
+			_ops.emit(0, 0x426100);	// move x,l:(r1)
+			_ops.emit(0, 0x436200);	// move y,l:(r2)
+			_ops.emit(0, 0x486300);	// move a,l:(r3)
+			_ops.emit(0, 0x496400);	// move b,l:(r4)
+		},
+		[&]()
+		{
+			assert(dsp.mem.get(MemArea_X, 0x10) == 0xaabbcc);	assert(dsp.mem.get(MemArea_Y, 0x10) == 0xddeeff);
+			assert(dsp.mem.get(MemArea_X, 0x15) == 0x112233);	assert(dsp.mem.get(MemArea_Y, 0x15) == 0x445566);
+			assert(dsp.mem.get(MemArea_X, 0x20) == 0xabcdef);	assert(dsp.mem.get(MemArea_Y, 0x20) == 0x123456);
+			assert(dsp.mem.get(MemArea_X, 0x25) == 0x654321);	assert(dsp.mem.get(MemArea_Y, 0x25) == 0xfedcba);
+		});
+
 		// op_Movel_aa
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{

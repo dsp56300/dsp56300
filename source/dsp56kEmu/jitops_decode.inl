@@ -542,7 +542,7 @@ namespace dsp56k
 				const auto alu = _lll & 3;
 				m_dspRegs.getALU(y, alu);
 				m_asm.mov(x.r64(), y.r64());
-				m_asm.shr(x, asmjit::Imm(24));
+				m_asm.shr(x.r64(), asmjit::Imm(24));
 				m_asm.and_(x, asmjit::Imm(0xffffff));
 				m_asm.and_(y, asmjit::Imm(0xffffff));
 			}
@@ -553,7 +553,7 @@ namespace dsp56k
 				const auto xy = _lll - 2;
 				m_dspRegs.getXY(y, xy);
 				m_asm.mov(x.r64(), y.r64());
-				m_asm.shr(x, asmjit::Imm(24));
+				m_asm.shr(x.r64(), asmjit::Imm(24));
 				m_asm.and_(x, asmjit::Imm(0xffffff));
 				m_asm.and_(y, asmjit::Imm(0xffffff));
 			}
@@ -578,8 +578,8 @@ namespace dsp56k
 		{
 		case 0:
 		case 1:
-		case 4:
-		case 5:
+		case 4:	// TODO: 48 bit saturation/limiting
+		case 5:	// TODO: 48 bit saturation/limiting
 			{
 				const auto alu = _lll & 3;
 				const AluReg r(m_block, alu);

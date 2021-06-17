@@ -285,7 +285,7 @@ namespace dsp56k
 
 	void JitDspRegs::getALU(const JitReg& _dst, const int _alu)
 	{
-		m_asm.movq(_dst, getALU(_alu));
+		m_asm.movq(_dst.r64(), getALU(_alu));
 	}
 
 	void JitDspRegs::setALU(int _alu, const JitReg& _src)
@@ -311,7 +311,7 @@ namespace dsp56k
 
 	void JitDspRegs::getXY(const JitReg& _dst, int _xy)
 	{
-		m_asm.movq(_dst, getXY(_xy));
+		m_asm.movq(_dst.r64(), getXY(_xy));
 	}
 
 	void JitDspRegs::getXY0(const JitReg& _dst, const uint32_t _aluIndex)
@@ -322,7 +322,7 @@ namespace dsp56k
 
 	void JitDspRegs::getXY1(const JitReg& _dst, const uint32_t _aluIndex)
 	{
-		getXY(_dst, _aluIndex);
+		getXY(_dst.r64(), _aluIndex);
 		m_asm.shr(_dst.r64(), Imm(24));
 	}
 
@@ -334,7 +334,7 @@ namespace dsp56k
 
 	void JitDspRegs::getALU1(const JitReg& _dst, uint32_t _aluIndex)
 	{
-		getALU(_dst, _aluIndex);
+		getALU(_dst.r64(), _aluIndex);
 		m_asm.shr(_dst.r64(), Imm(24));
 		m_asm.and_(_dst.r64(), Imm(0xffffff));
 	}
