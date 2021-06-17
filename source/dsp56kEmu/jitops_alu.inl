@@ -144,9 +144,19 @@ namespace dsp56k
 		const AluReg alu(m_block, ab);
 
 		{
+			const RegGP r(m_block);
+			m_asm.mov(r, alu.get());
+			m_asm.and_(r, _v.get());
+			ccr_update_ifZero(SRB_Z);
+		}
+
+		{
 			const RegGP mask(m_block);
 
 			m_asm.mov(mask, asmjit::Imm(0xff000000ffffff));
+
+			const RegGP r(m_block);
+
 			m_asm.or_(_v, mask.get());
 			m_asm.and_(alu, _v.get());
 		}
