@@ -19,7 +19,7 @@ namespace dsp56k
 			const auto pc = m_pcFirst + m_pMemSize;
 
 			// always terminate block if loop end has reached
-			if(m_instructionCount && pc == static_cast<TWord>(m_dsp.regs().la.var + 1))
+			if(m_encodedInstructionCount && pc == static_cast<TWord>(m_dsp.regs().la.var + 1))
 				break;
 
 			JitOps ops(*this, g_useSRCache);
@@ -37,7 +37,7 @@ namespace dsp56k
 			ops.emit(pc);
 
 			m_pMemSize += ops.getOpSize();
-			++m_instructionCount;
+			++m_encodedInstructionCount;
 
 			const auto res = ops.getInstruction();
 			assert(res != InstructionCount);
@@ -59,7 +59,7 @@ namespace dsp56k
 					break;
 			}
 
-			if(g_maxInstructionsPerBlock > 0 && m_instructionCount >= g_maxInstructionsPerBlock)
+			if(g_maxInstructionsPerBlock > 0 && m_encodedInstructionCount >= g_maxInstructionsPerBlock)
 				break;
 		}
 
@@ -71,6 +71,7 @@ namespace dsp56k
 	void JitBlock::exec()
 	{
 		m_nextPC = g_pcInvalid;
+		m_executedInstructionCount = m_encodedInstructionCount;
 		m_func();
 		m_dspRegs.updateDspMRegisters();
 	}

@@ -767,6 +767,11 @@ namespace dsp56k
 		m_asm.mov(lc, _lc.get().r32());
 		_lc.release();
 
+		{
+			const RegGP temp(m_block);
+			m_asm.add(m_block.mem().ptr(temp, &m_block.getExecutedInstructionCount()), lc);			
+		}
+
 		const auto opSize = m_opSize;
 		const auto pc = m_pcCurrentOp + m_opSize;	// remember old op size as it gets overwritten by the child instruction
 		

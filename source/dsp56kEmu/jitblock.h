@@ -56,7 +56,8 @@ namespace dsp56k
 		const JitEntry& getFunc() const { return m_func; }
 
 		void exec();
-		TWord getInstructionCount() const { return m_instructionCount; }
+		TWord getEncodedInstructionCount() const { return m_encodedInstructionCount; }
+		const TWord& getExecutedInstructionCount() const { return m_executedInstructionCount; }
 
 		// JIT code writes these
 		TWord& nextPC() { return m_nextPC; }
@@ -76,7 +77,8 @@ namespace dsp56k
 
 		TWord m_pcFirst = 0;
 		TWord m_pMemSize = 0;
-		TWord m_instructionCount = 0;
+		TWord m_encodedInstructionCount = 0;
+		TWord m_executedInstructionCount = 0;
 
 		TWord m_nextPC = g_pcInvalid;
 		TWord m_pMemWriteAddress = g_pcInvalid;

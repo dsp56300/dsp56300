@@ -102,7 +102,7 @@ namespace dsp56k
 		// run JIT code
 		cacheEntry->exec();
 
-		m_dsp.m_instructions += cacheEntry->getInstructionCount();
+		m_dsp.m_instructions += cacheEntry->getExecutedInstructionCount();
 
 		if(cacheEntry->nextPC() != g_pcInvalid)
 		{
@@ -184,7 +184,7 @@ namespace dsp56k
 		for(auto i=first; i<last; ++i)
 			m_jitCache[i] = b;
 
-		LOG("New block generated @ " << HEX(_pc) << " up to " << HEX(_pc + b->getPMemSize() - 1) << ", instruction count " << b->getInstructionCount() << ", disasm " << b->getDisasm());
+		LOG("New block generated @ " << HEX(_pc) << " up to " << HEX(_pc + b->getPMemSize() - 1) << ", instruction count " << b->getExecutedInstructionCount() << ", disasm " << b->getDisasm());
 	}
 
 	void Jit::destroy(JitBlock* _block)
