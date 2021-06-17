@@ -36,6 +36,7 @@ namespace dsp56k
 		}
 
 		decode_dddddd_write();
+		decode_dddddd_read();
 
 		runTest(&JitUnittests::getSS_build, &JitUnittests::getSS_verify);
 		runTest(&JitUnittests::getSetRegs_build, &JitUnittests::getSetRegs_verify);
@@ -612,6 +613,130 @@ namespace dsp56k
 			assert(m_checks[i++] == 0x222222111111);
 			assert(m_checks[i++] == 0xdddddd333333);
 			assert(m_checks[i++] == 0x444444333333);
+		});
+	}
+
+	void JitUnittests::decode_dddddd_read()
+	{
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			m_checks.fill(0);
+
+			const RegGP r(_block);
+
+			for(int i=0; i<8; ++i)
+			{
+				const TWord inc = i * 0x10000;
+
+				dsp.reg.r[i].var = (i+1) * 0x110000;
+				dsp.reg.n[i].var = (i+1) * 0x001100;
+				dsp.reg.m[i].var = (i+1) * 0x000011;
+
+				_ops.emit(0, 0x600500 + inc);						// asm move ri,x:$5
+				_block.mem().readDspMemory(r, MemArea_X, 0x5);
+				_block.mem().mov(m_checks[i], r.get().r32());
+
+				_ops.emit(0, 0x700500 + inc);						// asm move ni,x:$5
+				_block.mem().readDspMemory(r, MemArea_X, 0x5);
+				_block.mem().mov(m_checks[i+8], r.get().r32());
+
+				_ops.emit(0, 0x050520 + i);							// asm move mi,x:$5
+				_block.mem().readDspMemory(r, MemArea_X, 0x5);
+				_block.mem().mov(m_checks[i+16], r.get().r32());
+			}
+		}, [&]()
+		{
+			for(size_t i=0; i<8; ++i)
+			{
+				assert(m_checks[i   ] == 0x110000 * (i+1));
+				assert(m_checks[i+8 ] == 0x001100 * (i+1));
+				assert(m_checks[i+16] == 0x000011 * (i+1));
+			}
+		});
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			m_checks.fill(0);
+			dsp.reg.a.var = 0x11112233445566;
+			dsp.reg.b.var = 0xff5566778899aa;
+
+			int i=0;
+			const RegGP r(_block);
+
+			_ops.emit(0, 0x560500);								// a,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+
+			_ops.emit(0, 0x570500);								// b,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+
+			_ops.emit(0, 0x500500);								// a0,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+
+			_ops.emit(0, 0x540500);								// a1,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+
+			_ops.emit(0, 0x520500);								// a2,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+
+			_ops.emit(0, 0x510500);								// b0,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+
+			_ops.emit(0, 0x550500);								// b1,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+
+			_ops.emit(0, 0x530500);								// b2,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+		}, [&]()
+		{
+			int i=0;
+			assert(m_checks[i++] == 0x7fffff); // a
+			assert(m_checks[i++] == 0x800000); // b
+			assert(m_checks[i++] == 0x445566); // a0
+			assert(m_checks[i++] == 0x112233); // a1
+			assert(m_checks[i++] == 0x000011); // a2
+			assert(m_checks[i++] == 0x8899aa); // b0
+			assert(m_checks[i++] == 0x556677); // b1
+			assert(m_checks[i++] == 0xffffff); // b2
+		});
+
+		runTest([&](JitBlock& _block, JitOps& _ops)
+		{
+			m_checks.fill(0);
+			dsp.x0(0xaaabbb);
+			dsp.x1(0xcccddd);
+			dsp.y0(0xeeefff);
+			dsp.y1(0x111222);
+
+			int i=0;
+			const RegGP r(_block);
+
+			_ops.emit(0, 0x440500);								// move x0,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+			_ops.emit(0, 0x450500);								// move x1,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+			_ops.emit(0, 0x460500);								// move y0,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+			_ops.emit(0, 0x470500);								// move y1,x:$5
+			_block.mem().readDspMemory(r, MemArea_X, 0x5);
+			_block.mem().mov(m_checks[i++], r.get().r32());
+		}, [&]()
+		{
+			int i=0;
+			assert(m_checks[i++] == 0xaaabbb);
+			assert(m_checks[i++] == 0xcccddd);
+			assert(m_checks[i++] == 0xeeefff);
+			assert(m_checks[i++] == 0x111222);
 		});
 	}
 
