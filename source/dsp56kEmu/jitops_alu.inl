@@ -193,14 +193,13 @@ namespace dsp56k
 
 		ccr_update_ifNotZero(SRB_V);
 
-		ccr_n_update_by55(alu);
-
 		m_asm.sal(alu, _v.get());					// one more time
 		m_asm.shr(alu, asmjit::Imm(8));				// correction
 
 		ccr_update_ifZero(SRB_Z);
 
-		// S L E U N Z V C
+		ccr_n_update_by55(alu);
+
 		ccr_dirty(alu);
 	}
 
