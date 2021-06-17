@@ -302,7 +302,7 @@ namespace dsp56k
 		auto putVal = [&](TWord v)
 		{
 			std::stringstream ss;
-			ss << std::setfill('0') << std::hex << std::setw(8) << v;
+			ss << std::setfill('0') << std::hex << std::setw(6) << v;
 			const std::string str(ss.str());
 			return str;
 		};
