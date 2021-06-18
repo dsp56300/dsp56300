@@ -5,6 +5,8 @@
 #include "jithelper.h"
 #include "jitregtracker.h"
 
+//#define DEBUG_MEMORY_WRITES
+
 namespace dsp56k
 {
 	const auto regSmallTemp = regReturnVal;
@@ -123,9 +125,40 @@ namespace dsp56k
 
 		m_block.asm_().mov(_dst.r32(), asmjit::x86::ptr(t, _offset, 2, 0, sizeof(TWord)));
 	}
+	
+	void callDSPMemWrite(DSP* const _dsp, const EMemArea _area, const TWord _offset, const TWord _value)
+	{
+		EMemArea a(_area);
+		TWord o(_offset);
+		_dsp->memory().dspWrite(a, o, _value);
+	}
 
 	void Jitmem::writeDspMemory(const EMemArea _area, const JitReg& _offset, const JitReg& _src) const
 	{
+#ifdef DEBUG_MEMORY_WRITES
+		PushGP r8(m_block, asmjit::x86::r8);
+		PushGP r9(m_block, asmjit::x86::r9);
+		PushGP r10(m_block, asmjit::x86::r10);
+		PushGP r11(m_block, asmjit::x86::r11);
+		PushGP rbp(m_block, asmjit::x86::rbp);
+		PushGP padding(m_block, asmjit::x86::rbp);
+		
+		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
+		m_block.asm_().mov(regArg1, _area);
+
+		PushGP r2(m_block, regArg2);
+		PushGP r3(m_block, regArg3);
+		PushGP rPadding(m_block, regArg3);
+
+		m_block.asm_().mov(regArg2, _offset);
+		m_block.asm_().mov(regArg3, _src);
+
+		{
+			PushXMMRegs xmms(m_block);
+			PushShadowSpace ss(m_block);
+			m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemWrite));
+		}
+#else
 		const SkipLabel skip(m_block.asm_());
 
 		m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().size()));
@@ -136,6 +169,7 @@ namespace dsp56k
 		getMemAreaPtr(t.get(), _area, _offset);
 
 		m_block.asm_().mov(asmjit::x86::ptr(t, _offset, 2, 0, sizeof(TWord)), _src.r32());
+#endif
 	}
 
 	void Jitmem::readDspMemory(const JitReg& _dst, EMemArea _area, TWord _offset) const
@@ -157,6 +191,11 @@ namespace dsp56k
 
 	void Jitmem::writeDspMemory(EMemArea _area, TWord _offset, const JitReg& _src) const
 	{
+#ifdef DEBUG_MEMORY_WRITES
+		RegGP r(m_block);
+		m_block.asm_().mov(r, asmjit::Imm(_offset));
+		writeDspMemory(_area, r.get(), _src);
+#else
 		auto& mem = m_block.dsp().memory();
 		mem.memTranslateAddress(_area, _offset);
 
@@ -170,6 +209,7 @@ namespace dsp56k
 		getMemAreaPtr(t.get(), _area, _offset);
 
 		m_block.asm_().mov(asmjit::x86::ptr(t), _src.r32());
+#endif
 	}
 
 	TWord callDSPMemReadPeriph(DSP* const _dsp, const TWord _area, const TWord _offset)
