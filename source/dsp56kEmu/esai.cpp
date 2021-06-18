@@ -27,8 +27,8 @@ namespace dsp56k
 
 		// Time to xfer samples!
 		m_cyclesSinceWrite -= m_cyclesPerSample;
-		for (int i=0;i<6;i++) if (outputEnabled(i)) writeTXimpl(i,m_tx[i]);
-		for (int i=0;i<4;i++) if (inputEnabled(i)) m_rx[i]=readRXimpl(i);
+		for (int i=0;i<3;i++) if (outputEnabled(i)) writeTXimpl(i,m_tx[i]);
+		for (int i=0;i<1;i++) if (inputEnabled(i)) m_rx[i]=readRXimpl(i);
 		if (m_sr.test(M_TFS)) m_sr.clear(M_TFS); else m_sr.set(M_TFS);
 
 //		if (m_sr.test(M_TUE) && m_tcr.test(M_TEIE)) m_periph.getDSP().injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);

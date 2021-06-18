@@ -113,7 +113,7 @@ namespace dsp56k
 		TWord							m_opWordB = 0;
 		uint32_t						m_currentOpLen = 0;
 		uint32_t						m_instructions = 0;
-
+	
 		SRegs							reg;
 		CCRCache						ccrCache;
 
@@ -236,6 +236,13 @@ namespace dsp56k
 
 		void			setJit							(Jit* _jit) { m_jit = _jit; }
 		Jit*			getJit							() { return m_jit; }
+		
+		typedef void 	(*IctrCallback)(void *,DSP *dsp);
+		IctrCallback	m_callback = 0;
+		void*			m_callbackData = 0;
+		uint32_t		m_callbackCount = 0;
+		void			setCallback(IctrCallback cb,void *data,uint32_t count) {m_callback=cb;m_callbackData=data;m_callbackCount=count;}
+		void			handleICtrCallback() {if (m_callback && m_instructions>=m_callbackCount){IctrCallback c=m_callback;m_callback=0;c(m_callbackData,this);}}
 	private:
 
 		std::string getSSindent() const;
