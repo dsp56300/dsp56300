@@ -18,5 +18,7 @@ namespace dsp56k
 		if (_index==0) incFrameSync(m_frameSyncDSPWrite);
 		m_audioOutputs[_index].waitNotFull();
 		m_audioOutputs[_index].push_back(_val);
+		if (m_callback && _index==m_callbackChannels-1 && m_audioOutputs[_index].size()>=m_callbackSamples*2)
+			m_callback(this);
 	}
 }

@@ -26,10 +26,17 @@ namespace dsp56k
 		return static_cast<float>(signextend<int32_t,24>(d)) * g_dsp2FloatScale;
 	}
 
+	typedef void (*AudioCallback)(class Audio* audio);
+
 	class Audio
 	{
 	public:
-		Audio() : m_pendingRXInterrupts(0) {}
+		Audio() : m_pendingRXInterrupts(0), m_callback(0) {}
+		void setCallback(AudioCallback ac,int callbackSamples,int callbackChannels) {m_callback=ac;m_callbackSamples=callbackSamples;m_callbackChannels=callbackChannels;}
+		void writeAudioIn(float** _inputs,size_t len,size_t ins)
+		{
+			for (size_t i = 0; i < len; ++i) for (size_t c = 0; c < ins; ++c) m_audioInputs[c>>1].push_back(float2Dsdp(_inputs[c][i]));
+		}
 		void processAudioInterleaved(float** _inputs, float** _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
 		{
 			if (!_sampleFrames)
@@ -218,6 +225,8 @@ namespace dsp56k
 	protected:
 		TWord readRXimpl(size_t _index);
 		void writeTXimpl(size_t _index, TWord _val);
+		AudioCallback m_callback;
+		int m_callbackSamples,m_callbackChannels;
 
 		static void incFrameSync(uint32_t& _frameSync)
 		{
