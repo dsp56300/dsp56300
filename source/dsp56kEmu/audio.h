@@ -33,9 +33,9 @@ namespace dsp56k
 	public:
 		Audio() : m_pendingRXInterrupts(0), m_callback(0) {}
 		void setCallback(AudioCallback ac,int callbackSamples,int callbackChannels) {m_callback=ac;m_callbackSamples=callbackSamples;m_callbackChannels=callbackChannels;}
-		void writeAudioIn(float** _inputs,size_t len,size_t ins)
+		void writeEmptyAudioIn(size_t len,size_t ins)
 		{
-			for (size_t i = 0; i < len; ++i) for (size_t c = 0; c < ins; ++c) m_audioInputs[c>>1].push_back(float2Dsdp(_inputs[c][i]));
+			for (size_t i = 0; i < len; ++i) for (size_t c = 0; c < ins; ++c) m_audioInputs[c>>1].push_back(0);
 		}
 		void processAudioInterleaved(float** _inputs, float** _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
 		{
