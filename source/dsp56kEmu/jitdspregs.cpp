@@ -152,7 +152,7 @@ namespace dsp56k
 		setUnloaded(LoadedRegX + _xy);
 	}
 
-	void JitDspRegs::load24(const Gp& _dst, TReg24& _src) const
+	void JitDspRegs::load24(const Gp& _dst, const TReg24& _src) const
 	{
 		m_block.mem().mov(_dst, _src);
 	}
