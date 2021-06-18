@@ -95,6 +95,8 @@ namespace dsp56k
 		sr_clear( srClear );
 		sr_set	( srSet );
 
+		resetCCRCache();
+
 		// The Instruction Cache Controller is initialized as described in Chapter 8,	Instruction Cache.
 		cache.reset();
 		sr_clear( SR_CE );
@@ -108,8 +110,6 @@ namespace dsp56k
 		reg.pc = TReg24(int(0));
 		reg.omr = TReg24(int(0));
 		
-		resetCCRCache();
-
 		m_instructions = 0;
 	}
 
