@@ -6,7 +6,7 @@ namespace dsp56k
 	class HDI08
 	{
 	public:
-		explicit HDI08(IPeripherals& _peripheral) : m_periph(_peripheral), m_pendingRXInterrupts(0) {}
+		explicit HDI08(IPeripherals& _peripheral) : m_periph(_peripheral), m_pendingRXInterrupts(0), m_pendingTXInterrupts(1) {}
 
 		enum Addresses
 		{
@@ -96,5 +96,6 @@ namespace dsp56k
 		RingBuffer<uint32_t, 1024, false> m_dataTX;
 		IPeripherals& m_periph;
 		std::atomic<uint32_t> m_pendingRXInterrupts;
+		std::atomic<uint32_t> m_pendingTXInterrupts;
 	};
 }

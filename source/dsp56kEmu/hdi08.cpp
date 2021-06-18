@@ -14,8 +14,9 @@ namespace dsp56k
 			--m_pendingRXInterrupts;
 			m_periph.getDSP().injectInterrupt(Vba_Host_Receive_Data_Full);
 		}
-		else if (bittest(m_hcr, HCR_HTIE))
+		else if (bittest(m_hcr, HCR_HTIE) && m_pendingTXInterrupts > 0)
 		{
+			--m_pendingTXInterrupts;
 			m_periph.getDSP().injectInterrupt(Vba_Host_Transmit_Data_Empty);
 		}
 	}
@@ -75,6 +76,7 @@ namespace dsp56k
 		m_dataTX.waitNotFull();
 		m_dataTX.push_back(_val);
 		//LOG("Write HDI08 HOTX " << HEX(_val));
+		++m_pendingTXInterrupts;
 	}
 
 	void HDI08::writeControlRegister(TWord _val)
