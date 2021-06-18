@@ -28,7 +28,8 @@ namespace dsp56k
 			// modulo or linear addressing
 			if (moduloMask)
 			{
-				if( abs(signextend<int,24>(n)) >= modulo )	// linear addressing OR modulo with increment exceeding modulo.
+				n=signextend<int,24>(n);
+				if( abs(n) >= modulo )	// linear addressing OR modulo with increment exceeding modulo.
 				{
 					// the doc says it's only valid for N = P x (2 pow k), but assume the assembly is okay
 //						LOG( "r " << std::hex << r << " + n " << std::hex << n << " = " << std::hex << ((r+n)&0x00ffffff) );
