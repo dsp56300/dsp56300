@@ -107,6 +107,8 @@ namespace dsp56k
 
 		reg.pc = TReg24(int(0));
 		reg.omr = TReg24(int(0));
+		
+		resetCCRCache();
 
 		m_instructions = 0;
 	}
