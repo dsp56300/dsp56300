@@ -12,7 +12,7 @@ using namespace x86;
 
 namespace dsp56k
 {
-	JitDspRegs::JitDspRegs(JitBlock& _block): m_block(_block), m_asm(_block.asm_()), m_dsp(_block.dsp())
+	JitDspRegs::JitDspRegs(JitBlock& _block): m_block(_block), m_asm(_block.asm_()), m_dsp(_block.dsp()), m_AguMchanged()
 	{
 		m_AguMchanged.fill(0);
 	}
