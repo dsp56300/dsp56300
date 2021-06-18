@@ -237,7 +237,7 @@ namespace dsp56k
 	{
 		if(!isLoaded(LoadedRegSR))
 		{
-			load24(regSR, m_dsp.regs().sr);
+			load24(regSR, m_dsp.getSR());
 			setLoaded(LoadedRegSR);
 		}
 
