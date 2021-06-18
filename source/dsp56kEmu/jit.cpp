@@ -119,7 +119,11 @@ namespace dsp56k
 		{
 			TWord op, opB;
 			m_dsp.mem.getOpcode(pc, op, opB);
-			m_dsp.traceOp(pc, op, opB, cacheEntry->getPMemSize());
+			m_dsp.traceOp(pc, op, opB, cacheEntry->getPMemSize() > 2 ? 1 : cacheEntry->getPMemSize());
+
+			// make the diff tool happy, interpreter traces two ops. For the sake of simplicity, just trace it once more
+			if(cacheEntry->getDisasm().find("rep ") == 0)
+				m_dsp.traceOp(pc, op, opB, cacheEntry->getPMemSize() > 2 ? 1 : cacheEntry->getPMemSize());
 		}
 
 		// if JIT code has written to P memory, destroy a JIT block if present at the write location
