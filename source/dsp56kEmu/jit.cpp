@@ -75,7 +75,7 @@ namespace dsp56k
 
 		const auto pc = static_cast<TWord>(m_dsp.getPC().var);
 
-		LOG("Exec @ " << HEX(pc));
+//		LOG("Exec @ " << HEX(pc));
 
 		// get JIT code
 		auto& cacheEntry = m_jitCache[pc];
