@@ -4,7 +4,7 @@
 
 #include "dspassert.h"
 #include "types.h"
-#include "jittypes.h"
+#include "jitregtypes.h"
 
 #include "asmjit/x86/x86operand.h"
 

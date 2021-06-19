@@ -2,7 +2,7 @@
 
 #include "jitblock.h"
 #include "jitops.h"
-#include "jittypes.h"
+#include "jitregtypes.h"
 
 namespace dsp56k
 {

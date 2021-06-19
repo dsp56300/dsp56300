@@ -1,7 +1,7 @@
 #pragma once
 
 #include "jitregtracker.h"
-#include "jittypes.h"
+#include "jitregtypes.h"
 #include "types.h"
 
 namespace dsp56k

@@ -3,7 +3,7 @@
 #include "jitdspregs.h"
 #include "jitmem.h"
 #include "jitregtracker.h"
-#include "jittypes.h"
+#include "jitregtypes.h"
 
 #include <string>
 

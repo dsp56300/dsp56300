@@ -3,7 +3,7 @@
 #include <array>
 
 #include "jitregtracker.h"
-#include "jittypes.h"
+#include "jitregtypes.h"
 #include "types.h"
 
 namespace asmjit
