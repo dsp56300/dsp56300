@@ -639,8 +639,8 @@ namespace dsp56k
 			const auto skipNoScalingMode = m_asm.newLabel();
 
 			// if (!sr_test_noCache(SR_RM))
-			m_asm.bt(regSR, asmjit::Imm(SR_SM));
-			m_asm.jnz(skipNoScalingMode);
+			m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(SRB_SM));
+			m_asm.jc(skipNoScalingMode);
 
 			// convergent rounding. If all mask bits are cleared
 

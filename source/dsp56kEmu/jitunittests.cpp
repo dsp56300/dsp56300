@@ -85,6 +85,7 @@ namespace dsp56k
 		lua_rn();
 		mac_S();
 		mpy();
+		mpyr();
 		mpy_SD();
 		neg();
 		not_();
@@ -1593,6 +1594,23 @@ namespace dsp56k
 		[&]()
 		{
 			assert(dsp.reg.a.var == 0x2);
+		});		
+	}
+
+	void JitUnittests::mpyr()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.x0(0xef4e);
+			dsp.y0(0x600000);
+			dsp.setSR(0x0880d0);
+			dsp.reg.omr.var = 0x004380;
+
+			_ops.emit(0, 0x2000d1);				// mpyr y0,x0,a
+		},
+		[&]()
+		{
+			assert(dsp.reg.a.var == 0x0000b37a000000);
 		});		
 	}
 

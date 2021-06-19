@@ -61,6 +61,20 @@ namespace dsp56k
 		SRB_I1,					// interrupt mask bit 1
 		SRB_S0,					// scaling bit 0
 		SRB_S1,					// scaling bit 1
+		__SRB_12,				// not used
+		SRB_SC,					// sixteen-bit compatibility mode
+		SRB_DM,					// double-precision multiply mode
+		SRB_LF,					// DO loop flag
+
+	// bits 16-23
+		SRB_FV,					// DO forever
+		SRB_SA,					// sixteen-bit arithmetic mode
+		__SRB_18,				// not used
+		SRB_CE,					// cache enable
+		SRB_SM,					// arithmetic saturation mode
+		SRB_RM,					// rounding mode
+		SRB_CP0,				// core priority bit 0
+		SRB_CP1,				// core priority bit 1
 	};
 
 	enum CCRMask
