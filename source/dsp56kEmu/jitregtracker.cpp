@@ -139,4 +139,14 @@ namespace dsp56k
 		m_block.asm_().movq(xt, r);
 		m_block.asm_().movsd(xm, xt);
 	}
+
+	PushGPRegs::PushGPRegs(JitBlock& _block)
+	: m_r8(_block, asmjit::x86::r8), m_r9(_block, asmjit::x86::r9)
+	, m_r10(_block, asmjit::x86::r10), m_r11(_block, asmjit::x86::r11)
+	{
+	}
+
+	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block) : m_xmm(_block) , m_gp(_block), m_shadow(_block)
+	{
+	}
 }

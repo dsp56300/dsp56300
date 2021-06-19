@@ -474,8 +474,7 @@ namespace dsp56k
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 
 		{
-			PushXMMRegs xmms(m_block);
-			PushShadowSpace ss(m_block);
+			PushBeforeFunctionCall backup(m_block);
 			m_block.asm_().call(asmjit::func_as_ptr(_func));
 		}
 	}
