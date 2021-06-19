@@ -118,6 +118,7 @@ namespace dsp56k
 		const auto linear = m_asm.newLabel();
 		const auto bitreverse = m_asm.newLabel();
 		const auto modulo = m_asm.newLabel();
+		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
 		const PushGP n_sign(m_block, regReturnVal);	// sign extend n
@@ -126,22 +127,30 @@ namespace dsp56k
 		m_asm.shl(n_sign, asmjit::Imm(40));
 		m_asm.sar(n_sign, asmjit::Imm(40));
 
-		m_asm.cmp(_m.r32(), asmjit::Imm(0));	// bit reverse
+		m_asm.or_(_m.r16(), _m.r16());	// bit reverse
 		m_asm.jz(bitreverse);
 
 		m_asm.cmp(_m.r32(), asmjit::Imm(0xffffff));	// linear shortcut
 		m_asm.jz(linear);
+		
+		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));
+		m_asm.jg(multipleWrapModulo);
 		
 		m_asm.mov(n_abs, n_sign.get());
 		m_asm.neg(n_abs);
 		m_asm.cmovl(n_abs, n_sign.get());
 
 		m_asm.cmp(n_abs, _m);				// modulo or linear
-		m_asm.jge(linear);
+		m_asm.jg(linear);
 
 		// modulo:
 		m_asm.bind(modulo);
 		updateAddressRegisterModulo(_r, n_sign, _m);
+		m_asm.jmp(end);
+
+		// multiple-wrap modulo:
+		m_asm.bind(multipleWrapModulo);
+		updateAddressRegisterMultipleWrapModulo(_r, _n, _m);
 		m_asm.jmp(end);
 
 		// bitreverse:
