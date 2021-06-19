@@ -487,10 +487,19 @@ namespace dsp56k
 			RegGP r(m_block);
 			decode_dddddd_read(r.get().r32(), dddddd);
 
+			RegGP compare(m_block);
+			m_block.mem().readDspMemory(compare, MemArea_P, ea);
+
+			const auto skip = m_asm.newLabel();
+			m_asm.cmp(compare, r.get());
+			m_asm.jz(skip);
+
 			m_block.mem().writeDspMemory(MemArea_P, ea, r);
 
 			m_block.mem().mov(m_block.pMemWriteAddress(), ea.get().r32());
 			m_block.mem().mov(m_block.pMemWriteValue(), r.get().r32());
+
+			m_asm.bind(skip);
 
 			m_resultFlags |= WritePMem;
 		}

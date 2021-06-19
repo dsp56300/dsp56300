@@ -76,6 +76,7 @@ namespace dsp56k
 	{
 		m_nextPC = g_pcInvalid;
 		m_executedInstructionCount = m_encodedInstructionCount;
+		m_pMemWriteAddress = g_pcInvalid;
 		m_func();
 		m_dspRegs.updateDspMRegisters();
 	}
