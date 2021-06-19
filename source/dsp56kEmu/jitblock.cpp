@@ -28,9 +28,8 @@ namespace dsp56k
 
 			JitOps ops(*this, g_useSRCache);
 
-			std::string disasm;
-
 			{
+				std::string disasm;
 				TWord opA;
 				TWord opB;
 				m_dsp.memory().getOpcode(pc, opA, opB);
