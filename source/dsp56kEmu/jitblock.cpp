@@ -8,7 +8,7 @@ namespace dsp56k
 	constexpr uint32_t g_maxInstructionsPerBlock = 1;	// TODO: should be null for release, is one for testing purposes
 	constexpr bool g_useSRCache = false;
 
-	bool JitBlock::emit(const TWord _pc)
+	bool JitBlock::emit(const TWord _pc, std::vector<JitBlock*>& _cache)
 	{
 		m_pcFirst = _pc;
 		m_pMemSize = 0;
@@ -17,6 +17,10 @@ namespace dsp56k
 		while(true)
 		{
 			const auto pc = m_pcFirst + m_pMemSize;
+
+			// do never overwrite code that already exists
+			if(_cache[pc])
+				break;
 
 			// always terminate block if loop end has reached
 			if(m_encodedInstructionCount && pc == static_cast<TWord>(m_dsp.regs().la.var + 1))

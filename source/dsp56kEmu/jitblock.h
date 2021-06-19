@@ -6,6 +6,7 @@
 #include "jitregtypes.h"
 
 #include <string>
+#include <vector>
 
 namespace asmjit
 {
@@ -47,7 +48,7 @@ namespace dsp56k
 		operator JitRegpool<JitReg128>& ()		{ return m_xmmPool;	}
 		operator asmjit::x86::Assembler& ()		{ return m_asm;	}
 
-		bool emit(TWord _pc);
+		bool emit(TWord _pc, std::vector<JitBlock*>& _cache);
 		bool empty() const { return m_pMemSize == 0; }
 		TWord getPCFirst() const { return m_pcFirst; }
 		TWord getPMemSize() const { return m_pMemSize; }

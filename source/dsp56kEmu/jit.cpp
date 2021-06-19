@@ -159,7 +159,7 @@ namespace dsp56k
 
 			b = new JitBlock(m_asm, m_dsp);
 
-			if(!b->emit(_pc))
+			if(!b->emit(_pc, m_jitCache))
 			{
 				LOG("FATAL: code generation failed for PC " << HEX(_pc));
 				delete b;
