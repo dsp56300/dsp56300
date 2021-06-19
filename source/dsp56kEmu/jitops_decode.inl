@@ -536,8 +536,8 @@ namespace dsp56k
 		{
 		case 0:
 		case 1:
-		case 4:
-		case 5:
+		case 4:	// TODO: 48 bit saturation/limiting
+		case 5:	// TODO: 48 bit saturation/limiting
 			{
 				const auto alu = _lll & 3;
 				m_dspRegs.getALU(y, alu);
@@ -578,8 +578,6 @@ namespace dsp56k
 		{
 		case 0:
 		case 1:
-		case 4:	// TODO: 48 bit saturation/limiting
-		case 5:	// TODO: 48 bit saturation/limiting
 			{
 				const auto alu = _lll & 3;
 				const AluReg r(m_block, alu);
@@ -588,6 +586,18 @@ namespace dsp56k
 				m_asm.or_(r, x.r64());
 				m_asm.shl(r, asmjit::Imm(24));
 				m_asm.or_(r, y.r64());
+			}
+			break;
+		case 4:
+		case 5:
+			{
+				const auto alu = _lll & 3;
+				const RegGP r(m_block);
+				m_asm.mov(r, x.r64());
+				m_asm.shl(r, asmjit::Imm(24));
+				m_asm.or_(r, y.r64());
+				signextend48to56(r);
+				m_dspRegs.setALU(alu, r);
 			}
 			break;
 		case 2:

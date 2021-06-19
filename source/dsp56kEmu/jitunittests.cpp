@@ -1950,13 +1950,18 @@ namespace dsp56k
 			dsp.reg.r[1].var = 0x10;
 			dsp.mem.set(MemArea_X, 0x10, 0xaabbcc);
 			dsp.mem.set(MemArea_Y, 0x10, 0xddeeff);
-			nop(_block, 5);
+
 			_ops.emit(0, 0x42d900);	// move l:(r1)+,x
-			nop(_block, 5);
+
+			dsp.mem.set(MemArea_X, 0x3, 0x7f0000);
+			dsp.mem.set(MemArea_Y, 0x3, 0x112233);
+			dsp.reg.b.var = 0xffffeeddccbbaa;
+
+			_ops.emit(0, 0x498300);	// move l:$3,b
 		},
 		[&]()
 		{
-			assert(dsp.reg.x.var == 0xaabbccddeeff);
+			assert(dsp.reg.b.var == 0x007f0000112233);
 			assert(dsp.reg.r[1].var == 0x11);
 		});
 
