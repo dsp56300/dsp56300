@@ -137,7 +137,7 @@ namespace dsp56k
 		m_asm.cmovl(n_abs, n_sign.get());
 
 		m_asm.cmp(n_abs, _m);				// modulo or linear
-		m_asm.jge(linear);
+		m_asm.jg(linear);
 
 		// modulo:
 		m_asm.bind(modulo);
