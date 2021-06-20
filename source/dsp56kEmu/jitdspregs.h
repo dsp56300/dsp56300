@@ -150,7 +150,6 @@ namespace dsp56k
 		bool isLoaded(uint32_t _reg) const;
 		void setLoaded(const uint32_t _reg)				{ m_loadedRegs |= (1<<_reg); }
 		void setUnloaded(const uint32_t _reg)			{ m_loadedRegs &= ~(1<<_reg); }
-		uint32_t getLoadedRegs() const					{ return m_loadedRegs; }
 
 		void load(LoadedRegs _reg);
 		void store(LoadedRegs _reg);
@@ -166,16 +165,10 @@ namespace dsp56k
 	class JitDspRegsBranch
 	{
 	public:
-		JitDspRegsBranch(JitDspRegs& _regs) : m_regs(_regs)
-		{
-			m_regs.notifyBeginBranch();
-		}
-
-		~JitDspRegsBranch()
-		{
-			m_regs.notifyEndBranch();
-		}
+		JitDspRegsBranch(JitDspRegs& _regs);
+		~JitDspRegsBranch();
 
 		JitDspRegs& m_regs;
+		const uint32_t m_loadedRegsBeforeBranch;
 	};
 }

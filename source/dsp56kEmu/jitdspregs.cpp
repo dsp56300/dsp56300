@@ -719,4 +719,19 @@ namespace dsp56k
 
 		setUnloaded(_reg);
 	}
+
+	JitDspRegsBranch::JitDspRegsBranch(JitDspRegs& _regs): m_regs(_regs), m_loadedRegsBeforeBranch(_regs.getLoadedRegs())
+	{
+		_regs.notifyBeginBranch();
+	}
+
+	JitDspRegsBranch::~JitDspRegsBranch()
+	{
+		/*
+		const auto loadedRegs = m_regs.getLoadedRegs();
+		const auto newRegsInBranch = loadedRegs & ~m_loadedRegsBeforeBranch;
+
+		m_regs.storeDSPRegs(newRegsInBranch);
+		*/
+	}
 }
