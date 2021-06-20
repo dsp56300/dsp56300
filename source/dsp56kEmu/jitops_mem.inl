@@ -29,13 +29,28 @@ namespace dsp56k
 		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);
 		const TWord rrr = getFieldValue<Inst, Field_RRR>(_op);
 
-		updateAddressRegister(_dst, mmm, rrr);
-
 		if ((mmm << 3 | rrr) == MMMRRR_ImmediateData)
+		{
+			updateAddressRegister(_dst, mmm, rrr);
 			return;
+			
+		}
 
-		// TODO: if the MMMRRR is absolute address, we know at compile time if we need to read periph or memory
+		if(mmm == MMM_AbsAddr)
+		{
+			const TWord offset = getOpWordB();
+			if(offset >= XIO_Reserved_High_First)
+			{
+				m_block.mem().readPeriph(_dst, _area, offset);				
+			}
+			else
+			{
+				m_block.mem().readDspMemory(_dst, _area, offset);
+			}
+			return;
+		}
 
+		updateAddressRegister(_dst, mmm, rrr);
 		readMemOrPeriph(_dst, _area, _dst);
 	}
 
@@ -85,6 +100,21 @@ namespace dsp56k
 		if ((mmm << 3 | rrr) == MMMRRR_ImmediateData)
 		{
 			assert(0 && "unable to write to immediate data");
+			return;
+		}
+
+		if(mmm == MMM_AbsAddr)
+		{
+			const TWord offset = getOpWordB();
+
+			if(offset >= XIO_Reserved_High_First)
+			{
+				m_block.mem().writePeriph(_area, offset, _src);
+			}
+			else
+			{
+				m_block.mem().writeDspMemory(_area, offset, _src);
+			}
 			return;
 		}
 
