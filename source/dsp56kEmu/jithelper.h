@@ -43,4 +43,37 @@ namespace dsp56k
 		asmjit::Label m_label;
 		asmjit::x86::Assembler& m_asm;
 	};
+
+	class If
+	{
+	public:
+		If(asmjit::x86::Assembler& _a, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false) : If(_a, _jumpIfFalse, _true, _false, true)
+		{
+		}
+		If(asmjit::x86::Assembler& _a, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true) : If(_a, _jumpIfFalse, _true, [](){}, false)
+		{
+		}
+	private:
+		If(asmjit::x86::Assembler& _a, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc)
+		{
+			const auto toFalse = _a.newLabel();
+			const auto end = _a.newLabel();
+
+			_jumpIfFalse(toFalse);
+			_true();
+
+			if(_hasFalseFunc)
+			{				
+				_a.jmp(end);
+			}
+
+			_a.bind(toFalse);
+
+			if(_hasFalseFunc)
+			{
+				_false();
+				_a.bind(end);
+			}
+		}
+	};
 }
