@@ -8,6 +8,12 @@
 #include "asmjit/core/jitruntime.h"
 #include "asmjit/x86/x86assembler.h"
 
+#if defined(_WIN32) && defined(_WIN64)
+#define JIT_VTUNE_PROFILING
+#include "../vtuneSdk/include/jitprofiling.h"
+#endif
+
+
 using namespace asmjit;
 using namespace x86;
 
@@ -187,6 +193,21 @@ namespace dsp56k
 
 		for(auto i=first; i<last; ++i)
 			m_jitCache[i] = b;
+
+#ifdef JIT_VTUNE_PROFILING
+		iJIT_Method_Load jmethod = {0};
+		jmethod.method_id = iJIT_GetNewMethodID();
+		std::stringstream ss;
+		ss << "$" << HEX(first) << ':' << b->getDisasm();
+		const std::string methodName(ss.str());
+		jmethod.method_name = const_cast<char*>(methodName.c_str());
+		jmethod.class_file_name = const_cast<char*>("dsp56k::Jit");
+		jmethod.source_file_name = __FILE__;
+		jmethod.method_load_address = static_cast<void*>(func);
+		jmethod.method_size = static_cast<unsigned int>(code.codeSize());
+
+		iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &jmethod);
+#endif
 
 		LOG("New block generated @ " << HEX(_pc) << " up to " << HEX(_pc + b->getPMemSize() - 1) << ", instruction count " << b->getEncodedInstructionCount() << ", disasm " << b->getDisasm());
 	}

@@ -58,13 +58,25 @@ jitregtypes.h
 jitunittests.cpp jitunittests.h
 )
 
-target_sources(dsp56kEmu PRIVATE ${SOURCES} ${SOURCES_JIT})
+set(SOURCES_VTUNE
+../vtuneSdk/include/ittnotify.h
+../vtuneSdk/include/jitprofiling.h
+../vtuneSdk/include/libittnotify.h
+../vtuneSdk/include/llvm_jit_event_listener.hpp
+)
+
+target_sources(dsp56kEmu PRIVATE ${SOURCES} ${SOURCES_JIT} ${SOURCES_VTUNE})
 source_group("source" FILES ${SOURCES})
 source_group("source\\jit" FILES ${SOURCES_JIT})
+source_group("source\\vtune" FILES ${SOURCES_VTUNE})
 
 if(WIN32 AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../dsp56k/CM56300.lib AND NOT ${CMAKE_VS_PLATFORM_NAME} STREQUAL "x64")
 	target_link_libraries(dsp56kEmu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../dsp56k/CM56300.lib)
 	target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_MOTOROLA_UNASM)
+endif()
+
+if(WIN32 AND ${CMAKE_VS_PLATFORM_NAME} STREQUAL "x64")
+	target_link_libraries(dsp56kEmu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../vtuneSdk/lib64/jitprofiling.lib)
 endif()
 
 if(UNIX AND NOT APPLE)
