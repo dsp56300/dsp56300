@@ -5,7 +5,7 @@
 
 namespace dsp56k
 {
-	constexpr uint32_t g_maxInstructionsPerBlock = 1;	// TODO: should be null for release, is one for testing purposes
+	constexpr uint32_t g_maxInstructionsPerBlock = 0;	// set to 1 for debugging/tracing
 	constexpr bool g_useSRCache = false;
 
 	bool JitBlock::emit(const TWord _pc, std::vector<JitBlock*>& _cache)
