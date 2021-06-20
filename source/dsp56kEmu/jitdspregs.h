@@ -111,6 +111,7 @@ namespace dsp56k
 
 			loadDSPRegs();
 		}
+		void notifyEndBranch() {}
 
 		void setPC(const JitReg& _pc);
 		void updateDspMRegisters();
@@ -152,5 +153,21 @@ namespace dsp56k
 
 		uint32_t m_loadedRegs = 0;
 		std::array<uint32_t, 8> m_AguMchanged;
+	};
+
+	class JitDspRegsBranch
+	{
+	public:
+		JitDspRegsBranch(JitDspRegs& _regs) : m_regs(_regs)
+		{
+			m_regs.notifyBeginBranch();
+		}
+
+		~JitDspRegsBranch()
+		{
+			m_regs.notifyEndBranch();
+		}
+
+		JitDspRegs& m_regs;
 	};
 }
