@@ -3,13 +3,14 @@
 
 namespace dsp56k
 {
-	AluReg::AluReg(JitBlock& _block, const TWord _aluIndexSrc, bool readOnly/* = false*/, TWord _aluIndexDst/* = ~0*/)
+	AluReg::AluReg(JitBlock& _block, const TWord _aluIndexSrc, bool readOnly/* = false*/, bool writeOnly/* = false*/, TWord _aluIndexDst/* = ~0*/)
 	: m_block(_block)
 	, m_reg(_block)
 	, m_aluIndexDst(_aluIndexDst > 2 ? _aluIndexSrc : _aluIndexDst)
 	, m_readOnly(readOnly)
 	{
-		m_block.regs().getALU(m_reg, _aluIndexSrc);
+		if(!writeOnly)
+			m_block.regs().getALU(m_reg, _aluIndexSrc);
 	}
 
 	AluReg::~AluReg()

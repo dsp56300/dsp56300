@@ -100,7 +100,7 @@ namespace dsp56k
 	class AluReg
 	{
 	public:
-		AluReg(JitBlock& _block, TWord _aluIndexSrc, bool readOnly = false, TWord _aluIndexDst = ~0);
+		AluReg(JitBlock& _block, TWord _aluIndexSrc, bool readOnly = false, bool writeOnly = false, TWord _aluIndexDst = ~0);
 		~AluReg();
 		JitReg64 get() const { return m_reg.get(); }
 		operator JitReg64 () const { return m_reg.get(); }

@@ -172,7 +172,7 @@ namespace dsp56k
 
 	inline void JitOps::alu_asl(TWord abSrc, TWord abDst, const PushGP& _v)
 	{
-		const AluReg alu(m_block, abSrc, false, abDst);
+		const AluReg alu(m_block, abSrc, false, false, abDst);
 
 		m_asm.sal(alu, asmjit::Imm(8));				// we want to hit the 64 bit boundary to make use of the native carry flag so pre-shift by 8 bit (56 => 64)
 
@@ -203,7 +203,7 @@ namespace dsp56k
 
 	inline void JitOps::alu_asr(const TWord _abSrc, const TWord _abDst, const PushGP& _v)
 	{
-		const AluReg alu(m_block, _abSrc, false, _abDst);
+		const AluReg alu(m_block, _abSrc, false, false, _abDst);
 
 		m_asm.sal(alu, asmjit::Imm(8));
 		m_asm.sar(alu, _v.get());
