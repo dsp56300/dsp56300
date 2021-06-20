@@ -617,82 +617,97 @@ namespace dsp56k
 
 	void JitDspRegs::loadDSPRegs()
 	{
-		for(auto i=0; i<8; ++i)
+		for(auto i=0; i<LoadedRegCount; ++i)
+			load(static_cast<LoadedRegs>(i));
+	}
+
+	void JitDspRegs::load(LoadedRegs _reg)
+	{
+		if(isLoaded(_reg))
+			return;
+
+		switch (_reg)
 		{
-			if(!isLoaded(LoadedRegR0 + i))
-				loadAGU(i);
+		case LoadedRegR0:
+		case LoadedRegR1:
+		case LoadedRegR2:
+		case LoadedRegR3:
+		case LoadedRegR4:
+		case LoadedRegR5:
+		case LoadedRegR6:
+		case LoadedRegR7:
+			loadAGU(_reg - LoadedRegR0);
+			break;
+		case LoadedRegA:
+		case LoadedRegB:
+			loadALU(_reg - LoadedRegA);
+			break;
+		case LoadedRegX:
+		case LoadedRegY:
+			loadXY(_reg - LoadedRegX);
+			break;
+		case LoadedRegExtMem:
+			getExtMemAddr();
+			break;
+		case LoadedRegSR:
+			getSR();
+			break;
+		case LoadedRegLC: 
+			getLC();
+			break;
+		case LoadedRegLA:
+			getLA();
+			break;
 		}
 
-		if(!isLoaded(LoadedRegA))
-			loadALU(0);
-
-		if(!isLoaded(LoadedRegB))
-			loadALU(1);
-
-		if(!isLoaded(LoadedRegX))
-			loadXY(0);			
-
-		if(!isLoaded(LoadedRegY))
-			loadXY(1);
-
-		getSR();
-		getLA();
-		getLC();
+		setLoaded(_reg);
 	}
 
 	void JitDspRegs::storeDSPRegs()
 	{
-		for(auto i=0; i<8; ++i)
-		{
-			if(isLoaded(LoadedRegR0 + i))
-			{
-				storeAGU(i);
-				setUnloaded(LoadedRegR0 + i);
-			}
-		}
+		for(auto i=0; i<LoadedRegCount; ++i)
+			store(static_cast<LoadedRegs>(i));
+	}
 
-		if(isLoaded(LoadedRegA))
-		{
-			storeALU(0);
-			setUnloaded(LoadedRegA);
-		}
-		
-		if(isLoaded(LoadedRegB))
-		{
-			storeALU(1);
-			setUnloaded(LoadedRegB);
-		}	
+	void JitDspRegs::store(LoadedRegs _reg)
+	{
+		if(!isLoaded(_reg))
+			return;
 
-		if(isLoaded(LoadedRegX))
+		switch (_reg)
 		{
-			storeXY(0);			
-			setUnloaded(LoadedRegX);
-		}
-		if(isLoaded(LoadedRegY))
-		{
-			storeXY(1);
-			setUnloaded(LoadedRegY);
-		}
-
-		if(isLoaded(LoadedRegSR))
-		{
+		case LoadedRegR0:
+		case LoadedRegR1:
+		case LoadedRegR2:
+		case LoadedRegR3:
+		case LoadedRegR4:
+		case LoadedRegR5:
+		case LoadedRegR6:
+		case LoadedRegR7:
+			storeAGU(_reg - LoadedRegR0);
+			break;
+		case LoadedRegA:
+		case LoadedRegB:
+			storeALU(_reg - LoadedRegA);
+			break;
+		case LoadedRegX:
+		case LoadedRegY:
+			storeXY(_reg - LoadedRegX);
+			break;
+		case LoadedRegExtMem:
+			// readonly
+			break;
+		case LoadedRegSR:
 			store24(m_dsp.regs().sr, regSR);
-			m_dsp.resetCCRCache();
-			setUnloaded(LoadedRegSR);
-		}
-
-		if(isLoaded(LoadedRegLA))
-		{
-			store24(m_dsp.regs().la, regLA);
-			setUnloaded(LoadedRegLA);
-		}
-
-		if(isLoaded(LoadedRegLC))
-		{
+			break;
+		case LoadedRegLC: 
 			store24(m_dsp.regs().lc, regLC);
-			setUnloaded(LoadedRegLC);
+			break;
+		case LoadedRegLA:
+			store24(m_dsp.regs().la, regLA);
+			break;
 		}
 
-		setUnloaded(LoadedRegExtMem);
+		setUnloaded(_reg);
 	}
 }

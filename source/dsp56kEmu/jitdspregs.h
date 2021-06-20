@@ -125,7 +125,8 @@ namespace dsp56k
 			LoadedRegExtMem,
 			LoadedRegSR,
 			LoadedRegLC,
-			LoadedRegLA
+			LoadedRegLA,
+			LoadedRegCount
 		};
 
 		void loadDSPRegs();
@@ -147,6 +148,9 @@ namespace dsp56k
 		void setUnloaded(const uint32_t _reg)			{ m_loadedRegs &= ~(1<<_reg); }
 		uint32_t getLoadedRegs() const					{ return m_loadedRegs; }
 
+		void load(LoadedRegs _reg);
+		void store(LoadedRegs _reg);
+		
 		JitBlock& m_block;
 		asmjit::x86::Assembler& m_asm;
 		DSP& m_dsp;
