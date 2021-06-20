@@ -402,22 +402,22 @@ namespace dsp56k
 
 	void JitDspRegs::getEP(const JitReg32& _dst) const
 	{
-		m_block.mem().mov(_dst, m_dsp.regs().ep);
+		load24(_dst, m_dsp.regs().ep);
 	}
 
 	void JitDspRegs::setEP(const JitReg32& _src) const
 	{
-		m_block.mem().mov(m_dsp.regs().ep, _src);
+		store24(m_dsp.regs().ep, _src);
 	}
 
 	void JitDspRegs::getVBA(const JitReg32& _dst) const
 	{
-		m_block.mem().mov(_dst, m_dsp.regs().vba);
+		load24(_dst, m_dsp.regs().vba);
 	}
 
 	void JitDspRegs::setVBA(const JitReg32& _src) const
 	{
-		m_block.mem().mov(m_dsp.regs().vba, _src);
+		store24(m_dsp.regs().vba, _src);
 	}
 
 	void JitDspRegs::getSC(const JitReg32& _dst) const
@@ -432,12 +432,12 @@ namespace dsp56k
 
 	void JitDspRegs::getSZ(const JitReg32& _dst) const
 	{
-		m_block.mem().mov(_dst, m_dsp.regs().sz);
+		load24(_dst, m_dsp.regs().sz);
 	}
 
 	void JitDspRegs::setSZ(const JitReg32& _src) const
 	{
-		m_block.mem().mov(m_dsp.regs().sz, _src);
+		store24(m_dsp.regs().sz, _src);
 	}
 
 	void JitDspRegs::getSR(const JitReg32& _dst)
@@ -452,22 +452,22 @@ namespace dsp56k
 
 	void JitDspRegs::getOMR(const JitReg32& _dst) const
 	{
-		m_block.mem().mov(_dst, m_dsp.regs().omr);
+		load24(_dst, m_dsp.regs().omr);
 	}
 
 	void JitDspRegs::setOMR(const JitReg32& _src) const
 	{
-		m_block.mem().mov(m_dsp.regs().omr, _src);
+		store24(m_dsp.regs().omr, _src);
 	}
 
 	void JitDspRegs::getSP(const JitReg32& _dst) const
 	{
-		m_block.mem().mov(_dst, m_dsp.regs().sp);
+		load24(_dst, m_dsp.regs().sp);
 	}
 
 	void JitDspRegs::setSP(const JitReg32& _src) const
 	{
-		m_block.mem().mov(m_dsp.regs().sp, _src);
+		store24(m_dsp.regs().sp, _src);
 	}
 
 	void JitDspRegs::getSSH(const JitReg32& _dst) const
