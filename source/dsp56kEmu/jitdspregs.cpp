@@ -669,6 +669,15 @@ namespace dsp56k
 			store(static_cast<LoadedRegs>(i));
 	}
 
+	void JitDspRegs::storeDSPRegs(uint32_t _loadedRegs)
+	{
+		for(auto i=0; i<LoadedRegCount; ++i)
+		{
+			if(_loadedRegs & (1<<i))
+				store(static_cast<LoadedRegs>(i));
+		}
+	}
+
 	void JitDspRegs::store(LoadedRegs _reg)
 	{
 		if(!isLoaded(_reg))

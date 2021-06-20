@@ -113,8 +113,12 @@ namespace dsp56k
 		}
 		void notifyEndBranch() {}
 
+		void storeDSPRegs(uint32_t _loadedRegs);
+		
 		void setPC(const JitReg& _pc);
 		void updateDspMRegisters();
+
+		uint32_t getLoadedRegs() const { return m_loadedRegs; }
 
 	private:
 		enum LoadedRegs
