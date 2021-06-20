@@ -1,7 +1,10 @@
 #pragma once
 
+#include <functional>
+
 #include "asmjit/core/logger.h"
 #include "asmjit/core/errorhandler.h"
+#include "asmjit/x86/x86assembler.h"
 
 namespace asmjit
 {
