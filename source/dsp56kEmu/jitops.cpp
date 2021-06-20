@@ -482,12 +482,12 @@ namespace dsp56k
 
 	inline void JitOps::do_exec(RegGP& _lc, TWord _addr)
 	{
+		JitDspRegsBranch branch(m_dspRegs);
+
 		const SkipLabel end(m_asm);
 
 		{
 			const SkipLabel lcIsZero(m_asm);
-
-			m_dspRegs.notifyBeginBranch();
 
 			m_asm.cmp(_lc, asmjit::Imm(0));
 			m_asm.jz(lcIsZero.get());
@@ -616,14 +616,14 @@ namespace dsp56k
 
 		const auto end = m_asm.newLabel();
 
-		m_dspRegs.notifyBeginBranch();
+		RegGP test(m_block);
+		decode_cccc(test, cccc);
 
-		{
-			const RegGP test(m_block);
-			decode_cccc(test, cccc);
-			m_asm.cmp(test.get().r8(), asmjit::Imm(1));
-			m_asm.jne(end);
-		}
+		JitDspRegsBranch branch(m_dspRegs);
+		
+		m_asm.cmp(test.get().r8(), asmjit::Imm(1));
+		m_asm.jne(end);
+		test.release();
 
 		auto emitAluOp = [&](const TWord _op)
 		{

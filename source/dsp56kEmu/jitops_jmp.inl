@@ -19,7 +19,7 @@ namespace dsp56k
 
 		const auto end = m_asm.newLabel();
 
-		m_dspRegs.notifyBeginBranch();
+		JitDspRegsBranch branch(m_dspRegs);
 
 		bitTestMemory<Inst>(op, BitValue, end);
 
@@ -39,7 +39,7 @@ namespace dsp56k
 		const RegGP r(m_block);
 		decode_dddddd_read(r.get().r32(), dddddd);
 
-		m_dspRegs.notifyBeginBranch();
+		JitDspRegsBranch branch(m_dspRegs);
 
 		bitTest<Inst>(op, r, BitValue, end);
 
@@ -80,8 +80,8 @@ namespace dsp56k
 	{
 		const auto end = m_asm.newLabel();
 
-		m_dspRegs.notifyBeginBranch();
-
+		JitDspRegsBranch branch(m_dspRegs);
+		
 		checkCondition<Inst>(op);
 
 		m_asm.jz(end);
@@ -192,8 +192,8 @@ namespace dsp56k
 	{
 		const auto end = m_asm.newLabel();
 
-		m_dspRegs.notifyBeginBranch();
-
+		JitDspRegsBranch branch(m_dspRegs);
+		
 		checkCondition<Inst>(op);
 
 		m_asm.jz(end);
@@ -209,7 +209,7 @@ namespace dsp56k
 
 		const auto end = m_asm.newLabel();
 
-		m_dspRegs.notifyBeginBranch();
+		JitDspRegsBranch branch(m_dspRegs);
 
 		bitTestMemory<Inst>(_op, BitValue, end);
 
@@ -229,7 +229,7 @@ namespace dsp56k
 		const RegGP r(m_block);
 		decode_dddddd_read(r.get().r32(), dddddd);
 
-		m_dspRegs.notifyBeginBranch();
+		JitDspRegsBranch branch(m_dspRegs);
 
 		bitTest<Inst>(op, r, BitValue, end);
 

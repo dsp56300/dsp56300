@@ -1302,7 +1302,7 @@ namespace dsp56k
 		const auto JJJ = getFieldValue<Tcc_S1D1,Field_JJJ>(op);
 		const bool ab = getFieldValue<Tcc_S1D1,Field_d>(op);
 
-		m_dspRegs.notifyBeginBranch();
+		JitDspRegsBranch branch(m_dspRegs);
 
 		const auto end = m_asm.newLabel();
 		checkCondition<Tcc_S1D1>(op);
@@ -1324,24 +1324,22 @@ namespace dsp56k
 
 		const auto end = m_asm.newLabel();
 
-		m_dspRegs.notifyBeginBranch();
-
+		JitDspRegsBranch branch(m_dspRegs);
+		
 		checkCondition<Tcc_S1D1S2D2>(op);
 		m_asm.jz(end);
 		
 		{
-			{
-				const RegGP r(m_block);
-				decode_JJJ_read_56(r, JJJ, !ab);
-				m_dspRegs.setALU(ab, r);
-			}
+			const RegGP r(m_block);
+			decode_JJJ_read_56(r, JJJ, !ab);
+			m_dspRegs.setALU(ab, r);
+		}
 
-			if(TTT != ttt)
-			{
-				const RegGP r(m_block);
-				m_dspRegs.getR(r, ttt);
-				m_dspRegs.setR(TTT, r);
-			}
+		if(TTT != ttt)
+		{
+			const RegGP r(m_block);
+			m_dspRegs.getR(r, ttt);
+			m_dspRegs.setR(TTT, r);
 		}
 
 		m_asm.bind(end);
@@ -1355,13 +1353,13 @@ namespace dsp56k
 		if(TTT == ttt)
 			return;
 
-		m_dspRegs.notifyBeginBranch();
-
 		const auto end = m_asm.newLabel();
 
-		checkCondition<Tcc_S2D2>(op);
+		JitDspRegsBranch branch(m_dspRegs);
 
+		checkCondition<Tcc_S2D2>(op);
 		m_asm.jz(end);
+
 		{
 			const RegGP r(m_block);
 			m_dspRegs.getR(r, ttt);
