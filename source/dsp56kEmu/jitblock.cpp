@@ -37,7 +37,9 @@ namespace dsp56k
 				m_dspAsm += disasm + '\n';
 			}
 
+			m_asm.nop();
 			ops.emit(pc);
+			m_asm.nop();
 
 			m_pMemSize += ops.getOpSize();
 			++m_encodedInstructionCount;
