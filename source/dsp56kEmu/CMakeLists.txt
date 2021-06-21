@@ -75,8 +75,10 @@ if(WIN32 AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../dsp56k/CM56300.lib AND NOT ${
 	target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_MOTOROLA_UNASM)
 endif()
 
-if(WIN32 AND ${CMAKE_VS_PLATFORM_NAME} STREQUAL "x64")
-	target_link_libraries(dsp56kEmu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../vtuneSdk/lib64/jitprofiling.lib)
+if(WIN32)
+	if(${CMAKE_VS_PLATFORM_NAME} STREQUAL "x64")
+		target_link_libraries(dsp56kEmu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../vtuneSdk/lib64/jitprofiling.lib)
+	endif()
 endif()
 
 if(UNIX AND NOT APPLE)
