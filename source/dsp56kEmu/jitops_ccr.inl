@@ -234,7 +234,6 @@ namespace dsp56k
 
 			ccr_update(mask, SRB_E);
 		}
-
 	}
 
 	void JitOps::ccr_n_update_by55(const JitReg64& _alu) const

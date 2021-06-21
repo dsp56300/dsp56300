@@ -23,7 +23,6 @@ namespace dsp56k
 		sr_toggle( SR_N, bittest( d, 47 ) );
 		sr_toggle( SR_Z, (d.var & 0xffffff000000) == 0 );
 		sr_clear( SR_V );
-		sr_s_update();
 	}
 
 

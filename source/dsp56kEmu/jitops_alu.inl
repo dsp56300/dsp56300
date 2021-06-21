@@ -167,7 +167,6 @@ namespace dsp56k
 		// v - - - * * * -
 		ccr_n_update_by47(alu);
 		ccr_clear(SR_V);
-		ccr_s_update(alu);
 	}
 
 	inline void JitOps::alu_asl(TWord abSrc, TWord abDst, const PushGP& _v)
@@ -1370,8 +1369,6 @@ namespace dsp56k
 
 		decode_JJJ_read_56(r, JJJ, !D);
 		m_dspRegs.setALU(D, r);
-
-		ccr_s_update(r);
 	}
 
 	inline void JitOps::op_Tst(TWord op)
