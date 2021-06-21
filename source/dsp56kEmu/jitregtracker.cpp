@@ -110,8 +110,11 @@ namespace dsp56k
 		}
 	}
 
-	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex)
+	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(_block.regs().isRead(JitDspRegs::LoadedRegR0 + _xmmIndex))
 	{
+		if(!m_isLoaded)
+			return;
+
 		const RegGP r(_block);
 
 		const auto xm = asmjit::x86::xmm(_xmmIndex);
@@ -126,6 +129,9 @@ namespace dsp56k
 
 	PushXMM::~PushXMM()
 	{
+		if(!m_isLoaded)
+			return;
+
 		const RegGP r(m_block);
 
 		const auto xm = asmjit::x86::xmm(m_xmmIndex);

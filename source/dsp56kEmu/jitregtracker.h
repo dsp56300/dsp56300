@@ -183,6 +183,7 @@ namespace dsp56k
 	private:
 		JitBlock& m_block;
 		uint32_t m_xmmIndex;
+		bool m_isLoaded;
 	};
 
 	class PushXMMRegs
