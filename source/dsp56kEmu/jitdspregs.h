@@ -22,11 +22,30 @@ namespace dsp56k
 	class JitDspRegs
 	{
 	public:
+		enum LoadedRegs
+		{
+			LoadedRegR0,	LoadedRegR1,	LoadedRegR2,	LoadedRegR3,	LoadedRegR4,	LoadedRegR5,	LoadedRegR6,	LoadedRegR7,
+			LoadedRegA,		LoadedRegB,
+			LoadedRegX,		LoadedRegY,
+			LoadedRegExtMem,
+			LoadedRegSR,
+			LoadedRegLC,
+			LoadedRegLA,
+			LoadedRegCount
+		};
+
+		enum AccessType
+		{
+			Read = 0x1,
+			Write = 0x2,
+			ReadWrite = Read | Write,
+		};
+
 		JitDspRegs(JitBlock& _block);
 
 		~JitDspRegs();
 
-		void clear() { storeDSPRegs(); assert(m_loadedRegs == 0); }
+		void clear() { storeDSPRegs(); assert(m_writtenRegs == 0); }
 
 		void getR(const JitReg& _dst, int _agu);
 		void getN(const JitReg& _dst, int _agu);
@@ -36,14 +55,14 @@ namespace dsp56k
 		void setN(int _agu, const JitReg& _src);
 		void setM(int _agu, const JitReg& _src);
 
-		JitReg getSR();
+		JitReg getSR(AccessType _type);
 		JitReg getExtMemAddr();
-		JitReg getLA();
-		JitReg getLC();
+		JitReg getLA(AccessType _type);
+		JitReg getLC(AccessType _type);
 
 		JitReg128 getALU(int _ab);
 		void getALU(const JitReg& _dst, int _alu);
-		void setALU(int _alu, const JitReg& _src);
+		void setALU(int _alu, const JitReg& _src, bool _needsMasking = true);
 		void clrALU(const TWord _aluIndex);
 
 		JitReg128 getXY(int _xy);
@@ -104,21 +123,13 @@ namespace dsp56k
 		void setPC(const JitReg& _pc);
 		void updateDspMRegisters();
 
-		uint32_t getLoadedRegs() const { return m_loadedRegs; }
+		uint32_t getWrittenRegs() const { return m_writtenRegs; }
+		uint32_t getReadRegs() const { return m_readRegs; }
+
+		bool isRead(uint32_t _reg) const;
+		bool isWritten(uint32_t _reg) const;
 
 	private:
-		enum LoadedRegs
-		{
-			LoadedRegR0,	LoadedRegR1,	LoadedRegR2,	LoadedRegR3,	LoadedRegR4,	LoadedRegR5,	LoadedRegR6,	LoadedRegR7,
-			LoadedRegA,		LoadedRegB,
-			LoadedRegX,		LoadedRegY,
-			LoadedRegExtMem,
-			LoadedRegSR,
-			LoadedRegLC,
-			LoadedRegLA,
-			LoadedRegCount
-		};
-
 		void loadDSPRegs();
 		void storeDSPRegs();
 
@@ -133,9 +144,11 @@ namespace dsp56k
 		void load24(const asmjit::x86::Gp& _dst, const TReg24& _src) const;
 		void store24(TReg24& _dst, const asmjit::x86::Gp& _src) const;
 
-		bool isLoaded(uint32_t _reg) const;
-		void setLoaded(const uint32_t _reg)				{ m_loadedRegs |= (1<<_reg); }
-		void setUnloaded(const uint32_t _reg)			{ m_loadedRegs &= ~(1<<_reg); }
+		void setWritten(const uint32_t _reg)			{ m_writtenRegs |= (1<<_reg); }
+		void clearWritten(const uint32_t _reg)			{ m_writtenRegs &= ~(1<<_reg); }
+
+		void setRead(const uint32_t _reg)				{ m_readRegs |= (1<<_reg); }
+		void clearRead(const uint32_t _reg)				{ m_readRegs &= ~(1<<_reg); }
 
 		void load(LoadedRegs _reg);
 		void store(LoadedRegs _reg);
@@ -144,7 +157,8 @@ namespace dsp56k
 		asmjit::x86::Assembler& m_asm;
 		DSP& m_dsp;
 
-		uint32_t m_loadedRegs = 0;
+		uint32_t m_writtenRegs = 0;
+		uint32_t m_readRegs = 0;
 		std::array<uint32_t, 8> m_AguMchanged;
 	};
 

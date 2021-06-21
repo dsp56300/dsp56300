@@ -253,7 +253,7 @@ namespace dsp56k
 			m_dspRegs.setSSH(pc.get().r32());
 		}
 
-		m_dspRegs.setSSL(m_dspRegs.getSR().r32());
+		m_dspRegs.setSSL(m_dspRegs.getSR(JitDspRegs::Read).r32());
 	}
 	void JitOps::popPCSR()
 	{
@@ -285,7 +285,7 @@ namespace dsp56k
 
 	void JitOps::getMR(const JitReg64& _dst) const
 	{
-		m_asm.mov(_dst, m_dspRegs.getSR());
+		m_asm.mov(_dst, m_dspRegs.getSR(JitDspRegs::Read));
 		m_asm.shr(_dst, asmjit::Imm(8));
 		m_asm.and_(_dst, asmjit::Imm(0xff));
 	}
@@ -295,7 +295,7 @@ namespace dsp56k
 		_dst.release();
 		updateDirtyCCR();
 		_dst.acquire();
-		m_asm.mov(_dst, m_dspRegs.getSR());
+		m_asm.mov(_dst, m_dspRegs.getSR(JitDspRegs::Read));
 		m_asm.and_(_dst, asmjit::Imm(0xff));
 	}
 
@@ -315,19 +315,19 @@ namespace dsp56k
 	void JitOps::setMR(const JitReg64& _src) const
 	{
 		const RegGP r(m_block);
-		m_asm.mov(r, m_dspRegs.getSR());
+		m_asm.mov(r, m_dspRegs.getSR(JitDspRegs::Read));
 		m_asm.and_(r, asmjit::Imm(0xff00ff));
 		m_asm.shl(_src, asmjit::Imm(8));
 		m_asm.or_(r, _src);
 		m_asm.shr(_src, asmjit::Imm(8));	// TODO: we don't wanna be destructive to the input for now
-		m_asm.mov(m_dspRegs.getSR(), r.get());
+		m_asm.mov(m_dspRegs.getSR(JitDspRegs::Write), r.get());
 	}
 
 	void JitOps::setCCR(const JitReg64& _src)
 	{
 		m_ccrDirty = false;
-		m_asm.and_(m_dspRegs.getSR(), asmjit::Imm(0xffff00));
-		m_asm.or_(m_dspRegs.getSR(), _src);
+		m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(0xffff00));
+		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), _src);
 	}
 
 	void JitOps::setCOM(const JitReg64& _src) const
@@ -356,10 +356,10 @@ namespace dsp56k
 		m_dspRegs.getSR(_dst);
 	}
 
-	inline JitReg JitOps::getSR()
+	inline JitReg JitOps::getSR(JitDspRegs::AccessType _accessType)
 	{
 		updateDirtyCCR();
-		return m_dspRegs.getSR();
+		return m_dspRegs.getSR(_accessType);
 	}
 
 	void JitOps::setSR(const JitReg32& _src)
@@ -396,11 +396,11 @@ namespace dsp56k
 			const PushGP s0s1(m_block, asmjit::x86::rcx);
 			m_asm.xor_(s0s1, s0s1.get());
 
-			m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(SRB_S1));
+			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S1));
 			m_asm.setc(s0s1);
 			m_asm.shl(_dst, s0s1.get());
 
-			m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(SRB_S0));
+			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S0));
 			m_asm.setc(s0s1);
 			m_asm.shr(_dst, s0s1.get());
 		}

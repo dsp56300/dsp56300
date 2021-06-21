@@ -1198,9 +1198,9 @@ namespace dsp56k
 		dsp.mem.set(MemArea_X, 0x2, 0xaabbc4);
 
 		_ops.emit(0, 0x0b0222);	// bset #$2,x:<$2
-		_block.asm_().mov(_block.regs().getSR(), m_checks[0]);
+		_block.asm_().mov(_block.regs().getSR(JitDspRegs::ReadWrite), m_checks[0]);
 		_ops.emit(0, 0x0b0223);	// bset #$3,x:<$2
-		_block.asm_().mov(_block.regs().getSR(), m_checks[1]);
+		_block.asm_().mov(_block.regs().getSR(JitDspRegs::ReadWrite), m_checks[1]);	// TODO: args swapped! Why doesn't the test fail???
 	}
 
 	void JitUnittests::btst_aa_verify()
@@ -1809,7 +1809,6 @@ namespace dsp56k
 		{
 			assert(dsp.reg.b.var == 0x11223344556677);
 		});
-
 	}
 
 	void JitUnittests::move()

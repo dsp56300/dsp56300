@@ -8,12 +8,12 @@ namespace dsp56k
 {
 	inline void JitOps::ccr_clear(CCRMask _mask) const
 	{
-		m_asm.and_(m_dspRegs.getSR(), asmjit::Imm(~_mask));
+		m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~_mask));
 	}
 
 	inline void JitOps::ccr_set(CCRMask _mask) const
 	{
-		m_asm.or_(m_dspRegs.getSR(), asmjit::Imm(_mask));
+		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(_mask));
 	}
 
 	inline void JitOps::ccr_dirty(const JitReg64& _alu)
@@ -48,7 +48,7 @@ namespace dsp56k
 
 	inline void JitOps::sr_getBitValue(const JitReg& _dst, CCRBit _bit) const
 	{
-		m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(_bit));
+		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(_bit));
 		m_asm.setc(_dst);
 	}
 
@@ -144,7 +144,7 @@ namespace dsp56k
 			ccr_clear(static_cast<CCRMask>(1 << _bit));		// clear out old status register value
 
 		m_asm.shl(ra, _bit);								// shift left to become our new SR bit
-		m_asm.or_(m_dspRegs.getSR(), ra);					// or in our new SR bit
+		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite).r8(), ra.r8());	// or in our new SR bit
 	}
 
 	void JitOps::ccr_u_update(const JitReg64& _alu) const
@@ -266,7 +266,7 @@ namespace dsp56k
 	{
 		const auto exit = m_asm.newLabel();
 
-		m_asm.bt(m_dspRegs.getSR(), asmjit::Imm(SRB_S));
+		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S));
 		m_asm.jc(exit);
 
 		{

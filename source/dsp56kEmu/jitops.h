@@ -348,7 +348,7 @@ namespace dsp56k
 		void setEOM(const JitReg64& _src) const;
 
 		void getSR(const JitReg32& _dst);
-		JitReg getSR();
+		JitReg getSR(JitDspRegs::AccessType _accessType);
 		void setSR(const JitReg32& _src);
 
 		void transferAluTo24(const JitReg& _dst, int _alu);

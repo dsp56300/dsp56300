@@ -488,17 +488,17 @@ namespace dsp56k
 			m_asm.jz(_toFalse);
 		}, [&]()
 		{
-			m_dspRegs.setSSH(m_dspRegs.getLA().r32());
-			m_dspRegs.setSSL(m_dspRegs.getLC().r32());
+			m_dspRegs.setSSH(m_dspRegs.getLA(JitDspRegs::Read).r32());
+			m_dspRegs.setSSL(m_dspRegs.getLC(JitDspRegs::Read).r32());
 
-			m_asm.mov(m_dspRegs.getLA(), asmjit::Imm(_addr));
-			m_asm.mov(m_dspRegs.getLC(), _lc.get());
+			m_asm.mov(m_dspRegs.getLA(JitDspRegs::Write), asmjit::Imm(_addr));
+			m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), _lc.get());
 
 			_lc.release();
 
 			pushPCSR();
 
-			m_asm.or_(m_dspRegs.getSR(), asmjit::Imm(SR_LF));
+			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(SR_LF));
 		}, [&]()
 		{
 			jmp(_addr+1);
@@ -512,8 +512,8 @@ namespace dsp56k
 			const RegGP r(m_block);
 			m_dspRegs.getSSL(r.get().r32());
 			m_asm.and_(r, asmjit::Imm(SR_LF));
-			m_asm.and_(m_dspRegs.getSR(), asmjit::Imm(~SR_LF));
-			m_asm.or_(m_dspRegs.getSR(), r.get());
+			m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~SR_LF));
+			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
 		}
 
 		// decrement SP twice, restoring old loop settings
@@ -627,15 +627,15 @@ namespace dsp56k
 			if constexpr(BackupCCR)
 			{
 				const RegXMM ccrBackup(m_block);
-				m_asm.movd(ccrBackup, m_dspRegs.getSR());
+				m_asm.movd(ccrBackup, m_dspRegs.getSR(JitDspRegs::Read));
 
 				emitAluOp(op);
 
 				const RegGP r(m_block);
 				m_asm.movd(r.get(), ccrBackup);
 				m_asm.and_(r, asmjit::Imm(0xff));
-				m_asm.and_(m_dspRegs.getSR(), asmjit::Imm(0xffff00));
-				m_asm.or_(m_dspRegs.getSR(), r.get());
+				m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(0xffff00));
+				m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
 			}
 			else
 			{
@@ -751,7 +751,7 @@ namespace dsp56k
 
 	void JitOps::rep_exec(RegGP& _lc)
 	{
-		const auto lc = m_dspRegs.getLC().r32();
+		const auto lc = m_dspRegs.getLC(JitDspRegs::ReadWrite).r32();
 
 		// backup LC
 		const RegXMM lcBackup(m_block);
@@ -773,20 +773,20 @@ namespace dsp56k
 		// execute it once without being part of the loop to fill register cache, needed only once
 		m_asm.dec(lc);
 		emit(pc);
-		m_asm.cmp(m_dspRegs.getLC().r32(), asmjit::Imm(0));
+		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read).r32(), asmjit::Imm(0));
 		m_asm.jz(end);
 
 		m_asm.bind(start);
 
 		m_asm.dec(lc);
 		emit(pc);
-		m_asm.cmp(m_dspRegs.getLC().r32(), asmjit::Imm(0));
+		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read).r32(), asmjit::Imm(0));
 		m_asm.jnz(start);
 
 		m_asm.bind(end);
 
 		// restore previous LC
-		m_asm.movd(m_dspRegs.getLC(), lcBackup);
+		m_asm.movd(m_dspRegs.getLC(JitDspRegs::Write), lcBackup);
 
 		// op size is the sum of the rep plus the child op
 		assert(m_opSize == 1 && "repeated instruction needs to be a single word instruction");
