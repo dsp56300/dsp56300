@@ -50,6 +50,7 @@ jit.cpp jit.h
 jitblock.cpp jitblock.h
 jithelper.cpp jithelper.h
 jitdspregs.cpp jitdspregs.h
+jitdspregpool.cpp jitdspregpool.h
 jitmem.cpp jitmem.h
 jitops.cpp jitops.h
 jitops_alu.inl jitops_ccr.inl jitops_decode.inl jitops_helper.inl jitops_jmp.inl jitops_mem.inl jitops_move.inl
