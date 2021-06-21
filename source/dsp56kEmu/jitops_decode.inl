@@ -89,8 +89,7 @@ namespace dsp56k
 				m_asm.and_(_dst.r8(), r.get().r8());
 				sr_getBitValue(r, SRB_Z);
 				m_asm.add(_dst.r8(), r.get().r8());
-				m_asm.cmp(_dst.r8(), asmjit::Imm(0));
-				m_asm.sete(_dst);
+				m_asm.setz(_dst);
 			}
 			break;
 		case CCCC_GreaterThan:								// GT			Greater than
@@ -102,8 +101,7 @@ namespace dsp56k
 				m_asm.xor_(_dst.r8(), r.get().r8());
 				sr_getBitValue(r, SRB_Z);
 				m_asm.add(_dst.r8(), r.get().r8());
-				m_asm.cmp(_dst.r8(), asmjit::Imm(0));
-				m_asm.sete(_dst);
+				m_asm.setz(_dst);
 			}
 			break;
 		case CCCC_LessEqual:								// LE			Less than or equal

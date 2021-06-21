@@ -138,12 +138,11 @@ namespace dsp56k
 
 	inline void JitOps::ccr_update(const JitReg& ra, CCRBit _bit) const
 	{
-		m_asm.and_(ra, asmjit::Imm(0xff));
-
 		if(_bit != SRB_L && _bit != SRB_S)
-			ccr_clear(static_cast<CCRMask>(1 << _bit));		// clear out old status register value
+			ccr_clear(static_cast<CCRMask>(1 << _bit));						// clear out old status register value
 
-		m_asm.shl(ra, _bit);								// shift left to become our new SR bit
+		if(_bit)
+			m_asm.shl(ra.r8(), _bit);										// shift left to become our new SR bit
 		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite).r8(), ra.r8());	// or in our new SR bit
 	}
 
