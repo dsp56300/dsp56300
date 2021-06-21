@@ -28,7 +28,7 @@ namespace dsp56k
 
 		TReg24 val = decode_dddddd_read( dddddd );
 
-		sr_toggle( SR_C, bittestandchange( val, bit ) );
+		sr_toggle( CCR_C, bittestandchange( val, bit ) );
 
 		decode_dddddd_write( dddddd, val );
 
@@ -111,7 +111,7 @@ namespace dsp56k
 			// god WHY is this even possible! Bset_pp/qq are for peripherals and even save one word!	TODO: code optimizer? We could rewrite as Bset_qq/pp + one nop
 			auto val = memReadPeriph( S, ea );
 
-			sr_toggle( SR_C, bittestandset( val, bit ) );
+			sr_toggle( CCR_C, bittestandset( val, bit ) );
 
 			memWritePeriph( S, ea, val );
 		}
@@ -119,7 +119,7 @@ namespace dsp56k
 		{
 			auto val = memRead( S, ea );
 
-			sr_toggle( SR_C, bittestandset( val, bit ) );
+			sr_toggle( CCR_C, bittestandset( val, bit ) );
 
 			memWrite( S, ea, val );
 		}
@@ -138,7 +138,7 @@ namespace dsp56k
 
 		TWord val = memReadPeriphFFFFC0( S, ea );
 
-		sr_toggle( SR_C, bittestandset( val, bit ) );
+		sr_toggle( CCR_C, bittestandset( val, bit ) );
 
 		memWritePeriphFFFFC0( S, ea, val );
 	}
@@ -152,7 +152,7 @@ namespace dsp56k
 
 		TWord val = memReadPeriphFFFF80( S, ea );
 
-		sr_toggle( SR_C, bittestandset( val, bit ) );
+		sr_toggle( CCR_C, bittestandset( val, bit ) );
 
 		memWritePeriphFFFF80( S, ea, val );
 	}
@@ -169,7 +169,7 @@ namespace dsp56k
 		}
 		else
 		{
-			sr_toggle( SR_C, bittestandset( val, bit ) );
+			sr_toggle( CCR_C, bittestandset( val, bit ) );
 		}
 
 		decode_dddddd_write( d, val );
@@ -180,14 +180,14 @@ namespace dsp56k
 
 	inline void DSP::op_Btst_ea(const TWord op)
 	{
-		sr_toggle(SR_C, bitTestMemory<Btst_ea>(op));
+		sr_toggle(CCR_C, bitTestMemory<Btst_ea>(op));
 
 		sr_s_update();
 		sr_l_update_by_v();
 	}
 	inline void DSP::op_Btst_aa(const TWord op)
 	{
-		sr_toggle(SR_C, bitTestMemory<Btst_aa>(op));
+		sr_toggle(CCR_C, bitTestMemory<Btst_aa>(op));
 
 		sr_s_update();
 		sr_l_update_by_v();
@@ -202,7 +202,7 @@ namespace dsp56k
 
 		const bool bitSet	= ( memVal & (1<<bitNum)) != 0;
 
-		sr_toggle( SR_C, bitSet );
+		sr_toggle( CCR_C, bitSet );
 	}
 	inline void DSP::op_Btst_qq(const TWord op)
 	{
@@ -215,7 +215,7 @@ namespace dsp56k
 
 		TReg24 val = decode_dddddd_read( dddddd );
 
-		sr_toggle( SR_C, bittest( val.var, bit ) );
+		sr_toggle( CCR_C, bittest( val.var, bit ) );
 	}
 	inline void DSP::op_Debug(const TWord op)
 	{

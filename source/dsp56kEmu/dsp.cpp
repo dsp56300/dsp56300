@@ -396,14 +396,14 @@ namespace dsp56k
 	void DSP::sr_debug(char* _dst) const
 	{
 		_dst[8] = 0;
-		_dst[7] = sr_test(SR_C) ? 'C' : 'c';
-		_dst[6] = sr_test(SR_V) ? 'V' : 'v';
-		_dst[5] = sr_test(SR_Z) ? 'Z' : 'z';
-		_dst[4] = sr_test(SR_N) ? 'N' : 'n';
-		_dst[3] = sr_test(SR_U) ? 'U' : 'u';
-		_dst[2] = sr_test(SR_E) ? 'E' : 'e';
-		_dst[1] = sr_test(SR_L) ? 'L' : 'l';
-		_dst[0] = sr_test(SR_S) ? 'S' : 's';
+		_dst[7] = sr_test(CCR_C) ? 'C' : 'c';
+		_dst[6] = sr_test(CCR_V) ? 'V' : 'v';
+		_dst[5] = sr_test(CCR_Z) ? 'Z' : 'z';
+		_dst[4] = sr_test(CCR_N) ? 'N' : 'n';
+		_dst[3] = sr_test(CCR_U) ? 'U' : 'u';
+		_dst[2] = sr_test(CCR_E) ? 'E' : 'e';
+		_dst[1] = sr_test(CCR_L) ? 'L' : 'l';
+		_dst[0] = sr_test(CCR_S) ? 'S' : 's';
 	}
 
 	// _____________________________________________________________________________
@@ -1096,7 +1096,7 @@ namespace dsp56k
 		sr_z_update(d);
 	//	sr_v_update(d);
 	//	sr_l_update_by_v();
-		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
+		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
 	}
 
 	void DSP::alu_tfr(const bool ab, const TReg56& src)
@@ -1107,11 +1107,11 @@ namespace dsp56k
 
 	void DSP::alu_tst(bool ab)
 	{
-		const bool c = sr_test(SR_C);
+		const bool c = sr_test(CCR_C);
 		alu_cmp(ab, TReg56(0), false);
 
-		sr_clear(SR_V);		// "always cleared"
-		sr_toggle(SR_C,c);	// "unchanged by the instruction" so reset to previous state
+		sr_clear(CCR_V);		// "always cleared"
+		sr_toggle(CCR_C,c);	// "unchanged by the instruction" so reset to previous state
 	}
 
 	void DSP::alu_neg(bool ab)
@@ -1126,7 +1126,7 @@ namespace dsp56k
 		sr_z_update(d);
 	//	TODO: how to update v? test in sim		sr_v_update(d);
 		sr_l_update_by_v();
-		setCCRDirty(ab, d, SR_S | SR_E | SR_U | SR_N);
+		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
 	}
 
 	void DSP::alu_not(const bool ab)
@@ -1138,9 +1138,9 @@ namespace dsp56k
 		d &= 0xff000000ffffff;
 		d |= masked;
 
-		sr_toggle(SRB_N, bitvalue<uint64_t, 47>(d));	// Set if bit 47 of the result is set
-		sr_toggle(SR_Z, masked == 0);					// Set if bits 47–24 of the result are 0
-		sr_clear(SR_V);									// Always cleared
+		sr_toggle(CCRB_N, bitvalue<uint64_t, 47>(d));	// Set if bit 47 of the result is set
+		sr_toggle(CCR_Z, masked == 0);					// Set if bits 47–24 of the result are 0
+		sr_clear(CCR_V);									// Always cleared
 		sr_s_update();									// Changed according to the standard definition
 		//sr_l_update_by_v();							// Changed according to the standard definition
 	}

@@ -48,14 +48,14 @@ namespace dsp56k
 	// CCR - bit 0-7
 	enum CCRBit
 	{
-		SRB_C,					// carry
-		SRB_V,					// overflow
-		SRB_Z,					// zero
-		SRB_N,					// negative
-		SRB_U,					// unnormalized
-		SRB_E,					// extension
-		SRB_L,					// limit
-		SRB_S,					// scaling		
+		CCRB_C,					// carry
+		CCRB_V,					// overflow
+		CCRB_Z,					// zero
+		CCRB_N,					// negative
+		CCRB_U,					// unnormalized
+		CCRB_E,					// extension
+		CCRB_L,					// limit
+		CCRB_S,					// scaling		
 
 		SRB_I0,					// interrupt mask bit 0
 		SRB_I1,					// interrupt mask bit 1
@@ -79,14 +79,14 @@ namespace dsp56k
 
 	enum CCRMask
 	{
-		SR_C = (1<<SRB_C),		// carry
-		SR_V = (1<<SRB_V),		// overflow
-		SR_Z = (1<<SRB_Z),		// zero
-		SR_N = (1<<SRB_N),		// negative
-		SR_U = (1<<SRB_U),		// unnormalized
-		SR_E = (1<<SRB_E),		// extension
-		SR_L = (1<<SRB_L),		// limit
-		SR_S = (1<<SRB_S),		// scaling
+		CCR_C = (1<<CCRB_C),	// carry
+		CCR_V = (1<<CCRB_V),	// overflow
+		CCR_Z = (1<<CCRB_Z),	// zero
+		CCR_N = (1<<CCRB_N),	// negative
+		CCR_U = (1<<CCRB_U),	// unnormalized
+		CCR_E = (1<<CCRB_E),	// extension
+		CCR_L = (1<<CCRB_L),	// limit
+		CCR_S = (1<<CCRB_S),	// scaling
 
 	// bit 8-15
 		SR_I0	= 0x000100,	// interrupt mask bit 0

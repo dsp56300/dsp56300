@@ -346,7 +346,7 @@ namespace dsp56k
 
 		void	sr_s_update				()
 		{
-			if( sr_test_noCache(SR_S) )
+			if( sr_test_noCache(CCR_S) )
 				return;
 
 			const TWord offset = sr_val_noCache(SRB_S1) - sr_val_noCache(SRB_S0);
@@ -355,7 +355,7 @@ namespace dsp56k
 
 			if	(	(bitvalue(reg.a,bitA) != bitvalue(reg.a,bitB))
 				|	(bitvalue(reg.b,bitA) != bitvalue(reg.b,bitB)) )
-				sr_set( SR_S );
+				sr_set( CCR_S );
 		}
 
 		void	sr_e_update				( const TReg56& _ab )
@@ -383,7 +383,7 @@ namespace dsp56k
 
 			const auto res = static_cast<int>(m2 != mask) & static_cast<int>(m2 != 0);
 
-			sr_toggle( SRB_E, Bit(res));
+			sr_toggle( CCRB_E, Bit(res));
 		}
 
 		void sr_u_update( const TReg56& _ab )
@@ -393,33 +393,33 @@ namespace dsp56k
 			const auto msb = 47 + sOffset;
 			const auto lsb = 46 + sOffset;
 
-			sr_toggle( SRB_U, bitvalue(_ab,msb) == bitvalue(_ab,lsb) );
+			sr_toggle( CCRB_U, bitvalue(_ab,msb) == bitvalue(_ab,lsb) );
 		}
 
 		void sr_n_update( const TReg56& _ab )
 		{
 			// Negative
 			// Set if the MSB of the result is set; otherwise, this bit is cleared.	
-			sr_toggle( SRB_N, bitvalue<55>(_ab) );
+			sr_toggle( CCRB_N, bitvalue<55>(_ab) );
 		}
 
 		void sr_z_update( const TReg56& _ab )
 		{
 			const TReg56 zero(static_cast<TReg56::MyType>(0));
-			sr_toggle( SR_Z, zero == _ab );
+			sr_toggle( CCR_Z, zero == _ab );
 		}
 
 		template<typename T>
 		void	sr_c_update_arithmetic( const T& _old, const T& _new )
 		{
-			sr_toggle( SRB_C, bitvalue<55>(_old) != bitvalue<55>(_new) );
+			sr_toggle( CCRB_C, bitvalue<55>(_old) != bitvalue<55>(_new) );
 		}
 
 		void sr_l_update_by_v()
 		{
 			// L is never cleared automatically, so only test to set
-			if( sr_test_noCache(SR_V) )
-				sr_set(SR_L);
+			if( sr_test_noCache(CCR_V) )
+				sr_set(CCR_L);
 		}
 
 		// value needs to fit into 48 (arithmetic saturation mode) or 56 bits
@@ -428,11 +428,11 @@ namespace dsp56k
 			if( sr_test_noCache(SR_SM) )
 			{
 				const unsigned int test=(_result.var>>47)&0x13;
-				if (!(test ^ 0x13) || !(test)) sr_set(SR_V);
+				if (!(test ^ 0x13) || !(test)) sr_set(CCR_V);
 			}
 			else
 			{
-				sr_toggle( SR_V, ((_notLimitedResult>>48)^(_result.var>>48))&255);
+				sr_toggle( CCR_V, ((_notLimitedResult>>48)^(_result.var>>48))&255);
 			}
 		}
 
@@ -536,12 +536,12 @@ namespace dsp56k
 
 			if( test < -140737488355328 )			// ff 800000 000000
 			{
-				sr_set( SR_L );
+				sr_set( CCR_L );
 				_dst = 0x800000;
 			}
 			else if( test > 140737471578112 )		// 00 7fffff 000000
 			{
-				sr_set( SR_L );
+				sr_set( CCR_L );
 				_dst = 0x7FFFFF;
 			}
 			else
@@ -572,10 +572,10 @@ namespace dsp56k
 			case 7:	/* do nothing */								break;
 			case 1:
 			case 2:
-			case 3:	_dst.var = 0x007fffffffffff;	sr_set(SR_V);	break;
+			case 3:	_dst.var = 0x007fffffffffff;	sr_set(CCR_V);	break;
 			case 4:
 			case 5:
-			case 6: _dst.var = 0xff800000000000;	sr_set(SR_V);	break;
+			case 6: _dst.var = 0xff800000000000;	sr_set(CCR_V);	break;
 			default: assert( 0 && "impossible" );
 			}
 		}

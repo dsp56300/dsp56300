@@ -138,7 +138,7 @@ namespace dsp56k
 
 	inline void JitOps::ccr_update(const JitReg& ra, CCRBit _bit) const
 	{
-		if(_bit != SRB_L && _bit != SRB_S)
+		if(_bit != CCRB_L && _bit != CCRB_S)
 			ccr_clear(static_cast<CCRMask>(1 << _bit));						// clear out old status register value
 
 		if(_bit)
@@ -172,7 +172,7 @@ namespace dsp56k
 			m_asm.shr(r, shift.get().r8());
 			m_asm.and_(r, asmjit::Imm(0x3));
 		}
-		ccr_update_ifParity(SRB_U);
+		ccr_update_ifParity(CCRB_U);
 
 		/*
 		const auto sOffset = sr_val_noCache(SRB_S0) - sr_val_noCache(SRB_S1);
@@ -232,7 +232,7 @@ namespace dsp56k
 				m_asm.and_(mask.get().r8(), alu.get().r8());
 			}
 
-			ccr_update(mask, SRB_E);
+			ccr_update(mask, CCRB_E);
 		}
 	}
 
@@ -241,7 +241,7 @@ namespace dsp56k
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
 		m_asm.bt(_alu, asmjit::Imm(55));
-		ccr_update_ifCarry(SRB_N);
+		ccr_update_ifCarry(CCRB_N);
 	}
 
 	inline void JitOps::ccr_n_update_by47(const JitReg64& _alu) const
@@ -249,7 +249,7 @@ namespace dsp56k
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
 		m_asm.bt(_alu, asmjit::Imm(47));
-		ccr_update_ifCarry(SRB_N);
+		ccr_update_ifCarry(CCRB_N);
 	}
 
 	inline void JitOps::ccr_n_update_by23(const JitReg64& _alu) const
@@ -257,14 +257,14 @@ namespace dsp56k
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
 		m_asm.bt(_alu, asmjit::Imm(23));
-		ccr_update_ifCarry(SRB_N);
+		ccr_update_ifCarry(CCRB_N);
 	}
 
 	inline void JitOps::ccr_s_update(const JitReg64& _alu) const
 	{
 		const auto exit = m_asm.newLabel();
 
-		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S));
+		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_S));
 		m_asm.jc(exit);
 
 		{
@@ -291,7 +291,7 @@ namespace dsp56k
 			m_asm.xor_(bit,bit46.get());
 		}
 
-		ccr_update_ifNotZero(SRB_S);
+		ccr_update_ifNotZero(CCRB_S);
 
 		m_asm.bind(exit);
 	}
@@ -300,8 +300,8 @@ namespace dsp56k
 	{
 		RegGP r(m_block);
 		m_asm.xor_(r,r.get());
-		sr_getBitValue(r, SRB_V);
-		m_asm.shl(r, SRB_L);
+		sr_getBitValue(r, CCRB_V);
+		m_asm.shl(r, CCRB_L);
 		m_asm.or_(regSR, r.get());
 	}
 
@@ -314,7 +314,7 @@ namespace dsp56k
 			m_asm.cmp(signextended, _nonMaskedResult);
 		}
 
-		ccr_update_ifNotZero(SRB_V);
+		ccr_update_ifNotZero(CCRB_V);
 		ccr_l_update_by_v();
 	}
 }

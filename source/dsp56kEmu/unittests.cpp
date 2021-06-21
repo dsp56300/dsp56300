@@ -169,8 +169,8 @@ namespace dsp56k
 		// add b,a
 		execOpcode(0x200010);
 		assert(dsp.reg.a.var == 0);
-		assert(dsp.sr_test(SR_C));
-		assert(!dsp.sr_test(SR_V));
+		assert(dsp.sr_test(CCR_C));
+		assert(!dsp.sr_test(CCR_V));
 	}
 
 	void UnitTests::testAddr()
@@ -198,8 +198,8 @@ namespace dsp56k
 		// sub b,a
 		execOpcode(0x200014);
 		assert(dsp.reg.a.var == 0xffffffffffffff);
-		assert(dsp.sr_test(SR_C));
-		assert(!dsp.sr_test(SR_V));
+		assert(dsp.sr_test(CCR_C));
+		assert(!dsp.sr_test(CCR_V));
 
 		dsp.reg.a.var = 0x80000000000000;
 		dsp.reg.b.var = 0x00000000000001;
@@ -207,8 +207,8 @@ namespace dsp56k
 		// sub b,a
 		execOpcode(0x200014);
 		assert(dsp.reg.a.var == 0x7fffffffffffff);
-		assert(!dsp.sr_test(SR_C));
-		assert(!dsp.sr_test(SR_V));
+		assert(!dsp.sr_test(CCR_C));
+		assert(!dsp.sr_test(CCR_V));
 	}
 
 	void UnitTests::testAdd(int64_t a, int y0, int64_t expectedResult)
@@ -271,8 +271,8 @@ namespace dsp56k
 		// cmp x0,b
 		execOpcode(0x20004d);
 
-		assert(dsp.sr_test(SR_Z));
-		assert(!dsp.sr_test(static_cast<CCRMask>(SR_N | SR_E | SR_V | SR_C)));
+		assert(dsp.sr_test(CCR_Z));
+		assert(!dsp.sr_test(static_cast<CCRMask>(CCR_N | CCR_E | CCR_V | CCR_C)));
 
 		dsp.x0(0xf00000);
 		dsp.reg.a.var = 0xfff40000000000;
@@ -406,23 +406,23 @@ namespace dsp56k
 
 	void UnitTests::testROL()
 	{
-		dsp.sr_set(SR_C);
+		dsp.sr_set(CCR_C);
 		dsp.reg.a.var = 0x12abcdef123456;				// 00010010 10101011 11001101 11101111 00010010 00110100 01010110
 
 		// rol a
 		execOpcode(0x200037);
 
 		assert(dsp.reg.a.var == 0x12579BDF123456);		// 00010010 01010111 10011011 11011111 00010010 00110100 01010110
-		assert(dsp.sr_test(SR_C) == 1);
+		assert(dsp.sr_test(CCR_C) == 1);
 
-		dsp.sr_set(SR_C);
+		dsp.sr_set(CCR_C);
 		dsp.reg.a.var = 0x12123456abcdef;				// 00010010 00010010 00110100 01010110 10101011 11001101 11101111
 
 		// rol a
 		execOpcode(0x200037);
 
 		assert(dsp.reg.a.var == 0x122468ADABCDEF);		// 00010010 00100100 01101000 10101101 10101011 11001101 11101111
-		assert(dsp.sr_test(SR_C) == 0);
+		assert(dsp.sr_test(CCR_C) == 0);
 	}
 
 	void UnitTests::testNOT()

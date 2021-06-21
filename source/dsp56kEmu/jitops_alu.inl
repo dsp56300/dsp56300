@@ -41,7 +41,7 @@ namespace dsp56k
 
 //		m_asm.and_(ra, asmjit::Imm(0x00ff ffffff ffffff));		// absolute value does not need any mask
 
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
 		ccr_n_update_by55(ra);
 
@@ -64,12 +64,12 @@ namespace dsp56k
 			m_asm.cmp(alu, aluMax.get());
 		}
 
-		ccr_update_ifAbove(SRB_C);
+		ccr_update_ifAbove(CCRB_C);
 
-		ccr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
+		ccr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
 		m_dspRegs.mask56(alu);
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
 //		sr_l_update_by_v();
 
@@ -99,12 +99,12 @@ namespace dsp56k
 			m_asm.cmp(alu, aluMax.get());
 		}
 
-		ccr_update_ifAbove(SRB_C);
+		ccr_update_ifAbove(CCRB_C);
 
-		ccr_clear(SR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
+		ccr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
 		m_dspRegs.mask56(alu);
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
 //		sr_l_update_by_v();
 
@@ -147,7 +147,7 @@ namespace dsp56k
 			const RegGP r(m_block);
 			m_asm.mov(r, alu.get());
 			m_asm.and_(r, _v.get());
-			ccr_update_ifZero(SRB_Z);
+			ccr_update_ifZero(CCRB_Z);
 		}
 
 		{
@@ -166,7 +166,7 @@ namespace dsp56k
 		// S L E U N Z V C
 		// v - - - * * * -
 		ccr_n_update_by47(alu);
-		ccr_clear(SR_V);
+		ccr_clear(CCR_V);
 	}
 
 	inline void JitOps::alu_asl(TWord abSrc, TWord abDst, const PushGP& _v)
@@ -177,7 +177,7 @@ namespace dsp56k
 
 		m_asm.sal(alu, _v.get());					// now do the real shift
 
-		ccr_update_ifCarry(SRB_C);					// copy the host carry flag to the DSP carry flag
+		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
 
 		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
 		// The easiest way to check this is to shift back and compare if the initial alu value is identical ot the backshifted one
@@ -188,12 +188,12 @@ namespace dsp56k
 			m_asm.cmp(alu, oldAlu.get());
 		}
 
-		ccr_update_ifNotZero(SRB_V);
+		ccr_update_ifNotZero(CCRB_V);
 
 		m_asm.sal(alu, _v.get());					// one more time
 		m_asm.shr(alu, asmjit::Imm(8));				// correction
 
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
 		ccr_n_update_by55(alu);
 
@@ -207,11 +207,11 @@ namespace dsp56k
 		m_asm.sal(alu, asmjit::Imm(8));
 		m_asm.sar(alu, _v.get());
 		m_asm.sar(alu, asmjit::Imm(8));
-		ccr_update_ifCarry(SRB_C);					// copy the host carry flag to the DSP carry flag
+		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
 		m_dspRegs.mask56(alu);
-		ccr_update_ifZero(SRB_Z);					// we can check for zero now, too
+		ccr_update_ifZero(CCRB_Z);					// we can check for zero now, too
 
-		ccr_clear(SR_V);
+		ccr_clear(CCR_V);
 
 		ccr_n_update_by55(alu);
 
@@ -292,12 +292,12 @@ namespace dsp56k
 			m_asm.add(aluD, aluS.get());
 		}
 
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 
 		m_dspRegs.mask56(aluD);
 
-		ccr_update_ifZero(SRB_Z);
-		ccr_clear(SR_V);	// TODO: Set if overflow has occurred in the A or B result or the MSB of the destination operand is changed as a result of the instruction’s left shift.
+		ccr_update_ifZero(CCRB_Z);
+		ccr_clear(CCR_V);	// TODO: Set if overflow has occurred in the A or B result or the MSB of the destination operand is changed as a result of the instruction’s left shift.
 		ccr_n_update_by55(aluD);
 		ccr_dirty(aluD);
 	}
@@ -325,12 +325,12 @@ namespace dsp56k
 			m_asm.cmp(aluD, aluMax.get());
 		}
 
-		ccr_update_ifGreater(SRB_C);
+		ccr_update_ifGreater(CCRB_C);
 
 		m_dspRegs.mask56(aluD);
 
-		ccr_update_ifZero(SRB_Z);
-		ccr_clear(SR_V);			// TODO: Changed according to the standard definition.
+		ccr_update_ifZero(CCRB_Z);
+		ccr_clear(CCR_V);			// TODO: Changed according to the standard definition.
 		ccr_n_update_by55(aluD);
 		ccr_dirty(aluD);
 	}
@@ -448,19 +448,19 @@ namespace dsp56k
 	inline void JitOps::alu_bclr(const JitReg64& _dst, const TWord _bit) const
 	{
 		m_asm.btr(_dst, asmjit::Imm(_bit));
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 	}
 
 	inline void JitOps::alu_bset(const JitReg64& _dst, const TWord _bit) const
 	{
 		m_asm.bts(_dst, asmjit::Imm(_bit));
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 	}
 
 	inline void JitOps::alu_bchg(const JitReg64& _dst, const TWord _bit) const
 	{
 		m_asm.btc(_dst, asmjit::Imm(_bit));
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 	}
 
 	inline void JitOps::alu_cmp(TWord ab, const JitReg64& _v, bool _magnitude, bool updateCarry/* = true*/)
@@ -479,12 +479,12 @@ namespace dsp56k
 		m_asm.sub(d, _v);
 
 		if(updateCarry)
-			ccr_update_ifCarry(SRB_C);
+			ccr_update_ifCarry(CCRB_C);
 
 		m_asm.cmp(d, asmjit::Imm(0));
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
-		ccr_clear(SR_V);			// as cmp is identical to sub, the same for the V bit applies (see sub for details)
+		ccr_clear(CCR_V);			// as cmp is identical to sub, the same for the V bit applies (see sub for details)
 
 		m_asm.shr(d, asmjit::Imm(8));
 		m_asm.shr(_v, asmjit::Imm(8));
@@ -499,12 +499,12 @@ namespace dsp56k
 		const RegGP d(m_block);
 		m_dspRegs.getALU1(d, ab);
 		m_asm.shl(d.get().r32(), _shiftAmount + 8);	// + 8 to use native carry flag
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 		m_asm.shr(d.get().r32(), 8);				// revert shift by 8
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 		m_asm.bt(d.get().r32(), asmjit::Imm(23));
-		ccr_update_ifCarry(SRB_N);
-		ccr_clear(SR_V);
+		ccr_update_ifCarry(CCRB_N);
+		ccr_clear(CCR_V);
 		m_dspRegs.setALU1(ab, d.get().r32());
 	}
 
@@ -513,12 +513,12 @@ namespace dsp56k
 		const RegGP d(m_block);
 		m_dspRegs.getALU1(d, ab);
 		m_asm.shr(d.get().r32(), _shiftAmount);
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 		m_asm.cmp(d.get().r32(), asmjit::Imm(0));
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 		m_asm.bt(d.get().r32(), asmjit::Imm(23));
-		ccr_update_ifCarry(SRB_N);
-		ccr_clear(SR_V);
+		ccr_update_ifCarry(CCRB_N);
+		ccr_clear(CCR_V);
 		m_dspRegs.setALU1(ab, d.get().r32());
 	}
 
@@ -559,7 +559,7 @@ namespace dsp56k
 		ccr_v_update(d.get());
 
 		m_dspRegs.mask56(d);
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
 		ccr_n_update_by55(d);
 
@@ -606,9 +606,9 @@ namespace dsp56k
 
 		m_asm.shr(r, asmjit::Imm(24));
 		m_asm.and_(r, asmjit::Imm(0xffffff));
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 		
-		ccr_clear(SR_V);
+		ccr_clear(CCR_V);
 	}
 
 	inline void JitOps::alu_rnd(TWord ab)
@@ -674,7 +674,7 @@ namespace dsp56k
 		ccr_v_update(d.get());
 
 		m_dspRegs.mask56(d);
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
 		ccr_l_update_by_v();
 
@@ -747,7 +747,7 @@ namespace dsp56k
 		RegGP r(m_block);
 		readMem<Btst_ea>(r, op);
 		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_ea>(op)));
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 	}
 
 	inline void JitOps::op_Btst_aa(TWord op)
@@ -755,7 +755,7 @@ namespace dsp56k
 		RegGP r(m_block);
 		readMem<Btst_aa>(r, op);
 		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_aa>(op)));
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 	}
 
 	inline void JitOps::op_Btst_pp(TWord op)
@@ -763,7 +763,7 @@ namespace dsp56k
 		RegGP r(m_block);
 		readMem<Btst_pp>(r, op);
 		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_pp>(op)));
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 	}
 
 	inline void JitOps::op_Btst_qq(TWord op)
@@ -771,7 +771,7 @@ namespace dsp56k
 		RegGP r(m_block);
 		readMem<Btst_qq>(r, op);
 		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_qq>(op)));
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 	}
 
 	inline void JitOps::op_Btst_D(TWord op)
@@ -783,15 +783,15 @@ namespace dsp56k
 		decode_dddddd_read(r.get().r32(), dddddd);
 
 		m_asm.bt(r.get().r32(), asmjit::Imm(bit));
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 	}
 
 	inline void JitOps::op_Clr(TWord op)
 	{
 		const auto D = getFieldValue<Clr, Field_d>(op);
 		m_dspRegs.clrALU(D);
-		ccr_clear( static_cast<CCRMask>(SR_E | SR_N | SR_V) );
-		ccr_set( static_cast<CCRMask>(SR_U | SR_Z) );
+		ccr_clear( static_cast<CCRMask>(CCR_E | CCR_N | CCR_V) );
+		ccr_set( static_cast<CCRMask>(CCR_U | CCR_Z) );
 		m_ccrDirty = false;
 	}
 
@@ -849,11 +849,11 @@ namespace dsp56k
 		m_asm.shl(r, asmjit::Imm(8));	// shift left by 8 bits to enable using the host carry bit
 		m_asm.sub(r, asmjit::Imm(0x100));
 
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 
 		m_asm.shr(r, asmjit::Imm(8));
-		ccr_update_ifZero(SRB_Z);
-		ccr_clear(SR_V);				// never set in the simulator, even when wrapping around. Carry is set instead
+		ccr_update_ifZero(CCRB_Z);
+		ccr_clear(CCR_V);				// never set in the simulator, even when wrapping around. Carry is set instead
 		ccr_n_update_by55(r);
 
 		ccr_dirty(r);
@@ -877,8 +877,8 @@ namespace dsp56k
 			m_asm.shr(r, asmjit::Imm(54));
 			m_asm.and_(r, asmjit::Imm(0x3));
 			m_asm.setnp(r.get().r8());
-			ccr_update(r, SRB_V);
-			m_asm.shl(r, asmjit::Imm(SRB_L));
+			ccr_update(r, CCRB_V);
+			m_asm.shl(r, asmjit::Imm(CCRB_L));
 			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
 		}
 
@@ -897,7 +897,7 @@ namespace dsp56k
 			{
 				const RegGP carry(m_block);
 				m_asm.xor_(carry, carry.get());
-				sr_getBitValue(carry, SRB_C);
+				sr_getBitValue(carry, CCRB_C);
 				m_asm.or_(d, carry.get());
 			}
 
@@ -928,7 +928,7 @@ namespace dsp56k
 
 		// C is set if bit 55 of the result is cleared
 		m_asm.bt(d, asmjit::Imm(55));
-		ccr_update_ifNotCarry(SRB_C);
+		ccr_update_ifNotCarry(CCRB_C);
 	}
 
 	inline void JitOps::op_Dmac(TWord op)
@@ -973,12 +973,12 @@ namespace dsp56k
 		m_dspRegs.mask56(d);
 
 		// Update SR
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
 		// detect overflow by sign-extending the actual result and comparing VS the non-sign-extended one. We've got overflow if they are different
 		m_asm.cmp(dOld, d.get());
 
-		ccr_update_ifNotZero(SRB_V);
+		ccr_update_ifNotZero(CCRB_V);
 
 		ccr_l_update_by_v();
 
@@ -993,8 +993,8 @@ namespace dsp56k
 		const bool abDst	= getFieldValue<Extractu_S1S2, Field_D>(op);
 		const bool abSrc	= getFieldValue<Extractu_S1S2, Field_s>(op);
 
-		ccr_clear(SR_C);
-		ccr_clear(SR_V);
+		ccr_clear(CCR_C);
+		ccr_clear(CCR_V);
 
 		const RegGP widthOffset(m_block);
 		decode_sss_read(widthOffset, sss);
@@ -1026,7 +1026,7 @@ namespace dsp56k
 		s.release();
 
 		m_asm.cmp(d, asmjit::Imm(0));
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
 		ccr_n_update_by55(d);
 
@@ -1055,10 +1055,10 @@ namespace dsp56k
 		}
 
 		m_asm.cmp(d, asmjit::Imm(0));
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
-		ccr_clear(SR_C);
-		ccr_clear(SR_V);
+		ccr_clear(CCR_C);
+		ccr_clear(CCR_V);
 		ccr_n_update_by55(d);
 		ccr_dirty(d);
 	}
@@ -1071,11 +1071,11 @@ namespace dsp56k
 		m_asm.shl(r, asmjit::Imm(8));		// shift left by 8 bits to enable using the host carry bit
 		m_asm.add(r, asmjit::Imm(0x100));
 
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 
 		m_asm.shr(r, asmjit::Imm(8));
-		ccr_update_ifZero(SRB_Z);
-		ccr_clear(SR_V);					// never set in the simulator, even when wrapping around. Carry is set instead
+		ccr_update_ifZero(CCRB_Z);
+		ccr_clear(CCR_V);					// never set in the simulator, even when wrapping around. Carry is set instead
 		ccr_n_update_by55(r);
 
 		ccr_dirty(r);
@@ -1176,12 +1176,12 @@ namespace dsp56k
 
 		signextend56to64(r);
 		m_asm.neg(r);
-		ccr_update_ifLess(SRB_N);
+		ccr_update_ifLess(CCRB_N);
 
 		m_dspRegs.mask56(r);
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 
-		ccr_clear(SR_V);
+		ccr_clear(CCR_V);
 
 		ccr_dirty(r);
 	}
@@ -1202,13 +1202,13 @@ namespace dsp56k
 			m_dspRegs.setALU1(ab, d.get().r32());
 
 			m_asm.bt(d, asmjit::Imm(23));
-			ccr_update_ifCarry(SRB_N);					// Set if bit 47 of the result is set
+			ccr_update_ifCarry(CCRB_N);					// Set if bit 47 of the result is set
 
 			m_asm.cmp(d, asmjit::Imm(0));
-			ccr_update_ifZero(SRB_Z);					// Set if bits 47–24 of the result are 0
+			ccr_update_ifZero(CCRB_Z);					// Set if bits 47–24 of the result are 0
 		}
 
-		ccr_clear(SR_V);								// Always cleared
+		ccr_clear(CCR_V);								// Always cleared
 
 		const AluReg d(m_block, ab, true);
 
@@ -1252,19 +1252,19 @@ namespace dsp56k
 		const RegGP prevCarry(m_block);
 		m_asm.xor_(prevCarry, prevCarry.get());
 
-		sr_getBitValue(prevCarry, SRB_C);
+		sr_getBitValue(prevCarry, CCRB_C);
 
 		m_asm.bt(r, asmjit::Imm(23));						// Set if bit 47 of the destination operand is set, and cleared otherwise
-		ccr_update_ifCarry(SRB_C);
+		ccr_update_ifCarry(CCRB_C);
 
 		m_asm.shl(r.get(), asmjit::Imm(1));
 		ccr_n_update_by23(r.get());							// Set if bit 47 of the result is set
 
 		m_asm.or_(r, prevCarry.get());						// Set if bits 47–24 of the result are 0
-		ccr_update_ifZero(SRB_Z);
+		ccr_update_ifZero(CCRB_Z);
 		m_dspRegs.setALU1(D, r.get().r32());
 
-		ccr_clear(SR_V);									// This bit is always cleared
+		ccr_clear(CCR_V);									// This bit is always cleared
 	}
 
 	inline void JitOps::op_Sub_SD(TWord op)

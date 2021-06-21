@@ -443,7 +443,7 @@ namespace dsp56k
 				m_asm.mov(minmax, 0x800000);
 				m_asm.cmovl(_dst, minmax);
 			}
-			ccr_update_ifLess(SRB_L);
+			ccr_update_ifLess(CCRB_L);
 
 			// upper limit
 			{
@@ -457,7 +457,7 @@ namespace dsp56k
 				m_asm.cmovg(_dst, minmax);
 			}
 		}
-		ccr_update_ifGreater(SRB_L);
+		ccr_update_ifGreater(CCRB_L);
 	}
 
 	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type*> void JitOps::bitTestMemory(const TWord _op, const ExpectedBitValue _bitValue, const asmjit::Label _skip)
