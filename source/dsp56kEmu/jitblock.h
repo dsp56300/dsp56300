@@ -1,6 +1,7 @@
 #pragma once
 
 #include "jitdspregs.h"
+#include "jitdspregpool.h"
 #include "jitmem.h"
 #include "jitregtracker.h"
 #include "jitregtypes.h"
@@ -33,6 +34,7 @@ namespace dsp56k
 		, m_xmmPool({regXMMTempA, regXMMTempB, regXMMTempC})
 		, m_gpPool({regGPTempA, regGPTempB, regGPTempC, regGPTempD, regGPTempE})
 		, m_dspRegs(*this)
+		, m_dspRegPool(*this)
 		, m_mem(*this)
 		{
 		}
@@ -74,6 +76,7 @@ namespace dsp56k
 		JitRegpool<JitReg128> m_xmmPool;
 		JitRegpool<JitReg64> m_gpPool;
 		JitDspRegs m_dspRegs;
+		JitDspRegPool m_dspRegPool;
 		Jitmem m_mem;
 
 		TWord m_pcFirst = 0;
