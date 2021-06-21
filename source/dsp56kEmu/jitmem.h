@@ -22,7 +22,12 @@ namespace dsp56k
 		void mov(const JitReg128& _dst, TReg48& _src);
 
 		void mov(const asmjit::x86::Gp& _dst, const TReg24& _src);
-		void mov(TReg24& _dst, const asmjit::x86::Gp& _src);
+		void mov(const asmjit::x86::Gp& _dst, const TReg48& _src);
+		void mov(const asmjit::x86::Gp& _dst, const TReg56& _src);
+
+		void mov(const TReg24& _dst, const asmjit::x86::Gp& _src);
+		void mov(const TReg48& _dst, const asmjit::x86::Gp& _src);
+		void mov(const TReg56& _dst, const asmjit::x86::Gp& _src);
 
 		void mov(uint64_t& _dst, const asmjit::x86::Gp& _src) const;
 		void mov(uint32_t& _dst, const asmjit::x86::Gp& _src) const;

@@ -47,10 +47,34 @@ namespace dsp56k
 		m_block.asm_().mov(_dst.r32(), ptr(reg, _src));
 	}
 
-	void Jitmem::mov(TReg24& _dst, const asmjit::x86::Gp& _src)
+	void Jitmem::mov(const asmjit::x86::Gp& _dst, const TReg48& _src)
+	{
+		const auto reg = regSmallTemp;
+		m_block.asm_().mov(_dst.r64(), ptr(reg, _src));
+	}
+
+	void Jitmem::mov(const asmjit::x86::Gp& _dst, const TReg56& _src)
+	{
+		const auto reg = regSmallTemp;
+		m_block.asm_().mov(_dst.r64(), ptr(reg, _src));
+	}
+
+	void Jitmem::mov(const TReg24& _dst, const asmjit::x86::Gp& _src)
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, _dst), _src.r32());
+	}
+
+	void Jitmem::mov(const TReg48& _dst, const asmjit::x86::Gp& _src)
+	{
+		const auto reg = regSmallTemp;
+		m_block.asm_().mov(ptr(reg, _dst), _src.r64());
+	}
+
+	void Jitmem::mov(const TReg56& _dst, const asmjit::x86::Gp& _src)
+	{
+		const auto reg = regSmallTemp;
+		m_block.asm_().mov(ptr(reg, _dst), _src.r64());
 	}
 
 	void Jitmem::mov(const JitReg128& _dst, TReg56& _src)
