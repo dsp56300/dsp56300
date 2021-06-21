@@ -482,16 +482,12 @@ namespace dsp56k
 
 	inline void JitOps::do_exec(RegGP& _lc, TWord _addr)
 	{
-		JitDspRegsBranch branch(m_dspRegs);
-
-		const SkipLabel end(m_asm);
-
+		If(m_block, [&](auto _toFalse)
 		{
-			const SkipLabel lcIsZero(m_asm);
-
 			m_asm.cmp(_lc, asmjit::Imm(0));
-			m_asm.jz(lcIsZero.get());
-
+			m_asm.jz(_toFalse);
+		}, [&]()
+		{
 			m_dspRegs.setSSH(m_dspRegs.getLA().r32());
 			m_dspRegs.setSSL(m_dspRegs.getLC().r32());
 
@@ -503,11 +499,10 @@ namespace dsp56k
 			pushPCSR();
 
 			m_asm.or_(m_dspRegs.getSR(), asmjit::Imm(SR_LF));
-
-			m_asm.jmp(end.get());
-		}
-
-		jmp(_addr+1);		
+		}, [&]()
+		{
+			jmp(_addr+1);
+		});
 	}
 
 	void JitOps::do_end()
@@ -614,42 +609,39 @@ namespace dsp56k
 	{
 		const TWord cccc = getFieldValue<Ifcc,Field_CCCC>(op);
 
-		const auto end = m_asm.newLabel();
-
-		RegGP test(m_block);
-		decode_cccc(test, cccc);
-
-		JitDspRegsBranch branch(m_dspRegs);
-		
-		m_asm.cmp(test.get().r8(), asmjit::Imm(1));
-		m_asm.jne(end);
-		test.release();
-
-		auto emitAluOp = [&](const TWord _op)
+		If(m_block, [&](auto _toFalse)
 		{
-			const auto* oiAlu = m_opcodes.findParallelAluOpcodeInfo(_op);
-			emit(oiAlu->getInstruction(), _op);
-		};
+			const RegGP test(m_block);
+			decode_cccc(test, cccc);
 
-		if constexpr(BackupCCR)
+			m_asm.cmp(test.get().r8(), asmjit::Imm(1));
+			m_asm.jne(_toFalse);	
+		}, [&]()
 		{
-			const RegXMM ccrBackup(m_block);
-			m_asm.movd(ccrBackup, getSR());
+			auto emitAluOp = [&](const TWord _op)
+			{
+				const auto* oiAlu = m_opcodes.findParallelAluOpcodeInfo(_op);
+				emit(oiAlu->getInstruction(), _op);
+			};
 
-			emitAluOp(op);
+			if constexpr(BackupCCR)
+			{
+				const RegXMM ccrBackup(m_block);
+				m_asm.movd(ccrBackup, m_dspRegs.getSR());
 
-			const RegGP r(m_block);
-			m_asm.movd(r.get(), ccrBackup);
-			m_asm.and_(r, asmjit::Imm(0xff));
-			m_asm.and_(getSR(), asmjit::Imm(0xffff00));
-			m_asm.or_(getSR(), r.get());
-		}
-		else
-		{
-			emitAluOp(op);
-		}
+				emitAluOp(op);
 
-		m_asm.bind(end);
+				const RegGP r(m_block);
+				m_asm.movd(r.get(), ccrBackup);
+				m_asm.and_(r, asmjit::Imm(0xff));
+				m_asm.and_(m_dspRegs.getSR(), asmjit::Imm(0xffff00));
+				m_asm.or_(m_dspRegs.getSR(), r.get());
+			}
+			else
+			{
+				emitAluOp(op);
+			}
+		});
 	}
 
 	inline void JitOps::op_Lua_ea(const TWord _op)

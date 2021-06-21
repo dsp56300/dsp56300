@@ -17,35 +17,31 @@ namespace dsp56k
 	{
 		const auto addr = pcRelativeAddressExt<Inst>();
 
-		const auto end = m_asm.newLabel();
-
-		JitDspRegsBranch branch(m_dspRegs);
-
-		bitTestMemory<Inst>(op, BitValue, end);
-
-		braOrBsr<BMode>(addr);
-
-		m_asm.bind(end);
+		If(m_block, [&](auto _toFalse)
+		{
+			bitTestMemory<Inst>(op, BitValue, _toFalse);
+		}, [&]()
+		{
+			braOrBsr<BMode>(addr);
+		});
 	}
 
 	template<Instruction Inst, BraMode BMode, ExpectedBitValue BitValue> void JitOps::braIfBitTestDDDDDD(const TWord op)
 	{
 		const auto addr = pcRelativeAddressExt<Inst>();
 
-		const auto end = m_asm.newLabel();
-
 		const auto dddddd = getFieldValue<Inst,Field_DDDDDD>(op);
 
 		const RegGP r(m_block);
 		decode_dddddd_read(r.get().r32(), dddddd);
 
-		JitDspRegsBranch branch(m_dspRegs);
-
-		bitTest<Inst>(op, r, BitValue, end);
-
-		braOrBsr<BMode>(addr);
-
-		m_asm.bind(end);
+		If(m_block, [&](auto _toFalse)
+		{
+			bitTest<Inst>(op, r, BitValue, _toFalse);
+		}, [&]()
+		{
+			braOrBsr<BMode>(addr);
+		});
 	}
 
 	// Brclr
@@ -78,17 +74,14 @@ namespace dsp56k
 
 	template<Instruction Inst, BraMode Bmode, typename TOff> void JitOps::braIfCC(const TWord op, const TOff& offset)
 	{
-		const auto end = m_asm.newLabel();
-
-		JitDspRegsBranch branch(m_dspRegs);
-		
-		checkCondition<Inst>(op);
-
-		m_asm.jz(end);
-
-		braOrBsr<Bmode>(offset);
-
-		m_asm.bind(end);
+		If(m_block, [&](auto _toFalse)
+		{
+			checkCondition<Inst>(op);
+			m_asm.jz(_toFalse);
+		}, [&]()
+		{
+			braOrBsr<Bmode>(offset);
+		});
 	}
 
 	inline void JitOps::op_Bra_xxxx(TWord op)
@@ -190,32 +183,27 @@ namespace dsp56k
 	
 	template<Instruction Inst, JumpMode Bmode, typename TAbsAddr> void JitOps::jumpIfCC(const TWord op, const TAbsAddr& offset)
 	{
-		const auto end = m_asm.newLabel();
-
-		JitDspRegsBranch branch(m_dspRegs);
-		
-		checkCondition<Inst>(op);
-
-		m_asm.jz(end);
-
-		jumpOrJSR<Bmode>(offset);
-
-		m_asm.bind(end);
+		If(m_block, [&](auto _toFalse)
+		{
+			checkCondition<Inst>(op);
+			m_asm.jz(_toFalse);
+		}, [&]()
+		{
+			jumpOrJSR<Bmode>(offset);
+		});
 	}
 
 	template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void JitOps::jumpIfBitTestMem(const TWord _op)
 	{
 		const auto addr = absAddressExt<Inst>();
 
-		const auto end = m_asm.newLabel();
-
-		JitDspRegsBranch branch(m_dspRegs);
-
-		bitTestMemory<Inst>(_op, BitValue, end);
-
-		jumpOrJSR<Jsr>(addr);
-
-		m_asm.bind(end);
+		If(m_block, [&](auto _toFalse)
+		{
+			bitTestMemory<Inst>(_op, BitValue, _toFalse);
+		}, [&]()
+		{
+			jumpOrJSR<Jsr>(addr);
+		});
 	}
 
 	template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void JitOps::jumpIfBitTestDDDDDD(const TWord op)
@@ -228,8 +216,6 @@ namespace dsp56k
 
 		const RegGP r(m_block);
 		decode_dddddd_read(r.get().r32(), dddddd);
-
-		JitDspRegsBranch branch(m_dspRegs);
 
 		bitTest<Inst>(op, r, BitValue, end);
 

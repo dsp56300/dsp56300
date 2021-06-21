@@ -722,16 +722,19 @@ namespace dsp56k
 
 	JitDspRegsBranch::JitDspRegsBranch(JitDspRegs& _regs): m_regs(_regs), m_loadedRegsBeforeBranch(_regs.getLoadedRegs())
 	{
-		_regs.notifyBeginBranch();
+		/*
+		If code is generated which uses the DspRegs state machine and this is NOT executed because of a branch,
+		the state machine will emit register restore in its destructor but the load of these registers is missing.
+		What we do in this case is that we track the used registers in the branch and store them at the end of that branch.
+		That way, the register tracking state is identical, no matter if the branch has been executed or not
+		*/
 	}
 
 	JitDspRegsBranch::~JitDspRegsBranch()
 	{
-		/*
 		const auto loadedRegs = m_regs.getLoadedRegs();
 		const auto newRegsInBranch = loadedRegs & ~m_loadedRegsBeforeBranch;
 
 		m_regs.storeDSPRegs(newRegsInBranch);
-		*/
 	}
 }

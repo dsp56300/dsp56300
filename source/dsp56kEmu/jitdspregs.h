@@ -99,20 +99,6 @@ namespace dsp56k
 		void mask56(const JitReg& _alu) const;
 		void mask48(const JitReg& _alu) const;
 
-		void notifyBeginBranch()
-		{
-			/*
-			If code is generated which uses the DspRegs state machine and this is NOT executed because of a branch,
-			the state machine will emit register restore in its destructor but the load of these registers is missing.
-			The only workaround currently available is to emit loading code for all registers. Can be improved later
-			by only emitting loading code for register that have actually been loaded in the code that has not been
-			executed.
-			*/
-
-			loadDSPRegs();
-		}
-		void notifyEndBranch() {}
-
 		void storeDSPRegs(uint32_t _loadedRegs);
 		
 		void setPC(const JitReg& _pc);
