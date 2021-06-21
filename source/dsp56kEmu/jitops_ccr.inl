@@ -260,7 +260,7 @@ namespace dsp56k
 		ccr_update_ifCarry(CCRB_N);
 	}
 
-	inline void JitOps::ccr_s_update(const JitReg64& _alu) const
+	void JitOps::ccr_s_update(const JitReg64& _alu) const
 	{
 		const auto exit = m_asm.newLabel();
 
