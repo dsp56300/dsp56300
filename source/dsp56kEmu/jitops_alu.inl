@@ -926,7 +926,6 @@ namespace dsp56k
 
 			m_asm.or_(d, dLsWord.get());
 		}
-		m_dspRegs.mask56(d);
 
 		// C is set if bit 55 of the result is cleared
 		m_asm.bt(d, asmjit::Imm(55));
