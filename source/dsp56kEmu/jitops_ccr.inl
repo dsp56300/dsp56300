@@ -3,6 +3,7 @@
 #include "jitblock.h"
 #include "jitops.h"
 #include "jitregtypes.h"
+#include "asmjit/x86/x86features.h"
 
 namespace dsp56k
 {
@@ -20,7 +21,17 @@ namespace dsp56k
 	{
 		if(m_useCCRCache)
 		{
-			m_asm.movq(regLastModAlu, _alu);
+			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kSSE4_1))
+			{
+				m_asm.pinsrd(regLastModAlu, _alu, asmjit::Imm(0));
+			}
+			else
+			{
+				const RegXMM xmmTemp(m_block);
+
+				m_asm.movd(xmmTemp.get(), _alu);
+				m_asm.movss(regLastModAlu, xmmTemp.get());
+			}
 			m_ccrDirty = true;
 		}
 		else
@@ -35,7 +46,7 @@ namespace dsp56k
 			return;
 
 		const RegGP r(m_block);
-		m_asm.movq(r, regLastModAlu);
+		m_asm.movd(r, regLastModAlu);
 		updateDirtyCCR(r);
 	}
 
