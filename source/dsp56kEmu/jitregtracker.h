@@ -231,6 +231,10 @@ namespace dsp56k
 		const JitReg& get() const { return m_reg; }
 		operator const JitReg& () const { return get(); }
 
+		JitReg32 r32() const { return get().r32(); }
+
+		operator asmjit::Imm () const = delete;
+
 	private:
 		JitBlock& m_block;
 		const JitDspRegPool::DspReg m_dspReg;
