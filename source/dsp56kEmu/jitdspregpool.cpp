@@ -19,7 +19,7 @@ namespace dsp56k
 		"lc",
 		"la"
 	};
-	
+
 	JitDspRegPool::JitDspRegPool(JitBlock& _block) : m_block(_block)
 	{
 		for(size_t i=0; i<m_gpCount; ++i)
@@ -29,33 +29,83 @@ namespace dsp56k
 			m_availableXmms.push_back(m_xmms[i]);
 	}
 
-	JitReg JitDspRegPool::read(DspReg _reg)
+	JitDspRegPool::~JitDspRegPool()
+	{
+		for(auto it = m_writtenDspRegs.begin(); it != m_writtenDspRegs.end(); ++it)
+		{
+			const auto r = *it;
+
+			const auto itGp = m_usedGpsMap.find(r);
+			if(itGp != m_usedGpsMap.end())
+			{
+				LOG("Storing modified DSP reg " << g_dspRegNames[r] << " from GP");
+				store(r, itGp->second);
+			}
+			else
+			{
+				auto itXmm = m_usedXmmMap.find(r);
+				assert(itXmm != m_usedXmmMap.end() && "XMM register not found for DSP register");
+
+				store(r, itXmm->second);
+			}
+		}
+	}
+
+	JitReg JitDspRegPool::get(DspReg _reg, bool _read, bool _write)
 	{
 		const auto it = m_usedGpsMap.find(_reg);
 
+		if(_write)
+			m_writtenDspRegs.insert(_reg);
+
 		if(it != m_usedGpsMap.end())
 		{
-			// refresh LRU list
+			// The desired DSP register is already in a GP register. Nothing to be done except refresh the LRU list
 			m_usedGps.remove(_reg);
 			m_usedGps.push_back(_reg);
-
+			LOG("DSP reg " << g_dspRegNames[_reg] << " already available, returning GP");
 			return it->second;
 		}
 
+		// No space left? Move some other GP reg to an XMM reg
 		if(m_availableGps.empty())
-			makeSpace();
+		{
+			LOG("No space left for DSP reg " << g_dspRegNames[_reg] << ", making space");
+			makeSpace();			
+		}
 
+		// There should be space left now
 		assert(!m_availableGps.empty());
 
+		// allocate a new slot for the GP register
 		auto res = m_availableGps.front();
 		m_availableGps.pop_front();
 		m_usedGpsMap.insert(std::make_pair(_reg, res));
 		m_usedGps.push_back(_reg);
+
+		// Do we still have it in an XMM reg?
+		const auto itXmm = m_usedXmmMap.find(_reg);
+		if(itXmm != m_usedXmmMap.end())
+		{
+			LOG("DSP reg " <<g_dspRegNames[_reg] << " previously stored in xmm reg, restoring value");
+			// yes, remove it and restore the content
+			if(_read)
+				m_block.asm_().movq(res, itXmm->second);
+			m_usedXmmMap.erase(itXmm);
+		}
+		else if(_read)
+		{
+			// no, load from memory
+			LOG("Loading DSP reg " <<g_dspRegNames[_reg] << " from memory");
+			load(res, _reg);
+		}
+
 		return res;
 	}
 
 	void JitDspRegPool::lock(DspReg _reg)
 	{
+		LOG("Locking DSP reg " <<g_dspRegNames[_reg]);
 		const auto it = m_usedGpsMap.find(_reg);
 		assert(it != m_usedGpsMap.end() && "unable to lock reg if not in use");
 		assert(m_lockedGps.find(_reg) == m_lockedGps.end() && "register is already locked");
@@ -64,6 +114,7 @@ namespace dsp56k
 
 	void JitDspRegPool::unlock(DspReg _reg)
 	{
+		LOG("Unlocking DSP reg " <<g_dspRegNames[_reg]);
 		const auto it = m_usedGpsMap.find(_reg);
 		assert(it != m_usedGpsMap.end() && "unable to unlock reg if not in use");
 		assert(m_lockedGps.find(_reg) != m_lockedGps.end() && "register is not locked");
@@ -74,6 +125,7 @@ namespace dsp56k
 	{
 		assert(!m_availableXmms.empty());
 
+		// move the oldest used GP register to an XMM register
 		for(auto it = m_usedGps.begin(); it != m_usedGps.end(); ++it)
 		{
 			const auto dspReg = *it;
@@ -82,6 +134,8 @@ namespace dsp56k
 			if(m_lockedGps.find(dspReg) != m_lockedGps.end())
 				continue;
 
+			LOG("Moving DSP reg " <<g_dspRegNames[dspReg] << " to XMM");
+
 			m_usedGps.erase(it);
 			m_usedGpsMap.erase(dspReg);
 
@@ -89,7 +143,10 @@ namespace dsp56k
 			m_availableXmms.pop_front();
 			m_block.asm_().movq(xmm, hostReg);
 			m_usedXmmMap.insert(std::make_pair(dspReg, xmm));
+
+			return;
 		}
+		assert(false && "all GPs are locked, unable to make space");
 	}
 
 	void JitDspRegPool::load(JitReg& _dst, DspReg _src)
@@ -159,6 +216,70 @@ namespace dsp56k
 	void JitDspRegPool::store(DspReg _dst, JitReg& _src)
 	{
 		const auto& r = m_block.dsp().regs();
+		auto& m = m_block.mem();
+
+		switch (_dst)
+		{
+		case DspR0:
+		case DspR1:
+		case DspR2:
+		case DspR3:
+		case DspR4:
+		case DspR5:
+		case DspR6:
+		case DspR7:
+			m.mov(r.r[_dst - DspR0], _src);
+			break;
+		case DspN0:
+		case DspN1:
+		case DspN2:
+		case DspN3:
+		case DspN4:
+		case DspN5:
+		case DspN6:
+		case DspN7:
+			m.mov(r.n[_dst - DspN0], _src);
+			break;
+		case DspM0:
+		case DspM1:
+		case DspM2:
+		case DspM3:
+		case DspM4:
+		case DspM5:
+		case DspM6:
+		case DspM7:
+			m.mov(r.m[_dst - DspM0], _src);
+			break;
+		case DspA:
+			m.mov(r.a, _src);
+			break;
+		case DspB:
+			m.mov(r.b, _src);
+			break;
+		case DspX:
+			m.mov(r.x, _src);
+			break;
+		case DspY:
+			m.mov(r.y, _src);
+			break;
+		case DspExtMem:
+			// read only
+			break;
+		case DspSR:
+			m.mov(r.sr, _src);
+			break;
+		case DspLC: 
+			m.mov(r.lc, _src);
+			break;
+		case DspLA: 
+			m.mov(r.la, _src);
+			break;
+		}
+	}
+
+	void JitDspRegPool::store(DspReg _dst, JitReg128& _src)
+	{
+		auto& r = m_block.dsp().regs();
 		auto& m = m_block.mem();
 
 		switch (_dst)

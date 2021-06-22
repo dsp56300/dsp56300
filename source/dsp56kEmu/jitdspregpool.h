@@ -28,10 +28,11 @@ namespace dsp56k
 			DspLA,
 			DspCount
 		};
-				
-		JitDspRegPool(JitBlock& _block);
 
-		JitReg read(DspReg _reg);
+		JitDspRegPool(JitBlock& _block);
+		~JitDspRegPool();
+
+		JitReg get(DspReg _reg, bool _read, bool _write);
 
 		void lock(DspReg _reg);
 		void unlock(DspReg _reg);
@@ -41,10 +42,10 @@ namespace dsp56k
 											, asmjit::x86::r11, asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::r14
 											, asmjit::x86::r15};
 
-		static constexpr JitReg128 m_xmms[] =	{asmjit::x86::xmm0, asmjit::x86::xmm1, asmjit::x86::xmm2, asmjit::x86::xmm3
-												,asmjit::x86::xmm4, asmjit::x86::xmm5, asmjit::x86::xmm6, asmjit::x86::xmm7
-												,asmjit::x86::xmm8, asmjit::x86::xmm9, asmjit::x86::xmm10, asmjit::x86::xmm11
-												,asmjit::x86::xmm12, asmjit::x86::xmm13, asmjit::x86::xmm14, asmjit::x86::xmm15};
+		static constexpr JitReg128 m_xmms[] =	{ asmjit::x86::xmm0, asmjit::x86::xmm1, asmjit::x86::xmm2, asmjit::x86::xmm3
+												, asmjit::x86::xmm4, asmjit::x86::xmm5, asmjit::x86::xmm6, asmjit::x86::xmm7
+												, asmjit::x86::xmm8, asmjit::x86::xmm9, asmjit::x86::xmm10, asmjit::x86::xmm11
+												, asmjit::x86::xmm12, asmjit::x86::xmm13, asmjit::x86::xmm14, asmjit::x86::xmm15};
 
 		static constexpr uint32_t m_gpCount = sizeof(m_gps) / sizeof(m_gps[0]);
 		static constexpr uint32_t m_xmmCount = sizeof(m_xmms) / sizeof(m_xmms[0]);
@@ -53,15 +54,19 @@ namespace dsp56k
 		void makeSpace();
 		void load(JitReg& _dst, DspReg _src);
 		void store(DspReg _dst, JitReg& _src);
+		void store(DspReg _dst, JitReg128& _src);
 
 		JitBlock& m_block;
 
 		std::list<JitReg> m_availableGps;
 		std::list<JitReg128> m_availableXmms;
+
 		std::set<DspReg> m_lockedGps;
+
 		std::map<DspReg, JitReg> m_usedGpsMap;
 		std::map<DspReg, JitReg128> m_usedXmmMap;
-		std::list<DspReg> m_usedGps;
-	};
 
+		std::list<DspReg> m_usedGps;
+		std::set<DspReg> m_writtenDspRegs;
+	};
 }

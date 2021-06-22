@@ -156,4 +156,15 @@ namespace dsp56k
 	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block) : m_xmm(_block) , m_gp(_block), m_shadow(_block)
 	{
 	}
+
+	DSPReg::DSPReg(JitBlock& _block, JitDspRegPool::DspReg _reg, bool _read, bool _write)
+	: m_block(_block), m_dspReg(_reg), m_reg(_block.dspRegPool().get(_reg, _read, _write)), m_read(_read), m_write(_write)
+	{
+		_block.dspRegPool().lock(_reg);
+	}
+
+	DSPReg::~DSPReg()
+	{
+		m_block.dspRegPool().unlock(m_dspReg);
+	}
 }

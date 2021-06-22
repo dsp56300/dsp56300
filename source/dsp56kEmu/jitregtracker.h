@@ -3,6 +3,7 @@
 #include <stack>
 
 #include "dspassert.h"
+#include "jitdspregpool.h"
 #include "types.h"
 #include "jitregtypes.h"
 
@@ -242,5 +243,22 @@ namespace dsp56k
 		PushXMMRegs m_xmm;
 		PushGPRegs m_gp;
 		PushShadowSpace m_shadow;
+	};
+
+	class DSPReg
+	{
+	public:
+		DSPReg(JitBlock& _block, JitDspRegPool::DspReg _reg, bool _read = true, bool _write = true);
+		~DSPReg();
+
+		const JitReg& get() const { return m_reg; }
+		operator const JitReg& () const { return get(); }
+
+	private:
+		JitBlock& m_block;
+		const JitDspRegPool::DspReg m_dspReg;
+		const JitReg& m_reg;
+		const bool m_read;
+		const bool m_write;
 	};
 }
