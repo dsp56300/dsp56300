@@ -88,7 +88,6 @@ namespace dsp56k
 		void andi_verify();
 
 		void asl_D();
-		void asl_D_verify();
 
 		void asl_ii_build(JitBlock& _block, JitOps& _ops);
 		void asl_ii_verify();
