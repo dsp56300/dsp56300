@@ -243,6 +243,97 @@ namespace dsp56k
 		setWritten(LoadedRegR0 + _agu);
 	}
 
+	void JitDspRegs::getParallel0(const JitReg& _dst)
+	{
+		const int _agu = 11;
+		if (!isRead(LoadedRegR0 + _agu))
+			loadAGU(_agu);
+
+		const auto xm(xmm(xmmR0 + _agu));
+
+		if (CpuInfo::host().hasFeature(Features::kSSE4_1))
+		{
+			m_asm.pextrd(_dst, xm, Imm(1));
+		}
+		else
+		{
+			m_asm.pshufd(xm, xm, Imm(0xe1)); // swap lower two words to get N in word 0
+			m_asm.movd(_dst, xm);
+			m_asm.pshufd(xm, xm, Imm(0xe1)); // swap back
+		}
+	}
+
+	void JitDspRegs::getParallel1(const JitReg& _dst)
+	{
+		const int _agu = 11;
+		if (!isRead(LoadedRegR0 + _agu))
+			loadAGU(_agu);
+
+		const auto xm(xmm(xmmR0 + _agu));
+
+		if (CpuInfo::host().hasFeature(Features::kSSE4_1))
+		{
+			m_asm.pextrd(_dst, xm, Imm(2));
+		}
+		else
+		{
+			m_asm.pshufd(xm, xm, Imm(0xc6)); // swap words 0 and 2 to ret M in word 0
+			m_asm.movd(_dst, xm);
+			m_asm.pshufd(xm, xm, Imm(0xc6)); // swap back
+		}
+	}
+
+	void JitDspRegs::setParallel0(const JitReg& _src)
+	{
+		const int _agu = 11;
+		if (!isRead(LoadedRegR0 + _agu))
+			loadAGU(_agu);
+
+		const auto xm(xmm(xmmR0 + _agu));
+
+		if(CpuInfo::host().hasFeature(Features::kSSE4_1))
+		{
+			m_asm.pinsrd(xm, _src, Imm(1));
+		}
+		else
+		{
+			const RegXMM xmmTemp(m_block);
+
+			m_asm.movd(xmmTemp.get(), _src);
+
+			m_asm.pshufd(xm, xm, Imm(0xe1)); // swap lower two words to get N in word 0
+			m_asm.movss(xm, xmmTemp.get());
+			m_asm.pshufd(xm, xm, Imm(0xe1)); // swap back
+		}
+
+		setWritten(LoadedRegR0 + _agu);
+	}
+
+	void JitDspRegs::setParallel1(const JitReg& _src)
+	{
+		const int _agu = 11;
+		if (!isRead(LoadedRegR0 + _agu))
+			loadAGU(_agu);
+
+		const auto xm(xmm(xmmR0 + _agu));
+
+		if(CpuInfo::host().hasFeature(Features::kSSE4_1))
+		{
+			m_asm.pinsrd(xm, _src, Imm(2));
+		}
+		else
+		{
+			const RegXMM xmmTemp(m_block);
+
+			m_asm.movd(xmmTemp.get(), _src);
+
+			m_asm.pshufd(xm, xm, Imm(0xc6)); // swap words 0 and 2 to ret M in word 0
+			m_asm.movss(xm, xmmTemp.get());
+			m_asm.pshufd(xm, xm, Imm(0xc6)); // swap back
+		}
+		setWritten(LoadedRegR0 + _agu);
+	}
+
 	JitReg JitDspRegs::getSR(AccessType _type)
 	{
 		if(_type & Read && !isRead(LoadedRegSR))
