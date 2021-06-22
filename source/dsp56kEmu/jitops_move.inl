@@ -240,7 +240,7 @@ namespace dsp56k
 			RegGP r(m_block);
 			m_dspRegs.getParallel1(r);
 
-			if( write ) decode_ff_write( ff, r );
+			if( write ) decode_ee_write( ff, r );
 			else
 			{
 				RegGP ea(m_block);
