@@ -55,12 +55,6 @@ namespace dsp56k
 		void setN(int _agu, const JitReg& _src);
 		void setM(int _agu, const JitReg& _src);
 		
-		void getParallel0(const JitReg& _dst);
-		void getParallel1(const JitReg& _dst);
-		void setParallel0(const JitReg& _dst);
-		void setParallel1(const JitReg& _dst);
-
-
 		JitReg getSR(AccessType _type);
 		JitReg getExtMemAddr();
 		JitReg getLA(AccessType _type);

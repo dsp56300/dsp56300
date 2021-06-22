@@ -11,7 +11,6 @@ namespace dsp56k
 		const auto ddddd = getFieldValue<Move_xx, Field_ddddd>(op);
 		const auto iiiiiiii = getFieldValue<Move_xx, Field_iiiiiiii>(op);
 
-		if (m_preALUParallel) return;
 		const RegGP i(m_block);
 		m_asm.mov(i.get().r32(), asmjit::Imm(iiiiiiii));
 		decode_dddddd_write(ddddd, i.get().r32(), true);
@@ -23,21 +22,8 @@ namespace dsp56k
 		const auto ddddd = getFieldValue<Mover,Field_ddddd>(op);
 
 		const RegGP r(m_block);
-		if (m_preALUParallel)
-		{
-			decode_dddddd_read(r.get().r32(), eeeee);
-			m_dspRegs.setParallel0(r.get().r32());
-		}
-		else if (m_postALUParallel)
-		{
-			m_dspRegs.getParallel0(r.get().r32());
-			decode_dddddd_write(ddddd, r.get().r32());
-		}
-		else
-		{
-			decode_dddddd_read(r.get().r32(), eeeee);
-			decode_dddddd_write(ddddd, r.get().r32());
-		}
+		decode_dddddd_read(r.get().r32(), eeeee);
+		decode_dddddd_write(ddddd, r.get().r32());
 	}
 
 	void JitOps::op_Move_ea(TWord op)
@@ -45,7 +31,6 @@ namespace dsp56k
 		const auto mm  = getFieldValue<Move_ea, Field_MM>(op);
 		const auto rrr = getFieldValue<Move_ea, Field_RRR>(op);
 
-		if (m_preALUParallel) return;
 		const RegGP unused(m_block);
 		updateAddressRegister(unused, mm, rrr, true, true);
 	}
@@ -59,30 +44,15 @@ namespace dsp56k
 
 		const RegGP r(m_block);
 
-		if (m_preALUParallel)
+		if (write)
 		{
-			if (write)	readMem<Inst>(r, _op, _area);
-			else		decode_dddddd_read(r.get().r32(), ddddd);
-			m_dspRegs.setParallel0(r.get().r32());
-		}
-		else if (m_postALUParallel)
-		{
-			m_dspRegs.getParallel0(r.get().r32());
-			if (write)	decode_dddddd_write(ddddd, r.get().r32());
-			else		writeMem<Inst>(_op, _area, r);
+			readMem<Inst>(r, _op, _area);
+			decode_dddddd_write(ddddd, r.get().r32());
 		}
 		else
 		{
-			if (write)
-			{
-				readMem<Inst>(r, _op, _area);
-				decode_dddddd_write(ddddd, r.get().r32());
-			}
-			else
-			{
-				decode_dddddd_read(r.get().r32(), ddddd);
-				writeMem<Inst>(_op, _area, r);
-			}
+			decode_dddddd_read(r.get().r32(), ddddd);
+			writeMem<Inst>(_op, _area, r);
 		}
 	}
 	template<Instruction Inst> void JitOps::move_ddddd_absAddr(TWord _op, const EMemArea _area)
@@ -92,30 +62,15 @@ namespace dsp56k
 		
 		const RegGP r(m_block);
 
-		if (m_preALUParallel)
+		if (write)
 		{
-			if (write)	readMem<Inst>(r, _op, _area);
-			else		decode_dddddd_read(r.get().r32(), ddddd);
-			m_dspRegs.setParallel0(r.get().r32());
-		}
-		else if (m_postALUParallel)
-		{
-			m_dspRegs.getParallel0(r.get().r32());
-			if (write)	decode_dddddd_write(ddddd, r.get().r32());
-			else		writeMem<Inst>(_op, _area, r);
+			readMem<Inst>(r, _op, _area);
+			decode_dddddd_write(ddddd, r.get().r32());
 		}
 		else
 		{
-			if (write)
-			{
-				readMem<Inst>(r, _op, _area);
-				decode_dddddd_write(ddddd, r.get().r32());
-			}
-			else
-			{
-				decode_dddddd_read(r.get().r32(), ddddd);
-				writeMem<Inst>(_op, _area, r);
-			}
+			decode_dddddd_read(r.get().r32(), ddddd);
+			writeMem<Inst>(_op, _area, r);
 		}
 	}
 
@@ -216,69 +171,34 @@ namespace dsp56k
 		const TWord write	= getFieldValue<Movexr_ea,Field_W>(op);
 		const TWord d		= getFieldValue<Movexr_ea,Field_d>(op);
 
-		
-		if (m_preALUParallel)
+		// S2 D2 read
+		RegGP ab(m_block);
+		transferAluTo24(ab, d);
+
+		const RegGP r(m_block);
+
+		// S1 D1 read
+		if( write )
+			readMem<Movexr_ea>(r, op, MemArea_X);
+		else
+			decode_ff_read(r, ff);
+
+		// S2 D2 write
+		if(F)		m_dspRegs.setXY1(1, ab);
+		else		m_dspRegs.setXY0(1, ab);
+
+		ab.release();
+
+		// S1 D1 write
+		if(write)
 		{
-			const RegGP ab(m_block);
-			transferAluTo24(ab, d);
-			m_dspRegs.setParallel0(ab);
-
-			RegGP r(m_block);
-			if( write ) readMem<Movexr_ea>(r, op, MemArea_X);
-			else	decode_ff_read(r, ff);
-			m_dspRegs.setParallel1(r);
-		}
-		else if (m_postALUParallel)
-		{
-			{
-				const RegGP ab(m_block);
-				m_dspRegs.getParallel0(ab);
-				if( F )		m_dspRegs.setXY1(1, ab);
-				else		m_dspRegs.setXY0(1, ab);
-			}
-
-			RegGP r(m_block);
-			m_dspRegs.getParallel1(r);
-
-			if( write ) decode_ee_write( ff, r );
-			else
-			{
-				RegGP ea(m_block);
-				effectiveAddress<Movexr_ea>(ea, op);
-				writeMemOrPeriph(MemArea_X, ea, r);
-			}
+			decode_ee_write(ff, r);
 		}
 		else
 		{
-			// S2 D2 read
-			RegGP ab(m_block);
-			transferAluTo24(ab, d);
-
-			const RegGP r(m_block);
-
-			// S1 D1 read
-			if( write )
-				readMem<Movexr_ea>(r, op, MemArea_X);
-			else
-				decode_ff_read(r, ff);
-
-			// S2 D2 write
-			if(F)		m_dspRegs.setXY1(1, ab);
-			else		m_dspRegs.setXY0(1, ab);
-
-			ab.release();
-
-			// S1 D1 write
-			if(write)
-			{
-				decode_ee_write(ff, r);
-			}
-			else
-			{
-				const RegGP ea(m_block);
-				effectiveAddress<Movexr_ea>(ea, op);
-				writeMemOrPeriph(MemArea_X, ea, r);
-			}
+			const RegGP ea(m_block);
+			effectiveAddress<Movexr_ea>(ea, op);
+			writeMemOrPeriph(MemArea_X, ea, r);
 		}
 	}
 
@@ -289,71 +209,37 @@ namespace dsp56k
 		const bool write	= getFieldValue<Moveyr_ea,Field_W>(op);
 		const bool d		= getFieldValue<Moveyr_ea,Field_d>(op);
 
-		if (m_preALUParallel)
+		// S2 D2 read
+		const RegGP ab(m_block);
+		transferAluTo24(ab, d);
+
+		// S1 D1 read
+		RegGP r(m_block);
+		if( write )
 		{
-			const RegGP ab(m_block);
-			transferAluTo24(ab, d);
-			m_dspRegs.setParallel0(ab);
-
-			RegGP r(m_block);
-			if( write ) readMem<Moveyr_ea>(r, op, MemArea_Y);
-			else	decode_ff_read(r, ff);
-			m_dspRegs.setParallel1(r);
-		}
-		else if (m_postALUParallel)
-		{
-			{
-				const RegGP ab(m_block);
-				m_dspRegs.getParallel0(ab);
-				if( e )		m_dspRegs.setXY1(0, ab);
-				else		m_dspRegs.setXY0(0, ab);
-			}
-
-			RegGP r(m_block);
-			m_dspRegs.getParallel1(r);
-
-			if( write ) decode_ff_write( ff, r );
-			else
-			{
-				RegGP ea(m_block);
-				effectiveAddress<Moveyr_ea>(ea, op);
-				writeMemOrPeriph(MemArea_Y, ea, r);
-			}
+			readMem<Moveyr_ea>(r, op, MemArea_Y);
 		}
 		else
 		{
-			// S2 D2 read
-			const RegGP ab(m_block);
-			transferAluTo24(ab, d);
+			decode_ff_read(r, ff);
+		}
 
-			// S1 D1 read
-			RegGP r(m_block);
-			if( write )
-			{
-				readMem<Moveyr_ea>(r, op, MemArea_Y);
-			}
-			else
-			{
-				decode_ff_read(r, ff);
-			}
-
-			// S2 D2 write
-			{
-				if( e )		m_dspRegs.setXY1(0, ab);
-				else		m_dspRegs.setXY0(0, ab);
-			}
-		
-			// S1 D1 write
-			if( write )
-			{
-				decode_ff_write( ff, r );
-			}
-			else
-			{
-				RegGP ea(m_block);
-				effectiveAddress<Moveyr_ea>(ea, op);
-				writeMemOrPeriph(MemArea_Y, ea, r);
-			}
+		// S2 D2 write
+		{
+			if( e )		m_dspRegs.setXY1(0, ab);
+			else		m_dspRegs.setXY0(0, ab);
+		}
+	
+		// S1 D1 write
+		if( write )
+		{
+			decode_ff_write( ff, r );
+		}
+		else
+		{
+			RegGP ea(m_block);
+			effectiveAddress<Moveyr_ea>(ea, op);
+			writeMemOrPeriph(MemArea_Y, ea, r);
 		}
 	}
 
@@ -361,50 +247,19 @@ namespace dsp56k
 	{
 		const auto d = getFieldValue<Movexr_A,Field_d>(op);
 
-		if (m_preALUParallel)
 		{
-			{
-				const RegGP ab(m_block);
-				transferAluTo24(ab, d);
-				m_dspRegs.setParallel0(ab);
-			}
-			{
-				RegGP x0(m_block);
-				m_dspRegs.getX0(x0);
-				m_dspRegs.setParallel1(x0);
-			}
-		}
-		else if (m_postALUParallel)
-		{
-			{
-				RegGP ea(m_block);
-				effectiveAddress<Movexr_A>(ea, op);
-				RegGP ab(m_block);
-				m_dspRegs.getParallel0(ab);
-				writeMemOrPeriph(MemArea_X, ea, ab);
-			}
-			{
-				RegGP x0(m_block);
-				m_dspRegs.getParallel1(x0);
-				transfer24ToAlu(d, x0);
-			}
-		}
-		else
-		{
-			{
-				RegGP ea(m_block);
-				effectiveAddress<Movexr_A>(ea, op);
+			RegGP ea(m_block);
+			effectiveAddress<Movexr_A>(ea, op);
 
-				const RegGP ab(m_block);
-				transferAluTo24(ab, d);
+			const RegGP ab(m_block);
+			transferAluTo24(ab, d);
 
-				writeMemOrPeriph(MemArea_X, ea, ab);
-			}
-			{
-				RegGP x0(m_block);
-				m_dspRegs.getX0(x0);
-				transfer24ToAlu(d, x0);
-			}
+			writeMemOrPeriph(MemArea_X, ea, ab);
+		}
+		{
+			RegGP x0(m_block);
+			m_dspRegs.getX0(x0);
+			transfer24ToAlu(d, x0);
 		}
 	}
 
@@ -412,50 +267,19 @@ namespace dsp56k
 	{
 		const auto d = getFieldValue<Moveyr_A,Field_d>(op);
 
-		if (m_preALUParallel)
 		{
-			{
-				const RegGP ab(m_block);
-				transferAluTo24(ab, d);
-				m_dspRegs.setParallel0(ab);
-			}
-			{
-				RegGP y0(m_block);
-				m_dspRegs.getY0(y0);
-				m_dspRegs.setParallel1(y0);
-			}
-		}
-		else if (m_postALUParallel)
-		{
-			{
-				RegGP ea(m_block);
-				effectiveAddress<Moveyr_A>(ea, op);
-				RegGP ab(m_block);
-				m_dspRegs.getParallel0(ab);
-				writeMemOrPeriph(MemArea_Y, ea, ab);
-			}
-			{
-				RegGP y0(m_block);
-				m_dspRegs.getParallel1(y0);
-				transfer24ToAlu(d, y0);
-			}
-		}
-		else
-		{
-			{
-				RegGP ea(m_block);
-				effectiveAddress<Moveyr_A>(ea, op);
+			RegGP ea(m_block);
+			effectiveAddress<Moveyr_A>(ea, op);
 
-				const RegGP ab(m_block);
-				transferAluTo24(ab, d);
+			const RegGP ab(m_block);
+			transferAluTo24(ab, d);
 
-				writeMemOrPeriph(MemArea_Y, ea, ab);
-			}
-			{
-				RegGP y0(m_block);
-				m_dspRegs.getY0(y0);
-				transfer24ToAlu(d, y0);
-			}
+			writeMemOrPeriph(MemArea_Y, ea, ab);
+		}
+		{
+			RegGP y0(m_block);
+			m_dspRegs.getY0(y0);
+			transfer24ToAlu(d, y0);
 		}
 	}
 
@@ -467,59 +291,22 @@ namespace dsp56k
 		const RegGP x(m_block);
 		const RegGP y(m_block);
 
-		if (m_preALUParallel)
-		{
-			if( write )
-			{
-				const RegGP ea(m_block);
-				effectiveAddress<Inst>(ea, op);
-				readMemOrPeriph(x, MemArea_X, ea);
-				readMemOrPeriph(y, MemArea_Y, ea);
-			}
-			else
-			{
-				decode_LLL_read(LLL, x.get().r32(),y.get().r32());
-			}
-			m_dspRegs.setParallel0(x);
-			m_dspRegs.setParallel1(y);
-		}
-		else if (m_postALUParallel)
-		{
-			m_dspRegs.getParallel0(x);
-			m_dspRegs.getParallel1(y);
+		const RegGP ea(m_block);
+		effectiveAddress<Inst>(ea, op);
 
+		if( write )
+		{
+			readMemOrPeriph(x, MemArea_X, ea);
+			readMemOrPeriph(y, MemArea_Y, ea);
 
-			if( write )
-			{
-				decode_LLL_write(LLL,  x.get().r32(),y.get().r32());
-			}
-			else
-			{
-				const RegGP ea(m_block);
-				effectiveAddress<Inst>(ea, op);
-				writeMemOrPeriph(MemArea_X, ea, x);
-				writeMemOrPeriph(MemArea_Y, ea, y);
-			}
+			decode_LLL_write(LLL,  x.get().r32(),y.get().r32());
 		}
 		else
 		{
-			const RegGP ea(m_block);
-			effectiveAddress<Inst>(ea, op);
+			decode_LLL_read(LLL, x.get().r32(),y.get().r32());
 
-			if( write )
-			{
-				readMemOrPeriph(x, MemArea_X, ea);
-				readMemOrPeriph(y, MemArea_Y, ea);
-
-				decode_LLL_write(LLL,  x.get().r32(),y.get().r32());
-			}
-			else
-			{
-				decode_LLL_read(LLL, x.get().r32(),y.get().r32());
-
-				writeMemOrPeriph(MemArea_X, ea, x);
-				writeMemOrPeriph(MemArea_Y, ea, y);
-			}
+			writeMemOrPeriph(MemArea_X, ea, x);
+			writeMemOrPeriph(MemArea_Y, ea, y);
 		}
 	}
 
@@ -537,51 +324,19 @@ namespace dsp56k
 		const RegGP x(m_block);
 		const RegGP y(m_block);
 
-		if (m_preALUParallel)
+		if( write )
 		{
-			if( write )
-			{
-				m_block.mem().readDspMemory(x, MemArea_X, ea);
-				m_block.mem().readDspMemory(y, MemArea_Y, ea);
-			}
-			else
-			{
-				decode_LLL_read(LLL, x.get().r32(), y.get().r32());
-			}
-			m_dspRegs.setParallel0(x);
-			m_dspRegs.setParallel1(y);
-		}
-		else if (m_postALUParallel)
-		{
-			m_dspRegs.getParallel0(x);
-			m_dspRegs.getParallel1(y);
+			m_block.mem().readDspMemory(x, MemArea_X, ea);
+			m_block.mem().readDspMemory(y, MemArea_Y, ea);
 
-			if( write )
-			{
-				decode_LLL_write(LLL, x.get().r32(), y.get().r32());
-			}
-			else
-			{
-				m_block.mem().writeDspMemory(MemArea_X, ea, x);
-				m_block.mem().writeDspMemory(MemArea_Y, ea, y);
-			}
+			decode_LLL_write(LLL, x.get().r32(), y.get().r32());
 		}
 		else
 		{
-			if( write )
-			{
-				m_block.mem().readDspMemory(x, MemArea_X, ea);
-				m_block.mem().readDspMemory(y, MemArea_Y, ea);
+			decode_LLL_read(LLL, x.get().r32(), y.get().r32());
 
-				decode_LLL_write(LLL, x.get().r32(), y.get().r32());
-			}
-			else
-			{
-				decode_LLL_read(LLL, x.get().r32(), y.get().r32());
-
-				m_block.mem().writeDspMemory(MemArea_X, ea, x);
-				m_block.mem().writeDspMemory(MemArea_Y, ea, y);
-			}
+			m_block.mem().writeDspMemory(MemArea_X, ea, x);
+			m_block.mem().writeDspMemory(MemArea_Y, ea, y);
 		}
 	}
 
@@ -598,112 +353,39 @@ namespace dsp56k
 
 		const TWord regIdxOffset = RRR >= 4 ? 0 : 4;
 
-		if (m_preALUParallel)
+		RegGP eaX(m_block);
+		decode_XMove_MMRRR( eaX, MM, RRR );
+
+		const RegGP eaY(m_block);
+		decode_XMove_MMRRR( eaY, mm, (rr + regIdxOffset) & 7 );
+
+		if(!writeX)
 		{
-			if(!writeX)
-			{
-				const RegGP r(m_block);
-				decode_ee_read( r, ee );
-				m_dspRegs.setParallel0(r);
-			}
-			if(!writeY)
-			{
-				const RegGP r(m_block);
-				decode_ff_read( r, ff );
-				m_dspRegs.setParallel1(r);
-			}
-
-			if( writeX )
-			{
-				RegGP eaX(m_block);
-				decode_XMove_MMRRR( eaX, MM, RRR );
-
-				const RegGP r(m_block);
-				readMemOrPeriph(r, MemArea_X, eaX);
-				m_dspRegs.setParallel0(r);
-			}
-
-			if( writeY )
-			{
-				const RegGP eaY(m_block);
-				decode_XMove_MMRRR( eaY, mm, (rr + regIdxOffset) & 7 );
-
-				const RegGP r(m_block);
-				readMemOrPeriph(r, MemArea_Y, eaY);
-				m_dspRegs.setParallel1(r);
-			}
+			const RegGP r(m_block);
+			decode_ee_read( r, ee );
+			writeMemOrPeriph(MemArea_X, eaX, r);
 		}
-		else if (m_postALUParallel)
+		if(!writeY)
 		{
-			if(!writeX)
-			{
-				RegGP eaX(m_block);
-				decode_XMove_MMRRR( eaX, MM, RRR );
-
-				const RegGP r(m_block);
-				m_dspRegs.getParallel0(r.get().r32());
-				writeMemOrPeriph(MemArea_X, eaX, r);
-			}
-			if(!writeY)
-			{
-				const RegGP eaY(m_block);
-				decode_XMove_MMRRR( eaY, mm, (rr + regIdxOffset) & 7 );
-
-				const RegGP r(m_block);
-				m_dspRegs.getParallel1(r.get().r32());
-				writeMemOrPeriph( MemArea_Y, eaY, r);
-			}
-
-			if( writeX )
-			{
-				const RegGP r(m_block);
-				m_dspRegs.getParallel0(r.get().r32());
-				decode_ee_write( ee, r );
-			}
-
-			if( writeY )
-			{
-				const RegGP r(m_block);
-				m_dspRegs.getParallel1(r.get().r32());
-				decode_ff_write( ff, r);
-			}
+			const RegGP r(m_block);
+			decode_ff_read( r, ff );
+			writeMemOrPeriph( MemArea_Y, eaY, r);
 		}
-		else
+
+		if( writeX )
 		{
-			RegGP eaX(m_block);
-			decode_XMove_MMRRR( eaX, MM, RRR );
+			const RegGP r(m_block);
+			readMemOrPeriph(r, MemArea_X, eaX);
+			decode_ee_write( ee, r );
+		}
 
-			const RegGP eaY(m_block);
-			decode_XMove_MMRRR( eaY, mm, (rr + regIdxOffset) & 7 );
+		eaX.release();
 
-			if(!writeX)
-			{
-				const RegGP r(m_block);
-				decode_ee_read( r, ee );
-				writeMemOrPeriph(MemArea_X, eaX, r);
-			}
-			if(!writeY)
-			{
-				const RegGP r(m_block);
-				decode_ff_read( r, ff );
-				writeMemOrPeriph( MemArea_Y, eaY, r);
-			}
-
-			if( writeX )
-			{
-				const RegGP r(m_block);
-				readMemOrPeriph(r, MemArea_X, eaX);
-				decode_ee_write( ee, r );
-			}
-
-			eaX.release();
-
-			if( writeY )
-			{
-				const RegGP r(m_block);
-				readMemOrPeriph(r, MemArea_Y, eaY);
-				decode_ff_write( ff, r);
-			}
+		if( writeY )
+		{
+			const RegGP r(m_block);
+			readMemOrPeriph(r, MemArea_Y, eaY);
+			decode_ff_write( ff, r);
 		}
 	}
 
