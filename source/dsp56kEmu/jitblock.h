@@ -44,6 +44,7 @@ namespace dsp56k
 		JitRegpool<JitReg64>& gpPool() { return m_gpPool; }
 		JitRegpool<JitReg128>& xmmPool() { return m_xmmPool; }
 		JitDspRegs& regs() { return m_dspRegs; }
+		JitDspRegPool& dspRegPool() { return m_dspRegPool; }
 		Jitmem& mem() { return m_mem; }
 
 		operator JitRegpool<JitReg64>& ()		{ return m_gpPool; }
