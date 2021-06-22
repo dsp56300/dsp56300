@@ -245,11 +245,7 @@ namespace dsp56k
 
 	void JitDspRegs::getParallel0(const JitReg& _dst)
 	{
-		const int _agu = 11;
-		if (!isRead(LoadedRegR0 + _agu))
-			loadAGU(_agu);
-
-		const auto xm(xmm(xmmR0 + _agu));
+		const auto xm(xmm(xmmParallel));
 
 		if (CpuInfo::host().hasFeature(Features::kSSE4_1))
 		{
@@ -265,11 +261,7 @@ namespace dsp56k
 
 	void JitDspRegs::getParallel1(const JitReg& _dst)
 	{
-		const int _agu = 11;
-		if (!isRead(LoadedRegR0 + _agu))
-			loadAGU(_agu);
-
-		const auto xm(xmm(xmmR0 + _agu));
+		const auto xm(xmm(xmmParallel));
 
 		if (CpuInfo::host().hasFeature(Features::kSSE4_1))
 		{
@@ -285,11 +277,7 @@ namespace dsp56k
 
 	void JitDspRegs::setParallel0(const JitReg& _src)
 	{
-		const int _agu = 11;
-		if (!isRead(LoadedRegR0 + _agu))
-			loadAGU(_agu);
-
-		const auto xm(xmm(xmmR0 + _agu));
+		const auto xm(xmm(xmmParallel));
 
 		if(CpuInfo::host().hasFeature(Features::kSSE4_1))
 		{
@@ -305,17 +293,11 @@ namespace dsp56k
 			m_asm.movss(xm, xmmTemp.get());
 			m_asm.pshufd(xm, xm, Imm(0xe1)); // swap back
 		}
-
-		setWritten(LoadedRegR0 + _agu);
 	}
 
 	void JitDspRegs::setParallel1(const JitReg& _src)
 	{
-		const int _agu = 11;
-		if (!isRead(LoadedRegR0 + _agu))
-			loadAGU(_agu);
-
-		const auto xm(xmm(xmmR0 + _agu));
+		const auto xm(xmm(xmmParallel));
 
 		if(CpuInfo::host().hasFeature(Features::kSSE4_1))
 		{
@@ -331,7 +313,6 @@ namespace dsp56k
 			m_asm.movss(xm, xmmTemp.get());
 			m_asm.pshufd(xm, xm, Imm(0xc6)); // swap back
 		}
-		setWritten(LoadedRegR0 + _agu);
 	}
 
 	JitReg JitDspRegs::getSR(AccessType _type)

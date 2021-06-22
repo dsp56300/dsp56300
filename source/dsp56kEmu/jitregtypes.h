@@ -44,7 +44,8 @@ namespace dsp56k
 	{
 		xmmR0, xmmR1, xmmR2, xmmR3, xmmR4, xmmR5, xmmR6, xmmR7,
 		xmmA, xmmB,
-		xmmX, xmmY
+		xmmX, xmmY,
+		xmmParallel,
 	};
 
 	enum GPReg
