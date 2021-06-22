@@ -335,10 +335,9 @@ namespace dsp56k
 
 		{
 			// use P memory for all bridged external memory
-			const auto extMem = m_block.regs().getExtMemAddr();
 			const auto p = regSmallTemp;
 			getMemAreaPtr(p, MemArea_P);
-			m_block.asm_().cmp(_offset.r32(), extMem.r32());
+			m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().getBridgedMemoryAddress()));
 			m_block.asm_().cmovge(_dst, p);
 		}
 	}
