@@ -82,6 +82,18 @@ namespace dsp56k
 		return res;
 	}
 
+	void JitDspRegPool::read(const JitReg& _dst, const DspReg _src)
+	{
+		const auto r = get(_src, true, false);
+		m_block.asm_().mov(_dst, r);
+	}
+
+	void JitDspRegPool::write(const DspReg _dst, const JitReg& _src)
+	{
+		const auto r = get(_dst, false, true);
+		m_block.asm_().mov(r, _src);
+	}
+
 	void JitDspRegPool::lock(DspReg _reg)
 	{
 		LOG("Locking DSP reg " <<g_dspRegNames[_reg]);

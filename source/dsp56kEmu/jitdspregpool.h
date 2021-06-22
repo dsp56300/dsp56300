@@ -34,6 +34,9 @@ namespace dsp56k
 
 		JitReg get(DspReg _reg, bool _read, bool _write);
 
+		void read(const JitReg& _dst, DspReg _src);
+		void write(DspReg _dst, const JitReg& _src);
+
 		void lock(DspReg _reg);
 		void unlock(DspReg _reg);
 
