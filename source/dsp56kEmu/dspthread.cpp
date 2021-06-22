@@ -1,5 +1,7 @@
 #include "dspthread.h"
 
+#include <iostream>
+
 #include "dsp.h"
 
 #ifdef WIN32
@@ -84,6 +86,7 @@ namespace dsp56k
 				t = t2;
 
 				LOG("IPS: " << m_ips << "k");
+				std::cout << "IPS: "<< m_ips << "k" << std::endl;
 			}
 		}
 	}
