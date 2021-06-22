@@ -152,29 +152,6 @@ namespace dsp56k
 		JitBlock& m_block;
 	};
 
-	class TempGP
-	{
-	public:
-		TempGP(JitBlock& _block, const JitReg64& _spilledReg);
-		~TempGP();
-
-		const JitReg64& get() const { return m_reg; }
-		operator const JitReg64& () const { return get(); }
-	private:
-		enum Mode
-		{
-			ModeTemp,
-			ModePushToXMM,
-			ModePushToStack,
-		};
-
-		JitBlock& m_block;
-		const JitReg64 m_spilledReg;
-		Mode m_mode = ModeTemp;
-		JitReg64 m_reg;
-		JitReg128 m_regXMM;
-	};
-
 	class PushXMM
 	{
 	public:
