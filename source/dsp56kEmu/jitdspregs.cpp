@@ -172,6 +172,11 @@ namespace dsp56k
 		return m_writtenRegs & (1 << _reg);
 	}
 
+	JitDspRegPool& JitDspRegs::pool() const
+	{
+		return m_block.dspRegPool();
+	}
+
 	void JitDspRegs::setR(int _agu, const JitReg& _src)
 	{
 		if (!isRead(LoadedRegR0 + _agu))

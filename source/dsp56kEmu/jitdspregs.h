@@ -130,6 +130,8 @@ namespace dsp56k
 		bool isWritten(uint32_t _reg) const;
 
 	private:
+		JitDspRegPool& pool() const;
+		
 		void loadDSPRegs();
 		void storeDSPRegs();
 
