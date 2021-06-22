@@ -382,87 +382,15 @@ namespace dsp56k
 
 		emitOpProlog();
 
-		// Backup of X Y A B, pack two DSP registers into one XMM register each
-		const RegXMM preMoveAB(m_block);
-		const RegXMM preMoveXY(m_block);
-
-		m_asm.movdqa(preMoveXY, m_dspRegs.getXY(1));
-		m_asm.pslldq(preMoveXY, asmjit::Imm(8));
-		m_asm.movsd(preMoveXY, m_dspRegs.getXY(0));
-
-		m_asm.movdqa(preMoveAB, m_dspRegs.getALU(1));
-		m_asm.pslldq(preMoveAB, asmjit::Imm(8));
-		m_asm.movsd(preMoveAB, m_dspRegs.getALU(0));
-
+		m_preALUParallel = true;
 		(this->*funcMove)(_op);
-
-		// now get X Y A B after the move, too
-		const RegXMM postMoveAB(m_block);
-		m_asm.movdqa(postMoveAB, m_dspRegs.getALU(1));
-		m_asm.pslldq(postMoveAB, asmjit::Imm(8));
-		m_asm.movsd(postMoveAB, m_dspRegs.getALU(0));
-
-		// loop registers are not used in parallel ALU operations
-		const PushGP postMoveX(m_asm, regLA);
-		const PushGP postMoveY(m_asm, regLC);
-
-		m_dspRegs.getXY(postMoveX, 0);
-		m_dspRegs.getXY(postMoveY, 1);
-
-		// restore previous XYAB values for the ALU op
-		m_asm.movdqa(m_dspRegs.getXY(0), preMoveXY);
-		m_asm.movdqa(m_dspRegs.getXY(1), preMoveXY);
-		m_asm.psrldq(m_dspRegs.getXY(1), asmjit::Imm(8));
-
-		m_asm.movdqa(m_dspRegs.getALU(0), preMoveAB);
-		m_asm.movdqa(m_dspRegs.getALU(1), preMoveAB);
-		m_asm.psrldq(m_dspRegs.getALU(1), asmjit::Imm(8));
+		m_preALUParallel = false;
 
 		(this->*funcAlu)(_op);
 
-		// now check what has changed and get the final values for all registers
-		const RegGP preMove(m_block);
-		{
-			const RegGP r(m_block);
-
-			m_asm.movq(preMove, preMoveXY);
-			m_dspRegs.getXY(r, 0);
-			m_asm.cmp(preMove, postMoveX.get());
-			m_asm.cmovnz(r, postMoveX.get());
-			m_dspRegs.setXY(0, r);
-
-			m_asm.psrldq(preMoveXY, asmjit::Imm(8));
-
-			m_asm.movq(preMove, preMoveXY);
-			m_dspRegs.getXY(r, 1);
-			m_asm.cmp(preMove, postMoveY.get());
-			m_asm.cmovnz(r, postMoveY.get());
-			m_dspRegs.setXY(1, r);
-		}
-
-		{
-			const RegGP postMove(m_block);
-			{
-				const AluReg r(m_block, 0);
-
-				m_asm.movq(preMove, preMoveAB);
-				m_asm.movq(postMove, postMoveAB);
-				m_asm.cmp(preMove, postMove.get());
-				m_asm.cmovnz(r, postMove.get());
-			}
-
-			m_asm.psrldq(preMoveAB, asmjit::Imm(8));
-			m_asm.psrldq(postMoveAB, asmjit::Imm(8));
-
-			{
-				const AluReg r(m_block, 1);
-
-				m_asm.movq(preMove, preMoveAB);
-				m_asm.movq(postMove, postMoveAB);
-				m_asm.cmp(preMove, postMove.get());
-				m_asm.cmovnz(r, postMove.get());
-			}
-		}
+		m_postALUParallel = true;
+		(this->*funcMove)(_op);
+		m_postALUParallel = false;
 
 		emitOpEpilog();
 	}
