@@ -506,6 +506,7 @@ namespace dsp56k
 
 		bool m_ccrDirty = false;
 		const bool m_useCCRCache;
+		bool m_preALUParallel = false, m_postALUParallel = false;
 
 		TWord m_pcCurrentOp = 0;
 		TWord m_opWordA = 0;
