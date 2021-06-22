@@ -234,7 +234,7 @@ namespace dsp56k
 	private:
 		JitBlock& m_block;
 		const JitDspRegPool::DspReg m_dspReg;
-		const JitReg& m_reg;
+		const JitReg m_reg;
 		const bool m_read;
 		const bool m_write;
 	};
