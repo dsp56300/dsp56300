@@ -36,6 +36,8 @@ namespace dsp56k
 
 		void lock(DspReg _reg);
 		void unlock(DspReg _reg);
+
+		void storeAll();
 	
 		static constexpr JitReg m_gps[] =	{ /*asmjit::x86::rax, */asmjit::x86::rcx, asmjit::x86::rdx, asmjit::x86::rbp
 											, asmjit::x86::rdi, asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r10
@@ -52,6 +54,8 @@ namespace dsp56k
 
 	private:
 		void makeSpace();
+		void clear();
+
 		void load(JitReg& _dst, DspReg _src);
 		void store(DspReg _dst, JitReg& _src);
 		void store(DspReg _dst, JitReg128& _src);

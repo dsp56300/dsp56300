@@ -22,33 +22,12 @@ namespace dsp56k
 
 	JitDspRegPool::JitDspRegPool(JitBlock& _block) : m_block(_block)
 	{
-		for(size_t i=0; i<m_gpCount; ++i)
-			m_availableGps.push_back(m_gps[i]);
-
-		for(size_t i=0; i<m_xmmCount; ++i)
-			m_availableXmms.push_back(m_xmms[i]);
+		clear();
 	}
 
 	JitDspRegPool::~JitDspRegPool()
 	{
-		for(auto it = m_writtenDspRegs.begin(); it != m_writtenDspRegs.end(); ++it)
-		{
-			const auto r = *it;
-
-			const auto itGp = m_usedGpsMap.find(r);
-			if(itGp != m_usedGpsMap.end())
-			{
-				LOG("Storing modified DSP reg " << g_dspRegNames[r] << " from GP");
-				store(r, itGp->second);
-			}
-			else
-			{
-				auto itXmm = m_usedXmmMap.find(r);
-				assert(itXmm != m_usedXmmMap.end() && "XMM register not found for DSP register");
-
-				store(r, itXmm->second);
-			}
-		}
+		storeAll();
 	}
 
 	JitReg JitDspRegPool::get(DspReg _reg, bool _read, bool _write)
@@ -121,6 +100,30 @@ namespace dsp56k
 		m_lockedGps.erase(_reg);
 	}
 
+	void JitDspRegPool::storeAll()
+	{
+		for(auto it = m_writtenDspRegs.begin(); it != m_writtenDspRegs.end(); ++it)
+		{
+			const auto r = *it;
+
+			const auto itGp = m_usedGpsMap.find(r);
+			if(itGp != m_usedGpsMap.end())
+			{
+				LOG("Storing modified DSP reg " << g_dspRegNames[r] << " from GP");
+				store(r, itGp->second);
+			}
+			else
+			{
+				auto itXmm = m_usedXmmMap.find(r);
+				assert(itXmm != m_usedXmmMap.end() && "XMM register not found for DSP register");
+
+				store(r, itXmm->second);
+			}
+		}
+
+		clear();
+	}
+
 	void JitDspRegPool::makeSpace()
 	{
 		assert(!m_availableXmms.empty());
@@ -147,6 +150,26 @@ namespace dsp56k
 			return;
 		}
 		assert(false && "all GPs are locked, unable to make space");
+	}
+
+	void JitDspRegPool::clear()
+	{
+		m_availableGps.clear();
+		m_availableXmms.clear();
+
+		m_lockedGps.clear();
+
+		m_usedGpsMap.clear();
+		m_usedXmmMap.clear();
+
+		m_usedGps.clear();
+		m_writtenDspRegs.clear();
+
+		for(size_t i=0; i<m_gpCount; ++i)
+			m_availableGps.push_back(m_gps[i]);
+
+		for(size_t i=0; i<m_xmmCount; ++i)
+			m_availableXmms.push_back(m_xmms[i]);
 	}
 
 	void JitDspRegPool::load(JitReg& _dst, DspReg _src)
