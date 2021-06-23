@@ -47,14 +47,14 @@ namespace dsp56k
 		const auto isFalse = a.newLabel();
 		const auto end = a.newLabel();
 
-		auto regBackup = _block.dspRegPool();
+		_block.dspRegPool().releaseAll();
 
 		_jumpIfFalse(isFalse);
 
 		_true();
 		_block.dspRegPool().releaseAll();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
 
-		if(regBackup.hasWrittenRegs() || _hasFalseFunc)
+		if(_hasFalseFunc)
 			a.jmp(end);
 
 		a.bind(isFalse);
@@ -63,12 +63,7 @@ namespace dsp56k
 		{
 			_false();
 			_block.dspRegPool().releaseAll();
-
-			if(regBackup.hasWrittenRegs())	// do not excute the writes twice at runtime
-				a.jmp(end);
 		}
-
-		regBackup.releaseAll();
 
 		a.bind(end);
 	}
