@@ -165,6 +165,16 @@ namespace dsp56k
 		assert(m_writtenDspRegs.size() <= m_lockedGps.size());
 	}
 
+	bool JitDspRegPool::isInUse(const JitReg128& _xmm) const
+	{
+		return m_xmList.isUsed(_xmm);
+	}
+
+	bool JitDspRegPool::isInUse(const JitReg& _gp) const
+	{
+		return m_gpList.isUsed(_gp);
+	}
+
 	void JitDspRegPool::makeSpace(DspReg _wantedReg)
 	{
 		// TODO: we can use upper bits of the XMMs, too

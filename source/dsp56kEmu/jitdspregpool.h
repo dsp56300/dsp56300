@@ -47,6 +47,8 @@ namespace dsp56k
 		bool hasWrittenRegs() const { return !m_writtenDspRegs.empty(); }
 
 		void setRepMode(bool _repMode) { m_repMode = _repMode; }
+		bool isInUse(const JitReg128& _xmm) const;
+		bool isInUse(const JitReg& _gp) const;
 
 	private:
 		void makeSpace(DspReg _wantedReg);
@@ -63,6 +65,15 @@ namespace dsp56k
 		public:
 			bool isFull() const					{ return m_available.empty(); }
 			bool isUsed(DspReg _reg) const		{ return m_usedMap.find(_reg) != m_usedMap.end(); }
+			bool isUsed(const T& _reg) const
+			{
+				for(auto it = m_usedMap.begin(); it != m_usedMap.end(); ++it)
+				{
+					if(it->second.equals(_reg))
+						return true;
+				}
+				return false;
+			}
 			bool empty() const					{ return m_used.empty(); }
 			size_t available() const			{ return m_available.size(); }
 			size_t size() const { return m_used.size(); }
