@@ -157,7 +157,6 @@ namespace dsp56k
 
 		Assembler m_asm(&code);
 
-		// TODO: we need to stop emit inside block if the PC already has a block, atm we may have overlapping blocks
 		JitBlock* b;
 
 		{
