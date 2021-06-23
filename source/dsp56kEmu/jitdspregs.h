@@ -22,18 +22,6 @@ namespace dsp56k
 	class JitDspRegs
 	{
 	public:
-		enum LoadedRegs
-		{
-			LoadedRegR0,	LoadedRegR1,	LoadedRegR2,	LoadedRegR3,	LoadedRegR4,	LoadedRegR5,	LoadedRegR6,	LoadedRegR7,
-			LoadedRegA,		LoadedRegB,
-			LoadedRegX,		LoadedRegY,
-			LoadedRegExtMem,
-			LoadedRegSR,
-			LoadedRegLC,
-			LoadedRegLA,
-			LoadedRegCount
-		};
-
 		enum AccessType
 		{
 			Read = 0x1,
@@ -42,10 +30,7 @@ namespace dsp56k
 		};
 
 		JitDspRegs(JitBlock& _block);
-
 		~JitDspRegs();
-
-		void clear() { storeDSPRegs(); assert(m_writtenRegs == 0); }
 
 		void getR(const JitReg& _dst, int _agu);
 		void getN(const JitReg& _dst, int _agu);
@@ -56,17 +41,16 @@ namespace dsp56k
 		void setM(int _agu, const JitReg& _src);
 		
 		JitReg getSR(AccessType _type);
-		JitReg getExtMemAddr();
 		JitReg getLA(AccessType _type);
 		JitReg getLC(AccessType _type);
 
-		JitReg128 getALU(int _ab);
+		JitReg getALU(int _alu, AccessType _access);
 		void getALU(const JitReg& _dst, int _alu);
 		void setALU(int _alu, const JitReg& _src, bool _needsMasking = true);
-		void clrALU(const TWord _aluIndex);
+		void clrALU(TWord _alu);
 
-		JitReg128 getXY(int _xy);
 		void getXY(const JitReg& _dst, int _xy);
+		JitReg getXY(int _xy, AccessType _access);
 		void setXY(uint32_t _xy, const JitReg& _src);
 
 		void getXY0(const JitReg& _dst, uint32_t _aluIndex);
@@ -117,60 +101,20 @@ namespace dsp56k
 
 		void mask56(const JitReg& _alu) const;
 		void mask48(const JitReg& _alu) const;
-
-		void storeDSPRegs(uint32_t _loadedRegs);
 		
 		void setPC(const JitReg& _pc);
 		void updateDspMRegisters();
 
-		uint32_t getWrittenRegs() const { return m_writtenRegs; }
-		uint32_t getReadRegs() const { return m_readRegs; }
-
-		bool isRead(uint32_t _reg) const;
-		bool isWritten(uint32_t _reg) const;
-
 	private:
 		JitDspRegPool& pool() const;
-		
-		void loadDSPRegs();
-		void storeDSPRegs();
-
-		void loadAGU(int _agu);
-		void loadALU(int _alu);
-		void loadXY(int _xy);
-
-		void storeAGU(int _agu);
-		void storeALU(int _alu);
-		void storeXY(int _xy);
 
 		void load24(const asmjit::x86::Gp& _dst, const TReg24& _src) const;
 		void store24(TReg24& _dst, const asmjit::x86::Gp& _src) const;
 
-		void setWritten(const uint32_t _reg)			{ m_writtenRegs |= (1<<_reg); }
-		void clearWritten(const uint32_t _reg)			{ m_writtenRegs &= ~(1<<_reg); }
-
-		void setRead(const uint32_t _reg)				{ m_readRegs |= (1<<_reg); }
-		void clearRead(const uint32_t _reg)				{ m_readRegs &= ~(1<<_reg); }
-
-		void load(LoadedRegs _reg);
-		void store(LoadedRegs _reg);
-		
 		JitBlock& m_block;
 		asmjit::x86::Assembler& m_asm;
 		DSP& m_dsp;
 
-		uint32_t m_writtenRegs = 0;
-		uint32_t m_readRegs = 0;
 		std::array<uint32_t, 8> m_AguMchanged;
-	};
-
-	class JitDspRegsBranch
-	{
-	public:
-		JitDspRegsBranch(JitDspRegs& _regs);
-		~JitDspRegsBranch();
-
-		JitDspRegs& m_regs;
-		const uint32_t m_loadedRegsBeforeBranch;
 	};
 }

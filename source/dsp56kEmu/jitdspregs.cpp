@@ -5,8 +5,6 @@
 
 #include "dsp.h"
 
-#include "asmjit/x86/x86features.h"
-
 using namespace asmjit;
 using namespace x86;
 
@@ -19,137 +17,21 @@ namespace dsp56k
 
 	JitDspRegs::~JitDspRegs()
 	{
-		storeDSPRegs();
 	}
 
 	void JitDspRegs::getR(const JitReg& _dst, const int _agu)
 	{
-		if (!isRead(LoadedRegR0 + _agu))
-			loadAGU(_agu);
-
-		m_asm.movd(_dst, xmm(xmmR0 + _agu));
+		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspR0 + _agu));
 	}
 
 	void JitDspRegs::getN(const JitReg& _dst, const int _agu)
 	{
-		if (!isRead(LoadedRegR0 + _agu))
-			loadAGU(_agu);
-
-		const auto xm(xmm(xmmR0 + _agu));
-
-		if (CpuInfo::host().hasFeature(Features::kSSE4_1))
-		{
-			m_asm.pextrd(_dst, xm, Imm(1));
-		}
-		else
-		{
-			m_asm.pshufd(xm, xm, Imm(0xe1)); // swap lower two words to get N in word 0
-			m_asm.movd(_dst, xm);
-			m_asm.pshufd(xm, xm, Imm(0xe1)); // swap back
-		}
+		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspN0 + _agu));
 	}
 
 	void JitDspRegs::getM(const JitReg& _dst, const int _agu)
 	{
-		if (!isRead(LoadedRegR0 + _agu))
-			loadAGU(_agu);
-
-		const auto xm(xmm(xmmR0 + _agu));
-
-		if (CpuInfo::host().hasFeature(Features::kSSE4_1))
-		{
-			m_asm.pextrd(_dst, xm, Imm(2));
-		}
-		else
-		{
-			m_asm.pshufd(xm, xm, Imm(0xc6)); // swap words 0 and 2 to ret M in word 0
-			m_asm.movd(_dst, xm);
-			m_asm.pshufd(xm, xm, Imm(0xc6)); // swap back
-		}
-	}
-
-	void JitDspRegs::loadAGU(int _agu)
-	{
-		// TODO: we can do better by reordering the DSP registers in memory so that we can load one 128 bit word at once
-		const auto xm = xmm(xmmR0 + _agu);
-		auto& mem = m_block.mem();
-		mem.mov(xm, m_dsp.regs().m[_agu]);
-		m_asm.pslldq(xm, Imm(4));
-
-		const RegXMM xmmTemp(m_block);
-		
-		mem.mov(xmmTemp.get(), m_dsp.regs().n[_agu]);
-		m_asm.movss(xm, xmmTemp.get());
-		m_asm.pslldq(xm, Imm(4));
-
-		mem.mov(xmmTemp.get(), m_dsp.regs().r[_agu]);
-		m_asm.movss(xm, xmmTemp.get());
-
-		setRead(LoadedRegR0 + _agu);
-	}
-
-	void JitDspRegs::loadALU(int _alu)
-	{
-		auto& alu = _alu ? m_dsp.regs().b : m_dsp.regs().a;
-		
-		m_block.mem().mov(xmm(xmmA + _alu), alu);
-
-		setRead(LoadedRegA + _alu);
-	}
-
-	void JitDspRegs::loadXY(int _xy)
-	{
-		auto& xy = _xy ? m_dsp.regs().y : m_dsp.regs().x;
-
-		m_block.mem().mov(xmm(xmmX + _xy), xy);
-
-		setRead(LoadedRegX + _xy);
-	}
-
-	void JitDspRegs::storeAGU(int _agu)
-	{
-		const auto xm = xmm(xmmR0 + _agu);
-		auto& mem = m_block.mem();
-
-		mem.mov(m_dsp.regs().r[_agu], xm);
-		m_asm.psrldq(xm, Imm(4));
-
-		mem.mov(m_dsp.regs().n[_agu], xm);
-		m_asm.psrldq(xm, Imm(4));
-
-		const RegGP oldM(m_block);
-		mem.mov(oldM, m_dsp.regs().m[_agu]);
-
-		const RegGP newM(m_block);
-		m_asm.movd(newM, xm);
-
-		m_asm.cmp(oldM, newM.get());
-		m_asm.setnz(newM);
-		m_asm.movzx(newM.get().r32(), newM.get().r8());
-
-		mem.mov(m_AguMchanged[_agu], newM.get().r32());
-
-		mem.mov(m_dsp.regs().m[_agu], xm);
-		
-		clearWritten(LoadedRegR0 + _agu);
-	}
-
-	void JitDspRegs::storeALU(int _alu)
-	{
-		auto& alu = _alu ? m_dsp.regs().b : m_dsp.regs().a;
-
-		m_block.mem().mov(alu, xmm(xmmA + _alu));
-
-		clearWritten(LoadedRegA + _alu);
-	}
-
-	void JitDspRegs::storeXY(int _xy)
-	{
-		auto& xy = _xy ? m_dsp.regs().y : m_dsp.regs().x;
-
-		m_block.mem().mov(xy, xmm(xmmX + _xy));
-
-		clearWritten(LoadedRegX + _xy);
+		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspM0 + _agu));
 	}
 
 	void JitDspRegs::load24(const Gp& _dst, const TReg24& _src) const
@@ -162,16 +44,6 @@ namespace dsp56k
 		m_block.mem().mov(_dst, _src);
 	}
 
-	bool JitDspRegs::isRead(const uint32_t _reg) const
-	{
-		return isWritten(_reg) || (m_readRegs & (1 << _reg));
-	}
-
-	bool JitDspRegs::isWritten(const uint32_t _reg) const
-	{
-		return m_writtenRegs & (1 << _reg);
-	}
-
 	JitDspRegPool& JitDspRegs::pool() const
 	{
 		return m_block.dspRegPool();
@@ -179,140 +51,60 @@ namespace dsp56k
 
 	void JitDspRegs::setR(int _agu, const JitReg& _src)
 	{
-		if (!isRead(LoadedRegR0 + _agu))
-			loadAGU(_agu);
-
-		const auto xm(xmm(xmmR0 + _agu));
-
-		if(CpuInfo::host().hasFeature(Features::kSSE4_1))
-		{
-			m_asm.pinsrd(xm, _src, Imm(0));
-		}
-		else
-		{
-			const RegXMM xmmTemp(m_block);
-
-			m_asm.movd(xmmTemp.get(), _src);
-			m_asm.movss(xm, xmmTemp.get());
-		}
-
-		setWritten(LoadedRegR0 + _agu);
+		pool().write(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspR0 + _agu), _src);
 	}
 
 	void JitDspRegs::setN(int _agu, const JitReg& _src)
 	{
-		if (!isRead(LoadedRegR0 + _agu))
-			loadAGU(_agu);
-
-		const auto xm(xmm(xmmR0 + _agu));
-
-		if(CpuInfo::host().hasFeature(Features::kSSE4_1))
-		{
-			m_asm.pinsrd(xm, _src, Imm(1));
-		}
-		else
-		{
-			const RegXMM xmmTemp(m_block);
-
-			m_asm.movd(xmmTemp.get(), _src);
-
-			m_asm.pshufd(xm, xm, Imm(0xe1)); // swap lower two words to get N in word 0
-			m_asm.movss(xm, xmmTemp.get());
-			m_asm.pshufd(xm, xm, Imm(0xe1)); // swap back
-		}
-
-		setWritten(LoadedRegR0 + _agu);
+		pool().write(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspN0 + _agu), _src);
 	}
 
 	void JitDspRegs::setM(int _agu, const JitReg& _src)
 	{
-		if (!isRead(LoadedRegR0 + _agu))
-			loadAGU(_agu);
-
-		const auto xm(xmm(xmmR0 + _agu));
-
-		if(CpuInfo::host().hasFeature(Features::kSSE4_1))
-		{
-			m_asm.pinsrd(xm, _src, Imm(2));
-		}
-		else
-		{
-			const RegXMM xmmTemp(m_block);
-
-			m_asm.movd(xmmTemp.get(), _src);
-
-			m_asm.pshufd(xm, xm, Imm(0xc6)); // swap words 0 and 2 to ret M in word 0
-			m_asm.movss(xm, xmmTemp.get());
-			m_asm.pshufd(xm, xm, Imm(0xc6)); // swap back
-		}
-		setWritten(LoadedRegR0 + _agu);
+		pool().write(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspM0 + _agu), _src);
+		m_block.mem().mov(m_AguMchanged[_agu], _src.r32());
 	}
 
 	JitReg JitDspRegs::getSR(AccessType _type)
 	{
-		if(_type & Read && !isRead(LoadedRegSR))
-		{
-			load24(regSR, m_dsp.getSR());
-			setRead(LoadedRegSR);
-		}
-
-		if(_type & Write)
-		{
-			setWritten(LoadedRegSR);			
-		}
-
-		return regSR;
-	}
-
-	JitReg JitDspRegs::getExtMemAddr()
-	{
-		if(!isRead(LoadedRegExtMem))
-		{
-			m_block.mem().mov(regExtMem, m_dsp.memory().getBridgedMemoryAddress());
-			setRead(LoadedRegExtMem);			
-		}
-
-		return regExtMem;
-	}
-
-	JitReg128 JitDspRegs::getALU(int _ab)
-	{
-		if(!isRead(LoadedRegA + _ab))
-			loadALU(_ab);
-
-		return xmm(xmmA + _ab);
+		return pool().get(JitDspRegPool::DspSR, _type & Read, _type & Write);
 	}
 
 	void JitDspRegs::getALU(const JitReg& _dst, const int _alu)
 	{
-		m_asm.movq(_dst.r64(), getALU(_alu));
+		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu));
+	}
+
+	JitReg JitDspRegs::getALU(int _alu, AccessType _access)
+	{
+		return pool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu), _access & Read, _access & Write);
 	}
 
 	void JitDspRegs::setALU(int _alu, const JitReg& _src, bool _needsMasking)
 	{
+		const auto r = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu);
+
+		pool().write(r, _src);
+
 		if(_needsMasking)
-			mask56(_src);
-		m_asm.movq(xmm(xmmA + _alu), _src);
-		setWritten(LoadedRegA + _alu);
+			mask56(pool().get(r, false, true));			
 	}
 
-	void JitDspRegs::clrALU(const TWord _aluIndex)
+	void JitDspRegs::clrALU(const TWord _alu)
 	{
-		setWritten(LoadedRegA + _aluIndex);
-		const auto xm = regAlu(_aluIndex);
-		m_asm.pxor(xm, xm);
-	}
-
-	JitReg128 JitDspRegs::getXY(int _xy)
-	{
-		if(!isRead(LoadedRegX + _xy))
-			loadXY(_xy);
-		return xmm(xmmX + _xy);
+		const auto r = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu);
+		const auto alu = pool().get(r, false, true);
+		m_asm.xor_(alu, alu);
 	}
 
 	void JitDspRegs::getXY(const JitReg& _dst, int _xy)
 	{
-		m_asm.movq(_dst.r64(), getXY(_xy));
+		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy));
+	}
+
+	JitReg JitDspRegs::getXY(int _xy, AccessType _access)
+	{
+		return pool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), _access & Read, _access & Write);
 	}
 
 	void JitDspRegs::getXY0(const JitReg& _dst, const uint32_t _aluIndex)
@@ -353,8 +145,7 @@ namespace dsp56k
 	void JitDspRegs::setXY(const uint32_t _xy, const JitReg& _src)
 	{
 		mask48(_src);
-		m_asm.movq(xmm(xmmX + _xy), _src);
-		setWritten(LoadedRegX + _xy);
+		pool().write(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), _src);
 	}
 
 	void JitDspRegs::setXY0(const uint32_t _xy, const JitReg& _src)
@@ -528,50 +319,32 @@ namespace dsp56k
 
 	JitReg JitDspRegs::getLA(AccessType _type)
 	{
-		if(_type & Read && !isRead(LoadedRegLA))
-		{
-			load24(regLA, m_dsp.regs().la);
-			setRead(LoadedRegLA);
-		}
-
-		if(_type & Write)
-			setWritten(LoadedRegLA);
-		
-		return regLA;
+		return pool().get(JitDspRegPool::DspLA, _type & Read, _type & Write);
 	}
 
 	void JitDspRegs::getLA(const JitReg32& _dst)
 	{
-		m_asm.mov(_dst, getLA(Read).r32());
+		return pool().read(_dst.r64(), JitDspRegPool::DspLA);
 	}
 
 	void JitDspRegs::setLA(const JitReg32& _src)
 	{
-		m_asm.mov(regLA, _src);
-		setWritten(LoadedRegLA);
+		return pool().write(JitDspRegPool::DspLA, _src);
 	}
 
 	JitReg JitDspRegs::getLC(AccessType _type)
 	{
-		if(_type & Read && !isRead(LoadedRegLC))
-		{
-			load24(regLC, m_dsp.regs().lc);
-			setRead(LoadedRegLC);
-		}
-		if(_type & Write)
-			setWritten(LoadedRegLC);
-
-		return regLC;
+		return pool().get(JitDspRegPool::DspLC, _type & Read, _type & Write);
 	}
+
 	void JitDspRegs::getLC(const JitReg32& _dst)
 	{
-		m_asm.mov(_dst, getLC(Read).r32());
+		return pool().read(_dst.r64(), JitDspRegPool::DspLC);
 	}
 
 	void JitDspRegs::setLC(const JitReg32& _src)
 	{
-		m_asm.mov(regLC, _src);
-		setWritten(LoadedRegLC);
+		return pool().write(JitDspRegPool::DspLC, _src);
 	}
 
 	void JitDspRegs::getSS(const JitReg64& _dst) const
@@ -641,128 +414,5 @@ namespace dsp56k
 			if(m_AguMchanged[i])
 				m_dsp.set_m(i, m_dsp.regs().m[i].var);
 		}
-	}
-
-	void JitDspRegs::loadDSPRegs()
-	{
-		for(auto i=0; i<LoadedRegCount; ++i)
-			load(static_cast<LoadedRegs>(i));
-	}
-
-	void JitDspRegs::load(LoadedRegs _reg)
-	{
-		if(isRead(_reg))
-			return;
-
-		switch (_reg)
-		{
-		case LoadedRegR0:
-		case LoadedRegR1:
-		case LoadedRegR2:
-		case LoadedRegR3:
-		case LoadedRegR4:
-		case LoadedRegR5:
-		case LoadedRegR6:
-		case LoadedRegR7:
-			loadAGU(_reg - LoadedRegR0);
-			break;
-		case LoadedRegA:
-		case LoadedRegB:
-			loadALU(_reg - LoadedRegA);
-			break;
-		case LoadedRegX:
-		case LoadedRegY:
-			loadXY(_reg - LoadedRegX);
-			break;
-		case LoadedRegExtMem:
-			getExtMemAddr();
-			break;
-		case LoadedRegSR:
-			getSR(Read);
-			break;
-		case LoadedRegLC: 
-			getLC(Read);
-			break;
-		case LoadedRegLA:
-			getLA(Read);
-			break;
-		}
-
-		setRead(_reg);
-	}
-
-	void JitDspRegs::storeDSPRegs()
-	{
-		for(auto i=0; i<LoadedRegCount; ++i)
-			store(static_cast<LoadedRegs>(i));
-	}
-
-	void JitDspRegs::storeDSPRegs(uint32_t _loadedRegs)
-	{
-		for(auto i=0; i<LoadedRegCount; ++i)
-		{
-			if(_loadedRegs & (1<<i))
-				store(static_cast<LoadedRegs>(i));
-		}
-	}
-
-	void JitDspRegs::store(LoadedRegs _reg)
-	{
-		if(!isWritten(_reg))
-			return;
-
-		switch (_reg)
-		{
-		case LoadedRegR0:
-		case LoadedRegR1:
-		case LoadedRegR2:
-		case LoadedRegR3:
-		case LoadedRegR4:
-		case LoadedRegR5:
-		case LoadedRegR6:
-		case LoadedRegR7:
-			storeAGU(_reg - LoadedRegR0);
-			break;
-		case LoadedRegA:
-		case LoadedRegB:
-			storeALU(_reg - LoadedRegA);
-			break;
-		case LoadedRegX:
-		case LoadedRegY:
-			storeXY(_reg - LoadedRegX);
-			break;
-		case LoadedRegExtMem:
-			// readonly
-			break;
-		case LoadedRegSR:
-			store24(m_dsp.regs().sr, regSR);
-			break;
-		case LoadedRegLC: 
-			store24(m_dsp.regs().lc, regLC);
-			break;
-		case LoadedRegLA:
-			store24(m_dsp.regs().la, regLA);
-			break;
-		}
-
-		clearWritten(_reg);
-	}
-
-	JitDspRegsBranch::JitDspRegsBranch(JitDspRegs& _regs): m_regs(_regs), m_loadedRegsBeforeBranch(_regs.getWrittenRegs())
-	{
-		/*
-		If code is generated which uses the DspRegs state machine and this is NOT executed because of a branch,
-		the state machine will emit register restore in its destructor but the load of these registers is missing.
-		What we do in this case is that we track the used registers in the branch and store them at the end of that branch.
-		That way, the register tracking state is identical, no matter if the branch has been executed or not
-		*/
-	}
-
-	JitDspRegsBranch::~JitDspRegsBranch()
-	{
-		const auto loadedRegs = m_regs.getWrittenRegs();
-		const auto newRegsInBranch = loadedRegs & ~m_loadedRegsBeforeBranch;
-
-		m_regs.storeDSPRegs(newRegsInBranch);
 	}
 }

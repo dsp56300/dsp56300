@@ -70,7 +70,7 @@ namespace dsp56k
 				break;
 		}
 
-		m_dspRegs.clear();
+		m_dspRegPool.releaseAll();
 
 		return !empty();
 	}

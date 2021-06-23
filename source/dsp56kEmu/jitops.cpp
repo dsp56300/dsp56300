@@ -381,24 +381,50 @@ namespace dsp56k
 		const auto& funcAlu = g_opcodeFuncs[_instAlu];
 
 		emitOpProlog();
+
+		auto get64High = [this](const JitReg& _dst, const JitReg128& _src)
+		{
+			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kSSE4_1))
+			{
+				m_asm.pextrq(_dst, _src, asmjit::Imm(1));
+			}
+			else
+			{
+				m_asm.pshufd(_src, _src, asmjit::Imm(0x4e));	// swap high 64 bits with low 64 bits
+				m_asm.movq(_dst, _src);
+				m_asm.pshufd(_src, _src, asmjit::Imm(0x4e));	// swap back
+			}
+		};
 		
+		auto set64High = [this](const JitReg128& _dst, const JitReg& _src)
+		{
+			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kSSE4_1))
+			{
+				m_asm.pinsrq(_dst, _src, asmjit::Imm(1));
+			}
+			else
+			{
+				const RegXMM xm(m_block);
+				m_asm.movq(xm, _src);
+				m_asm.pshufd(_dst, _dst, asmjit::Imm(0x4e));	// swap high 64 bits with low 64 bits
+				m_asm.movsd(_dst, xm);
+				m_asm.pshufd(_dst, _dst, asmjit::Imm(0x4e));	// swap back
+			}
+		};
 		
 		const RegXMM preALUAB(m_block);	// Stash the current AB values
-		m_asm.movdqa(preALUAB, m_dspRegs.getALU(1));
-		m_asm.pslldq(preALUAB, asmjit::Imm(8));
-		m_asm.movsd(preALUAB, m_dspRegs.getALU(0));
+		m_asm.movq(preALUAB, m_dspRegs.getALU(0, JitDspRegs::Read));
+		set64High(preALUAB, m_dspRegs.getALU(1, JitDspRegs::Read));
 
 		(this->*funcAlu)(_op);	// Do the ALU op
 
 		const RegXMM postALUAB(m_block);	// stash the post-ALU AB values
-		m_asm.movdqa(postALUAB, m_dspRegs.getALU(1));
-		m_asm.pslldq(postALUAB, asmjit::Imm(8));
-		m_asm.movsd(postALUAB, m_dspRegs.getALU(0));
+		m_asm.movq(postALUAB, m_dspRegs.getALU(0, JitDspRegs::Read));
+		set64High(postALUAB, m_dspRegs.getALU(1, JitDspRegs::Read));
 
 		// restore the pre-ALU AB values
-		m_asm.movdqa(m_dspRegs.getALU(0), preALUAB);
-		m_asm.movdqa(m_dspRegs.getALU(1), preALUAB);
-		m_asm.psrldq(m_dspRegs.getALU(1), asmjit::Imm(8));
+		m_asm.movq(m_dspRegs.getALU(0, JitDspRegs::Write), preALUAB);
+		get64High(m_dspRegs.getALU(1, JitDspRegs::Write), preALUAB);
 
 		(this->*funcMove)(_op);
 
@@ -714,13 +740,13 @@ namespace dsp56k
 
 		// backup LC
 		const RegXMM lcBackup(m_block);
-		m_asm.movd(lcBackup, lc);
-		m_asm.mov(lc, _lc.get().r32());
+		m_asm.movd(lcBackup, m_dspRegs.getLC(JitDspRegs::Read));
+		m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), _lc.get().r32());
 		_lc.release();
 
 		{
 			const RegGP temp(m_block);
-			m_asm.add(m_block.mem().ptr(temp, &m_block.getExecutedInstructionCount()), lc);			
+			m_asm.add(m_block.mem().ptr(temp, &m_block.getExecutedInstructionCount()), m_dspRegs.getLC(JitDspRegs::Read));			
 		}
 
 		const auto opSize = m_opSize;
@@ -729,20 +755,30 @@ namespace dsp56k
 		const auto start = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
-		// execute it once without being part of the loop to fill register cache, needed only once
-		m_asm.dec(lc);
+		m_block.dspRegPool().releaseAll();
+		m_block.dspRegPool().setRepMode(true);
+
+		// execute it once without being part of the loop to fill register cache
+		m_asm.dec(m_dspRegs.getLC(JitDspRegs::ReadWrite));
 		emit(pc);
-		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read).r32(), asmjit::Imm(0));
+		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read), asmjit::Imm(0));
+		m_asm.jz(end);
+
+		m_asm.dec(m_dspRegs.getLC(JitDspRegs::ReadWrite));
+		emit(pc);
+		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read), asmjit::Imm(0));
 		m_asm.jz(end);
 
 		m_asm.bind(start);
 
-		m_asm.dec(lc);
+		m_asm.dec(m_dspRegs.getLC(JitDspRegs::ReadWrite));
 		emit(pc);
-		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read).r32(), asmjit::Imm(0));
+		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read), asmjit::Imm(0));
 		m_asm.jnz(start);
 
 		m_asm.bind(end);
+
+		m_block.dspRegPool().setRepMode(false);
 
 		// restore previous LC
 		m_asm.movd(m_dspRegs.getLC(JitDspRegs::Write), lcBackup);

@@ -71,7 +71,7 @@ namespace dsp56k
 #endif
 	}
 
-	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(_block.regs().isRead(JitDspRegs::LoadedRegR0 + _xmmIndex))
+	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(true)// TODO: only push if in use by dsp reg pool
 	{
 		if(!m_isLoaded)
 			return;
