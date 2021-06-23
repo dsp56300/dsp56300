@@ -123,13 +123,14 @@ namespace dsp56k
 
 		if(g_traceOps)
 		{
+			const TWord lastPC = pc + cacheEntry->getPMemSize() - cacheEntry->getLastOpSize();
 			TWord op, opB;
-			m_dsp.mem.getOpcode(pc, op, opB);
-			m_dsp.traceOp(pc, op, opB, cacheEntry->getPMemSize() > 2 ? 1 : cacheEntry->getPMemSize());
+			m_dsp.mem.getOpcode(lastPC, op, opB);
+			m_dsp.traceOp(lastPC, op, opB, cacheEntry->getLastOpSize());
 
 			// make the diff tool happy, interpreter traces two ops. For the sake of simplicity, just trace it once more
 			if(cacheEntry->getDisasm().find("rep ") == 0)
-				m_dsp.traceOp(pc, op, opB, cacheEntry->getPMemSize() > 2 ? 1 : cacheEntry->getPMemSize());
+				m_dsp.traceOp(lastPC, op, opB, cacheEntry->getLastOpSize());
 		}
 
 		// if JIT code has written to P memory, destroy a JIT block if present at the write location

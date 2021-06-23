@@ -47,6 +47,8 @@ namespace dsp56k
 			const auto res = ops.getInstruction();
 			assert(res != InstructionCount);
 
+			m_lastOpSize = ops.getOpSize();
+
 			if(ops.checkResultFlag(JitOps::WritePMem) || ops.checkResultFlag(JitOps::WriteToLA) || ops.checkResultFlag(JitOps::WriteToLC))
 				break;
 
