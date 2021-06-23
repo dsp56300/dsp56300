@@ -3,8 +3,8 @@
 #include "dsp.h"
 #include "jitblock.h"
 
-//#define LOGRP(S)		{}
-#define LOGRP(S)		LOG(S)
+#define LOGRP(S)		{}
+//#define LOGRP(S)		LOG(S)
 
 namespace dsp56k
 {
