@@ -5,6 +5,7 @@
 #include <set>
 
 #include "jitregtypes.h"
+#include "dspassert.h"
 
 namespace dsp56k
 {
@@ -40,40 +41,115 @@ namespace dsp56k
 		void lock(DspReg _reg);
 		void unlock(DspReg _reg);
 
-		void storeAll();
+		void releaseAll();
+		void releaseWritten();
 
 		bool hasWrittenRegs() const { return !m_writtenDspRegs.empty(); }
 
-		static constexpr JitReg m_gps[] =	{ asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r10, asmjit::x86::r11};
-
-		static constexpr JitReg128 m_xmms[] =	{ asmjit::x86::xmm0, asmjit::x86::xmm1, asmjit::x86::xmm2, asmjit::x86::xmm3
-												, asmjit::x86::xmm4, asmjit::x86::xmm5, asmjit::x86::xmm6, asmjit::x86::xmm7
-												, asmjit::x86::xmm8, asmjit::x86::xmm9, asmjit::x86::xmm10, asmjit::x86::xmm11};
-
-		static constexpr uint32_t m_gpCount = sizeof(m_gps) / sizeof(m_gps[0]);
-		static constexpr uint32_t m_xmmCount = sizeof(m_xmms) / sizeof(m_xmms[0]);
+		void setRepMode(bool _repMode) { m_repMode = _repMode; }
 
 	private:
-		void makeSpace();
+		void makeSpace(DspReg _wantedReg);
 		void clear();
 
 		void load(JitReg& _dst, DspReg _src);
 		void store(DspReg _dst, JitReg& _src);
 		void store(DspReg _dst, JitReg128& _src);
 
+		bool release(DspReg _dst);
+
+		template<typename T> class RegisterList
+		{
+		public:
+			bool isFull() const					{ return m_available.empty(); }
+			bool isUsed(DspReg _reg) const		{ return m_usedMap.find(_reg) != m_usedMap.end(); }
+			bool empty() const					{ return m_used.empty(); }
+			size_t available() const			{ return m_available.size(); }
+			size_t size() const { return m_used.size(); }
+
+			bool acquire(T& _dst, const DspReg _reg, bool _pushFront)
+			{
+				const auto itExisting = m_usedMap.find(_reg);
+
+				if(itExisting != m_usedMap.end())
+				{
+					if(!_pushFront)
+					{
+						m_used.remove(_reg);
+						m_used.push_back(_reg);
+					}
+					_dst = itExisting->second;
+					return true;
+				}
+
+				if(isFull())
+					return false;
+
+				auto res = m_available.front();
+				m_available.pop_front();
+				m_usedMap.insert(std::make_pair(_reg, res));
+
+				push(m_used, _reg, _pushFront);
+				_dst = res;
+				return true;
+			}
+
+			bool get(T& _dst, const DspReg _reg)
+			{
+				const auto it = m_usedMap.find(_reg);
+				if(it == m_usedMap.end())
+					return false;
+				_dst = it->second;
+				return true;
+			}
+
+			bool release(T& _dst, DspReg _reg, bool _pushFront)
+			{
+				const auto it = m_usedMap.find(_reg);
+				if(it == m_usedMap.end())
+					return false;
+				_dst = it->second;
+				push(m_available, it->second, _pushFront);
+				m_used.remove(_reg);
+				m_usedMap.erase(it);
+				return true;
+			}
+
+			void addHostReg(const T& _hr)
+			{
+				m_available.push_back(_hr);
+			}
+
+			void clear()
+			{
+				m_available.clear();
+				m_used.clear();
+				m_usedMap.clear();
+			}
+
+			const std::list<DspReg>& used() const { return m_used; }
+
+		private:
+			template<typename T> void push(std::list<T>& _dst, const T& _src, bool _pushFront)
+			{
+				if(_pushFront)
+					_dst.push_front(_src);
+				else
+					_dst.push_back(_src);
+			}
+			std::list<T> m_available;
+			std::list<DspReg> m_used;
+			std::map<DspReg, T> m_usedMap;
+		};
+
 		JitBlock& m_block;
 
-		std::list<JitReg> m_availableGps;
-		std::list<JitReg128> m_availableXmms;
-
 		std::set<DspReg> m_lockedGps;
-
-		std::list<DspReg> m_usedGps;
-		std::map<DspReg, JitReg> m_usedGpsMap;
-
-		std::list<DspReg> m_usedXmms;
-		std::map<DspReg, JitReg128> m_usedXmmMap;
-
 		std::set<DspReg> m_writtenDspRegs;
+
+		RegisterList<JitReg> m_gpList;
+		RegisterList<JitReg128> m_xmList;
+
+		bool m_repMode = false;
 	};
 }

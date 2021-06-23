@@ -3,11 +3,20 @@
 #include "dsp.h"
 #include "jitblock.h"
 
-#define LOGRP(S)		{}
-//#define LOGRP(S)		LOG(S)
+//#define LOGRP(S)		{}
+#define LOGRP(S)		LOG(S)
 
 namespace dsp56k
 {
+	static constexpr JitReg g_gps[] =	{ asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r10, asmjit::x86::r11};
+
+	static constexpr JitReg128 g_xmms[] =	{ asmjit::x86::xmm0, asmjit::x86::xmm1, asmjit::x86::xmm2, asmjit::x86::xmm3
+											, asmjit::x86::xmm4, asmjit::x86::xmm5, asmjit::x86::xmm6, asmjit::x86::xmm7
+											, asmjit::x86::xmm8, asmjit::x86::xmm9, asmjit::x86::xmm10, asmjit::x86::xmm11};
+
+	static constexpr uint32_t g_gpCount = sizeof(g_gps) / sizeof(g_gps[0]);
+	static constexpr uint32_t g_xmmCount = sizeof(g_xmms) / sizeof(g_xmms[0]);
+
 	constexpr const char* g_dspRegNames[JitDspRegPool::DspCount] = 
 	{
 		"r0",	"r1",	"r2",	"r3",	"r4",	"r5",	"r6",	"r7",
@@ -30,63 +39,70 @@ namespace dsp56k
 
 	JitDspRegPool::~JitDspRegPool()
 	{
-		storeAll();
-	}
+		releaseWritten();
+/*		releaseAll();
+
+		assert(m_availableGps.size() == (m_gpCount - m_lockedGps.size()));
+		assert(m_availableXmms.size() == m_xmmCount);
+		assert(m_writtenDspRegs.size() <= m_lockedGps.size());
+		assert(m_usedGps.size() == m_lockedGps.size());
+		assert(m_usedGpsMap.size() == m_lockedGps.size());
+		assert(m_usedXmms.empty());
+		assert(m_usedXmmMap.empty());		
+*/	}
 
 	JitReg JitDspRegPool::get(DspReg _reg, bool _read, bool _write)
 	{
-		const auto it = m_usedGpsMap.find(_reg);
+		assert(_read || _write);
 
 		if(_write)
 			m_writtenDspRegs.insert(_reg);
 
-		if(it != m_usedGpsMap.end())
+		if(m_gpList.isUsed(_reg))
 		{
 			// The desired DSP register is already in a GP register. Nothing to be done except refresh the LRU list
-			m_usedGps.remove(_reg);
-			m_usedGps.push_back(_reg);
-			LOGRP("DSP reg " << g_dspRegNames[_reg] << " already available, returning GP, now " << m_usedGps.size() << " used GPs");
-			return it->second;
+
+			JitReg res;
+			m_gpList.acquire(res, _reg, m_repMode);
+
+			LOGRP("DSP reg " << g_dspRegNames[_reg] << " already available, returning GP, " << m_gpList.size() << " used GPs");
+			return res;
 		}
 
 		// No space left? Move some other GP reg to an XMM reg
-		if(m_availableGps.empty())
+		if(m_gpList.isFull())
 		{
 			LOGRP("No space left for DSP reg " << g_dspRegNames[_reg] << ", making space");
-			makeSpace();
+			makeSpace(_reg);
 		}
 
 		// There should be space left now
-		assert(!m_availableGps.empty());
+		assert(!m_gpList.isFull());
 
 		// allocate a new slot for the GP register
-		auto res = m_availableGps.front();
-		m_availableGps.pop_front();
-		m_usedGpsMap.insert(std::make_pair(_reg, res));
-		m_usedGps.push_back(_reg);
+		JitReg res;
+		m_gpList.acquire(res, _reg, m_repMode);
 
 		// Do we still have it in an XMM reg?
-		const auto itXmm = m_usedXmmMap.find(_reg);
-		if(itXmm != m_usedXmmMap.end())
+		JitReg128 xmReg;
+		if(m_xmList.release(xmReg, _reg, m_repMode))
 		{
-			LOGRP("DSP reg " <<g_dspRegNames[_reg] << " previously stored in xmm reg, restoring value");
 			// yes, remove it and restore the content
-			if(_read)
-				m_block.asm_().movq(res, itXmm->second);
-			m_usedXmmMap.erase(itXmm);
-			m_usedXmms.remove(_reg);
+			LOGRP("DSP reg " <<g_dspRegNames[_reg] << " previously stored in xmm reg, restoring value");
+//			if(_read)
+				m_block.asm_().movq(res, xmReg);
 		}
-		else if(_read)
+		else// if(_read)
 		{
 			// no, load from memory
-			LOGRP("Loading DSP reg " <<g_dspRegNames[_reg] << " from memory, now " << m_usedGps.size() << " GPs");
+			LOGRP("Loading DSP reg " <<g_dspRegNames[_reg] << " from memory, now " << m_gpList.size() << " GPs");
 			load(res, _reg);
 		}
-		else
+/*		else
 		{
-			LOGRP("DSP reg " << g_dspRegNames[_reg] << " allocated, no read so no load, now " << m_usedGps.size() << " GPs");
+			LOGRP("DSP reg " << g_dspRegNames[_reg] << " allocated, no read so no load, now " << m_gpList.size() << " GPs");
 		}
-
+*/
 		return res;
 	}
 
@@ -105,8 +121,7 @@ namespace dsp56k
 	void JitDspRegPool::lock(DspReg _reg)
 	{
 		LOGRP("Locking DSP reg " <<g_dspRegNames[_reg]);
-		const auto it = m_usedGpsMap.find(_reg);
-		assert(it != m_usedGpsMap.end() && "unable to lock reg if not in use");
+		assert(m_gpList.isUsed(_reg) && "unable to lock reg if not in use");
 		assert(m_lockedGps.find(_reg) == m_lockedGps.end() && "register is already locked");
 		m_lockedGps.insert(_reg);
 	}
@@ -114,81 +129,87 @@ namespace dsp56k
 	void JitDspRegPool::unlock(DspReg _reg)
 	{
 		LOGRP("Unlocking DSP reg " <<g_dspRegNames[_reg]);
-		const auto it = m_usedGpsMap.find(_reg);
-		assert(it != m_usedGpsMap.end() && "unable to unlock reg if not in use");
+		assert(m_gpList.isUsed(_reg) && "unable to unlock reg if not in use");
 		assert(m_lockedGps.find(_reg) != m_lockedGps.end() && "register is not locked");
 		m_lockedGps.erase(_reg);
 	}
 
-	void JitDspRegPool::storeAll()
+	void JitDspRegPool::releaseAll()
 	{
-		if(!m_writtenDspRegs.empty())
-			LOGRP("Storing ALL written registers into memory");
+		for(size_t i=0; i<DspCount; ++i)
+			release(static_cast<DspReg>(i));
 
-		while(!m_writtenDspRegs.empty())
-		{
-			const auto r = *m_writtenDspRegs.begin();
+		assert(m_gpList.empty());
+		assert(m_xmList.empty());
+		assert(m_writtenDspRegs.empty());
+		assert(m_lockedGps.empty());
+		assert(m_gpList.available() == g_gpCount);
+		assert(m_xmList.available() == g_xmmCount);
 
-			const auto itGp = m_usedGpsMap.find(r);
-			if(itGp != m_usedGpsMap.end())
-			{
-				LOGRP("Storing modified DSP reg " << g_dspRegNames[r] << " from GP");
-				store(r, itGp->second);
-			}
-			else
-			{
-				auto itXmm = m_usedXmmMap.find(r);
-				assert(itXmm != m_usedXmmMap.end() && "XMM register not found for DSP register");
-				LOGRP("Storing modified DSP reg " << g_dspRegNames[r] << " from XMM");
-				store(r, itXmm->second);
-			}
-		}
-
+		// We use this to restore ordering of GPs and XMMs as they need to be predictable in native loops
 		clear();
 	}
 
-	void JitDspRegPool::makeSpace()
+	void JitDspRegPool::releaseWritten()
+	{
+		if(m_writtenDspRegs.empty())
+			return;
+		
+		LOGRP("Storing ALL written registers into memory");
+
+		const auto written(m_writtenDspRegs);
+
+		for(auto it = written.begin(); it != written.end(); ++it)
+			release(*it);
+
+		assert(m_writtenDspRegs.size() <= m_lockedGps.size());
+	}
+
+	void JitDspRegPool::makeSpace(DspReg _wantedReg)
 	{
 		// TODO: we can use upper bits of the XMMs, too
-		if(m_availableXmms.empty())
+		if(m_xmList.isFull())
 		{
-			const auto dspReg = m_usedXmms.front();
+			LOGRP("No XMM temps left, writing a DSP reg back to memory");
 
-			LOGRP("No XMM temps left, writing DSP reg " <<g_dspRegNames[dspReg] << " back to memory");
+			for(auto it = m_xmList.used().begin(); it != m_xmList.used().end(); ++it)
+			{
+				const auto dspReg = *it;
+				
+				if(dspReg == _wantedReg)
+					continue;
 
-			auto itXmm = m_usedXmmMap.find(dspReg);
-			auto hostReg = itXmm->second;
+				LOGRP("Writing DSP reg " <<g_dspRegNames[dspReg] << " back to memory to make space");
 
-			// TODO: discard a register that was NOT written first
-			if(m_writtenDspRegs.find(dspReg) != m_writtenDspRegs.end())
-				store(dspReg, hostReg);
-
-			m_usedXmms.pop_front();
-			m_usedXmmMap.erase(itXmm);
-			m_availableXmms.push_back(hostReg);
+				// TODO: discard a register that was NOT written first
+				
+				const auto res = release(dspReg);
+				assert(res && "unable to release XMM reg");
+				break;
+			}
 		}
 
 		// move the oldest used GP register to an XMM register
-		for(auto it = m_usedGps.begin(); it != m_usedGps.end(); ++it)
+		for(auto it = m_gpList.used().begin(); it != m_gpList.used().end(); ++it)
 		{
-			const auto dspReg = *it;
-			const auto hostReg = m_usedGpsMap.find(*it)->second;
+			const DspReg dspReg = *it;
 
 			if(m_lockedGps.find(dspReg) != m_lockedGps.end())
 				continue;
 
+			if(dspReg == _wantedReg)
+				continue;
+
 			LOGRP("Moving DSP reg " <<g_dspRegNames[dspReg] << " to XMM");
 
-			m_usedGps.erase(it);
-			m_usedGpsMap.erase(dspReg);
+			JitReg hostReg;
+			m_gpList.release(hostReg, dspReg, m_repMode);
 
-			const auto xmm = m_availableXmms.front();
-			m_availableXmms.pop_front();
-			m_block.asm_().movq(xmm, hostReg);
-			m_usedXmmMap.insert(std::make_pair(dspReg, xmm));
-			m_usedXmms.push_back(dspReg);
+			JitReg128 xmReg;
+			m_xmList.acquire(xmReg, dspReg, m_repMode);
 
-			m_availableGps.push_back(hostReg);
+			m_block.asm_().movq(xmReg, hostReg);
+
 			return;
 		}
 		assert(false && "all GPs are locked, unable to make space");
@@ -196,23 +217,18 @@ namespace dsp56k
 
 	void JitDspRegPool::clear()
 	{
-		m_availableGps.clear();
-		m_availableXmms.clear();
+		m_gpList.clear();
+		m_xmList.clear();
 
 		m_lockedGps.clear();
 
-		m_usedGpsMap.clear();
-		m_usedXmmMap.clear();
-		m_usedXmms.clear();
-
-		m_usedGps.clear();
 		m_writtenDspRegs.clear();
 
-		for(size_t i=0; i<m_gpCount; ++i)
-			m_availableGps.push_back(m_gps[i]);
+		for(size_t i=0; i<g_gpCount; ++i)
+			m_gpList.addHostReg(g_gps[i]);
 
-		for(size_t i=0; i<m_xmmCount; ++i)
-			m_availableXmms.push_back(m_xmms[i]);
+		for(size_t i=0; i<g_xmmCount; ++i)
+			m_xmList.addHostReg(g_xmms[i]);
 	}
 
 	void JitDspRegPool::load(JitReg& _dst, const DspReg _src)
@@ -341,7 +357,6 @@ namespace dsp56k
 			m.mov(r.la, _src);
 			break;
 		}
-		m_writtenDspRegs.erase(_dst);
 	}
 
 	void JitDspRegPool::store(const DspReg _dst, JitReg128& _src)
@@ -406,6 +421,41 @@ namespace dsp56k
 			m.mov(r.la, _src);
 			break;
 		}
-		m_writtenDspRegs.erase(_dst);
+	}
+
+	bool JitDspRegPool::release(DspReg _dst)
+	{
+		if(m_lockedGps.find(_dst) != m_lockedGps.end())
+		{
+			LOGRP("Unable to release DSP reg " << g_dspRegNames[_dst] << " as its locked");
+			return false;
+		}
+
+		const bool wasWritten = m_writtenDspRegs.find(_dst) != m_writtenDspRegs.end();
+
+		JitReg gpReg;
+		if(m_gpList.release(gpReg, _dst, m_repMode))
+		{
+			if(wasWritten)
+			{
+				LOGRP("Storing modified DSP reg " << g_dspRegNames[_dst] << " from GP");
+				store(_dst, gpReg);
+				m_writtenDspRegs.erase(_dst);
+			}
+			return true;
+		}
+		
+		JitReg128 xmReg;
+		if(m_xmList.release(xmReg, _dst, m_repMode))
+		{
+			if(wasWritten)
+			{
+				LOGRP("Storing modified DSP reg " << g_dspRegNames[_dst] << " from XMM");
+				store(_dst, xmReg);
+				m_writtenDspRegs.erase(_dst);
+			}						
+		}
+
+		return true;
 	}
 }
