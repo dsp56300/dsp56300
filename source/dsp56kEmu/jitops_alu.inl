@@ -522,7 +522,7 @@ namespace dsp56k
 		m_dspRegs.setALU1(ab, d.get().r32());
 	}
 
-	void JitOps::alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate, bool _s1Unsigned/* = false*/, bool _s2Unsigned/* = false*/)
+	void JitOps::alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate, bool _s1Unsigned, bool _s2Unsigned, bool _round)
 	{
 	//	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
 
@@ -540,30 +540,40 @@ namespace dsp56k
 		if(_negate)
 			m_asm.neg(_s1);
 
-		const AluReg d(m_block, ab);
-
-		if( _accumulate )
 		{
-			signextend56to64(d);
-			m_asm.add(d, _s1.get());
+			const AluReg d(m_block, ab);
+
+			if( _accumulate )
+			{
+				signextend56to64(d);
+				m_asm.add(d, _s1.get());
+			}
+			else
+			{
+				m_asm.mov(d, _s1.get());
+			}
+
+			_s1.release();
+			_s2.release();
+
+			// Update SR
+			if(!_round)
+				ccr_v_update(d.get());
+
+			m_dspRegs.mask56(d);
+
+			if(!_round)
+			{
+				ccr_update_ifZero(CCRB_Z);
+
+				ccr_n_update_by55(d);
+
+				ccr_dirty(d);
+			}
 		}
-		else
-		{
-			m_asm.mov(d, _s1.get());
-		}
 
-		_s1.release();
-		_s2.release();
-
-		// Update SR
-		ccr_v_update(d.get());
-
-		m_dspRegs.mask56(d);
-		ccr_update_ifZero(CCRB_Z);
-
-		ccr_n_update_by55(d);
-
-		ccr_dirty(d);
+		if(_round)
+			alu_rnd(ab);
 	}
 	
 	inline void JitOps::alu_multiply(TWord op)
@@ -580,12 +590,7 @@ namespace dsp56k
 
 			decode_QQQQ_read(s1, s2, qqq);
 
-			alu_mpy(ab, s1, s2, negative, mulAcc);
-		}
-
-		if(round)
-		{
-			alu_rnd(ab);
+			alu_mpy(ab, s1, s2, negative, mulAcc, false, false, round);
 		}
 	}
 
@@ -1132,11 +1137,7 @@ namespace dsp56k
 		RegGP s2(m_block);
 		m_asm.mov(s2, asmjit::Imm(DSP::decode_sssss(sssss)));
 
-		alu_mpy(ab, s1, s2, negate, Accumulate);
-		if constexpr(Round)
-		{
-			alu_rnd(ab);			
-		}
+		alu_mpy(ab, s1, s2, negate, Accumulate, false, false, Round);
 	}
 
 	template<Instruction Inst, bool Accumulate> void JitOps::op_Mpy_su(TWord op)
@@ -1150,7 +1151,7 @@ namespace dsp56k
 		RegGP s2(m_block);
 		decode_QQQQ_read( s1, s2, qqqq );
 
-		alu_mpy(ab, s1, s2, negate, Accumulate, !uu, true);
+		alu_mpy(ab, s1, s2, negate, Accumulate, !uu, true, false);
 	}
 
 	inline void JitOps::op_Mpyi(TWord op)
@@ -1165,7 +1166,7 @@ namespace dsp56k
 		RegGP reg(m_block);
 		decode_qq_read(reg, qq);
 
-		alu_mpy( ab, reg, s, negate, false );
+		alu_mpy( ab, reg, s, negate, false, false, false, false);
 	}
 
 	inline void JitOps::op_Neg(TWord op)
