@@ -28,7 +28,9 @@ namespace dsp56k
 		"extmem",
 		"sr",
 		"lc",
-		"la"
+		"la",
+
+		"ta", "tb", "tc", "td", "te", "tf", "tg", "th"
 	};
 
 	JitDspRegPool::JitDspRegPool(JitBlock& _block) : m_block(_block)
@@ -52,8 +54,6 @@ namespace dsp56k
 
 	JitReg JitDspRegPool::get(DspReg _reg, bool _read, bool _write)
 	{
-		assert(_read || _write);
-
 		if(_write)
 			m_writtenDspRegs.insert(_reg);
 
@@ -174,6 +174,20 @@ namespace dsp56k
 		return m_gpList.isUsed(_gp);
 	}
 
+	JitDspRegPool::DspReg JitDspRegPool::aquireTemp()
+	{
+		assert(!m_availableTemps.empty());
+		const auto res = m_availableTemps.front();
+		m_availableTemps.pop_front();
+		return res;
+	}
+
+	void JitDspRegPool::releaseTemp(DspReg _reg)
+	{
+		push(m_availableTemps, _reg);
+		release(_reg);
+	}
+
 	void JitDspRegPool::makeSpace(DspReg _wantedReg)
 	{
 		// TODO: we can use upper bits of the XMMs, too
@@ -238,6 +252,11 @@ namespace dsp56k
 
 		for(size_t i=0; i<g_xmmCount; ++i)
 			m_xmList.addHostReg(g_xmms[i]);
+
+		m_availableTemps.clear();
+
+		for(int i=TempA; i<=LastTemp; ++i)
+			m_availableTemps.push_back(static_cast<DspReg>(i));
 	}
 
 	void JitDspRegPool::load(JitReg& _dst, const DspReg _src)

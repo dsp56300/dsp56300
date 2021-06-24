@@ -27,6 +27,9 @@ namespace dsp56k
 			DspSR,
 			DspLC,
 			DspLA,
+
+			TempA, TempB, TempC, TempD, TempE, TempF, TempG, TempH, LastTemp = TempH,
+
 			DspCount
 		};
 
@@ -50,6 +53,9 @@ namespace dsp56k
 		bool isInUse(const JitReg128& _xmm) const;
 		bool isInUse(const JitReg& _gp) const;
 
+		DspReg aquireTemp();
+		void releaseTemp(DspReg _reg);
+
 	private:
 		void makeSpace(DspReg _wantedReg);
 		void clear();
@@ -59,6 +65,14 @@ namespace dsp56k
 		void store(DspReg _dst, JitReg128& _src);
 
 		bool release(DspReg _dst);
+
+		template<typename T> void push(std::list<T>& _dst, const T& _src)
+		{
+			if(m_repMode)
+				_dst.push_front(_src);
+			else
+				_dst.push_back(_src);
+		}
 
 		template<typename T> class RegisterList
 		{
@@ -160,6 +174,8 @@ namespace dsp56k
 
 		RegisterList<JitReg> m_gpList;
 		RegisterList<JitReg128> m_xmList;
+
+		std::list<DspReg> m_availableTemps;
 
 		bool m_repMode = false;
 	};
