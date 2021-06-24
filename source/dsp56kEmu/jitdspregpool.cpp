@@ -140,8 +140,8 @@ namespace dsp56k
 
 		assert(m_gpList.empty());
 		assert(m_xmList.empty());
-		assert(m_writtenDspRegs.empty());
-		assert(m_lockedGps.empty());
+		assert(m_writtenDspRegs == 0);
+		assert(m_lockedGps == 0);
 		assert(m_gpList.available() == g_gpCount);
 		assert(m_xmList.available() == g_xmmCount);
 
@@ -156,16 +156,12 @@ namespace dsp56k
 		
 		LOGRP("Storing ALL written registers into memory");
 
-		const auto written(m_writtenDspRegs);
-
 		for(size_t i=0; i<DspCount; ++i)
 		{
 			const auto r = static_cast<DspReg>(i);
 			if(isWritten(r))
 				release(r);
 		}
-
-		assert(m_writtenDspRegs.size() <= m_lockedGps.size());
 	}
 
 	bool JitDspRegPool::isInUse(const JitReg128& _xmm) const
