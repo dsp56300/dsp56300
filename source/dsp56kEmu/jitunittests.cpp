@@ -191,27 +191,31 @@ namespace dsp56k
 		m_checks[4] = 0xab123456abcdef;
 		m_checks[5] = 0x12123456abcdef;
 
+		const DSPReg regLA(_block, JitDspRegPool::DspLA, true, false);
+		const DSPReg regLC(_block, JitDspRegPool::DspLC, true, false);
+		const DSPReg regSR(_block, JitDspRegPool::DspSR, true, false);
+		const DSPReg regA(_block, JitDspRegPool::DspA, true, false);
 		const RegGP ra(_block);
 		const RegGP rb(_block);
 
 		_block.mem().mov(regLA, m_checks[0]);
 		_block.mem().mov(regLC, m_checks[1]);
 		_block.mem().mov(regSR, m_checks[2]);
-		_block.mem().mov(regExtMem, m_checks[3]);
+		_block.mem().mov(regA, m_checks[3]);
 		_block.mem().mov(ra, m_checks[4]);
 		_block.mem().mov(rb, m_checks[5]);
 
-		_ops.signextend24to56(regLA);
-		_ops.signextend24to56(regLC);
-		_ops.signextend48to56(regSR);
-		_ops.signextend48to56(regExtMem);
+		_ops.signextend24to56(regLA.get().r64());
+		_ops.signextend24to56(regLC.get().r64());
+		_ops.signextend48to56(regSR.get().r64());
+		_ops.signextend48to56(regA.get().r64());
 		_ops.signextend56to64(ra);
 		_ops.signextend56to64(rb);
 
 		_block.mem().mov(m_checks[0], regLA);
 		_block.mem().mov(m_checks[1], regLC);
 		_block.mem().mov(m_checks[2], regSR);
-		_block.mem().mov(m_checks[3], regExtMem);
+		_block.mem().mov(m_checks[3], regA);
 		_block.mem().mov(m_checks[4], ra);
 		_block.mem().mov(m_checks[5], rb);
 	}
@@ -399,6 +403,7 @@ namespace dsp56k
 
 		for(size_t i=0; i<8; ++i)
 		{
+			m_checks[i] = 0;
 			_ops.updateAddressRegister(temp.get(), MMM_RnPlusNn, 0);
 			_block.regs().getR(temp, 0);
 			_block.mem().mov(m_checks[i], temp);
