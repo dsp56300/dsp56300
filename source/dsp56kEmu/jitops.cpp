@@ -659,7 +659,7 @@ namespace dsp56k
 		const RegGP m(m_block);
 		m_dspRegs.getM(m, rrr);
 
-		updateAddressRegister(r, n, m);
+		updateAddressRegister(r.get().r32(), n.get().r32(), m.get().r32());
 
 		if( dddd < 8 )									// r0-r7
 		{

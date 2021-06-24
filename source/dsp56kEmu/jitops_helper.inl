@@ -39,6 +39,12 @@ namespace dsp56k
 		m_asm.sar(_reg, asmjit::Imm(40));
 	}
 
+	void JitOps::signextend24To32(const JitReg32& _reg) const
+	{
+		m_asm.shl(_reg, asmjit::Imm(8));
+		m_asm.sar(_reg, asmjit::Imm(8));
+	}
+
 	void JitOps::updateAddressRegister(const JitReg64& _r, const TWord _mmm, const TWord _rrr, bool _writeR/* = true*/, bool _returnPostR/* = false*/)
 	{
 		if(_mmm == 6)													/* 110         */
@@ -61,7 +67,7 @@ namespace dsp56k
 			const RegGP n(m_block);
 			m_asm.mov(n.get().r32(), asmjit::Imm(-1));
 			m_dspRegs.getR(_r, _rrr);
-			updateAddressRegister(_r,n,m);
+			updateAddressRegister(_r.r32(),n.get().r32(),m.get().r32());
 			if(_writeR)
 				m_block.regs().setR(_rrr, _r);
 			return;
@@ -73,7 +79,8 @@ namespace dsp56k
 		{
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
-			updateAddressRegister(_r,n, m);
+			signextend24To32(n.get().r32());
+			updateAddressRegister(_r.r32(),n.get().r32(), m.get().r32());
 			return;
 		}
 
@@ -85,25 +92,26 @@ namespace dsp56k
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			m_asm.neg(n);
-			updateAddressRegister(_r,n,m);
+			updateAddressRegister(_r.r32(),n.get().r32(),m.get().r32());
 		}	
 		if(_mmm == 1)													/* 001 (Rn)+Nn */
 		{
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
-			updateAddressRegister(_r,n,m);
+			signextend24To32(n.get().r32());
+			updateAddressRegister(_r.r32(),n.get().r32(),m.get().r32());
 		}
 		if(_mmm == 2)													/* 010 (Rn)-   */
 		{
 			const RegGP n(m_block);
 			m_asm.mov(n.get().r32(), asmjit::Imm(-1));
-			updateAddressRegister(_r,n,m);
+			updateAddressRegister(_r.r32(),n.get().r32(),m.get().r32());
 		}
 		if(_mmm == 3)													/* 011 (Rn)+   */
 		{
 			const RegGP n(m_block);
 			m_asm.mov(n.get().r32(), asmjit::Imm(1));
-			updateAddressRegister(_r,n,m);
+			updateAddressRegister(_r.r32(),n.get().r32(),m.get().r32());
 		}
 
 		if(_writeR)
@@ -113,7 +121,7 @@ namespace dsp56k
 			m_asm.pop(_r);
 	}
 
-	inline void JitOps::updateAddressRegister(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m)
+	inline void JitOps::updateAddressRegister(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m)
 	{
 		const auto linear = m_asm.newLabel();
 		const auto bitreverse = m_asm.newLabel();
@@ -123,29 +131,28 @@ namespace dsp56k
 
 		const PushGP n_sign(m_block, regReturnVal);	// sign extend n
 		const PushGP n_abs(m_block, regExtMem);		// compare abs(n) with m
-		m_asm.mov(n_sign, _n);
-		m_asm.shl(n_sign, asmjit::Imm(40));
-		m_asm.sar(n_sign, asmjit::Imm(40));
+
+		const auto nAbs = n_abs.get().r32();
 
 		m_asm.or_(_m.r16(), _m.r16());	// bit reverse
 		m_asm.jz(bitreverse);
 
-		m_asm.cmp(_m.r32(), asmjit::Imm(0xffffff));	// linear shortcut
+		m_asm.cmp(_m.r32(), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.jz(linear);
 		
 		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));
 		m_asm.jg(multipleWrapModulo);
 		
-		m_asm.mov(n_abs, n_sign.get());
-		m_asm.neg(n_abs);
-		m_asm.cmovl(n_abs, n_sign.get());
+		m_asm.mov(nAbs, _n);
+		m_asm.neg(nAbs);
+		m_asm.cmovl(nAbs, _n);
 
-		m_asm.cmp(n_abs, _m);				// modulo or linear
+		m_asm.cmp(nAbs, _m);							// modulo or linear
 		m_asm.jg(linear);
 
 		// modulo:
 		m_asm.bind(modulo);
-		updateAddressRegisterModulo(_r.r32(), n_sign.get().r32(), _m.r32());
+		updateAddressRegisterModulo(_r.r32(), _n, _m.r32());
 		m_asm.jmp(end);
 
 		// multiple-wrap modulo:
@@ -155,12 +162,12 @@ namespace dsp56k
 
 		// bitreverse:
 		m_asm.bind(bitreverse);
-		updateAddressRegisterBitreverse(_r, n_sign, _m);
+		updateAddressRegisterBitreverse(_r, _n, _m);
 		m_asm.jmp(end);
 
 		// linear:
 		m_asm.bind(linear);
-		m_asm.add(_r, n_sign.get());
+		m_asm.add(_r, _n);
 
 		m_asm.bind(end);
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
@@ -226,11 +233,11 @@ namespace dsp56k
 		m_asm.sub(r, mtMinusP);
 	}
 
-	inline void JitOps::updateAddressRegisterMultipleWrapModulo(const JitReg64& _r, const JitReg64& _n,	const JitReg64& _m)
+	inline void JitOps::updateAddressRegisterMultipleWrapModulo(const JitReg32& _r, const JitReg32& _n,	const JitReg32& _m)
 	{
 	}
 
-	inline void JitOps::updateAddressRegisterBitreverse(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m)
+	inline void JitOps::updateAddressRegisterBitreverse(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m)
 	{
 	}
 

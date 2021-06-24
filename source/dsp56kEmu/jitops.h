@@ -274,12 +274,13 @@ namespace dsp56k
 		void signextend48to56(const JitReg64& _reg) const;
 		void signextend24to56(const JitReg64& _reg) const;
 		void signextend24to64(const JitReg64& _reg) const;
+		void signextend24To32(const JitReg32& _r) const;
 
 		void updateAddressRegister(const JitReg64& _r, TWord _mmm, TWord _rrr, bool _writeR = true, bool _returnPostR = false);
-		void updateAddressRegister(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
+		void updateAddressRegister(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m);
 		void updateAddressRegisterModulo(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m) const;
-		void updateAddressRegisterMultipleWrapModulo(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
-		static void updateAddressRegisterBitreverse(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
+		void updateAddressRegisterMultipleWrapModulo(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m);
+		static void updateAddressRegisterBitreverse(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m);
 
 		void signed24To56(const JitReg64& _r) const;
 
