@@ -288,11 +288,11 @@ namespace dsp56k
 		const auto LLL		= getFieldValue<Inst,Field_L, Field_LL>(op);
 		const auto write	= getFieldValue<Inst,Field_W>(op);
 
-		const RegGP x(m_block);
-		const RegGP y(m_block);
-
 		const RegGP ea(m_block);
 		effectiveAddress<Inst>(ea, op);
+
+		const RegGP x(m_block);
+		const RegGP y(m_block);
 
 		if( write )
 		{
