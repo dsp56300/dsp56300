@@ -98,6 +98,46 @@ namespace dsp56k
 	using RegGP = JitScopedReg<JitReg64>;
 	using RegXMM = JitScopedReg<JitReg128>;
 
+	class DSPReg
+	{
+	public:
+		DSPReg(JitBlock& _block, JitDspRegPool::DspReg _reg, bool _read = true, bool _write = true);
+		~DSPReg();
+
+		JitReg get() const { return m_reg; }
+		operator JitReg() const { return get(); }
+
+		JitReg32 r32() const { return get().r32(); }
+		JitReg64 r64() const { return get().r64(); }
+
+		operator asmjit::Imm () const = delete;
+
+	private:
+		JitBlock& m_block;
+		const JitDspRegPool::DspReg m_dspReg;
+		const JitReg m_reg;
+	};
+	
+	class DSPRegTemp
+	{
+	public:
+		DSPRegTemp(JitBlock& _block);
+		~DSPRegTemp();
+
+		JitReg64 get() const { return m_reg.r64(); }
+		operator JitReg64() const { return get(); }
+
+		void acquire();
+		void release();
+
+		bool acquired() const { return m_dspReg != JitDspRegPool::DspCount; }
+
+	private:
+		JitBlock& m_block;
+		JitDspRegPool::DspReg m_dspReg = JitDspRegPool::DspCount;
+		JitReg m_reg;
+	};
+
 	class AluReg
 	{
 	public:
@@ -113,6 +153,20 @@ namespace dsp56k
 		RegGP m_reg;
 		const TWord m_aluIndexDst;
 		const bool m_readOnly;
+	};
+
+	class AguReg : public DSPReg
+	{
+	public:
+		AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly = false);
+	};
+
+	class AguRegM : public AguReg
+	{
+	public:
+		AguRegM(JitBlock& _block, int _aguIndex, bool readOnly = true) : AguReg(_block, JitDspRegPool::DspM0, _aguIndex, readOnly)
+		{
+		}
 	};
 
 	class PushGP
@@ -220,26 +274,5 @@ namespace dsp56k
 		PushXMMRegs m_xmm;
 		PushGPRegs m_gp;
 		PushShadowSpace m_shadow;
-	};
-
-	class DSPReg
-	{
-	public:
-		DSPReg(JitBlock& _block, JitDspRegPool::DspReg _reg, bool _read = true, bool _write = true);
-		~DSPReg();
-
-		const JitReg& get() const { return m_reg; }
-		operator const JitReg& () const { return get(); }
-
-		JitReg32 r32() const { return get().r32(); }
-
-		operator asmjit::Imm () const = delete;
-
-	private:
-		JitBlock& m_block;
-		const JitDspRegPool::DspReg m_dspReg;
-		const JitReg m_reg;
-		const bool m_read;
-		const bool m_write;
 	};
 }
