@@ -169,6 +169,14 @@ namespace dsp56k
 		}
 	};
 
+	class AguRegN : public AguReg
+	{
+	public:
+		AguRegN(JitBlock& _block, int _aguIndex, bool readOnly = true) : AguReg(_block, JitDspRegPool::DspN0, _aguIndex, readOnly)
+		{
+		}
+	};
+
 	class PushGP
 	{
 	public:
