@@ -55,7 +55,7 @@ namespace dsp56k
 	JitReg JitDspRegPool::get(DspReg _reg, bool _read, bool _write)
 	{
 		if(_write)
-			m_writtenDspRegs.insert(_reg);
+			setWritten(_reg);
 
 		if(m_gpList.isUsed(_reg))
 		{
@@ -121,16 +121,16 @@ namespace dsp56k
 	{
 		LOGRP("Locking DSP reg " <<g_dspRegNames[_reg]);
 		assert(m_gpList.isUsed(_reg) && "unable to lock reg if not in use");
-		assert(m_lockedGps.find(_reg) == m_lockedGps.end() && "register is already locked");
-		m_lockedGps.insert(_reg);
+		assert(!isLocked(_reg) && "register is already locked");
+		setLocked(_reg);
 	}
 
 	void JitDspRegPool::unlock(DspReg _reg)
 	{
 		LOGRP("Unlocking DSP reg " <<g_dspRegNames[_reg]);
 		assert(m_gpList.isUsed(_reg) && "unable to unlock reg if not in use");
-		assert(m_lockedGps.find(_reg) != m_lockedGps.end() && "register is not locked");
-		m_lockedGps.erase(_reg);
+		assert(isLocked(_reg) && "register is not locked");
+		clearLocked(_reg);
 	}
 
 	void JitDspRegPool::releaseAll()
@@ -151,15 +151,19 @@ namespace dsp56k
 
 	void JitDspRegPool::releaseWritten()
 	{
-		if(m_writtenDspRegs.empty())
+		if(m_writtenDspRegs == 0)
 			return;
 		
 		LOGRP("Storing ALL written registers into memory");
 
 		const auto written(m_writtenDspRegs);
 
-		for(auto it = written.begin(); it != written.end(); ++it)
-			release(*it);
+		for(size_t i=0; i<DspCount; ++i)
+		{
+			const auto r = static_cast<DspReg>(i);
+			if(isWritten(r))
+				release(r);
+		}
 
 		assert(m_writtenDspRegs.size() <= m_lockedGps.size());
 	}
@@ -217,7 +221,7 @@ namespace dsp56k
 		{
 			const DspReg dspReg = *it;
 
-			if(m_lockedGps.find(dspReg) != m_lockedGps.end())
+			if(isLocked(dspReg))
 				continue;
 
 			if(dspReg == _wantedReg)
@@ -243,9 +247,8 @@ namespace dsp56k
 		m_gpList.clear();
 		m_xmList.clear();
 
-		m_lockedGps.clear();
-
-		m_writtenDspRegs.clear();
+		m_lockedGps = 0;
+		m_writtenDspRegs = 0;
 
 		for(size_t i=0; i<g_gpCount; ++i)
 			m_gpList.addHostReg(g_gps[i]);
@@ -453,22 +456,20 @@ namespace dsp56k
 
 	bool JitDspRegPool::release(DspReg _dst)
 	{
-		if(m_lockedGps.find(_dst) != m_lockedGps.end())
+		if(isLocked(_dst))
 		{
 			LOGRP("Unable to release DSP reg " << g_dspRegNames[_dst] << " as its locked");
 			return false;
 		}
 
-		const bool wasWritten = m_writtenDspRegs.find(_dst) != m_writtenDspRegs.end();
-
 		JitReg gpReg;
 		if(m_gpList.release(gpReg, _dst, m_repMode))
 		{
-			if(wasWritten)
+			if(isWritten(_dst))
 			{
 				LOGRP("Storing modified DSP reg " << g_dspRegNames[_dst] << " from GP");
 				store(_dst, gpReg);
-				m_writtenDspRegs.erase(_dst);
+				clearWritten(_dst);
 			}
 			return true;
 		}
@@ -476,11 +477,11 @@ namespace dsp56k
 		JitReg128 xmReg;
 		if(m_xmList.release(xmReg, _dst, m_repMode))
 		{
-			if(wasWritten)
+			if(isWritten(_dst))
 			{
 				LOGRP("Storing modified DSP reg " << g_dspRegNames[_dst] << " from XMM");
 				store(_dst, xmReg);
-				m_writtenDspRegs.erase(_dst);
+				clearWritten(_dst);
 			}						
 		}
 
