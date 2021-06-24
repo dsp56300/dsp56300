@@ -19,48 +19,12 @@ namespace dsp56k
 
 	static constexpr auto regReturnVal = asmjit::x86::rax;
 
-	static constexpr auto regR(const int _index) noexcept
-	{
-		return asmjit::x86::xmm(_index);
-	}
-
-	static constexpr auto regAlu(const int _index) noexcept
-	{
-		return asmjit::x86::xmm(_index + 8);
-	}
-
-	static constexpr auto regXY(const int _index) noexcept
-	{
-		return asmjit::x86::xmm(_index + 10);
-	}
-
-	static constexpr auto regA() noexcept { return regAlu(0); }
-	static constexpr auto regB() noexcept { return regAlu(1); }
-
-	static constexpr auto regX() noexcept { return regXY(0); }
-	static constexpr auto regY() noexcept { return regXY(1); }
-
 	enum XMMReg
 	{
 		xmmR0, xmmR1, xmmR2, xmmR3, xmmR4, xmmR5, xmmR6, xmmR7,
 		xmmA, xmmB,
 		xmmX, xmmY,
 		xmmParallel,
-	};
-
-	enum GPReg
-	{
-// TODO: asmjit should have code for this, I can't find it
-#ifdef _MSC_VER
-		gpOP = asmjit::x86::Gp::kIdAx,	// rax
-#else
-		gpOP = asmjit::x86::Gp::kIdDi,	// rdi
-#endif
-
-		gpSR = asmjit::x86::Gp::kIdR8,
-		gpPC = asmjit::x86::Gp::kIdR9,
-		gpLC = asmjit::x86::Gp::kIdR10,
-		gpLA = asmjit::x86::Gp::kIdR11,
 	};
 
 	static constexpr auto regSR = asmjit::x86::r8;

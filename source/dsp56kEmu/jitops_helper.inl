@@ -145,7 +145,7 @@ namespace dsp56k
 
 		// modulo:
 		m_asm.bind(modulo);
-		updateAddressRegisterModulo(_r, n_sign, _m);
+		updateAddressRegisterModulo(_r.r32(), n_sign.get().r32(), _m.r32());
 		m_asm.jmp(end);
 
 		// multiple-wrap modulo:
@@ -166,7 +166,7 @@ namespace dsp56k
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
 	}
 
-	inline void JitOps::updateAddressRegisterModulo(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m) const
+	inline void JitOps::updateAddressRegisterModulo(const JitReg32& r, const JitReg32& n, const JitReg32& m) const
 	{
 		/*
 				const int32_t p				= (r&moduloMask) + n;
@@ -174,14 +174,10 @@ namespace dsp56k
 				r							+= n + ((p>>31) & modulo) - (((mt)>>31) & modulo);
 		 */
 
-		const auto r = _r.r32();
-		const auto n = _n.r32();
-		const auto m = _m.r32();
-
+		const PushGP moduloMask(m_block, regLC);
 
 		// Compute p
 		{
-			const PushGP moduloMask(m_block, regLC);
 			/* modulo mask mm = m
 			mm |= mm >> 1;
 			mm |= mm >> 2;
@@ -214,7 +210,7 @@ namespace dsp56k
 		// r += ((p>>31) & modulo) - (((mt-p)>>31) & modulo);
 		const auto p = n;		// We hid p in n.
 		const auto& modulo = m;	// and modulo is m+1
-		const PushGP mtMinusP64(m_block, regSR);
+		const auto& mtMinusP64 = moduloMask;
 		const auto mtMinusP = mtMinusP64.get().r32();
 
 		m_asm.mov(mtMinusP, m);
@@ -226,8 +222,8 @@ namespace dsp56k
 		m_asm.sar(p, asmjit::Imm(31));
 		m_asm.and_(p, modulo);
 
-		m_asm.add(_r.r32(), p);
-		m_asm.sub(_r.r32(), mtMinusP);
+		m_asm.add(r, p);
+		m_asm.sub(r, mtMinusP);
 	}
 
 	inline void JitOps::updateAddressRegisterMultipleWrapModulo(const JitReg64& _r, const JitReg64& _n,	const JitReg64& _m)

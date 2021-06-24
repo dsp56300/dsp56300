@@ -277,7 +277,7 @@ namespace dsp56k
 
 		void updateAddressRegister(const JitReg64& _r, TWord _mmm, TWord _rrr, bool _writeR = true, bool _returnPostR = false);
 		void updateAddressRegister(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
-		void updateAddressRegisterModulo(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m) const;
+		void updateAddressRegisterModulo(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m) const;
 		void updateAddressRegisterMultipleWrapModulo(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
 		static void updateAddressRegisterBitreverse(const JitReg64& _r, const JitReg64& _n, const JitReg64& _m);
 
@@ -442,7 +442,7 @@ namespace dsp56k
 
 		void alu_lsl(TWord ab, int _shiftAmount) const;
 		void alu_lsr(TWord ab, int _shiftAmount) const;
-		void alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate, bool _s1Unsigned = false, bool _s2Unsigned = false);
+		void alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate, bool _s1Unsigned, bool _s2Unsigned, bool _round);
 		void alu_multiply(TWord op);
 		void alu_or(TWord ab, const JitReg& _v);
 		void alu_rnd(TWord ab);

@@ -313,7 +313,7 @@ namespace dsp56k
 		m_asm.xor_(r,r.get());
 		sr_getBitValue(r, CCRB_V);
 		m_asm.shl(r, CCRB_L);
-		m_asm.or_(regSR, r.get());
+		m_asm.or_(m_block.regs().getSR(JitDspRegs::ReadWrite), r.get());
 	}
 
 	inline void JitOps::ccr_v_update(const JitReg64& _nonMaskedResult) const

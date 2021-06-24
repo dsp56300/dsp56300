@@ -3,6 +3,31 @@
 
 namespace dsp56k
 {
+	DSPRegTemp::DSPRegTemp(JitBlock& _block): m_block(_block)
+	{
+		acquire();
+	}
+
+	DSPRegTemp::~DSPRegTemp()
+	{
+		if (acquired())
+			release();
+	}
+
+	void DSPRegTemp::acquire()
+	{
+		m_dspReg = m_block.dspRegPool().aquireTemp();
+		m_reg = m_block.dspRegPool().get(m_dspReg, false, false);
+		m_block.dspRegPool().lock(m_dspReg);
+	}
+
+	void DSPRegTemp::release()
+	{
+		m_block.dspRegPool().unlock(m_dspReg);
+		m_block.dspRegPool().releaseTemp(m_dspReg);
+		m_dspReg = JitDspRegPool::DspCount;
+	}
+
 	AluReg::AluReg(JitBlock& _block, const TWord _aluIndexSrc, bool readOnly/* = false*/, bool writeOnly/* = false*/, TWord _aluIndexDst/* = ~0*/)
 	: m_block(_block)
 	, m_reg(_block)
@@ -22,6 +47,10 @@ namespace dsp56k
 	void AluReg::release()
 	{
 		m_reg.release();
+	}
+
+	AguReg::AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly) : DSPReg(_block, static_cast<JitDspRegPool::DspReg>(_regBase + _aguIndex), true, !readOnly)
+	{
 	}
 
 	PushGP::PushGP(asmjit::x86::Assembler& _a, const JitReg64& _reg) : m_asm(_a), m_reg(_reg)
@@ -71,7 +100,7 @@ namespace dsp56k
 #endif
 	}
 
-	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(_block.regs().isRead(JitDspRegs::LoadedRegR0 + _xmmIndex))
+	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(m_block.dspRegPool().isInUse(asmjit::x86::xmm(_xmmIndex)))
 	{
 		if(!m_isLoaded)
 			return;
@@ -119,7 +148,7 @@ namespace dsp56k
 	}
 
 	DSPReg::DSPReg(JitBlock& _block, JitDspRegPool::DspReg _reg, bool _read, bool _write)
-	: m_block(_block), m_dspReg(_reg), m_reg(_block.dspRegPool().get(_reg, _read, _write)), m_read(_read), m_write(_write)
+	: m_block(_block), m_dspReg(_reg), m_reg(_block.dspRegPool().get(_reg, _read, _write))
 	{
 		_block.dspRegPool().lock(_reg);
 	}

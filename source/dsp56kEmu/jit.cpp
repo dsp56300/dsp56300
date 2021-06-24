@@ -89,7 +89,7 @@ namespace dsp56k
 		if(cacheEntry == nullptr)
 		{
 			// No code preset, generate
-			LOG("Generating new JIT block for PC " << HEX(pc));
+//			LOG("Generating new JIT block for PC " << HEX(pc));
 			emit(pc);
 		}
 		else
@@ -97,7 +97,7 @@ namespace dsp56k
 			// there is code, but the JIT block does not start at the PC position that we want to run. We need to throw the block away and regenerate
 			if(cacheEntry->getPCFirst() < pc)
 			{
-				LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
+//				LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
 				destroy(cacheEntry);
 				emit(pc);
 			}
@@ -209,7 +209,7 @@ namespace dsp56k
 		iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &jmethod);
 #endif
 
-		LOG("New block generated @ " << HEX(_pc) << " up to " << HEX(_pc + b->getPMemSize() - 1) << ", instruction count " << b->getEncodedInstructionCount() << ", disasm " << b->getDisasm());
+//		LOG("New block generated @ " << HEX(_pc) << " up to " << HEX(_pc + b->getPMemSize() - 1) << ", instruction count " << b->getEncodedInstructionCount() << ", disasm " << b->getDisasm());
 	}
 
 	void Jit::destroy(JitBlock* _block)
@@ -217,7 +217,7 @@ namespace dsp56k
 		const auto first = _block->getPCFirst();
 		const auto last = first + _block->getPMemSize();
 
-		LOG("Destroying JIT block at PC " << HEX(first) << ", length " << _block->getPMemSize());
+//		LOG("Destroying JIT block at PC " << HEX(first) << ", length " << _block->getPMemSize());
 
 		for(auto i=first; i<last; ++i)
 			m_jitCache[i] = nullptr;

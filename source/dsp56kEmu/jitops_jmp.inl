@@ -210,18 +210,17 @@ namespace dsp56k
 	{
 		const auto addr = absAddressExt<Inst>();
 
-		const auto end = m_asm.newLabel();
-
 		const auto dddddd = getFieldValue<Inst,Field_DDDDDD>(op);
 
-		const RegGP r(m_block);
-		decode_dddddd_read(r.get().r32(), dddddd);
-
-		bitTest<Inst>(op, r, BitValue, end);
-
-		jumpOrJSR<Jsr>(addr);
-
-		m_asm.bind(end);
+		If(m_block, [&](auto _toFalse)
+		{
+			const RegGP r(m_block);
+			decode_dddddd_read(r.get().r32(), dddddd);
+			bitTest<Inst>(op, r, BitValue, _toFalse);
+		}, [&]()
+		{
+			jumpOrJSR<Jsr>(addr);
+		});
 	}
 
 	inline void JitOps::op_Jclr_ea(const TWord op)		{ jumpIfBitTestMem<Jclr_ea, Jump, BitClear>(op); }

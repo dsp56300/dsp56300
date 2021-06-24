@@ -44,30 +44,27 @@ namespace dsp56k
 	{
 		auto& a = _block.asm_();
 
-		const auto toFalse = a.newLabel();
+		const auto isFalse = a.newLabel();
 		const auto end = a.newLabel();
 
-		_jumpIfFalse(toFalse);
+		_block.dspRegPool().releaseAll();
 
-		{
-			JitDspRegsBranch branch(_block.regs());
-			_true();			
-		}
+		_jumpIfFalse(isFalse);
 
-		if (_hasFalseFunc)
-		{
+		_true();
+		_block.dspRegPool().releaseAll();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
+
+		if(_hasFalseFunc)
 			a.jmp(end);
-		}
 
-		a.bind(toFalse);
+		a.bind(isFalse);
 
 		if (_hasFalseFunc)
 		{
-			{
-				JitDspRegsBranch branch(_block.regs());
-				_false();
-			}
-			a.bind(end);
+			_false();
+			_block.dspRegPool().releaseAll();
 		}
+
+		a.bind(end);
 	}
 }

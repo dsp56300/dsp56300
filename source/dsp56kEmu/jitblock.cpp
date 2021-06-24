@@ -28,12 +28,14 @@ namespace dsp56k
 
 			JitOps ops(*this, g_useSRCache);
 
+			if(false)
 			{
 				std::string disasm;
 				TWord opA;
 				TWord opB;
 				m_dsp.memory().getOpcode(pc, opA, opB);
 				m_dsp.disassembler().disassemble(disasm, opA, opB, 0, 0, 0);
+//				LOG(HEX(pc) << ": " << disasm);
 				m_dspAsm += disasm + '\n';
 			}
 
@@ -70,7 +72,7 @@ namespace dsp56k
 				break;
 		}
 
-		m_dspRegs.clear();
+		m_dspRegPool.releaseAll();
 
 		return !empty();
 	}

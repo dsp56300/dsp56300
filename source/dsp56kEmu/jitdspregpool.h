@@ -1,11 +1,9 @@
 #pragma once
 
 #include <list>
-#include <map>
-#include <set>
+#include <vector>
 
 #include "jitregtypes.h"
-#include "dspassert.h"
 
 namespace dsp56k
 {
@@ -27,6 +25,9 @@ namespace dsp56k
 			DspSR,
 			DspLC,
 			DspLA,
+
+			TempA, TempB, TempC, TempD, TempE, TempF, TempG, TempH, LastTemp = TempH,
+
 			DspCount
 		};
 
@@ -44,9 +45,14 @@ namespace dsp56k
 		void releaseAll();
 		void releaseWritten();
 
-		bool hasWrittenRegs() const { return !m_writtenDspRegs.empty(); }
+		bool hasWrittenRegs() const { return m_writtenDspRegs != 0; }
 
 		void setRepMode(bool _repMode) { m_repMode = _repMode; }
+		bool isInUse(const JitReg128& _xmm) const;
+		bool isInUse(const JitReg& _gp) const;
+
+		DspReg aquireTemp();
+		void releaseTemp(DspReg _reg);
 
 	private:
 		void makeSpace(DspReg _wantedReg);
@@ -58,27 +64,58 @@ namespace dsp56k
 
 		bool release(DspReg _dst);
 
+		template<typename T> void push(std::list<T>& _dst, const T& _src)
+		{
+			if(m_repMode)
+				_dst.push_front(_src);
+			else
+				_dst.push_back(_src);
+		}
+
+		bool isWritten(DspReg _reg) const		{ return m_writtenDspRegs & (1ull<<static_cast<uint64_t>(_reg)); }
+		void setWritten(DspReg _reg)			{ m_writtenDspRegs |= (1ull<<static_cast<uint64_t>(_reg)); }											  
+		void clearWritten(DspReg _reg)			{ m_writtenDspRegs &= ~(1ull<<static_cast<uint64_t>(_reg)); }
+
+		bool isLocked(DspReg _reg) const		{ return m_lockedGps & (1ull<<static_cast<uint64_t>(_reg)); }
+		void setLocked(DspReg _reg)				{ m_lockedGps |= (1ull<<static_cast<uint64_t>(_reg)); }											  
+		void clearLocked(DspReg _reg)			{ m_lockedGps &= ~(1ull<<static_cast<uint64_t>(_reg)); }
+
 		template<typename T> class RegisterList
 		{
 		public:
+			RegisterList()
+			{
+				m_used.reserve(DspCount);
+				m_available.reserve(DspCount);
+			}
+
 			bool isFull() const					{ return m_available.empty(); }
-			bool isUsed(DspReg _reg) const		{ return m_usedMap.find(_reg) != m_usedMap.end(); }
+			bool isUsed(DspReg _reg) const		{ return m_usedMap[_reg].isValid(); }
+			bool isUsed(const T& _reg) const
+			{
+				for(size_t i=0; i<DspCount; ++i)
+				{
+					if(m_usedMap[i].equals(_reg))
+						return true;
+				}
+				return false;
+			}
 			bool empty() const					{ return m_used.empty(); }
 			size_t available() const			{ return m_available.size(); }
 			size_t size() const { return m_used.size(); }
 
 			bool acquire(T& _dst, const DspReg _reg, bool _pushFront)
 			{
-				const auto itExisting = m_usedMap.find(_reg);
+				const auto existing = m_usedMap[_reg];
 
-				if(itExisting != m_usedMap.end())
+				if(existing.isValid())
 				{
 					if(!_pushFront)
 					{
-						m_used.remove(_reg);
+						remove(m_used, _reg);
 						m_used.push_back(_reg);
 					}
-					_dst = itExisting->second;
+					_dst = existing;
 					return true;
 				}
 
@@ -86,8 +123,8 @@ namespace dsp56k
 					return false;
 
 				auto res = m_available.front();
-				m_available.pop_front();
-				m_usedMap.insert(std::make_pair(_reg, res));
+				m_available.erase(m_available.begin());
+				m_usedMap[_reg] = res;
 
 				push(m_used, _reg, _pushFront);
 				_dst = res;
@@ -96,22 +133,18 @@ namespace dsp56k
 
 			bool get(T& _dst, const DspReg _reg)
 			{
-				const auto it = m_usedMap.find(_reg);
-				if(it == m_usedMap.end())
-					return false;
-				_dst = it->second;
-				return true;
+				_dst = m_used[_reg];
+				return _dst.isValid();
 			}
 
 			bool release(T& _dst, DspReg _reg, bool _pushFront)
 			{
-				const auto it = m_usedMap.find(_reg);
-				if(it == m_usedMap.end())
+				_dst = m_usedMap[_reg];
+				if(!_dst.isValid())
 					return false;
-				_dst = it->second;
-				push(m_available, it->second, _pushFront);
-				m_used.remove(_reg);
-				m_usedMap.erase(it);
+				push(m_available, _dst, _pushFront);
+				remove(m_used, _reg);
+				m_usedMap[_reg].reset();
 				return true;
 			}
 
@@ -124,31 +157,45 @@ namespace dsp56k
 			{
 				m_available.clear();
 				m_used.clear();
-				m_usedMap.clear();
+				for(size_t i=0; i<DspCount; ++i)
+					m_usedMap[i].reset();
 			}
 
-			const std::list<DspReg>& used() const { return m_used; }
+			const std::vector<DspReg>& used() const { return m_used; }
 
 		private:
-			template<typename T> void push(std::list<T>& _dst, const T& _src, bool _pushFront)
+			template<typename T> static void push(std::vector<T>& _dst, const T& _src, bool _pushFront)
 			{
 				if(_pushFront)
-					_dst.push_front(_src);
+					_dst.insert(_dst.begin(), _src);
 				else
 					_dst.push_back(_src);
 			}
-			std::list<T> m_available;
-			std::list<DspReg> m_used;
-			std::map<DspReg, T> m_usedMap;
+			template<typename T> static void remove(std::vector<T>& _dst, const DspReg _src)
+			{
+				for(auto it = _dst.begin(); it != _dst.end(); ++it)
+				{
+					if(*it == _src)
+					{
+						_dst.erase(it);
+						break;
+					}
+				}
+			}
+			std::vector<T> m_available;
+			std::vector<DspReg> m_used;
+			T m_usedMap[DspCount];
 		};
 
 		JitBlock& m_block;
 
-		std::set<DspReg> m_lockedGps;
-		std::set<DspReg> m_writtenDspRegs;
+		uint64_t m_lockedGps;
+		uint64_t m_writtenDspRegs;
 
 		RegisterList<JitReg> m_gpList;
 		RegisterList<JitReg128> m_xmList;
+
+		std::list<DspReg> m_availableTemps;
 
 		bool m_repMode = false;
 	};
