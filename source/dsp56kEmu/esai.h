@@ -258,7 +258,7 @@ namespace dsp56k
 
 		void writeReceiveControlRegister(TWord _val)
 		{
-			LOG("Write ESAI RCR" << HEX(_val));
+			LOG("Write ESAI RCR " << HEX(_val));
 			m_rcr = _val;
 		}
 
@@ -277,13 +277,13 @@ namespace dsp56k
 
 		void writeControlRegister(TWord _val)
 		{
-			LOG("Write ESAI CR" << HEX(_val));
+			LOG("Write ESAI CR " << HEX(_val));
 			m_cr = _val;
 		}
 
 		void writeReceiveClockControlRegister(TWord _val)
 		{
-			LOG("Write ESAI RCCR" << HEX(_val));
+			LOG("Write ESAI RCCR " << HEX(_val));
 			m_rccr = _val;
 		}
 
