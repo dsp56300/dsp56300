@@ -693,13 +693,42 @@ namespace dsp56k
 	{
 		const auto area = getFieldValueMemArea<Inst>(op);
 
-		const RegGP offset(m_block);
-		effectiveAddress<Inst>(offset, op);
+		auto eaType = effectiveAddressType<Inst>(op);
+
+		// not sure if this can happen, iirc I've seen this once. Handle it
+		if(eaType == Immediate)
+			eaType = m_opWordB >= XIO_Reserved_High_First ? Peripherals : Memory;
 
 		const RegGP regMem(m_block);
-		readMemOrPeriph(regMem, area, offset);
-		(this->*_bitmodFunc)(regMem, getBit<Inst>(op));
-		writeMemOrPeriph(area, offset, regMem);
+
+		switch (eaType)
+		{
+		case Peripherals:
+			{
+				const TWord offset = getOpWordB();
+				m_block.mem().readPeriph(regMem, area, offset);
+				(this->*_bitmodFunc)(regMem, getBit<Inst>(op));
+				m_block.mem().writePeriph(area, offset, regMem);
+			}
+			break;
+		case Memory:
+			{
+				const TWord offset = getOpWordB();
+				m_block.mem().readDspMemory(regMem, area, offset);
+				(this->*_bitmodFunc)(regMem, getBit<Inst>(op));
+				m_block.mem().writeDspMemory(area, offset, regMem);
+			}
+			break;
+		case Dynamic:
+			{
+				const RegGP offset(m_block);
+				effectiveAddress<Inst>(offset, op);			
+				readMemOrPeriph(regMem, area, offset);
+				(this->*_bitmodFunc)(regMem, getBit<Inst>(op));
+				writeMemOrPeriph(area, offset, regMem);
+			}
+			break;
+		}
 	}
 	
 	template<Instruction Inst> void JitOps::bitmod_aa(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)

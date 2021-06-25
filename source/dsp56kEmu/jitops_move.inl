@@ -196,9 +196,7 @@ namespace dsp56k
 		}
 		else
 		{
-			const RegGP ea(m_block);
-			effectiveAddress<Movexr_ea>(ea, op);
-			writeMemOrPeriph(MemArea_X, ea, r);
+			writeMem<Movexr_ea>(op, MemArea_X, r);
 		}
 	}
 
@@ -237,9 +235,7 @@ namespace dsp56k
 		}
 		else
 		{
-			RegGP ea(m_block);
-			effectiveAddress<Moveyr_ea>(ea, op);
-			writeMemOrPeriph(MemArea_Y, ea, r);
+			writeMem<Moveyr_ea>(op, MemArea_Y, r);
 		}
 	}
 
@@ -248,13 +244,10 @@ namespace dsp56k
 		const auto d = getFieldValue<Movexr_A,Field_d>(op);
 
 		{
-			RegGP ea(m_block);
-			effectiveAddress<Movexr_A>(ea, op);
-
 			const RegGP ab(m_block);
 			transferAluTo24(ab, d);
 
-			writeMemOrPeriph(MemArea_X, ea, ab);
+			writeMem<Movexr_A>(op, MemArea_X, ab);
 		}
 		{
 			RegGP x0(m_block);
@@ -268,13 +261,10 @@ namespace dsp56k
 		const auto d = getFieldValue<Moveyr_A,Field_d>(op);
 
 		{
-			RegGP ea(m_block);
-			effectiveAddress<Moveyr_A>(ea, op);
-
 			const RegGP ab(m_block);
 			transferAluTo24(ab, d);
 
-			writeMemOrPeriph(MemArea_Y, ea, ab);
+			writeMem<Moveyr_A>(op, MemArea_Y, ab);
 		}
 		{
 			RegGP y0(m_block);
@@ -403,15 +393,10 @@ namespace dsp56k
 		}
 		else
 		{
-			const auto area = getFieldValueMemArea<Movec_ea>(op);
-
-			RegGP ea(m_block);
-			effectiveAddress<Movec_ea>(ea, op);
-
 			const RegGP r(m_block);
 			decode_ddddd_pcr_read(r.get().r32(), ddddd);
 
-			writeMemOrPeriph(area, ea, r);
+			writeMem<Movec_ea>(op, r);
 		}
 	}
 	inline void JitOps::op_Movec_aa(TWord op)
@@ -510,8 +495,9 @@ namespace dsp56k
 		const EMemArea sm	= getFieldValueMemArea<Movep_ppea>(op);
 
 		RegGP ea(m_block);
-		effectiveAddress<Movep_ppea>(ea, op);
+		const auto eaType = effectiveAddress<Movep_ppea>(ea, op);
 
+		// TODO: handle eaType to skip read/write MemOrPeriph
 		if( write )
 		{
 			if( mmmrrr == MMMRRR_ImmediateData )

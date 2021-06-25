@@ -12,11 +12,28 @@
 
 namespace dsp56k
 {
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::effectiveAddress(const JitReg64& _dst, const TWord _op)
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> JitOps::EffectiveAddressType JitOps::effectiveAddressType(const TWord _op) const
 	{
 		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);
 		const TWord rrr = getFieldValue<Inst, Field_RRR>(_op);
+
+		if ((mmm << 3 | rrr) == MMMRRR_ImmediateData)
+			return Immediate;
+
+		if(mmm == MMM_AbsAddr)
+			return m_opWordB >= XIO_Reserved_High_First ? Peripherals : Memory;
+
+		return Dynamic;
+	}
+
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> JitOps::EffectiveAddressType JitOps::effectiveAddress(const JitReg64& _dst, const TWord _op)
+	{
+		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);
+		const TWord rrr = getFieldValue<Inst, Field_RRR>(_op);
+
 		updateAddressRegister(_dst, mmm, rrr);
+
+		return effectiveAddressType<Inst>(_op);
 	}
 
 	template <Instruction Inst, typename std::enable_if<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, const TWord _op)
@@ -24,34 +41,27 @@ namespace dsp56k
 		readMem<Inst>(_dst, _op, getFieldValueMemArea<Inst>(_op));
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::readMem(const JitReg64& _dst, const TWord _op, const EMemArea _area)
+	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> JitOps::EffectiveAddressType JitOps::readMem(const JitReg64& _dst, const TWord _op, const EMemArea _area)
 	{
-		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);
-		const TWord rrr = getFieldValue<Inst, Field_RRR>(_op);
+		const auto eaType = effectiveAddressType<Inst>(_op);
 
-		if ((mmm << 3 | rrr) == MMMRRR_ImmediateData)
+		switch (eaType)
 		{
-			updateAddressRegister(_dst, mmm, rrr);
-			return;
-			
+		case Immediate:
+			getOpWordB(_dst);
+			break;
+		case Memory:
+			m_block.mem().readDspMemory(_dst, _area, getOpWordB());
+			break;
+		case Peripherals:
+			m_block.mem().readPeriph(_dst, _area, getOpWordB());
+			break;
+		case Dynamic:
+			effectiveAddress<Inst>(_dst, _op);
+			readMemOrPeriph(_dst, _area, _dst);
+			break;
 		}
-
-		if(mmm == MMM_AbsAddr)
-		{
-			const TWord offset = getOpWordB();
-			if(offset >= XIO_Reserved_High_First)
-			{
-				m_block.mem().readPeriph(_dst, _area, offset);				
-			}
-			else
-			{
-				m_block.mem().readDspMemory(_dst, _area, offset);
-			}
-			return;
-		}
-
-		updateAddressRegister(_dst, mmm, rrr);
-		readMemOrPeriph(_dst, _area, _dst);
+		return eaType;
 	}
 
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, TWord op) const
@@ -92,35 +102,30 @@ namespace dsp56k
 		m_block.mem().writePeriph(area, static_cast<TWord>(offset + 0xffffc0), _src);
 	}
 
-	template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void JitOps::writeMem(const TWord _op, const EMemArea _area, const JitReg64& _src)
+	template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> JitOps::EffectiveAddressType JitOps::writeMem(const TWord _op, const EMemArea _area, const JitReg64& _src)
 	{
-		const TWord mmm = getFieldValue<Inst, Field_MMM>(_op);
-		const TWord rrr = getFieldValue<Inst, Field_RRR>(_op);
+		const auto eaType = effectiveAddressType<Inst>(_op);
 
-		if ((mmm << 3 | rrr) == MMMRRR_ImmediateData)
+		switch (eaType)
 		{
+		case Immediate:
 			assert(0 && "unable to write to immediate data");
-			return;
-		}
-
-		if(mmm == MMM_AbsAddr)
-		{
-			const TWord offset = getOpWordB();
-
-			if(offset >= XIO_Reserved_High_First)
+			break;
+		case Memory:
+			m_block.mem().writeDspMemory(_area, getOpWordB(), _src);
+			break;
+		case Peripherals:
+			m_block.mem().writePeriph(_area, getOpWordB(), _src);
+			break;
+		case Dynamic:
 			{
-				m_block.mem().writePeriph(_area, offset, _src);
+				const RegGP offset(m_block);
+				effectiveAddress<Inst>(offset, _op);
+				writeMemOrPeriph(_area, offset, _src);				
 			}
-			else
-			{
-				m_block.mem().writeDspMemory(_area, offset, _src);
-			}
-			return;
+			break;
 		}
-
-		const RegGP offset(m_block);
-		updateAddressRegister(offset, mmm, rrr);
-		writeMemOrPeriph(_area, offset, _src);
+		return eaType;
 	}
 
 	template <Instruction Inst, typename std::enable_if<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type*> void JitOps::writeMem(const TWord _op, const JitReg64& _src)
