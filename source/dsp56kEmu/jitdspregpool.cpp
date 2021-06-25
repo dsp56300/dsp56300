@@ -16,7 +16,7 @@ namespace dsp56k
 	static constexpr uint32_t g_gpCount = sizeof(g_gps) / sizeof(g_gps[0]);
 	static constexpr uint32_t g_xmmCount = sizeof(g_xmms) / sizeof(g_xmms[0]);
 
-	constexpr const char* g_dspRegNames[JitDspRegPool::DspCount] = 
+	constexpr const char* g_dspRegNames[] = 
 	{
 		"r0",	"r1",	"r2",	"r3",	"r4",	"r5",	"r6",	"r7",
 		"n0",	"n1",	"n2",	"n3",	"n4",	"n5",	"n6",	"n7",
@@ -32,6 +32,8 @@ namespace dsp56k
 
 		"ta", "tb", "tc", "td", "te", "tf", "tg", "th"
 	};
+
+	static_assert((sizeof(g_dspRegNames) / sizeof(g_dspRegNames[0])) == JitDspRegPool::DspCount);
 
 	JitDspRegPool::JitDspRegPool(JitBlock& _block) : m_block(_block)
 	{
