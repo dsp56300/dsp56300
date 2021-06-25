@@ -30,7 +30,7 @@ namespace dsp56k
 
 	static constexpr auto regPoolA = asmjit::x86::rsi;
 	static constexpr auto regPoolB = asmjit::x86::rdx;
-	static constexpr auto regPoolD = asmjit::x86::rcx;
+	static constexpr auto regPoolC = asmjit::x86::rcx;
 	static constexpr auto regPoolD = asmjit::x86::r8;
 	static constexpr auto regPoolE = asmjit::x86::r9;
 #endif
