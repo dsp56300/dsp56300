@@ -176,6 +176,11 @@ namespace dsp56k
 		return m_gpList.isUsed(_gp);
 	}
 
+	bool JitDspRegPool::isInUse(DspReg _reg) const
+	{
+		return m_gpList.isUsed(_reg) || m_xmList.isUsed(_reg);
+	}
+
 	JitDspRegPool::DspReg JitDspRegPool::aquireTemp()
 	{
 		assert(!m_availableTemps.empty());

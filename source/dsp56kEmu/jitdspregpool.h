@@ -50,6 +50,7 @@ namespace dsp56k
 		void setRepMode(bool _repMode) { m_repMode = _repMode; }
 		bool isInUse(const JitReg128& _xmm) const;
 		bool isInUse(const JitReg& _gp) const;
+		bool isInUse(DspReg _reg) const;
 
 		DspReg aquireTemp();
 		void releaseTemp(DspReg _reg);
