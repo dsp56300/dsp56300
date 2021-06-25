@@ -19,16 +19,6 @@ namespace dsp56k
 
 	static constexpr auto regReturnVal = asmjit::x86::rax;
 
-	enum XMMReg
-	{
-		xmmR0, xmmR1, xmmR2, xmmR3, xmmR4, xmmR5, xmmR6, xmmR7,
-		xmmA, xmmB,
-		xmmX, xmmY,
-		xmmParallel,
-	};
-
-	static constexpr auto regSR = asmjit::x86::r8;
-	static constexpr auto regLA = asmjit::x86::r9;
 	static constexpr auto regLC = asmjit::x86::r10;
 	static constexpr auto regExtMem = asmjit::x86::r11;
 
