@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 namespace asmjit
 {
@@ -51,7 +52,7 @@ namespace dsp56k
 		operator JitRegpool<JitReg128>& ()		{ return m_xmmPool;	}
 		operator asmjit::x86::Assembler& ()		{ return m_asm;	}
 
-		bool emit(TWord _pc, std::vector<JitBlock*>& _cache);
+		bool emit(TWord _pc, std::vector<JitBlock*>& _cache, const std::set<TWord>& _volatileP);
 		bool empty() const { return m_pMemSize == 0; }
 		TWord getPCFirst() const { return m_pcFirst; }
 		TWord getPMemSize() const { return m_pMemSize; }

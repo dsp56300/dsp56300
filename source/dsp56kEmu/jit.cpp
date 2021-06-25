@@ -136,6 +136,9 @@ namespace dsp56k
 		// if JIT code has written to P memory, destroy a JIT block if present at the write location
 		if(cacheEntry->pMemWriteAddress() != g_pcInvalid)
 		{
+			TWord addr=cacheEntry->pMemWriteAddress();
+			if (m_jitCache[addr]) m_volatileP.insert(addr);
+
 			notifyProgramMemWrite(cacheEntry->pMemWriteAddress());
 			m_dsp.notifyProgramMemWrite(cacheEntry->pMemWriteAddress());
 		}
@@ -165,7 +168,7 @@ namespace dsp56k
 
 			b = new JitBlock(m_asm, m_dsp);
 
-			if(!b->emit(_pc, m_jitCache))
+			if(!b->emit(_pc, m_jitCache, m_volatileP))
 			{
 				LOG("FATAL: code generation failed for PC " << HEX(_pc));
 				delete b;

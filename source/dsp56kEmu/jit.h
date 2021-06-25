@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <set>
 
 #include "types.h"
 
@@ -31,5 +32,6 @@ namespace dsp56k
 
 		asmjit::JitRuntime m_rt;
 		std::vector<JitBlock*> m_jitCache;
+		std::set<TWord> m_volatileP;
 	};
 }
