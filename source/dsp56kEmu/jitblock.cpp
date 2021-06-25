@@ -8,13 +8,14 @@ namespace dsp56k
 	constexpr uint32_t g_maxInstructionsPerBlock = 0;	// set to 1 for debugging/tracing
 	constexpr bool g_useSRCache = false;
 
-	bool JitBlock::emit(const TWord _pc, std::vector<JitBlock*>& _cache)
+	bool JitBlock::emit(const TWord _pc, std::vector<JitBlock*>& _cache, const std::set<TWord>& _volatileP)
 	{
 		m_pcFirst = _pc;
 		m_pMemSize = 0;
 		m_dspAsm.clear();
+		bool shouldEmit = true;
 
-		while(true)
+		while(shouldEmit)
 		{
 			const auto pc = m_pcFirst + m_pMemSize;
 
@@ -25,6 +26,13 @@ namespace dsp56k
 			// always terminate block if loop end has reached
 			if(m_encodedInstructionCount && pc == static_cast<TWord>(m_dsp.regs().la.var + 1))
 				break;
+			
+			// for a volatile P address, if you have some code, break now. if not, generate this one op, and then return.
+			if (_volatileP.find(pc)!=_volatileP.end())
+			{
+				if (m_encodedInstructionCount) break;
+				else shouldEmit=false;
+			}
 
 			JitOps ops(*this, g_useSRCache);
 
