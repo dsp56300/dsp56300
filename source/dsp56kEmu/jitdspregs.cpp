@@ -77,24 +77,31 @@ namespace dsp56k
 
 	JitReg JitDspRegs::getALU(int _alu, AccessType _access)
 	{
+		assert((_access & Write) == 0);
 		return pool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu), _access & Read, _access & Write);
 	}
 
-	void JitDspRegs::setALU(int _alu, const JitReg& _src, bool _needsMasking)
+	void JitDspRegs::setALU(const int _alu, const JitReg& _src, const bool _needsMasking)
 	{
-		const auto r = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu);
+		const auto r = static_cast<JitDspRegPool::DspReg>((pool().isParallelOp() ? JitDspRegPool::DspAwrite : JitDspRegPool::DspA) + _alu);
 
 		pool().write(r, _src);
 
 		if(_needsMasking)
-			mask56(pool().get(r, false, true));			
+			mask56(pool().get(r, true, true));
+
+		if(pool().isParallelOp() && !pool().isLocked(r))
+			pool().lock(r);
 	}
 
 	void JitDspRegs::clrALU(const TWord _alu)
 	{
-		const auto r = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu);
+		const auto r = static_cast<JitDspRegPool::DspReg>((pool().isParallelOp() ? JitDspRegPool::DspAwrite : JitDspRegPool::DspA) + _alu);
 		const auto alu = pool().get(r, false, true);
 		m_asm.xor_(alu, alu);
+
+		if(pool().isParallelOp() && !pool().isLocked(r))
+			pool().lock(r);
 	}
 
 	void JitDspRegs::getXY(const JitReg& _dst, int _xy)

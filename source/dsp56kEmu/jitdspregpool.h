@@ -18,7 +18,9 @@ namespace dsp56k
 			DspN0,	DspN1,	DspN2,	DspN3,	DspN4,	DspN5,	DspN6,	DspN7,
 			DspM0,	DspM1,	DspM2,	DspM3,	DspM4,	DspM5,	DspM6,	DspM7,
 
-			DspA,	DspB,
+			DspA,		DspB,
+			DspAwrite,	DspBwrite,
+
 			DspX,	DspY,
 
 			DspExtMem,
@@ -55,7 +57,30 @@ namespace dsp56k
 		DspReg aquireTemp();
 		void releaseTemp(DspReg _reg);
 
+		bool isWritten(DspReg _reg) const
+		{
+			return m_writtenDspRegs & (1ull<<static_cast<uint64_t>(_reg));
+		}
+		bool isLocked(DspReg _reg) const
+		{
+			return m_lockedGps & (1ull<<static_cast<uint64_t>(_reg));
+		}
+
+		bool move(DspReg _dst, DspReg _src);
+		bool move(const JitReg& _dst, DspReg _src);
+
+		void setIsParallelOp(bool _isParallelOp);
+
+		bool isParallelOp() const
+		{
+			return m_isParallelOp;
+		}
+
+		void parallelOpEpilog();
+
 	private:
+		void parallelOpEpilog(DspReg _aluReadReg, DspReg _aluWriteReg);
+		
 		void makeSpace(DspReg _wantedReg);
 		void clear();
 
@@ -73,11 +98,9 @@ namespace dsp56k
 				_dst.push_back(_src);
 		}
 
-		bool isWritten(DspReg _reg) const		{ return m_writtenDspRegs & (1ull<<static_cast<uint64_t>(_reg)); }
 		void setWritten(DspReg _reg)			{ m_writtenDspRegs |= (1ull<<static_cast<uint64_t>(_reg)); }											  
 		void clearWritten(DspReg _reg)			{ m_writtenDspRegs &= ~(1ull<<static_cast<uint64_t>(_reg)); }
 
-		bool isLocked(DspReg _reg) const		{ return m_lockedGps & (1ull<<static_cast<uint64_t>(_reg)); }
 		void setLocked(DspReg _reg)				{ m_lockedGps |= (1ull<<static_cast<uint64_t>(_reg)); }											  
 		void clearLocked(DspReg _reg)			{ m_lockedGps &= ~(1ull<<static_cast<uint64_t>(_reg)); }
 
@@ -198,6 +221,7 @@ namespace dsp56k
 
 		std::list<DspReg> m_availableTemps;
 
+		bool m_isParallelOp = false;
 		bool m_repMode = false;
 	};
 }

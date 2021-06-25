@@ -22,7 +22,9 @@ namespace dsp56k
 		"n0",	"n1",	"n2",	"n3",	"n4",	"n5",	"n6",	"n7",
 		"m0",	"m1",	"m2",	"m3",	"m4",	"m5",	"m6",	"m7",
 
-		"a",	"b",
+		"ar",	"br",
+		"aw",	"bw",
+
 		"x",	"y",
 
 		"extmem",
@@ -57,7 +59,31 @@ namespace dsp56k
 	JitReg JitDspRegPool::get(DspReg _reg, bool _read, bool _write)
 	{
 		if(_write)
+		{
 			setWritten(_reg);
+
+			if(!_read)
+			{
+				// If a previous parallel op wrote to the same register, discard what was written
+				switch (_reg)
+				{
+				case DspA:
+					if(isInUse(DspAwrite))
+					{
+						clearWritten(DspAwrite);
+						release(DspAwrite);
+					}
+					break;
+				case DspB:
+					if(isInUse(DspBwrite))
+					{
+						clearWritten(DspBwrite);
+						release(DspBwrite);					
+					}
+					break;
+				}
+			}
+		}
 
 		if(m_gpList.isUsed(_reg))
 		{
@@ -194,10 +220,89 @@ namespace dsp56k
 		push(m_availableTemps, _reg);
 		release(_reg);
 	}
-
-	void JitDspRegPool::makeSpace(DspReg _wantedReg)
+	
+	bool JitDspRegPool::move(const JitReg& _dst, const DspReg _src)
 	{
-		// TODO: we can use upper bits of the XMMs, too
+		asmjit::x86::Gp gpSrc;
+		asmjit::x86::Xmm xmSrc;
+
+		if(m_gpList.get(gpSrc, _src))
+			m_block.asm_().mov(_dst, gpSrc);
+		else if(m_xmList.get(xmSrc, _src))
+			m_block.asm_().movq(_dst, xmSrc);
+		else
+			return false;
+		return true;
+	}
+
+	void JitDspRegPool::setIsParallelOp(bool _isParallelOp)
+	{
+		m_isParallelOp = _isParallelOp;
+	}
+
+	bool JitDspRegPool::move(DspReg _dst, DspReg _src)
+	{
+		asmjit::x86::Gp gpSrc;
+		asmjit::x86::Xmm xmSrc;
+
+		if(m_gpList.get(gpSrc, _src))
+		{
+			// src is GP
+
+			asmjit::x86::Gp gpDst;
+			asmjit::x86::Xmm xmDst;
+
+			if(m_gpList.get(gpDst, _dst))
+				m_block.asm_().mov(gpDst, gpSrc);
+			else if(m_xmList.get(xmDst, _dst))
+				m_block.asm_().movq(xmDst, gpSrc);
+			else
+				return false;
+			return true;
+		}
+
+		if(m_xmList.get(xmSrc, _src))
+		{
+			// src is XMM
+
+			asmjit::x86::Gp gpDst;
+			asmjit::x86::Xmm xmDst;
+
+			if(m_gpList.get(gpDst, _dst))
+				m_block.asm_().movq(gpDst, xmSrc);
+			else if(m_xmList.get(xmDst, _dst))
+				m_block.asm_().movq(xmDst, xmSrc);
+			else
+				return false;
+			return true;
+		}
+		return false;
+	}
+
+	void JitDspRegPool::parallelOpEpilog()
+	{
+		parallelOpEpilog(DspA, DspAwrite);
+		parallelOpEpilog(DspB, DspBwrite);
+	}
+
+	void JitDspRegPool::parallelOpEpilog(const DspReg _aluReadReg, const DspReg _aluWriteReg)
+	{
+		if(!isLocked(_aluWriteReg))
+			return;
+
+		unlock(_aluWriteReg);
+
+		if(!isInUse(_aluReadReg))
+			return;
+
+		move(_aluReadReg, _aluWriteReg);
+		setWritten(_aluReadReg);
+		clearWritten(_aluWriteReg);
+		release(_aluWriteReg);
+	}
+
+	void JitDspRegPool::makeSpace(const DspReg _wantedReg)
+	{
 		if(m_xmList.isFull())
 		{
 			LOGRP("No XMM temps left, writing a DSP reg back to memory");
@@ -303,10 +408,38 @@ namespace dsp56k
 			m.mov(_dst, r.m[_src - DspM0]);
 			break;
 		case DspA:
-			m.mov(_dst, r.a);
+			if(!isLocked(DspAwrite) && isInUse(DspAwrite))
+			{
+				move(_dst, DspAwrite);
+				if(!m_isParallelOp)
+				{
+					clearWritten(DspAwrite);
+					release(DspAwrite);
+					setWritten(DspA);
+				}
+			}
+			else
+				m.mov(_dst, r.a);
+			break;
+		case DspAwrite:
+			// write only
 			break;
 		case DspB:
-			m.mov(_dst, r.b);
+			if(!isLocked(DspBwrite) && isInUse(DspBwrite))
+			{
+				move(_dst, DspBwrite);
+				if(!m_isParallelOp)
+				{
+					clearWritten(DspBwrite);
+					release(DspBwrite);
+					setWritten(DspB);					
+				}
+			}
+			else
+				m.mov(_dst, r.b);
+			break;
+		case DspBwrite:
+			// write only
 			break;
 		case DspX:
 			m.mov(_dst, r.x);
@@ -367,9 +500,11 @@ namespace dsp56k
 			m.mov(r.m[_dst - DspM0], _src);
 			break;
 		case DspA:
+		case DspAwrite:
 			m.mov(r.a, _src);
 			break;
 		case DspB:
+		case DspBwrite:
 			m.mov(r.b, _src);
 			break;
 		case DspX:
@@ -431,9 +566,11 @@ namespace dsp56k
 			m.mov(r.m[_dst - DspM0], _src);
 			break;
 		case DspA:
+		case DspAwrite:
 			m.mov(r.a, _src);
 			break;
 		case DspB:
+		case DspBwrite:
 			m.mov(r.b, _src);
 			break;
 		case DspX:

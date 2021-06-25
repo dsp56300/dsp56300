@@ -365,6 +365,8 @@ namespace dsp56k
 	{
 		m_instruction = _inst;
 
+		m_block.dspRegPool().setIsParallelOp(false);
+
 		emitOpProlog();
 
 		const auto& func = g_opcodeFuncs[_inst];
@@ -380,75 +382,15 @@ namespace dsp56k
 		const auto& funcMove = g_opcodeFuncs[_instMove];
 		const auto& funcAlu = g_opcodeFuncs[_instAlu];
 
+		m_block.dspRegPool().setIsParallelOp(true);
+
 		emitOpProlog();
-
-		auto get64High = [this](const JitReg& _dst, const JitReg128& _src)
-		{
-			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kSSE4_1))
-			{
-				m_asm.pextrq(_dst, _src, asmjit::Imm(1));
-			}
-			else
-			{
-				m_asm.pshufd(_src, _src, asmjit::Imm(0x4e));	// swap high 64 bits with low 64 bits
-				m_asm.movq(_dst, _src);
-				m_asm.pshufd(_src, _src, asmjit::Imm(0x4e));	// swap back
-			}
-		};
-		
-		auto set64High = [this](const JitReg128& _dst, const JitReg& _src)
-		{
-			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kSSE4_1))
-			{
-				m_asm.pinsrq(_dst, _src, asmjit::Imm(1));
-			}
-			else
-			{
-				const RegXMM xm(m_block);
-				m_asm.movq(xm, _src);
-				m_asm.pshufd(_dst, _dst, asmjit::Imm(0x4e));	// swap high 64 bits with low 64 bits
-				m_asm.movsd(_dst, xm);
-				m_asm.pshufd(_dst, _dst, asmjit::Imm(0x4e));	// swap back
-			}
-		};
-		
-		const RegXMM preALUAB(m_block);	// Stash the current AB values
-		m_asm.movq(preALUAB, m_dspRegs.getALU(0, JitDspRegs::Read));
-		set64High(preALUAB, m_dspRegs.getALU(1, JitDspRegs::Read));
-
-		(this->*funcAlu)(_op);	// Do the ALU op
-
-		const RegXMM postALUAB(m_block);	// stash the post-ALU AB values
-		m_asm.movq(postALUAB, m_dspRegs.getALU(0, JitDspRegs::Read));
-		set64High(postALUAB, m_dspRegs.getALU(1, JitDspRegs::Read));
-
-		// restore the pre-ALU AB values
-		m_asm.movq(m_dspRegs.getALU(0, JitDspRegs::Write), preALUAB);
-		get64High(m_dspRegs.getALU(1, JitDspRegs::Write), preALUAB);
-
+	
+		(this->*funcAlu)(_op);
 		(this->*funcMove)(_op);
 
-		const RegGP preALU(m_block);
-		const RegGP postALU(m_block);
-		{
-			const AluReg rA(m_block, 0);
-
-			m_asm.movq(preALU, preALUAB);
-			m_asm.movq(postALU, postALUAB);
-			m_asm.cmp(preALU, postALU.get());
-			m_asm.cmovnz(rA, postALU.get());
-
-			m_asm.psrldq(preALUAB, asmjit::Imm(8));
-			m_asm.psrldq(postALUAB, asmjit::Imm(8));
-
-			const AluReg rB(m_block, 1);
-
-			m_asm.movq(preALU, preALUAB);
-			m_asm.movq(postALU, postALUAB);
-			m_asm.cmp(preALU, postALU.get());
-			m_asm.cmovnz(rB, postALU.get());
-		}
-
+		m_block.dspRegPool().parallelOpEpilog();
+		
 		emitOpEpilog();
 	}
 
