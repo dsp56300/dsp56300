@@ -188,14 +188,14 @@ namespace dsp56k
 			const std::vector<DspReg>& used() const { return m_used; }
 
 		private:
-			template<typename T> static void push(std::vector<T>& _dst, const T& _src, bool _pushFront)
+			template<typename TT> static void push(std::vector<TT>& _dst, const TT& _src, bool _pushFront)
 			{
 				if(_pushFront)
 					_dst.insert(_dst.begin(), _src);
 				else
 					_dst.push_back(_src);
 			}
-			template<typename T> static void remove(std::vector<T>& _dst, const DspReg _src)
+			template<typename TT> static void remove(std::vector<TT>& _dst, const DspReg _src)
 			{
 				for(auto it = _dst.begin(); it != _dst.end(); ++it)
 				{
