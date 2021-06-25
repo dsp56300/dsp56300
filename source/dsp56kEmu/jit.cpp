@@ -198,7 +198,7 @@ namespace dsp56k
 		iJIT_Method_Load jmethod = {0};
 		jmethod.method_id = iJIT_GetNewMethodID();
 		std::stringstream ss;
-		ss << "$" << HEX(first) << ':' << b->getDisasm();
+		ss << "$" << HEX(first) << "-$" << HEX(last-1) << ':' << b->getDisasm();
 		const std::string methodName(ss.str());
 		jmethod.method_name = const_cast<char*>(methodName.c_str());
 		jmethod.class_file_name = const_cast<char*>("dsp56k::Jit");
