@@ -35,7 +35,7 @@ namespace dsp56k
 
 	static_assert((sizeof(g_dspRegNames) / sizeof(g_dspRegNames[0])) == JitDspRegPool::DspCount);
 
-	JitDspRegPool::JitDspRegPool(JitBlock& _block) : m_block(_block)
+	JitDspRegPool::JitDspRegPool(JitBlock& _block) : m_block(_block), m_lockedGps(0), m_writtenDspRegs(0)
 	{
 		clear();
 	}
