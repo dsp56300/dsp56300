@@ -274,7 +274,7 @@ namespace dsp56k
 		void signextend48to56(const JitReg64& _reg) const;
 		void signextend24to56(const JitReg64& _reg) const;
 		void signextend24to64(const JitReg64& _reg) const;
-		void signextend24To32(const JitReg32& _r) const;
+		void signextend24To32(const JitReg32& _reg) const;
 
 		void updateAddressRegister(const JitReg64& _r, TWord _mmm, TWord _rrr, bool _writeR = true, bool _returnPostR = false);
 		void updateAddressRegister(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m);
