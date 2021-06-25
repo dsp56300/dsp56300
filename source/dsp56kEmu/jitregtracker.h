@@ -264,7 +264,9 @@ namespace dsp56k
 		, m_tempC(_a, regGPTempC)
 		, m_tempD(_a, regGPTempD)
 		, m_tempE(_a, regGPTempE)
-		, m_tempPadding16byte(_a, regGPTempE)
+		, m_tempPadding16byte(_a, asmjit::x86::rbx)
+		, m_rsi(_a, asmjit::x86::rsi)
+		, m_rdi(_a, asmjit::x86::rdi)
 		{
 		}
 
@@ -274,6 +276,8 @@ namespace dsp56k
 		PushGP m_tempD;
 		PushGP m_tempE;
 		PushGP m_tempPadding16byte;
+		PushGP m_rsi;
+		PushGP m_rdi;
 	};
 
 	class PushBeforeFunctionCall
