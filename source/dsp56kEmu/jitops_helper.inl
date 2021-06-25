@@ -192,13 +192,21 @@ namespace dsp56k
 			mm |= mm >> 8;
 			*/
 
-			const PushGP temp(m_block, regExtMem);
+			const PushGP temp(m_block, asmjit::x86::rcx);
+			m_asm.bsr(temp, m);								// returns index of MSB that is 1
+			m_asm.mov(moduloMask, asmjit::Imm(1));
+			m_asm.shl(moduloMask, temp.get());
 
-			m_asm.mov(moduloMask, m);
-			m_asm.mov(temp, moduloMask.get());			m_asm.shr(temp, asmjit::Imm(1));	m_asm.or_(moduloMask, temp.get());
-			m_asm.mov(temp.get(), moduloMask.get());	m_asm.shr(temp, asmjit::Imm(2));	m_asm.or_(moduloMask, temp.get());
-			m_asm.mov(temp.get(), moduloMask.get());	m_asm.shr(temp, asmjit::Imm(4));	m_asm.or_(moduloMask, temp.get());
-			m_asm.mov(temp.get(), moduloMask.get());	m_asm.shr(temp, asmjit::Imm(8));	m_asm.or_(moduloMask, temp.get());
+			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kBMI))
+			{
+				m_asm.blsmsk(moduloMask, moduloMask);				
+			}
+			else
+			{
+				m_asm.mov(temp, moduloMask.get());
+				m_asm.dec(moduloMask);
+				m_asm.or_(moduloMask, temp.get());
+			}
 
 			/*
 			rOffset = r & moduloMask
