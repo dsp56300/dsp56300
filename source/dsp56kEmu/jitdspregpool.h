@@ -134,7 +134,7 @@ namespace dsp56k
 
 			bool get(T& _dst, const DspReg _reg)
 			{
-				_dst = m_used[_reg];
+				_dst = m_usedMap[_reg];
 				return _dst.isValid();
 			}
 
