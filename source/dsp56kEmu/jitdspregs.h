@@ -104,6 +104,7 @@ namespace dsp56k
 		
 		void setPC(const JitReg& _pc);
 		void updateDspMRegisters();
+		bool hasDirtyMRegisters() const { return m_AguMchangedCount > 0; }
 
 	private:
 		JitDspRegPool& pool() const;
@@ -116,5 +117,6 @@ namespace dsp56k
 		DSP& m_dsp;
 
 		std::array<uint32_t, 8> m_AguMchanged;
+		uint32_t m_AguMchangedCount = 0;
 	};
 }

@@ -63,6 +63,8 @@ namespace dsp56k
 	{
 		pool().write(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspM0 + _agu), _src);
 		m_block.mem().mov(m_AguMchanged[_agu], _src.r32());
+		const RegGP temp(m_block);
+		m_asm.inc(m_block.mem().ptr(temp, &m_AguMchangedCount));
 	}
 
 	JitReg JitDspRegs::getSR(AccessType _type)
@@ -416,10 +418,18 @@ namespace dsp56k
 
 	void JitDspRegs::updateDspMRegisters()
 	{
+		if(!m_AguMchangedCount)
+			return;
+
 		for(auto i=0; i<m_AguMchanged.size(); ++i)
 		{
 			if(m_AguMchanged[i])
+			{
 				m_dsp.set_m(i, m_dsp.regs().m[i].var);
+				m_AguMchanged[i] = 0;
+			}
 		}
+
+		m_AguMchangedCount = 0;
 	}
 }

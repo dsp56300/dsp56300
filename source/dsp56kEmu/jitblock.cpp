@@ -91,6 +91,8 @@ namespace dsp56k
 		m_executedInstructionCount = m_encodedInstructionCount;
 		m_pMemWriteAddress = g_pcInvalid;
 		m_func();
-		m_dspRegs.updateDspMRegisters();
+
+		if(m_dspRegs.hasDirtyMRegisters())
+			m_dspRegs.updateDspMRegisters();
 	}
 }
