@@ -540,40 +540,37 @@ namespace dsp56k
 		if(_negate)
 			m_asm.neg(_s1);
 
+		const AluReg d(m_block, ab);
+
+		if( _accumulate )
 		{
-			const AluReg d(m_block, ab);
-
-			if( _accumulate )
-			{
-				signextend56to64(d);
-				m_asm.add(d, _s1.get());
-			}
-			else
-			{
-				m_asm.mov(d, _s1.get());
-			}
-
-			_s1.release();
-			_s2.release();
-
-			// Update SR
-			if(!_round)
-				ccr_v_update(d.get());
-
-			m_dspRegs.mask56(d);
-
-			if(!_round)
-			{
-				ccr_update_ifZero(CCRB_Z);
-
-				ccr_n_update_by55(d);
-
-				ccr_dirty(d);
-			}
+			signextend56to64(d);
+			m_asm.add(d, _s1.get());
+		}
+		else
+		{
+			m_asm.mov(d, _s1.get());
 		}
 
-		if(_round)
-			alu_rnd(ab);
+		_s1.release();
+		_s2.release();
+
+		// Update SR
+		if(!_round)
+			ccr_v_update(d.get());
+
+		m_dspRegs.mask56(d);
+
+		if(!_round)
+		{
+			ccr_update_ifZero(CCRB_Z);
+
+			ccr_n_update_by55(d);
+
+			ccr_dirty(d);
+		}
+		else
+			alu_rnd(d);
 	}
 	
 	inline void JitOps::alu_multiply(TWord op)
@@ -618,6 +615,12 @@ namespace dsp56k
 
 	inline void JitOps::alu_rnd(TWord ab)
 	{
+		const AluReg d(m_block, ab);
+		alu_rnd(d);
+	}
+
+	inline void JitOps::alu_rnd(const AluReg& d)
+	{
 		RegGP rounder(m_block);
 		m_asm.mov(rounder, asmjit::Imm(0x800000));
 
@@ -628,7 +631,6 @@ namespace dsp56k
 		sr_getBitValue(asmjit::x86::rcx, SRB_S0);
 		m_asm.shl(rounder, shifter);
 
-		const AluReg d(m_block, ab);
 		signextend56to64(d);
 		m_asm.add(d, rounder.get());
 
