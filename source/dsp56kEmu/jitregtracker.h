@@ -219,6 +219,7 @@ namespace dsp56k
 	public:
 		PushXMM(JitBlock& _block, uint32_t _xmmIndex);
 		~PushXMM();
+		bool isPushed() const { return m_isLoaded; }
 
 	private:
 		JitBlock& m_block;
@@ -229,10 +230,9 @@ namespace dsp56k
 	class PushXMMRegs
 	{
 	public:
-		PushXMMRegs(JitBlock& _block) : m_xmm0(_block, 0), m_xmm1(_block, 1), m_xmm2(_block, 2), m_xmm3(_block, 3), m_xmm4(_block, 4), m_xmm5(_block, 5)
-		{
-		}
-		
+		PushXMMRegs(JitBlock& _block);
+		~PushXMMRegs();
+
 	private:
 		PushXMM m_xmm0;
 		PushXMM m_xmm1;
@@ -240,6 +240,8 @@ namespace dsp56k
 		PushXMM m_xmm3;
 		PushXMM m_xmm4;
 		PushXMM m_xmm5;
+		bool m_needsPadding;
+		JitBlock& m_block;
 	};
 
 	class PushGPRegs
