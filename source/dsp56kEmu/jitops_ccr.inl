@@ -38,12 +38,12 @@ namespace dsp56k
 		}
 	}
 
-	inline void JitOps::ccr_clearDirty(const CCRMask _mask)
+	void JitOps::ccr_clearDirty(const CCRMask _mask)
 	{
 		m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~_mask);
 	}
 
-	inline void JitOps::updateDirtyCCR()
+	void JitOps::updateDirtyCCR()
 	{
 		if(!m_ccrDirty)
 			return;
@@ -51,7 +51,7 @@ namespace dsp56k
 		updateDirtyCCR(m_ccrDirty);
 	}
 
-	inline void JitOps::updateDirtyCCR(CCRMask _whatToUpdate)
+	void JitOps::updateDirtyCCR(CCRMask _whatToUpdate)
 	{
 		const auto dirty = m_ccrDirty & _whatToUpdate;
 		if(!dirty)
