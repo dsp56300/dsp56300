@@ -6,7 +6,6 @@
 namespace dsp56k
 {
 	constexpr uint32_t g_maxInstructionsPerBlock = 0;	// set to 1 for debugging/tracing
-	constexpr bool g_useSRCache = false;
 
 	bool JitBlock::emit(const TWord _pc, std::vector<JitBlock*>& _cache, const std::set<TWord>& _volatileP)
 	{
@@ -34,7 +33,7 @@ namespace dsp56k
 				else shouldEmit=false;
 			}
 
-			JitOps ops(*this, g_useSRCache);
+			JitOps ops(*this);
 
 			if(false)
 			{
@@ -80,6 +79,11 @@ namespace dsp56k
 				break;
 		}
 
+		if(m_dspRegs.ccrDirtyFlags())
+		{
+			JitOps op(*this);
+			op.updateDirtyCCR();
+		}
 		m_dspRegPool.releaseAll();
 
 		return !empty();

@@ -56,5 +56,6 @@ namespace dsp56k
 		If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true) : If(_block, _jumpIfFalse, _true, [](){}, false) {}
 	private:
 		If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc);
+		void updateDirtyCCR(JitBlock& _block);
 	};
 }

@@ -3,10 +3,11 @@
 #include "jitblock.h"
 #include "jitops.h"
 #include "jitregtypes.h"
-#include "asmjit/x86/x86features.h"
 
 namespace dsp56k
 {
+	constexpr bool g_useSRCache = true;
+
 	inline void JitOps::ccr_clear(CCRMask _mask)
 	{
 		m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~_mask));
@@ -21,19 +22,14 @@ namespace dsp56k
 
 	inline void JitOps::ccr_dirty(TWord _aluIndex, const JitReg64& _alu, CCRMask _dirtyBits)
 	{
-		if(m_useCCRCache)
+		if(g_useSRCache)
 		{
-			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kSSE4_1))
-			{
-				m_asm.pinsrd(regLastModAlu, _alu, asmjit::Imm(0));
-			}
-			else
-			{
-				const RegXMM xmmTemp(m_block);
+			// if the last dirty call marked bits as dirty that are no longer to be dirtied now, we need to update them
+			const auto lastDirty = m_ccrDirty & ~_dirtyBits;
+			updateDirtyCCR(static_cast<CCRMask>(lastDirty));
 
-				m_asm.movd(xmmTemp.get(), _alu);
-				m_asm.movss(regLastModAlu, xmmTemp.get());
-			}
+			m_asm.movq(regLastModAlu, _alu);
+
 			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty | _dirtyBits);
 		}
 		else
@@ -62,7 +58,7 @@ namespace dsp56k
 			return;
 
 		const RegGP r(m_block);
-		m_asm.movd(r, regLastModAlu);
+		m_asm.movq(r, regLastModAlu);
 		updateDirtyCCR(r, static_cast<CCRMask>(dirty));
 	}
 

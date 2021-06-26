@@ -260,12 +260,12 @@ namespace dsp56k
 		&JitOps::op_Wait							// Wait 
 	};
 
-	JitOps::JitOps(JitBlock& _block, bool _useSRCache)
+	JitOps::JitOps(JitBlock& _block)
 	: m_block(_block)
 	, m_opcodes(_block.dsp().opcodes())
 	, m_dspRegs(_block.regs())
 	, m_asm(_block.asm_())
-	, m_useCCRCache(_useSRCache)
+	, m_ccrDirty(_block.regs().ccrDirtyFlags())
 	{
 	}
 
@@ -706,11 +706,6 @@ namespace dsp56k
 		m_block.dspRegPool().setRepMode(true);
 
 		// execute it once without being part of the loop to fill register cache
-		m_asm.dec(m_dspRegs.getLC(JitDspRegs::ReadWrite));
-		emit(pc);
-		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read), asmjit::Imm(0));
-		m_asm.jz(end);
-
 		m_asm.dec(m_dspRegs.getLC(JitDspRegs::ReadWrite));
 		emit(pc);
 		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read), asmjit::Imm(0));

@@ -129,9 +129,11 @@ namespace dsp56k
 
 			JitBlock block(m_asm, dsp);
 
-			JitOps ops(block, false);
+			JitOps ops(block);
 
 			_build(block, ops);
+
+			ops.updateDirtyCCR();
 		}
 
 		m_asm.ret();

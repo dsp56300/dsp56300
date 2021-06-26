@@ -4,6 +4,7 @@
 
 #include "jitregtracker.h"
 #include "jitregtypes.h"
+#include "registers.h"
 #include "types.h"
 
 namespace asmjit
@@ -105,6 +106,7 @@ namespace dsp56k
 		void setPC(const JitReg& _pc);
 		void updateDspMRegisters();
 		bool hasDirtyMRegisters() const { return m_AguMchangedCount > 0; }
+		CCRMask& ccrDirtyFlags() { return m_ccrDirtyFlags; }
 
 	private:
 		JitDspRegPool& pool() const;
@@ -118,5 +120,6 @@ namespace dsp56k
 
 		std::array<uint32_t, 8> m_AguMchanged;
 		uint32_t m_AguMchangedCount = 0;
+		CCRMask m_ccrDirtyFlags = static_cast<CCRMask>(0);
 	};
 }

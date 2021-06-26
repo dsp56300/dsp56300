@@ -4,6 +4,7 @@
 
 #include "asmjit/core/operand.h"
 #include "asmjit/x86/x86operand.h"
+#include "asmjit/x86/x86features.h"
 
 namespace dsp56k
 {

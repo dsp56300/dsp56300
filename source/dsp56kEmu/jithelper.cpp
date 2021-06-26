@@ -3,6 +3,7 @@
 #include "dspassert.h"
 #include "jitblock.h"
 #include "jitdspregs.h"
+#include "jitops.h"
 #include "logging.h"
 
 #include "asmjit/x86/x86assembler.h"
@@ -47,11 +48,13 @@ namespace dsp56k
 		const auto isFalse = a.newLabel();
 		const auto end = a.newLabel();
 
+		updateDirtyCCR(_block);
 		_block.dspRegPool().releaseAll();
 
 		_jumpIfFalse(isFalse);
 
 		_true();
+		updateDirtyCCR(_block);
 		_block.dspRegPool().releaseAll();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
 
 		if(_hasFalseFunc)
@@ -62,9 +65,16 @@ namespace dsp56k
 		if (_hasFalseFunc)
 		{
 			_false();
+			updateDirtyCCR(_block);
 			_block.dspRegPool().releaseAll();
 		}
 
 		a.bind(end);
+	}
+
+	void If::updateDirtyCCR(JitBlock& _block)
+	{
+		JitOps ops(_block);
+		ops.updateDirtyCCR();
 	}
 }

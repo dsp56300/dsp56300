@@ -26,7 +26,7 @@ namespace dsp56k
 			WriteToLA			= 0x04
 		};
 
-		JitOps(JitBlock& _block, bool _useSRCache = true);
+		JitOps(JitBlock& _block);
 
 		void emit(TWord _pc);
 		void emit(TWord _pc, TWord _op, TWord _opB = 0);
@@ -518,8 +518,7 @@ namespace dsp56k
 		JitDspRegs& m_dspRegs;
 		asmjit::x86::Assembler& m_asm;
 
-		CCRMask m_ccrDirty = static_cast<CCRMask>(0);
-		const bool m_useCCRCache;
+		CCRMask& m_ccrDirty;
 
 		TWord m_pcCurrentOp = 0;
 		TWord m_opWordA = 0;
