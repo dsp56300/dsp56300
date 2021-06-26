@@ -336,7 +336,7 @@ namespace dsp56k
 
 	void JitOps::setCCR(const JitReg64& _src)
 	{
-		m_ccrDirty = false;
+		m_ccrDirty = static_cast<CCRMask>(0);
 		m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(0xffff00));
 		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), _src);
 	}
@@ -375,7 +375,7 @@ namespace dsp56k
 
 	void JitOps::setSR(const JitReg32& _src)
 	{
-		m_ccrDirty = false;
+		m_ccrDirty = static_cast<CCRMask>(0);
 		m_dspRegs.setSR(_src);
 	}
 

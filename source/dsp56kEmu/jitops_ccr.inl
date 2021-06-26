@@ -17,7 +17,7 @@ namespace dsp56k
 		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(_mask));
 	}
 
-	inline void JitOps::ccr_dirty(const JitReg64& _alu)
+	inline void JitOps::ccr_dirty(TWord _aluIndex, const JitReg64& _alu, CCRMask _dirtyBits)
 	{
 		if(m_useCCRCache)
 		{
@@ -32,29 +32,34 @@ namespace dsp56k
 				m_asm.movd(xmmTemp.get(), _alu);
 				m_asm.movss(regLastModAlu, xmmTemp.get());
 			}
-			m_ccrDirty = true;
+			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty | _dirtyBits);
 		}
 		else
 		{
-			updateDirtyCCR(_alu);
+			updateDirtyCCR(_alu, _dirtyBits);
 		}
 	}
 
 	inline void JitOps::updateDirtyCCR()
 	{
-		if(!m_ccrDirty)
-			return;
-
-		const RegGP r(m_block);
-		m_asm.movd(r, regLastModAlu);
-		updateDirtyCCR(r);
 	}
 
-	inline void JitOps::updateDirtyCCR(const JitReg64& _alu)
+	inline void JitOps::updateDirtyCCR(const JitReg64& _alu, CCRMask _dirtyBits)
 	{
-		ccr_e_update(_alu);
-		ccr_u_update(_alu);
-		m_ccrDirty = false;
+		if(_dirtyBits & CCR_Z)
+		{
+			m_asm.cmp(_alu, asmjit::Imm(0));
+			ccr_update_ifZero(CCRB_Z);
+		}
+
+		if(_dirtyBits & CCR_N)
+			ccr_n_update_by55(_alu);
+		if(_dirtyBits & CCR_E)
+			ccr_e_update(_alu);
+		if(_dirtyBits & CCR_U)
+			ccr_u_update(_alu);
+		if(_dirtyBits & CCR_V)
+			ccr_v_update(_alu);
 	}
 
 	inline void JitOps::ccr_getBitValue(const JitReg& _dst, CCRBit _bit) const

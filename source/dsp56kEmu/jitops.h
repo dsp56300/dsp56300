@@ -392,9 +392,9 @@ namespace dsp56k
 
 		void ccr_clear(CCRMask _mask) const;
 		void ccr_set(CCRMask _mask) const;
-		void ccr_dirty(const JitReg64& _alu);
+		void ccr_dirty(TWord _aluIndex, const JitReg64& _alu, CCRMask _dirtyBits = static_cast<CCRMask>(CCR_E | CCR_U));
 		void updateDirtyCCR();
-		void updateDirtyCCR(const JitReg64& _alu);
+		void updateDirtyCCR(const JitReg64& _alu, CCRMask _dirtyBits);
 
 		void ccr_getBitValue(const JitReg& _dst, CCRBit _bit) const;
 		void sr_getBitValue(const JitReg& _dst, SRBit _bit) const;
@@ -457,7 +457,7 @@ namespace dsp56k
 		void alu_multiply(TWord op);
 		void alu_or(TWord ab, const JitReg& _v);
 		void alu_rnd(TWord ab);
-		void alu_rnd(const AluReg& r);
+		void alu_rnd(TWord ab, const AluReg& r);
 		
 		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
 		template<Instruction Inst> void bitmod_aa(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
@@ -516,7 +516,7 @@ namespace dsp56k
 		JitDspRegs& m_dspRegs;
 		asmjit::x86::Assembler& m_asm;
 
-		bool m_ccrDirty = false;
+		CCRMask m_ccrDirty = static_cast<CCRMask>(0);
 		const bool m_useCCRCache;
 
 		TWord m_pcCurrentOp = 0;

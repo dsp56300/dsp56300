@@ -39,15 +39,9 @@ namespace dsp56k
 
 		alu_abs(ra);
 
-//		m_asm.and_(ra, asmjit::Imm(0x00ff ffffff ffffff));		// absolute value does not need any mask
-
-		ccr_update_ifZero(CCRB_Z);
-
-		ccr_n_update_by55(ra);
-
 	//	sr_v_update(d);
 	//	sr_l_update_by_v();
-		ccr_dirty(ra);
+		ccr_dirty(ab, ra, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::alu_add(const TWord _ab, RegGP& _v)
@@ -69,13 +63,10 @@ namespace dsp56k
 		ccr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
 		m_dspRegs.mask56(alu);
-		ccr_update_ifZero(CCRB_Z);
 
 //		sr_l_update_by_v();
 
-		ccr_n_update_by55(alu);
-
-		ccr_dirty(alu);
+		ccr_dirty(_ab, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::alu_add(const TWord _ab, const asmjit::Imm& _v)
@@ -104,13 +95,10 @@ namespace dsp56k
 		ccr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
 		m_dspRegs.mask56(alu);
-		ccr_update_ifZero(CCRB_Z);
 
 //		sr_l_update_by_v();
 
-		ccr_n_update_by55(alu);
-
-		ccr_dirty(alu);
+		ccr_dirty(_ab, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::alu_sub(const TWord _ab, const asmjit::Imm& _v)
@@ -193,11 +181,7 @@ namespace dsp56k
 		m_asm.sal(alu, _v.get());					// one more time
 		m_asm.shr(alu, asmjit::Imm(8));				// correction
 
-		ccr_update_ifZero(CCRB_Z);
-
-		ccr_n_update_by55(alu);
-
-		ccr_dirty(alu);
+		ccr_dirty(abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::alu_asr(const TWord _abSrc, const TWord _abDst, const PushGP& _v)
@@ -209,14 +193,10 @@ namespace dsp56k
 		m_asm.sar(alu, asmjit::Imm(8));
 		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
 		m_dspRegs.mask56(alu);
-		ccr_update_ifZero(CCRB_Z);					// we can check for zero now, too
 
 		ccr_clear(CCR_V);
 
-		ccr_n_update_by55(alu);
-
-		// S L E U N Z V C
-		ccr_dirty(alu);
+		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::jmp(const JitReg32& _absAddr)
@@ -296,10 +276,8 @@ namespace dsp56k
 
 		m_dspRegs.mask56(aluD);
 
-		ccr_update_ifZero(CCRB_Z);
 		ccr_clear(CCR_V);	// TODO: Set if overflow has occurred in the A or B result or the MSB of the destination operand is changed as a result of the instruction’s left shift.
-		ccr_n_update_by55(aluD);
-		ccr_dirty(aluD);
+		ccr_dirty(ab, aluD, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::op_Addr(TWord op)
@@ -329,10 +307,8 @@ namespace dsp56k
 
 		m_dspRegs.mask56(aluD);
 
-		ccr_update_ifZero(CCRB_Z);
 		ccr_clear(CCR_V);			// TODO: Changed according to the standard definition.
-		ccr_n_update_by55(aluD);
-		ccr_dirty(aluD);
+		ccr_dirty(ab, aluD, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::op_And_SD(TWord op)
@@ -482,16 +458,13 @@ namespace dsp56k
 			ccr_update_ifCarry(CCRB_C);
 
 		m_asm.cmp(d, asmjit::Imm(0));
-		ccr_update_ifZero(CCRB_Z);
 
 		ccr_clear(CCR_V);			// as cmp is identical to sub, the same for the V bit applies (see sub for details)
 
 		m_asm.shr(d, asmjit::Imm(8));
 		m_asm.shr(_v, asmjit::Imm(8));
 
-		ccr_n_update_by55(d);
-
-		ccr_dirty(d);
+		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::alu_lsl(TWord ab, int _shiftAmount) const
@@ -562,15 +535,9 @@ namespace dsp56k
 		m_dspRegs.mask56(d);
 
 		if(!_round)
-		{
-			ccr_update_ifZero(CCRB_Z);
-
-			ccr_n_update_by55(d);
-
-			ccr_dirty(d);
-		}
+			ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 		else
-			alu_rnd(d);
+			alu_rnd(ab, d);
 	}
 	
 	inline void JitOps::alu_multiply(TWord op)
@@ -616,10 +583,10 @@ namespace dsp56k
 	inline void JitOps::alu_rnd(TWord ab)
 	{
 		const AluReg d(m_block, ab);
-		alu_rnd(d);
+		alu_rnd(ab, d);
 	}
 
-	inline void JitOps::alu_rnd(const AluReg& d)
+	inline void JitOps::alu_rnd(TWord ab, const AluReg& d)
 	{
 		RegGP rounder(m_block);
 		m_asm.mov(rounder, asmjit::Imm(0x800000));
@@ -681,12 +648,8 @@ namespace dsp56k
 		ccr_v_update(d.get());
 
 		m_dspRegs.mask56(d);
-		ccr_update_ifZero(CCRB_Z);
 
-		ccr_l_update_by_v();
-
-		ccr_n_update_by55(d);
-		ccr_dirty(d);
+		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	template<Instruction Inst> void JitOps::bitmod_ea(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
@@ -828,7 +791,6 @@ namespace dsp56k
 		m_dspRegs.clrALU(D);
 		ccr_clear( static_cast<CCRMask>(CCR_E | CCR_N | CCR_V) );
 		ccr_set( static_cast<CCRMask>(CCR_U | CCR_Z) );
-		m_ccrDirty = false;
 	}
 
 	inline void JitOps::op_Cmp_S1S2(TWord op)
@@ -888,11 +850,9 @@ namespace dsp56k
 		ccr_update_ifCarry(CCRB_C);
 
 		m_asm.shr(r, asmjit::Imm(8));
-		ccr_update_ifZero(CCRB_Z);
 		ccr_clear(CCR_V);				// never set in the simulator, even when wrapping around. Carry is set instead
-		ccr_n_update_by55(r);
 
-		ccr_dirty(r);
+		ccr_dirty(ab, r, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::op_Div(TWord op)
@@ -1009,18 +969,13 @@ namespace dsp56k
 		m_dspRegs.mask56(d);
 
 		// Update SR
-		ccr_update_ifZero(CCRB_Z);
-
 		// detect overflow by sign-extending the actual result and comparing VS the non-sign-extended one. We've got overflow if they are different
 		m_asm.cmp(dOld, d.get());
 
 		ccr_update_ifNotZero(CCRB_V);
-
 		ccr_l_update_by_v();
 
-		ccr_n_update_by55(d);
-
-		ccr_dirty(d);
+		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::op_Extractu_S1S2(TWord op)
@@ -1061,12 +1016,7 @@ namespace dsp56k
 		m_asm.mov(d, s.get());
 		s.release();
 
-		m_asm.cmp(d, asmjit::Imm(0));
-		ccr_update_ifZero(CCRB_Z);
-
-		ccr_n_update_by55(d);
-
-		ccr_dirty(d);
+		ccr_dirty(abDst, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::op_Extractu_CoS2(TWord op)
@@ -1090,13 +1040,9 @@ namespace dsp56k
 			m_asm.mov(d, s.get());
 		}
 
-		m_asm.cmp(d, asmjit::Imm(0));
-		ccr_update_ifZero(CCRB_Z);
-
 		ccr_clear(CCR_C);
 		ccr_clear(CCR_V);
-		ccr_n_update_by55(d);
-		ccr_dirty(d);
+		ccr_dirty(abDst, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::op_Inc(TWord op)
@@ -1110,11 +1056,10 @@ namespace dsp56k
 		ccr_update_ifCarry(CCRB_C);
 
 		m_asm.shr(r, asmjit::Imm(8));
-		ccr_update_ifZero(CCRB_Z);
-		ccr_clear(CCR_V);					// never set in the simulator, even when wrapping around. Carry is set instead
-		ccr_n_update_by55(r);
 
-		ccr_dirty(r);
+		ccr_clear(CCR_V);					// never set in the simulator, even when wrapping around. Carry is set instead
+
+		ccr_dirty(ab, r, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::op_Lra_xxxx(TWord op)
@@ -1211,11 +1156,10 @@ namespace dsp56k
 		ccr_update_ifLess(CCRB_N);
 
 		m_dspRegs.mask56(r);
-		ccr_update_ifZero(CCRB_Z);
-
+		
 		ccr_clear(CCR_V);
 
-		ccr_dirty(r);
+		ccr_dirty(D, r, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::op_Nop(TWord op)
