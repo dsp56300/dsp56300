@@ -5,6 +5,7 @@
 #include "jitmem.h"
 #include "jitregtracker.h"
 #include "jitregtypes.h"
+#include "jitregusage.h"
 
 #include <string>
 #include <vector>
@@ -29,27 +30,17 @@ namespace dsp56k
 	public:
 		typedef void (*JitEntry)();
 
-		JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp)
-		: m_asm(_a)
-		, m_dsp(_dsp)
-		, m_xmmPool({regXMMTempA, regXMMTempB, regXMMTempC})
-		, m_gpPool({regGPTempA, regGPTempB, regGPTempC, regGPTempD, regGPTempE})
-		, m_dspRegs(*this)
-		, m_dspRegPool(*this)
-		, m_mem(*this)
-		{
-		}
+		JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp);
 
 		asmjit::x86::Assembler& asm_() { return m_asm; }
 		DSP& dsp() { return m_dsp; }
-		JitRegpool<JitReg64>& gpPool() { return m_gpPool; }
-		JitRegpool<JitReg128>& xmmPool() { return m_xmmPool; }
+		RegUsage& regUsage() { return m_regUsage; }
+		JitRegpool& gpPool() { return m_gpPool; }
+		JitRegpool& xmmPool() { return m_xmmPool; }
 		JitDspRegs& regs() { return m_dspRegs; }
 		JitDspRegPool& dspRegPool() { return m_dspRegPool; }
 		Jitmem& mem() { return m_mem; }
 
-		operator JitRegpool<JitReg64>& ()		{ return m_gpPool; }
-		operator JitRegpool<JitReg128>& ()		{ return m_xmmPool;	}
 		operator asmjit::x86::Assembler& ()		{ return m_asm;	}
 
 		bool emit(TWord _pc, std::vector<JitBlock*>& _cache, const std::set<TWord>& _volatileP);
@@ -76,8 +67,9 @@ namespace dsp56k
 
 		asmjit::x86::Assembler& m_asm;
 		DSP& m_dsp;
-		JitRegpool<JitReg128> m_xmmPool;
-		JitRegpool<JitReg64> m_gpPool;
+		RegUsage m_regUsage;
+		JitRegpool m_xmmPool;
+		JitRegpool m_gpPool;
 		JitDspRegs m_dspRegs;
 		JitDspRegPool m_dspRegPool;
 		Jitmem m_mem;

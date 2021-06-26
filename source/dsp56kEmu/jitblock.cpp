@@ -7,6 +7,18 @@ namespace dsp56k
 {
 	constexpr uint32_t g_maxInstructionsPerBlock = 0;	// set to 1 for debugging/tracing
 
+	JitBlock::JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp)
+	: m_asm(_a)
+	, m_dsp(_dsp)
+	, m_regUsage(*this)
+	, m_xmmPool({regXMMTempA, regXMMTempB, regXMMTempC})
+	, m_gpPool({regGPTempA, regGPTempB, regGPTempC, regGPTempD, regGPTempE})
+	, m_dspRegs(*this)
+	, m_dspRegPool(*this)
+	, m_mem(*this)
+	{
+	}
+
 	bool JitBlock::emit(const TWord _pc, std::vector<JitBlock*>& _cache, const std::set<TWord>& _volatileP)
 	{
 		m_pcFirst = _pc;

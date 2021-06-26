@@ -2,7 +2,6 @@
 
 #include <stack>
 
-#include "dspassert.h"
 #include "jitdspregpool.h"
 #include "types.h"
 #include "jitregtypes.h"
@@ -21,57 +20,26 @@ namespace dsp56k
 {
 	class JitBlock;
 
-	template<typename T>
 	class JitRegpool
 	{
 	public:
-		JitRegpool(std::initializer_list<T> _availableRegs)
-		{
-			for (const auto& r : _availableRegs)
-				m_availableRegs.push(r);
-		}
+		JitRegpool(std::initializer_list<asmjit::x86::Reg> _availableRegs);
 
-		void put(const T& _reg)
-		{
-			m_availableRegs.push(_reg);
-		}
+		void put(const asmjit::x86::Reg& _reg);
+		asmjit::x86::Reg get();
+		bool empty() const;
 
-		T get()
-		{
-			assert(!m_availableRegs.empty() && "no more temporary registers left");
-			const auto ret = m_availableRegs.top();
-			m_availableRegs.pop();
-			return ret;
-		}
-
-		bool empty() const
-		{
-			return m_availableRegs.empty();
-		}
 	private:
-		std::stack<T> m_availableRegs;	// TODO: do we want a FIFO instead to have more register spread? Is it any better performance-wise?
+		std::stack<asmjit::x86::Reg> m_availableRegs;	// TODO: do we want a FIFO instead to have more register spread? Is it any better performance-wise?
 	};
 
-	template<typename T>
 	class JitScopedReg
 	{
 	public:
 		JitScopedReg() = delete;
 		JitScopedReg(const JitScopedReg&) = delete;
-		JitScopedReg(JitRegpool<T>& _pool) : m_pool(_pool), m_reg({}) { acquire(); }	// TODO: move acquire() to (first) get, will greatly reduce register pressure if the RegGP is passed in as parameter
+		JitScopedReg(JitRegpool& _pool) : m_pool(_pool), m_reg({}) { acquire(); }	// TODO: move acquire() to (first) get, will greatly reduce register pressure if the RegGP is passed in as parameter
 		~JitScopedReg() { release(); }
-
-		const T& get() const { return m_reg; }
-
-		operator const T& () const { return get(); }
-
-		template<typename U = T>
-		operator typename std::enable_if_t<std::is_same<U, JitReg64>::value, asmjit::x86::Gp>::type () const
-		{
-			return get();
-		}
-
-		template<typename U = T> operator typename std::enable_if_t<std::is_same<U, JitReg64>::value, asmjit::Imm>::type () const = delete;
 
 		JitScopedReg& operator = (const JitScopedReg&) = delete;
 
@@ -89,14 +57,31 @@ namespace dsp56k
 			m_pool.put(m_reg);
 			m_acquired = false;
 		}
+
+	protected:
+		asmjit::x86::Reg m_reg;
 	private:
-		JitRegpool<T>& m_pool;
-		T m_reg;
+		JitRegpool& m_pool;
 		bool m_acquired = false;
 	};
 
-	using RegGP = JitScopedReg<JitReg64>;
-	using RegXMM = JitScopedReg<JitReg128>;
+	class RegGP : public JitScopedReg
+	{
+	public:
+		RegGP(JitBlock& _block);
+
+		const JitReg64& get() const { return m_reg.as<JitReg64>(); }
+		operator const JitReg64& () const { return get(); }
+	};
+	
+	class RegXMM : public JitScopedReg
+	{
+	public:
+		RegXMM(JitBlock& _block);
+
+		const JitReg128& get() const { return m_reg.as<JitReg128>(); }
+		operator const JitReg128& () const { return get(); }
+	};
 
 	class DSPReg
 	{
@@ -144,7 +129,7 @@ namespace dsp56k
 		AluReg(JitBlock& _block, TWord _aluIndexSrc, bool readOnly = false, bool writeOnly = false, TWord _aluIndexDst = ~0);
 		~AluReg();
 		JitReg64 get() const { return m_reg.get(); }
-		operator JitReg64 () const { return m_reg.get(); }
+		operator JitReg64 () const { return get(); }
 		operator const RegGP& () const { return m_reg; }
 		void release();
 
