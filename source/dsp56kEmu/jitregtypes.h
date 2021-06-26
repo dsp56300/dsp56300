@@ -22,6 +22,12 @@ namespace dsp56k
 	static constexpr auto regPoolC = asmjit::x86::r9;
 	static constexpr auto regPoolD = asmjit::x86::rsi;
 	static constexpr auto regPoolE = asmjit::x86::rdi;
+
+	static constexpr JitReg g_nonVolatileGPs[] = { asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::rdi, asmjit::x86::rsi, asmjit::x86::rsp
+	                                             , asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::r14, asmjit::x86::r15};
+	
+	static constexpr JitReg128 g_nonVolatileXMMs[] = { asmjit::x86::xmm0, asmjit::x86::xmm1, asmjit::x86::xmm2, asmjit::x86::xmm3, asmjit::x86::xmm4, asmjit::x86::xmm5};
+	
 #else
 	static constexpr auto regArg0 = asmjit::x86::rdi;
 	static constexpr auto regArg1 = asmjit::x86::rsi;
@@ -33,6 +39,12 @@ namespace dsp56k
 	static constexpr auto regPoolC = asmjit::x86::rcx;
 	static constexpr auto regPoolD = asmjit::x86::r8;
 	static constexpr auto regPoolE = asmjit::x86::r9;
+
+	static constexpr JitReg g_nonVolatileGPs[] = { asmjit::x86::rbx, asmjit::x86::rsp, asmjit::x86::rbp, asmjit::x86::rsi
+	                                             , asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::r14, asmjit::x86::r15};
+	
+	static constexpr JitReg128 g_nonVolatileXMMs[] = { asmjit::x86::xmm0, asmjit::x86::xmm1, asmjit::x86::xmm2, asmjit::x86::xmm3, asmjit::x86::xmm4, asmjit::x86::xmm5};
+	
 #endif
 
 	static constexpr auto regReturnVal = asmjit::x86::rax;
