@@ -57,7 +57,13 @@ namespace dsp56k
 		m_ccrDirty = false;
 	}
 
-	inline void JitOps::sr_getBitValue(const JitReg& _dst, CCRBit _bit) const
+	inline void JitOps::ccr_getBitValue(const JitReg& _dst, CCRBit _bit) const
+	{
+		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(_bit));
+		m_asm.setc(_dst);
+	}
+
+	inline void JitOps::sr_getBitValue(const JitReg& _dst, SRBit _bit) const
 	{
 		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(_bit));
 		m_asm.setc(_dst);
@@ -311,7 +317,7 @@ namespace dsp56k
 	{
 		RegGP r(m_block);
 		m_asm.xor_(r,r.get());
-		sr_getBitValue(r, CCRB_V);
+		ccr_getBitValue(r, CCRB_V);
 		m_asm.shl(r, CCRB_L);
 		m_asm.or_(m_block.regs().getSR(JitDspRegs::ReadWrite), r.get());
 	}

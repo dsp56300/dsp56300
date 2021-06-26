@@ -336,12 +336,18 @@ namespace dsp56k
 		// -- status register management
 
 		void 	sr_set					( CCRMask _bits )					{ reg.sr.var |= _bits;	}
+		void 	sr_set					( SRMask _bits )					{ reg.sr.var |= _bits;	}
 		void 	sr_clear				( CCRMask _bits )					{ reg.sr.var &= ~_bits; }
+		void 	sr_clear				( SRMask _bits )					{ reg.sr.var &= ~_bits; }
 		int 	sr_test					( CCRMask _bits ) const				{ updateDirtyCCR(); return sr_test_noCache(_bits); }
+		int 	sr_test					( SRMask _bits ) const				{ return sr_test_noCache(_bits); }
 		int 	sr_test_noCache			( CCRMask _bits ) const				{ return (reg.sr.var & _bits); }
+		int 	sr_test_noCache			( SRMask _bits ) const				{ return (reg.sr.var & _bits); }
 		int 	sr_val					( CCRBit _bitNum ) const			{ updateDirtyCCR(); return sr_val_noCache(_bitNum); }
 		int 	sr_val_noCache			( CCRBit _bitNum ) const			{ return (reg.sr.var >> _bitNum) & 1; }
+		int 	sr_val_noCache			( SRBit _bitNum ) const				{ return (reg.sr.var >> _bitNum) & 1; }
 		void 	sr_toggle				( CCRMask _bits, bool _set )		{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
+		void 	sr_toggle				( SRMask _bits, bool _set )			{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
 		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, int32_t(_bit), _value); }
 
 		void	sr_s_update				()

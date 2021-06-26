@@ -396,7 +396,8 @@ namespace dsp56k
 		void updateDirtyCCR();
 		void updateDirtyCCR(const JitReg64& _alu);
 
-		void sr_getBitValue(const JitReg& _dst, CCRBit _bit) const;
+		void ccr_getBitValue(const JitReg& _dst, CCRBit _bit) const;
+		void sr_getBitValue(const JitReg& _dst, SRBit _bit) const;
 
 		void XYto56(const JitReg64& _dst, int _xy) const;
 		void XY0to56(const JitReg64& _dst, int _xy) const;

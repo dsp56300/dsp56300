@@ -9,46 +9,46 @@ namespace dsp56k
 		switch( cccc )
 		{
 		case CCCC_CarrySet:									// CC(LO)		Carry Set	(lower)
-			sr_getBitValue(_dst, CCRB_C);
+			ccr_getBitValue(_dst, CCRB_C);
 			break;
 		case CCCC_CarryClear:								// CC(HS)		Carry Clear (higher or same)	
-			sr_getBitValue(_dst, CCRB_C);
+			ccr_getBitValue(_dst, CCRB_C);
 			m_asm.xor_(_dst, asmjit::Imm(1));
 			break;
 		case CCCC_ExtensionSet:								// ES			Extension set	
-			sr_getBitValue(_dst, CCRB_E);
+			ccr_getBitValue(_dst, CCRB_E);
 			break;
 		case CCCC_ExtensionClear:							// EC			Extension clear	
-			sr_getBitValue(_dst, CCRB_E);
+			ccr_getBitValue(_dst, CCRB_E);
 			m_asm.xor_(_dst, asmjit::Imm(1));
 			break;
 		case CCCC_Equal:									// EQ			Equal	
-			sr_getBitValue(_dst, CCRB_Z);
+			ccr_getBitValue(_dst, CCRB_Z);
 			break;
 		case CCCC_NotEqual:									// NE			Not Equal
-			sr_getBitValue(_dst, CCRB_Z);
+			ccr_getBitValue(_dst, CCRB_Z);
 			m_asm.xor_(_dst, asmjit::Imm(1));
 			break;
 		case CCCC_LimitSet:									// LS			Limit set
-			sr_getBitValue(_dst, CCRB_L);
+			ccr_getBitValue(_dst, CCRB_L);
 			break;
 		case CCCC_LimitClear:								// LC			Limit clear
-			sr_getBitValue(_dst, CCRB_L);
+			ccr_getBitValue(_dst, CCRB_L);
 			m_asm.xor_(_dst, asmjit::Imm(1));
 			break;
 		case CCCC_Minus:									// MI			Minus
-			sr_getBitValue(_dst, CCRB_N);
+			ccr_getBitValue(_dst, CCRB_N);
 			break;
 		case CCCC_Plus:										// PL			Plus
-			sr_getBitValue(_dst, CCRB_N);
+			ccr_getBitValue(_dst, CCRB_N);
 			m_asm.xor_(_dst, asmjit::Imm(1));
 			break;
 		case CCCC_GreaterEqual:								// GE			Greater than or equal
 			{
 				// SRB_N == SRB_V
-				sr_getBitValue(_dst, CCRB_N);
+				ccr_getBitValue(_dst, CCRB_N);
 				const RegGP r(m_block);
-				sr_getBitValue(r, CCRB_V);
+				ccr_getBitValue(r, CCRB_V);
 				m_asm.cmp(_dst.r8(), r.get().r8());
 				m_asm.sete(_dst);
 			}
@@ -56,9 +56,9 @@ namespace dsp56k
 		case CCCC_LessThan:									// LT			Less than
 			{
 				// SRB_N != SRB_V
-				sr_getBitValue(_dst, CCRB_N);
+				ccr_getBitValue(_dst, CCRB_N);
 				const RegGP r(m_block);
-				sr_getBitValue(r, CCRB_V);
+				ccr_getBitValue(r, CCRB_V);
 				m_asm.cmp(_dst.r8(), r.get().r8());
 				m_asm.setne(_dst);
 			}
@@ -66,13 +66,13 @@ namespace dsp56k
 		case CCCC_Normalized:								// NR			Normalized
 			{
 				// (SRB_Z + ((!SRB_U) | (!SRB_E))) == 1
-				sr_getBitValue(_dst, CCRB_U);
+				ccr_getBitValue(_dst, CCRB_U);
 				m_asm.xor_(_dst, asmjit::Imm(1));
 				const RegGP r(m_block);
-				sr_getBitValue(r, CCRB_E);
+				ccr_getBitValue(r, CCRB_E);
 				m_asm.xor_(r, asmjit::Imm(1));
 				m_asm.and_(_dst.r8(), r.get().r8());
-				sr_getBitValue(r, CCRB_Z);
+				ccr_getBitValue(r, CCRB_Z);
 				m_asm.add(_dst.r8(), r.get().r8());
 				m_asm.cmp(_dst.r8(), asmjit::Imm(1));
 				m_asm.sete(_dst);
@@ -81,13 +81,13 @@ namespace dsp56k
 		case CCCC_NotNormalized:							// NN			Not normalized
 			{
 				// (SRB_Z + ((!SRB_U) | !SRB_E)) == 0
-				sr_getBitValue(_dst, CCRB_U);
+				ccr_getBitValue(_dst, CCRB_U);
 				m_asm.xor_(_dst, asmjit::Imm(1));
 				const RegGP r(m_block);
-				sr_getBitValue(r, CCRB_E);
+				ccr_getBitValue(r, CCRB_E);
 				m_asm.xor_(r, asmjit::Imm(1));
 				m_asm.and_(_dst.r8(), r.get().r8());
-				sr_getBitValue(r, CCRB_Z);
+				ccr_getBitValue(r, CCRB_Z);
 				m_asm.add(_dst.r8(), r.get().r8());
 				m_asm.setz(_dst);
 			}
@@ -95,11 +95,11 @@ namespace dsp56k
 		case CCCC_GreaterThan:								// GT			Greater than
 			{
 				// (SRB_Z + (SRB_N != SRB_V)) == 0
-				sr_getBitValue(_dst, CCRB_N);
+				ccr_getBitValue(_dst, CCRB_N);
 				const RegGP r(m_block);
-				sr_getBitValue(r, CCRB_V);
+				ccr_getBitValue(r, CCRB_V);
 				m_asm.xor_(_dst.r8(), r.get().r8());
-				sr_getBitValue(r, CCRB_Z);
+				ccr_getBitValue(r, CCRB_Z);
 				m_asm.add(_dst.r8(), r.get().r8());
 				m_asm.setz(_dst);
 			}
@@ -107,11 +107,11 @@ namespace dsp56k
 		case CCCC_LessEqual:								// LE			Less than or equal
 			{
 				// (SRB_Z + (SRB_N != SRB_V)) == 1
-				sr_getBitValue(_dst, CCRB_N);
+				ccr_getBitValue(_dst, CCRB_N);
 				const RegGP r(m_block);
-				sr_getBitValue(r, CCRB_V);
+				ccr_getBitValue(r, CCRB_V);
 				m_asm.xor_(_dst.r8(), r.get().r8());
-				sr_getBitValue(r, CCRB_Z);
+				ccr_getBitValue(r, CCRB_Z);
 				m_asm.add(_dst.r8(), r.get().r8());
 				m_asm.cmp(_dst.r8(), asmjit::Imm(1));
 				m_asm.sete(_dst);

@@ -933,7 +933,7 @@ namespace dsp56k
 			{
 				const RegGP carry(m_block);
 				m_asm.xor_(carry, carry.get());
-				sr_getBitValue(carry, CCRB_C);
+				ccr_getBitValue(carry, CCRB_C);
 				m_asm.or_(d, carry.get());
 			}
 
@@ -1285,7 +1285,7 @@ namespace dsp56k
 		const RegGP prevCarry(m_block);
 		m_asm.xor_(prevCarry, prevCarry.get());
 
-		sr_getBitValue(prevCarry, CCRB_C);
+		ccr_getBitValue(prevCarry, CCRB_C);
 
 		m_asm.bt(r, asmjit::Imm(23));						// Set if bit 47 of the destination operand is set, and cleared otherwise
 		ccr_update_ifCarry(CCRB_C);
