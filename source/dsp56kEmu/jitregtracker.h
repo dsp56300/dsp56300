@@ -255,16 +255,16 @@ namespace dsp56k
 		PushGP m_r11;
 	};
 
-	class PushTemps
+	class PushNonVolatiles
 	{
 	public:
-		explicit PushTemps(asmjit::x86::Assembler& _a)
+		explicit PushNonVolatiles(asmjit::x86::Assembler& _a)
 		: m_tempA(_a, regGPTempA)
 		, m_tempB(_a, regGPTempB)
 		, m_tempC(_a, regGPTempC)
 		, m_tempD(_a, regGPTempD)
 		, m_tempE(_a, regGPTempE)
-		, m_tempPadding16byte(_a, asmjit::x86::rbx)
+		, m_rbx(_a, asmjit::x86::rbx)
 		, m_rsi(_a, asmjit::x86::rsi)
 		, m_rdi(_a, asmjit::x86::rdi)
 		{
@@ -275,7 +275,7 @@ namespace dsp56k
 		PushGP m_tempC;
 		PushGP m_tempD;
 		PushGP m_tempE;
-		PushGP m_tempPadding16byte;
+		PushGP m_rbx;
 		PushGP m_rsi;
 		PushGP m_rdi;
 	};

@@ -164,7 +164,7 @@ namespace dsp56k
 		JitBlock* b;
 
 		{
-			PushTemps temps(m_asm);
+			PushNonVolatiles temps(m_asm);
 
 			b = new JitBlock(m_asm, m_dsp);
 
