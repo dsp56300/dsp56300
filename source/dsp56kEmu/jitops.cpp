@@ -536,6 +536,8 @@ namespace dsp56k
 	{
 		const TWord cccc = getFieldValue<Ifcc,Field_CCCC>(op);
 
+		updateDirtyCCR();
+
 		If(m_block, [&](auto _toFalse)
 		{
 			const RegGP test(m_block);
@@ -553,10 +555,13 @@ namespace dsp56k
 
 			if constexpr(BackupCCR)
 			{
+				// TODO: alus should not update the CCR so we don't have to use backup stuff
 				const RegXMM ccrBackup(m_block);
-				m_asm.movd(ccrBackup, m_dspRegs.getSR(JitDspRegs::Read));
+				m_asm.movd(ccrBackup, getSR(JitDspRegs::Read));
 
 				emitAluOp(op);
+
+				updateDirtyCCR();
 
 				const RegGP r(m_block);
 				m_asm.movd(r.get(), ccrBackup);

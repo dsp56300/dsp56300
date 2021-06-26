@@ -114,7 +114,7 @@ namespace dsp56k
 		m_asm.shl(_r, asmjit::Imm(24));
 	}
 
-	inline void JitOps::alu_abs(const JitReg& _r) const
+	inline void JitOps::alu_abs(const JitReg& _r)
 	{
 		const RegGP rb(m_block);
 
@@ -125,7 +125,7 @@ namespace dsp56k
 		m_asm.cmovl(_r, rb);	// if now negative, restore its saved value
 	}
 
-	inline void JitOps::alu_and(const TWord ab, RegGP& _v) const
+	inline void JitOps::alu_and(const TWord ab, RegGP& _v)
 	{
 		m_asm.shl(_v, asmjit::Imm(24));
 
@@ -421,19 +421,19 @@ namespace dsp56k
 		alu_asr(abDst, abSrc, r);
 	}
 
-	inline void JitOps::alu_bclr(const JitReg64& _dst, const TWord _bit) const
+	inline void JitOps::alu_bclr(const JitReg64& _dst, const TWord _bit)
 	{
 		m_asm.btr(_dst, asmjit::Imm(_bit));
 		ccr_update_ifCarry(CCRB_C);
 	}
 
-	inline void JitOps::alu_bset(const JitReg64& _dst, const TWord _bit) const
+	inline void JitOps::alu_bset(const JitReg64& _dst, const TWord _bit)
 	{
 		m_asm.bts(_dst, asmjit::Imm(_bit));
 		ccr_update_ifCarry(CCRB_C);
 	}
 
-	inline void JitOps::alu_bchg(const JitReg64& _dst, const TWord _bit) const
+	inline void JitOps::alu_bchg(const JitReg64& _dst, const TWord _bit)
 	{
 		m_asm.btc(_dst, asmjit::Imm(_bit));
 		ccr_update_ifCarry(CCRB_C);
@@ -467,7 +467,7 @@ namespace dsp56k
 		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
-	inline void JitOps::alu_lsl(TWord ab, int _shiftAmount) const
+	inline void JitOps::alu_lsl(TWord ab, int _shiftAmount)
 	{
 		const RegGP d(m_block);
 		m_dspRegs.getALU1(d, ab);
@@ -481,7 +481,7 @@ namespace dsp56k
 		m_dspRegs.setALU1(ab, d.get().r32());
 	}
 
-	inline void JitOps::alu_lsr(TWord ab, int _shiftAmount) const
+	inline void JitOps::alu_lsr(TWord ab, int _shiftAmount)
 	{
 		const RegGP d(m_block);
 		m_dspRegs.getALU1(d, ab);
@@ -652,7 +652,7 @@ namespace dsp56k
 		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
-	template<Instruction Inst> void JitOps::bitmod_ea(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
+	template<Instruction Inst> void JitOps::bitmod_ea(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord))
 	{
 		const auto area = getFieldValueMemArea<Inst>(op);
 
@@ -694,7 +694,7 @@ namespace dsp56k
 		}
 	}
 	
-	template<Instruction Inst> void JitOps::bitmod_aa(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
+	template<Instruction Inst> void JitOps::bitmod_aa(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord))
 	{
 		const auto area = getFieldValueMemArea<Inst>(op);
 		const auto addr = getFieldValue<Inst, Field_aaaaaa>(op);
@@ -704,7 +704,7 @@ namespace dsp56k
 		m_block.mem().writeDspMemory(area, addr, regMem);
 	}
 
-	template<Instruction Inst> void JitOps::bitmod_ppqq(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
+	template<Instruction Inst> void JitOps::bitmod_ppqq(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord))
 	{
 		const RegGP r(m_block);
 		readMem<Inst>(r, op);
@@ -712,7 +712,7 @@ namespace dsp56k
 		writeMem<Inst>(op, r);
 	}
 
-	template<Instruction Inst> void JitOps::bitmod_D(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord) const)
+	template<Instruction Inst> void JitOps::bitmod_D(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord))
 	{
 		const auto bit		= getBit<Inst>(op);
 		const auto dddddd	= getFieldValue<Inst,Field_DDDDDD>(op);
@@ -876,6 +876,7 @@ namespace dsp56k
 			ccr_update(r, CCRB_V);
 			m_asm.shl(r, asmjit::Imm(CCRB_L));
 			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
+			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~CCR_L);
 		}
 
 		{

@@ -366,37 +366,39 @@ namespace dsp56k
 		void transferSaturation(const JitReg& _dst);
 
 		// CCR
-		void ccr_update_ifZero(CCRBit _bit) const;
-		void ccr_update_ifNotZero(CCRBit _bit) const;
-		void ccr_update_ifGreater(CCRBit _bit) const;
-		void ccr_update_ifGreaterEqual(CCRBit _bit) const;
-		void ccr_update_ifLess(CCRBit _bit) const;
-		void ccr_update_ifLessEqual(CCRBit _bit) const;
-		void ccr_update_ifCarry(CCRBit _bit) const;
-		void ccr_update_ifNotCarry(CCRBit _bit) const;
-		void ccr_update_ifParity(CCRBit _bit) const;
-		void ccr_update_ifNotParity(CCRBit _bit) const;
-		void ccr_update_ifAbove(CCRBit _bit) const;
-		void ccr_update_ifBelow(CCRBit _bit) const;
+		void ccr_update_ifZero(CCRBit _bit);
+		void ccr_update_ifNotZero(CCRBit _bit);
+		void ccr_update_ifGreater(CCRBit _bit);
+		void ccr_update_ifGreaterEqual(CCRBit _bit);
+		void ccr_update_ifLess(CCRBit _bit);
+		void ccr_update_ifLessEqual(CCRBit _bit);
+		void ccr_update_ifCarry(CCRBit _bit);
+		void ccr_update_ifNotCarry(CCRBit _bit);
+		void ccr_update_ifParity(CCRBit _bit);
+		void ccr_update_ifNotParity(CCRBit _bit);
+		void ccr_update_ifAbove(CCRBit _bit);
+		void ccr_update_ifBelow(CCRBit _bit);
 
-		void ccr_update(const JitReg& _value, CCRBit _bit) const;
+		void ccr_update(const JitReg& _value, CCRBit _bit);
 
-		void ccr_u_update(const JitReg64& _alu) const;
-		void ccr_e_update(const JitReg64& _alu) const;
-		void ccr_n_update_by55(const JitReg64& _alu) const;
-		void ccr_n_update_by47(const JitReg64& _alu) const;
-		void ccr_n_update_by23(const JitReg64& _alu) const;
-		void ccr_s_update(const JitReg64& _alu) const;
-		void ccr_l_update_by_v() const;
-		void ccr_v_update(const JitReg64& _nonMaskedResult) const;
+		void ccr_u_update(const JitReg64& _alu);
+		void ccr_e_update(const JitReg64& _alu);
+		void ccr_n_update_by55(const JitReg64& _alu);
+		void ccr_n_update_by47(const JitReg64& _alu);
+		void ccr_n_update_by23(const JitReg64& _alu);
+		void ccr_s_update(const JitReg64& _alu);
+		void ccr_l_update_by_v();
+		void ccr_v_update(const JitReg64& _nonMaskedResult);
 
-		void ccr_clear(CCRMask _mask) const;
-		void ccr_set(CCRMask _mask) const;
+		void ccr_clear(CCRMask _mask);
+		void ccr_set(CCRMask _mask);
 		void ccr_dirty(TWord _aluIndex, const JitReg64& _alu, CCRMask _dirtyBits = static_cast<CCRMask>(CCR_E | CCR_U));
+		void ccr_clearDirty(CCRMask _mask);
 		void updateDirtyCCR();
+		void updateDirtyCCR(CCRMask _whatToUpdate);
 		void updateDirtyCCR(const JitReg64& _alu, CCRMask _dirtyBits);
 
-		void ccr_getBitValue(const JitReg& _dst, CCRBit _bit) const;
+		void ccr_getBitValue(const JitReg& _dst, CCRBit _bit);
 		void sr_getBitValue(const JitReg& _dst, SRBit _bit) const;
 
 		void XYto56(const JitReg64& _dst, int _xy) const;
@@ -432,7 +434,7 @@ namespace dsp56k
 		// ALU
 		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;
 
-		void alu_abs(const JitReg& _r) const;
+		void alu_abs(const JitReg& _r);
 		
 		void alu_add(TWord _ab, RegGP& _v);
 		void alu_add(TWord _ab, const asmjit::Imm& _v);
@@ -440,29 +442,29 @@ namespace dsp56k
 		void alu_sub(TWord _ab, RegGP& _v);
 		void alu_sub(TWord _ab, const asmjit::Imm& _v);
 
-		void alu_and(TWord ab, RegGP& _v) const;
+		void alu_and(TWord ab, RegGP& _v);
 
 		void alu_asl(TWord abSrc, TWord abDst, const PushGP& _v);
 		void alu_asr(TWord _abSrc, TWord _abDst, const PushGP& _v);
 
-		void alu_bclr(const JitReg64& _dst, TWord _bit) const;
-		void alu_bset(const JitReg64& _dst, TWord _bit) const;
-		void alu_bchg(const JitReg64& _dst, TWord _bit) const;
+		void alu_bclr(const JitReg64& _dst, TWord _bit);
+		void alu_bset(const JitReg64& _dst, TWord _bit);
+		void alu_bchg(const JitReg64& _dst, TWord _bit);
 
 		void alu_cmp(TWord ab, const JitReg64& _v, bool magnitude, bool updateCarry = true);
 
-		void alu_lsl(TWord ab, int _shiftAmount) const;
-		void alu_lsr(TWord ab, int _shiftAmount) const;
+		void alu_lsl(TWord ab, int _shiftAmount);
+		void alu_lsr(TWord ab, int _shiftAmount);
 		void alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate, bool _s1Unsigned, bool _s2Unsigned, bool _round);
 		void alu_multiply(TWord op);
 		void alu_or(TWord ab, const JitReg& _v);
 		void alu_rnd(TWord ab);
 		void alu_rnd(TWord ab, const AluReg& r);
 		
-		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
-		template<Instruction Inst> void bitmod_aa(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
-		template<Instruction Inst> void bitmod_ppqq(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
-		template<Instruction Inst> void bitmod_D(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord) const);
+		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord));
+		template<Instruction Inst> void bitmod_aa(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord));
+		template<Instruction Inst> void bitmod_ppqq(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord));
+		template<Instruction Inst> void bitmod_D(TWord _op, void(JitOps::*_bitmodFunc)(const JitReg64&, TWord));
 
 		// move
 		template<Instruction Inst> void move_ddddd_MMMRRR(TWord _op, EMemArea _area);
