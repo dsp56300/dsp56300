@@ -38,29 +38,19 @@ namespace dsp56k
 	public:
 		JitScopedReg() = delete;
 		JitScopedReg(const JitScopedReg&) = delete;
-		JitScopedReg(JitRegpool& _pool) : m_pool(_pool), m_reg({}) { acquire(); }	// TODO: move acquire() to (first) get, will greatly reduce register pressure if the RegGP is passed in as parameter
+		JitScopedReg(JitBlock& _block, JitRegpool& _pool) : m_block(_block), m_pool(_pool), m_reg({}) { acquire(); }	// TODO: move acquire() to (first) get, will greatly reduce register pressure if the RegGP is passed in as parameter
 		~JitScopedReg() { release(); }
 
 		JitScopedReg& operator = (const JitScopedReg&) = delete;
 
-		void acquire()
-		{
-			if(m_acquired)
-				return;
-			m_reg = m_pool.get();
-			m_acquired = true;
-		}
-		void release()
-		{
-			if(!m_acquired)
-				return;
-			m_pool.put(m_reg);
-			m_acquired = false;
-		}
+		void acquire();
+
+		void release();
 
 	protected:
 		asmjit::x86::Reg m_reg;
 	private:
+		JitBlock& m_block;
 		JitRegpool& m_pool;
 		bool m_acquired = false;
 	};
@@ -165,29 +155,15 @@ namespace dsp56k
 	class PushGP
 	{
 	public:
-		PushGP(asmjit::x86::Assembler& _a, const JitReg64& _reg);
+		PushGP(JitBlock& _block, const JitReg64& _reg);
 		~PushGP();
 
 		const JitReg64& get() const { return m_reg; }
 		operator const JitReg64& () const { return m_reg; }
 
 	private:
-		asmjit::x86::Assembler& m_asm;
+		JitBlock& m_block;
 		const JitReg64 m_reg;
-	};
-
-	class PushExchange
-	{
-	public:
-		PushExchange(asmjit::x86::Assembler& _a, const JitReg64& _regA, const JitReg64& _regB);
-		~PushExchange();
-
-	private:
-		void swap() const;
-
-		asmjit::x86::Assembler& m_asm;
-		const JitReg64 m_regA;
-		const JitReg64 m_regB;
 	};
 
 	class PushShadowSpace
@@ -238,31 +214,6 @@ namespace dsp56k
 		PushGP m_r9;
 		PushGP m_r10;
 		PushGP m_r11;
-	};
-
-	class PushNonVolatiles
-	{
-	public:
-		explicit PushNonVolatiles(asmjit::x86::Assembler& _a)
-		: m_tempA(_a, regGPTempA)
-		, m_tempB(_a, regGPTempB)
-		, m_tempC(_a, regGPTempC)
-		, m_tempD(_a, regGPTempD)
-		, m_tempE(_a, regGPTempE)
-		, m_rbx(_a, asmjit::x86::rbx)
-		, m_rsi(_a, asmjit::x86::rsi)
-		, m_rdi(_a, asmjit::x86::rdi)
-		{
-		}
-
-		PushGP m_tempA;
-		PushGP m_tempB;
-		PushGP m_tempC;
-		PushGP m_tempD;
-		PushGP m_tempE;
-		PushGP m_rbx;
-		PushGP m_rsi;
-		PushGP m_rdi;
 	};
 
 	class PushBeforeFunctionCall

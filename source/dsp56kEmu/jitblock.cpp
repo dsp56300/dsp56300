@@ -98,6 +98,8 @@ namespace dsp56k
 		}
 		m_dspRegPool.releaseAll();
 
+		m_regUsage.popAll();
+
 		return !empty();
 	}
 

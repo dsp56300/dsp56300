@@ -53,30 +53,14 @@ namespace dsp56k
 	{
 	}
 
-	PushGP::PushGP(asmjit::x86::Assembler& _a, const JitReg64& _reg) : m_asm(_a), m_reg(_reg)
+	PushGP::PushGP(JitBlock& _block, const JitReg64& _reg) : m_block(_block), m_reg(_reg)
 	{
-		_a.push(m_reg);
+		m_block.regUsage().push(_reg);
 	}
 
 	PushGP::~PushGP()
 	{
-		m_asm.pop(m_reg);
-	}
-
-	PushExchange::PushExchange(asmjit::x86::Assembler& _a, const JitReg64& _regA, const JitReg64& _regB) : m_asm(_a), m_regA(_regA), m_regB(_regB)
-	{
-		swap();
-	}
-
-	PushExchange::~PushExchange()
-	{
-		swap();
-	}
-
-	void PushExchange::swap() const
-	{
-		if(m_regA != m_regB)
-			m_asm.xchg(m_regA, m_regB);
+		m_block.regUsage().pop(m_reg);
 	}
 
 	PushShadowSpace::PushShadowSpace(JitBlock& _block) : m_block(_block)
@@ -87,7 +71,7 @@ namespace dsp56k
 		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
 		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
 #endif
-		}
+	}
 
 	PushShadowSpace::~PushShadowSpace()
 	{
@@ -209,11 +193,28 @@ namespace dsp56k
 		return m_availableRegs.empty();
 	}
 
-	RegGP::RegGP(JitBlock& _block) : JitScopedReg(_block.gpPool())
+	void JitScopedReg::acquire()
+	{
+		if (m_acquired)
+			return;
+		m_reg = m_pool.get();
+		m_block.regUsage().setUsed(m_reg);
+		m_acquired = true;
+	}
+
+	void JitScopedReg::release()
+	{
+		if (!m_acquired)
+			return;
+		m_pool.put(m_reg);
+		m_acquired = false;
+	}
+
+	RegGP::RegGP(JitBlock& _block) : JitScopedReg(_block, _block.gpPool())
 	{
 	}
 
-	RegXMM::RegXMM(JitBlock& _block) : JitScopedReg(_block.xmmPool())
+	RegXMM::RegXMM(JitBlock& _block) : JitScopedReg(_block, _block.xmmPool())
 	{
 	}
 

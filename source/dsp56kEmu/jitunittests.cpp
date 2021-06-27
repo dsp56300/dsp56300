@@ -125,8 +125,6 @@ namespace dsp56k
 		asmjit::x86::Assembler m_asm(&code);
 
 		{
-			PushNonVolatiles temps(m_asm);
-
 			JitBlock block(m_asm, dsp);
 
 			JitOps ops(block);

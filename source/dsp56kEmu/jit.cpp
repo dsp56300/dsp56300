@@ -164,8 +164,6 @@ namespace dsp56k
 		JitBlock* b;
 
 		{
-			PushNonVolatiles temps(m_asm);
-
 			b = new JitBlock(m_asm, m_dsp);
 
 			if(!b->emit(_pc, m_jitCache, m_volatileP))
