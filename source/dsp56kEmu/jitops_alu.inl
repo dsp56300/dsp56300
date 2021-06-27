@@ -1,6 +1,7 @@
 #pragma once
 
 #include "jitops.h"
+#include "asmjit/x86/x86features.h"
 
 namespace dsp56k
 {
@@ -997,7 +998,7 @@ namespace dsp56k
 		const RegGP widthOffset(m_block);
 		decode_sss_read(widthOffset, sss);
 
-		RegGP width(m_block);
+		const ShiftReg width(m_block);
 		m_asm.mov(width, widthOffset.get());
 		m_asm.shr(width, asmjit::Imm(12));
 		m_asm.and_(width, asmjit::Imm(0x3f));
@@ -1011,12 +1012,23 @@ namespace dsp56k
 
 		const auto& mask = widthOffset;
 		m_asm.mov(mask, asmjit::Imm(g_alu_max_56_u));
-		m_asm.shrx(mask, mask, width.get());
-		width.release();
+		m_asm.shr(mask, width.get());
 
 		AluReg s(m_block, abSrc, abSrc != abDst);
-		m_asm.shrx(s, s, offset.get());
+
+		if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kBMI2))
+		{
+			m_asm.shrx(s, s, offset.get());	
+		}
+		else
+		{
+			const ShiftReg shift(m_block);
+			m_asm.mov(shift, offset.get());
+			m_asm.shr(s, shift.get());
+		}
+
 		m_asm.and_(s, mask.get());
+
 		offset.release();
 
 		JitReg64 aluD;
