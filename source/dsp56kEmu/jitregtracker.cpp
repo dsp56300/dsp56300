@@ -53,14 +53,16 @@ namespace dsp56k
 	{
 	}
 
-	PushGP::PushGP(JitBlock& _block, const JitReg64& _reg) : m_block(_block), m_reg(_reg)
+	PushGP::PushGP(JitBlock& _block, const JitReg64& _reg, bool _onlyIfUsedInPool/* = true*/) : m_block(_block), m_reg(_reg), m_pushed(!_onlyIfUsedInPool || _block.dspRegPool().isInUse(_reg))
 	{
-		m_block.regUsage().push(_reg);
+		if(m_pushed)
+			m_block.regUsage().push(_reg);
 	}
 
 	PushGP::~PushGP()
 	{
-		m_block.regUsage().pop(m_reg);
+		if(m_pushed)
+			m_block.regUsage().pop(m_reg);
 	}
 
 	PushShadowSpace::PushShadowSpace(JitBlock& _block) : m_block(_block)
@@ -91,19 +93,18 @@ namespace dsp56k
 		if(!m_isLoaded)
 			return;
 
-		const RegGP r(_block);
-
 		const auto xm = asmjit::x86::xmm(_xmmIndex);
-		
-		_block.asm_().movq(r, xm);
-		_block.asm_().push(r.get());
+
+		_block.regUsage().push(xm);
 
 		if(g_push128Bits)
 		{
+			const RegGP r(_block);
 			_block.asm_().psrldq(xm, asmjit::Imm(8));
 
 			_block.asm_().movq(r, xm);
-			_block.asm_().push(r.get());			
+			
+			_block.regUsage().push(r.get());
 		}
 	}
 
@@ -112,18 +113,16 @@ namespace dsp56k
 		if(!m_isLoaded)
 			return;
 
-		const RegGP r(m_block);
-
 		const auto xm = asmjit::x86::xmm(m_xmmIndex);
 
-		m_block.asm_().pop(r.get());
-		m_block.asm_().movq(xm, r);
+		m_block.regUsage().pop(xm);
 
 		if(g_push128Bits)
 		{
-			m_block.asm_().pslldq(xm, asmjit::Imm(8));
+			const RegGP r(m_block);
+			m_block.regUsage().pop(r.get());
 
-			m_block.asm_().pop(r.get());
+			m_block.asm_().pslldq(xm, asmjit::Imm(8));
 
 			RegXMM xt(m_block);
 			m_block.asm_().movq(xt, r);

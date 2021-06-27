@@ -84,6 +84,7 @@ namespace dsp56k
 
 	void RegUsage::call(const void* _funcAsPtr)
 	{
+		PushBeforeFunctionCall backup(m_block);
 		m_block.asm_().call(_funcAsPtr);
 	}
 

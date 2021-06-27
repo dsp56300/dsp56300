@@ -155,7 +155,7 @@ namespace dsp56k
 	class PushGP
 	{
 	public:
-		PushGP(JitBlock& _block, const JitReg64& _reg);
+		PushGP(JitBlock& _block, const JitReg64& _reg, bool _onlyIfUsedInPool = false);
 		~PushGP();
 
 		const JitReg64& get() const { return m_reg; }
@@ -164,6 +164,7 @@ namespace dsp56k
 	private:
 		JitBlock& m_block;
 		const JitReg64 m_reg;
+		const bool m_pushed;
 	};
 
 	class PushShadowSpace
