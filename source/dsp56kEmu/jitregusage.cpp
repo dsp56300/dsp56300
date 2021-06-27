@@ -11,6 +11,11 @@ namespace dsp56k
 
 	constexpr size_t g_stackAlignmentBytes = 16;
 	constexpr size_t g_functionCallSize = 8;
+#ifdef _MSC_VER
+	constexpr size_t g_shadowSpaceSize = 32;
+#else
+	constexpr size_t g_shadowSpaceSize = 0;
+#endif
 	
 	RegUsage::RegUsage(JitBlock& _block) : m_block(_block)
 	{
@@ -85,7 +90,19 @@ namespace dsp56k
 	void RegUsage::call(const void* _funcAsPtr)
 	{
 		PushBeforeFunctionCall backup(m_block);
+
+		const auto usedSize = m_pushedBytes + g_functionCallSize;
+		const auto alignedStack = (usedSize + g_stackAlignmentBytes-1) & ~(g_stackAlignmentBytes-1);
+
+		const auto offset = alignedStack - usedSize + g_shadowSpaceSize;
+
+		if(offset)
+			m_block.asm_().sub(asmjit::x86::rsp, asmjit::Imm(offset));
+
 		m_block.asm_().call(_funcAsPtr);
+
+		if(offset)
+			m_block.asm_().add(asmjit::x86::rsp, asmjit::Imm(offset));
 	}
 
 	bool RegUsage::isNonVolatile(const JitReg& _gp)

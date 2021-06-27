@@ -131,40 +131,21 @@ namespace dsp56k
 	}
 
 	PushXMMRegs::PushXMMRegs(JitBlock& _block): m_xmm0(_block, 0), m_xmm1(_block, 1), m_xmm2(_block, 2),
-	                                            m_xmm3(_block, 3), m_xmm4(_block, 4), m_xmm5(_block, 5), m_needsPadding(false), m_block(_block)
+	                                            m_xmm3(_block, 3), m_xmm4(_block, 4), m_xmm5(_block, 5), m_block(_block)
 	{
-		uint32_t numPushed = 0;
-		if(m_xmm0.isPushed()) ++numPushed;
-		if(m_xmm1.isPushed()) ++numPushed;
-		if(m_xmm2.isPushed()) ++numPushed;
-		if(m_xmm3.isPushed()) ++numPushed;
-		if(m_xmm4.isPushed()) ++numPushed;
-		if(m_xmm5.isPushed()) ++numPushed;
-
-		// TODO: should be a global thing, not here but before actually calling the func
-		if(numPushed & 1)
-		{
-			_block.asm_().push(asmjit::Imm(0xc0deba5ec0deba5e));
-			m_needsPadding = true;
-		}
 	}
 
 	PushXMMRegs::~PushXMMRegs()
 	{
-		if(m_needsPadding)
-		{
-			const RegGP gp(m_block);
-			m_block.asm_().pop(gp);
-		}
 	}
 
 	PushGPRegs::PushGPRegs(JitBlock& _block)
-	: m_r8(_block, asmjit::x86::r8), m_r9(_block, asmjit::x86::r9)
-	, m_r10(_block, asmjit::x86::r10), m_r11(_block, asmjit::x86::r11)
+	: m_r8(_block, asmjit::x86::r8, true), m_r9(_block, asmjit::x86::r9, true)
+	, m_r10(_block, asmjit::x86::r10, true), m_r11(_block, asmjit::x86::r11, true)
 	{
 	}
 
-	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block) : m_xmm(_block) , m_gp(_block), m_shadow(_block)
+	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block) : m_xmm(_block) , m_gp(_block)
 	{
 	}
 

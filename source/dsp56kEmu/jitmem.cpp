@@ -160,28 +160,16 @@ namespace dsp56k
 	void Jitmem::writeDspMemory(const EMemArea _area, const JitReg& _offset, const JitReg& _src) const
 	{
 #ifdef DEBUG_MEMORY_WRITES
-		PushGP r8(m_block, asmjit::x86::r8);
-		PushGP r9(m_block, asmjit::x86::r9);
-		PushGP r10(m_block, asmjit::x86::r10);
-		PushGP r11(m_block, asmjit::x86::r11);
-		PushGP rbp(m_block, asmjit::x86::rbp);
-		PushGP padding(m_block, asmjit::x86::rbp);
-		
-		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
-		m_block.asm_().mov(regArg1, _area);
-
+		PushGP r1(m_block, regArg1);
 		PushGP r2(m_block, regArg2);
 		PushGP r3(m_block, regArg3);
-		PushGP rPadding(m_block, regArg3);
 
+		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
+		m_block.asm_().mov(regArg1, _area);
 		m_block.asm_().mov(regArg2, _offset);
 		m_block.asm_().mov(regArg3, _src);
 
-		{
-			PushXMMRegs xmms(m_block);
-			PushShadowSpace ss(m_block);
-			m_block.asm_().call(asmjit::func_as_ptr(&callDSPMemWrite));
-		}
+		m_block.regUsage().call(asmjit::func_as_ptr(&callDSPMemWrite));
 #else
 		const SkipLabel skip(m_block.asm_());
 
@@ -248,9 +236,8 @@ namespace dsp56k
 
 	void Jitmem::readPeriph(const JitReg64& _dst, EMemArea _area, const TWord& _offset) const
 	{
-		PushGP r1(m_block, regArg1);
-		PushGP r2(m_block, regArg2);
-		PushGP rPadding(m_block, regArg3);
+		PushGP r1(m_block, regArg1, true);
+		PushGP r2(m_block, regArg2, true);
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
@@ -263,9 +250,8 @@ namespace dsp56k
 
 	void Jitmem::readPeriph(const JitReg64& _dst, const EMemArea _area, const JitReg64& _offset) const
 	{
-		PushGP r1(m_block, regArg1);
-		PushGP r2(m_block, regArg2);
-		PushGP rPadding(m_block, regArg3);
+		PushGP r1(m_block, regArg1, true);
+		PushGP r2(m_block, regArg2, true);
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
@@ -278,9 +264,9 @@ namespace dsp56k
 
 	void Jitmem::writePeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value) const
 	{
-		PushGP r1(m_block, regArg1);
-		PushGP r2(m_block, regArg2);
-		PushGP r3(m_block, regArg3);
+		PushGP r1(m_block, regArg1, true);
+		PushGP r2(m_block, regArg2, true);
+		PushGP r3(m_block, regArg3, true);
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
@@ -292,9 +278,9 @@ namespace dsp56k
 
 	void Jitmem::writePeriph(EMemArea _area, const TWord& _offset, const JitReg64& _value) const
 	{
-		PushGP r1(m_block, regArg1);
-		PushGP r2(m_block, regArg2);
-		PushGP r3(m_block, regArg3);
+		PushGP r1(m_block, regArg1, true);
+		PushGP r2(m_block, regArg2, true);
+		PushGP r3(m_block, regArg3, true);
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);

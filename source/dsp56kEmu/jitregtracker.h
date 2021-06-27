@@ -202,7 +202,6 @@ namespace dsp56k
 		PushXMM m_xmm3;
 		PushXMM m_xmm4;
 		PushXMM m_xmm5;
-		bool m_needsPadding;
 		JitBlock& m_block;
 	};
 
@@ -224,6 +223,5 @@ namespace dsp56k
 
 		PushXMMRegs m_xmm;
 		PushGPRegs m_gp;
-		PushShadowSpace m_shadow;
 	};
 }
