@@ -130,12 +130,12 @@ namespace dsp56k
 		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
-		m_asm.or_(_m.r16(), _m.r16());	// bit reverse
-		m_asm.jz(bitreverse);
-
 		m_asm.cmp(_m.r32(), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.jz(linear);
 		
+		m_asm.or_(_m.r16(), _m.r16());					// bit reverse
+		m_asm.jz(bitreverse);
+
 		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));
 		m_asm.jg(multipleWrapModulo);
 		
