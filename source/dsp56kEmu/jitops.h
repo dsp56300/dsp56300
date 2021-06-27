@@ -444,7 +444,7 @@ namespace dsp56k
 
 		void alu_and(TWord ab, RegGP& _v);
 
-		void alu_asl(TWord abSrc, TWord abDst, const ShiftReg& _v);
+		void alu_asl(TWord _abSrc, TWord _abDst, const ShiftReg& _v);
 		void alu_asr(TWord _abSrc, TWord _abDst, const ShiftReg& _v);
 
 		void alu_bclr(const JitReg64& _dst, TWord _bit);

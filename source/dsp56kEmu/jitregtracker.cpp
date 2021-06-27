@@ -28,20 +28,20 @@ namespace dsp56k
 		m_dspReg = JitDspRegPool::DspCount;
 	}
 
-	AluReg::AluReg(JitBlock& _block, const TWord _aluIndexSrc, bool readOnly/* = false*/, bool writeOnly/* = false*/, TWord _aluIndexDst/* = ~0*/)
+	AluReg::AluReg(JitBlock& _block, const TWord _aluIndex, bool readOnly/* = false*/, bool writeOnly/* = false*/)
 	: m_block(_block)
 	, m_reg(_block)
-	, m_aluIndexDst(_aluIndexDst > 2 ? _aluIndexSrc : _aluIndexDst)
 	, m_readOnly(readOnly)
+	, m_aluIndex(_aluIndex)
 	{
 		if(!writeOnly)
-			m_block.regs().getALU(m_reg, _aluIndexSrc);
+			m_block.regs().getALU(m_reg, _aluIndex);
 	}
 
 	AluReg::~AluReg()
 	{
 		if(!m_readOnly)
-			m_block.regs().setALU(m_aluIndexDst, m_reg);
+			m_block.regs().setALU(m_aluIndex, m_reg);
 	}
 
 	void AluReg::release()

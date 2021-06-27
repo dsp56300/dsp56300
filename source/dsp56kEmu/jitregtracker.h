@@ -116,18 +116,17 @@ namespace dsp56k
 	class AluReg
 	{
 	public:
-		AluReg(JitBlock& _block, TWord _aluIndexSrc, bool readOnly = false, bool writeOnly = false, TWord _aluIndexDst = ~0);
+		AluReg(JitBlock& _block, TWord _aluIndex, bool readOnly = false, bool writeOnly = false);
 		~AluReg();
 		JitReg64 get() const { return m_reg.get(); }
 		operator JitReg64 () const { return get(); }
-		operator const RegGP& () const { return m_reg; }
 		void release();
 
 	private:
 		JitBlock& m_block;
 		RegGP m_reg;
-		const TWord m_aluIndexDst;
 		const bool m_readOnly;
+		const TWord m_aluIndex;
 	};
 
 	class AguReg : public DSPReg

@@ -157,9 +157,11 @@ namespace dsp56k
 		ccr_clear(CCR_V);
 	}
 
-	inline void JitOps::alu_asl(TWord abSrc, TWord abDst, const ShiftReg& _v)
+	inline void JitOps::alu_asl(const TWord _abSrc, const TWord _abDst, const ShiftReg& _v)
 	{
-		const AluReg alu(m_block, abSrc, false, false, abDst);
+		const AluReg alu(m_block, _abDst, false, _abDst != _abSrc);
+		if(_abDst != _abSrc)
+			m_asm.mov(alu.get(), m_dspRegs.getALU(_abSrc, JitDspRegs::Read));
 
 		m_asm.sal(alu, asmjit::Imm(8));				// we want to hit the 64 bit boundary to make use of the native carry flag so pre-shift by 8 bit (56 => 64)
 
@@ -170,7 +172,7 @@ namespace dsp56k
 		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
 		// The easiest way to check this is to shift back and compare if the initial alu value is identical ot the backshifted one
 		{
-			const AluReg oldAlu(m_block, abSrc, true);
+			const AluReg oldAlu(m_block, _abSrc, true);
 			m_asm.sal(oldAlu, asmjit::Imm(8));
 			m_asm.sar(alu, _v.get());
 			m_asm.cmp(alu, oldAlu.get());
@@ -181,12 +183,14 @@ namespace dsp56k
 		m_asm.sal(alu, _v.get());					// one more time
 		m_asm.shr(alu, asmjit::Imm(8));				// correction
 
-		ccr_dirty(abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
+		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	inline void JitOps::alu_asr(const TWord _abSrc, const TWord _abDst, const ShiftReg& _v)
 	{
-		const AluReg alu(m_block, _abSrc, false, false, _abDst);
+		const AluReg alu(m_block, _abDst, false, _abDst != _abSrc);
+		if(_abDst != _abSrc)
+			m_asm.mov(alu.get(), m_dspRegs.getALU(_abSrc, JitDspRegs::Read));
 
 		m_asm.sal(alu, asmjit::Imm(8));
 		m_asm.sar(alu, _v.get());
