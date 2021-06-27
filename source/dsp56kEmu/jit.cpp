@@ -110,16 +110,7 @@ namespace dsp56k
 
 		m_dsp.m_instructions += cacheEntry->getExecutedInstructionCount();
 
-		if(cacheEntry->nextPC() != g_pcInvalid)
-		{
-			// If the JIt block executed a branch, point PC to the new location
-			m_dsp.setPC(cacheEntry->nextPC());
-		}
-		else
-		{
-			// Otherwise, move PC forward
-			m_dsp.setPC(pc + cacheEntry->getPMemSize());
-		}
+		m_dsp.setPC(cacheEntry->nextPC());
 
 		if(g_traceOps)
 		{

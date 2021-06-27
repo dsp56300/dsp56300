@@ -75,6 +75,7 @@ namespace dsp56k
 		Jitmem m_mem;
 
 		TWord m_pcFirst = 0;
+		TWord m_pcLast = 0;
 		TWord m_pMemSize = 0;
 		TWord m_lastOpSize = 0;
 		TWord m_encodedInstructionCount = 0;
