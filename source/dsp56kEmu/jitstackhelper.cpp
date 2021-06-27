@@ -1,4 +1,4 @@
-#include "jitregusage.h"
+#include "jitstackhelper.h"
 
 #include <cassert>
 
@@ -17,7 +17,7 @@ namespace dsp56k
 	constexpr size_t g_shadowSpaceSize = 0;
 #endif
 	
-	RegUsage::RegUsage(JitBlock& _block) : m_block(_block)
+	JitStackHelper::JitStackHelper(JitBlock& _block) : m_block(_block)
 	{
 		m_pushedRegs.reserve(128);
 		m_usedRegs.reserve(128);
@@ -26,12 +26,12 @@ namespace dsp56k
 			push(reg);
 	}
 
-	RegUsage::~RegUsage()
+	JitStackHelper::~JitStackHelper()
 	{
 		popAll();
 	}
 
-	void RegUsage::push(const JitReg& _reg)
+	void JitStackHelper::push(const JitReg& _reg)
 	{
 		m_block.asm_().push(_reg);
 
@@ -39,7 +39,7 @@ namespace dsp56k
 		m_pushedBytes += _reg.size();
 	}
 
-	void RegUsage::push(const JitReg128& _reg)
+	void JitStackHelper::push(const JitReg128& _reg)
 	{
 		m_block.asm_().movq(regReturnVal, _reg);
 		m_block.asm_().push(regReturnVal);
@@ -48,7 +48,7 @@ namespace dsp56k
 		m_pushedBytes += regReturnVal.size();
 	}
 
-	void RegUsage::pop(const JitReg& _reg)
+	void JitStackHelper::pop(const JitReg& _reg)
 	{
 		assert(!m_pushedRegs.empty());
 		assert(m_pushedBytes >= _reg.size());
@@ -59,13 +59,13 @@ namespace dsp56k
 		m_block.asm_().pop(_reg);
 	}
 
-	void RegUsage::pop(const JitReg128& _reg)
+	void JitStackHelper::pop(const JitReg128& _reg)
 	{
 		pop(regReturnVal);
 		m_block.asm_().movq(_reg, regReturnVal);
 	}
 
-	void RegUsage::pop(const Reg& _reg)
+	void JitStackHelper::pop(const Reg& _reg)
 	{
 		if(_reg.isGp())
 			pop(_reg.as<JitReg>());
@@ -75,19 +75,19 @@ namespace dsp56k
 			assert(false && "unknown register type");
 	}
 
-	void RegUsage::pop()
+	void JitStackHelper::pop()
 	{
 		auto reg = m_pushedRegs.back();
 		pop(reg);
 	}
 
-	void RegUsage::popAll()
+	void JitStackHelper::popAll()
 	{
 		while(!m_pushedRegs.empty())
 			pop();
 	}
 
-	void RegUsage::call(const void* _funcAsPtr)
+	void JitStackHelper::call(const void* _funcAsPtr)
 	{
 		PushBeforeFunctionCall backup(m_block);
 
@@ -105,7 +105,7 @@ namespace dsp56k
 			m_block.asm_().add(asmjit::x86::rsp, asmjit::Imm(offset));
 	}
 
-	bool RegUsage::isNonVolatile(const JitReg& _gp)
+	bool JitStackHelper::isNonVolatile(const JitReg& _gp)
 	{
 		for(size_t i=0; i<g_nonVolatileGPCount; ++i)
 		{
@@ -115,7 +115,7 @@ namespace dsp56k
 		return false;
 	}
 
-	bool RegUsage::isNonVolatile(const JitReg128& _xm)
+	bool JitStackHelper::isNonVolatile(const JitReg128& _xm)
 	{
 		for(size_t i=0; i<g_nonVolatileXMMCount; ++i)
 		{
@@ -125,7 +125,7 @@ namespace dsp56k
 		return false;
 	}
 
-	void RegUsage::setUsed(const Reg& _reg)
+	void JitStackHelper::setUsed(const Reg& _reg)
 	{
 		if(_reg.isGp())
 			setUsed(_reg.as<JitReg>());
@@ -135,7 +135,7 @@ namespace dsp56k
 			assert(false && "unknown register type");
 	}
 
-	void RegUsage::setUsed(const JitReg& _reg)
+	void JitStackHelper::setUsed(const JitReg& _reg)
 	{
 		if(isUsed(_reg))
 			return;
@@ -146,7 +146,7 @@ namespace dsp56k
 		m_usedRegs.push_back(_reg);
 	}
 
-	void RegUsage::setUsed(const JitReg128& _reg)
+	void JitStackHelper::setUsed(const JitReg128& _reg)
 	{
 		if(isUsed(_reg))
 			return;
@@ -157,7 +157,7 @@ namespace dsp56k
 		m_usedRegs.push_back(_reg);
 	}
 
-	bool RegUsage::isUsed(const Reg& _reg) const
+	bool JitStackHelper::isUsed(const Reg& _reg) const
 	{
 		for (const auto& m_usedReg : m_usedRegs)
 		{

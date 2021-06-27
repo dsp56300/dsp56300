@@ -104,7 +104,7 @@ namespace dsp56k
 		// allocate a new slot for the GP register
 		JitReg res;
 		m_gpList.acquire(res, _reg, m_repMode);
-		m_block.regUsage().setUsed(res);
+		m_block.stack().setUsed(res);
 
 		// Do we still have it in an XMM reg?
 		JitReg128 xmReg;
@@ -338,7 +338,7 @@ namespace dsp56k
 
 			JitReg128 xmReg;
 			m_xmList.acquire(xmReg, dspReg, m_repMode);
-			m_block.regUsage().setUsed(xmReg);
+			m_block.stack().setUsed(xmReg);
 
 			m_block.asm_().movq(xmReg, hostReg);
 

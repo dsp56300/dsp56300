@@ -5,7 +5,7 @@
 #include "jitmem.h"
 #include "jitregtracker.h"
 #include "jitregtypes.h"
-#include "jitregusage.h"
+#include "jitstackhelper.h"
 
 #include <string>
 #include <vector>
@@ -34,7 +34,7 @@ namespace dsp56k
 
 		asmjit::x86::Assembler& asm_() { return m_asm; }
 		DSP& dsp() { return m_dsp; }
-		RegUsage& regUsage() { return m_regUsage; }
+		JitStackHelper& stack() { return m_stack; }
 		JitRegpool& gpPool() { return m_gpPool; }
 		JitRegpool& xmmPool() { return m_xmmPool; }
 		JitDspRegs& regs() { return m_dspRegs; }
@@ -67,7 +67,7 @@ namespace dsp56k
 
 		asmjit::x86::Assembler& m_asm;
 		DSP& m_dsp;
-		RegUsage m_regUsage;
+		JitStackHelper m_stack;
 		JitRegpool m_xmmPool;
 		JitRegpool m_gpPool;
 		JitDspRegs m_dspRegs;

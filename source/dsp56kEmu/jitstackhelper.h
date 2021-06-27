@@ -9,13 +9,13 @@ namespace dsp56k
 {
 	class JitBlock;
 
-	class RegUsage
+	class JitStackHelper
 	{
 	public:
 		using Reg = asmjit::x86::Reg;
 
-		RegUsage(JitBlock& _block);
-		~RegUsage();
+		JitStackHelper(JitBlock& _block);
+		~JitStackHelper();
 
 		void push(const JitReg& _reg);
 		void push(const JitReg128& _reg);

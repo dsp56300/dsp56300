@@ -10,7 +10,7 @@ namespace dsp56k
 	JitBlock::JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp)
 	: m_asm(_a)
 	, m_dsp(_dsp)
-	, m_regUsage(*this)
+	, m_stack(*this)
 	, m_xmmPool({regXMMTempA, regXMMTempB, regXMMTempC})
 	, m_gpPool({regGPTempA, regGPTempB, regGPTempC, regGPTempD, regGPTempE})
 	, m_dspRegs(*this)
@@ -98,7 +98,7 @@ namespace dsp56k
 		}
 		m_dspRegPool.releaseAll();
 
-		m_regUsage.popAll();
+		m_stack.popAll();
 
 		return !empty();
 	}

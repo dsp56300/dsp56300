@@ -243,7 +243,7 @@ namespace dsp56k
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
 		m_block.asm_().mov(regArg2, asmjit::Imm(_offset));
 
-		m_block.regUsage().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
+		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
 
 		m_block.asm_().mov(_dst, regReturnVal);
 	}
@@ -257,7 +257,7 @@ namespace dsp56k
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
 		m_block.asm_().mov(regArg2, _offset);
 
-		m_block.regUsage().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
+		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
 
 		m_block.asm_().mov(_dst, regReturnVal);
 	}
@@ -273,7 +273,7 @@ namespace dsp56k
 		m_block.asm_().mov(regArg2, _offset);
 		m_block.asm_().mov(regArg3, _value);
 
-		m_block.regUsage().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
+		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
 	}
 
 	void Jitmem::writePeriph(EMemArea _area, const TWord& _offset, const JitReg64& _value) const
@@ -288,7 +288,7 @@ namespace dsp56k
 		m_block.asm_().mov(regArg2, asmjit::Imm(_offset));
 		m_block.asm_().mov(regArg3, _value);
 
-		m_block.regUsage().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
+		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
 	}
 
 	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, TWord offset/* = 0*/) const
