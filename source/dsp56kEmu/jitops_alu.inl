@@ -157,7 +157,7 @@ namespace dsp56k
 		ccr_clear(CCR_V);
 	}
 
-	inline void JitOps::alu_asl(TWord abSrc, TWord abDst, const PushGP& _v)
+	inline void JitOps::alu_asl(TWord abSrc, TWord abDst, const ShiftReg& _v)
 	{
 		const AluReg alu(m_block, abSrc, false, false, abDst);
 
@@ -184,7 +184,7 @@ namespace dsp56k
 		ccr_dirty(abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
-	inline void JitOps::alu_asr(const TWord _abSrc, const TWord _abDst, const PushGP& _v)
+	inline void JitOps::alu_asr(const TWord _abSrc, const TWord _abDst, const ShiftReg& _v)
 	{
 		const AluReg alu(m_block, _abSrc, false, false, _abDst);
 
@@ -356,7 +356,7 @@ namespace dsp56k
 		const auto D = getFieldValue<Asl_D, Field_d>(op);
 
 		// TODO: this is far from optimal, we should use immediate data here
-		const PushGP r(m_block, asmjit::x86::rcx);
+		const ShiftReg r(m_block);
 		m_asm.mov(r, asmjit::Imm(1));
 		alu_asl(D, D, r);
 	}
@@ -369,7 +369,7 @@ namespace dsp56k
 		const bool abSrc		= getFieldValue<Asl_ii,Field_S>(op);
 
 		// TODO: this is far from optimal, we should use immediate data here
-		const PushGP r(m_block, asmjit::x86::rcx);
+		const ShiftReg r(m_block);
 		m_asm.mov(r, asmjit::Imm(shiftAmount));
 		alu_asl(abSrc, abDst, r);
 	}
@@ -380,7 +380,7 @@ namespace dsp56k
 		const bool abDst = getFieldValue<Asl_S1S2D,Field_D>(op);
 		const bool abSrc = getFieldValue<Asl_S1S2D,Field_S>(op);
 
-		const PushGP r(m_block, asmjit::x86::rcx);
+		const ShiftReg r(m_block);
 		decode_sss_read( r.get(), sss );
 		m_asm.and_(r, asmjit::Imm(0x3f));	// "In the control register S1: bits 5–0 (LSB) are used as the #ii field, and the rest of the register is ignored." TODO: this is missing in the interpreter!
 		alu_asl(abDst, abSrc, r);
@@ -391,7 +391,7 @@ namespace dsp56k
 		const auto D = getFieldValue<Asr_D, Field_d>(op);
 
 		// TODO: this is far from optimal, we should use immediate data here
-		const PushGP r(m_block, asmjit::x86::rcx);
+		const ShiftReg r(m_block);
 		m_asm.mov(r, asmjit::Imm(1));
 		alu_asr(D, D, r);
 	}
@@ -404,7 +404,7 @@ namespace dsp56k
 		const bool abSrc		= getFieldValue<Asr_ii,Field_S>(op);
 
 		// TODO: this is far from optimal, we should use immediate data here
-		const PushGP r(m_block, asmjit::x86::rcx);
+		const ShiftReg r(m_block);
 		m_asm.mov(r, asmjit::Imm(shiftAmount));
 		alu_asr(abSrc, abDst, r);
 	}
@@ -415,7 +415,7 @@ namespace dsp56k
 		const bool abDst = getFieldValue<Asr_S1S2D,Field_D>(op);
 		const bool abSrc = getFieldValue<Asr_S1S2D,Field_S>(op);
 
-		const PushGP r(m_block, asmjit::x86::rcx);
+		const ShiftReg r(m_block);
 		decode_sss_read( r.get(), sss );
 		m_asm.and_(r, asmjit::Imm(0x3f));	// "In the control register S1: bits 5–0 (LSB) are used as the #ii field, and the rest of the register is ignored." TODO: this is missing in the interpreter!
 		alu_asr(abDst, abSrc, r);
@@ -591,12 +591,14 @@ namespace dsp56k
 		RegGP rounder(m_block);
 		m_asm.mov(rounder, asmjit::Imm(0x800000));
 
-		const auto shifter = asmjit::x86::rcx;
-		m_asm.xor_(shifter, shifter);
-		sr_getBitValue(asmjit::x86::rcx, SRB_S1);
-		m_asm.shr(rounder, shifter);
-		sr_getBitValue(asmjit::x86::rcx, SRB_S0);
-		m_asm.shl(rounder, shifter);
+		{
+			const ShiftReg shifter(m_block);
+			m_asm.xor_(shifter, shifter.get());
+			sr_getBitValue(shifter, SRB_S1);
+			m_asm.shr(rounder, shifter.get());
+			sr_getBitValue(shifter, SRB_S0);
+			m_asm.shl(rounder, shifter.get());
+		}
 
 		signextend56to64(d);
 		m_asm.add(d, rounder.get());

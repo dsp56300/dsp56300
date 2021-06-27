@@ -38,7 +38,7 @@ namespace dsp56k
 	public:
 		JitScopedReg() = delete;
 		JitScopedReg(const JitScopedReg&) = delete;
-		JitScopedReg(JitBlock& _block, JitRegpool& _pool) : m_block(_block), m_pool(_pool), m_reg({}) { acquire(); }	// TODO: move acquire() to (first) get, will greatly reduce register pressure if the RegGP is passed in as parameter
+		JitScopedReg(JitBlock& _block, JitRegpool& _pool) : m_block(_block), m_pool(_pool) { acquire(); }	// TODO: move acquire() to (first) get, will greatly reduce register pressure if the RegGP is passed in as parameter
 		~JitScopedReg() { release(); }
 
 		JitScopedReg& operator = (const JitScopedReg&) = delete;
@@ -165,6 +165,18 @@ namespace dsp56k
 		JitBlock& m_block;
 		const JitReg64 m_reg;
 		const bool m_pushed;
+	};
+
+	class FuncArg : PushGP
+	{
+	public:
+		FuncArg(JitBlock& _block, const JitReg64& _reg) : PushGP(_block, _reg, true) {}
+	};
+
+	class ShiftReg : public PushGP
+	{
+	public:
+		ShiftReg(JitBlock& _block) : PushGP(_block, asmjit::x86::rcx, true) {}
 	};
 
 	class PushShadowSpace

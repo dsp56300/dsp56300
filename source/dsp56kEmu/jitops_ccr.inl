@@ -201,7 +201,7 @@ namespace dsp56k
 		{
 			// build shift value:
 			// const auto offset = sr_val_noCache(SRB_S0) - sr_val_noCache(SRB_S1);
-			const PushGP shift(m_block, asmjit::x86::rcx);
+			const ShiftReg shift(m_block);
 			m_asm.xor_(shift,shift.get());
 			sr_getBitValue(shift, SRB_S0);
 			m_asm.add(shift, asmjit::Imm(14));	// 46 - 32
@@ -252,7 +252,7 @@ namespace dsp56k
 			m_asm.mov(mask, asmjit::Imm(0x3fe));
 
 			{
-				const PushGP s0s1(m_block, asmjit::x86::rcx);
+				const ShiftReg s0s1(m_block);
 
 				sr_getBitValue(s0s1, SRB_S0);
 				m_asm.shl(mask, s0s1.get().r8());

@@ -48,7 +48,7 @@ namespace dsp56k
 		assert(m_usedGps.size() == m_lockedGps.size());
 		assert(m_usedGpsMap.size() == m_lockedGps.size());
 		assert(m_usedXmms.empty());
-		assert(m_usedXmmMap.empty());		
+		assert(m_usedXmmMap.empty());
 */	}
 
 	JitReg JitDspRegPool::get(DspReg _reg, bool _read, bool _write)

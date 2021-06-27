@@ -130,11 +130,6 @@ namespace dsp56k
 		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
-		const PushGP n_sign(m_block, regReturnVal);	// sign extend n
-		const PushGP n_abs(m_block, regExtMem);		// compare abs(n) with m
-
-		const auto nAbs = n_abs.get().r32();
-
 		m_asm.or_(_m.r16(), _m.r16());	// bit reverse
 		m_asm.jz(bitreverse);
 
@@ -144,6 +139,7 @@ namespace dsp56k
 		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));
 		m_asm.jg(multipleWrapModulo);
 		
+		const auto nAbs = regReturnVal.r32();			// compare abs(n) with m
 		m_asm.mov(nAbs, _n);
 		m_asm.neg(nAbs);
 		m_asm.cmovl(nAbs, _n);
@@ -182,7 +178,7 @@ namespace dsp56k
 				r							+= n + ((p>>31) & modulo) - (((mt)>>31) & modulo);
 		 */
 
-		const PushGP moduloMask(m_block, regLC);
+		const auto moduloMask = regReturnVal;
 
 		// Compute p
 		{
@@ -193,10 +189,10 @@ namespace dsp56k
 			mm |= mm >> 8;
 			*/
 
-			const PushGP temp(m_block, asmjit::x86::rcx);
-			m_asm.bsr(temp, m);								// returns index of MSB that is 1
+			const ShiftReg shifter(m_block);
+			m_asm.bsr(shifter, m);								// returns index of MSB that is 1
 			m_asm.mov(moduloMask, asmjit::Imm(1));
-			m_asm.shl(moduloMask, temp.get());
+			m_asm.shl(moduloMask, shifter.get());
 
 			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kBMI))
 			{
@@ -204,9 +200,9 @@ namespace dsp56k
 			}
 			else
 			{
-				m_asm.mov(temp, moduloMask.get());
+				m_asm.mov(shifter, moduloMask);
 				m_asm.dec(moduloMask);
-				m_asm.or_(moduloMask, temp.get());
+				m_asm.or_(moduloMask, shifter.get());
 			}
 
 			/*
@@ -215,10 +211,10 @@ namespace dsp56k
 
 			we store it in n as n is no longer needed now
 			*/
-			const auto& p64 = temp;
+			const auto& p64 = shifter;
 			const auto p = p64.get().r32();
 			m_asm.mov(p, r);
-			m_asm.and_(p, moduloMask.get().r32());
+			m_asm.and_(p, moduloMask.r32());
 			m_asm.add(r, n);		// Increment r by n here.
 			m_asm.add(n, p);
 		}
@@ -227,7 +223,7 @@ namespace dsp56k
 		const auto p = n;		// We hid p in n.
 		const auto& modulo = m;	// and modulo is m+1
 		const auto& mtMinusP64 = moduloMask;
-		const auto mtMinusP = mtMinusP64.get().r32();
+		const auto mtMinusP = mtMinusP64.r32();
 
 		m_asm.mov(mtMinusP, m);
 		m_asm.sub(mtMinusP, p);
@@ -406,7 +402,7 @@ namespace dsp56k
 		*/
 
 		{
-			const PushGP s0s1(m_block, asmjit::x86::rcx);
+			const ShiftReg s0s1(m_block);
 			m_asm.xor_(s0s1, s0s1.get());
 
 			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S1));
@@ -499,7 +495,7 @@ namespace dsp56k
 
 	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord), TWord _arg) const
 	{
-		PushGP r1(m_block, regArg1);
+		FuncArg r1(m_block, regArg1);
 
 		m_block.asm_().mov(regArg1, asmjit::Imm(_arg));
 		callDSPFunc(_func);
@@ -507,7 +503,7 @@ namespace dsp56k
 
 	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord), const JitReg& _arg) const
 	{
-		PushGP r1(m_block, regArg1);
+		FuncArg r1(m_block, regArg1);
 
 		m_block.asm_().mov(regArg1, _arg);
 		callDSPFunc(_func);

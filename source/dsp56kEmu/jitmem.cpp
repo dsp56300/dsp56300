@@ -236,8 +236,8 @@ namespace dsp56k
 
 	void Jitmem::readPeriph(const JitReg64& _dst, EMemArea _area, const TWord& _offset) const
 	{
-		PushGP r1(m_block, regArg1, true);
-		PushGP r2(m_block, regArg2, true);
+		FuncArg r1(m_block, regArg1);
+		FuncArg r2(m_block, regArg2);
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
@@ -250,8 +250,8 @@ namespace dsp56k
 
 	void Jitmem::readPeriph(const JitReg64& _dst, const EMemArea _area, const JitReg64& _offset) const
 	{
-		PushGP r1(m_block, regArg1, true);
-		PushGP r2(m_block, regArg2, true);
+		FuncArg r1(m_block, regArg1);
+		FuncArg r2(m_block, regArg2);
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
@@ -264,9 +264,9 @@ namespace dsp56k
 
 	void Jitmem::writePeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value) const
 	{
-		PushGP r1(m_block, regArg1, true);
-		PushGP r2(m_block, regArg2, true);
-		PushGP r3(m_block, regArg3, true);
+		FuncArg r1(m_block, regArg1);
+		FuncArg r2(m_block, regArg2);
+		FuncArg r3(m_block, regArg3);
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
@@ -278,9 +278,9 @@ namespace dsp56k
 
 	void Jitmem::writePeriph(EMemArea _area, const TWord& _offset, const JitReg64& _value) const
 	{
-		PushGP r1(m_block, regArg1, true);
-		PushGP r2(m_block, regArg2, true);
-		PushGP r3(m_block, regArg3, true);
+		FuncArg r1(m_block, regArg1);
+		FuncArg r2(m_block, regArg2);
+		FuncArg r3(m_block, regArg3);
 
 		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
 		m_block.asm_().mov(regArg1, _area == MemArea_Y ? 1 : 0);
