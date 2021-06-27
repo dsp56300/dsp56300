@@ -1186,12 +1186,6 @@ namespace dsp56k
 		}
 
 		ccr_clear(CCR_V);								// Always cleared
-
-		// TODO: this does no longer work if there is also a parallel move, we will retrieve the OLD alu value!
-		const AluReg d(m_block, ab, true);
-
-		ccr_s_update(d);								// Changed according to the standard definition
-		//sr_l_update_by_v();							// Changed according to the standard definition
 	}
 
 	inline void JitOps::op_Or_SD(TWord op)
