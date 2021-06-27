@@ -79,8 +79,9 @@ namespace dsp56k
 
 	JitReg JitDspRegs::getALU(int _alu, AccessType _access)
 	{
-		assert((_access & Write) == 0);
-		return pool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu), _access & Read, _access & Write);
+		assert((_access != (Read | Write)) && "unable to read & write to the same register");
+		const auto baseReg = _access & Write ? JitDspRegPool::DspAwrite : JitDspRegPool::DspA;
+		return pool().get(static_cast<JitDspRegPool::DspReg>(baseReg + _alu), _access & Read, _access & Write);
 	}
 
 	void JitDspRegs::setALU(const int _alu, const JitReg& _src, const bool _needsMasking)
