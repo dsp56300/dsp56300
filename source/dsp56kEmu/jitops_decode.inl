@@ -578,7 +578,7 @@ namespace dsp56k
 		case 1:
 			{
 				const auto alu = _lll & 3;
-				const AluReg r(m_block, alu);
+				AluReg r(m_block, alu);
 				m_asm.shr(r, asmjit::Imm(48));	// clear 48 LSBs
 				m_asm.shl(r, asmjit::Imm(24));
 				m_asm.or_(r, x.r64());

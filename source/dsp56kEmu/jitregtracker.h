@@ -118,14 +118,32 @@ namespace dsp56k
 	public:
 		AluReg(JitBlock& _block, TWord _aluIndex, bool readOnly = false, bool writeOnly = false);
 		~AluReg();
-		JitReg64 get() const { return m_reg.get(); }
-		operator JitReg64 () const { return get(); }
+		JitReg64 get();
+		operator JitReg64 () { return get(); }
 		void release();
 
 	private:
 		JitBlock& m_block;
 		RegGP m_reg;
 		const bool m_readOnly;
+		const bool m_writeOnly;
+		const TWord m_aluIndex;
+	};
+
+
+	class AluRef
+	{
+	public:
+		AluRef(JitBlock& _block, TWord _aluIndex, bool _read = true, bool _write = true);
+		~AluRef();
+		JitReg64 get();
+		operator JitReg64 () { return get(); }
+
+	private:
+		JitBlock& m_block;
+		JitReg64 m_reg;
+		const bool m_read;
+		const bool m_write;
 		const TWord m_aluIndex;
 	};
 

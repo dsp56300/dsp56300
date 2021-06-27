@@ -32,6 +32,7 @@ namespace dsp56k
 	: m_block(_block)
 	, m_reg(_block)
 	, m_readOnly(readOnly)
+	, m_writeOnly(writeOnly)
 	, m_aluIndex(_aluIndex)
 	{
 		if(!writeOnly)
@@ -44,9 +45,68 @@ namespace dsp56k
 			m_block.regs().setALU(m_aluIndex, m_reg);
 	}
 
+	JitReg64 AluReg::get()
+	{
+		return m_reg.get();
+	}
+
 	void AluReg::release()
 	{
 		m_reg.release();
+	}
+
+	AluRef::AluRef(JitBlock& _block, const TWord _aluIndex, const bool _read, const bool _write)
+	: m_block(_block)
+	, m_read(_read)
+	, m_write(_write)
+	, m_aluIndex(_aluIndex)
+	{
+		m_reg.reset();
+	}
+
+	AluRef::~AluRef()
+	{
+		auto& p = m_block.dspRegPool();
+
+		if(p.isParallelOp() && m_write)
+		{
+			// ALU write registers stay locked
+		}
+		else
+		{
+			const auto dspReg = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + m_aluIndex);
+			p.unlock(dspReg);
+		}
+	}
+
+	JitReg64 AluRef::get()
+	{
+		if(m_reg.isValid())
+			return m_reg;
+
+		auto& p = m_block.dspRegPool();
+
+		JitReg r;
+
+		if(p.isParallelOp() && m_write)
+		{
+			const auto dspReg = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspAwrite + m_aluIndex);
+			r = p.get(dspReg, false, true);
+
+			if(!p.isLocked(dspReg))
+				p.lock(dspReg);
+
+			if(m_read)
+				m_block.regs().getALU(r, m_aluIndex);
+		}
+		else
+		{
+			const auto dspReg = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + m_aluIndex);
+			r = p.get(dspReg, m_read, m_write);
+			p.lock(dspReg);
+		}
+		m_reg = r.as<JitReg64>();
+		return m_reg;
 	}
 
 	AguReg::AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly) : DSPReg(_block, static_cast<JitDspRegPool::DspReg>(_regBase + _aguIndex), true, !readOnly)
