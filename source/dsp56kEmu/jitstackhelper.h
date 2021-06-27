@@ -25,7 +25,7 @@ namespace dsp56k
 		void pop();
 		void popAll();
 
-		void call(const void* _funcAsPtr);
+		void call(const void* _funcAsPtr) const;
 		
 		static bool isNonVolatile(const JitReg& _gp);
 		static bool isNonVolatile(const JitReg128& _xm);

@@ -6,9 +6,6 @@
 
 namespace dsp56k
 {
-	constexpr size_t g_nonVolatileGPCount  = sizeof(g_nonVolatileGPs)  / sizeof(g_nonVolatileGPs[0]);
-	constexpr size_t g_nonVolatileXMMCount = sizeof(g_nonVolatileXMMs) / sizeof(g_nonVolatileXMMs[0]);
-
 	constexpr size_t g_stackAlignmentBytes = 16;
 	constexpr size_t g_functionCallSize = 8;
 #ifdef _MSC_VER
@@ -77,7 +74,7 @@ namespace dsp56k
 
 	void JitStackHelper::pop()
 	{
-		auto reg = m_pushedRegs.back();
+		const auto reg = m_pushedRegs.back();
 		pop(reg);
 	}
 
@@ -87,7 +84,7 @@ namespace dsp56k
 			pop();
 	}
 
-	void JitStackHelper::call(const void* _funcAsPtr)
+	void JitStackHelper::call(const void* _funcAsPtr) const
 	{
 		PushBeforeFunctionCall backup(m_block);
 
@@ -107,9 +104,9 @@ namespace dsp56k
 
 	bool JitStackHelper::isNonVolatile(const JitReg& _gp)
 	{
-		for(size_t i=0; i<g_nonVolatileGPCount; ++i)
+		for (const auto& gp : g_nonVolatileGPs)
 		{
-			if(g_nonVolatileGPs[i].equals(_gp))
+			if(gp.equals(_gp))
 				return true;
 		}
 		return false;
@@ -117,9 +114,9 @@ namespace dsp56k
 
 	bool JitStackHelper::isNonVolatile(const JitReg128& _xm)
 	{
-		for(size_t i=0; i<g_nonVolatileXMMCount; ++i)
+		for (const auto& xm : g_nonVolatileXMMs)
 		{
-			if(g_nonVolatileXMMs[i].equals(_xm))
+			if(xm.equals(_xm))
 				return true;
 		}
 		return false;
