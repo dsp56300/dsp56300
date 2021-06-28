@@ -142,6 +142,10 @@ namespace dsp56k
 
 	void JitOps::readMemOrPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset)
 	{
+		// Disabled writing to peripherals with dynamic addressing (such as (r0)+) for now as it is costly but most likely unused
+		m_block.mem().readDspMemory(_dst, _area, _offset);
+		return;
+
 		if(_area == MemArea_P)
 		{
 			m_block.mem().readDspMemory(_dst, MemArea_P, _offset);
@@ -165,6 +169,10 @@ namespace dsp56k
 	}
 	void JitOps::writeMemOrPeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value)
 	{
+		// Disabled writing to peripherals with dynamic addressing (such as (r0)+) for now as it is costly but most likely unused
+		m_block.mem().writeDspMemory(_area, _offset, _value);
+		return;
+
 		if(_area == MemArea_P)
 		{
 			m_block.mem().writeDspMemory(MemArea_P, _offset, _value);
