@@ -534,15 +534,16 @@ namespace dsp56k
 		_s2.release();
 
 		// Update SR
-		if(!_round)
-			ccr_v_update(d.get());
-
-		m_dspRegs.mask56(d);
 
 		if(!_round)
-			ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
+		{
+			ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z | CCR_V));
+			m_dspRegs.mask56(d);
+		}
 		else
-			alu_rnd(ab, d);
+		{
+			alu_rnd(ab, d);			
+		}
 	}
 	
 	inline void JitOps::alu_multiply(TWord op)
@@ -652,11 +653,8 @@ namespace dsp56k
 			m_asm.and_(d, mask.get());
 		}
 
-		ccr_v_update(d);
-
+		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z | CCR_V));
 		m_dspRegs.mask56(d);
-
-		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
 	template<Instruction Inst> void JitOps::bitmod_ea(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord))

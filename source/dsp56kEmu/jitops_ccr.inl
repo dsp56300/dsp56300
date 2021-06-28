@@ -70,14 +70,17 @@ namespace dsp56k
 			ccr_update_ifZero(CCRB_Z);
 		}
 
+		if(_dirtyBits & CCR_V)
+		{
+			ccr_v_update(_alu);
+			m_dspRegs.mask56(_alu);
+		}
 		if(_dirtyBits & CCR_N)
 			ccr_n_update_by55(_alu);
 		if(_dirtyBits & CCR_E)
 			ccr_e_update(_alu);
 		if(_dirtyBits & CCR_U)
 			ccr_u_update(_alu);
-		if(_dirtyBits & CCR_V)
-			ccr_v_update(_alu);
 	}
 
 	inline void JitOps::ccr_getBitValue(const JitReg& _dst, CCRBit _bit)
