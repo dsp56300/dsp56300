@@ -865,7 +865,7 @@ namespace dsp56k
 		const auto ab	= getFieldValue<Div,Field_d>(op);
 		const auto jj	= getFieldValue<Div,Field_JJ>(op);
 
-		AluReg d(m_block, ab);
+		AluRef d(m_block, ab);
 
 		{
 			// V and L updates
