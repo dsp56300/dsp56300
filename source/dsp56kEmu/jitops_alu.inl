@@ -931,6 +931,8 @@ namespace dsp56k
 		// C is set if bit 55 of the result is cleared
 		m_asm.bt(d, asmjit::Imm(55));
 		ccr_update_ifNotCarry(CCRB_C);
+
+		m_dspRegs.mask56(d);
 	}
 
 	inline void JitOps::op_Dmac(TWord op)

@@ -1329,9 +1329,7 @@ namespace dsp56k
 		{
 			for(size_t i=0; i<24; ++i)
 			{
-				nop(_block, 3);
 				_ops.emit(0, 0x018050);		// div y0,a
-				nop(_block, 5);
 				RegGP r(_block);
 				_block.regs().getALU(r, 0);
 				_block.mem().mov(m_checks[i], r.get());
