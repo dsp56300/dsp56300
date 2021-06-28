@@ -85,6 +85,8 @@ namespace dsp56k
 		JitReg32 r32() const { return get().r32(); }
 		JitReg64 r64() const { return get().r64(); }
 
+		void write();
+
 		operator asmjit::Imm () const = delete;
 
 	private:
@@ -153,20 +155,22 @@ namespace dsp56k
 		AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly = false);
 	};
 
-	class AguRegM : public AguReg
+	class AguRegR : public AguReg
 	{
 	public:
-		AguRegM(JitBlock& _block, int _aguIndex, bool readOnly = true) : AguReg(_block, JitDspRegPool::DspM0, _aguIndex, readOnly)
-		{
-		}
+		AguRegR(JitBlock& _block, int _aguIndex, bool readOnly = true) : AguReg(_block, JitDspRegPool::DspR0, _aguIndex, readOnly) {}
 	};
 
 	class AguRegN : public AguReg
 	{
 	public:
-		AguRegN(JitBlock& _block, int _aguIndex, bool readOnly = true) : AguReg(_block, JitDspRegPool::DspN0, _aguIndex, readOnly)
-		{
-		}
+		AguRegN(JitBlock& _block, int _aguIndex, bool readOnly = true) : AguReg(_block, JitDspRegPool::DspN0, _aguIndex, readOnly) {}
+	};
+
+	class AguRegM : public AguReg
+	{
+	public:
+		AguRegM(JitBlock& _block, int _aguIndex, bool readOnly = true) : AguReg(_block, JitDspRegPool::DspM0, _aguIndex, readOnly) {}
 	};
 
 	class PushGP

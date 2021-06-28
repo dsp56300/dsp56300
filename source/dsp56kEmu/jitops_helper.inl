@@ -74,52 +74,69 @@ namespace dsp56k
 			return;
 		}
 
-		m_dspRegs.getR(_r, _rrr);
+		AguRegR r(m_block, _rrr, true);
 
 		if(_mmm == 5)													/* 101 (Rn+Nn) */
 		{
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			signextend24To32(n.get().r32());
+			m_asm.mov(_r, r.get());
 			updateAddressRegister(_r.r32(),n.get().r32(), m.get().r32());
 			return;
 		}
 
 		if(!_returnPostR)
-			m_asm.push(_r);
+		{
+			m_asm.mov(_r, r.get());
+			if(!_writeR)
+				return;
+		}
+
+		JitReg32 r32;
+
+		if(!_writeR)
+		{
+			m_asm.mov(_r, r.get());
+			r32 = _r.r32();
+		}
+		else
+			r32 = r.r32();
 
 		if(_mmm == 0)													/* 000 (Rn)-Nn */
 		{
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			m_asm.neg(n);
-			updateAddressRegister(_r.r32(),n.get().r32(),m.get().r32());
+			updateAddressRegister(r32,n.get().r32(),m.get().r32());
 		}	
 		if(_mmm == 1)													/* 001 (Rn)+Nn */
 		{
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			signextend24To32(n.get().r32());
-			updateAddressRegister(_r.r32(),n.get().r32(),m.get().r32());
+			updateAddressRegister(r32,n.get().r32(),m.get().r32());
 		}
 		if(_mmm == 2)													/* 010 (Rn)-   */
 		{
 			const RegGP n(m_block);
 			m_asm.mov(n.get().r32(), asmjit::Imm(-1));
-			updateAddressRegister(_r.r32(),n.get().r32(),m.get().r32());
+			updateAddressRegister(r32,n.get().r32(),m.get().r32());
 		}
 		if(_mmm == 3)													/* 011 (Rn)+   */
 		{
 			const RegGP n(m_block);
 			m_asm.mov(n.get().r32(), asmjit::Imm(1));
-			updateAddressRegister(_r.r32(),n.get().r32(),m.get().r32());
+			updateAddressRegister(r32,n.get().r32(),m.get().r32());
 		}
 
 		if(_writeR)
-			m_block.regs().setR(_rrr, _r);
+		{
+			r.write();
 
-		if(!_returnPostR)
-			m_asm.pop(_r);
+			if(_returnPostR)
+				m_asm.mov(_r, r.get());
+		}
 	}
 
 	inline void JitOps::updateAddressRegister(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m)

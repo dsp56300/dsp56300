@@ -280,4 +280,9 @@ namespace dsp56k
 	{
 		m_block.dspRegPool().unlock(m_dspReg);
 	}
+
+	void DSPReg::write()
+	{
+		m_block.dspRegPool().get(m_dspReg, false, true);
+	}
 }
