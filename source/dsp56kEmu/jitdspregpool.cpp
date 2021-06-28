@@ -206,14 +206,14 @@ namespace dsp56k
 	JitDspRegPool::DspReg JitDspRegPool::aquireTemp()
 	{
 		assert(!m_availableTemps.empty());
-		const auto res = m_availableTemps.front();
-		m_availableTemps.pop_front();
+		const auto res = m_availableTemps.back();
+		m_availableTemps.pop_back();
 		return res;
 	}
 
 	void JitDspRegPool::releaseTemp(DspReg _reg)
 	{
-		push(m_availableTemps, _reg);
+		m_availableTemps.push_back(_reg);
 		release(_reg);
 	}
 	

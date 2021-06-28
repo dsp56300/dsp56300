@@ -219,7 +219,7 @@ namespace dsp56k
 		RegisterList<JitReg> m_gpList;
 		RegisterList<JitReg128> m_xmList;
 
-		std::list<DspReg> m_availableTemps;
+		std::vector<DspReg> m_availableTemps;
 
 		bool m_isParallelOp = false;
 		bool m_repMode = false;
