@@ -88,22 +88,34 @@ namespace dsp56k
 
 		JitReg r;
 
+		const auto dspRegR = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA      + m_aluIndex);
+		const auto dspRegW = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspAwrite + m_aluIndex);
+
 		if(p.isParallelOp() && m_write)
 		{
-			const auto dspReg = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspAwrite + m_aluIndex);
-			r = p.get(dspReg, false, true);
-
-			if(!p.isLocked(dspReg))
-				p.lock(dspReg);
+			JitReg rRead;
 
 			if(m_read)
-				m_block.regs().getALU(r, m_aluIndex);
+			{
+				rRead = p.get(dspRegR, true, false);
+				p.lock(dspRegR);
+			}
+
+			r = p.get(dspRegW, false, true);
+
+			if(!p.isLocked(dspRegW))
+				p.lock(dspRegW);
+
+			if(m_read)
+			{
+				m_block.asm_().mov(r, rRead);
+				p.unlock(dspRegR);
+			}
 		}
 		else
 		{
-			const auto dspReg = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + m_aluIndex);
-			r = p.get(dspReg, m_read, m_write);
-			p.lock(dspReg);
+			r = p.get(dspRegR, m_read, m_write);
+			p.lock(dspRegR);
 		}
 		m_reg = r.as<JitReg64>();
 		return m_reg;
