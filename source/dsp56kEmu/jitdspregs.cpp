@@ -160,23 +160,21 @@ namespace dsp56k
 
 	void JitDspRegs::setXY0(const uint32_t _xy, const JitReg& _src)
 	{
-		const RegGP temp(m_block);
-		getXY(temp, _xy);
+		const auto temp = pool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);
 		m_asm.and_(temp, Imm(0xffffffffff000000));
 		m_asm.or_(temp, _src.r64());
-		setXY(_xy, temp);
 	}
 
 	void JitDspRegs::setXY1(const uint32_t _xy, const JitReg& _src)
 	{
 		const RegGP shifted(m_block);
+
 		m_asm.mov(shifted, _src);
 		m_asm.shl(shifted, Imm(24));
-		const RegGP temp(m_block);
-		getXY(temp, _xy);
+
+		const auto temp = pool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);
 		m_asm.and_(temp, Imm(0xffffff));
 		m_asm.or_(temp, shifted.get());
-		setXY(_xy, temp);
 	}
 
 	void JitDspRegs::setALU0(const uint32_t _aluIndex, const JitReg& _src)
