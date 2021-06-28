@@ -13,19 +13,24 @@ namespace dsp56k
 #else
 	constexpr size_t g_shadowSpaceSize = 0;
 #endif
-	
+
 	JitStackHelper::JitStackHelper(JitBlock& _block) : m_block(_block)
 	{
 		m_pushedRegs.reserve(128);
 		m_usedRegs.reserve(128);
 
-		for (const auto& reg : g_nonVolatileGPs)
-			push(reg);
+		pushNonVolatiles();
 	}
 
 	JitStackHelper::~JitStackHelper()
 	{
 		popAll();
+	}
+
+	void JitStackHelper::pushNonVolatiles()
+	{
+		for (const auto& reg : g_nonVolatileGPs)
+			push(reg);
 	}
 
 	void JitStackHelper::push(const JitReg& _reg)

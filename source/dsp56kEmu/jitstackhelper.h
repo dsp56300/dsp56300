@@ -35,6 +35,7 @@ namespace dsp56k
 
 		bool isUsed(const Reg& _reg) const;
 	private:
+		void pushNonVolatiles();
 		JitBlock& m_block;
 		uint32_t m_pushedBytes = 0;
 		std::vector<Reg> m_pushedRegs;
