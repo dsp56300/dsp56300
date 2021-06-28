@@ -46,14 +46,14 @@ namespace dsp56k
 
 	Jit::Jit(DSP& _dsp) : m_dsp(_dsp)
 	{
-		m_jitCache.resize(_dsp.memory().size(), nullptr);
+		m_jitCache.resize(_dsp.memory().size(), JitCacheEntry{&Jit::create, nullptr});
 	}
 
 	Jit::~Jit()
 	{
 		for(size_t i=0; i<m_jitCache.size(); ++i)
 		{
-			auto* entry = m_jitCache[i];
+			auto* const entry = m_jitCache[i].block;
 			if(entry)
 				destroy(entry);
 		}
@@ -86,62 +86,9 @@ namespace dsp56k
 		// get JIT code
 		auto& cacheEntry = m_jitCache[pc];
 
-		if(cacheEntry == nullptr)
-		{
-			// No code preset, generate
-//			LOG("Generating new JIT block for PC " << HEX(pc));
-			emit(pc);
-		}
-		else
-		{
-			// there is code, but the JIT block does not start at the PC position that we want to run. We need to throw the block away and regenerate
-			if(cacheEntry->getPCFirst() < pc)
-			{
-//				LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
-				destroy(cacheEntry);
-				emit(pc);
-			}
-		}
+		assert(cacheEntry.func);
 
-		assert(cacheEntry);
-		
-		// run JIT code
-		cacheEntry->exec();
-
-		m_dsp.m_instructions += cacheEntry->getExecutedInstructionCount();
-
-		if(cacheEntry->nextPC() != g_pcInvalid)
-		{
-			// If the JIt block executed a branch, point PC to the new location
-			m_dsp.setPC(cacheEntry->nextPC());
-		}
-		else
-		{
-			// Otherwise, move PC forward
-			m_dsp.setPC(pc + cacheEntry->getPMemSize());
-		}
-
-		if(g_traceOps)
-		{
-			const TWord lastPC = pc + cacheEntry->getPMemSize() - cacheEntry->getLastOpSize();
-			TWord op, opB;
-			m_dsp.mem.getOpcode(lastPC, op, opB);
-			m_dsp.traceOp(lastPC, op, opB, cacheEntry->getLastOpSize());
-
-			// make the diff tool happy, interpreter traces two ops. For the sake of simplicity, just trace it once more
-			if(cacheEntry->getDisasm().find("rep ") == 0)
-				m_dsp.traceOp(lastPC, op, opB, cacheEntry->getLastOpSize());
-		}
-
-		// if JIT code has written to P memory, destroy a JIT block if present at the write location
-		if(cacheEntry->pMemWriteAddress() != g_pcInvalid)
-		{
-			TWord addr=cacheEntry->pMemWriteAddress();
-			if (m_jitCache[addr]) m_volatileP.insert(addr);
-
-			notifyProgramMemWrite(cacheEntry->pMemWriteAddress());
-			m_dsp.notifyProgramMemWrite(cacheEntry->pMemWriteAddress());
-		}
+		(this->*cacheEntry.func)(pc, cacheEntry.block);
 	}
 
 	void Jit::notifyProgramMemWrite(TWord _offset)
@@ -193,46 +140,102 @@ namespace dsp56k
 		const auto last = first + b->getPMemSize();
 
 		for(auto i=first; i<last; ++i)
-			m_jitCache[i] = b;
+		{			
+			m_jitCache[i].block = b;
+			m_jitCache[i].func = i == first ? &Jit::run : &Jit::recreate;
+		}
 
 #ifdef JIT_VTUNE_PROFILING
-		iJIT_Method_Load jmethod = {0};
-		jmethod.method_id = iJIT_GetNewMethodID();
-		std::stringstream ss;
-		ss << "$" << HEX(first) << "-$" << HEX(last-1) << ':' << b->getDisasm();
-		const std::string methodName(ss.str());
-		jmethod.method_name = const_cast<char*>(methodName.c_str());
-		jmethod.class_file_name = const_cast<char*>("dsp56k::Jit");
-		jmethod.source_file_name = __FILE__;
-		jmethod.method_load_address = static_cast<void*>(func);
-		jmethod.method_size = static_cast<unsigned int>(code.codeSize());
+		if(iJIT_IsProfilingActive() == iJIT_SAMPLING_ON)
+		{
+			iJIT_Method_Load jmethod = {0};
+			jmethod.method_id = iJIT_GetNewMethodID();
+			std::stringstream ss;
+			char temp[64];
+			sprintf(temp, "$%06x-$%06x", first, last-1);
+			jmethod.method_name = temp;
+			jmethod.class_file_name = const_cast<char*>("dsp56k::Jit");
+			jmethod.source_file_name = __FILE__;
+			jmethod.method_load_address = static_cast<void*>(func);
+			jmethod.method_size = static_cast<unsigned int>(code.codeSize());
 
-		iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &jmethod);
+			iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &jmethod);
+		}
 #endif
 
 //		LOG("New block generated @ " << HEX(_pc) << " up to " << HEX(_pc + b->getPMemSize() - 1) << ", instruction count " << b->getEncodedInstructionCount() << ", disasm " << b->getDisasm());
 	}
 
-	void Jit::destroy(JitBlock* _block)
+	void Jit::destroy(JitBlock* _jitBlock)
 	{
-		const auto first = _block->getPCFirst();
-		const auto last = first + _block->getPMemSize();
+		const auto first = _jitBlock->getPCFirst();
+		const auto last = first + _jitBlock->getPMemSize();
 
 //		LOG("Destroying JIT block at PC " << HEX(first) << ", length " << _block->getPMemSize());
 
 		for(auto i=first; i<last; ++i)
-			m_jitCache[i] = nullptr;
+		{
+			m_jitCache[i].block = nullptr;
+			m_jitCache[i].func = &Jit::create;
+		}
 
-		m_rt.release(_block->getFunc());
+		m_rt.release(_jitBlock->getFunc());
 
-		delete _block;
+		delete _jitBlock;
 	}
 
 	void Jit::destroy(TWord _pc)
 	{
-		const auto cacheEntry = m_jitCache[_pc];
-		if(!cacheEntry)
+		const auto block = m_jitCache[_pc].block;
+		if(!block)
 			return;
-		destroy(cacheEntry);
+		destroy(block);
+	}
+
+	void Jit::run(TWord _pc, JitBlock* _block)
+	{
+		_block->exec();
+
+		m_dsp.m_instructions += _block->getExecutedInstructionCount();
+
+		m_dsp.setPC(_block->nextPC());
+
+		if(g_traceOps)
+		{
+			const TWord lastPC = _pc + _block->getPMemSize() - _block->getLastOpSize();
+			TWord op, opB;
+			m_dsp.mem.getOpcode(lastPC, op, opB);
+			m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
+
+			// make the diff tool happy, interpreter traces two ops. For the sake of simplicity, just trace it once more
+			if(_block->getDisasm().find("rep ") == 0)
+				m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
+		}
+
+		// if JIT code has written to P memory, destroy a JIT block if present at the write location
+		if(_block->pMemWriteAddress() != g_pcInvalid)
+		{
+			const TWord addr = _block->pMemWriteAddress();
+
+			if (m_jitCache[addr].block)
+				m_volatileP.insert(addr);
+
+			notifyProgramMemWrite(_block->pMemWriteAddress());
+			m_dsp.notifyProgramMemWrite(_block->pMemWriteAddress());
+		}
+	}
+
+	void Jit::create(const TWord _pc, JitBlock* _block)
+	{
+		emit(_pc);
+		run(_pc, m_jitCache[_pc].block);
+	}
+
+	void Jit::recreate(const TWord _pc, JitBlock* _block)
+	{
+		// there is code, but the JIT block does not start at the PC position that we want to run. We need to throw the block away and regenerate
+//		LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
+		destroy(_block);
+		create(_pc, _block);
 	}
 }

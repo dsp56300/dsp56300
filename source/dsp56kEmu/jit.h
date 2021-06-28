@@ -1,9 +1,10 @@
 #pragma once
 
+#include "jitcacheentry.h"
+#include "types.h"
+
 #include <vector>
 #include <set>
-
-#include "types.h"
 
 #include "asmjit/core/jitruntime.h"
 
@@ -28,10 +29,14 @@ namespace dsp56k
 		void destroy(JitBlock* _block);
 		void destroy(TWord _pc);
 
+		void run(TWord _pc, JitBlock* _block);
+		void create(TWord _pc, JitBlock* _block);
+		void recreate(TWord _pc, JitBlock* _block);
+
 		DSP& m_dsp;
 
 		asmjit::JitRuntime m_rt;
-		std::vector<JitBlock*> m_jitCache;
+		std::vector<JitCacheEntry> m_jitCache;
 		std::set<TWord> m_volatileP;
 	};
 }

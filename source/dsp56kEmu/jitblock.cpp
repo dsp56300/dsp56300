@@ -19,7 +19,7 @@ namespace dsp56k
 	{
 	}
 
-	bool JitBlock::emit(const TWord _pc, std::vector<JitBlock*>& _cache, const std::set<TWord>& _volatileP)
+	bool JitBlock::emit(const TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP)
 	{
 		m_pcFirst = _pc;
 		m_pMemSize = 0;
@@ -31,7 +31,7 @@ namespace dsp56k
 			const auto pc = m_pcFirst + m_pMemSize;
 
 			// do never overwrite code that already exists
-			if(_cache[pc])
+			if(_cache[pc].block)
 				break;
 
 			// always terminate block if loop end has reached
@@ -105,7 +105,7 @@ namespace dsp56k
 
 	void JitBlock::exec()
 	{
-		m_nextPC = g_pcInvalid;
+		m_nextPC = m_pcFirst + getPMemSize();
 		m_executedInstructionCount = m_encodedInstructionCount;
 		m_pMemWriteAddress = g_pcInvalid;
 		m_func();

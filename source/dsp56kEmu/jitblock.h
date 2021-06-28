@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jitcacheentry.h"
 #include "jitdspregs.h"
 #include "jitdspregpool.h"
 #include "jitmem.h"
@@ -43,7 +44,7 @@ namespace dsp56k
 
 		operator asmjit::x86::Assembler& ()		{ return m_asm;	}
 
-		bool emit(TWord _pc, std::vector<JitBlock*>& _cache, const std::set<TWord>& _volatileP);
+		bool emit(TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP);
 		bool empty() const { return m_pMemSize == 0; }
 		TWord getPCFirst() const { return m_pcFirst; }
 		TWord getPMemSize() const { return m_pMemSize; }
