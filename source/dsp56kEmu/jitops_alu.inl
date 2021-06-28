@@ -881,7 +881,7 @@ namespace dsp56k
 			ccr_update(r, CCRB_V);
 			m_asm.shl(r, asmjit::Imm(CCRB_L));
 			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
-			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~CCR_L);
+			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~(CCR_L | CCR_V));
 		}
 
 		{
