@@ -179,6 +179,24 @@ namespace dsp56k
 			m_jitCache[i].func = &Jit::create;
 		}
 
+		if(_jitBlock->getPMemSize() == 1)
+		{
+			// if a 1-word-op, cache it
+			auto& cacheEntry = m_jitCache[first];
+
+			TWord opA;
+			TWord opB;
+			m_dsp.memory().getOpcode(first, opA, opB);
+
+			if(cacheEntry.singleOpCache.find(opA) == cacheEntry.singleOpCache.end())
+			{
+//				LOG("Caching 1-word-op " << HEX(opA) << " at PC " << HEX(first));
+
+				cacheEntry.singleOpCache.insert(std::make_pair(opA, _jitBlock));
+				return;
+			}
+		}
+
 		m_rt.release(_jitBlock->getFunc());
 
 		delete _jitBlock;
@@ -227,8 +245,29 @@ namespace dsp56k
 
 	void Jit::create(const TWord _pc, JitBlock* _block)
 	{
+		auto& cacheEntry = m_jitCache[_pc];
+
+		if(m_jitCache[_pc+1].block != nullptr)
+		{
+			// we will generate a 1-word op, try to find in single op cache
+			TWord opA;
+			TWord opB;
+			m_dsp.memory().getOpcode(_pc, opA, opB);
+
+			auto it = cacheEntry.singleOpCache.find(opA);
+
+			if(it != cacheEntry.singleOpCache.end())
+			{
+//				LOG("Returning 1-word-op " << HEX(opA) << " at PC " << HEX(_pc));
+				cacheEntry.block = it->second;
+				cacheEntry.singleOpCache.erase(it);
+				cacheEntry.func = &Jit::run;
+				run(_pc, cacheEntry.block);
+				return;
+			}
+		}
 		emit(_pc);
-		run(_pc, m_jitCache[_pc].block);
+		run(_pc, cacheEntry.block);
 	}
 
 	void Jit::recreate(const TWord _pc, JitBlock* _block)

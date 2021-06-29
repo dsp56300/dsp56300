@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "types.h"
 
 namespace dsp56k
@@ -13,5 +15,6 @@ namespace dsp56k
 	{
 		TJitUpdateFunc func;
 		JitBlock* block;
+		std::map<TWord,JitBlock*> singleOpCache;
 	};
 }

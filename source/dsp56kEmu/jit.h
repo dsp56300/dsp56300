@@ -28,7 +28,8 @@ namespace dsp56k
 		void emit(TWord _pc);
 		void destroy(JitBlock* _block);
 		void destroy(TWord _pc);
-
+		void markInvalid(JitBlock* _block);
+		
 		void run(TWord _pc, JitBlock* _block);
 		void create(TWord _pc, JitBlock* _block);
 		void recreate(TWord _pc, JitBlock* _block);
