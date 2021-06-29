@@ -65,10 +65,8 @@ namespace dsp56k
 
 		if(_mmm == 7)													/* 111 -(Rn)   */
 		{
-			const RegGP n(m_block);
-			m_asm.mov(n.get().r32(), asmjit::Imm(-1));
 			m_dspRegs.getR(_r, _rrr);
-			updateAddressRegister(_r.r32(),n.get().r32(),m.get().r32());
+			updateAddressRegisterConst(_r.r32(),-1,m.get().r32());
 			if(_writeR)
 				m_block.regs().setR(_rrr, _r);
 			return;
@@ -119,15 +117,11 @@ namespace dsp56k
 		}
 		if(_mmm == 2)													/* 010 (Rn)-   */
 		{
-			const RegGP n(m_block);
-			m_asm.mov(n.get().r32(), asmjit::Imm(-1));
-			updateAddressRegister(r32,n.get().r32(),m.get().r32());
+			updateAddressRegisterConst(r32,-1,m.get().r32());
 		}
 		if(_mmm == 3)													/* 011 (Rn)+   */
 		{
-			const RegGP n(m_block);
-			m_asm.mov(n.get().r32(), asmjit::Imm(1));
-			updateAddressRegister(r32,n.get().r32(),m.get().r32());
+			updateAddressRegisterConst(r32,1,m.get().r32());
 		}
 
 		if(_writeR)
@@ -186,6 +180,75 @@ namespace dsp56k
 		m_asm.bind(end);
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
 	}
+	
+	inline void JitOps::updateAddressRegisterConst(const JitReg32& _r, const int _n, const JitReg32& _m)
+	{
+		const auto linear = m_asm.newLabel();
+		const auto modulo = m_asm.newLabel();
+		const auto end = m_asm.newLabel();
+
+		m_asm.cmp(_m.r32(), asmjit::Imm(0xffffff));		// linear shortcut
+		m_asm.jz(linear);
+		
+		m_asm.or_(_m.r16(), _m.r16());					// bit reverse
+		m_asm.jz(end);
+
+		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));
+		m_asm.jg(end);
+
+		// modulo:
+		m_asm.bind(modulo);
+		{
+			const auto moduloMask = regReturnVal;
+			const ShiftReg shifter(m_block);
+			const auto& p64 = shifter;
+			const auto p = p64.get().r32();
+
+			m_asm.bsr(shifter, _m);								// returns index of MSB that is 1
+			m_asm.mov(moduloMask, asmjit::Imm(2));
+			m_asm.shl(moduloMask, shifter.get());
+			m_asm.dec(moduloMask);
+
+			m_asm.mov(p, _r);
+			m_asm.and_(p, moduloMask.r32());
+			const auto& modulo = _m;	// and modulo is m+1
+			if (_n==-1)
+			{
+				m_asm.dec(_r);
+				m_asm.dec(p);
+
+				m_asm.sar(p, asmjit::Imm(31));
+				m_asm.inc(modulo);
+				m_asm.and_(p, modulo);
+				m_asm.add(_r, p);
+			}
+			else	// _n==1
+			{
+				m_asm.inc(_r);		// Increment r by n here.
+				m_asm.inc(p);
+
+				const auto& mtMinusP64 = moduloMask;
+				const auto mtMinusP = mtMinusP64.r32();
+
+				m_asm.mov(mtMinusP, _m);
+				m_asm.sub(mtMinusP, p);
+				m_asm.sar(mtMinusP, asmjit::Imm(31));
+				m_asm.inc(modulo);
+				m_asm.and_(mtMinusP, modulo);
+
+				m_asm.sub(_r, mtMinusP);
+			}
+
+		}
+		m_asm.jmp(end);
+
+		// linear:
+		m_asm.bind(linear);
+		m_asm.add(_r, _n);
+
+		m_asm.bind(end);
+		m_asm.and_(_r, asmjit::Imm(0xffffff));
+	}
 
 	inline void JitOps::updateAddressRegisterModulo(const JitReg32& r, const JitReg32& n, const JitReg32& m) const
 	{
@@ -208,19 +271,9 @@ namespace dsp56k
 
 			const ShiftReg shifter(m_block);
 			m_asm.bsr(shifter, m);								// returns index of MSB that is 1
-			m_asm.mov(moduloMask, asmjit::Imm(1));
+			m_asm.mov(moduloMask, asmjit::Imm(2));
 			m_asm.shl(moduloMask, shifter.get());
-
-			if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kBMI))
-			{
-				m_asm.blsmsk(moduloMask, moduloMask);				
-			}
-			else
-			{
-				m_asm.mov(shifter, moduloMask);
-				m_asm.dec(moduloMask);
-				m_asm.or_(moduloMask, shifter.get());
-			}
+			m_asm.dec(moduloMask);
 
 			/*
 			rOffset = r & moduloMask
