@@ -480,7 +480,7 @@ namespace dsp56k
 		void do_exec(RegGP& _lc, TWord _addr);
 		void do_end();
 		void rep_exec(TWord _lc);
-		void rep_exec(RegGP& _lc);
+		void rep_exec(RegGP& _lc, TWord _lcImmediateOperand);
 
 		// -------------- bra variants
 		template<BraMode Bmode> void braOrBsr(int offset);
@@ -512,6 +512,15 @@ namespace dsp56k
 		bool checkResultFlag(const ResultFlags _flag) const { return (m_resultFlags & _flag) != 0; }
 
 	private:
+		enum RepMode
+		{
+			RepNone,
+			RepDynamic,
+			RepFirst,
+			RepLoop,
+			RepLast
+		};
+
 		void errNotImplemented(TWord op);
 
 		JitBlock& m_block;
@@ -529,5 +538,6 @@ namespace dsp56k
 		Instruction m_instruction = InstructionCount;
 
 		uint32_t m_resultFlags = None;
+		RepMode m_repMode = RepNone;
 	};
 }

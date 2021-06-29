@@ -867,6 +867,7 @@ namespace dsp56k
 
 		AluRef d(m_block, ab);
 
+		if(m_repMode == RepNone || m_repMode == RepLast)
 		{
 			// V and L updates
 			// V: Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.

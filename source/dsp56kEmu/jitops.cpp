@@ -678,12 +678,12 @@ namespace dsp56k
 		// TODO: optimize me, we know the LC at compile time, which gives lots of optimization potential such as loop unrolling etc
 		RegGP lc(m_block);
 		m_asm.mov(lc, asmjit::Imm(_lc));
-		rep_exec(lc);
+		rep_exec(lc, _lc);
 	}
 
-	void JitOps::rep_exec(RegGP& _lc)
+	void JitOps::rep_exec(RegGP& _lc, TWord _lcImmediateOperand)
 	{
-		const auto lc = m_dspRegs.getLC(JitDspRegs::ReadWrite).r32();
+		const auto hasImmediateOperand = _lcImmediateOperand != std::numeric_limits<TWord>::max();
 
 		// backup LC
 		const RegXMM lcBackup(m_block);
@@ -699,28 +699,69 @@ namespace dsp56k
 		const auto opSize = m_opSize;
 		const auto pc = m_pcCurrentOp + m_opSize;	// remember old op size as it gets overwritten by the child instruction
 		
+		const auto loopCycle = [&](bool _compare = true, TWord compareValue = 0)
+		{
+			m_asm.dec(m_dspRegs.getLC(JitDspRegs::ReadWrite));
+			emit(pc);
+			if(_compare)
+				m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read), asmjit::Imm(compareValue));
+		};
+
 		const auto start = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
 		m_block.dspRegPool().releaseAll();
 		m_block.dspRegPool().setRepMode(true);
 
-		// execute it once without being part of the loop to fill register cache
-		m_asm.dec(m_dspRegs.getLC(JitDspRegs::ReadWrite));
-		emit(pc);
-		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read), asmjit::Imm(0));
-		m_asm.jz(end);
+		if(false && hasImmediateOperand)
+		{
+			if(_lcImmediateOperand == 0)
+				_lcImmediateOperand = 65536;
 
-		m_asm.bind(start);
+			if(_lcImmediateOperand == 1)
+			{
+				m_repMode = RepLast;
+				loopCycle(false);
+			}
+			else if(_lcImmediateOperand == 2)
+			{
+				m_repMode = RepFirst;
+				loopCycle(false);
+				m_repMode = RepLast;
+				loopCycle(false);
+			}
+			else
+			{
+				m_repMode = RepFirst;
+				loopCycle(false);
 
-		m_asm.dec(m_dspRegs.getLC(JitDspRegs::ReadWrite));
-		emit(pc);
-		m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read), asmjit::Imm(0));
-		m_asm.jnz(start);
+				m_repMode = RepLoop;
+
+				m_asm.bind(start);
+				loopCycle(true, 1);
+				m_asm.jnz(start);
+
+				m_repMode = RepLast;
+				loopCycle(false);			
+			}
+		}
+		else
+		{
+			m_repMode = RepDynamic;
+
+			// execute it once without being part of the loop to fill register cache
+			loopCycle();
+			m_asm.jz(end);
+
+			m_asm.bind(start);
+			loopCycle();
+			m_asm.jnz(start);
+		}
 
 		m_asm.bind(end);
 
 		m_block.dspRegPool().setRepMode(false);
+		m_repMode = RepNone;
 
 		// restore previous LC
 		m_asm.movd(m_dspRegs.getLC(JitDspRegs::Write), lcBackup);
@@ -741,7 +782,7 @@ namespace dsp56k
 		const auto dddddd = getFieldValue<Rep_S,Field_dddddd>(op);
 		RegGP lc(m_block);
 		decode_dddddd_read(lc.get().r32(), dddddd);
-		rep_exec(lc);
+		rep_exec(lc, std::numeric_limits<TWord>::max());
 	}
 
 	inline void JitOps::op_Reset(TWord op)
