@@ -62,6 +62,8 @@ namespace dsp56k
 			ops.emit(pc);
 			m_asm.nop();
 
+			m_singleOpWord = ops.getOpWordA();
+			
 			m_pMemSize += ops.getOpSize();
 			++m_encodedInstructionCount;
 

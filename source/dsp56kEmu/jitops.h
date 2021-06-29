@@ -428,6 +428,7 @@ namespace dsp56k
 		void decode_LLL_write(TWord _lll, const JitReg32& x, const JitReg32& y);
 		void decode_XMove_MMRRR(const JitReg64& _dst, TWord _mm, TWord _rrr);
 
+		TWord getOpWordA() const { return m_opWordA; }
 		TWord getOpWordB();
 		void getOpWordB(const JitReg& _dst);
 

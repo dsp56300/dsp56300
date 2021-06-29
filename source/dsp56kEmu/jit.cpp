@@ -183,16 +183,13 @@ namespace dsp56k
 		{
 			// if a 1-word-op, cache it
 			auto& cacheEntry = m_jitCache[first];
+			const auto op = _jitBlock->getSingleOpWord();
 
-			TWord opA;
-			TWord opB;
-			m_dsp.memory().getOpcode(first, opA, opB);
-
-			if(cacheEntry.singleOpCache.find(opA) == cacheEntry.singleOpCache.end())
+			if(cacheEntry.singleOpCache.find(op) == cacheEntry.singleOpCache.end())
 			{
 //				LOG("Caching 1-word-op " << HEX(opA) << " at PC " << HEX(first));
 
-				cacheEntry.singleOpCache.insert(std::make_pair(opA, _jitBlock));
+				cacheEntry.singleOpCache.insert(std::make_pair(op, _jitBlock));
 				return;
 			}
 		}

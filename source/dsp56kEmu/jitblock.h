@@ -62,6 +62,7 @@ namespace dsp56k
 		uint32_t& pMemWriteValue() { return m_pMemWriteValue; }
 		const std::string& getDisasm() const { return m_dspAsm; }
 		TWord getLastOpSize() const { return m_lastOpSize; }
+		TWord getSingleOpWord() const { return m_singleOpWord; }
 
 	private:
 		JitEntry m_func = nullptr;
@@ -79,6 +80,7 @@ namespace dsp56k
 		TWord m_pcLast = 0;
 		TWord m_pMemSize = 0;
 		TWord m_lastOpSize = 0;
+		TWord m_singleOpWord = 0;
 		TWord m_encodedInstructionCount = 0;
 		TWord m_executedInstructionCount = 0;
 
