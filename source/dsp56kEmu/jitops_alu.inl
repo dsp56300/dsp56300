@@ -889,28 +889,25 @@ namespace dsp56k
 			decode_JJ_read(s, jj);
 
 			const RegGP addOrSub(m_block);
-			m_asm.xor_(addOrSub, addOrSub.get());
 			m_asm.bt(d, asmjit::Imm(55));
-			m_asm.setc(addOrSub);
+			m_asm.setc(addOrSub.get().r8());
 			m_asm.bt(s, asmjit::Imm(23));
-			m_asm.adc(addOrSub, asmjit::Imm(0));
+			m_asm.adc(addOrSub.get().r8(), asmjit::Imm(0));
+			m_asm.and_(addOrSub.get().r8(), asmjit::Imm(1));
 
 			m_asm.shl(d, asmjit::Imm(1));
-			{
-				const RegGP carry(m_block);
-				m_asm.xor_(carry, carry.get());
-				ccr_getBitValue(carry, CCRB_C);
-				m_asm.or_(d, carry.get());
-			}
 
-			m_asm.shl(s, asmjit::Imm(24));
-			signextend48to64(s);
+			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
+			m_asm.adc(d.get().r8(), asmjit::Imm(0));
+
+			m_asm.shl(s, asmjit::Imm(40));
+			m_asm.sar(s, asmjit::Imm(16));
 
 			const RegGP dLsWord(m_block);
 			m_asm.mov(dLsWord, d.get());
 			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
 
-			m_asm.cmp(addOrSub, asmjit::Imm(0));
+			m_asm.cmp(addOrSub.get().r8(), asmjit::Imm(0));
 
 			const asmjit::Label sub = m_asm.newLabel();
 			const asmjit::Label end = m_asm.newLabel();		
