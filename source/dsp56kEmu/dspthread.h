@@ -25,6 +25,5 @@ namespace dsp56k
 		std::unique_ptr<std::thread> m_thread;
 
 		std::atomic<bool> m_runThread;
-		uint64_t m_ips = 0;
 	};
 }

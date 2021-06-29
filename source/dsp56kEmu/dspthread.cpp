@@ -78,15 +78,17 @@ namespace dsp56k
 				const auto t2 = Clock::now();
 				const auto d = t2 - t;
 
-				const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(d);
+				const auto ms = std::chrono::duration_cast<std::chrono::microseconds>(d);
 
-				m_ips = instructions / ms.count();
+				const auto ips = static_cast<double>(instructions) / static_cast<double>(ms.count());
 
 				instructions = 0;
 				t = t2;
 
-				LOG("IPS: " << m_ips << "k");
-				std::cout << "IPS: "<< m_ips << "k" << std::endl;
+				char temp[64];
+				sprintf(temp, "MIPS: %.6f", ips);
+				puts(temp);
+				LOG(temp);
 			}
 		}
 	}
