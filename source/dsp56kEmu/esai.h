@@ -287,18 +287,7 @@ namespace dsp56k
 			m_rccr = _val;
 		}
 
-		void updatePCTL(TWord _val)
-		{
-			const TWord pctl = _val;
-			int pd = ((pctl>>20) & 15) + 1;
-			int mf = (pctl & 0xfff) + 1;
-			m_cyclesPerSample = mf * 128 / pd;	// The ratio between external clock and sample period simplifies to this.
-			// A more full expression would be m_cyclesPerSample = dsp_frequency / samplerate, where
-			// dsp_frequency = m_extClock * mf / pd    and   samplerate = m_extClock/256
-
-			const float speed_mhz = 12.0f * mf / pd;
-			LOG("Clock speed changed to: " << speed_mhz << "Mhz, pd=" << HEX(pd) << ", mf=" << HEX(mf) << ", word=" << HEX(_val));	// logging assumes an external crystal at 12MHz
-		}
+		void updatePCTL(TWord _val);
 		void writeTX(uint32_t _index, TWord _val);
 		TWord readRX(uint32_t _index);
 		
