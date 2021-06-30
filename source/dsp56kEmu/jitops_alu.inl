@@ -1334,8 +1334,7 @@ namespace dsp56k
 
 			if(TTT != ttt)
 			{
-				const RegGP r(m_block);
-				m_dspRegs.getR(r, ttt);
+				AguRegR r(m_block, ttt, true);
 				m_dspRegs.setR(TTT, r);
 			}
 		});
@@ -1355,8 +1354,7 @@ namespace dsp56k
 			m_asm.jz(_toFalse);
 		}, [&]()
 		{
-			const RegGP r(m_block);
-			m_dspRegs.getR(r, ttt);
+			AguRegR r(m_block, ttt, true);
 			m_dspRegs.setR(TTT, r);
 		});
 	}
