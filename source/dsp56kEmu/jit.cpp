@@ -69,7 +69,7 @@ namespace dsp56k
 				auto& lc = m_dsp.regs().lc.var;
 				if(lc <= 1)
 				{
-					m_dsp.do_end();					
+					m_dsp.do_end();
 				}
 				else
 				{
