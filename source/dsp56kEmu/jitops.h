@@ -511,6 +511,7 @@ namespace dsp56k
 		Instruction getInstruction() const { return m_instruction; }
 
 		bool checkResultFlag(const ResultFlags _flag) const { return (m_resultFlags & _flag) != 0; }
+		uint32_t getResultFlags() const { return m_resultFlags; }
 
 	private:
 		enum RepMode

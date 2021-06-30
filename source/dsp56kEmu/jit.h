@@ -31,6 +31,7 @@ namespace dsp56k
 		void markInvalid(JitBlock* _block);
 		
 		void run(TWord _pc, JitBlock* _block);
+		void runCheckPMemWrite(TWord _pc, JitBlock* _block);
 		void create(TWord _pc, JitBlock* _block);
 		void recreate(TWord _pc, JitBlock* _block);
 

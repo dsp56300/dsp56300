@@ -29,6 +29,13 @@ namespace dsp56k
 	class JitBlock
 	{
 	public:
+		enum JitBlockFlags
+		{
+			Failed		= 0,
+			Success		= 0x0001,
+			WritePMem	= 0x0002,
+		};
+
 		typedef void (*JitEntry)();
 
 		JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp);
@@ -44,7 +51,7 @@ namespace dsp56k
 
 		operator asmjit::x86::Assembler& ()		{ return m_asm;	}
 
-		bool emit(TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP);
+		JitBlockFlags emit(TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP);
 		bool empty() const { return m_pMemSize == 0; }
 		TWord getPCFirst() const { return m_pcFirst; }
 		TWord getPMemSize() const { return m_pMemSize; }

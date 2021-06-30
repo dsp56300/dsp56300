@@ -108,17 +108,14 @@ namespace dsp56k
 
 		Assembler m_asm(&code);
 
-		JitBlock* b;
+		JitBlock* b = new JitBlock(m_asm, m_dsp);
 
+		const auto blockResult = b->emit(_pc, m_jitCache, m_volatileP);
+		if(!blockResult)
 		{
-			b = new JitBlock(m_asm, m_dsp);
-
-			if(!b->emit(_pc, m_jitCache, m_volatileP))
-			{
-				LOG("FATAL: code generation failed for PC " << HEX(_pc));
-				delete b;
-				return;
-			}
+			LOG("FATAL: code generation failed for PC " << HEX(_pc));
+			delete b;
+			return;
 		}
 
 		m_asm.ret();
@@ -139,10 +136,12 @@ namespace dsp56k
 		const auto first = b->getPCFirst();
 		const auto last = first + b->getPMemSize();
 
+		auto runFunc = (blockResult & JitBlock::WritePMem) ? &Jit::runCheckPMemWrite : &Jit::run;
+
 		for(auto i=first; i<last; ++i)
 		{			
 			m_jitCache[i].block = b;
-			m_jitCache[i].func = i == first ? &Jit::run : &Jit::recreate;
+			m_jitCache[i].func = i == first ? runFunc : &Jit::recreate;
 		}
 
 #ifdef JIT_VTUNE_PROFILING
@@ -224,6 +223,11 @@ namespace dsp56k
 			if(_block->getDisasm().find("rep ") == 0)
 				m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
 		}
+	}
+
+	void Jit::runCheckPMemWrite(TWord _pc, JitBlock* _block)
+	{
+		run(_pc, _block);
 
 		// if JIT code has written to P memory, destroy a JIT block if present at the write location
 		const TWord pMemWriteAddr = _block->pMemWriteAddress();
