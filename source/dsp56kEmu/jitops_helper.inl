@@ -60,8 +60,7 @@ namespace dsp56k
 			return;
 		}
 
-		const RegGP m(m_block);
-		m_block.regs().getM(m, _rrr);
+		const AguRegM m(m_block, _rrr, true);
 
 		if(_mmm == 7)													/* 111 -(Rn)   */
 		{
@@ -220,6 +219,7 @@ namespace dsp56k
 				m_asm.sar(p, asmjit::Imm(31));
 				m_asm.inc(modulo);
 				m_asm.and_(p, modulo);
+				m_asm.dec(modulo);
 				m_asm.add(_r, p);
 			}
 			else	// _n==1
@@ -235,7 +235,7 @@ namespace dsp56k
 				m_asm.sar(mtMinusP, asmjit::Imm(31));
 				m_asm.inc(modulo);
 				m_asm.and_(mtMinusP, modulo);
-
+				m_asm.dec(modulo);
 				m_asm.sub(_r, mtMinusP);
 			}
 
@@ -244,7 +244,13 @@ namespace dsp56k
 
 		// linear:
 		m_asm.bind(linear);
-		m_asm.add(_r, _n);
+
+		if(_n == 1)
+			m_asm.inc(_r);
+		else if(_n == -1)
+			m_asm.dec(_r);
+		else
+			m_asm.add(_r, _n);
 
 		m_asm.bind(end);
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
@@ -303,6 +309,7 @@ namespace dsp56k
 
 		m_asm.sar(p, asmjit::Imm(31));
 		m_asm.and_(p, modulo);
+		m_asm.dec(modulo);
 
 		m_asm.add(r, p);
 		m_asm.sub(r, mtMinusP);
