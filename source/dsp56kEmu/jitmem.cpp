@@ -92,7 +92,7 @@ namespace dsp56k
 	void Jitmem::mov(uint32_t& _dst, const asmjit::x86::Gp& _src) const
 	{
 		const auto reg = regSmallTemp;
-		m_block.asm_().mov(ptr(reg, &_dst), _src);
+		m_block.asm_().mov(ptr(reg, &_dst), _src.r32());
 	}
 
 	void Jitmem::mov(uint8_t& _dst, const asmjit::x86::Gp& _src) const
@@ -110,7 +110,7 @@ namespace dsp56k
 	void Jitmem::mov(const asmjit::x86::Gp& _dst, const uint32_t& _src) const
 	{
 		const auto reg = regSmallTemp;
-		m_block.asm_().mov(_dst, ptr(reg, &_src));
+		m_block.asm_().mov(_dst.r32(), ptr(reg, &_src));
 	}
 
 	void Jitmem::mov(const asmjit::x86::Gp& _dst, const uint8_t& _src) const
