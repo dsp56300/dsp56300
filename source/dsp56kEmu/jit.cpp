@@ -228,12 +228,11 @@ namespace dsp56k
 		}
 
 		// if JIT code has written to P memory, destroy a JIT block if present at the write location
-		if(_block->pMemWriteAddress() != g_pcInvalid)
+		const TWord pMemWriteAddr = _block->pMemWriteAddress();
+		if(pMemWriteAddr != g_pcInvalid)
 		{
-			const TWord addr = _block->pMemWriteAddress();
-
-			if (m_jitCache[addr].block)
-				m_volatileP.insert(addr);
+			if (m_jitCache[pMemWriteAddr].block)
+				m_volatileP.insert(pMemWriteAddr);
 
 			notifyProgramMemWrite(_block->pMemWriteAddress());
 			m_dsp.notifyProgramMemWrite(_block->pMemWriteAddress());

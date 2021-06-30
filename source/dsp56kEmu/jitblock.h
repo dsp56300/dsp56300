@@ -53,13 +53,14 @@ namespace dsp56k
 		const JitEntry& getFunc() const { return m_func; }
 
 		void exec();
-		TWord getEncodedInstructionCount() const { return m_encodedInstructionCount; }
+		TWord& getEncodedInstructionCount() { return m_encodedInstructionCount; }
 		const TWord& getExecutedInstructionCount() const { return m_executedInstructionCount; }
 
 		// JIT code writes these
 		TWord& nextPC() { return m_nextPC; }
 		uint32_t& pMemWriteAddress() { return m_pMemWriteAddress; }
 		uint32_t& pMemWriteValue() { return m_pMemWriteValue; }
+
 		const std::string& getDisasm() const { return m_dspAsm; }
 		TWord getLastOpSize() const { return m_lastOpSize; }
 		TWord getSingleOpWord() const { return m_singleOpWord; }

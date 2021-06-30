@@ -691,9 +691,14 @@ namespace dsp56k
 		m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), _lc.get().r32());
 		_lc.release();
 
+		if(hasImmediateOperand)
+		{
+			m_block.getEncodedInstructionCount() += _lcImmediateOperand;
+		}
+		else
 		{
 			const RegGP temp(m_block);
-			m_asm.add(m_block.mem().ptr(temp, &m_block.getExecutedInstructionCount()), m_dspRegs.getLC(JitDspRegs::Read));			
+			m_asm.add(m_block.mem().ptr(temp, &m_block.getExecutedInstructionCount()), m_dspRegs.getLC(JitDspRegs::Read));
 		}
 
 		const auto opSize = m_opSize;
@@ -713,7 +718,7 @@ namespace dsp56k
 		m_block.dspRegPool().releaseAll();
 		m_block.dspRegPool().setRepMode(true);
 
-		if(false && hasImmediateOperand)
+		if(hasImmediateOperand)
 		{
 			if(_lcImmediateOperand == 0)
 				_lcImmediateOperand = 65536;
