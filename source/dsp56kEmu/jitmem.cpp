@@ -139,12 +139,12 @@ namespace dsp56k
 
 	void Jitmem::readDspMemory(const JitReg& _dst, const EMemArea _area, const JitReg& _offset) const
 	{
+		const RegGP t(m_block);
 		const SkipLabel skip(m_block.asm_());
 
 		m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().size()));
 		m_block.asm_().jge(skip.get());
 		
-		const RegGP t(m_block);
 		getMemAreaPtr(t.get(), _area, _offset);
 
 		m_block.asm_().mov(_dst.r32(), asmjit::x86::ptr(t, _offset, 2, 0, sizeof(TWord)));
@@ -171,12 +171,12 @@ namespace dsp56k
 
 		m_block.regUsage().call(asmjit::func_as_ptr(&callDSPMemWrite));
 #else
+		const RegGP t(m_block);
+
 		const SkipLabel skip(m_block.asm_());
 
 		m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().size()));
 		m_block.asm_().jge(skip.get());
-
-		const RegGP t(m_block);
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
