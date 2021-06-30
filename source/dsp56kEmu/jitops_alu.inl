@@ -448,8 +448,11 @@ namespace dsp56k
 	{
 		AluReg d(m_block, ab, true);
 
-		m_asm.sal(d.get(), asmjit::Imm(8));
-		m_asm.sal(_v, asmjit::Imm(8));
+		if(updateCarry)
+		{
+			m_asm.sal(d.get(), asmjit::Imm(8));
+			m_asm.sal(_v, asmjit::Imm(8));			
+		}
 
 		if( _magnitude )
 		{
@@ -466,8 +469,11 @@ namespace dsp56k
 
 		ccr_clear(CCR_V);			// as cmp is identical to sub, the same for the V bit applies (see sub for details)
 
-		m_asm.shr(d, asmjit::Imm(8));
-		m_asm.shr(_v, asmjit::Imm(8));
+		if(updateCarry)
+		{
+			m_asm.shr(d, asmjit::Imm(8));
+			m_asm.shr(_v, asmjit::Imm(8));			
+		}
 
 		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
