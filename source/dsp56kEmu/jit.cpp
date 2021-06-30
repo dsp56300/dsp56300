@@ -213,8 +213,6 @@ namespace dsp56k
 
 		m_dsp.m_instructions += _block->getExecutedInstructionCount();
 
-		m_dsp.setPC(_block->nextPC());
-
 		if(g_traceOps)
 		{
 			const TWord lastPC = _pc + _block->getPMemSize() - _block->getLastOpSize();

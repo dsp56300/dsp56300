@@ -412,7 +412,7 @@ namespace dsp56k
 
 	void JitDspRegs::setPC(const JitReg& _pc)
 	{
-		m_block.mem().mov(m_block.nextPC(), _pc);
+		m_block.setNextPC(_pc);
 	}
 
 	void JitDspRegs::updateDspMRegisters()

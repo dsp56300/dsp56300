@@ -60,6 +60,7 @@ namespace dsp56k
 		TWord& nextPC() { return m_nextPC; }
 		uint32_t& pMemWriteAddress() { return m_pMemWriteAddress; }
 		uint32_t& pMemWriteValue() { return m_pMemWriteValue; }
+		void setNextPC(const JitReg& _pc);
 
 		const std::string& getDisasm() const { return m_dspAsm; }
 		TWord getLastOpSize() const { return m_lastOpSize; }
@@ -89,5 +90,6 @@ namespace dsp56k
 		TWord m_pMemWriteAddress = g_pcInvalid;
 		TWord m_pMemWriteValue = 0;
 		std::string m_dspAsm;
+		bool m_possibleBranch = false;
 	};
 }

@@ -26,6 +26,12 @@ namespace dsp56k
 		m_dspAsm.clear();
 		bool shouldEmit = true;
 
+		{
+			const RegGP temp(*this);
+			mem().mov(temp, m_pcLast);
+			mem().mov(nextPC(), temp);
+		}
+
 		while(shouldEmit)
 		{
 			const auto pc = m_pcFirst + m_pMemSize;
@@ -79,13 +85,10 @@ namespace dsp56k
 			{
 				const auto& oi = g_opcodes[res];
 
-				if(oi.flag(OpFlagBranch))
+				if(oi.flag(OpFlagBranch) || oi.flag(OpFlagPopPC))
 					break;
 
 				if(oi.flag(OpFlagLoop))
-					break;
-
-				if(oi.flag(OpFlagPopPC))
 					break;
 			}
 
@@ -93,6 +96,19 @@ namespace dsp56k
 				break;
 		}
 
+		m_pcLast = m_pcFirst + m_pMemSize;
+
+		if(m_possibleBranch)
+		{
+			const RegGP temp(*this);
+			mem().mov(temp, nextPC());
+			mem().mov(m_dsp.regs().pc, temp);
+		}
+		else
+		{
+			m_asm.mov(mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().pc.var)), asmjit::Imm(m_pcLast));
+		}
+		
 		if(m_dspRegs.ccrDirtyFlags())
 		{
 			JitOps op(*this);
@@ -102,14 +118,11 @@ namespace dsp56k
 
 		m_stack.popAll();
 
-		m_pcLast = m_pcFirst + m_pMemSize;
-
 		return !empty();
 	}
 
 	void JitBlock::exec()
 	{
-		m_nextPC = m_pcLast;
 		m_executedInstructionCount = m_encodedInstructionCount;
 		m_pMemWriteAddress = g_pcInvalid;
 
@@ -117,5 +130,11 @@ namespace dsp56k
 
 		if(m_dspRegs.hasDirtyMRegisters())
 			m_dspRegs.updateDspMRegisters();
+	}
+
+	void JitBlock::setNextPC(const JitReg& _pc)
+	{
+		mem().mov(nextPC(), _pc);
+		m_possibleBranch = true;
 	}
 }
