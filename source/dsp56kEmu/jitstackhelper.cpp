@@ -14,12 +14,15 @@ namespace dsp56k
 	constexpr size_t g_shadowSpaceSize = 0;
 #endif
 
+	constexpr bool g_dynamicNonVolatilePushes = false;
+
 	JitStackHelper::JitStackHelper(JitBlock& _block) : m_block(_block)
 	{
 		m_pushedRegs.reserve(128);
 		m_usedRegs.reserve(128);
 
-		pushNonVolatiles();
+		if constexpr (!g_dynamicNonVolatilePushes)
+			pushNonVolatiles();
 	}
 
 	JitStackHelper::~JitStackHelper()
@@ -30,7 +33,7 @@ namespace dsp56k
 	void JitStackHelper::pushNonVolatiles()
 	{
 		for (const auto& reg : g_nonVolatileGPs)
-			push(reg);
+			setUsed(reg);
 	}
 
 	void JitStackHelper::push(const JitReg& _reg)
@@ -142,8 +145,8 @@ namespace dsp56k
 		if(isUsed(_reg))
 			return;
 
-//		if(isNonVolatile(_reg))
-//			push(_reg);
+		if(isNonVolatile(_reg))
+			push(_reg);
 
 		m_usedRegs.push_back(_reg);
 	}
@@ -153,8 +156,8 @@ namespace dsp56k
 		if(isUsed(_reg))
 			return;
 
-//		if(isNonVolatile(_reg))
-//			push(_reg);
+		if(isNonVolatile(_reg))
+			push(_reg);
 
 		m_usedRegs.push_back(_reg);
 	}

@@ -50,6 +50,7 @@ namespace dsp56k
 
 		updateDirtyCCR(_block);
 		_block.dspRegPool().releaseAll();
+		_block.stack().pushNonVolatiles();
 
 		_jumpIfFalse(isFalse);
 

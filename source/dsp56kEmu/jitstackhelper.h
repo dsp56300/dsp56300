@@ -19,12 +19,16 @@ namespace dsp56k
 
 		void push(const JitReg& _reg);
 		void push(const JitReg128& _reg);
+
 		void pop(const JitReg& _reg);
 		void pop(const JitReg128& _reg);
 		void pop(const Reg& _reg);
 		void pop();
+
 		void popAll();
 
+		void pushNonVolatiles();
+		
 		void call(const void* _funcAsPtr) const;
 		
 		static bool isNonVolatile(const JitReg& _gp);
@@ -35,7 +39,6 @@ namespace dsp56k
 
 		bool isUsed(const Reg& _reg) const;
 	private:
-		void pushNonVolatiles();
 		JitBlock& m_block;
 		uint32_t m_pushedBytes = 0;
 		std::vector<Reg> m_pushedRegs;
