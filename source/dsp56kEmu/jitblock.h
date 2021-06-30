@@ -51,7 +51,7 @@ namespace dsp56k
 
 		operator asmjit::x86::Assembler& ()		{ return m_asm;	}
 
-		JitBlockFlags emit(TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP);
+		bool emit(TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP);
 		bool empty() const { return m_pMemSize == 0; }
 		TWord getPCFirst() const { return m_pcFirst; }
 		TWord getPMemSize() const { return m_pMemSize; }
@@ -72,6 +72,7 @@ namespace dsp56k
 		const std::string& getDisasm() const { return m_dspAsm; }
 		TWord getLastOpSize() const { return m_lastOpSize; }
 		TWord getSingleOpWord() const { return m_singleOpWord; }
+		uint32_t getFlags() const { return m_flags; }
 
 	private:
 		JitEntry m_func = nullptr;
@@ -98,5 +99,6 @@ namespace dsp56k
 		TWord m_pMemWriteValue = 0;
 		std::string m_dspAsm;
 		bool m_possibleBranch = false;
+		uint32_t m_flags = 0;
 	};
 }

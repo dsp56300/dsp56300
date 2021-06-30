@@ -19,7 +19,7 @@ namespace dsp56k
 	{
 	}
 
-	JitBlock::JitBlockFlags JitBlock::emit(const TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP)
+	bool JitBlock::emit(const TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP)
 	{
 		m_pcFirst = _pc;
 		m_pMemSize = 0;
@@ -123,10 +123,10 @@ namespace dsp56k
 		m_stack.popAll();
 
 		if(empty())
-			return Failed;
+			return false;
 		if(opFlags & JitOps::WritePMem)
-			return static_cast<JitBlockFlags>(Success | WritePMem);
-		return Success;
+			m_flags |= WritePMem;
+		return true;
 	}
 
 	void JitBlock::exec()

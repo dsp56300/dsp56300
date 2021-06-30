@@ -108,10 +108,9 @@ namespace dsp56k
 
 		Assembler m_asm(&code);
 
-		JitBlock* b = new JitBlock(m_asm, m_dsp);
+		auto* b = new JitBlock(m_asm, m_dsp);
 
-		const auto blockResult = b->emit(_pc, m_jitCache, m_volatileP);
-		if(!blockResult)
+		if(!b->emit(_pc, m_jitCache, m_volatileP))
 		{
 			LOG("FATAL: code generation failed for PC " << HEX(_pc));
 			delete b;
@@ -136,7 +135,7 @@ namespace dsp56k
 		const auto first = b->getPCFirst();
 		const auto last = first + b->getPMemSize();
 
-		auto runFunc = (blockResult & JitBlock::WritePMem) ? &Jit::runCheckPMemWrite : &Jit::run;
+		auto runFunc = (b->getFlags() & JitBlock::WritePMem) ? &Jit::runCheckPMemWrite : &Jit::run;
 
 		for(auto i=first; i<last; ++i)
 		{			
@@ -259,13 +258,13 @@ namespace dsp56k
 //				LOG("Returning 1-word-op " << HEX(opA) << " at PC " << HEX(_pc));
 				cacheEntry.block = it->second;
 				cacheEntry.singleOpCache.erase(it);
-				cacheEntry.func = &Jit::run;
-				run(_pc, cacheEntry.block);
+				cacheEntry.func = cacheEntry.block->getFlags() & JitBlock::WritePMem ? &Jit::runCheckPMemWrite : &Jit::run;
+				(this->*cacheEntry.func)(_pc, cacheEntry.block);
 				return;
 			}
 		}
 		emit(_pc);
-		run(_pc, cacheEntry.block);
+		(this->*cacheEntry.func)(_pc, cacheEntry.block);
 	}
 
 	void Jit::recreate(const TWord _pc, JitBlock* _block)
