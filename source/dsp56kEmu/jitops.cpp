@@ -603,8 +603,7 @@ namespace dsp56k
 		const RegGP n(m_block);
 		m_asm.mov(n, asmjit::Imm(aSigned));
 
-		const RegGP m(m_block);
-		m_dspRegs.getM(m, rrr);
+		const AguRegM m(m_block, rrr, true);
 
 		updateAddressRegister(r.get().r32(), n.get().r32(), m.get().r32());
 
