@@ -14,7 +14,7 @@ namespace dsp56k
 	constexpr size_t g_shadowSpaceSize = 0;
 #endif
 
-	constexpr bool g_dynamicNonVolatilePushes = false;
+	constexpr bool g_dynamicNonVolatilePushes = true;
 
 	JitStackHelper::JitStackHelper(JitBlock& _block) : m_block(_block)
 	{
