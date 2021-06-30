@@ -208,10 +208,12 @@ namespace dsp56k
 
 	enum OpcodeFlags
 	{
-		OpFlagBranch	= (1<<0),
-		OpFlagLoop		= (1<<1),
-		OpFlagCondition	= (1<<2),
-		OpFlagCacheMod	= (1<<3),
-		OpFlagPopPC		= (1<<4),
+		OpFlagBranch		= (1<<0),
+		OpFlagLoop			= (1<<1),
+		OpFlagCondition		= (1<<2),
+		OpFlagCacheMod		= (1<<3),
+		OpFlagPopPC			= (1<<4),
+		OpFlagRepImmediate	= (1<<5),
+		OpFlagRepDynamic	= (1<<6),
 	};
 }

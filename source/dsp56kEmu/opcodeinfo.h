@@ -346,10 +346,10 @@ namespace dsp56k
 		OpcodeInfo(Punlock,			"0000101011MMMRRR10000001",	"PUNLOCK ea", EAandID, OpFlagCacheMod),
 		OpcodeInfo(Punlockr,		"000000000000000000001110",	"PUNLOCKR xxxx", PCRelativeAddressExt, OpFlagCacheMod),
 
-		OpcodeInfo(Rep_ea,			"0000011001MMMRRR0S100000",	"REP [X or Y]:ea", None, OpFlagLoop),
-		OpcodeInfo(Rep_aa,			"0000011000aaaaaa0S100000",	"REP [X or Y]:aa", None, OpFlagLoop),
-		OpcodeInfo(Rep_xxx,			"00000110iiiiiiii1o1ohhhh",	"REP #xxx", None, OpFlagLoop),
-		OpcodeInfo(Rep_S,			"0000011011dddddd00100000",	"REP S", None, OpFlagLoop),
+		OpcodeInfo(Rep_ea,			"0000011001MMMRRR0S100000",	"REP [X or Y]:ea", None, OpFlagLoop | OpFlagRepDynamic),
+		OpcodeInfo(Rep_aa,			"0000011000aaaaaa0S100000",	"REP [X or Y]:aa", None, OpFlagLoop | OpFlagRepDynamic),
+		OpcodeInfo(Rep_xxx,			"00000110iiiiiiii1o1ohhhh",	"REP #xxx", None, OpFlagLoop | OpFlagRepImmediate),
+		OpcodeInfo(Rep_S,			"0000011011dddddd00100000",	"REP S", None, OpFlagLoop | OpFlagRepDynamic),
 
 		OpcodeInfo(Reset,			"00000000000000001o0o0100",	"RESET"),
 
