@@ -13,15 +13,25 @@ namespace dsp56k
 	constexpr float g_dspFloatMax		= 8388607.0f;
 	constexpr float g_dspFloatMin		= -8388608.0f;
 
-	static TWord float2Dsdp(float f)
+	template<typename T> TWord sample2dsp(T _src)
 	{
-		f *= g_float2dspScale;
-		f = clamp(f, g_dspFloatMin, g_dspFloatMax);
-
-		return floor_int(f) & 0x00ffffff;
+		return _src;
 	}
 
-	static float dsp2Float(TWord d)
+	template<> inline TWord sample2dsp(float _src)
+	{
+		_src *= g_float2dspScale;
+		_src = clamp(_src, g_dspFloatMin, g_dspFloatMax);
+
+		return floor_int(_src) & 0x00ffffff;
+	}
+
+	template<typename T> T dsp2sample(TWord d)
+	{
+		return d;
+	}
+
+	template<> inline float dsp2sample(const TWord d)
 	{
 		return static_cast<float>(signextend<int32_t,24>(d)) * g_dsp2FloatScale;
 	}
@@ -31,13 +41,15 @@ namespace dsp56k
 	class Audio
 	{
 	public:
-		Audio() : m_pendingRXInterrupts(0), m_callback(0) {}
+		Audio() : m_callback(0), m_pendingRXInterrupts(0) {}
 		void setCallback(AudioCallback ac,int callbackSamples,int callbackChannels) {m_callback=ac;m_callbackSamples=callbackSamples;m_callbackChannels=callbackChannels;}
 		void writeEmptyAudioIn(size_t len,size_t ins)
 		{
 			for (size_t i = 0; i < len; ++i) for (size_t c = 0; c < ins; ++c) m_audioInputs[c>>1].push_back(0);
 		}
-		void processAudioInterleaved(float** _inputs, float** _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
+
+		template<typename T>
+		void processAudioInterleaved(T** _inputs, T** _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
 		{
 			if (!_sampleFrames)
 				return;
@@ -66,7 +78,7 @@ namespace dsp56k
 				{
 					const auto in = c >> 1;
 					m_audioInputs[in].waitNotFull();
-					m_audioInputs[in].push_back(float2Dsdp(_inputs[c][i]));
+					m_audioInputs[in].push_back(sample2dsp<T>(_inputs[c][i]));
 				}
 
 				m_pendingRXInterrupts += 2;
@@ -98,11 +110,13 @@ namespace dsp56k
 						v = m_audioOutputs[out].pop_front();
 					}
 
-					_outputs[c][i] = dsp2Float(v);
+					_outputs[c][i] = dsp2sample<T>(v);
 				}
 			}
 		}
-		void processAudioInterleavedSingle(float* _inputs, float* _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
+
+		template<typename T>
+		void processAudioInterleavedSingle(T* _inputs, T* _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
 		{
 			if (!_sampleFrames)
 				return;
@@ -131,7 +145,7 @@ namespace dsp56k
 				{
 					const auto in = c >> 1;
 					m_audioInputs[in].waitNotFull();
-					m_audioInputs[in].push_back(float2Dsdp(*_inputs++));
+					m_audioInputs[in].push_back(sample2dsp<T>(*_inputs++));
 				}
 
 				m_pendingRXInterrupts += 2;
@@ -163,12 +177,13 @@ namespace dsp56k
 						v = m_audioOutputs[out].pop_front();
 					}
 
-					*_outputs++ = dsp2Float(v);
+					*_outputs++ = dsp2sample<T>(v);
 				}
 			}
 		}
 
-		void processAudioInterleavedTX0(float** _inputs, float** _outputs, size_t _sampleFrames)
+		template<typename T>
+		void processAudioInterleavedTX0(T** _inputs, T** _outputs, size_t _sampleFrames)
 		{
 			return processAudioInterleaved(_inputs, _outputs, _sampleFrames, 2, 2);
 		}
