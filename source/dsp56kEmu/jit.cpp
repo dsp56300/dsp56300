@@ -164,10 +164,10 @@ namespace dsp56k
 //		LOG("New block generated @ " << HEX(_pc) << " up to " << HEX(_pc + b->getPMemSize() - 1) << ", instruction count " << b->getEncodedInstructionCount() << ", disasm " << b->getDisasm());
 	}
 
-	void Jit::destroy(JitBlock* _jitBlock)
+	void Jit::destroy(JitBlock* _block)
 	{
-		const auto first = _jitBlock->getPCFirst();
-		const auto last = first + _jitBlock->getPMemSize();
+		const auto first = _block->getPCFirst();
+		const auto last = first + _block->getPMemSize();
 
 //		LOG("Destroying JIT block at PC " << HEX(first) << ", length " << _block->getPMemSize());
 
@@ -177,24 +177,24 @@ namespace dsp56k
 			m_jitCache[i].func = &Jit::create;
 		}
 
-		if(_jitBlock->getPMemSize() == 1)
+		if(_block->getPMemSize() == 1)
 		{
 			// if a 1-word-op, cache it
 			auto& cacheEntry = m_jitCache[first];
-			const auto op = _jitBlock->getSingleOpWord();
+			const auto op = _block->getSingleOpWord();
 
 			if(cacheEntry.singleOpCache.find(op) == cacheEntry.singleOpCache.end())
 			{
 //				LOG("Caching 1-word-op " << HEX(opA) << " at PC " << HEX(first));
 
-				cacheEntry.singleOpCache.insert(std::make_pair(op, _jitBlock));
+				cacheEntry.singleOpCache.insert(std::make_pair(op, _block));
 				return;
 			}
 		}
 
-		m_rt.release(_jitBlock->getFunc());
+		m_rt.release(_block->getFunc());
 
-		delete _jitBlock;
+		delete _block;
 	}
 
 	void Jit::destroy(TWord _pc)
