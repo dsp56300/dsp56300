@@ -6,6 +6,8 @@
 
 #include "asmjit/core/jitruntime.h"
 
+#include <functional>
+
 namespace dsp56k
 {
 	class JitBlock;
