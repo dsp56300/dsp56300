@@ -41,9 +41,6 @@ namespace dsp56k
 
 	static constexpr auto regReturnVal = asmjit::x86::rax;
 
-	static constexpr auto regLC = asmjit::x86::r10;
-	static constexpr auto regExtMem = asmjit::x86::r11;
-
 	static constexpr auto regGPTempA = asmjit::x86::r12;
 	static constexpr auto regGPTempB = asmjit::x86::r13;
 	static constexpr auto regGPTempC = asmjit::x86::r14;
