@@ -34,6 +34,7 @@ namespace dsp56k
 			Failed		= 0,
 			Success		= 0x0001,
 			WritePMem	= 0x0002,
+			LoopEnd		= 0x0004,
 		};
 
 		typedef void (*JitEntry)();

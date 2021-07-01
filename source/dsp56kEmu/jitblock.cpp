@@ -33,6 +33,7 @@ namespace dsp56k
 		}
 
 		uint32_t opFlags = 0;
+		bool appendLoopCode = false;
 
 		while(shouldEmit)
 		{
@@ -42,10 +43,6 @@ namespace dsp56k
 			if(_cache[pc].block)
 				break;
 
-			// always terminate block if loop end has reached
-			if(m_encodedInstructionCount && pc == static_cast<TWord>(m_dsp.regs().la.var + 1))
-				break;
-			
 			// for a volatile P address, if you have some code, break now. if not, generate this one op, and then return.
 			if (_volatileP.find(pc)!=_volatileP.end())
 			{
@@ -82,6 +79,13 @@ namespace dsp56k
 
 			m_lastOpSize = ops.getOpSize();
 
+			// always terminate block if loop end has reached
+			if((m_pcFirst + m_pMemSize) == static_cast<TWord>(m_dsp.regs().la.var + 1))
+			{
+				appendLoopCode = true;
+				break;
+			}
+			
 			if(ops.checkResultFlag(JitOps::WritePMem) || ops.checkResultFlag(JitOps::WriteToLA) || ops.checkResultFlag(JitOps::WriteToLC))
 				break;
 
@@ -112,7 +116,7 @@ namespace dsp56k
 		{
 			m_asm.mov(mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().pc.var)), asmjit::Imm(m_pcLast));
 		}
-		
+
 		if(m_dspRegs.ccrDirtyFlags())
 		{
 			JitOps op(*this);
@@ -126,6 +130,8 @@ namespace dsp56k
 			return false;
 		if(opFlags & JitOps::WritePMem)
 			m_flags |= WritePMem;
+		if(appendLoopCode)
+			m_flags |= LoopEnd;
 		return true;
 	}
 

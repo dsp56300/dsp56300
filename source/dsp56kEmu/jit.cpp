@@ -61,24 +61,6 @@ namespace dsp56k
 
 	void Jit::exec()
 	{
-		// loop processing
-		if(m_dsp.sr_test(SR_LF))
-		{
-			if(m_dsp.getPC().var == m_dsp.regs().la.var + 1)
-			{
-				auto& lc = m_dsp.regs().lc.var;
-				if(lc <= 1)
-				{
-					m_dsp.do_end();
-				}
-				else
-				{
-					--lc;
-					m_dsp.setPC(hiword(m_dsp.regs().ss[m_dsp.ssIndex()]));
-				}
-			}
-		}
-
 		const auto pc = static_cast<TWord>(m_dsp.getPC().var);
 
 //		LOG("Exec @ " << HEX(pc));
@@ -135,12 +117,13 @@ namespace dsp56k
 		const auto first = b->getPCFirst();
 		const auto last = first + b->getPMemSize();
 
-		auto runFunc = (b->getFlags() & JitBlock::WritePMem) ? &Jit::runCheckPMemWrite : &Jit::run;
-
 		for(auto i=first; i<last; ++i)
 		{			
 			m_jitCache[i].block = b;
-			m_jitCache[i].func = i == first ? runFunc : &Jit::recreate;
+			if(i == first)
+				updateRunFunc(m_jitCache[i]);
+			else
+				m_jitCache[i].func = &Jit::recreate;
 		}
 
 #ifdef JIT_VTUNE_PROFILING
@@ -240,6 +223,30 @@ namespace dsp56k
 		}
 	}
 
+	void Jit::runCheckLoopEnd(TWord _pc, JitBlock* _block)
+	{
+		run(_pc, _block);
+
+		// loop processing
+		if(m_dsp.sr_test(SR_LF))
+		{
+			if(m_dsp.getPC().var == m_dsp.regs().la.var + 1)
+			{
+				assert((_block->getFlags() & JitBlock::LoopEnd) != 0);
+				auto& lc = m_dsp.regs().lc.var;
+				if(lc <= 1)
+				{
+					m_dsp.do_end();
+				}
+				else
+				{
+					--lc;
+					m_dsp.setPC(hiword(m_dsp.regs().ss[m_dsp.ssIndex()]));
+				}
+			}
+		}
+	}
+
 	void Jit::create(const TWord _pc, JitBlock* _block)
 	{
 		auto& cacheEntry = m_jitCache[_pc];
@@ -258,7 +265,7 @@ namespace dsp56k
 //				LOG("Returning 1-word-op " << HEX(opA) << " at PC " << HEX(_pc));
 				cacheEntry.block = it->second;
 				cacheEntry.singleOpCache.erase(it);
-				cacheEntry.func = cacheEntry.block->getFlags() & JitBlock::WritePMem ? &Jit::runCheckPMemWrite : &Jit::run;
+				updateRunFunc(cacheEntry);
 				(this->*cacheEntry.func)(_pc, cacheEntry.block);
 				return;
 			}
@@ -273,5 +280,25 @@ namespace dsp56k
 //		LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
 		destroy(_block);
 		create(_pc, _block);
+	}
+
+	void Jit::updateRunFunc(JitCacheEntry& e)
+	{
+		const auto f = e.block->getFlags();
+
+		if(f & JitBlock::WritePMem)
+		{
+			assert((f & JitBlock::LoopEnd) == 0);
+			e.func = &Jit::runCheckPMemWrite;
+		}
+		else if(f & JitBlock::LoopEnd)
+		{
+			assert((f & JitBlock::WritePMem) == 0);
+			e.func = &Jit::runCheckLoopEnd;
+		}
+		else
+		{
+			e.func = &Jit::run;
+		}
 	}
 }
