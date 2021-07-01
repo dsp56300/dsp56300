@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-
 #include "dsp.h"
 
 #include "asmjit/core/jitruntime.h"
