@@ -550,8 +550,14 @@ namespace dsp56k
 
 		if(!_round)
 		{
-			ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z | CCR_V));
-			m_dspRegs.mask56(d);
+			bool canOverflow = !_s1Unsigned || !_s2Unsigned;
+
+			const auto vBit = canOverflow ? CCR_V : 0;
+
+			ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z | vBit));
+
+			if(canOverflow)
+				m_dspRegs.mask56(d);
 		}
 		else
 		{
