@@ -388,6 +388,7 @@ namespace dsp56k
 		emitOpProlog();
 	
 		(this->*funcAlu)(_op);
+		m_asm.nop();
 		(this->*funcMove)(_op);
 
 		m_block.dspRegPool().parallelOpEpilog();
