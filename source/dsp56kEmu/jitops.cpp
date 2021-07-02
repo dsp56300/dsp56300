@@ -304,6 +304,7 @@ namespace dsp56k
 			emit(oi->m_instruction, _op);
 			return;
 		}
+
 		const auto* oiMove = m_opcodes.findParallelMoveOpcodeInfo(_op);
 		if(!oiMove)
 		{

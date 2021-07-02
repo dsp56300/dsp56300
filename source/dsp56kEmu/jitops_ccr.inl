@@ -64,16 +64,19 @@ namespace dsp56k
 
 	inline void JitOps::updateDirtyCCR(const JitReg64& _alu, CCRMask _dirtyBits)
 	{
-		if(_dirtyBits & CCR_Z)
-		{
-			m_asm.cmp(_alu, asmjit::Imm(0));
-			ccr_update_ifZero(CCRB_Z);
-		}
+		m_ccr_update_clear = false;
+
+		m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~_dirtyBits));
 
 		if(_dirtyBits & CCR_V)
 		{
 			ccr_v_update(_alu);
 			m_dspRegs.mask56(_alu);
+		}
+		if(_dirtyBits & CCR_Z)
+		{
+			m_asm.cmp(_alu, asmjit::Imm(0));
+			ccr_update_ifZero(CCRB_Z);
 		}
 		if(_dirtyBits & CCR_N)
 			ccr_n_update_by55(_alu);
@@ -81,6 +84,8 @@ namespace dsp56k
 			ccr_e_update(_alu);
 		if(_dirtyBits & CCR_U)
 			ccr_u_update(_alu);
+
+		m_ccr_update_clear = true;
 	}
 
 	inline void JitOps::ccr_getBitValue(const JitReg& _dst, CCRBit _bit)
@@ -184,7 +189,7 @@ namespace dsp56k
 	{
 		const auto mask = static_cast<CCRMask>(1 << _bit);
 
-		if(_bit != CCRB_L && _bit != CCRB_S)
+		if(m_ccr_update_clear && _bit != CCRB_L && _bit != CCRB_S)
 			ccr_clear(mask);												// clear out old status register value
 		else
 			ccr_clearDirty(mask);

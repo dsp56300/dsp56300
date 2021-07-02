@@ -534,6 +534,7 @@ namespace dsp56k
 		asmjit::x86::Assembler& m_asm;
 
 		CCRMask& m_ccrDirty;
+		bool m_ccr_update_clear = true;
 
 		TWord m_pcCurrentOp = 0;
 		TWord m_opWordA = 0;
