@@ -115,6 +115,39 @@ namespace dsp56k
 
 		m_pcLast = m_pcFirst + m_pMemSize;
 
+		if(false && appendLoopCode)	// this block works, but I'm not sure if we want to keep it here as it increases code size, while the code in jit.cpp does the same but exists only once
+		{
+			const auto end = m_asm.newLabel();
+			const auto decLC = m_asm.newLabel();
+
+			dspRegPool().releaseAll();
+			stack().pushNonVolatiles();
+
+			JitOps ops(*this);
+//			DSPReg lc(*this, JitDspRegPool::DspLC, true, true);
+			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_LF));	// check loop flag
+			m_asm.jnc(end);
+			m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read), asmjit::Imm(1));
+			dspRegPool().releaseAll();
+			m_asm.jg(decLC);
+			ops.do_end();
+			dspRegPool().releaseAll();
+			m_asm.jmp(end);
+
+			m_asm.bind(decLC);
+			m_asm.dec(m_dspRegs.getLC(JitDspRegs::ReadWrite));
+			{
+				const RegGP ss(*this);
+				m_dspRegs.getSS(ss);
+				m_asm.shr(ss, asmjit::Imm(24));
+				m_asm.and_(ss, asmjit::Imm(0xffffff));
+				setNextPC(ss);
+			}
+
+			dspRegPool().releaseAll();
+			m_asm.bind(end);
+		}
+
 		if(m_possibleBranch)
 		{
 			const RegGP temp(*this);
