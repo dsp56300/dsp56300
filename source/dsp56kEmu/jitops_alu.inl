@@ -902,31 +902,28 @@ namespace dsp56k
 			const RegGP s(m_block);
 			decode_JJ_read(s, jj);
 
+			m_asm.shl(s, asmjit::Imm(40));
+			m_asm.sar(s, asmjit::Imm(16));
+
 			const RegGP addOrSub(m_block);
-			m_asm.bt(d, asmjit::Imm(55));
-			m_asm.setc(addOrSub.get().r8());
-			m_asm.bt(s, asmjit::Imm(23));
-			m_asm.adc(addOrSub.get().r8(), asmjit::Imm(0));
-			m_asm.and_(addOrSub.get().r8(), asmjit::Imm(1));
+			m_asm.mov(addOrSub, s.get());
+			m_asm.xor_(addOrSub, d.get());
 
 			m_asm.shl(d, asmjit::Imm(1));
 
 			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
 			m_asm.adc(d.get().r8(), asmjit::Imm(0));
 
-			m_asm.shl(s, asmjit::Imm(40));
-			m_asm.sar(s, asmjit::Imm(16));
-
 			const RegGP dLsWord(m_block);
 			m_asm.mov(dLsWord, d.get());
 			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
 
-			m_asm.cmp(addOrSub.get().r8(), asmjit::Imm(0));
-
 			const asmjit::Label sub = m_asm.newLabel();
 			const asmjit::Label end = m_asm.newLabel();		
 
-			m_asm.jz(sub);
+			m_asm.bt(addOrSub, asmjit::Imm(55));
+
+			m_asm.jnc(sub);
 			m_asm.add(d, s.get());
 			m_asm.jmp(end);
 
@@ -935,7 +932,6 @@ namespace dsp56k
 
 			m_asm.bind(end);
 			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
-
 			m_asm.or_(d, dLsWord.get());
 		}
 
