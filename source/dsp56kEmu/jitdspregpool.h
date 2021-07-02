@@ -3,6 +3,7 @@
 #include <list>
 #include <vector>
 
+#include "types.h"
 #include "jitregtypes.h"
 
 namespace dsp56k
@@ -85,10 +86,10 @@ namespace dsp56k
 		void clear();
 
 		void load(JitReg& _dst, DspReg _src);
-		void store(DspReg _dst, JitReg& _src);
-		void store(DspReg _dst, JitReg128& _src);
+		void store(DspReg _dst, JitReg& _src, bool _resetBasePtr = true);
+		void store(DspReg _dst, JitReg128& _src, bool _resetBasePtr = true);
 
-		bool release(DspReg _dst);
+		bool release(DspReg _dst, bool _resetBasePtr = true);
 
 		template<typename T> void push(std::list<T>& _dst, const T& _src)
 		{
@@ -211,6 +212,41 @@ namespace dsp56k
 			T m_usedMap[DspCount];
 		};
 
+		template<typename T, unsigned int B>
+		asmjit::x86::Mem makeDspPtr(const RegType<T,B>& _reg)
+		{
+			return makeDspPtr(&_reg, sizeof(_reg.var));
+		}
+
+		asmjit::x86::Mem makeDspPtr(const void* _ptr, size_t _size);
+
+		template<typename T, unsigned int B>
+		void mov(const RegType<T,B>& _reg, const JitReg& _src)
+		{
+			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
+				mov(makeDspPtr(_reg), _src.r32());
+			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
+				mov(makeDspPtr(_reg), _src.r64());
+			else
+				static_assert(false && "unknown register size");
+		}
+
+		template<typename T, unsigned int B>
+		void mov(const RegType<T,B>& _reg, const JitReg128& _src)
+		{
+			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
+				movd(makeDspPtr(_reg), _src);
+			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
+				movq(makeDspPtr(_reg), _src);
+			else
+				static_assert(false && "unknown register size");
+		}
+
+		void mov(const asmjit::x86::Mem& _dst, const JitReg& _src) const;
+		void movd(const asmjit::x86::Mem& _dst, const JitReg128& _src) const;
+		void movq(const asmjit::x86::Mem& _dst, const JitReg128& _src) const;
+
+
 		JitBlock& m_block;
 
 		uint64_t m_lockedGps;
@@ -223,5 +259,6 @@ namespace dsp56k
 
 		bool m_isParallelOp = false;
 		bool m_repMode = false;
+		asmjit::x86::Mem m_dspPtr;
 	};
 }

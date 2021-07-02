@@ -66,17 +66,19 @@ namespace dsp56k
 					if(isInUse(DspAwrite))
 					{
 						clearWritten(DspAwrite);
-						release(DspAwrite);
+						release(DspAwrite, false);
 					}
 					break;
 				case DspB:
 					if(isInUse(DspBwrite))
 					{
 						clearWritten(DspBwrite);
-						release(DspBwrite);					
+						release(DspBwrite, false);					
 					}
 					break;
 				}
+
+				m_dspPtr.reset();
 			}
 		}
 
@@ -160,7 +162,9 @@ namespace dsp56k
 	void JitDspRegPool::releaseAll()
 	{
 		for(size_t i=0; i<DspCount; ++i)
-			release(static_cast<DspReg>(i));
+			release(static_cast<DspReg>(i), false);
+
+		m_dspPtr.reset();
 
 		assert(m_gpList.empty());
 		assert(m_xmList.empty());
@@ -177,15 +181,16 @@ namespace dsp56k
 	{
 		if(m_writtenDspRegs == 0)
 			return;
-		
+
 		LOGRP("Storing ALL written registers into memory");
 
 		for(size_t i=0; i<DspCount; ++i)
 		{
 			const auto r = static_cast<DspReg>(i);
 			if(isWritten(r))
-				release(r);
+				release(r, false);
 		}
+		m_dspPtr.reset();
 	}
 
 	bool JitDspRegPool::isInUse(const JitReg128& _xmm) const
@@ -459,10 +464,9 @@ namespace dsp56k
 		}
 	}
 
-	void JitDspRegPool::store(const DspReg _dst, JitReg& _src)
+	void JitDspRegPool::store(const DspReg _dst, JitReg& _src, bool _resetBasePtr/* = true*/)
 	{
 		const auto& r = m_block.dsp().regs();
-		auto& m = m_block.mem();
 
 		switch (_dst)
 		{
@@ -474,7 +478,7 @@ namespace dsp56k
 		case DspR5:
 		case DspR6:
 		case DspR7:
-			m.mov(r.r[_dst - DspR0], _src);
+			mov(r.r[_dst - DspR0], _src);
 			break;
 		case DspN0:
 		case DspN1:
@@ -484,7 +488,7 @@ namespace dsp56k
 		case DspN5:
 		case DspN6:
 		case DspN7:
-			m.mov(r.n[_dst - DspN0], _src);
+			mov(r.n[_dst - DspN0], _src);
 			break;
 		case DspM0:
 		case DspM1:
@@ -494,38 +498,41 @@ namespace dsp56k
 		case DspM5:
 		case DspM6:
 		case DspM7:
-			m.mov(r.m[_dst - DspM0], _src);
+			mov(r.m[_dst - DspM0], _src);
 			break;
 		case DspA:
 		case DspAwrite:
-			m.mov(r.a, _src);
+			mov(r.a, _src);
 			break;
 		case DspB:
 		case DspBwrite:
-			m.mov(r.b, _src);
+			mov(r.b, _src);
 			break;
 		case DspX:
-			m.mov(r.x, _src);
+			mov(r.x, _src);
 			break;
 		case DspY:
-			m.mov(r.y, _src);
+			mov(r.y, _src);
 			break;
 		case DspExtMem:
 			// read only
 			break;
 		case DspSR:
-			m.mov(r.sr, _src);
+			mov(r.sr, _src);
 			break;
 		case DspLC: 
-			m.mov(r.lc, _src);
+			mov(r.lc, _src);
 			break;
 		case DspLA: 
-			m.mov(r.la, _src);
+			mov(r.la, _src);
 			break;
 		}
+
+		if(_resetBasePtr)
+			m_dspPtr.reset();
 	}
 
-	void JitDspRegPool::store(const DspReg _dst, JitReg128& _src)
+	void JitDspRegPool::store(const DspReg _dst, JitReg128& _src, bool _resetBasePtr/* = true*/)
 	{
 		auto& r = m_block.dsp().regs();
 		auto& m = m_block.mem();
@@ -540,7 +547,7 @@ namespace dsp56k
 		case DspR5:
 		case DspR6:
 		case DspR7:
-			m.mov(r.r[_dst - DspR0], _src);
+			mov(r.r[_dst - DspR0], _src);
 			break;
 		case DspN0:
 		case DspN1:
@@ -550,7 +557,7 @@ namespace dsp56k
 		case DspN5:
 		case DspN6:
 		case DspN7:
-			m.mov(r.n[_dst - DspN0], _src);
+			mov(r.n[_dst - DspN0], _src);
 			break;
 		case DspM0:
 		case DspM1:
@@ -560,38 +567,41 @@ namespace dsp56k
 		case DspM5:
 		case DspM6:
 		case DspM7:
-			m.mov(r.m[_dst - DspM0], _src);
+			mov(r.m[_dst - DspM0], _src);
 			break;
 		case DspA:
 		case DspAwrite:
-			m.mov(r.a, _src);
+			mov(r.a, _src);
 			break;
 		case DspB:
 		case DspBwrite:
-			m.mov(r.b, _src);
+			mov(r.b, _src);
 			break;
 		case DspX:
-			m.mov(r.x, _src);
+			mov(r.x, _src);
 			break;
 		case DspY:
-			m.mov(r.y, _src);
+			mov(r.y, _src);
 			break;
 		case DspExtMem:
 			// read only
 			break;
 		case DspSR:
-			m.mov(r.sr, _src);
+			mov(r.sr, _src);
 			break;
 		case DspLC: 
-			m.mov(r.lc, _src);
+			mov(r.lc, _src);
 			break;
 		case DspLA: 
-			m.mov(r.la, _src);
+			mov(r.la, _src);
 			break;
 		}
+
+		if(_resetBasePtr)
+			m_dspPtr.reset();
 	}
 
-	bool JitDspRegPool::release(DspReg _dst)
+	bool JitDspRegPool::release(DspReg _dst, bool _resetBasePtr)
 	{
 		if(isLocked(_dst))
 		{
@@ -605,7 +615,7 @@ namespace dsp56k
 			if(isWritten(_dst))
 			{
 				LOGRP("Storing modified DSP reg " << g_dspRegNames[_dst] << " from GP");
-				store(_dst, gpReg);
+				store(_dst, gpReg, _resetBasePtr);
 				clearWritten(_dst);
 			}
 			return true;
@@ -617,11 +627,44 @@ namespace dsp56k
 			if(isWritten(_dst))
 			{
 				LOGRP("Storing modified DSP reg " << g_dspRegNames[_dst] << " from XMM");
-				store(_dst, xmReg);
+				store(_dst, xmReg, _resetBasePtr);
 				clearWritten(_dst);
 			}						
 		}
 
 		return true;
+	}
+
+	asmjit::x86::Mem JitDspRegPool::makeDspPtr(const void* _ptr, const size_t _size)
+	{
+		const void* base = &m_block.dsp().regs();
+		const auto offset = static_cast<const uint8_t*>(_ptr) - static_cast<const uint8_t*>(base);
+		assert(offset < 0xffffffff);
+		
+		if(!m_dspPtr.hasBase() || !m_dspPtr.hasSize())
+		{
+			m_block.asm_().mov(regReturnVal, asmjit::Imm(reinterpret_cast<uint64_t>(base)));
+			m_dspPtr = ptr(regReturnVal, 0, static_cast<uint32_t>(_size));
+		}
+
+		m_dspPtr.setSize(static_cast<uint32_t>(_size));
+		m_dspPtr.setOffset(offset);
+
+		return m_dspPtr;
+	}
+
+	void JitDspRegPool::mov(const asmjit::x86::Mem& _dst, const JitReg& _src) const
+	{
+		m_block.asm_().mov(_dst, _src);
+	}
+
+	void JitDspRegPool::movd(const asmjit::x86::Mem& _dst, const JitReg128& _src) const
+	{
+		m_block.asm_().movd(_dst, _src);
+	}
+
+	void JitDspRegPool::movq(const asmjit::x86::Mem& _dst, const JitReg128& _src) const
+	{
+		m_block.asm_().movq(_dst, _src);
 	}
 }
