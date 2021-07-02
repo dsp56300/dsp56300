@@ -46,7 +46,7 @@ namespace dsp56k
 		auto t = Clock::now();
 
 #ifdef _DEBUG
-		const size_t ipsStep = 0x0100000;
+		const size_t ipsStep = 0x0400000;
 #else
 		const size_t ipsStep = 0x2000000;
 #endif
