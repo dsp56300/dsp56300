@@ -53,6 +53,7 @@ namespace dsp56k
 		int disassembleNonParallel(const OpcodeInfo& oi, TWord op, TWord opB, TWord sr, TWord omr);
 
 		std::string mmmrrr(TWord mmmrrr, TWord S, TWord opB, bool _addMemSpace = true, bool _long = true);
+		std::string mmmrrr(TWord mmmrrr, EMemArea S, TWord opB, bool _addMemSpace = true, bool _long = true);
 
 		bool getSymbol(SymbolType _type, TWord _key, std::string& _result) const;
 		bool getSymbol(EMemArea _area, TWord _key, std::string& _result) const;
@@ -65,9 +66,9 @@ namespace dsp56k
 		std::string relativeLongAddr(EMemArea _area, int _data) const;
 		std::string absAddr(EMemArea _area, int _data, bool _long = false) const;
 
-		std::string peripheral(TWord S, TWord a, TWord _root) const;
-		std::string peripheralQ(TWord S, TWord a) const;
-		std::string peripheralP(TWord S, TWord a) const;
+		std::string peripheral(EMemArea S, TWord a, TWord _root) const;
+		std::string peripheralQ(EMemArea S, TWord a) const;
+		std::string peripheralP(EMemArea S, TWord a) const;
 
 		std::string absShortAddr(EMemArea _area, int _data) const;
 

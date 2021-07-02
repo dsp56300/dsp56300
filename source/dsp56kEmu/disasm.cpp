@@ -297,10 +297,8 @@ namespace dsp56k
 		return std::string(memArea(area)) + '<' + hex(a);
 	}
 
-	std::string Disassembler::peripheral(TWord S, TWord a, TWord _root) const
+	std::string Disassembler::peripheral(EMemArea area, TWord a, TWord _root) const
 	{
-		const auto area = memArea(S);
-
 		std::string sym;
 		if(getSymbol(area, a, sym))
 			return sym;
@@ -308,12 +306,12 @@ namespace dsp56k
 		return std::string(memArea(area)) + "<<" + hex(_root + a);
 	}
 
-	std::string Disassembler::peripheralQ(TWord S, TWord a) const
+	std::string Disassembler::peripheralQ(EMemArea S, TWord a) const
 	{
 		return peripheral(S, a, 0xffff80);
 	}
 
-	std::string Disassembler::peripheralP(TWord S, TWord a) const
+	std::string Disassembler::peripheralP(EMemArea S, TWord a) const
 	{
 		return peripheral(S, a, 0xffffc0);
 	}
@@ -339,7 +337,12 @@ namespace dsp56k
 		return temp;
 	}
 
-	std::string Disassembler::mmmrrr(TWord mmmrrr, TWord S, TWord opB, bool _addMemSpace, bool _long)
+	std::string Disassembler::mmmrrr(TWord _mmmrrr, TWord S, TWord opB, bool _addMemSpace, bool _long)
+	{
+		return mmmrrr(_mmmrrr, memArea(S), opB, _addMemSpace, _long);
+	}
+
+	std::string Disassembler::mmmrrr(TWord mmmrrr, EMemArea S, TWord opB, bool _addMemSpace, bool _long)
 	{
 		const char* formats[8]
 		{
@@ -353,7 +356,7 @@ namespace dsp56k
 			"-(r%d)",
 		};
 
-		const char* ar = _addMemSpace ? memArea(memArea(S)) : "";
+		const char* ar = _addMemSpace ? memArea(S) : "";
 		const std::string area(ar);
 
 		char temp[32];
@@ -364,7 +367,7 @@ namespace dsp56k
 			++m_extWordUsed;
 			if(opB >= XIO_Reserved_High_First)
 				return peripheral(S, opB, 0xffff80);
-			return area + absAddr(memArea(S), opB, _long);
+			return area + absAddr(S, opB, _long);
 		case 0x34:	// immediate data
 			++m_extWordUsed;
 			return immediateLong(opB);
@@ -839,7 +842,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto p	= getFieldValue(inst, Field_pppppp, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralP(S, p);
+				m_ss << immediate(b) << ',' << peripheralP(memArea(S), p);
 				return 1;
 			}
 		case Bchg_qq:
@@ -850,7 +853,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto q	= getFieldValue(inst, Field_qqqqqq, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralQ(S, q);
+				m_ss << immediate(b) << ',' << peripheralQ(memArea(S), q);
 				return 1;
 			}
 		case Bchg_D:
@@ -894,7 +897,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto p	= getFieldValue(inst, Field_pppppp, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralP(S, p) << ',' << relativeAddr(MemArea_P, opB);
+				m_ss << immediate(b) << ',' << peripheralP(memArea(S), p) << ',' << relativeAddr(MemArea_P, opB);
 				return 2;
 			}
 		case Brclr_qq:
@@ -905,7 +908,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto q	= getFieldValue(inst, Field_qqqqqq, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralQ(S, q) << ',' << relativeAddr(MemArea_P, opB);
+				m_ss << immediate(b) << ',' << peripheralQ(memArea(S), q) << ',' << relativeAddr(MemArea_P, opB);
 				return 2;
 			}
 		case Brclr_S:
@@ -1180,7 +1183,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto p	= getFieldValue(inst, Field_pppppp, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralP(S, p) << ',' << absAddr(MemArea_P, opB);
+				m_ss << immediate(b) << ',' << peripheralP(memArea(S), p) << ',' << absAddr(MemArea_P, opB);
 			}
 			return 2;
 		case Jclr_qq:
@@ -1191,7 +1194,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto q	= getFieldValue(inst, Field_qqqqqq, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralQ(S, q) << ',' << absAddr(MemArea_P, opB);
+				m_ss << immediate(b) << ',' << peripheralQ(memArea(S), q) << ',' << absAddr(MemArea_P, opB);
 			}
 			return 2;
 		case Jclr_S:
