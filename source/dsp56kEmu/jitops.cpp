@@ -260,12 +260,13 @@ namespace dsp56k
 		&JitOps::op_Wait							// Wait 
 	};
 
-	JitOps::JitOps(JitBlock& _block)
+	JitOps::JitOps(JitBlock& _block, bool _fastInterrupt/* = false*/)
 	: m_block(_block)
 	, m_opcodes(_block.dsp().opcodes())
 	, m_dspRegs(_block.regs())
 	, m_asm(_block.asm_())
 	, m_ccrDirty(_block.regs().ccrDirtyFlags())
+	, m_fastInterrupt(_fastInterrupt)
 	{
 	}
 
@@ -653,13 +654,7 @@ namespace dsp56k
 	{
 		popPCSR();
 
-		const RegGP r(m_block);
-		m_asm.mov(r.get().r32(), asmjit::Imm(DSP::DefaultPreventInterrupt));
-
-		if constexpr (sizeof(m_block.dsp().m_processingMode) == sizeof(uint32_t))
-			m_block.mem().mov(reinterpret_cast<uint32_t&>(m_block.dsp().m_processingMode), r);
-		else if constexpr (sizeof(m_block.dsp().m_processingMode) == sizeof(uint64_t))
-			m_block.mem().mov(reinterpret_cast<uint64_t&>(m_block.dsp().m_processingMode), r);
+		setDspProcessingMode(DSP::DefaultPreventInterrupt);
 	}
 
 	inline void JitOps::op_Rts(TWord op)

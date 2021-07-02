@@ -334,7 +334,16 @@ namespace dsp56k
 	{
 		{
 			const RegGP pc(m_block);
-			m_asm.mov(pc, asmjit::Imm(m_pcCurrentOp + m_opSize));
+
+			if(m_fastInterrupt)
+			{
+				m_block.mem().mov(pc, m_block.dsp().regs().pc);
+			}
+			else
+			{
+				m_asm.mov(pc, asmjit::Imm(m_pcCurrentOp + m_opSize));
+			}
+
 			m_dspRegs.setSSH(pc.get().r32());
 		}
 
@@ -354,6 +363,17 @@ namespace dsp56k
 		RegGP pc(m_block);
 		m_dspRegs.getSSH(pc.get().r32());
 		m_dspRegs.setPC(pc);
+	}
+
+	void JitOps::setDspProcessingMode(uint32_t _mode)
+	{
+		const RegGP r(m_block);
+		m_asm.mov(r.get().r32(), asmjit::Imm(_mode));
+
+		if constexpr (sizeof(m_block.dsp().m_processingMode) == sizeof(uint32_t))
+			m_block.mem().mov(reinterpret_cast<uint32_t&>(m_block.dsp().m_processingMode), r);
+		else if constexpr (sizeof(m_block.dsp().m_processingMode) == sizeof(uint64_t))
+			m_block.mem().mov(reinterpret_cast<uint64_t&>(m_block.dsp().m_processingMode), r);
 	}
 
 	inline TWord JitOps::getOpWordB()

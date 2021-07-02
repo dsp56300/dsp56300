@@ -213,6 +213,13 @@ namespace dsp56k
 	{
 		pushPCSR();
 		jmp(_absAddr);
+
+		if(m_fastInterrupt)
+		{
+			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
+			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0 | SR_SA | SR_LF)));
+			setDspProcessingMode(DSP::LongInterrupt);			
+		}
 	}
 
 	inline void JitOps::jmp(TWord _absAddr)

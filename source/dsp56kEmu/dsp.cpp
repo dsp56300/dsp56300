@@ -138,6 +138,8 @@ namespace dsp56k
 			pcCurrentInstruction = reg.pc.toWord();
 
 			m_jit->exec();
+
+			handleICtrCallback();
 		}
 		else
 		{
@@ -171,45 +173,72 @@ namespace dsp56k
 			if(minPrio < 3)
 			{
 				const auto vba = m_pendingInterrupts.pop_front();
-				TWord op0, op1;
-				memReadOpcode(vba, op0, op1);
-
-				const auto oldSP = reg.sp.var;
-
-				m_opWordB = op1;
-
-				m_processingMode = FastInterrupt;
 
 				pcCurrentInstruction = vba;
-				execOp(op0);
+				m_processingMode = FastInterrupt;
 
-				const auto jumped = reg.sp.var - oldSP;
-
-				// only exec the second op if the first one was a one-word op and we did not jump into a long interrupt
-				if(m_currentOpLen == 1 && !jumped)
+				if(g_useJIT && m_jit)
 				{
-					pcCurrentInstruction = vba+1;
-					m_opWordB = 0;
-					execOp(op1);
-
-					// fast interrupt done
-					m_processingMode = DefaultPreventInterrupt;
-					m_interruptFunc = &DSP::execDefaultPreventInterrupt;
-				}
-				else if(jumped)
-				{
-					// Long Interrupt
-
-					sr_clear((CCRMask)(SR_S1|SR_S0|SR_SA));
-
-					m_processingMode = LongInterrupt;
-					m_interruptFunc = &DSP::nop;
+					m_jit->exec(vba);
+					if(m_processingMode != LongInterrupt)
+					{
+						m_processingMode = DefaultPreventInterrupt;
+						m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+					}
+					else
+					{
+						int d=0;
+					}
 				}
 				else
 				{
-					// Default Processing, no interrupt
-					m_processingMode = DefaultPreventInterrupt;
-					m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+					TWord op0, op1;
+					memReadOpcode(vba, op0, op1);
+
+					const auto oldSP = reg.sp.var;
+
+					m_opWordB = op1;
+
+					execOp(op0);
+
+					const auto jumped = reg.sp.var - oldSP;
+
+					// only exec the second op if the first one was a one-word op and we did not jump into a long interrupt
+					if(m_currentOpLen == 1 && !jumped)
+					{
+						pcCurrentInstruction = vba+1;
+						m_opWordB = 0;
+						execOp(op1);
+
+						// fast interrupt done
+						m_processingMode = DefaultPreventInterrupt;
+						m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+					}
+					else if(jumped)
+					{
+						// Long Interrupt
+
+						// If one of the instructions in the fast routine is a JSR, then a long interrupt routine is formed.
+						// The following actions occur during execution of the JSR instruction when it occurs in the interrupt
+						// starting address or in the next address:
+
+						// 1.The PC (containing the return address) and the SR are stacked.
+						// 2.The Loop Flag is cleared.
+						// 3.The Scaling mode bits (S[1–0]) in the Status Register (SR) are cleared.
+						// 4.The Sixteen-bit Arithmetic (SA) mode bit is cleared.
+						// 5.The IPL is raised to disallow further interrupts of the same or lower levels.
+
+						sr_clear(static_cast<CCRMask>(SR_S1 | SR_S0 | SR_SA | SR_LF));
+
+						m_processingMode = LongInterrupt;
+						m_interruptFunc = &DSP::nop;
+					}
+					else
+					{
+						// Default Processing, no interrupt
+						m_processingMode = DefaultPreventInterrupt;
+						m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+					}
 				}
 			}
 		}

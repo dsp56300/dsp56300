@@ -26,7 +26,7 @@ namespace dsp56k
 			WriteToLA			= 0x04
 		};
 
-		JitOps(JitBlock& _block);
+		JitOps(JitBlock& _block, bool _fastInterrupt = false);
 
 		void emit(TWord _pc);
 		void emit(TWord _pc, TWord _op, TWord _opB = 0);
@@ -289,6 +289,8 @@ namespace dsp56k
 		void callDSPFunc(void(* _func)(DSP*, TWord), TWord _arg) const;
 		void callDSPFunc(void(* _func)(DSP*, TWord), const JitReg& _arg) const;
 
+		void setDspProcessingMode(uint32_t _mode);
+		
 		// Check Condition
 		template <Instruction Inst> void checkCondition(const TWord _op)
 		{
@@ -541,5 +543,6 @@ namespace dsp56k
 
 		uint32_t m_resultFlags = None;
 		RepMode m_repMode = RepNone;
+		bool m_fastInterrupt = false;
 	};
 }

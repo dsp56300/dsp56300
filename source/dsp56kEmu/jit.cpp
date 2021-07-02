@@ -62,14 +62,17 @@ namespace dsp56k
 	void Jit::exec()
 	{
 		const auto pc = static_cast<TWord>(m_dsp.getPC().var);
+		exec(pc);
+	}
 
+	void Jit::exec(const TWord pc)
+	{
 //		LOG("Exec @ " << HEX(pc));
 
 		// get JIT code
 		auto& cacheEntry = m_jitCache[pc];
 
 		assert(cacheEntry.func);
-
 		(this->*cacheEntry.func)(pc, cacheEntry.block);
 	}
 

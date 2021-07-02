@@ -59,7 +59,7 @@ namespace dsp56k
 				else shouldEmit=false;
 			}
 
-			JitOps ops(*this);
+			JitOps ops(*this, isFastInterrupt);
 
 			if(false)
 			{
@@ -123,7 +123,7 @@ namespace dsp56k
 			dspRegPool().releaseAll();
 			stack().pushNonVolatiles();
 
-			JitOps ops(*this);
+			JitOps ops(*this, isFastInterrupt);
 //			DSPReg lc(*this, JitDspRegPool::DspLC, true, true);
 			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_LF));	// check loop flag
 			m_asm.jnc(end);
@@ -161,7 +161,7 @@ namespace dsp56k
 
 		if(m_dspRegs.ccrDirtyFlags())
 		{
-			JitOps op(*this);
+			JitOps op(*this, isFastInterrupt);
 			op.updateDirtyCCR();
 		}
 		m_dspRegPool.releaseAll();

@@ -21,6 +21,7 @@ namespace dsp56k
 
 		DSP& dsp() { return m_dsp; }
 		void exec();
+		void exec(TWord pc);
 
 		void notifyProgramMemWrite(TWord _offset);
 
