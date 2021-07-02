@@ -117,6 +117,7 @@ namespace dsp56k
 		void op_Debugcc(TWord op);
 		void op_Dec(TWord op);
 		void op_Div(TWord op);
+		void op_Rep_Div(TWord _op, TWord _iterationCount);
 		void op_Dmac(TWord op);
 		void op_Do_ea(TWord op);
 		void op_Do_aa(TWord op);

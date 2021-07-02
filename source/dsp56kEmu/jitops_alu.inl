@@ -942,6 +942,101 @@ namespace dsp56k
 		m_dspRegs.mask56(d);
 	}
 
+	inline void JitOps::op_Rep_Div(const TWord _op, const TWord _iterationCount)
+	{
+		m_block.getEncodedInstructionCount() += _iterationCount;
+
+		const auto ab = getFieldValue<Div,Field_d>(_op);
+		const auto jj = getFieldValue<Div,Field_JJ>(_op);
+
+		AluRef d(m_block, ab);
+
+		auto ccrUpdateVL = [&]()
+		{
+			// V and L updates
+			// V: Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
+			// L: Set if the Overflow bit (V) is set.
+			// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
+			// Nearly identical for L but L is only set, not cleared as it is sticky
+			const RegGP r(m_block);
+			m_asm.mov(r, d.get());
+			m_asm.shr(r, asmjit::Imm(54));
+			m_asm.and_(r, asmjit::Imm(0x3));
+			m_asm.setnp(r.get().r8());
+			ccr_update(r, CCRB_V);
+			m_asm.shl(r, asmjit::Imm(CCRB_L));
+			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
+			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~(CCR_L | CCR_V));			
+		};
+		
+		const RegGP s(m_block);
+		decode_JJ_read(s, jj);
+
+		RegGP addOrSub(m_block);
+		RegGP dLsWord(m_block);
+		RegGP lc(m_block);
+		RegGP carry(m_block);
+
+		const auto loopIteration = [&](bool last)
+		{
+			m_asm.mov(addOrSub, s.get());
+			m_asm.xor_(addOrSub, d.get());
+
+			m_asm.shl(d, asmjit::Imm(1));
+
+			m_asm.add(d.get().r8(), carry.get().r8());
+
+			m_asm.mov(dLsWord, d.get());
+			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
+
+			const asmjit::Label sub = m_asm.newLabel();
+			const asmjit::Label end = m_asm.newLabel();
+
+			m_asm.bt(addOrSub, asmjit::Imm(55));
+
+			m_asm.jnc(sub);
+			m_asm.add(d, s.get());
+			m_asm.jmp(end);
+
+			m_asm.bind(sub);
+			m_asm.sub(d, s.get());
+
+			m_asm.bind(end);
+			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
+			m_asm.or_(d, dLsWord.get());
+
+			// C is set if bit 55 of the result is cleared
+			m_asm.bt(d, asmjit::Imm(55));
+			if(last)
+				ccr_update_ifNotCarry(CCRB_C);
+			else
+				m_asm.setnc(carry);
+		};
+
+		// once
+		m_asm.shl(s, asmjit::Imm(40));
+		m_asm.sar(s, asmjit::Imm(16));
+
+		m_asm.mov(lc, _iterationCount-2);
+
+		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
+		m_asm.setc(carry);
+
+		// loop
+		const auto start = m_asm.newLabel();
+		m_asm.bind(start);
+		loopIteration(false);
+		m_asm.dec(lc);
+		m_asm.jnz(start);
+		lc.release();
+
+		// once
+		ccrUpdateVL();
+		loopIteration(true);
+
+		m_dspRegs.mask56(d);
+	}
+
 	inline void JitOps::op_Dmac(TWord op)
 	{
 		const auto ss			= getFieldValue<Dmac,Field_S, Field_s>(op);

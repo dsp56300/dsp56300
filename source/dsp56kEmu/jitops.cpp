@@ -667,9 +667,24 @@ namespace dsp56k
 		_dsp->op_Reset(op);
 	}
 
-	void JitOps::rep_exec(TWord _lc)
+	void JitOps::rep_exec(const TWord _lc)
 	{
-		// TODO: optimize me, we know the LC at compile time, which gives lots of optimization potential such as loop unrolling etc
+		// detect div loops and use custom code to speed them up
+		TWord opA;
+		TWord opB;
+		m_block.dsp().mem.getOpcode(m_pcCurrentOp + 1, opA, opB);
+
+		if(!OpcodeInfo::isParallelOpcode(opA))
+		{
+			const auto* oi = m_block.dsp().opcodes().findNonParallelOpcodeInfo(opA);
+			if(oi && oi->getInstruction() == Div)
+			{
+				op_Rep_Div(opA, _lc);
+				return;
+			}
+		}
+
+		// regular processing
 		RegGP lc(m_block);
 		m_asm.mov(lc, asmjit::Imm(_lc));
 		rep_exec(lc, _lc);
