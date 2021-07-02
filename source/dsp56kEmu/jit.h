@@ -6,6 +6,7 @@
 #include <vector>
 #include <set>
 
+#include "jitruntimedata.h"
 #include "asmjit/core/jitruntime.h"
 
 namespace dsp56k
@@ -20,22 +21,23 @@ namespace dsp56k
 		~Jit();
 
 		DSP& dsp() { return m_dsp; }
-		void exec();
+
 		void exec(TWord pc);
 
 		void notifyProgramMemWrite(TWord _offset);
 
-	private:
-		void emit(TWord _pc);
-		void destroy(JitBlock* _block);
-		void destroy(TWord _pc);
-		void markInvalid(JitBlock* _block);
-		
 		void run(TWord _pc, JitBlock* _block);
 		void runCheckPMemWrite(TWord _pc, JitBlock* _block);
 		void runCheckLoopEnd(TWord _pc, JitBlock* _block);
 		void create(TWord _pc, JitBlock* _block);
 		void recreate(TWord _pc, JitBlock* _block);
+
+	private:
+		void emit(TWord _pc);
+		void destroy(JitBlock* _block);
+		void destroy(TWord _pc);
+		
+		void exec(TWord pc, JitCacheEntry& e);
 
 		static void updateRunFunc(JitCacheEntry& e);
 
@@ -44,5 +46,6 @@ namespace dsp56k
 		asmjit::JitRuntime m_rt;
 		std::vector<JitCacheEntry> m_jitCache;
 		std::set<TWord> m_volatileP;
+		JitRuntimeData m_runtimeData;
 	};
 }

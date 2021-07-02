@@ -6,6 +6,7 @@
 #include "jitmem.h"
 #include "jitregtracker.h"
 #include "jitregtypes.h"
+#include "jitruntimedata.h"
 #include "jitstackhelper.h"
 
 #include <string>
@@ -24,8 +25,6 @@ namespace dsp56k
 {
 	class DSP;
 
-	constexpr TWord g_pcInvalid = 0xffffffff;
-
 	class JitBlock final
 	{
 	public:
@@ -37,9 +36,9 @@ namespace dsp56k
 			LoopEnd		= 0x0004,
 		};
 
-		typedef void (*JitEntry)();
+		typedef void (*JitEntry)(Jit*, TWord, JitBlock*);
 
-		JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp);
+		JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp, JitRuntimeData& _runtimeData);
 
 		asmjit::x86::Assembler& asm_() { return m_asm; }
 		DSP& dsp() { return m_dsp; }
@@ -60,14 +59,13 @@ namespace dsp56k
 		void setFunc(const JitEntry _func) { m_func = _func; }
 		const JitEntry& getFunc() const { return m_func; }
 
-		void exec();
 		TWord& getEncodedInstructionCount() { return m_encodedInstructionCount; }
-		const TWord& getExecutedInstructionCount() const { return m_executedInstructionCount; }
 
 		// JIT code writes these
-		TWord& nextPC() { return m_nextPC; }
-		uint32_t& pMemWriteAddress() { return m_pMemWriteAddress; }
-		uint32_t& pMemWriteValue() { return m_pMemWriteValue; }
+		TWord& getExecutedInstructionCount() const { return m_runtimeData.m_executedInstructionCount; }
+		TWord& nextPC() { return m_runtimeData.m_nextPC; }
+		uint32_t& pMemWriteAddress() { return m_runtimeData.m_pMemWriteAddress; }
+		uint32_t& pMemWriteValue() { return m_runtimeData.m_pMemWriteValue; }
 		void setNextPC(const JitReg& _pc);
 
 		const std::string& getDisasm() const { return m_dspAsm; }
@@ -77,6 +75,7 @@ namespace dsp56k
 
 	private:
 		JitEntry m_func = nullptr;
+		JitRuntimeData& m_runtimeData;
 
 		asmjit::x86::Assembler& m_asm;
 		DSP& m_dsp;
@@ -93,11 +92,7 @@ namespace dsp56k
 		TWord m_lastOpSize = 0;
 		TWord m_singleOpWord = 0;
 		TWord m_encodedInstructionCount = 0;
-		TWord m_executedInstructionCount = 0;
 
-		TWord m_nextPC = g_pcInvalid;
-		TWord m_pMemWriteAddress = g_pcInvalid;
-		TWord m_pMemWriteValue = 0;
 		std::string m_dspAsm;
 		bool m_possibleBranch = false;
 		uint32_t m_flags = 0;

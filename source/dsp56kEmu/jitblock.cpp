@@ -8,8 +8,9 @@ namespace dsp56k
 {
 	constexpr uint32_t g_maxInstructionsPerBlock = 0;	// set to 1 for debugging/tracing
 
-	JitBlock::JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp)
-	: m_asm(_a)
+	JitBlock::JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp, JitRuntimeData& _runtimeData)
+	: m_runtimeData(_runtimeData)
+	, m_asm(_a)
 	, m_dsp(_dsp)
 	, m_stack(*this)
 	, m_xmmPool({regXMMTempA, regXMMTempB, regXMMTempC})
@@ -34,10 +35,14 @@ namespace dsp56k
 		if(!isFastInterrupt)
 		{
 			const RegGP temp(*this);
-			auto m = mem().makePtr(this, &m_pcLast);
-			m_asm.mov(temp, m);
-			Jitmem::setPtrOffset(m, this, &nextPC());
-			m_asm.mov(m, temp.get());
+			m_mem.mov(temp, m_pcLast);
+			m_mem.mov(nextPC(), temp);
+		}
+
+		{
+			const RegGP temp(*this);
+			m_mem.mov(temp, getEncodedInstructionCount());
+			m_mem.mov(getExecutedInstructionCount(), temp.get());
 		}
 
 		uint32_t opFlags = 0;
@@ -177,14 +182,6 @@ namespace dsp56k
 		if(appendLoopCode)
 			m_flags |= LoopEnd;
 		return true;
-	}
-
-	void JitBlock::exec()
-	{
-		m_executedInstructionCount = m_encodedInstructionCount;
-		m_pMemWriteAddress = g_pcInvalid;
-
-		m_func();
 	}
 
 	void JitBlock::setNextPC(const JitReg& _pc)

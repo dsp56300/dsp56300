@@ -124,8 +124,10 @@ namespace dsp56k
 
 		asmjit::x86::Assembler m_asm(&code);
 
+		JitRuntimeData rtData;
+
 		{
-			JitBlock block(m_asm, dsp);
+			JitBlock block(m_asm, dsp, rtData);
 
 			JitOps ops(block);
 

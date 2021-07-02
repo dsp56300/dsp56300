@@ -137,7 +137,7 @@ namespace dsp56k
 
 			pcCurrentInstruction = reg.pc.toWord();
 
-			m_jit->exec();
+			m_jit->exec(getPC().var);
 
 			handleICtrCallback();
 		}

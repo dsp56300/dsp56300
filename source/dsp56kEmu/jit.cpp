@@ -44,9 +44,34 @@ namespace dsp56k
 {
 	constexpr bool g_traceOps = false;
 
+	void funcCreate(Jit* _jit, TWord _pc, JitBlock* _block)
+	{
+		_jit->create(_pc, _block);
+	}
+
+	void funcRecreate(Jit* _jit, TWord _pc, JitBlock* _block)
+	{
+		_jit->recreate(_pc, _block);
+	}
+
+	void funcRunCheckPMemWrite(Jit* _jit, TWord _pc, JitBlock* _block)
+	{
+		_jit->runCheckPMemWrite(_pc, _block);
+	}
+
+	void funcRunCheckLoopEnd(Jit* _jit, TWord _pc, JitBlock* _block)
+	{
+		_jit->runCheckLoopEnd(_pc, _block);
+	}
+
+	void funcRun(Jit* _jit, TWord _pc, JitBlock* _block)
+	{
+		_jit->run(_pc, _block);
+	}
+
 	Jit::Jit(DSP& _dsp) : m_dsp(_dsp)
 	{
-		m_jitCache.resize(_dsp.memory().size(), JitCacheEntry{&Jit::create, nullptr});
+		m_jitCache.resize(_dsp.memory().size(), JitCacheEntry{&funcCreate, nullptr});
 	}
 
 	Jit::~Jit()
@@ -59,21 +84,19 @@ namespace dsp56k
 		}
 	}
 
-	void Jit::exec()
-	{
-		const auto pc = static_cast<TWord>(m_dsp.getPC().var);
-		exec(pc);
-	}
-
 	void Jit::exec(const TWord pc)
 	{
 //		LOG("Exec @ " << HEX(pc));
 
 		// get JIT code
 		auto& cacheEntry = m_jitCache[pc];
+		exec(pc, cacheEntry);
+	}
 
-		assert(cacheEntry.func);
-		(this->*cacheEntry.func)(pc, cacheEntry.block);
+	void Jit::exec(const TWord pc, JitCacheEntry& e)
+	{
+		e.func(this, pc, e.block);
+		m_dsp.m_instructions += e.block->getExecutedInstructionCount();
 	}
 
 	void Jit::notifyProgramMemWrite(TWord _offset)
@@ -93,7 +116,7 @@ namespace dsp56k
 
 		Assembler m_asm(&code);
 
-		auto* b = new JitBlock(m_asm, m_dsp);
+		auto* b = new JitBlock(m_asm, m_dsp, m_runtimeData);
 
 		if(!b->emit(_pc, m_jitCache, m_volatileP))
 		{
@@ -126,7 +149,7 @@ namespace dsp56k
 			if(i == first)
 				updateRunFunc(m_jitCache[i]);
 			else
-				m_jitCache[i].func = &Jit::recreate;
+				m_jitCache[i].func = &funcRecreate;
 		}
 
 #ifdef JIT_VTUNE_PROFILING
@@ -160,7 +183,7 @@ namespace dsp56k
 		for(auto i=first; i<last; ++i)
 		{
 			m_jitCache[i].block = nullptr;
-			m_jitCache[i].func = &Jit::create;
+			m_jitCache[i].func = &funcCreate;
 		}
 
 		if(_block->getPMemSize() == 1)
@@ -193,9 +216,7 @@ namespace dsp56k
 
 	void Jit::run(TWord _pc, JitBlock* _block)
 	{
-		_block->exec();
-
-		m_dsp.m_instructions += _block->getExecutedInstructionCount();
+		_block->getFunc()(this, _pc, _block);
 
 		if(g_traceOps)
 		{
@@ -212,6 +233,7 @@ namespace dsp56k
 
 	void Jit::runCheckPMemWrite(TWord _pc, JitBlock* _block)
 	{
+		m_runtimeData.m_pMemWriteAddress = g_pcInvalid;
 		run(_pc, _block);
 
 		// if JIT code has written to P memory, destroy a JIT block if present at the write location
@@ -269,12 +291,12 @@ namespace dsp56k
 				cacheEntry.block = it->second;
 				cacheEntry.singleOpCache.erase(it);
 				updateRunFunc(cacheEntry);
-				(this->*cacheEntry.func)(_pc, cacheEntry.block);
+				exec(_pc, cacheEntry);
 				return;
 			}
 		}
 		emit(_pc);
-		(this->*cacheEntry.func)(_pc, cacheEntry.block);
+		exec(_pc, cacheEntry);
 	}
 
 	void Jit::recreate(const TWord _pc, JitBlock* _block)
@@ -292,16 +314,16 @@ namespace dsp56k
 		if(f & JitBlock::WritePMem)
 		{
 			assert((f & JitBlock::LoopEnd) == 0);
-			e.func = &Jit::runCheckPMemWrite;
+			e.func = &funcRunCheckPMemWrite;
 		}
 		else if(f & JitBlock::LoopEnd)
 		{
 			assert((f & JitBlock::WritePMem) == 0);
-			e.func = &Jit::runCheckLoopEnd;
+			e.func = &funcRunCheckLoopEnd;
 		}
 		else
 		{
-			e.func = &Jit::run;
+			e.func = e.block->getFunc();
 		}
 	}
 }

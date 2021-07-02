@@ -9,7 +9,7 @@ namespace dsp56k
 	class JitBlock;
 	class Jit;
 
-	using TJitUpdateFunc = void (Jit::*)(TWord pc, JitBlock* _block);
+	typedef void (*TJitUpdateFunc)(Jit*, TWord, JitBlock*);
 
 	struct JitCacheEntry
 	{
