@@ -26,7 +26,7 @@ namespace dsp56k
 
 	constexpr TWord g_pcInvalid = 0xffffffff;
 
-	class JitBlock
+	class JitBlock final
 	{
 	public:
 		enum JitBlockFlags

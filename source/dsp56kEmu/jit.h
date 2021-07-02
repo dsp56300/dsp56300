@@ -13,7 +13,7 @@ namespace dsp56k
 	class DSP;
 	class JitBlock;
 
-	class Jit
+	class Jit final
 	{
 	public:
 		explicit Jit(DSP& _dsp);
