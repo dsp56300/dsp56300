@@ -183,9 +183,6 @@ namespace dsp56k
 		m_pMemWriteAddress = g_pcInvalid;
 
 		m_func();
-
-		if(m_dspRegs.hasDirtyMRegisters())
-			m_dspRegs.updateDspMRegisters();
 	}
 
 	void JitBlock::setNextPC(const JitReg& _pc)

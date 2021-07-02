@@ -104,8 +104,6 @@ namespace dsp56k
 		void mask48(const JitReg& _alu) const;
 		
 		void setPC(const JitReg& _pc);
-		void updateDspMRegisters();
-		bool hasDirtyMRegisters() const { return m_AguMchangedCount > 0; }
 		CCRMask& ccrDirtyFlags() { return m_ccrDirtyFlags; }
 
 	private:
@@ -118,8 +116,6 @@ namespace dsp56k
 		asmjit::x86::Assembler& m_asm;
 		DSP& m_dsp;
 
-		std::array<uint32_t, 8> m_AguMchanged;
-		uint32_t m_AguMchangedCount = 0;
 		CCRMask m_ccrDirtyFlags = static_cast<CCRMask>(0);
 	};
 }
