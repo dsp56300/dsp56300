@@ -52,6 +52,14 @@ namespace dsp56k
 		template<typename T>
 		void ptrToReg(const JitReg64& _r, const T* _t) const;
 
+		template<typename T>
+		asmjit::x86::Mem makePtr(const void* _base, const T* _member)
+		{
+			return makePtr(_base, _member, sizeof(T));
+		}
+		asmjit::x86::Mem makePtr(const void* _base, const void* _member, size_t _size);
+		static void setPtrOffset(asmjit::x86::Mem& _mem, const void* _base, const void* _member);
+		
 		void readDspMemory(const JitReg& _dst, EMemArea _area, const JitReg& _offset) const;
 		void writeDspMemory(EMemArea _area, const JitReg& _offset, const JitReg& _src) const;
 

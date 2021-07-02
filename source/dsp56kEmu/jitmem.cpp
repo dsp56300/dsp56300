@@ -137,6 +137,19 @@ namespace dsp56k
 		m_block.asm_().mov(asmjit::x86::ptr(a, 0, _size), _src);
 	}
 
+	asmjit::x86::Mem Jitmem::makePtr(const void* _base, const void* _member, size_t _size)
+	{
+		m_block.asm_().mov(regReturnVal, asmjit::Imm(_base));
+		auto res = asmjit::x86::ptr(regReturnVal, 0, static_cast<int32_t>(_size));
+		setPtrOffset(res, _base, _member);
+		return res;
+	}
+
+	void Jitmem::setPtrOffset(asmjit::x86::Mem& _mem, const void* _base, const void* _member)
+	{
+		_mem.setOffset(reinterpret_cast<uint64_t>(_member) - reinterpret_cast<uint64_t>(_base));
+	}
+
 	void Jitmem::readDspMemory(const JitReg& _dst, const EMemArea _area, const JitReg& _offset) const
 	{
 		const RegGP t(m_block);
@@ -144,7 +157,7 @@ namespace dsp56k
 
 		m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().size()));
 		m_block.asm_().jge(skip.get());
-		
+
 		getMemAreaPtr(t.get(), _area, _offset);
 
 		m_block.asm_().mov(_dst.r32(), asmjit::x86::ptr(t, _offset, 2, 0, sizeof(TWord)));

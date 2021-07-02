@@ -34,8 +34,10 @@ namespace dsp56k
 		if(!isFastInterrupt)
 		{
 			const RegGP temp(*this);
-			mem().mov(temp, m_pcLast);
-			mem().mov(nextPC(), temp);
+			auto m = mem().makePtr(this, &m_pcLast);
+			m_asm.mov(temp, m);
+			Jitmem::setPtrOffset(m, this, &nextPC());
+			m_asm.mov(m, temp.get());
 		}
 
 		uint32_t opFlags = 0;
