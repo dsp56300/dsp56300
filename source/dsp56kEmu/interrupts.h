@@ -25,7 +25,9 @@ namespace dsp56k
 		Vba_DMAchannel2								= 0x1C,			// DMA channel 2								
 		Vba_DMAchannel3								= 0x1E,			// DMA channel 3								
 		Vba_DMAchannel4								= 0x20,			// DMA channel 4								
-		Vba_DMAchannel5								= 0x22,			// DMA channel 5							
+		Vba_DMAchannel5								= 0x22,			// DMA channel 5
+
+		Vba_End										= 0x100,
 	};
 
 	enum InterruptVectorAddress56303

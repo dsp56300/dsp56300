@@ -1,6 +1,7 @@
+#include "dsp.h"
+#include "interrupts.h"
 #include "jitblock.h"
 #include "jitops.h"
-#include "dsp.h"
 #include "memory.h"
 
 namespace dsp56k
@@ -21,11 +22,16 @@ namespace dsp56k
 
 	bool JitBlock::emit(const TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP)
 	{
+		const bool isFastInterrupt = _pc < Vba_End;
+
+		const TWord pcMax = isFastInterrupt ? (_pc + 2) : m_dsp.memory().size();
+
 		m_pcFirst = _pc;
 		m_pMemSize = 0;
 		m_dspAsm.clear();
 		bool shouldEmit = true;
 
+		if(!isFastInterrupt)
 		{
 			const RegGP temp(*this);
 			mem().mov(temp, m_pcLast);
@@ -38,6 +44,9 @@ namespace dsp56k
 		while(shouldEmit)
 		{
 			const auto pc = m_pcFirst + m_pMemSize;
+
+			if(pc >= pcMax)
+				break;
 
 			// do never overwrite code that already exists
 			if(_cache[pc].block)
@@ -112,7 +121,7 @@ namespace dsp56k
 			mem().mov(temp, nextPC());
 			mem().mov(m_dsp.regs().pc, temp);
 		}
-		else
+		else if(!isFastInterrupt)
 		{
 			m_asm.mov(mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().pc.var)), asmjit::Imm(m_pcLast));
 		}
