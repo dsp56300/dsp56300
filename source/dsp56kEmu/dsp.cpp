@@ -47,6 +47,7 @@ namespace dsp56k
 		, perif({_pX, _pY})
 		, pcCurrentInstruction(0xffffff)
 		, m_disasm(m_opcodes)
+		, m_jit(*this)
 	{
 		mem.setDSP(this);
 
@@ -121,7 +122,7 @@ namespace dsp56k
 		// we do not support 16-bit compatibility mode
 		assert( (reg.sr.var & SR_SC) == 0 && "16 bit compatibility mode is not supported");
 
-		if(g_useJIT && m_jit)
+		if(g_useJIT)
 		{
 			if(m_processingMode == Default)
 			{
@@ -137,7 +138,7 @@ namespace dsp56k
 
 			pcCurrentInstruction = reg.pc.toWord();
 
-			m_jit->exec(getPC().var);
+			m_jit.exec(getPC().var);
 
 			handleICtrCallback();
 		}
@@ -177,9 +178,9 @@ namespace dsp56k
 				pcCurrentInstruction = vba;
 				m_processingMode = FastInterrupt;
 
-				if(g_useJIT && m_jit)
+				if(g_useJIT)
 				{
-					m_jit->exec(vba);
+					m_jit.exec(vba);
 					if(m_processingMode != LongInterrupt)
 					{
 						m_processingMode = DefaultPreventInterrupt;
@@ -993,8 +994,7 @@ namespace dsp56k
 		if(_area == MemArea_P && _offset < m_opcodeCache.size())
 		{
 			notifyProgramMemWrite(_offset);
-			if(m_jit)
-				m_jit->notifyProgramMemWrite(_offset);
+			m_jit.notifyProgramMemWrite(_offset);
 		}
 
 		return res;

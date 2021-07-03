@@ -7,6 +7,7 @@
 #include "instructioncache.h"
 #include "opcodes.h"
 #include "logging.h"
+#include "jit.h"
 
 namespace dsp56k
 {
@@ -15,7 +16,6 @@ namespace dsp56k
 	class JitUnittests;
 	class JitDspRegs;
 	class JitOps;
-	class Jit;
 	
 	using TInstructionFunc = void (DSP::*)(TWord op);
 
@@ -114,6 +114,7 @@ namespace dsp56k
 		uint32_t						m_currentOpLen = 0;
 		uint32_t						m_instructions = 0;
 	
+		Jit								m_jit;
 		SRegs							reg;
 		CCRCache						ccrCache;
 
@@ -160,8 +161,6 @@ namespace dsp56k
 
 		std::string		m_asm;
 		Disassembler	m_disasm;
-
-		Jit* m_jit = nullptr;
 
 		// _____________________________________________________________________________
 		// implementation
@@ -234,8 +233,7 @@ namespace dsp56k
 		
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
 
-		void			setJit							(Jit* _jit) { m_jit = _jit; }
-		Jit*			getJit							() { return m_jit; }
+		Jit&			getJit							() { return m_jit; }
 		
 		typedef void 	(*IctrCallback)(void *,DSP *dsp);
 		IctrCallback	m_callback = 0;

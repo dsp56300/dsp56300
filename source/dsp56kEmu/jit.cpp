@@ -72,6 +72,8 @@ namespace dsp56k
 	Jit::Jit(DSP& _dsp) : m_dsp(_dsp)
 	{
 		m_jitCache.resize(_dsp.memory().size(), JitCacheEntry{&funcCreate, nullptr});
+
+		m_rt = new JitRuntime();
 	}
 
 	Jit::~Jit()
@@ -82,6 +84,8 @@ namespace dsp56k
 			if(entry)
 				destroy(entry);
 		}
+
+		delete m_rt;
 	}
 
 	void Jit::exec(const TWord pc)
@@ -112,7 +116,7 @@ namespace dsp56k
 
 //		code.setLogger(&logger);
 		code.setErrorHandler(&errorHandler);
-		code.init(m_rt.environment());
+		code.init(m_rt->environment());
 
 		Assembler m_asm(&code);
 
@@ -129,7 +133,7 @@ namespace dsp56k
 
 		JitBlock::JitEntry func;
 
-		const auto err = m_rt.add(&func, &code);
+		const auto err = m_rt->add(&func, &code);
 
 		if(err)
 		{
@@ -201,7 +205,7 @@ namespace dsp56k
 			}
 		}
 
-		m_rt.release(_block->getFunc());
+		m_rt->release(_block->getFunc());
 
 		delete _block;
 	}

@@ -7,7 +7,11 @@
 #include <set>
 
 #include "jitruntimedata.h"
-#include "asmjit/core/jitruntime.h"
+
+namespace asmjit
+{
+	class JitRuntime;
+}
 
 namespace dsp56k
 {
@@ -41,11 +45,12 @@ namespace dsp56k
 
 		static void updateRunFunc(JitCacheEntry& e);
 
+		JitRuntimeData m_runtimeData;
+
 		DSP& m_dsp;
 
-		asmjit::JitRuntime m_rt;
+		asmjit::JitRuntime* m_rt = nullptr;
 		std::vector<JitCacheEntry> m_jitCache;
 		std::set<TWord> m_volatileP;
-		JitRuntimeData m_runtimeData;
 	};
 }
