@@ -76,4 +76,13 @@ namespace dsp56k
 
 		return m_rx[_index];
 	}
+
+	void Esai::terminate()
+	{
+		for(size_t i=0; i<m_audioInputs.size(); ++i)
+		{
+			while(!m_audioInputs[i].full())
+				m_audioInputs[i].push_back(0);
+		}
+	}
 }

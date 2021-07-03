@@ -92,6 +92,7 @@ namespace dsp56k
 		virtual void exec() = 0;
 		virtual void reset() = 0;
 		virtual void setSymbols(Disassembler& _disasm) = 0;
+		virtual void terminate() = 0;
 
 	private:
 		DSP* m_dsp = nullptr;
@@ -121,6 +122,8 @@ namespace dsp56k
 
 		void setSymbols(Disassembler& _disasm) override {}
 
+		void terminate() override {};
+
 	private:
 		Essi m_essi;
 		HI08 m_hi08;
@@ -149,6 +152,8 @@ namespace dsp56k
 		HDI08& getHDI08()	{ return m_hdi08; }
 		
 		void setSymbols(Disassembler& _disasm) override;
+
+		void terminate() override;
 
 	private:
 		Esai m_esai;

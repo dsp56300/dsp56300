@@ -60,6 +60,12 @@ namespace dsp56k
 		return m_data.full();
 	}
 
+	void HDI08::terminate()
+	{
+		while(!m_data.full())
+			m_data.push_back(0);
+	}
+
 	bool HDI08::hasTX() const
 	{
 		return !m_dataTX.empty();

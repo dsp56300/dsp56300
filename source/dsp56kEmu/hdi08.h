@@ -88,6 +88,8 @@ namespace dsp56k
 
 		bool dataRXFull() const;
 
+		void terminate();
+
 	private:
 		TWord m_hsr = 0;
 		TWord m_hcr = 0;

@@ -234,7 +234,9 @@ namespace dsp56k
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
 
 		Jit&			getJit							() { return m_jit; }
-		
+
+		void			terminate						();
+
 		typedef void 	(*IctrCallback)(void *,DSP *dsp);
 		IctrCallback	m_callback = 0;
 		void*			m_callbackData = 0;

@@ -29,6 +29,9 @@ namespace dsp56k
 			return;
 
 		m_runThread = false;
+
+		m_dsp.terminate();
+
 		m_thread->join();
 		m_thread.reset();
 	}

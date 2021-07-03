@@ -345,4 +345,11 @@ namespace dsp56k
 			_disasm.addSymbol(Disassembler::MemX, symbol.first, symbol.second);	
 		}
 	}
+
+	void Peripherals56362::terminate()
+	{
+		m_hdi08.terminate();
+
+		m_esai.terminate();
+	}
 }

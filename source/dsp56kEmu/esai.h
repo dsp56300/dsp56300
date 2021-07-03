@@ -290,7 +290,9 @@ namespace dsp56k
 		void updatePCTL(TWord _val);
 		void writeTX(uint32_t _index, TWord _val);
 		TWord readRX(uint32_t _index);
-		
+
+		void terminate();
+
 	private:
 		bool inputEnabled(uint32_t _index) const	{ return m_rcr.test(static_cast<RcrBits>(_index)); }
 		bool outputEnabled(uint32_t _index) const	{ return m_tcr.test(static_cast<TcrBits>(_index)); }

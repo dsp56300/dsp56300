@@ -260,6 +260,12 @@ namespace dsp56k
 		execPeriph();
 	}
 
+	void DSP::terminate()
+	{
+		for(size_t i=0; i<perif.size(); ++i)
+			perif[i]->terminate();
+	}
+
 	std::string DSP::getSSindent() const
 	{
 		std::stringstream ss;
