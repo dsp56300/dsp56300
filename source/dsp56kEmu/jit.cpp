@@ -141,6 +141,10 @@ namespace dsp56k
 			std::stringstream ss;
 			char temp[64];
 			sprintf(temp, "$%06x-$%06x", first, last-1);
+			if(b->getFlags() & JitBlock::LoopEnd)
+				strcat(temp, " L");
+			if(b->getFlags() & JitBlock::WritePMem)
+				strcat(temp, " P");
 			jmethod.method_name = temp;
 			jmethod.class_file_name = const_cast<char*>("dsp56k::Jit");
 			jmethod.source_file_name = __FILE__;
