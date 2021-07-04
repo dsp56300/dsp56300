@@ -531,7 +531,7 @@ namespace dsp56k
 		if(_negate)
 			m_asm.neg(_s1);
 
-		AluRef d(m_block, ab, _accumulate, true);
+		AluRef d(m_block, ab, true, true);
 
 		if( _accumulate )
 		{
