@@ -227,8 +227,6 @@ namespace dsp56k
 				mov(makeDspPtr(_reg), _src.r32());
 			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
 				mov(makeDspPtr(_reg), _src.r64());
-			else
-				static_assert(false && "unknown register size");
 		}
 
 		template<typename T, unsigned int B>
@@ -238,8 +236,6 @@ namespace dsp56k
 				movd(makeDspPtr(_reg), _src);
 			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
 				movq(makeDspPtr(_reg), _src);
-			else
-				static_assert(false && "unknown register size");
 		}
 
 		void mov(const asmjit::x86::Mem& _dst, const JitReg& _src) const;
