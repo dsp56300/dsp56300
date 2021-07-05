@@ -56,5 +56,10 @@ It can currently run the dspthru example in polling mode and in interrupt mode.
 ### Join us on Discord
 
 A core team of several people now work together to make the emulator do something more *"useful"* 😊
-Audio and Video examples can be found on our homepage: [DSP 56300 Emulation Blog](https://dsp56300.wordpress.com/)
 Contributions are welcome! If you want to help or just want to follow the state of the project, feel free to join us on Discord: https://discord.gg/mveFUNbNCK
+
+### Visit our Homepage
+
+🎧We have some audio & video examples ready!🎵
+Visit our homepage:
+[DSP 56300 Emulation Blog](https://dsp56300.wordpress.com/)
