@@ -54,14 +54,12 @@ namespace dsp56k
 			if (!_sampleFrames)
 				return;
 
-			// write input data
+			auto inLatency = m_latency;
 
-			if(_latency > m_latency)
+			for (size_t i = 0; i < _sampleFrames; ++i)
 			{
-				// write 0s to input to increase latency
-				const auto len = std::min(_latency - m_latency, _sampleFrames);
-
-				for (size_t i = 0; i < len; ++i)
+				// write input
+				if(_latency > inLatency)
 				{
 					for (size_t c = 0; c < _numDSPins; ++c)
 					{
@@ -69,11 +67,9 @@ namespace dsp56k
 						m_audioInputs[in].waitNotFull();
 						m_audioInputs[in].push_back(0);
 					}
+					++inLatency;
 				}
-			}
 
-			for (size_t i = 0; i < _sampleFrames; ++i)
-			{
 				for (size_t c = 0; c < _numDSPins; ++c)
 				{
 					const auto in = c >> 1;
@@ -82,11 +78,8 @@ namespace dsp56k
 				}
 
 				m_pendingRXInterrupts += 2;
-			}
 
-			// read output
-			for (size_t i = 0; i < _sampleFrames; ++i)
-			{
+				// read output
 				if(_latency > m_latency)
 				{
 					for (size_t c = 0; c < _numDSPouts; ++c)
