@@ -979,7 +979,7 @@ namespace dsp56k
 		const auto regular = m_asm.newLabel();
 		const RegGP s(m_block);
 		decode_JJ_read(s, jj);
-
+		/* TODO: broken
 		if (_iterationCount<24)
 		{
 			{
@@ -998,7 +998,7 @@ namespace dsp56k
 				m_asm.jmp(finished);
 			}
 		}
-		
+		*/
 		m_asm.bind(regular);
 		RegGP addOrSub(m_block);
 		RegGP dLsWord(m_block);
