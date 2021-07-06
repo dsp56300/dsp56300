@@ -975,9 +975,31 @@ namespace dsp56k
 			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~(CCR_L | CCR_V));			
 		};
 		
+		const auto finished = m_asm.newLabel();
+		const auto regular = m_asm.newLabel();
 		const RegGP s(m_block);
 		decode_JJ_read(s, jj);
 
+		if (_iterationCount<24)
+		{
+			{
+				const RegGP t(m_block);
+				m_asm.mov(t, s.get());
+				m_asm.dec(t);
+				m_asm.and_(t, s.get());
+				m_asm.jnz(regular);
+			}
+			{
+				const ShiftReg t(m_block);
+				m_asm.bsr(t, s.get());
+				m_asm.add(t, asmjit::Imm(_iterationCount + 1));
+				m_asm.shr(d, t.get());
+				m_asm.and_(d, asmjit::Imm((1<<_iterationCount)-1));
+				m_asm.jmp(finished);
+			}
+		}
+		
+		m_asm.bind(regular);
 		RegGP addOrSub(m_block);
 		RegGP dLsWord(m_block);
 		RegGP lc(m_block);
@@ -1041,6 +1063,7 @@ namespace dsp56k
 		loopIteration(true);
 
 		m_dspRegs.mask56(d);
+		m_asm.bind(finished);
 	}
 
 	inline void JitOps::op_Dmac(TWord op)
