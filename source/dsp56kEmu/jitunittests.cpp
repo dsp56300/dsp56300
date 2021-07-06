@@ -119,7 +119,7 @@ namespace dsp56k
 		asmjit::CodeHolder code;
 		AsmJitLogger logger;
 		code.init(m_rt.environment());
-		code.setLogger(&logger);
+//		code.setLogger(&logger);
 		code.setErrorHandler(&errorHandler);
 
 		asmjit::x86::Assembler m_asm(&code);
