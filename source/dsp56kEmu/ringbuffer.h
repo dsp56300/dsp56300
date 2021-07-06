@@ -98,12 +98,16 @@ public:
 
 	void waitNotEmpty() const
 	{
+		if constexpr(Lock)
+			return;
 		while(empty())
 			std::this_thread::yield();
 	}
 
 	void waitNotFull() const
 	{
+		if constexpr(Lock)
+			return;
 		while(full())
 			std::this_thread::yield();
 	}
