@@ -248,8 +248,8 @@ namespace dsp56k
 			FrameSyncChannelRight = 0
 		};
 
-		std::array<RingBuffer<uint32_t, 4096, false>, 1> m_audioInputs;
-		std::array<RingBuffer<uint32_t, 4096, false>, 3> m_audioOutputs;
+		std::array<RingBuffer<uint32_t, 4096, true>, 1> m_audioInputs;
+		std::array<RingBuffer<uint32_t, 4096, true>, 3> m_audioOutputs;
 		std::atomic<uint32_t> m_pendingRXInterrupts;
 
 		uint32_t m_frameSyncDSPStatus = FrameSyncChannelLeft;
