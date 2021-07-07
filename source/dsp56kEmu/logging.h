@@ -41,5 +41,4 @@ namespace Logging
 #define LOGFMT(fmt, ...)	LOG(Logging::string_format(fmt,  ##__VA_ARGS__))
 
 #define HEX(S)			std::hex << std::setfill('0') << std::setw(6) << S
-#define HEXN(S, n)		std::hex << std::setfill('0') << std::setw(n) << S
-
+#define HEXN(S, n)		std::hex << std::setfill('0') << std::setw(n) << (uint32_t)S
