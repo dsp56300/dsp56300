@@ -57,10 +57,20 @@ namespace dsp56k
 	{
 		for(size_t i=0; i<m_jitCache.size(); ++i)
 		{
-			auto* const entry = m_jitCache[i].block;
-			if(entry)
-				destroy(entry);
+			auto& e = m_jitCache[i];
+
+			if(e.block)
+				destroy(e.block);
+
+			for(auto it = e.singleOpCache.begin(); it != e.singleOpCache.end(); ++it)
+			{
+				m_rt->release(it->second->getFunc());
+				delete it->second;
+			}
+			e.singleOpCache.clear();
 		}
+
+		m_jitCache.clear();
 
 		delete m_rt;
 	}
@@ -273,6 +283,7 @@ namespace dsp56k
 			if(it != cacheEntry.singleOpCache.end())
 			{
 //				LOG("Returning 1-word-op " << HEX(opA) << " at PC " << HEX(_pc));
+				assert(cacheEntry.block == nullptr);
 				cacheEntry.block = it->second;
 				cacheEntry.singleOpCache.erase(it);
 				updateRunFunc(cacheEntry);
