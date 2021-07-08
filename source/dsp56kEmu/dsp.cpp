@@ -35,7 +35,7 @@
 namespace dsp56k
 {
 	constexpr bool g_traceSupported = false;
-	constexpr bool g_useJIT = true;
+	constexpr bool g_useJIT = g_jitSupported;
 
 	Jumptable g_jumptable;
 
