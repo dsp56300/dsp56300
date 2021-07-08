@@ -33,7 +33,6 @@ opcodes.cpp opcodes.h
 opcodefields.h
 opcodeinfo.cpp opcodeinfo.h
 opcodetypes.h
-ops.cpp ops.h
 peripherals.cpp peripherals.h
 registers.cpp registers.h
 ringbuffer.h

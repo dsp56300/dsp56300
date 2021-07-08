@@ -113,7 +113,7 @@ namespace dsp56k
 		TWord							m_opWordB = 0;
 		uint32_t						m_currentOpLen = 0;
 		uint32_t						m_instructions = 0;
-	
+
 		Jit								m_jit;
 		SRegs							reg;
 		CCRCache						ccrCache;

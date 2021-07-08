@@ -1,4 +1,5 @@
 #pragma once
+
 #include <array>
 #include <cstdint>
 
@@ -45,7 +46,11 @@ namespace dsp56k
 		void setCallback(AudioCallback ac,int callbackSamples,int callbackChannels) {m_callback=ac;m_callbackSamples=callbackSamples;m_callbackChannels=callbackChannels;}
 		void writeEmptyAudioIn(size_t len,size_t ins)
 		{
-			for (size_t i = 0; i < len; ++i) for (size_t c = 0; c < ins; ++c) m_audioInputs[c>>1].push_back(0);
+			for (size_t i = 0; i < len; ++i)
+			{
+				for (size_t c = 0; c < ins; ++c) 
+					m_audioInputs[c>>1].push_back(0);
+			}
 		}
 
 		template<typename T>
@@ -180,56 +185,7 @@ namespace dsp56k
 		{
 			return processAudioInterleaved(_inputs, _outputs, _sampleFrames, 2, 2);
 		}
-		/*
-		void setLatency(size_t _latency, size_t _numDSPins, size_t _numDSPouts, std::mutex& _dspLock)
-		{
-			if(m_latency == _latency)
-				return;
 
-			if(_latency > m_latency)
-			{
-				const auto len = _latency - m_latency;
-
-				for (size_t i = 0; i < len; ++i)
-				{
-					for (size_t c = 0; c < _numDSPins; ++c)
-					{
-						const auto in = c >> 1;
-						m_audioInputs[in].waitNotFull();
-						m_audioInputs[in].push_back(0);
-					}
-					for (size_t c = 0; c < _numDSPouts; ++c)
-					{
-						const auto out = c >> 1;
-						m_audioOutputs[out].waitNotFull();
-						m_audioOutputs[out].push_back(0);
-					}
-				}
-			}
-			else
-			{
-				const auto len = m_latency - _latency;
-
-				for (size_t i = 0; i < len; ++i)
-				{
-					for (size_t c = 0; c < _numDSPins; ++c)
-					{
-						const auto in = c >> 1;
-						m_audioInputs[in].waitNotEmpty();
-						m_audioInputs[in].pop_front();
-					}
-					for (size_t c = 0; c < _numDSPouts; ++c)
-					{
-						const auto out = c >> 1;
-						m_audioOutputs[out].waitNotEmpty();
-						m_audioOutputs[out].pop_front();
-					}
-				}
-			}
-
-			m_latency = _latency;
-		}		
-		*/
 	protected:
 		TWord readRXimpl(size_t _index);
 		void writeTXimpl(size_t _index, TWord _val);

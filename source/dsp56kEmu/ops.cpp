@@ -1,3 +1,0 @@
-namespace dsp56k
-{
-}
