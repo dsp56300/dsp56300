@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(dsp56kEmu)
 
-add_library(dsp56kEmu STATIC)
+add_library(dsp56kEmu)
 
 set(SOURCES
 aar.h
