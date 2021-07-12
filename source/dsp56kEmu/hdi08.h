@@ -94,8 +94,8 @@ namespace dsp56k
 		TWord m_hsr = 0;
 		TWord m_hcr = 0;
 		TWord m_hpcr = 0;
-		RingBuffer<uint32_t, 1024, false> m_data;
-		RingBuffer<uint32_t, 1024, false> m_dataTX;
+		RingBuffer<uint32_t, 8192, false> m_data;
+		RingBuffer<uint32_t, 8192, false> m_dataTX;
 		IPeripherals& m_periph;
 		std::atomic<uint32_t> m_pendingRXInterrupts;
 		std::atomic<uint32_t> m_pendingTXInterrupts;
