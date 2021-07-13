@@ -46,25 +46,25 @@ namespace dsp56k
 			return m_hsr;
 		}
 
-		TWord readControlRegister()
+		TWord readControlRegister() const
 		{
 			return m_hcr;
 		}
 
-		TWord readPortControlRegister()
+		TWord readPortControlRegister() const
 		{
 			return m_hpcr;
 		}
 
 		void writeControlRegister(TWord _val);
 
-		void writeStatusRegister(TWord _val)
+		void writeStatusRegister(const TWord _val)
 		{
 			LOG("Write HDI08 HSR " << HEX(_val));
 			m_hsr = _val;
 		}
 
-		void writePortControlRegister(TWord _val)
+		void writePortControlRegister(const TWord _val)
 		{
 			LOG("Write HDI08 HPCR " << HEX(_val));
 			m_hpcr = _val;
@@ -77,12 +77,13 @@ namespace dsp56k
 		void exec();
 
 		TWord readRX();
-		void writeRX(const int32_t* _data, const size_t _count);
+		void writeRX(const std::vector<TWord>& _data)		{ writeRX(&_data[0], _data.size()); }
+		void writeRX(const TWord* _data, size_t _count);
 		void clearRX();
 		
-		bool hasDataToSend() {return !m_data.empty();}
+		bool hasDataToSend() const {return !m_data.empty();}
 
-		void setHostFlags(const char _flag0, const char _flag1);
+		void setHostFlags(char _flag0, char _flag1);
 
 		void reset() {}
 
@@ -94,8 +95,8 @@ namespace dsp56k
 		TWord m_hsr = 0;
 		TWord m_hcr = 0;
 		TWord m_hpcr = 0;
-		RingBuffer<uint32_t, 8192, false> m_data;
-		RingBuffer<uint32_t, 8192, false> m_dataTX;
+		RingBuffer<TWord, 8192, false> m_data;
+		RingBuffer<TWord, 8192, false> m_dataTX;
 		IPeripherals& m_periph;
 		std::atomic<uint32_t> m_pendingRXInterrupts;
 		std::atomic<uint32_t> m_pendingTXInterrupts;

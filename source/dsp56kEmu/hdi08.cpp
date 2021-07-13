@@ -31,7 +31,7 @@ namespace dsp56k
 		return m_data.pop_front() & 0xFFFFFF;
 	}
 
-	void HDI08::writeRX(const int32_t* _data, const size_t _count)
+	void HDI08::writeRX(const TWord* _data, const size_t _count)
 	{
 		for (size_t i = 0; i < _count; ++i)
 		{
