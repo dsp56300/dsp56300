@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
+        cmake_generator: [ default, Ninja ]
       fail-fast: false
     name:  ${{ matrix.os }} build
     steps:
@@ -18,8 +19,17 @@ jobs:
       with:
         submodules: "recursive"
 
-    - name: Configure CMake
-      run: cmake -S source -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Setting up Ninja build system
+      if: matrix.cmake_generator == 'Ninja'
+      uses: seanmiddleditch/gha-setup-ninja@master
+
+    - name: Configure CMake with ${{ matrix.cmake_generator }}
+      if: matrix.cmake_generator != 'default'
+      run: cmake -G ${{ matrix.cmake_generator }} -S source -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Configure CMake with default generator
+      if: matrix.cmake_generator == 'default'
+      run: cmake -B ${{github.workspace}}/build -S source -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
