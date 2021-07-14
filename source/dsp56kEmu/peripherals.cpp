@@ -101,8 +101,7 @@ namespace dsp56k
 		case Esai::M_RX1:
 		case Esai::M_RX2:
 		case Esai::M_RX3:
-			m_esai.readRX(_addr - Esai::M_RX0);
-			return 0;
+			return m_esai.readRX(_addr - Esai::M_RX0);
 		case 0xFFFFBE:	// Port C Direction Register
 			return 0;
 
