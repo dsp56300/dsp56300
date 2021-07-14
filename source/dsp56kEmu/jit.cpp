@@ -8,11 +8,9 @@
 #include "asmjit/core/jitruntime.h"
 #include "asmjit/x86/x86assembler.h"
 
-#if defined(_WIN32) && defined(_WIN64)
-#define JIT_VTUNE_PROFILING
+#ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
 #include "../vtuneSdk/include/jitprofiling.h"
 #endif
-
 
 using namespace asmjit;
 using namespace x86;
@@ -143,7 +141,7 @@ namespace dsp56k
 				m_jitCache[i].func = &funcRecreate;
 		}
 
-#ifdef JIT_VTUNE_PROFILING
+#ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
 		if(iJIT_IsProfilingActive() == iJIT_SAMPLING_ON)
 		{
 			iJIT_Method_Load jmethod = {0};
