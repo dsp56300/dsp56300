@@ -3,7 +3,7 @@
 #include <mutex>
 #include <condition_variable>
 
-namespace ceLib
+namespace dsp56k
 {
 	class Semaphore
 	{
