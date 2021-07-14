@@ -83,7 +83,7 @@ if(WIN32)
 				${CMAKE_CURRENT_SOURCE_DIR}/../vtuneSdk/lib64/
 			REQUIRED
 		)
-		target_link_libraries(dsp56kEmu PUBLIC JIT_PROFILING)
+		target_link_libraries(dsp56kEmu PUBLIC ${JIT_PROFILING})
 		target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_VTUNE_JIT_PROFILING_API)
 	else()
 		find_library(CM56300
@@ -94,7 +94,7 @@ if(WIN32)
 					${CMAKE_CURRENT_SOURCE_DIR}/../dsp56k
 				)
 		if(CM56300)
-			target_link_libraries(dsp56kEmu PUBLIC CM56300)
+			target_link_libraries(dsp56kEmu PUBLIC ${CM56300})
 			target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_MOTOROLA_UNASM)
 		endif()
 	endif()
