@@ -73,15 +73,29 @@ source_group("source" FILES ${SOURCES})
 source_group("source\\jit" FILES ${SOURCES_JIT})
 source_group("source\\vtune" FILES ${SOURCES_VTUNE})
 
-if(WIN32 AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../dsp56k/CM56300.lib AND NOT ${CMAKE_VS_PLATFORM_NAME} STREQUAL "x64")
-	target_link_libraries(dsp56kEmu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../dsp56k/CM56300.lib)
-	target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_MOTOROLA_UNASM)
-endif()
-
 if(WIN32)
 	if(${CMAKE_VS_PLATFORM_NAME} STREQUAL "x64")
-		target_link_libraries(dsp56kEmu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../vtuneSdk/lib64/jitprofiling.lib)
-		target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_VTUNE_JIT_PROFILING_API)
+		find_library(JIT_PROFILING
+			NAMES
+				jitprofiling
+				jitprofiling.lib
+			PATHS
+				${CMAKE_CURRENT_SOURCE_DIR}/../vtuneSdk/lib64/
+			REQUIRED
+		)
+		target_link_libraries(dsp56kEmu PUBLIC JIT_PROFILING)
+	else()
+		find_library(CM56300
+				NAMES
+					CM56300
+					CM56300.lib
+				PATHS
+					${CMAKE_CURRENT_SOURCE_DIR}/../dsp56k
+				)
+		if(CM56300)
+			target_link_libraries(dsp56kEmu PUBLIC CM56300)
+			target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_MOTOROLA_UNASM)
+		endif()
 	endif()
 endif()
 
