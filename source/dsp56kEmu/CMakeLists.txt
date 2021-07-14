@@ -84,6 +84,7 @@ if(WIN32)
 			REQUIRED
 		)
 		target_link_libraries(dsp56kEmu PUBLIC JIT_PROFILING)
+		target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_VTUNE_JIT_PROFILING_API)
 	else()
 		find_library(CM56300
 				NAMES
