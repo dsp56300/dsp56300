@@ -74,7 +74,8 @@ source_group("source\\jit" FILES ${SOURCES_JIT})
 source_group("source\\vtune" FILES ${SOURCES_VTUNE})
 
 if(WIN32)
-	if(${CMAKE_VS_PLATFORM_NAME} STREQUAL "x64")
+	# If CMAKE_SIZEOF_VOID_P is equal to 8, it's 64 bit
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 		find_library(JIT_PROFILING
 			NAMES
 				jitprofiling
