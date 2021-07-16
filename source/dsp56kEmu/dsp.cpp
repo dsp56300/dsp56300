@@ -502,12 +502,15 @@ namespace dsp56k
 		// __________________
 		//
 
-		while(sr_test_noCache(SR_LF) && reg.sc.var >= stackCount)
+		while(reg.sc.var >= stackCount)
 		{
 			exec();
 
 			if(reg.pc.var != (reg.la.var+1))
 				continue;
+
+			if(!sr_test_noCache(SR_LF))
+				break;
 
 			if( reg.lc.var <= 1 )
 			{
