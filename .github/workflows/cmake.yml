@@ -29,11 +29,11 @@ jobs:
 
     - name: Configure CMake with ${{ matrix.cmake_generator }}
       if: matrix.cmake_generator != 'default'
-      run: cmake -G ${{ matrix.cmake_generator }} -S source -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -G ${{ matrix.cmake_generator }} -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Configure CMake with default generator
       if: matrix.cmake_generator == 'default'
-      run: cmake -B ${{github.workspace}}/build -S source -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
