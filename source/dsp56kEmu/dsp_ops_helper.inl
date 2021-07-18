@@ -103,7 +103,7 @@ namespace dsp56k
 
 	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_S>()>::type*> TWord DSP::readMem(const TWord op) const
 	{
-		return readMem<Inst>(getFieldValue<Inst, Field_aaaaaa>(op), getFieldValueMemArea<Inst>(op));
+		return readMem<Inst>(op, getFieldValueMemArea<Inst>(op));
 	}
 
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> TWord DSP::readMem(const TWord op) const
@@ -165,7 +165,7 @@ namespace dsp56k
 
 	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_S>()>::type*> void DSP::writeMem(const TWord op, const TWord value)
 	{
-		writeMem<Inst>(getFieldValue<Inst, Field_aaaaaa>(op), getFieldValueMemArea<Inst>(op), value);
+		writeMem<Inst>(op, getFieldValueMemArea<Inst>(op), value);
 	}
 
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> void DSP::writeMem(const TWord op, const TWord value)
