@@ -1,4 +1,3 @@
-include("base.cmake")
 
 set(ASMJIT_STATIC TRUE)
 
