@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "fastmath.h"
+#include "logging.h"
 #include "ringbuffer.h"
 #include "utils.h"
 
@@ -59,123 +60,50 @@ namespace dsp56k
 			if (!_sampleFrames)
 				return;
 
-			auto inLatency = m_latency;
-
 			for (size_t i = 0; i < _sampleFrames; ++i)
 			{
-				// write input
-				if(_latency > inLatency)
+				// INPUT
+
+				if(_latency > m_latency)
 				{
+					// a latency increase on the input means to feed additional zeroes into it
 					for (size_t c = 0; c < _numDSPins; ++c)
 					{
 						const auto in = c >> 1;
 						m_audioInputs[in].waitNotFull();
 						m_audioInputs[in].push_back(0);
 					}
-					++inLatency;
-				}
 
-				for (size_t c = 0; c < _numDSPins; ++c)
-				{
-					const auto in = c >> 1;
-					m_audioInputs[in].waitNotFull();
-					m_audioInputs[in].push_back(sample2dsp<T>(_inputs[c][i]));
-				}
+					m_pendingRXInterrupts += 2;
 
-				m_pendingRXInterrupts += 2;
-
-				// read output
-				if(_latency > m_latency)
-				{
-					for (size_t c = 0; c < _numDSPouts; ++c)
-						_outputs[c][i] = 0;
 					++m_latency;
+				}
+				
+				if(_latency < m_latency)
+				{
+					// a latency decrease on the input means to skip writing data
+					--m_latency;
+				}
+				else
+				{
+					for (size_t c = 0; c < _numDSPins; ++c)
+					{
+						const auto in = c >> 1;
+						m_audioInputs[in].waitNotFull();
+						m_audioInputs[in].push_back(sample2dsp<T>(_inputs[c][i]));
+					}
+
+					m_pendingRXInterrupts += 2;
 				}
 
 				for (size_t c = 0; c < _numDSPouts; ++c)
 				{
 					const auto out = c >> 1;
 
-					TWord v = 0;
-					
-					if(out == 0)
-					{
-						m_audioOutputs[out].waitNotEmpty();						
-						v = m_audioOutputs[out].pop_front();
-					}
-					else if(!m_audioOutputs[out].empty())
-					{
-						v = m_audioOutputs[out].pop_front();
-					}
+					m_audioOutputs[out].waitNotEmpty();
+					const auto v = m_audioOutputs[out].pop_front();
 
 					_outputs[c][i] = dsp2sample<T>(v);
-				}
-			}
-		}
-
-		template<typename T>
-		void processAudioInterleavedSingle(T* _inputs, T* _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
-		{
-			if (!_sampleFrames)
-				return;
-
-			// write input data
-
-			if(_latency > m_latency)
-			{
-				// write 0s to input to increase latency
-				const auto len = std::min(_latency - m_latency, _sampleFrames);
-
-				for (size_t i = 0; i < len; ++i)
-				{
-					for (size_t c = 0; c < _numDSPins; ++c)
-					{
-						const auto in = c >> 1;
-						m_audioInputs[in].waitNotFull();
-						m_audioInputs[in].push_back(0);
-					}
-				}
-			}
-
-			for (size_t i = 0; i < _sampleFrames; ++i)
-			{
-				for (size_t c = 0; c < _numDSPins; ++c)
-				{
-					const auto in = c >> 1;
-					m_audioInputs[in].waitNotFull();
-					m_audioInputs[in].push_back(sample2dsp<T>(*_inputs++));
-				}
-
-				m_pendingRXInterrupts += 2;
-			}
-
-			// read output
-			for (size_t i = 0; i < _sampleFrames; ++i)
-			{
-				if(_latency > m_latency)
-				{
-					for (size_t c = 0; c < _numDSPouts; ++c)
-						*_outputs++ = 0;
-					++m_latency;
-				}
-
-				for (size_t c = 0; c < _numDSPouts; ++c)
-				{
-					const auto out = c >> 1;
-
-					TWord v = 0;
-
-					if(out == 0)
-					{
-						m_audioOutputs[out].waitNotEmpty();
-						v = m_audioOutputs[out].pop_front();
-					}
-					else if(!m_audioOutputs[out].empty())
-					{
-						v = m_audioOutputs[out].pop_front();
-					}
-
-					*_outputs++ = dsp2sample<T>(v);
 				}
 			}
 		}
