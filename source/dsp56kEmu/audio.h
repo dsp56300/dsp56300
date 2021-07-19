@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 
 #include "fastmath.h"
 #include "logging.h"
