@@ -38,13 +38,22 @@ namespace dsp56k
 		return static_cast<float>(signextend<int32_t,24>(d)) * g_dsp2FloatScale;
 	}
 
-	typedef void (*AudioCallback)(class Audio* audio);
+	class Audio;
+
+	using AudioCallback = std::function<void(Audio*)>;
 
 	class Audio
 	{
 	public:
 		Audio() : m_callback(0), m_pendingRXInterrupts(0) {}
-		void setCallback(AudioCallback ac,int callbackSamples,int callbackChannels) {m_callback=ac;m_callbackSamples=callbackSamples;m_callbackChannels=callbackChannels;}
+
+		void setCallback(const AudioCallback& _ac, const int _callbackSamples, const int _callbackChannels)
+		{
+			m_callback = _ac;
+			m_callbackSamples = _callbackSamples;
+			m_callbackChannels = _callbackChannels;
+		}
+
 		void writeEmptyAudioIn(size_t len,size_t ins)
 		{
 			for (size_t i = 0; i < len; ++i)
@@ -117,8 +126,11 @@ namespace dsp56k
 	protected:
 		TWord readRXimpl(size_t _index);
 		void writeTXimpl(size_t _index, TWord _val);
-		AudioCallback m_callback;
-		int m_callbackSamples,m_callbackChannels;
+
+		AudioCallback m_callback = nullptr;
+
+		size_t m_callbackSamples = 0;
+		size_t m_callbackChannels = 0;
 
 		static void incFrameSync(uint32_t& _frameSync)
 		{
