@@ -125,6 +125,9 @@ namespace dsp56k
 			return processAudioInterleaved(_inputs, _outputs, _sampleFrames, 2, 2);
 		}
 
+		const std::array<RingBuffer<uint32_t, 8192, true>, 1>& getAudioInputs() const { return m_audioInputs; }
+		const std::array<RingBuffer<uint32_t, 8192, true>, 3>& getAudioOutputs() const { return m_audioOutputs; }
+
 	protected:
 		TWord readRXimpl(size_t _index);
 		void writeTXimpl(size_t _index, TWord _val);
@@ -148,6 +151,7 @@ namespace dsp56k
 
 		std::array<RingBuffer<uint32_t, 8192, true>, 1> m_audioInputs;
 		std::array<RingBuffer<uint32_t, 8192, true>, 3> m_audioOutputs;
+
 		std::atomic<uint32_t> m_pendingRXInterrupts;
 
 		uint32_t m_frameSyncDSPStatus = FrameSyncChannelLeft;
