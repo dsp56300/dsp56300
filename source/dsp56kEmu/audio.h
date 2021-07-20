@@ -46,13 +46,14 @@ namespace dsp56k
 	class Audio
 	{
 	public:
-		Audio() : m_callback(0), m_pendingRXInterrupts(0) {}
+		Audio() : m_callback(nullptr), m_pendingRXInterrupts(0) {}
 
 		void setCallback(const AudioCallback& _ac, const int _callbackSamples, const int _callbackChannels)
 		{
-			m_callback = _ac;
 			m_callbackSamples = _callbackSamples;
 			m_callbackChannels = _callbackChannels;
+
+			m_callback = _ac;
 		}
 
 		void writeEmptyAudioIn(size_t len,size_t ins)
@@ -128,7 +129,7 @@ namespace dsp56k
 		TWord readRXimpl(size_t _index);
 		void writeTXimpl(size_t _index, TWord _val);
 
-		AudioCallback m_callback = nullptr;
+		AudioCallback m_callback;
 
 		size_t m_callbackSamples = 0;
 		size_t m_callbackChannels = 0;
