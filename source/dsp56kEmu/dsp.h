@@ -339,6 +339,12 @@ namespace dsp56k
 		void 	sr_set					( SRMask _bits )					{ reg.sr.var |= _bits;	}
 		void 	sr_clear				( CCRMask _bits )					{ reg.sr.var &= ~_bits; }
 		void 	sr_clear				( SRMask _bits )					{ reg.sr.var &= ~_bits; }
+
+		void 	sr_toggle				( CCRMask _bits, bool _set )		{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
+		void 	sr_toggle				( SRMask _bits, bool _set )			{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
+		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, int32_t(_bit), _value); }
+
+	public:
 		int 	sr_test					( CCRMask _bits ) const				{ updateDirtyCCR(); return sr_test_noCache(_bits); }
 		int 	sr_test					( SRMask _bits ) const				{ return sr_test_noCache(_bits); }
 		int 	sr_test_noCache			( CCRMask _bits ) const				{ return (reg.sr.var & _bits); }
@@ -346,10 +352,8 @@ namespace dsp56k
 		int 	sr_val					( CCRBit _bitNum ) const			{ updateDirtyCCR(); return sr_val_noCache(_bitNum); }
 		int 	sr_val_noCache			( CCRBit _bitNum ) const			{ return (reg.sr.var >> _bitNum) & 1; }
 		int 	sr_val_noCache			( SRBit _bitNum ) const				{ return (reg.sr.var >> _bitNum) & 1; }
-		void 	sr_toggle				( CCRMask _bits, bool _set )		{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
-		void 	sr_toggle				( SRMask _bits, bool _set )			{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
-		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, int32_t(_bit), _value); }
 
+	private:
 		void	sr_s_update				()
 		{
 			if( sr_test_noCache(CCR_S) )
@@ -452,11 +456,13 @@ namespace dsp56k
 			setSR(TReg24(_sr));
 		}
 
+	public:
 		const TReg24& getSR() const
 		{
 			updateDirtyCCR();
 			return reg.sr;
 		}
+	private:
 
 		void setCCRDirty(bool ab, const TReg56& _alu, uint32_t _dirtyBitsMask);
 		void updateDirtyCCR() const;
@@ -466,8 +472,10 @@ namespace dsp56k
 
 		// register access helpers
 
+	public:
 		TReg24	x0				() const							{ return loword(reg.x); }
 		TReg24	x1				() const							{ return hiword(reg.x); }
+	private:
 		void	x0				(const TReg24& _val)				{ loword(reg.x,_val); }
 		void	x0				(const TWord _val)					{ loword(reg.x,TReg24(_val)); }
 		void	x1				(const TReg24& _val)				{ hiword(reg.x,_val); }
@@ -477,8 +485,10 @@ namespace dsp56k
 		void	x0				(TReg8 _val)						{ x0(TReg24(_val.toWord()<<16)); }
 		void	x1				(TReg8 _val)						{ x1(TReg24(_val.toWord()<<16)); }
 
+	public:
 		TReg24	y0				() const							{ return loword(reg.y); }
 		TReg24	y1				() const							{ return hiword(reg.y); }
+	private:
 		void	y0				(const TReg24& _val)				{ loword(reg.y,_val); }
 		void	y0				(const TWord& _val)					{ loword(reg.y,TReg24(_val)); }
 		void	y1				(const TReg24& _val)				{ hiword(reg.y,_val); }
@@ -662,9 +672,9 @@ namespace dsp56k
 		// -- memory
 
 		bool	memWrite			( EMemArea _area, TWord _offset, TWord _value );
-		bool	memWritePeriph		( EMemArea _area, TWord _offset, TWord _value  );
-		bool	memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value  );
-		bool	memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value  );
+		bool	memWritePeriph		( EMemArea _area, TWord _offset, TWord _value );
+		bool	memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value );
+		bool	memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value );
 
 		void	notifyProgramMemWrite(TWord _offset);
 		
