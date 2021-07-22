@@ -102,6 +102,11 @@ namespace dsp56k
 		runTest(&JitUnittests::clr_build, &JitUnittests::clr_verify);
 	}
 
+	JitUnittests::~JitUnittests()
+	{
+		m_rt.reset(asmjit::Globals::kResetHard);
+	}
+
 	void JitUnittests::runTest(void( JitUnittests::* _build)(JitBlock&, JitOps&), void( JitUnittests::* _verify)())
 	{
 		runTest([&](JitBlock& _b, JitOps& _o)

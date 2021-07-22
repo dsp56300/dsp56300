@@ -15,6 +15,7 @@ namespace dsp56k
 	{
 	public:
 		JitUnittests();
+		~JitUnittests();
 
 	private:
 		void runTest(void(JitUnittests::*_build)(JitBlock&, JitOps&), void( JitUnittests::*_verify)());
