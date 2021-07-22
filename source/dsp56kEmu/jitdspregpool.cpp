@@ -294,10 +294,15 @@ namespace dsp56k
 		unlock(_aluWriteReg);
 
 		if(!isInUse(_aluReadReg))
-			return;
+		{
+			get(_aluReadReg, true, true);
+		}
+		else
+		{
+			move(_aluReadReg, _aluWriteReg);
+			setWritten(_aluReadReg);
+		}
 
-		move(_aluReadReg, _aluWriteReg);
-		setWritten(_aluReadReg);
 		clearWritten(_aluWriteReg);
 		release(_aluWriteReg);
 	}
