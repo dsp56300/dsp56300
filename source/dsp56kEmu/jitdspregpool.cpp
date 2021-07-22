@@ -114,20 +114,20 @@ namespace dsp56k
 		{
 			// yes, remove it and restore the content
 			LOGRP("DSP reg " <<g_dspRegNames[_reg] << " previously stored in xmm reg, restoring value");
-//			if(_read)
+			if(_read)
 				m_block.asm_().movq(res, xmReg);
 		}
-		else// if(_read)
+		else if(_read)
 		{
 			// no, load from memory
 			LOGRP("Loading DSP reg " <<g_dspRegNames[_reg] << " from memory, now " << m_gpList.size() << " GPs");
 			load(res, _reg);
 		}
-/*		else
+		else
 		{
 			LOGRP("DSP reg " << g_dspRegNames[_reg] << " allocated, no read so no load, now " << m_gpList.size() << " GPs");
 		}
-*/
+
 		return res;
 	}
 
