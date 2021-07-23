@@ -590,12 +590,14 @@ namespace dsp56k
 		case 5:
 			{
 				const auto alu = _lll & 3;
-				const RegGP r(m_block);
+
+				AluRef r(m_block, alu, false, true);
+
 				m_asm.mov(r, x.r64());
 				m_asm.shl(r, asmjit::Imm(24));
 				m_asm.or_(r, y.r64());
+
 				signextend48to56(r);
-				m_dspRegs.setALU(alu, r);
 			}
 			break;
 		case 2:
@@ -603,11 +605,10 @@ namespace dsp56k
 			{
 				const auto xy = _lll - 2;
 
-				const RegGP r(m_block);
+				const auto r = m_dspRegs.getXY(xy, JitDspRegs::Write);
 				m_asm.mov(r, x);
 				m_asm.shl(r, asmjit::Imm(24));
 				m_asm.or_(r, y.r64());
-				m_dspRegs.setXY(xy, r);
 			}
 			break;
 		case 6:

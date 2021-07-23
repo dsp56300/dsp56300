@@ -140,12 +140,11 @@ namespace dsp56k
 
 	void JitDspRegs::getALU2signed(const JitReg& _dst, uint32_t _aluIndex)
 	{
-		const RegGP temp(m_block);
+		const auto temp = _dst.r64();
 		getALU(temp, _aluIndex);
 		m_asm.sal(temp, Imm(8));
 		m_asm.sar(temp, Imm(56));
 		m_asm.and_(temp, Imm(0xffffff));
-		m_asm.mov(_dst.r32(), temp.get().r32());
 	}
 
 	void JitDspRegs::setXY(const uint32_t _xy, const JitReg& _src)
