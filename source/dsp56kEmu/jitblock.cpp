@@ -41,7 +41,7 @@ namespace dsp56k
 			// This code is only used to set the value of the next PC to the default value. Might be overwritten by a branch.
 			// If this code does not have a branch (only known after generation has finished), this code block is removed
 
-			const auto temp = regArg0;
+			const RegGP temp(*this);
 			cursorBeforePCUpdate = m_asm.cursor();
 			m_mem.mov(temp, m_pcLast);
 			m_mem.mov(nextPC(), temp);
