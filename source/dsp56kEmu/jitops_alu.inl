@@ -35,11 +35,13 @@ namespace dsp56k
 	{
 		const auto ab = getFieldValue<Abs, Field_d>(op);
 
-		AluReg ra(m_block, ab);							// Load ALU
+		AluRef ra(m_block, ab);							// Load ALU
 
-		signextend56to64(ra);									// extend to 64 bits
+		signextend56to64(ra);								// extend to 64 bits
 
 		alu_abs(ra);
+
+		m_dspRegs.mask56(ra);
 
 	//	sr_v_update(d);
 	//	sr_l_update_by_v();
@@ -80,7 +82,7 @@ namespace dsp56k
 
 	inline void JitOps::alu_sub(const TWord _ab, RegGP& _v)
 	{
-		AluReg alu(m_block, _ab);
+		AluRef alu(m_block, _ab);
 
 		m_asm.sub(alu, _v.get());
 
@@ -131,7 +133,7 @@ namespace dsp56k
 	{
 		m_asm.shl(_v, asmjit::Imm(24));
 
-		AluReg alu(m_block, ab);
+		AluRef alu(m_block, ab);
 
 		{
 			const RegGP r(m_block);
@@ -190,7 +192,7 @@ namespace dsp56k
 
 	inline void JitOps::alu_asr(const TWord _abSrc, const TWord _abDst, const ShiftReg& _v)
 	{
-		AluReg alu(m_block, _abDst, false, _abDst != _abSrc);
+		AluRef alu(m_block, _abDst, _abDst == _abSrc, true);
 		if(_abDst != _abSrc)
 			m_asm.mov(alu.get(), m_dspRegs.getALU(_abSrc, JitDspRegs::Read));
 
@@ -306,7 +308,7 @@ namespace dsp56k
 		m_asm.shr(aluD, asmjit::Imm(8));
 
 		{
-			AluReg aluS(m_block, ab ? 0 : 1, true);
+			AluRef aluS(m_block, ab ? 0 : 1, true, false);
 			m_asm.add(aluD, aluS.get());
 		}
 
@@ -608,7 +610,7 @@ namespace dsp56k
 
 	inline void JitOps::alu_rnd(TWord ab)
 	{
-		AluReg d(m_block, ab);
+		AluRef d(m_block, ab);
 		alu_rnd(ab, d.get());
 	}
 
@@ -867,7 +869,7 @@ namespace dsp56k
 	inline void JitOps::op_Dec(TWord op)
 	{
 		const auto ab = getFieldValue<Dec,Field_d>(op);
-		AluReg r(m_block, ab);
+		AluRef r(m_block, ab);
 
 		m_asm.shl(r, asmjit::Imm(8));	// shift left by 8 bits to enable using the host carry bit
 		m_asm.sub(r, asmjit::Imm(0x100));
@@ -1095,7 +1097,7 @@ namespace dsp56k
 		if( negate )
 			m_asm.neg(s1);
 
-		AluReg d(m_block, ab);
+		AluRef d(m_block, ab);
 
 		signextend56to64(d);
 		m_asm.sar(d, asmjit::Imm(24));
@@ -1167,7 +1169,7 @@ namespace dsp56k
 		
 		if(abSrc != abDst)
 		{
-			AluReg d(m_block, abDst);
+			AluRef d(m_block, abDst, false, true);
 			m_asm.mov(d, s.get());
 			aluD = d.get();
 		}
@@ -1206,7 +1208,7 @@ namespace dsp56k
 	inline void JitOps::op_Inc(TWord op)
 	{
 		const auto ab = getFieldValue<Dec,Field_d>(op);
-		AluReg r(m_block, ab);
+		AluRef r(m_block, ab);
 
 		m_asm.shl(r, asmjit::Imm(8));		// shift left by 8 bits to enable using the host carry bit
 		m_asm.add(r, asmjit::Imm(0x100));
@@ -1307,7 +1309,7 @@ namespace dsp56k
 	{
 		const auto D = getFieldValue<Neg, Field_d>(op);
 
-		AluReg r(m_block, D);
+		AluRef r(m_block, D);
 
 		signextend56to64(r);
 		m_asm.neg(r);
