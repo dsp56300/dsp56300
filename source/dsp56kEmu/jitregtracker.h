@@ -8,14 +8,6 @@
 
 #include "asmjit/x86/x86operand.h"
 
-namespace asmjit
-{
-	namespace x86
-	{
-		class Assembler;
-	}
-}
-
 namespace dsp56k
 {
 	class JitBlock;

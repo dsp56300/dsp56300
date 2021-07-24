@@ -3,6 +3,7 @@
 #include "jitblock.h"
 #include "jitops.h"
 #include "jithelper.h"
+#include "asmjit/x86/x86builder.h"
 
 namespace dsp56k
 {
@@ -127,7 +128,7 @@ namespace dsp56k
 //		code.setLogger(&logger);
 		code.setErrorHandler(&errorHandler);
 
-		asmjit::x86::Assembler m_asm(&code);
+		JitAssembler m_asm(&code);
 
 		JitRuntimeData rtData;
 
@@ -142,6 +143,8 @@ namespace dsp56k
 		}
 
 		m_asm.ret();
+
+		m_asm.finalize();
 
 		typedef void (*Func)();
 		Func func;

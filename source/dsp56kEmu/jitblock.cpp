@@ -3,12 +3,13 @@
 #include "jitblock.h"
 #include "jitops.h"
 #include "memory.h"
+#include "asmjit/x86/x86builder.h"
 
 namespace dsp56k
 {
 	constexpr uint32_t g_maxInstructionsPerBlock = 0;	// set to 1 for debugging/tracing
 
-	JitBlock::JitBlock(asmjit::x86::Assembler& _a, DSP& _dsp, JitRuntimeData& _runtimeData)
+	JitBlock::JitBlock(JitAssembler& _a, DSP& _dsp, JitRuntimeData& _runtimeData)
 	: m_runtimeData(_runtimeData)
 	, m_asm(_a)
 	, m_dsp(_dsp)

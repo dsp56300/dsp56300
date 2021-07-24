@@ -4,16 +4,9 @@
 
 #include "jitregtracker.h"
 #include "jitregtypes.h"
+#include "jittypes.h"
 #include "registers.h"
 #include "types.h"
-
-namespace asmjit
-{
-	namespace x86
-	{
-		class Assembler;
-	}
-}
 
 namespace dsp56k
 {
@@ -113,7 +106,7 @@ namespace dsp56k
 		void store24(TReg24& _dst, const asmjit::x86::Gp& _src) const;
 
 		JitBlock& m_block;
-		asmjit::x86::Assembler& m_asm;
+		JitAssembler& m_asm;
 		DSP& m_dsp;
 
 		CCRMask m_ccrDirtyFlags = static_cast<CCRMask>(0);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "asmjit/x86/x86assembler.h"
+#include "asmjit/x86/x86operand.h"
 
 namespace dsp56k
 {

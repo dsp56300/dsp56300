@@ -3,6 +3,7 @@
 #include "jitblock.h"
 #include "jitdspregs.h"
 #include "jitregtracker.h"
+#include "jittypes.h"
 #include "opcodes.h"
 #include "opcodetypes.h"
 #include "registers.h"
@@ -531,7 +532,7 @@ namespace dsp56k
 		JitBlock& m_block;
 		const Opcodes& m_opcodes;
 		JitDspRegs& m_dspRegs;
-		asmjit::x86::Assembler& m_asm;
+		JitAssembler& m_asm;
 
 		CCRMask& m_ccrDirty;
 		bool m_ccr_update_clear = true;

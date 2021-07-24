@@ -4,6 +4,7 @@
 #include "jitblock.h"
 
 #include "dsp.h"
+#include "asmjit/x86/x86builder.h"
 
 using namespace asmjit;
 using namespace x86;

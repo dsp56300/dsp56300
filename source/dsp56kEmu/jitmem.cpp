@@ -5,6 +5,8 @@
 #include "jithelper.h"
 #include "jitregtracker.h"
 
+#include "asmjit/x86/x86builder.h"
+
 //#define DEBUG_MEMORY_WRITES
 
 namespace dsp56k

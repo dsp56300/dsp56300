@@ -2,17 +2,10 @@
 
 #include <functional>
 
+#include "jittypes.h"
+
 #include "asmjit/core/logger.h"
 #include "asmjit/core/errorhandler.h"
-#include "asmjit/x86/x86assembler.h"
-
-namespace asmjit
-{
-	namespace x86
-	{
-		class Assembler;
-	}
-}
 
 namespace dsp56k
 {
@@ -31,7 +24,7 @@ namespace dsp56k
 	class SkipLabel
 	{
 	public:
-		explicit SkipLabel(asmjit::x86::Assembler& _a);
+		explicit SkipLabel(JitAssembler& _a);
 		~SkipLabel();
 
 		const asmjit::Label& get() const
@@ -46,7 +39,7 @@ namespace dsp56k
 
 	private:
 		asmjit::Label m_label;
-		asmjit::x86::Assembler& m_asm;
+		JitAssembler& m_asm;
 	};
 
 	class If

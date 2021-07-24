@@ -6,7 +6,7 @@
 #include "jitops.h"
 #include "logging.h"
 
-#include "asmjit/x86/x86assembler.h"
+#include "asmjit/x86/x86builder.h"
 
 namespace dsp56k
 {
@@ -32,7 +32,7 @@ namespace dsp56k
 		}
 	}
 
-	SkipLabel::SkipLabel(asmjit::x86::Assembler& _a) : m_label(_a.newLabel()), m_asm(_a)
+	SkipLabel::SkipLabel(JitAssembler& _a) : m_label(_a.newLabel()), m_asm(_a)
 	{
 	}
 
