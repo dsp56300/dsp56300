@@ -133,7 +133,7 @@ namespace dsp56k
 			}
 			else if(m_processingMode == DefaultPreventInterrupt)
 			{
-				execDefaultPreventInterrupt();
+				m_processingMode = Default;
 			}
 
 			m_jit.exec(getPC().var);
@@ -154,17 +154,22 @@ namespace dsp56k
 
 	void DSP::execPeriph()
 	{
-		if ((peripheralCounter--)) return;
-		peripheralCounter = 20;
-		perif[0]->exec();
+		if (peripheralCounter--)
+			return;
 
-		if(perif[1] != perif[0])
-			perif[1]->exec();
+		peripheralCounter = 20;
+
+		perif[0]->exec();
+	}
+
+	void DSP::tryExecInterrupts()
+	{
+		if (!m_pendingInterrupts.empty())
+			execInterrupts();
 	}
 
 	void DSP::execInterrupts()
 	{
-		if(!m_pendingInterrupts.empty())
 		{
 			// TODO: priority sorting, masking
 			const auto minPrio = mr().var & 0x3;
@@ -1236,7 +1241,7 @@ namespace dsp56k
 		m_pendingInterrupts.push_back(_interruptVectorAddress);
 
 		if(m_interruptFunc == &DSP::execNoPendingInterrupts)
-			m_interruptFunc = &DSP::execInterrupts;
+			m_interruptFunc = &DSP::tryExecInterrupts;
 	}
 
 	void DSP::clearOpcodeCache()
