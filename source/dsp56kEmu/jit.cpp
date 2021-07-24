@@ -85,7 +85,7 @@ namespace dsp56k
 	void Jit::exec(const TWord pc, JitCacheEntry& e)
 	{
 		e.func(this, pc, e.block);
-		m_dsp.m_instructions += e.block->getExecutedInstructionCount();
+		m_dsp.m_instructions += m_runtimeData.m_executedInstructionCount;
 	}
 
 	void Jit::notifyProgramMemWrite(TWord _offset)
