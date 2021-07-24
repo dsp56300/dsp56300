@@ -192,15 +192,6 @@ namespace dsp56k
 		ShiftReg(JitBlock& _block) : PushGP(_block, asmjit::x86::rcx, true) {}
 	};
 
-	class PushShadowSpace
-	{
-	public:
-		PushShadowSpace(JitBlock& _block);
-		~PushShadowSpace();
-	private:
-		JitBlock& m_block;
-	};
-
 	class PushXMM
 	{
 	public:

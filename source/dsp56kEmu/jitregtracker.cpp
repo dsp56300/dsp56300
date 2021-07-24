@@ -138,27 +138,6 @@ namespace dsp56k
 			m_block.stack().pop(m_reg);
 	}
 
-	PushShadowSpace::PushShadowSpace(JitBlock& _block) : m_block(_block)
-	{
-#ifdef _MSC_VER
-		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
-		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
-		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
-		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
-#endif
-	}
-
-	PushShadowSpace::~PushShadowSpace()
-	{
-#ifdef _MSC_VER
-		const RegGP temp(m_block);
-		m_block.asm_().pop(temp);
-		m_block.asm_().pop(temp);
-		m_block.asm_().pop(temp);
-		m_block.asm_().pop(temp);
-#endif
-	}
-
 	constexpr bool g_push128Bits = false;
 	
 	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(m_block.dspRegPool().isInUse(asmjit::x86::xmm(_xmmIndex)))
