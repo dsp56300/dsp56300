@@ -10,6 +10,8 @@
 #include "types.h"
 #include "utils.h"
 
+#include "asmjit/x86/x86builder.h"
+
 namespace dsp56k
 {
 	class Jit;
