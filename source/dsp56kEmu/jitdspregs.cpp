@@ -378,18 +378,14 @@ namespace dsp56k
 
 	void JitDspRegs::decSP() const
 	{
-		const RegGP temp(m_block);
-
-		m_asm.dec(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sp.var)));
-		m_asm.dec(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sc.var)));
+		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sp.var)));
+		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sc.var)));
 	}
 
 	void JitDspRegs::incSP() const
 	{
-		const RegGP temp(m_block);
-
-		m_asm.inc(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sp.var)));
-		m_asm.inc(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sc.var)));
+		m_asm.inc(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sp.var)));
+		m_asm.inc(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sc.var)));
 	}
 
 	void JitDspRegs::mask56(const JitReg& _alu) const

@@ -57,9 +57,9 @@ namespace dsp56k
 		_v.release();
 
 		{
-			const RegGP aluMax(m_block);
+			const auto aluMax = regReturnVal;
 			m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
-			m_asm.cmp(alu, aluMax.get());
+			m_asm.cmp(alu, aluMax);
 		}
 
 		ccr_update_ifAbove(CCRB_C);
@@ -89,9 +89,9 @@ namespace dsp56k
 		_v.release();
 
 		{
-			const RegGP aluMax(m_block);
+			const auto aluMax = regReturnVal;
 			m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
-			m_asm.cmp(alu, aluMax.get());
+			m_asm.cmp(alu, aluMax);
 		}
 
 		ccr_update_ifAbove(CCRB_C);
@@ -112,7 +112,7 @@ namespace dsp56k
 		alu_sub(_ab, r);
 	}
 
-	inline void JitOps::unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const
+	inline void JitOps::unsignedImmediateToAlu(const JitReg64& _r, const asmjit::Imm& _i) const
 	{
 		m_asm.mov(_r, _i);
 		m_asm.shl(_r, asmjit::Imm(24));
@@ -120,12 +120,10 @@ namespace dsp56k
 
 	inline void JitOps::alu_abs(const JitReg& _r)
 	{
-		const RegGP rb(m_block);
+		const auto rb = regReturnVal;
 
 		m_asm.mov(rb, _r);		// Copy to backup location
-
 		m_asm.neg(_r);			// negate
-
 		m_asm.cmovl(_r, rb);	// if now negative, restore its saved value
 	}
 
@@ -143,13 +141,9 @@ namespace dsp56k
 		}
 
 		{
-			const RegGP mask(m_block);
-
+			const auto mask = regReturnVal;
 			m_asm.mov(mask, asmjit::Imm(0xff000000ffffff));
-
-			const RegGP r(m_block);
-
-			m_asm.or_(_v, mask.get());
+			m_asm.or_(_v, mask);
 			m_asm.and_(alu, _v.get());
 		}
 
@@ -313,9 +307,9 @@ namespace dsp56k
 		}
 
 		{
-			const RegGP aluMax(m_block);
+			const auto aluMax = regReturnVal;
 			m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
-			m_asm.cmp(aluD, aluMax.get());
+			m_asm.cmp(aluD, aluMax);
 		}
 
 		ccr_update_ifGreater(CCRB_C);
@@ -660,7 +654,7 @@ namespace dsp56k
 				rounder.release();
 
 				{
-					const RegGP temp(m_block);
+					const auto temp = regReturnVal;
 					m_asm.mov(temp, d);
 					m_asm.and_(temp, mask.get());
 					m_asm.cmovz(d, aluIfAndWithMaskIsZero.get());
@@ -923,7 +917,7 @@ namespace dsp56k
 			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
 			m_asm.adc(d.get().r8(), asmjit::Imm(0));
 
-			const RegGP dLsWord(m_block);
+			const auto dLsWord = regReturnVal;
 			m_asm.mov(dLsWord, d.get());
 			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
 
@@ -941,7 +935,7 @@ namespace dsp56k
 
 			m_asm.bind(end);
 			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
-			m_asm.or_(d, dLsWord.get());
+			m_asm.or_(d, dLsWord);
 		}
 
 		// C is set if bit 55 of the result is cleared
@@ -1004,7 +998,6 @@ namespace dsp56k
 		*/
 		m_asm.bind(regular);
 		RegGP addOrSub(m_block);
-		RegGP dLsWord(m_block);
 		RegGP lc(m_block);
 		RegGP carry(m_block);
 
@@ -1017,6 +1010,7 @@ namespace dsp56k
 
 			m_asm.add(d.get().r8(), carry.get().r8());
 
+			const auto dLsWord = regReturnVal;
 			m_asm.mov(dLsWord, d.get());
 			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
 
@@ -1034,7 +1028,7 @@ namespace dsp56k
 
 			m_asm.bind(end);
 			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
-			m_asm.or_(d, dLsWord.get());
+			m_asm.or_(d, dLsWord);
 
 			// C is set if bit 55 of the result is cleared
 			m_asm.bt(d, asmjit::Imm(55));

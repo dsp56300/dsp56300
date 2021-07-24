@@ -708,8 +708,8 @@ namespace dsp56k
 		}
 		else
 		{
-			const RegGP temp(m_block);
-			m_asm.add(m_block.mem().ptr(temp, &m_block.getExecutedInstructionCount()), m_dspRegs.getLC(JitDspRegs::Read));
+			const auto lc = m_dspRegs.getLC(JitDspRegs::Read);
+			m_asm.add(m_block.mem().ptr(regReturnVal, &m_block.getExecutedInstructionCount()), lc);
 		}
 
 		const auto opSize = m_opSize;

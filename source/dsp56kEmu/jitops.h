@@ -440,7 +440,7 @@ namespace dsp56k
 		void getOpWordB(const JitReg& _dst);
 
 		// ALU
-		void unsignedImmediateToAlu(const RegGP& _r, const asmjit::Imm& _i) const;
+		void unsignedImmediateToAlu(const JitReg64& _r, const asmjit::Imm& _i) const;
 
 		void alu_abs(const JitReg& _r);
 		
