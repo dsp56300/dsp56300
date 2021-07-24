@@ -48,7 +48,7 @@ namespace dsp56k
 
 	inline void JitOps::alu_add(const TWord _ab, RegGP& _v)
 	{
-		AluReg alu(m_block, _ab);
+		AluRef alu(m_block, _ab);
 
 		m_asm.add(alu, _v.get());
 
