@@ -34,12 +34,12 @@ namespace dsp56k
 		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspM0 + _agu));
 	}
 
-	void JitDspRegs::load24(const Gp& _dst, const TReg24& _src) const
+	void JitDspRegs::load24(const JitReg& _dst, const TReg24& _src) const
 	{
 		m_block.mem().mov(_dst, _src);
 	}
 
-	void JitDspRegs::store24(TReg24& _dst, const Gp& _src) const
+	void JitDspRegs::store24(TReg24& _dst, const JitReg& _src) const
 	{
 		m_block.mem().mov(_dst, _src);
 	}

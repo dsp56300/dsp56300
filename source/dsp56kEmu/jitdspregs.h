@@ -102,8 +102,8 @@ namespace dsp56k
 	private:
 		JitDspRegPool& pool() const;
 
-		void load24(const asmjit::x86::Gp& _dst, const TReg24& _src) const;
-		void store24(TReg24& _dst, const asmjit::x86::Gp& _src) const;
+		void load24(const JitReg& _dst, const TReg24& _src) const;
+		void store24(TReg24& _dst, const JitReg& _src) const;
 
 		JitBlock& m_block;
 		JitAssembler& m_asm;

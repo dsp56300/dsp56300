@@ -43,35 +43,35 @@ namespace dsp56k
 		m_block.asm_().movq(_dst, ptr(reg, _src));
 	}
 
-	void Jitmem::mov(const asmjit::x86::Gp& _dst, const TReg24& _src)
+	void Jitmem::mov(const JitReg& _dst, const TReg24& _src)
 	{
 		m_block.asm_().mov(_dst.r32(), ptr(_dst.r64(), _src));
 	}
 
-	void Jitmem::mov(const asmjit::x86::Gp& _dst, const TReg48& _src)
+	void Jitmem::mov(const JitReg& _dst, const TReg48& _src)
 	{
 		m_block.asm_().mov(_dst.r64(), ptr(_dst.r64(), _src));
 	}
 
-	void Jitmem::mov(const asmjit::x86::Gp& _dst, const TReg56& _src)
+	void Jitmem::mov(const JitReg& _dst, const TReg56& _src)
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(_dst.r64(), ptr(reg, _src));
 	}
 
-	void Jitmem::mov(const TReg24& _dst, const asmjit::x86::Gp& _src)
+	void Jitmem::mov(const TReg24& _dst, const JitReg& _src)
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, _dst), _src.r32());
 	}
 
-	void Jitmem::mov(const TReg48& _dst, const asmjit::x86::Gp& _src)
+	void Jitmem::mov(const TReg48& _dst, const JitReg& _src)
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, _dst), _src.r64());
 	}
 
-	void Jitmem::mov(const TReg56& _dst, const asmjit::x86::Gp& _src)
+	void Jitmem::mov(const TReg56& _dst, const JitReg& _src)
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, _dst), _src.r64());
@@ -83,35 +83,35 @@ namespace dsp56k
 		m_block.asm_().movq(_dst, ptr(reg, _src));
 	}
 
-	void Jitmem::mov(uint64_t& _dst, const asmjit::x86::Gp& _src) const
+	void Jitmem::mov(uint64_t& _dst, const JitReg& _src) const
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, &_dst), _src);
 	}
 
-	void Jitmem::mov(uint32_t& _dst, const asmjit::x86::Gp& _src) const
+	void Jitmem::mov(uint32_t& _dst, const JitReg& _src) const
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, &_dst), _src.r32());
 	}
 
-	void Jitmem::mov(uint8_t& _dst, const asmjit::x86::Gp& _src) const
+	void Jitmem::mov(uint8_t& _dst, const JitReg& _src) const
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, &_dst), _src);
 	}
 
-	void Jitmem::mov(const asmjit::x86::Gp& _dst, const uint64_t& _src) const
+	void Jitmem::mov(const JitReg& _dst, const uint64_t& _src) const
 	{
 		m_block.asm_().mov(_dst, ptr(_dst.r64(), &_src));
 	}
 
-	void Jitmem::mov(const asmjit::x86::Gp& _dst, const uint32_t& _src) const
+	void Jitmem::mov(const JitReg& _dst, const uint32_t& _src) const
 	{
 		m_block.asm_().mov(_dst.r32(), ptr(_dst.r64(), &_src));
 	}
 
-	void Jitmem::mov(const asmjit::x86::Gp& _dst, const uint8_t& _src) const
+	void Jitmem::mov(const JitReg& _dst, const uint8_t& _src) const
 	{
 		m_block.asm_().movzx(_dst, ptr(_dst.r64(), &_src));
 	}

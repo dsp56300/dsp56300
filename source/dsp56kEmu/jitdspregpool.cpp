@@ -225,8 +225,8 @@ namespace dsp56k
 	
 	bool JitDspRegPool::move(const JitReg& _dst, const DspReg _src)
 	{
-		asmjit::x86::Gp gpSrc;
-		asmjit::x86::Xmm xmSrc;
+		JitReg gpSrc;
+		JitReg128 xmSrc;
 
 		if(m_gpList.get(gpSrc, _src))
 			m_block.asm_().mov(_dst, gpSrc);
@@ -244,15 +244,15 @@ namespace dsp56k
 
 	bool JitDspRegPool::move(DspReg _dst, DspReg _src)
 	{
-		asmjit::x86::Gp gpSrc;
-		asmjit::x86::Xmm xmSrc;
+		JitReg gpSrc;
+		JitReg128 xmSrc;
 
 		if(m_gpList.get(gpSrc, _src))
 		{
 			// src is GP
 
-			asmjit::x86::Gp gpDst;
-			asmjit::x86::Xmm xmDst;
+			JitReg gpDst;
+			JitReg128 xmDst;
 
 			if(m_gpList.get(gpDst, _dst))
 				m_block.asm_().mov(gpDst, gpSrc);
@@ -267,8 +267,8 @@ namespace dsp56k
 		{
 			// src is XMM
 
-			asmjit::x86::Gp gpDst;
-			asmjit::x86::Xmm xmDst;
+			JitReg gpDst;
+			JitReg128 xmDst;
 
 			if(m_gpList.get(gpDst, _dst))
 				m_block.asm_().movq(gpDst, xmSrc);
