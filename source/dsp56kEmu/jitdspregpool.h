@@ -4,7 +4,8 @@
 #include <vector>
 
 #include "types.h"
-#include "jitregtypes.h"
+
+#include "jithelper.h"
 
 namespace dsp56k
 {
