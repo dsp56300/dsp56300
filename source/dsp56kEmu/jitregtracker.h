@@ -15,14 +15,14 @@ namespace dsp56k
 	class JitRegpool
 	{
 	public:
-		JitRegpool(std::initializer_list<asmjit::x86::Reg> _availableRegs);
+		JitRegpool(std::initializer_list<JitReg> _availableRegs);
 
-		void put(const asmjit::x86::Reg& _reg);
-		asmjit::x86::Reg get();
+		void put(const JitReg& _reg);
+		JitReg get();
 		bool empty() const;
 
 	private:
-		std::stack<asmjit::x86::Reg> m_availableRegs;	// TODO: do we want a FIFO instead to have more register spread? Is it any better performance-wise?
+		std::stack<JitReg> m_availableRegs;	// TODO: do we want a FIFO instead to have more register spread? Is it any better performance-wise?
 	};
 
 	class JitScopedReg
@@ -40,7 +40,7 @@ namespace dsp56k
 		void release();
 
 	protected:
-		asmjit::x86::Reg m_reg;
+		JitReg m_reg;
 	private:
 		JitBlock& m_block;
 		JitRegpool& m_pool;

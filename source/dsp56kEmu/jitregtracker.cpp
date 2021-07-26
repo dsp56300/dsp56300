@@ -234,18 +234,18 @@ namespace dsp56k
 	{
 	}
 
-	JitRegpool::JitRegpool(std::initializer_list<asmjit::x86::Reg> _availableRegs)
+	JitRegpool::JitRegpool(std::initializer_list<JitReg> _availableRegs)
 	{
 		for (const auto& r : _availableRegs)
 			m_availableRegs.push(r);
 	}
 
-	void JitRegpool::put(const asmjit::x86::Reg& _reg)
+	void JitRegpool::put(const JitReg& _reg)
 	{
 		m_availableRegs.push(_reg);
 	}
 
-	asmjit::x86::Reg JitRegpool::get()
+	JitReg JitRegpool::get()
 	{
 		assert(!m_availableRegs.empty() && "no more temporary registers left");
 		const auto ret = m_availableRegs.top();

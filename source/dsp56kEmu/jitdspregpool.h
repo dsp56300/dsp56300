@@ -213,12 +213,12 @@ namespace dsp56k
 		};
 
 		template<typename T, unsigned int B>
-		asmjit::x86::Mem makeDspPtr(const RegType<T,B>& _reg)
+		JitMemPtr makeDspPtr(const RegType<T,B>& _reg)
 		{
 			return makeDspPtr(&_reg, sizeof(_reg.var));
 		}
 
-		asmjit::x86::Mem makeDspPtr(const void* _ptr, size_t _size);
+		JitMemPtr makeDspPtr(const void* _ptr, size_t _size);
 
 		template<typename T, unsigned int B>
 		void mov(const RegType<T,B>& _reg, const JitRegGP& _src)
@@ -238,9 +238,9 @@ namespace dsp56k
 				movq(makeDspPtr(_reg), _src);
 		}
 
-		void mov(const asmjit::x86::Mem& _dst, const JitRegGP& _src) const;
-		void movd(const asmjit::x86::Mem& _dst, const JitReg128& _src) const;
-		void movq(const asmjit::x86::Mem& _dst, const JitReg128& _src) const;
+		void mov(const JitMemPtr& _dst, const JitRegGP& _src) const;
+		void movd(const JitMemPtr& _dst, const JitReg128& _src) const;
+		void movq(const JitMemPtr& _dst, const JitReg128& _src) const;
 
 
 		JitBlock& m_block;
@@ -255,6 +255,6 @@ namespace dsp56k
 
 		bool m_isParallelOp = false;
 		bool m_repMode = false;
-		asmjit::x86::Mem m_dspPtr;
+		JitMemPtr m_dspPtr;
 	};
 }

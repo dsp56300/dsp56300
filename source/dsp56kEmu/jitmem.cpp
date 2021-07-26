@@ -122,27 +122,24 @@ namespace dsp56k
 		const auto a = regReturnVal;
 
 		m_block.asm_().mov(a, asmjit::Imm(_src));
-		m_block.asm_().mov(v, asmjit::x86::ptr(a, 0, _size));
+		m_block.asm_().mov(v, makePtr(a, 0, _size));
 		m_block.asm_().mov(a, asmjit::Imm(_dst));
-		m_block.asm_().mov(asmjit::x86::ptr(a, 0, _size), v.get());
+		m_block.asm_().mov(makePtr(a, 0, _size), v.get());
 	}
 
 	void Jitmem::mov(void* _dst, const JitRegGP& _src, uint32_t _size)
 	{
 		const auto a = regReturnVal;
 		m_block.asm_().mov(a, asmjit::Imm(_dst));
-		m_block.asm_().mov(asmjit::x86::ptr(a, 0, _size), _src);
+		m_block.asm_().mov(makePtr(a, 0, _size), _src);
 	}
 
-	asmjit::x86::Mem Jitmem::makePtr(const void* _base, const void* _member, size_t _size)
+	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const uint32_t _offset, const uint32_t _size)
 	{
-		m_block.asm_().mov(regReturnVal, asmjit::Imm(_base));
-		auto res = asmjit::x86::ptr(regReturnVal, 0, static_cast<int32_t>(_size));
-		setPtrOffset(res, _base, _member);
-		return res;
+		return asmjit::x86::ptr(_base, _offset, _size);
 	}
 
-	void Jitmem::setPtrOffset(asmjit::x86::Mem& _mem, const void* _base, const void* _member)
+	void Jitmem::setPtrOffset(JitMemPtr& _mem, const void* _base, const void* _member)
 	{
 		_mem.setOffset(reinterpret_cast<uint64_t>(_member) - reinterpret_cast<uint64_t>(_base));
 	}
@@ -208,7 +205,7 @@ namespace dsp56k
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
-		m_block.asm_().mov(_dst.r32(), asmjit::x86::ptr(t));
+		m_block.asm_().mov(_dst.r32(), makePtr(t, 0, sizeof(uint32_t)));
 	}
 
 	void Jitmem::writeDspMemory(EMemArea _area, TWord _offset, const JitRegGP& _src) const
@@ -230,7 +227,7 @@ namespace dsp56k
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
-		m_block.asm_().mov(asmjit::x86::ptr(t), _src.r32());
+		m_block.asm_().mov(makePtr(t, 0, sizeof(uint32_t)), _src.r32());
 #endif
 	}
 
@@ -330,10 +327,10 @@ namespace dsp56k
 	}
 
 	template<typename T>
-	asmjit::x86::Mem Jitmem::ptr(const JitReg64& _temp, const T* _t) const
+	JitMemPtr Jitmem::ptr(const JitReg64& _temp, const T* _t) const
 	{
 		ptrToReg<T>(_temp, _t);
-		return asmjit::x86::ptr(_temp, 0, sizeof(T));
+		return makePtr(_temp, 0, sizeof(T));
 	}
 
 	template <typename T> void Jitmem::ptrToReg(const JitReg64& _r, const T* _t) const
@@ -346,9 +343,9 @@ namespace dsp56k
 			static_assert(sizeof(T*) == sizeof(uint64_t) || sizeof(T*) == sizeof(uint32_t), "unknown pointer size");
 	}
 
-	template asmjit::x86::Mem Jitmem::ptr<uint8_t>(const JitReg64&, const uint8_t*) const;
-	template asmjit::x86::Mem Jitmem::ptr<uint32_t>(const JitReg64&, const uint32_t*) const;
-	template asmjit::x86::Mem Jitmem::ptr<uint64_t>(const JitReg64&, const uint64_t*) const;
+	template JitMemPtr Jitmem::ptr<uint8_t>(const JitReg64&, const uint8_t*) const;
+	template JitMemPtr Jitmem::ptr<uint32_t>(const JitReg64&, const uint32_t*) const;
+	template JitMemPtr Jitmem::ptr<uint64_t>(const JitReg64&, const uint64_t*) const;
 
 	template void Jitmem::ptrToReg<uint8_t>(const JitReg64&, const uint8_t*) const;
 	template void Jitmem::ptrToReg<uint32_t>(const JitReg64&, const uint32_t*) const;

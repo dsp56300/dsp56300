@@ -14,6 +14,8 @@ namespace dsp56k
 {
 	using JitAssembler = asmjit::x86::Builder;
 
+	using JitMemPtr = asmjit::x86::Mem;
+
 	using JitReg = asmjit::x86::Reg;
 	using JitRegGP = asmjit::x86::Gp;
 	using JitReg32 = asmjit::x86::Gpd;

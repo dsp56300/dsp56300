@@ -641,7 +641,7 @@ namespace dsp56k
 		return true;
 	}
 
-	asmjit::x86::Mem JitDspRegPool::makeDspPtr(const void* _ptr, const size_t _size)
+	JitMemPtr JitDspRegPool::makeDspPtr(const void* _ptr, const size_t _size)
 	{
 		const void* base = &m_block.dsp().regs();
 		const auto offset = static_cast<const uint8_t*>(_ptr) - static_cast<const uint8_t*>(base);
@@ -650,7 +650,7 @@ namespace dsp56k
 		if(!m_dspPtr.hasBase() || !m_dspPtr.hasSize())
 		{
 			m_block.asm_().mov(regReturnVal, asmjit::Imm(reinterpret_cast<uint64_t>(base)));
-			m_dspPtr = ptr(regReturnVal, 0, static_cast<uint32_t>(_size));
+			m_dspPtr = Jitmem::makePtr(regReturnVal, 0, static_cast<uint32_t>(_size));
 		}
 
 		m_dspPtr.setSize(static_cast<uint32_t>(_size));
@@ -659,17 +659,17 @@ namespace dsp56k
 		return m_dspPtr;
 	}
 
-	void JitDspRegPool::mov(const asmjit::x86::Mem& _dst, const JitRegGP& _src) const
+	void JitDspRegPool::mov(const JitMemPtr& _dst, const JitRegGP& _src) const
 	{
 		m_block.asm_().mov(_dst, _src);
 	}
 
-	void JitDspRegPool::movd(const asmjit::x86::Mem& _dst, const JitReg128& _src) const
+	void JitDspRegPool::movd(const JitMemPtr& _dst, const JitReg128& _src) const
 	{
 		m_block.asm_().movd(_dst, _src);
 	}
 
-	void JitDspRegPool::movq(const asmjit::x86::Mem& _dst, const JitReg128& _src) const
+	void JitDspRegPool::movq(const JitMemPtr& _dst, const JitReg128& _src) const
 	{
 		m_block.asm_().movq(_dst, _src);
 	}

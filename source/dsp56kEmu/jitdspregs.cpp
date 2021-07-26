@@ -7,7 +7,6 @@
 #include "asmjit/x86/x86builder.h"
 
 using namespace asmjit;
-using namespace x86;
 
 namespace dsp56k
 {

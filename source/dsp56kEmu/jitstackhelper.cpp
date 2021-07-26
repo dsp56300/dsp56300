@@ -71,7 +71,7 @@ namespace dsp56k
 		m_block.asm_().movq(_reg, regReturnVal);
 	}
 
-	void JitStackHelper::pop(const Reg& _reg)
+	void JitStackHelper::pop(const JitReg& _reg)
 	{
 		if(_reg.isGp())
 			pop(_reg.as<JitRegGP>());
@@ -141,7 +141,7 @@ namespace dsp56k
 		return false;
 	}
 
-	void JitStackHelper::setUsed(const Reg& _reg)
+	void JitStackHelper::setUsed(const JitReg& _reg)
 	{
 		if(_reg.isGp())
 			setUsed(_reg.as<JitRegGP>());
@@ -173,7 +173,7 @@ namespace dsp56k
 		m_usedRegs.push_back(_reg);
 	}
 
-	bool JitStackHelper::isUsed(const Reg& _reg) const
+	bool JitStackHelper::isUsed(const JitReg& _reg) const
 	{
 		for (const auto& m_usedReg : m_usedRegs)
 		{

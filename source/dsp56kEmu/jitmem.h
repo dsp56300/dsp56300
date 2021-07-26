@@ -41,24 +41,20 @@ namespace dsp56k
 		void mov(void* _dst, const JitRegGP& _src, uint32_t _size);
 
 		template<typename T, unsigned int B>
-		asmjit::x86::Mem ptr(const JitReg64& _temp, const RegType<T, B>& _reg)
+		JitMemPtr ptr(const JitReg64& _temp, const RegType<T, B>& _reg)
 		{
 			return ptr<T>(_temp, &_reg.var);
 		}
 
 		template<typename T>
-		asmjit::x86::Mem ptr(const JitReg64& _temp, const T* _t) const;
+		JitMemPtr ptr(const JitReg64& _temp, const T* _t) const;
 
 		template<typename T>
 		void ptrToReg(const JitReg64& _r, const T* _t) const;
 
-		template<typename T>
-		asmjit::x86::Mem makePtr(const void* _base, const T* _member)
-		{
-			return makePtr(_base, _member, sizeof(T));
-		}
-		asmjit::x86::Mem makePtr(const void* _base, const void* _member, size_t _size);
-		static void setPtrOffset(asmjit::x86::Mem& _mem, const void* _base, const void* _member);
+		static JitMemPtr makePtr(const JitReg64& _base, uint32_t _offset, uint32_t _size);
+
+		static void setPtrOffset(JitMemPtr& _mem, const void* _base, const void* _member);
 		
 		void readDspMemory(const JitRegGP& _dst, EMemArea _area, const JitRegGP& _offset) const;
 		void writeDspMemory(EMemArea _area, const JitRegGP& _offset, const JitRegGP& _src) const;
