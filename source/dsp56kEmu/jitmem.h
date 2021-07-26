@@ -52,6 +52,7 @@ namespace dsp56k
 		template<typename T>
 		void ptrToReg(const JitReg64& _r, const T* _t) const;
 
+		static JitMemPtr makePtr(const JitReg64& _base, const JitRegGP& _index, uint32_t _shift = 0, int32_t _offset = 0, uint32_t _size = 0);
 		static JitMemPtr makePtr(const JitReg64& _base, uint32_t _offset, uint32_t _size);
 
 		static void setPtrOffset(JitMemPtr& _mem, const void* _base, const void* _member);

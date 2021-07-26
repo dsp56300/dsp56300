@@ -134,6 +134,11 @@ namespace dsp56k
 		m_block.asm_().mov(makePtr(a, 0, _size), _src);
 	}
 
+	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const JitRegGP& _index, const uint32_t _shift, const int32_t _offset, const uint32_t _size)
+	{
+		return asmjit::x86::ptr(_base, _index, _shift, _offset, _size);
+	}
+
 	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const uint32_t _offset, const uint32_t _size)
 	{
 		return asmjit::x86::ptr(_base, _offset, _size);
@@ -154,7 +159,7 @@ namespace dsp56k
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
-		m_block.asm_().mov(_dst.r32(), asmjit::x86::ptr(t, _offset, 2, 0, sizeof(TWord)));
+		m_block.asm_().mov(_dst.r32(), makePtr(t, _offset, 2, 0, sizeof(TWord)));
 	}
 	
 	void callDSPMemWrite(DSP* const _dsp, const EMemArea _area, const TWord _offset, const TWord _value)
@@ -187,7 +192,7 @@ namespace dsp56k
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
-		m_block.asm_().mov(asmjit::x86::ptr(t, _offset, 2, 0, sizeof(TWord)), _src.r32());
+		m_block.asm_().mov(makePtr(t, _offset, 2, 0, sizeof(TWord)), _src.r32());
 #endif
 	}
 

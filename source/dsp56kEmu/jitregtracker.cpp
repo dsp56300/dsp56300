@@ -140,12 +140,12 @@ namespace dsp56k
 
 	constexpr bool g_push128Bits = false;
 	
-	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(m_block.dspRegPool().isInUse(asmjit::x86::xmm(_xmmIndex)))
+	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(m_block.dspRegPool().isInUse(JitReg128(_xmmIndex)))
 	{
 		if(!m_isLoaded)
 			return;
 
-		const auto xm = asmjit::x86::xmm(_xmmIndex);
+		const auto xm = JitReg128(_xmmIndex);
 
 		_block.stack().push(xm);
 
@@ -165,7 +165,7 @@ namespace dsp56k
 		if(!m_isLoaded)
 			return;
 
-		const auto xm = asmjit::x86::xmm(m_xmmIndex);
+		const auto xm = JitReg128(m_xmmIndex);
 
 		m_block.stack().pop(xm);
 

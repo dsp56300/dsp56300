@@ -13,7 +13,6 @@
 #endif
 
 using namespace asmjit;
-using namespace x86;
 
 namespace dsp56k
 {
