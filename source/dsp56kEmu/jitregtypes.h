@@ -35,7 +35,7 @@ namespace dsp56k
 	
 	static constexpr JitReg128 g_nonVolatileXMMs[] = { asmjit::x86::xmm0, asmjit::x86::xmm1, asmjit::x86::xmm2, asmjit::x86::xmm3, asmjit::x86::xmm4, asmjit::x86::xmm5};
 
-	static constexpr JitReg g_dspPoolGps[] =		{ asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r10, asmjit::x86::r11, asmjit::x86::rsi};
+	static constexpr JitRegGP g_dspPoolGps[] =		{ asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r10, asmjit::x86::r11, asmjit::x86::rsi};
 	
 #endif
 
