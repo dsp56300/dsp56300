@@ -26,42 +26,42 @@ namespace dsp56k
 		JitDspRegs(JitBlock& _block);
 		~JitDspRegs();
 
-		void getR(const JitReg& _dst, int _agu);
-		void getN(const JitReg& _dst, int _agu);
-		void getM(const JitReg& _dst, int _agu);
+		void getR(const JitRegGP& _dst, int _agu);
+		void getN(const JitRegGP& _dst, int _agu);
+		void getM(const JitRegGP& _dst, int _agu);
 
-		void setR(int _agu, const JitReg& _src);
-		void setN(int _agu, const JitReg& _src);
-		void setM(int _agu, const JitReg& _src);
+		void setR(int _agu, const JitRegGP& _src);
+		void setN(int _agu, const JitRegGP& _src);
+		void setM(int _agu, const JitRegGP& _src);
 		
-		JitReg getSR(AccessType _type);
-		JitReg getLA(AccessType _type);
-		JitReg getLC(AccessType _type);
+		JitRegGP getSR(AccessType _type);
+		JitRegGP getLA(AccessType _type);
+		JitRegGP getLC(AccessType _type);
 
-		JitReg getALU(int _alu, AccessType _access);
-		void getALU(const JitReg& _dst, int _alu);
-		void setALU(int _alu, const JitReg& _src, bool _needsMasking = true);
+		JitRegGP getALU(int _alu, AccessType _access);
+		void getALU(const JitRegGP& _dst, int _alu);
+		void setALU(int _alu, const JitRegGP& _src, bool _needsMasking = true);
 		void clrALU(TWord _alu);
 
-		void getXY(const JitReg& _dst, int _xy);
-		JitReg getXY(int _xy, AccessType _access);
-		void setXY(uint32_t _xy, const JitReg& _src);
+		void getXY(const JitRegGP& _dst, int _xy);
+		JitRegGP getXY(int _xy, AccessType _access);
+		void setXY(uint32_t _xy, const JitRegGP& _src);
 
-		void getXY0(const JitReg& _dst, uint32_t _aluIndex);
-		void setXY0(uint32_t _xy, const JitReg& _src);
-		void getXY1(const JitReg& _dst, uint32_t _aluIndex);
-		void setXY1(uint32_t _xy, const JitReg& _src);
+		void getXY0(const JitRegGP& _dst, uint32_t _aluIndex);
+		void setXY0(uint32_t _xy, const JitRegGP& _src);
+		void getXY1(const JitRegGP& _dst, uint32_t _aluIndex);
+		void setXY1(uint32_t _xy, const JitRegGP& _src);
 
-		void getX0(const JitReg& _dst) { return getXY0(_dst, 0); }
-		void getY0(const JitReg& _dst) { return getXY0(_dst, 1); }
-		void getX1(const JitReg& _dst) { return getXY1(_dst, 0); }
-		void getY1(const JitReg& _dst) { return getXY1(_dst, 1); }
+		void getX0(const JitRegGP& _dst) { return getXY0(_dst, 0); }
+		void getY0(const JitRegGP& _dst) { return getXY0(_dst, 1); }
+		void getX1(const JitRegGP& _dst) { return getXY1(_dst, 0); }
+		void getY1(const JitRegGP& _dst) { return getXY1(_dst, 1); }
 
-		void getALU0(const JitReg& _dst, uint32_t _aluIndex);
-		void setALU0(uint32_t _aluIndex, const JitReg& _src);
-		void getALU1(const JitReg& _dst, uint32_t _aluIndex);
+		void getALU0(const JitRegGP& _dst, uint32_t _aluIndex);
+		void setALU0(uint32_t _aluIndex, const JitRegGP& _src);
+		void getALU1(const JitRegGP& _dst, uint32_t _aluIndex);
 		void setALU1(uint32_t _aluIndex, const JitReg32& _src);
-		void getALU2signed(const JitReg& _dst, uint32_t _aluIndex);
+		void getALU2signed(const JitRegGP& _dst, uint32_t _aluIndex);
 		void setALU2(uint32_t _aluIndex, const JitReg32& _src);
 
 		void getEP(const JitReg32& _dst) const;
@@ -93,17 +93,17 @@ namespace dsp56k
 		void decSP() const;
 		void incSP() const;
 
-		void mask56(const JitReg& _alu) const;
-		void mask48(const JitReg& _alu) const;
+		void mask56(const JitRegGP& _alu) const;
+		void mask48(const JitRegGP& _alu) const;
 		
-		void setPC(const JitReg& _pc);
+		void setPC(const JitRegGP& _pc);
 		CCRMask& ccrDirtyFlags() { return m_ccrDirtyFlags; }
 
 	private:
 		JitDspRegPool& pool() const;
 
-		void load24(const JitReg& _dst, const TReg24& _src) const;
-		void store24(TReg24& _dst, const JitReg& _src) const;
+		void load24(const JitRegGP& _dst, const TReg24& _src) const;
+		void store24(TReg24& _dst, const JitRegGP& _src) const;
 
 		JitBlock& m_block;
 		JitAssembler& m_asm;

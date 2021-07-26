@@ -196,7 +196,7 @@ namespace dsp56k
 		return true;
 	}
 
-	void JitBlock::setNextPC(const JitReg& _pc)
+	void JitBlock::setNextPC(const JitRegGP& _pc)
 	{
 		mem().mov(nextPC(), _pc);
 		m_possibleBranch = true;

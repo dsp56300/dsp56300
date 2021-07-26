@@ -17,10 +17,10 @@ namespace dsp56k
 		JitStackHelper(JitBlock& _block);
 		~JitStackHelper();
 
-		void push(const JitReg& _reg);
+		void push(const JitRegGP& _reg);
 		void push(const JitReg128& _reg);
 
-		void pop(const JitReg& _reg);
+		void pop(const JitRegGP& _reg);
 		void pop(const JitReg128& _reg);
 		void pop(const Reg& _reg);
 		void pop();
@@ -31,10 +31,10 @@ namespace dsp56k
 		
 		void call(const void* _funcAsPtr) const;
 		
-		static bool isNonVolatile(const JitReg& _gp);
+		static bool isNonVolatile(const JitRegGP& _gp);
 		static bool isNonVolatile(const JitReg128& _xm);
 		void setUsed(const Reg& _reg);
-		void setUsed(const JitReg& _reg);
+		void setUsed(const JitRegGP& _reg);
 		void setUsed(const JitReg128& _reg);
 
 		bool isUsed(const Reg& _reg) const;

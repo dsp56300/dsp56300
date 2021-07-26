@@ -37,10 +37,10 @@ namespace dsp56k
 		JitDspRegPool(JitBlock& _block);
 		~JitDspRegPool();
 
-		JitReg get(DspReg _reg, bool _read, bool _write);
+		JitRegGP get(DspReg _reg, bool _read, bool _write);
 
-		void read(const JitReg& _dst, DspReg _src);
-		void write(DspReg _dst, const JitReg& _src);
+		void read(const JitRegGP& _dst, DspReg _src);
+		void write(DspReg _dst, const JitRegGP& _src);
 
 		void lock(DspReg _reg);
 		void unlock(DspReg _reg);
@@ -52,7 +52,7 @@ namespace dsp56k
 
 		void setRepMode(bool _repMode) { m_repMode = _repMode; }
 		bool isInUse(const JitReg128& _xmm) const;
-		bool isInUse(const JitReg& _gp) const;
+		bool isInUse(const JitRegGP& _gp) const;
 		bool isInUse(DspReg _reg) const;
 
 		DspReg aquireTemp();
@@ -68,7 +68,7 @@ namespace dsp56k
 		}
 
 		bool move(DspReg _dst, DspReg _src);
-		bool move(const JitReg& _dst, DspReg _src);
+		bool move(const JitRegGP& _dst, DspReg _src);
 
 		void setIsParallelOp(bool _isParallelOp);
 
@@ -85,8 +85,8 @@ namespace dsp56k
 		void makeSpace(DspReg _wantedReg);
 		void clear();
 
-		void load(JitReg& _dst, DspReg _src);
-		void store(DspReg _dst, JitReg& _src, bool _resetBasePtr = true);
+		void load(JitRegGP& _dst, DspReg _src);
+		void store(DspReg _dst, JitRegGP& _src, bool _resetBasePtr = true);
 		void store(DspReg _dst, JitReg128& _src, bool _resetBasePtr = true);
 
 		bool release(DspReg _dst, bool _resetBasePtr = true);
@@ -221,7 +221,7 @@ namespace dsp56k
 		asmjit::x86::Mem makeDspPtr(const void* _ptr, size_t _size);
 
 		template<typename T, unsigned int B>
-		void mov(const RegType<T,B>& _reg, const JitReg& _src)
+		void mov(const RegType<T,B>& _reg, const JitRegGP& _src)
 		{
 			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
 				mov(makeDspPtr(_reg), _src.r32());
@@ -238,7 +238,7 @@ namespace dsp56k
 				movq(makeDspPtr(_reg), _src);
 		}
 
-		void mov(const asmjit::x86::Mem& _dst, const JitReg& _src) const;
+		void mov(const asmjit::x86::Mem& _dst, const JitRegGP& _src) const;
 		void movd(const asmjit::x86::Mem& _dst, const JitReg128& _src) const;
 		void movq(const asmjit::x86::Mem& _dst, const JitReg128& _src) const;
 
@@ -248,7 +248,7 @@ namespace dsp56k
 		uint64_t m_lockedGps;
 		uint64_t m_writtenDspRegs;
 
-		RegisterList<JitReg> m_gpList;
+		RegisterList<JitRegGP> m_gpList;
 		RegisterList<JitReg128> m_xmList;
 
 		std::vector<DspReg> m_availableTemps;

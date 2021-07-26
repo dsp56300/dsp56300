@@ -4,7 +4,7 @@
 
 namespace dsp56k
 {
-	void JitOps::decode_cccc(const JitReg& _dst, const TWord cccc)
+	void JitOps::decode_cccc(const JitRegGP& _dst, const TWord cccc)
 	{
 		switch( cccc )
 		{
@@ -337,7 +337,7 @@ namespace dsp56k
 		}
 	}
 	
-	void JitOps::decode_ee_read(const JitReg& _dst, const TWord _ee)
+	void JitOps::decode_ee_read(const JitRegGP& _dst, const TWord _ee)
 	{
 		switch (_ee)
 		{
@@ -349,7 +349,7 @@ namespace dsp56k
 		}
 	}
 
-	inline void JitOps::decode_ee_write(const TWord _ee, const JitReg& _value)
+	inline void JitOps::decode_ee_write(const TWord _ee, const JitRegGP& _value)
 	{
 		switch (_ee)
 		{
@@ -361,7 +361,7 @@ namespace dsp56k
 		assert(0 && "invalid ee value");
 	}
 
-	void JitOps::decode_ff_read(const JitReg& _dst, TWord _ff)
+	void JitOps::decode_ff_read(const JitRegGP& _dst, TWord _ff)
 	{
 		switch (_ff)
 		{
@@ -375,7 +375,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::decode_ff_write(const TWord _ff, const JitReg& _value)
+	void JitOps::decode_ff_write(const TWord _ff, const JitRegGP& _value)
 	{
 		switch (_ff)
 		{
@@ -447,7 +447,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::decode_RRR_read( const JitReg& _dst, TWord _mmmrrr, int _shortDisplacement/* = 0*/)
+	void JitOps::decode_RRR_read( const JitRegGP& _dst, TWord _mmmrrr, int _shortDisplacement/* = 0*/)
 	{
 		const auto regIdx = _mmmrrr & 0x07;
 
@@ -460,7 +460,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::decode_qq_read(const JitReg& _dst, TWord _qq)
+	void JitOps::decode_qq_read(const JitRegGP& _dst, TWord _qq)
 	{
 		switch (_qq)
 		{
@@ -472,7 +472,7 @@ namespace dsp56k
 		}
 	}
 
-	inline void JitOps::decode_QQ_read(const JitReg& _dst, TWord _qq)
+	inline void JitOps::decode_QQ_read(const JitRegGP& _dst, TWord _qq)
 	{
 		switch (_qq)
 		{
@@ -484,7 +484,7 @@ namespace dsp56k
 		}
 	}
 
-	inline void JitOps::decode_QQQQ_read(const JitReg& _s1, const JitReg& _s2, TWord _qqqq) const
+	inline void JitOps::decode_QQQQ_read(const JitRegGP& _s1, const JitRegGP& _s2, TWord _qqqq) const
 	{
 		switch (_qqqq)
 		{

@@ -21,24 +21,24 @@ namespace dsp56k
 		void mov(const JitReg128& _dst, TReg56& _src);
 		void mov(const JitReg128& _dst, TReg48& _src);
 
-		void mov(const JitReg& _dst, const TReg24& _src);
-		void mov(const JitReg& _dst, const TReg48& _src);
-		void mov(const JitReg& _dst, const TReg56& _src);
+		void mov(const JitRegGP& _dst, const TReg24& _src);
+		void mov(const JitRegGP& _dst, const TReg48& _src);
+		void mov(const JitRegGP& _dst, const TReg56& _src);
 
-		void mov(const TReg24& _dst, const JitReg& _src);
-		void mov(const TReg48& _dst, const JitReg& _src);
-		void mov(const TReg56& _dst, const JitReg& _src);
+		void mov(const TReg24& _dst, const JitRegGP& _src);
+		void mov(const TReg48& _dst, const JitRegGP& _src);
+		void mov(const TReg56& _dst, const JitRegGP& _src);
 
-		void mov(uint64_t& _dst, const JitReg& _src) const;
-		void mov(uint32_t& _dst, const JitReg& _src) const;
-		void mov(uint8_t& _dst, const JitReg& _src) const;
+		void mov(uint64_t& _dst, const JitRegGP& _src) const;
+		void mov(uint32_t& _dst, const JitRegGP& _src) const;
+		void mov(uint8_t& _dst, const JitRegGP& _src) const;
 
-		void mov(const JitReg& _dst, const uint64_t& _src) const;
-		void mov(const JitReg& _dst, const uint32_t& _src) const;
-		void mov(const JitReg& _dst, const uint8_t& _src) const;
+		void mov(const JitRegGP& _dst, const uint64_t& _src) const;
+		void mov(const JitRegGP& _dst, const uint32_t& _src) const;
+		void mov(const JitRegGP& _dst, const uint8_t& _src) const;
 
 		void mov(void* _dst, void* _src, uint32_t _size);
-		void mov(void* _dst, const JitReg& _src, uint32_t _size);
+		void mov(void* _dst, const JitRegGP& _src, uint32_t _size);
 
 		template<typename T, unsigned int B>
 		asmjit::x86::Mem ptr(const JitReg64& _temp, const RegType<T, B>& _reg)
@@ -60,11 +60,11 @@ namespace dsp56k
 		asmjit::x86::Mem makePtr(const void* _base, const void* _member, size_t _size);
 		static void setPtrOffset(asmjit::x86::Mem& _mem, const void* _base, const void* _member);
 		
-		void readDspMemory(const JitReg& _dst, EMemArea _area, const JitReg& _offset) const;
-		void writeDspMemory(EMemArea _area, const JitReg& _offset, const JitReg& _src) const;
+		void readDspMemory(const JitRegGP& _dst, EMemArea _area, const JitRegGP& _offset) const;
+		void writeDspMemory(EMemArea _area, const JitRegGP& _offset, const JitRegGP& _src) const;
 
-		void readDspMemory(const JitReg& _dst, EMemArea _area, TWord _offset) const;
-		void writeDspMemory(EMemArea _area, TWord _offset, const JitReg& _src) const;
+		void readDspMemory(const JitRegGP& _dst, EMemArea _area, TWord _offset) const;
+		void writeDspMemory(EMemArea _area, TWord _offset, const JitRegGP& _src) const;
 
 		void readPeriph(const JitReg64& _dst, EMemArea _area, const TWord& _offset) const;
 		void readPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset) const;
@@ -73,7 +73,7 @@ namespace dsp56k
 
 	private:
 		void getMemAreaPtr(const JitReg64& _dst, EMemArea _area, TWord offset = 0) const;
-		void getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitReg& _offset) const;
+		void getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitRegGP& _offset) const;
 		JitBlock& m_block;
 	};
 }

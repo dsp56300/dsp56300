@@ -43,35 +43,35 @@ namespace dsp56k
 		m_block.asm_().movq(_dst, ptr(reg, _src));
 	}
 
-	void Jitmem::mov(const JitReg& _dst, const TReg24& _src)
+	void Jitmem::mov(const JitRegGP& _dst, const TReg24& _src)
 	{
 		m_block.asm_().mov(_dst.r32(), ptr(_dst.r64(), _src));
 	}
 
-	void Jitmem::mov(const JitReg& _dst, const TReg48& _src)
+	void Jitmem::mov(const JitRegGP& _dst, const TReg48& _src)
 	{
 		m_block.asm_().mov(_dst.r64(), ptr(_dst.r64(), _src));
 	}
 
-	void Jitmem::mov(const JitReg& _dst, const TReg56& _src)
+	void Jitmem::mov(const JitRegGP& _dst, const TReg56& _src)
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(_dst.r64(), ptr(reg, _src));
 	}
 
-	void Jitmem::mov(const TReg24& _dst, const JitReg& _src)
+	void Jitmem::mov(const TReg24& _dst, const JitRegGP& _src)
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, _dst), _src.r32());
 	}
 
-	void Jitmem::mov(const TReg48& _dst, const JitReg& _src)
+	void Jitmem::mov(const TReg48& _dst, const JitRegGP& _src)
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, _dst), _src.r64());
 	}
 
-	void Jitmem::mov(const TReg56& _dst, const JitReg& _src)
+	void Jitmem::mov(const TReg56& _dst, const JitRegGP& _src)
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, _dst), _src.r64());
@@ -83,35 +83,35 @@ namespace dsp56k
 		m_block.asm_().movq(_dst, ptr(reg, _src));
 	}
 
-	void Jitmem::mov(uint64_t& _dst, const JitReg& _src) const
+	void Jitmem::mov(uint64_t& _dst, const JitRegGP& _src) const
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, &_dst), _src);
 	}
 
-	void Jitmem::mov(uint32_t& _dst, const JitReg& _src) const
+	void Jitmem::mov(uint32_t& _dst, const JitRegGP& _src) const
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, &_dst), _src.r32());
 	}
 
-	void Jitmem::mov(uint8_t& _dst, const JitReg& _src) const
+	void Jitmem::mov(uint8_t& _dst, const JitRegGP& _src) const
 	{
 		const auto reg = regSmallTemp;
 		m_block.asm_().mov(ptr(reg, &_dst), _src);
 	}
 
-	void Jitmem::mov(const JitReg& _dst, const uint64_t& _src) const
+	void Jitmem::mov(const JitRegGP& _dst, const uint64_t& _src) const
 	{
 		m_block.asm_().mov(_dst, ptr(_dst.r64(), &_src));
 	}
 
-	void Jitmem::mov(const JitReg& _dst, const uint32_t& _src) const
+	void Jitmem::mov(const JitRegGP& _dst, const uint32_t& _src) const
 	{
 		m_block.asm_().mov(_dst.r32(), ptr(_dst.r64(), &_src));
 	}
 
-	void Jitmem::mov(const JitReg& _dst, const uint8_t& _src) const
+	void Jitmem::mov(const JitRegGP& _dst, const uint8_t& _src) const
 	{
 		m_block.asm_().movzx(_dst, ptr(_dst.r64(), &_src));
 	}
@@ -127,7 +127,7 @@ namespace dsp56k
 		m_block.asm_().mov(asmjit::x86::ptr(a, 0, _size), v.get());
 	}
 
-	void Jitmem::mov(void* _dst, const JitReg& _src, uint32_t _size)
+	void Jitmem::mov(void* _dst, const JitRegGP& _src, uint32_t _size)
 	{
 		const auto a = regReturnVal;
 		m_block.asm_().mov(a, asmjit::Imm(_dst));
@@ -147,7 +147,7 @@ namespace dsp56k
 		_mem.setOffset(reinterpret_cast<uint64_t>(_member) - reinterpret_cast<uint64_t>(_base));
 	}
 
-	void Jitmem::readDspMemory(const JitReg& _dst, const EMemArea _area, const JitReg& _offset) const
+	void Jitmem::readDspMemory(const JitRegGP& _dst, const EMemArea _area, const JitRegGP& _offset) const
 	{
 		const RegGP t(m_block);
 		const SkipLabel skip(m_block.asm_());
@@ -167,7 +167,7 @@ namespace dsp56k
 		_dsp->memory().dspWrite(a, o, _value);
 	}
 
-	void Jitmem::writeDspMemory(const EMemArea _area, const JitReg& _offset, const JitReg& _src) const
+	void Jitmem::writeDspMemory(const EMemArea _area, const JitRegGP& _offset, const JitRegGP& _src) const
 	{
 #ifdef DEBUG_MEMORY_WRITES
 		PushGP r1(m_block, regArg1);
@@ -194,7 +194,7 @@ namespace dsp56k
 #endif
 	}
 
-	void Jitmem::readDspMemory(const JitReg& _dst, EMemArea _area, TWord _offset) const
+	void Jitmem::readDspMemory(const JitRegGP& _dst, EMemArea _area, TWord _offset) const
 	{
 		auto& mem = m_block.dsp().memory();
 		mem.memTranslateAddress(_area, _offset);
@@ -211,7 +211,7 @@ namespace dsp56k
 		m_block.asm_().mov(_dst.r32(), asmjit::x86::ptr(t));
 	}
 
-	void Jitmem::writeDspMemory(EMemArea _area, TWord _offset, const JitReg& _src) const
+	void Jitmem::writeDspMemory(EMemArea _area, TWord _offset, const JitRegGP& _src) const
 	{
 #ifdef DEBUG_MEMORY_WRITES
 		RegGP r(m_block);
@@ -316,7 +316,7 @@ namespace dsp56k
 		}
 	}
 
-	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitReg& _offset) const
+	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitRegGP& _offset) const
 	{
 		getMemAreaPtr(_dst, _area);
 

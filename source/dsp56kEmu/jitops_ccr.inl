@@ -88,14 +88,14 @@ namespace dsp56k
 		m_ccr_update_clear = true;
 	}
 
-	inline void JitOps::ccr_getBitValue(const JitReg& _dst, CCRBit _bit)
+	inline void JitOps::ccr_getBitValue(const JitRegGP& _dst, CCRBit _bit)
 	{
 		updateDirtyCCR(static_cast<CCRMask>(1 << _bit));
 		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(_bit));
 		m_asm.setc(_dst);
 	}
 
-	inline void JitOps::sr_getBitValue(const JitReg& _dst, SRBit _bit) const
+	inline void JitOps::sr_getBitValue(const JitRegGP& _dst, SRBit _bit) const
 	{
 		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(_bit));
 		m_asm.setc(_dst);
@@ -185,7 +185,7 @@ namespace dsp56k
 		ccr_update(ra, _bit);
 	}
 
-	inline void JitOps::ccr_update(const JitReg& ra, CCRBit _bit)
+	inline void JitOps::ccr_update(const JitRegGP& ra, CCRBit _bit)
 	{
 		const auto mask = static_cast<CCRMask>(1 << _bit);
 

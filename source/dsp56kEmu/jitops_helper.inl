@@ -383,7 +383,7 @@ namespace dsp56k
 		return m_opWordB;
 	}
 
-	inline void JitOps::getOpWordB(const JitReg& _dst)
+	inline void JitOps::getOpWordB(const JitRegGP& _dst)
 	{
 		m_asm.mov(_dst.r32(), asmjit::Imm(getOpWordB()));
 	}
@@ -461,7 +461,7 @@ namespace dsp56k
 		m_dspRegs.getSR(_dst);
 	}
 
-	inline JitReg JitOps::getSR(JitDspRegs::AccessType _accessType)
+	inline JitRegGP JitOps::getSR(JitDspRegs::AccessType _accessType)
 	{
 		updateDirtyCCR();
 		return m_dspRegs.getSR(_accessType);
@@ -473,13 +473,13 @@ namespace dsp56k
 		m_dspRegs.setSR(_src);
 	}
 
-	void JitOps::transferAluTo24(const JitReg& _dst, int _alu)
+	void JitOps::transferAluTo24(const JitRegGP& _dst, int _alu)
 	{
 		m_dspRegs.getALU(_dst.r64(), _alu);
 		transferSaturation(_dst.r64());
 	}
 
-	void JitOps::transfer24ToAlu(int _alu, const JitReg& _src)
+	void JitOps::transfer24ToAlu(int _alu, const JitRegGP& _src)
 	{
 		m_asm.shl(_src.r64(), asmjit::Imm(40));
 		m_asm.sar(_src.r64(), asmjit::Imm(8));
@@ -487,7 +487,7 @@ namespace dsp56k
 		m_dspRegs.setALU(_alu, _src.r64(), false);
 	}
 
-	void JitOps::transferSaturation(const JitReg& _dst)
+	void JitOps::transferSaturation(const JitRegGP& _dst)
 	{
 		// scaling
 
@@ -573,7 +573,7 @@ namespace dsp56k
 		bitTest<Inst>(_op, r, _bitValue, _skip);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_bbbbb>()>::type*> void JitOps::bitTest(TWord op, const JitReg& _value, const ExpectedBitValue _bitValue, const asmjit::Label _skip) const
+	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_bbbbb>()>::type*> void JitOps::bitTest(TWord op, const JitRegGP& _value, const ExpectedBitValue _bitValue, const asmjit::Label _skip) const
 	{
 		const auto bit = getBit<Inst>(op);
 		m_asm.bt(_value, asmjit::Imm(bit));
@@ -598,7 +598,7 @@ namespace dsp56k
 		callDSPFunc(_func);
 	}
 
-	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord), const JitReg& _arg) const
+	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord), const JitRegGP& _arg) const
 	{
 		FuncArg r1(m_block, regArg1);
 

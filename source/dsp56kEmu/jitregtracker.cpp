@@ -87,14 +87,14 @@ namespace dsp56k
 
 		auto& p = m_block.dspRegPool();
 
-		JitReg r;
+		JitRegGP r;
 
 		const auto dspRegR = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA      + m_aluIndex);
 		const auto dspRegW = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspAwrite + m_aluIndex);
 
 		if(p.isParallelOp() && m_write)
 		{
-			JitReg rRead;
+			JitRegGP rRead;
 
 			if(m_read)
 			{

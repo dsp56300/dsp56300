@@ -52,7 +52,7 @@ namespace dsp56k
 		assert(m_usedXmmMap.empty());
 */	}
 
-	JitReg JitDspRegPool::get(DspReg _reg, bool _read, bool _write)
+	JitRegGP JitDspRegPool::get(DspReg _reg, bool _read, bool _write)
 	{
 		if(_write)
 		{
@@ -87,7 +87,7 @@ namespace dsp56k
 		{
 			// The desired DSP register is already in a GP register. Nothing to be done except refresh the LRU list
 
-			JitReg res;
+			JitRegGP res;
 			m_gpList.acquire(res, _reg, m_repMode);
 
 			LOGRP("DSP reg " << g_dspRegNames[_reg] << " already available, returning GP, " << m_gpList.size() << " used GPs");
@@ -105,7 +105,7 @@ namespace dsp56k
 		assert(!m_gpList.isFull());
 
 		// allocate a new slot for the GP register
-		JitReg res;
+		JitRegGP res;
 		m_gpList.acquire(res, _reg, m_repMode);
 		m_block.stack().setUsed(res);
 
@@ -132,13 +132,13 @@ namespace dsp56k
 		return res;
 	}
 
-	void JitDspRegPool::read(const JitReg& _dst, const DspReg _src)
+	void JitDspRegPool::read(const JitRegGP& _dst, const DspReg _src)
 	{
 		const auto r = get(_src, true, false);
 		m_block.asm_().mov(_dst.r64(), r);
 	}
 
-	void JitDspRegPool::write(const DspReg _dst, const JitReg& _src)
+	void JitDspRegPool::write(const DspReg _dst, const JitRegGP& _src)
 	{
 		const auto r = get(_dst, false, true);
 		m_block.asm_().mov(r, _src.r64());
@@ -199,7 +199,7 @@ namespace dsp56k
 		return m_xmList.isUsed(_xmm);
 	}
 
-	bool JitDspRegPool::isInUse(const JitReg& _gp) const
+	bool JitDspRegPool::isInUse(const JitRegGP& _gp) const
 	{
 		return m_gpList.isUsed(_gp);
 	}
@@ -223,9 +223,9 @@ namespace dsp56k
 		release(_reg);
 	}
 	
-	bool JitDspRegPool::move(const JitReg& _dst, const DspReg _src)
+	bool JitDspRegPool::move(const JitRegGP& _dst, const DspReg _src)
 	{
-		JitReg gpSrc;
+		JitRegGP gpSrc;
 		JitReg128 xmSrc;
 
 		if(m_gpList.get(gpSrc, _src))
@@ -244,14 +244,14 @@ namespace dsp56k
 
 	bool JitDspRegPool::move(DspReg _dst, DspReg _src)
 	{
-		JitReg gpSrc;
+		JitRegGP gpSrc;
 		JitReg128 xmSrc;
 
 		if(m_gpList.get(gpSrc, _src))
 		{
 			// src is GP
 
-			JitReg gpDst;
+			JitRegGP gpDst;
 			JitReg128 xmDst;
 
 			if(m_gpList.get(gpDst, _dst))
@@ -267,7 +267,7 @@ namespace dsp56k
 		{
 			// src is XMM
 
-			JitReg gpDst;
+			JitRegGP gpDst;
 			JitReg128 xmDst;
 
 			if(m_gpList.get(gpDst, _dst))
@@ -344,7 +344,7 @@ namespace dsp56k
 
 			LOGRP("Moving DSP reg " <<g_dspRegNames[dspReg] << " to XMM");
 
-			JitReg hostReg;
+			JitRegGP hostReg;
 			m_gpList.release(hostReg, dspReg, m_repMode);
 
 			JitReg128 xmReg;
@@ -378,7 +378,7 @@ namespace dsp56k
 			m_availableTemps.push_back(static_cast<DspReg>(i));
 	}
 
-	void JitDspRegPool::load(JitReg& _dst, const DspReg _src)
+	void JitDspRegPool::load(JitRegGP& _dst, const DspReg _src)
 	{
 		const auto& r = m_block.dsp().regs();
 		auto& m = m_block.mem();
@@ -470,7 +470,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitDspRegPool::store(const DspReg _dst, JitReg& _src, bool _resetBasePtr/* = true*/)
+	void JitDspRegPool::store(const DspReg _dst, JitRegGP& _src, bool _resetBasePtr/* = true*/)
 	{
 		const auto& r = m_block.dsp().regs();
 
@@ -615,7 +615,7 @@ namespace dsp56k
 			return false;
 		}
 
-		JitReg gpReg;
+		JitRegGP gpReg;
 		if(m_gpList.release(gpReg, _dst, m_repMode))
 		{
 			if(isWritten(_dst))
@@ -659,7 +659,7 @@ namespace dsp56k
 		return m_dspPtr;
 	}
 
-	void JitDspRegPool::mov(const asmjit::x86::Mem& _dst, const JitReg& _src) const
+	void JitDspRegPool::mov(const asmjit::x86::Mem& _dst, const JitRegGP& _src) const
 	{
 		m_block.asm_().mov(_dst, _src);
 	}

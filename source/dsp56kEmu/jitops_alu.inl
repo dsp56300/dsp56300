@@ -118,7 +118,7 @@ namespace dsp56k
 		m_asm.shl(_r, asmjit::Imm(24));
 	}
 
-	inline void JitOps::alu_abs(const JitReg& _r)
+	inline void JitOps::alu_abs(const JitRegGP& _r)
 	{
 		const auto rb = regReturnVal;
 
@@ -580,7 +580,7 @@ namespace dsp56k
 		}
 	}
 
-	inline void JitOps::alu_or(TWord ab, const JitReg& _v)
+	inline void JitOps::alu_or(TWord ab, const JitRegGP& _v)
 	{
 		RegGP r(m_block);
 		m_dspRegs.getALU(r, ab);

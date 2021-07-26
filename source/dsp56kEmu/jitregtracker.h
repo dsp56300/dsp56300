@@ -71,8 +71,8 @@ namespace dsp56k
 		DSPReg(JitBlock& _block, JitDspRegPool::DspReg _reg, bool _read = true, bool _write = true);
 		~DSPReg();
 
-		JitReg get() const { return m_reg; }
-		operator JitReg() const { return get(); }
+		JitRegGP get() const { return m_reg; }
+		operator JitRegGP() const { return get(); }
 
 		JitReg32 r32() const { return get().r32(); }
 		JitReg64 r64() const { return get().r64(); }
@@ -84,7 +84,7 @@ namespace dsp56k
 	private:
 		JitBlock& m_block;
 		const JitDspRegPool::DspReg m_dspReg;
-		const JitReg m_reg;
+		const JitRegGP m_reg;
 	};
 	
 	class DSPRegTemp
@@ -104,7 +104,7 @@ namespace dsp56k
 	private:
 		JitBlock& m_block;
 		JitDspRegPool::DspReg m_dspReg = JitDspRegPool::DspCount;
-		JitReg m_reg;
+		JitRegGP m_reg;
 	};
 
 	class AluReg
