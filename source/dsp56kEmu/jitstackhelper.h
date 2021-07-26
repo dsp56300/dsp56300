@@ -31,6 +31,7 @@ namespace dsp56k
 		
 		void call(const void* _funcAsPtr) const;
 		
+		static bool isFuncArg(const JitRegGP& _gp);
 		static bool isNonVolatile(const JitRegGP& _gp);
 		static bool isNonVolatile(const JitReg128& _xm);
 		void setUsed(const Reg& _reg);

@@ -111,11 +111,21 @@ namespace dsp56k
 			m_block.asm_().add(asmjit::x86::rsp, asmjit::Imm(offset));
 	}
 
+	bool JitStackHelper::isFuncArg(const JitRegGP& _gp)
+	{
+		for (const auto& gp : g_funcArgGPs)
+		{
+			if (gp.equals(_gp.r64()))
+				return true;
+		}
+		return false;
+	}
+
 	bool JitStackHelper::isNonVolatile(const JitRegGP& _gp)
 	{
 		for (const auto& gp : g_nonVolatileGPs)
 		{
-			if(gp.equals(_gp))
+			if(gp.equals(_gp.r64()))
 				return true;
 		}
 		return false;

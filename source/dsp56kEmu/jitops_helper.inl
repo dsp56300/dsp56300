@@ -586,23 +586,23 @@ namespace dsp56k
 
 	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord)) const
 	{
-		m_block.asm_().mov(regArg0, asmjit::Imm(&m_block.dsp()));
+		m_block.asm_().mov(g_funcArgGPs[0], asmjit::Imm(&m_block.dsp()));
 		m_block.stack().call(asmjit::func_as_ptr(_func));
 	}
 
 	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord), TWord _arg) const
 	{
-		FuncArg r1(m_block, regArg1);
+		FuncArg r1(m_block, 1);
 
-		m_block.asm_().mov(regArg1, asmjit::Imm(_arg));
+		m_block.asm_().mov(g_funcArgGPs[1], asmjit::Imm(_arg));
 		callDSPFunc(_func);
 	}
 
 	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord), const JitRegGP& _arg) const
 	{
-		FuncArg r1(m_block, regArg1);
+		FuncArg r1(m_block, 1);
 
-		m_block.asm_().mov(regArg1, _arg);
+		m_block.asm_().mov(g_funcArgGPs[1], _arg);
 		callDSPFunc(_func);
 	}
 }

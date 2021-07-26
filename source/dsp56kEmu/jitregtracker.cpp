@@ -182,19 +182,52 @@ namespace dsp56k
 		}
 	}
 
-	PushXMMRegs::PushXMMRegs(JitBlock& _block): m_xmm0(_block, 0), m_xmm1(_block, 1), m_xmm2(_block, 2),
-	                                            m_xmm3(_block, 3), m_xmm4(_block, 4), m_xmm5(_block, 5), m_block(_block)
+	PushXMMRegs::PushXMMRegs(JitBlock& _block) : m_block(_block)
 	{
+		for (const auto& xm : g_nonVolatileXMMs)
+		{
+			if (m_block.dspRegPool().isInUse(xm))
+			{
+				m_pushedRegs.push_front(xm);
+				m_block.stack().push(xm);
+			}
+		}
 	}
 
 	PushXMMRegs::~PushXMMRegs()
 	{
+		for (const auto& xm : m_pushedRegs)
+			m_block.stack().pop(xm);
 	}
 
-	PushGPRegs::PushGPRegs(JitBlock& _block)
-	: m_r8(_block, asmjit::x86::r8, true), m_r9(_block, asmjit::x86::r9, true)
-	, m_r10(_block, asmjit::x86::r10, true), m_r11(_block, asmjit::x86::r11, true)
+	PushGPRegs::PushGPRegs(JitBlock& _block) : m_block(_block)
 	{
+		for (auto gp : g_dspPoolGps)
+		{
+			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp))
+			{
+				m_pushedRegs.push_front(gp);
+				_block.stack().push(gp);
+			}
+		}
+		for (auto reg : g_regGPTemps)
+		{
+			const auto gp = reg.as<JitRegGP>();
+
+			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp))
+			{
+				m_pushedRegs.push_front(gp);
+				_block.stack().push(gp);
+			}
+		}
+	}
+
+	PushGPRegs::~PushGPRegs()
+	{
+		for (auto gp : m_pushedRegs)
+		{
+			m_block.stack().pop(gp);
+		}
 	}
 
 	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block) : m_xmm(_block) , m_gp(_block)

@@ -15,7 +15,7 @@ namespace dsp56k
 	, m_dsp(_dsp)
 	, m_stack(*this)
 	, m_xmmPool({regXMMTempA})
-	, m_gpPool({regGPTempA, regGPTempB, regGPTempC, regGPTempD, regGPTempE})
+	, m_gpPool(g_regGPTemps)
 	, m_dspRegs(*this)
 	, m_dspRegPool(*this)
 	, m_mem(*this)

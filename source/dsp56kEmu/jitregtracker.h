@@ -180,10 +180,10 @@ namespace dsp56k
 		const bool m_pushed;
 	};
 
-	class FuncArg : PushGP
+	class FuncArg : public PushGP
 	{
 	public:
-		FuncArg(JitBlock& _block, const JitReg64& _reg) : PushGP(_block, _reg, true) {}
+		FuncArg(JitBlock& _block, const uint32_t& _argIndex) : PushGP(_block, g_funcArgGPs[_argIndex], true) {}
 	};
 
 	class ShiftReg : public PushGP
@@ -212,24 +212,18 @@ namespace dsp56k
 		~PushXMMRegs();
 
 	private:
-		PushXMM m_xmm0;
-		PushXMM m_xmm1;
-		PushXMM m_xmm2;
-		PushXMM m_xmm3;
-		PushXMM m_xmm4;
-		PushXMM m_xmm5;
 		JitBlock& m_block;
+		std::list<JitReg128> m_pushedRegs;
 	};
 
 	class PushGPRegs
 	{
 	public:
 		PushGPRegs(JitBlock& _block);
+		~PushGPRegs();
 	private:
-		PushGP m_r8;
-		PushGP m_r9;
-		PushGP m_r10;
-		PushGP m_r11;
+		JitBlock& m_block;
+		std::list<JitRegGP> m_pushedRegs;
 	};
 
 	class PushBeforeFunctionCall
