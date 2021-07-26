@@ -2,6 +2,9 @@
 
 #include "buildconfig.h"
 
+//#define HAVE_ARM64
+//#undef HAVE_X86_64
+
 #if defined(HAVE_ARM64)
 #include "asmjit/arm/a64operand.h"
 
@@ -15,7 +18,7 @@ namespace asmjit
 
 namespace dsp56k
 {
-	using JitAssembler = asmjit::a64::Builder;
+	using JitBuilder = asmjit::a64::Builder;
 
 	using JitMemPtr = asmjit::arm::Mem;
 
@@ -38,7 +41,7 @@ namespace asmjit
 
 namespace dsp56k
 {
-	using JitAssembler = asmjit::x86::Builder;
+	using JitBuilder = asmjit::x86::Builder;
 
 	using JitMemPtr = asmjit::x86::Mem;
 

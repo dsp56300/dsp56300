@@ -5,7 +5,8 @@
 
 #include "dsp.h"
 #include "jithelper.h"
-#include "asmjit/x86/x86builder.h"
+#include "jitemitter.h"
+
 
 using namespace asmjit;
 

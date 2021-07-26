@@ -106,7 +106,7 @@ namespace dsp56k
 		void store24(TReg24& _dst, const JitRegGP& _src) const;
 
 		JitBlock& m_block;
-		JitAssembler& m_asm;
+		JitEmitter& m_asm;
 		DSP& m_dsp;
 
 		CCRMask m_ccrDirtyFlags = static_cast<CCRMask>(0);

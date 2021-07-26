@@ -1,6 +1,7 @@
 #include "jitregtracker.h"
+
 #include "jitblock.h"
-#include "asmjit/x86/x86builder.h"
+#include "jitemitter.h"
 
 namespace dsp56k
 {

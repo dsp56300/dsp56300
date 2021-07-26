@@ -1,9 +1,9 @@
 #include "jitstackhelper.h"
 
-#include <cassert>
-
 #include "jitblock.h"
-#include "asmjit/x86/x86builder.h"
+#include "jitemitter.h"
+
+#include <cassert>
 
 namespace dsp56k
 {

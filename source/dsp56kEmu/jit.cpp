@@ -6,7 +6,6 @@
 #include "jitops.h"
 
 #include "asmjit/core/jitruntime.h"
-#include "asmjit/x86/x86builder.h"
 
 #ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
 #include "../vtuneSdk/include/jitprofiling.h"
@@ -102,7 +101,7 @@ namespace dsp56k
 		code.setErrorHandler(&errorHandler);
 		code.init(m_rt->environment());
 
-		JitAssembler m_asm(&code);
+		JitEmitter m_asm(&code);
 
 		auto* b = new JitBlock(m_asm, m_dsp, m_runtimeData);
 

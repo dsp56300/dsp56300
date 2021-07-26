@@ -1,9 +1,9 @@
 #include "jitunittests.h"
 
 #include "jitblock.h"
-#include "jitops.h"
+#include "jitemitter.h"
 #include "jithelper.h"
-#include "asmjit/x86/x86builder.h"
+#include "jitops.h"
 
 namespace dsp56k
 {
@@ -128,7 +128,7 @@ namespace dsp56k
 //		code.setLogger(&logger);
 		code.setErrorHandler(&errorHandler);
 
-		JitAssembler m_asm(&code);
+		JitEmitter m_asm(&code);
 
 		JitRuntimeData rtData;
 

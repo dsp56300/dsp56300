@@ -46,6 +46,7 @@ utils.cpp utils.h
 
 set(SOURCES_JIT
 jit.cpp jit.h
+jitemitter.cpp jitemitter.h
 jitblock.cpp jitblock.h
 jitcacheentry.h
 jithelper.cpp jithelper.h

@@ -187,11 +187,13 @@ namespace dsp56k
 		FuncArg(JitBlock& _block, const uint32_t& _argIndex) : PushGP(_block, g_funcArgGPs[_argIndex], true) {}
 	};
 
+#ifdef HAVE_X86_64
 	class ShiftReg : public PushGP
 	{
 	public:
 		ShiftReg(JitBlock& _block) : PushGP(_block, asmjit::x86::rcx, true) {}
 	};
+#endif
 
 	class PushXMM
 	{

@@ -2,15 +2,15 @@
 
 #include "jitblock.h"
 #include "jitdspregs.h"
+#include "jitemitter.h"
 #include "jitregtracker.h"
 #include "jittypes.h"
+
 #include "opcodes.h"
 #include "opcodetypes.h"
 #include "registers.h"
 #include "types.h"
 #include "utils.h"
-
-#include "asmjit/x86/x86builder.h"
 
 namespace dsp56k
 {
@@ -534,7 +534,7 @@ namespace dsp56k
 		JitBlock& m_block;
 		const Opcodes& m_opcodes;
 		JitDspRegs& m_dspRegs;
-		JitAssembler& m_asm;
+		JitEmitter& m_asm;
 
 		CCRMask& m_ccrDirty;
 		bool m_ccr_update_clear = true;

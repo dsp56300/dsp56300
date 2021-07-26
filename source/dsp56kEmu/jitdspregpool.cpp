@@ -2,7 +2,7 @@
 
 #include "dsp.h"
 #include "jitblock.h"
-#include "asmjit/x86/x86builder.h"
+#include "jitemitter.h"
 
 #define LOGRP(S)		{}
 //#define LOGRP(S)		LOG(S)

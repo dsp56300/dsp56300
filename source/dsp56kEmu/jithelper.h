@@ -10,6 +10,7 @@
 namespace dsp56k
 {
 	class JitBlock;
+	class JitEmitter;
 
 	class AsmJitErrorHandler final : public asmjit::ErrorHandler
 	{
@@ -24,7 +25,7 @@ namespace dsp56k
 	class SkipLabel
 	{
 	public:
-		explicit SkipLabel(JitAssembler& _a);
+		explicit SkipLabel(JitEmitter& _a);
 		~SkipLabel();
 
 		const asmjit::Label& get() const
@@ -39,7 +40,7 @@ namespace dsp56k
 
 	private:
 		asmjit::Label m_label;
-		JitAssembler& m_asm;
+		JitEmitter& m_asm;
 	};
 
 	class If
