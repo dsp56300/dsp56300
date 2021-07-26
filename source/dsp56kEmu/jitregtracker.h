@@ -193,6 +193,8 @@ namespace dsp56k
 	public:
 		ShiftReg(JitBlock& _block) : PushGP(_block, asmjit::x86::rcx, true) {}
 	};
+#else
+	using ShiftReg = RegGP;
 #endif
 
 	class PushXMM

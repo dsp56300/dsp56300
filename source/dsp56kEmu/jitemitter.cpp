@@ -19,6 +19,10 @@ namespace dsp56k
 	{
 	}
 
+	void JitEmitter::mov(const JitMemPtr& _dst, const asmjit::Imm& _src)
+	{
+	}
+
 	void JitEmitter::movd(const JitMemPtr& _dst, const JitReg128& _src)
 	{
 	}

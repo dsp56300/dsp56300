@@ -7,7 +7,6 @@
 #include "jithelper.h"
 #include "jitemitter.h"
 
-
 using namespace asmjit;
 
 namespace dsp56k
