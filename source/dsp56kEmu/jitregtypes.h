@@ -1,14 +1,9 @@
 #pragma once
 
-#include "asmjit/x86/x86operand.h"
+#include "jittypes.h"
 
 namespace dsp56k
 {
-	using JitRegGP = asmjit::x86::Gp;
-	using JitReg32 = asmjit::x86::Gpd;
-	using JitReg64 = asmjit::x86::Gpq;
-	using JitReg128 = asmjit::x86::Xmm;
-
 #ifdef _MSC_VER
 	static constexpr auto regArg0 = asmjit::x86::rcx;
 	static constexpr auto regArg1 = asmjit::x86::rdx;
