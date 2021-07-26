@@ -131,7 +131,8 @@ namespace dsp56k
 
 		m_pcLast = m_pcFirst + m_pMemSize;
 
-		if(false && appendLoopCode)	// this block works, but I'm not sure if we want to keep it here as it increases code size, while the code in jit.cpp does the same but exists only once
+#if 0
+		if(appendLoopCode)	// this block works, but I'm not sure if we want to keep it here as it increases code size, while the code in jit.cpp does the same but exists only once
 		{
 			const auto end = m_asm.newLabel();
 			const auto decLC = m_asm.newLabel();
@@ -163,7 +164,7 @@ namespace dsp56k
 			dspRegPool().releaseAll();
 			m_asm.bind(end);
 		}
-
+#endif
 		if(m_possibleBranch)
 		{
 			const RegGP temp(*this);
