@@ -115,7 +115,7 @@ namespace dsp56k
 	{
 		for (const auto& gp : g_funcArgGPs)
 		{
-			if (gp.equals(_gp.r64()))
+			if (gp.equals(r64(_gp)))
 				return true;
 		}
 		return false;
@@ -125,7 +125,7 @@ namespace dsp56k
 	{
 		for (const auto& gp : g_nonVolatileGPs)
 		{
-			if(gp.equals(_gp.r64()))
+			if(gp.equals(r64(_gp)))
 				return true;
 		}
 		return false;

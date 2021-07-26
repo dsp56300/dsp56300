@@ -215,10 +215,10 @@ namespace dsp56k
 		_block.mem().mov(ra, m_checks[4]);
 		_block.mem().mov(rb, m_checks[5]);
 
-		_ops.signextend24to56(regLA.get().r64());
-		_ops.signextend24to56(regLC.get().r64());
-		_ops.signextend48to56(regSR.get().r64());
-		_ops.signextend48to56(regA.get().r64());
+		_ops.signextend24to56(r64(regLA.get()));
+		_ops.signextend24to56(r64(regLC.get()));
+		_ops.signextend48to56(r64(regSR.get()));
+		_ops.signextend48to56(r64(regA.get()));
 		_ops.signextend56to64(ra);
 		_ops.signextend56to64(rb);
 
@@ -532,15 +532,15 @@ namespace dsp56k
 
 				_ops.emit(0, 0x60f400 + inc, 0x110000 * (i+1));		// move #$110000,ri
 				_block.regs().getR(r, i);
-				_block.mem().mov(m_checks[i], r.get().r32());
+				_block.mem().mov(m_checks[i], r32(r.get()));
 
 				_ops.emit(0, 0x70f400 + inc, 0x001100 * (i+1));		// move #$001100,ni
 				_block.regs().getN(r, i);
-				_block.mem().mov(m_checks[i+8], r.get().r32());
+				_block.mem().mov(m_checks[i+8], r32(r.get()));
 
 				_ops.emit(0, 0x05f420 + i, 0x000011 * (i+1));		// move #$000011,mi
 				_block.regs().getM(r, i);
-				_block.mem().mov(m_checks[i+16], r.get().r32());
+				_block.mem().mov(m_checks[i+16], r32(r.get()));
 			}
 		}, [&]()
 		{
@@ -650,15 +650,15 @@ namespace dsp56k
 
 				_ops.emit(0, 0x600500 + inc);						// asm move ri,x:$5
 				_block.mem().readDspMemory(r, MemArea_X, 0x5);
-				_block.mem().mov(m_checks[i], r.get().r32());
+				_block.mem().mov(m_checks[i], r32(r.get()));
 
 				_ops.emit(0, 0x700500 + inc);						// asm move ni,x:$5
 				_block.mem().readDspMemory(r, MemArea_X, 0x5);
-				_block.mem().mov(m_checks[i+8], r.get().r32());
+				_block.mem().mov(m_checks[i+8], r32(r.get()));
 
 				_ops.emit(0, 0x050520 + i);							// asm move mi,x:$5
 				_block.mem().readDspMemory(r, MemArea_X, 0x5);
-				_block.mem().mov(m_checks[i+16], r.get().r32());
+				_block.mem().mov(m_checks[i+16], r32(r.get()));
 			}
 		}, [&]()
 		{
@@ -681,35 +681,35 @@ namespace dsp56k
 
 			_ops.emit(0, 0x560500);								// a,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x570500);								// b,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x500500);								// a0,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x540500);								// a1,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x520500);								// a2,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x510500);								// b0,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x550500);								// b1,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x530500);								// b2,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 		}, [&]()
 		{
 			int i=0;
@@ -736,16 +736,16 @@ namespace dsp56k
 
 			_ops.emit(0, 0x440500);								// move x0,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 			_ops.emit(0, 0x450500);								// move x1,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 			_ops.emit(0, 0x460500);								// move y0,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 			_ops.emit(0, 0x470500);								// move y1,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 		}, [&]()
 		{
 			int i=0;
@@ -796,7 +796,7 @@ namespace dsp56k
 		dsp.regs().y.var = 0x0000112233445566;
 
 		const RegGP temp(_block);
-		const auto r = temp.get().r32();
+		const auto r = r32(temp.get());
 
 		auto& regs = _block.regs();
 

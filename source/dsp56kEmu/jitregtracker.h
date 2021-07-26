@@ -5,6 +5,7 @@
 #include "jitdspregpool.h"
 #include "types.h"
 #include "jitregtypes.h"
+#include "jithelper.h"
 
 #include "asmjit/x86/x86operand.h"
 
@@ -74,8 +75,8 @@ namespace dsp56k
 		JitRegGP get() const { return m_reg; }
 		operator JitRegGP() const { return get(); }
 
-		JitReg32 r32() const { return get().r32(); }
-		JitReg64 r64() const { return get().r64(); }
+		JitReg32 r32() const { return dsp56k::r32(get()); }
+		JitReg64 r64() const { return dsp56k::r64(get()); }
 
 		void write();
 
@@ -93,7 +94,7 @@ namespace dsp56k
 		DSPRegTemp(JitBlock& _block);
 		~DSPRegTemp();
 
-		JitReg64 get() const { return m_reg.r64(); }
+		JitReg64 get() const { return r64(m_reg); }
 		operator JitReg64() const { return get(); }
 
 		void acquire();

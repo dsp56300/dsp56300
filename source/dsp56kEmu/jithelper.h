@@ -51,4 +51,22 @@ namespace dsp56k
 		If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc);
 		void updateDirtyCCR(JitBlock& _block);
 	};
+
+	static JitReg32 r32(const JitRegGP& _reg)
+	{
+#ifdef HAVE_ARM64
+		return _reg.w();
+#else
+		return _reg.r32();
+#endif
+	}
+
+	static JitReg64 r64(const JitRegGP& _reg)
+	{
+#ifdef HAVE_ARM64
+		return _reg.x();
+#else
+		return _reg.r64();
+#endif
+	}
 }
