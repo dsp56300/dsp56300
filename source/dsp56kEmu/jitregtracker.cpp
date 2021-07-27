@@ -139,8 +139,6 @@ namespace dsp56k
 			m_block.stack().pop(m_reg);
 	}
 
-	constexpr bool g_push128Bits = false;
-	
 	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(m_block.dspRegPool().isInUse(JitReg128(_xmmIndex)))
 	{
 		if(!m_isLoaded)
@@ -149,16 +147,6 @@ namespace dsp56k
 		const auto xm = JitReg128(_xmmIndex);
 
 		_block.stack().push(xm);
-
-		if(g_push128Bits)
-		{
-			const RegGP r(_block);
-			_block.asm_().psrldq(xm, asmjit::Imm(8));
-
-			_block.asm_().movq(r, xm);
-			
-			_block.stack().push(r.get());
-		}
 	}
 
 	PushXMM::~PushXMM()
@@ -169,18 +157,6 @@ namespace dsp56k
 		const auto xm = JitReg128(m_xmmIndex);
 
 		m_block.stack().pop(xm);
-
-		if(g_push128Bits)
-		{
-			const RegGP r(m_block);
-			m_block.stack().pop(r.get());
-
-			m_block.asm_().pslldq(xm, asmjit::Imm(8));
-
-			RegXMM xt(m_block);
-			m_block.asm_().movq(xt, r);
-			m_block.asm_().movsd(xm, xt);
-		}
 	}
 
 	PushXMMRegs::PushXMMRegs(JitBlock& _block) : m_block(_block)

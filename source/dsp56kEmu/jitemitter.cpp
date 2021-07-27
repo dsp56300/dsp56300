@@ -73,6 +73,15 @@ namespace dsp56k
 	}
 #endif
 
+	void JitEmitter::move(const JitRegGP& _dst, const JitMemPtr& _src)
+	{
+#ifdef HAVE_ARM64
+		ldr(_dst, _src);
+#else
+		mov(_dst, _src);
+#endif
+	}
+
 	void JitEmitter::clr(const JitRegGP& _gp)
 	{
 #ifdef HAVE_ARM64
