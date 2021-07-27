@@ -133,14 +133,22 @@ namespace dsp56k
 		m_block.asm_().mov(makePtr(a, 0, _size), _src);
 	}
 
-	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const JitRegGP& _index, const uint32_t _shift, const int32_t _offset, const uint32_t _size)
+	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const JitRegGP& _index, const uint32_t _shift, const uint32_t _size)
 	{
-		return asmjit::x86::ptr(_base, _index, _shift, _offset, _size);
+#ifdef HAVE_ARM64
+		return asmjit::arm::ptr(_base, _index, asmjit::arm::Shift(asmjit::arm::Shift::kOpLSL, _shift));
+#else
+		return asmjit::x86::ptr(_base, _index, _shift, 0, _size);
+#endif
 	}
 
 	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const uint32_t _offset, const uint32_t _size)
 	{
+#ifdef HAVE_ARM64
+		return asmjit::arm::ptr(_base, _offset);
+#else
 		return asmjit::x86::ptr(_base, _offset, _size);
+#endif
 	}
 
 	void Jitmem::setPtrOffset(JitMemPtr& _mem, const void* _base, const void* _member)
@@ -153,12 +161,12 @@ namespace dsp56k
 		const RegGP t(m_block);
 		const SkipLabel skip(m_block.asm_());
 
-		m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().size()));
+		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size()));
 		m_block.asm_().jge(skip.get());
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
-		m_block.asm_().mov(r32(_dst), makePtr(t, _offset, 2, 0, sizeof(TWord)));
+		m_block.asm_().mov(r32(_dst), makePtr(t, _offset, 2, sizeof(TWord)));
 	}
 	
 	void callDSPMemWrite(DSP* const _dsp, const EMemArea _area, const TWord _offset, const TWord _value)
@@ -186,12 +194,12 @@ namespace dsp56k
 
 		const SkipLabel skip(m_block.asm_());
 
-		m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().size()));
+		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size()));
 		m_block.asm_().jge(skip.get());
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
-		m_block.asm_().mov(makePtr(t, _offset, 2, 0, sizeof(TWord)), r32(_src));
+		m_block.asm_().mov(makePtr(t, _offset, 2, sizeof(TWord)), r32(_src));
 #endif
 	}
 
@@ -326,7 +334,11 @@ namespace dsp56k
 			const auto p = regSmallTemp;
 			getMemAreaPtr(p, MemArea_P);
 			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().getBridgedMemoryAddress()));
+#ifdef HAVE_ARM64
+			m_block.asm_().csel(_dst, p, _dst, asmjit::arm::Cond::kGE);
+#else
 			m_block.asm_().cmovge(_dst, p);
+#endif
 		}
 	}
 

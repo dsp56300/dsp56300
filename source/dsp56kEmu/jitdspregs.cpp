@@ -98,7 +98,7 @@ namespace dsp56k
 	{
 		const auto r = static_cast<JitDspRegPool::DspReg>((pool().isParallelOp() ? JitDspRegPool::DspAwrite : JitDspRegPool::DspA) + _alu);
 		const auto alu = pool().get(r, false, true);
-		m_asm.xor_(alu, alu);
+		m_asm.clr(alu);
 
 		if(pool().isParallelOp() && !pool().isLocked(r))
 			pool().lock(r);
