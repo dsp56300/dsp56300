@@ -184,8 +184,8 @@ namespace dsp56k
 			decode_ff_read(r, ff);
 
 		// S2 D2 write
-		if(F)		m_dspRegs.setXY1(1, ab);
-		else		m_dspRegs.setXY0(1, ab);
+		if(F)		setXY1(1, ab);
+		else		setXY0(1, ab);
 
 		ab.release();
 
@@ -224,8 +224,8 @@ namespace dsp56k
 
 		// S2 D2 write
 		{
-			if( e )		m_dspRegs.setXY1(0, ab);
-			else		m_dspRegs.setXY0(0, ab);
+			if( e )		setXY1(0, ab);
+			else		setXY0(0, ab);
 		}
 	
 		// S1 D1 write
@@ -251,7 +251,7 @@ namespace dsp56k
 		}
 		{
 			RegGP x0(m_block);
-			m_dspRegs.getX0(x0);
+			getX0(x0);
 			transfer24ToAlu(d, x0);
 		}
 	}
@@ -268,7 +268,7 @@ namespace dsp56k
 		}
 		{
 			RegGP y0(m_block);
-			m_dspRegs.getY0(y0);
+			getY0(y0);
 			transfer24ToAlu(d, y0);
 		}
 	}

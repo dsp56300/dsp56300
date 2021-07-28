@@ -368,6 +368,24 @@ namespace dsp56k
 		JitRegGP getSR(JitDspRegs::AccessType _accessType);
 		void setSR(const JitReg32& _src);
 
+		void getXY0(const JitRegGP& _dst, uint32_t _aluIndex) const;
+		void setXY0(uint32_t _xy, const JitRegGP& _src);
+		void getXY1(const JitRegGP& _dst, uint32_t _aluIndex) const;
+		void setXY1(uint32_t _xy, const JitRegGP& _src);
+
+		void getX0(const JitRegGP& _dst) const { return getXY0(_dst, 0); }
+		void getY0(const JitRegGP& _dst) const { return getXY0(_dst, 1); }
+		void getX1(const JitRegGP& _dst) const { return getXY1(_dst, 0); }
+		void getY1(const JitRegGP& _dst) const { return getXY1(_dst, 1); }
+
+		void getALU0(const JitRegGP& _dst, uint32_t _aluIndex) const;
+		void getALU1(const JitRegGP& _dst, uint32_t _aluIndex) const;
+		void getALU2signed(const JitRegGP& _dst, uint32_t _aluIndex) const;
+
+		void setALU0(uint32_t _aluIndex, const JitRegGP& _src);
+		void setALU1(uint32_t _aluIndex, const JitReg32& _src);
+		void setALU2(uint32_t _aluIndex, const JitReg32& _src);
+
 		void transferAluTo24(const JitRegGP& _dst, int _alu);
 		void transfer24ToAlu(int _alu, const JitRegGP& _src);
 		void transferSaturation(const JitRegGP& _dst);

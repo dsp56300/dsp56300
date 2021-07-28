@@ -820,14 +820,14 @@ namespace dsp56k
 		regs.getLA(r);				modify();		regs.setLA(r);
 		regs.getLC(r);				modify();		regs.setLC(r);
 
-		regs.getALU0(r, 0);			modify64();		regs.setALU0(0,r);
-		regs.getALU1(r, 0);			modify64();		regs.setALU1(0,r);
-		regs.getALU2signed(r, 0);	modify64();		regs.setALU2(0,r);
+		_ops.getALU0(r, 0);			modify64();		_ops.setALU0(0,r);
+		_ops.getALU1(r, 0);			modify64();		_ops.setALU1(0,r);
+		_ops.getALU2signed(r, 0);	modify64();		_ops.setALU2(0,r);
 
 		regs.getALU(temp, 1);		modify64();		regs.setALU(1, temp);
 
-		regs.getXY0(r, 0);			modify();		regs.setXY0(0, r);
-		regs.getXY1(r, 0);			modify();		regs.setXY1(0, r);
+		_ops.getXY0(r, 0);			modify();		_ops.setXY0(0, r);
+		_ops.getXY1(r, 0);			modify();		_ops.setXY1(0, r);
 
 		regs.getXY(r, 1);			modify64();		regs.setXY(1, r);
 	}

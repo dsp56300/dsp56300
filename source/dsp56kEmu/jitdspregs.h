@@ -47,23 +47,6 @@ namespace dsp56k
 		JitRegGP getXY(int _xy, AccessType _access);
 		void setXY(uint32_t _xy, const JitRegGP& _src);
 
-		void getXY0(const JitRegGP& _dst, uint32_t _aluIndex);
-		void setXY0(uint32_t _xy, const JitRegGP& _src);
-		void getXY1(const JitRegGP& _dst, uint32_t _aluIndex);
-		void setXY1(uint32_t _xy, const JitRegGP& _src);
-
-		void getX0(const JitRegGP& _dst) { return getXY0(_dst, 0); }
-		void getY0(const JitRegGP& _dst) { return getXY0(_dst, 1); }
-		void getX1(const JitRegGP& _dst) { return getXY1(_dst, 0); }
-		void getY1(const JitRegGP& _dst) { return getXY1(_dst, 1); }
-
-		void getALU0(const JitRegGP& _dst, uint32_t _aluIndex);
-		void setALU0(uint32_t _aluIndex, const JitRegGP& _src);
-		void getALU1(const JitRegGP& _dst, uint32_t _aluIndex);
-		void setALU1(uint32_t _aluIndex, const JitReg32& _src);
-		void getALU2signed(const JitRegGP& _dst, uint32_t _aluIndex);
-		void setALU2(uint32_t _aluIndex, const JitReg32& _src);
-
 		void getEP(const JitReg32& _dst) const;
 		void setEP(const JitReg32& _src) const;
 		void getVBA(const JitReg32& _dst) const;

@@ -128,28 +128,28 @@ namespace dsp56k
 		switch( i )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-		case 0x00:	m_dspRegs.getXY0(_dst, 0);	break;
-		case 0x01:	m_dspRegs.getXY1(_dst, 0);	break;
-		case 0x02:	m_dspRegs.getXY0(_dst, 1);	break;
-		case 0x03:	m_dspRegs.getXY1(_dst, 1);	break;
+		case 0x00:	getXY0(_dst, 0);	break;
+		case 0x01:	getXY1(_dst, 0);	break;
+		case 0x02:	getXY0(_dst, 1);	break;
+		case 0x03:	getXY1(_dst, 1);	break;
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	m_dspRegs.getXY0(_dst, 0);	break;
-		case 0x05:	m_dspRegs.getXY1(_dst, 0);	break;
-		case 0x06:	m_dspRegs.getXY0(_dst, 1);	break;
-		case 0x07:	m_dspRegs.getXY1(_dst, 1);	break;
+		case 0x04:	getXY0(_dst, 0);	break;
+		case 0x05:	getXY1(_dst, 0);	break;
+		case 0x06:	getXY0(_dst, 1);	break;
+		case 0x07:	getXY1(_dst, 1);	break;
 
 		// 001DDD - 8 accumulators in data ALU
-		case 0x08:	m_dspRegs.getALU0(_dst, 0);	break;
-		case 0x09:	m_dspRegs.getALU0(_dst, 1);	break;
+		case 0x08:	getALU0(_dst, 0);	break;
+		case 0x09:	getALU0(_dst, 1);	break;
 		case 0x0a:
 		case 0x0b:
 			{
 				const auto aluIndex = i - 0x0a;
-				m_dspRegs.getALU2signed(_dst, aluIndex);
+				getALU2signed(_dst, aluIndex);
 			}
 			break;
-		case 0x0c:	m_dspRegs.getALU1(_dst, 0);	break;
-		case 0x0d:	m_dspRegs.getALU1(_dst, 1);	break;
+		case 0x0c:	getALU1(_dst, 0);	break;
+		case 0x0d:	getALU1(_dst, 1);	break;
 		case 0x0e:	transferAluTo24(_dst, 0);	break;
 		case 0x0f:	transferAluTo24(_dst, 1);	break;
 
@@ -217,23 +217,23 @@ namespace dsp56k
 		switch( i )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-		case 0x00:	m_dspRegs.setXY0(0, signedFraction(_src));	break;
-		case 0x01:	m_dspRegs.setXY1(0, signedFraction(_src));	break;
-		case 0x02:	m_dspRegs.setXY0(1, signedFraction(_src));	break;
-		case 0x03:	m_dspRegs.setXY1(1, signedFraction(_src));	break;
+		case 0x00:	setXY0(0, signedFraction(_src));	break;
+		case 0x01:	setXY1(0, signedFraction(_src));	break;
+		case 0x02:	setXY0(1, signedFraction(_src));	break;
+		case 0x03:	setXY1(1, signedFraction(_src));	break;
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	m_dspRegs.setXY0(0, signedFraction(_src));	break;
-		case 0x05:	m_dspRegs.setXY1(0, signedFraction(_src));	break;
-		case 0x06:	m_dspRegs.setXY0(1, signedFraction(_src));	break;
-		case 0x07:	m_dspRegs.setXY1(1, signedFraction(_src));	break;
+		case 0x04:	setXY0(0, signedFraction(_src));	break;
+		case 0x05:	setXY1(0, signedFraction(_src));	break;
+		case 0x06:	setXY0(1, signedFraction(_src));	break;
+		case 0x07:	setXY1(1, signedFraction(_src));	break;
 
 		// 001DDD - 8 accumulators in data ALU
-		case 0x08:	m_dspRegs.setALU0(0, _src);	break;
-		case 0x09:	m_dspRegs.setALU0(1, _src);	break;
-		case 0x0a:	m_dspRegs.setALU2(0, _src);	break;
-		case 0x0b:	m_dspRegs.setALU2(1, _src);	break;
-		case 0x0c:	m_dspRegs.setALU1(0, _src);	break;
-		case 0x0d:	m_dspRegs.setALU1(1, _src);	break;
+		case 0x08:	setALU0(0, _src);	break;
+		case 0x09:	setALU0(1, _src);	break;
+		case 0x0a:	setALU2(0, _src);	break;
+		case 0x0b:	setALU2(1, _src);	break;
+		case 0x0c:	setALU1(0, _src);	break;
+		case 0x0d:	setALU1(1, _src);	break;
 		case 0x0e:	transfer24ToAlu(0, signedFraction(_src));	break;	
 		case 0x0f:	transfer24ToAlu(1, signedFraction(_src));	break;
 
@@ -341,8 +341,8 @@ namespace dsp56k
 	{
 		switch (_ee)
 		{
-		case 0: m_dspRegs.getX0(_dst); break;
-		case 1: m_dspRegs.getX1(_dst); break;
+		case 0: getX0(_dst); break;
+		case 1: getX1(_dst); break;
 		case 2: transferAluTo24(_dst, 0); break;
 		case 3: transferAluTo24(_dst, 1); break;
 		default: assert(0 && "invalid ee value");
@@ -353,8 +353,8 @@ namespace dsp56k
 	{
 		switch (_ee)
 		{
-		case 0: m_dspRegs.setXY0(0, _value); return;
-		case 1: m_dspRegs.setXY1(0, _value); return;
+		case 0: setXY0(0, _value); return;
+		case 1: setXY1(0, _value); return;
 		case 2: transfer24ToAlu(0, _value);	return;
 		case 3: transfer24ToAlu(1, _value);	return;
 		}
@@ -365,8 +365,8 @@ namespace dsp56k
 	{
 		switch (_ff)
 		{
-		case 0: m_dspRegs.getY0(_dst); break;
-		case 1: m_dspRegs.getY1(_dst); break;
+		case 0: getY0(_dst); break;
+		case 1: getY1(_dst); break;
 		case 2: transferAluTo24(_dst, 0); break;
 		case 3: transferAluTo24(_dst, 1); break;
 		default:
@@ -379,8 +379,8 @@ namespace dsp56k
 	{
 		switch (_ff)
 		{
-		case 0: m_dspRegs.setXY0(1, _value); break;
-		case 1: m_dspRegs.setXY1(1, _value); break;
+		case 0: setXY0(1, _value); break;
+		case 1: setXY1(1, _value); break;
 		case 2: transfer24ToAlu(0, _value); break;
 		case 3: transfer24ToAlu(1, _value); break;
 		default: assert(false && "invalid ff value"); break;
@@ -436,11 +436,11 @@ namespace dsp56k
 		{
 		case 0:
 		case 1:
-			m_dspRegs.getXY0(_dst, jj);
+			getXY0(_dst, jj);
 			break;
 		case 2: 
 		case 3:
-			m_dspRegs.getXY1(_dst, jj - 2);
+			getXY1(_dst, jj - 2);
 			break;
 		default:
 			assert(0 && "unreachable, invalid JJ value");
@@ -464,10 +464,10 @@ namespace dsp56k
 	{
 		switch (_qq)
 		{
-		case 0: m_dspRegs.getX0(_dst); break;
-		case 1: m_dspRegs.getY0(_dst); break;
-		case 2: m_dspRegs.getX1(_dst); break;
-		case 3: m_dspRegs.getY1(_dst); break;
+		case 0: getX0(_dst); break;
+		case 1: getY0(_dst); break;
+		case 2: getX1(_dst); break;
+		case 3: getY1(_dst); break;
 		default: assert(0 && "invalid qq value"); break;
 		}
 	}
@@ -476,10 +476,10 @@ namespace dsp56k
 	{
 		switch (_qq)
 		{
-		case 0: m_dspRegs.getY1(_dst);	break;
-		case 1: m_dspRegs.getX0(_dst);	break;
-		case 2: m_dspRegs.getY0(_dst);	break;
-		case 3: m_dspRegs.getX1(_dst);	break;
+		case 0: getY1(_dst);	break;
+		case 1: getX0(_dst);	break;
+		case 2: getY0(_dst);	break;
+		case 3: getX1(_dst);	break;
 		default:	assert(0 && "invalid QQ value");	break;
 		}
 	}
@@ -488,25 +488,25 @@ namespace dsp56k
 	{
 		switch (_qqqq)
 		{
-		case 0:  m_dspRegs.getX0(_s1);	m_dspRegs.getX0(_s2);	return;
-		case 1:  m_dspRegs.getY0(_s1);	m_dspRegs.getY0(_s2);	return;
-		case 2:  m_dspRegs.getX1(_s1);	m_dspRegs.getX0(_s2);	return;
-		case 3:  m_dspRegs.getY1(_s1);	m_dspRegs.getY0(_s2);	return;
+		case 0:  getX0(_s1);	getX0(_s2);	return;
+		case 1:  getY0(_s1);	getY0(_s2);	return;
+		case 2:  getX1(_s1);	getX0(_s2);	return;
+		case 3:  getY1(_s1);	getY0(_s2);	return;
 
-		case 4:  m_dspRegs.getX0(_s1);	m_dspRegs.getY1(_s2);	return;
-		case 5:  m_dspRegs.getY0(_s1);	m_dspRegs.getX0(_s2);	return;
-		case 6:  m_dspRegs.getX1(_s1);	m_dspRegs.getY0(_s2);	return;
-		case 7:  m_dspRegs.getY1(_s1);	m_dspRegs.getX1(_s2);	return;
+		case 4:  getX0(_s1);	getY1(_s2);	return;
+		case 5:  getY0(_s1);	getX0(_s2);	return;
+		case 6:  getX1(_s1);	getY0(_s2);	return;
+		case 7:  getY1(_s1);	getX1(_s2);	return;
 
-		case 8:  m_dspRegs.getX1(_s1);	m_dspRegs.getX1(_s2);	return;
-		case 9:  m_dspRegs.getY1(_s1);	m_dspRegs.getY1(_s2);	return;
-		case 10: m_dspRegs.getX0(_s1);	m_dspRegs.getX1(_s2);	return;
-		case 11: m_dspRegs.getY0(_s1);	m_dspRegs.getY1(_s2);	return;
+		case 8:  getX1(_s1);	getX1(_s2);	return;
+		case 9:  getY1(_s1);	getY1(_s2);	return;
+		case 10: getX0(_s1);	getX1(_s2);	return;
+		case 11: getY0(_s1);	getY1(_s2);	return;
 
-		case 12: m_dspRegs.getY1(_s1);	m_dspRegs.getX0(_s2);	return;
-		case 13: m_dspRegs.getX0(_s1);	m_dspRegs.getY0(_s2);	return;
-		case 14: m_dspRegs.getY0(_s1);	m_dspRegs.getX1(_s2);	return;
-		case 15: m_dspRegs.getX1(_s1);	m_dspRegs.getY1(_s2);	return;
+		case 12: getY1(_s1);	getX0(_s2);	return;
+		case 13: getX0(_s1);	getY0(_s2);	return;
+		case 14: getY0(_s1);	getX1(_s2);	return;
+		case 15: getX1(_s1);	getY1(_s2);	return;
 
 		default: assert(0 && "invalid QQQQ value");				return;
 		}
@@ -516,12 +516,12 @@ namespace dsp56k
 	{
 		switch( _sss )
 		{
-		case 2:		m_dspRegs.getALU1(_dst, 0);			break;
-		case 3:		m_dspRegs.getALU1(_dst, 1);			break;
-		case 4:		m_dspRegs.getXY0(_dst, 0);			break;
-		case 5:		m_dspRegs.getXY0(_dst, 1);			break;
-		case 6:		m_dspRegs.getXY1(_dst, 0);			break;
-		case 7:		m_dspRegs.getXY1(_dst, 1);			break;
+		case 2:		getALU1(_dst, 0);	break;
+		case 3:		getALU1(_dst, 1);	break;
+		case 4:		getXY0(_dst, 0);	break;
+		case 5:		getXY0(_dst, 1);	break;
+		case 6:		getXY1(_dst, 0);	break;
+		case 7:		getXY1(_dst, 1);	break;
 		case 0:
 		case 1:
 		default:

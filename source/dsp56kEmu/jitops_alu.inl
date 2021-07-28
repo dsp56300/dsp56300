@@ -485,7 +485,7 @@ namespace dsp56k
 	inline void JitOps::alu_lsl(TWord ab, int _shiftAmount)
 	{
 		const RegGP d(m_block);
-		m_dspRegs.getALU1(d, ab);
+		getALU1(d, ab);
 		m_asm.shl(d.get().r32(), _shiftAmount + 8);	// + 8 to use native carry flag
 		ccr_update_ifCarry(CCRB_C);
 		m_asm.shr(d.get().r32(), 8);				// revert shift by 8
@@ -493,13 +493,13 @@ namespace dsp56k
 		m_asm.bt(d.get().r32(), asmjit::Imm(23));
 		ccr_update_ifCarry(CCRB_N);
 		ccr_clear(CCR_V);
-		m_dspRegs.setALU1(ab, d.get().r32());
+		setALU1(ab, d.get().r32());
 	}
 
 	inline void JitOps::alu_lsr(TWord ab, int _shiftAmount)
 	{
 		const RegGP d(m_block);
-		m_dspRegs.getALU1(d, ab);
+		getALU1(d, ab);
 		m_asm.shr(d.get().r32(), _shiftAmount);
 		ccr_update_ifCarry(CCRB_C);
 		m_asm.cmp(d.get().r32(), asmjit::Imm(0));
@@ -507,7 +507,7 @@ namespace dsp56k
 		m_asm.bt(d.get().r32(), asmjit::Imm(23));
 		ccr_update_ifCarry(CCRB_N);
 		ccr_clear(CCR_V);
-		m_dspRegs.setALU1(ab, d.get().r32());
+		setALU1(ab, d.get().r32());
 	}
 
 	void JitOps::alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate, bool _s1Unsigned, bool _s2Unsigned, bool _round)
@@ -1326,10 +1326,10 @@ namespace dsp56k
 
 		{
 			const RegGP d(m_block);
-			m_dspRegs.getALU1(d, ab);
+			getALU1(d, ab);
 			m_asm.not_(d.get().r32());
 			m_asm.and_(d, asmjit::Imm(0xffffff));
-			m_dspRegs.setALU1(ab, d.get().r32());
+			setALU1(ab, d.get().r32());
 
 			m_asm.bt(d, asmjit::Imm(23));
 			ccr_update_ifCarry(CCRB_N);					// Set if bit 47 of the result is set
@@ -1372,7 +1372,7 @@ namespace dsp56k
 		const auto D = getFieldValue<Rol, Field_d>(op);
 
 		RegGP r(m_block);
-		m_dspRegs.getALU1(r, D);
+		getALU1(r, D);
 
 		const RegGP prevCarry(m_block);
 		m_asm.xor_(prevCarry, prevCarry.get());
@@ -1387,7 +1387,7 @@ namespace dsp56k
 
 		m_asm.or_(r, prevCarry.get());						// Set if bits 47–24 of the result are 0
 		ccr_update_ifZero(CCRB_Z);
-		m_dspRegs.setALU1(D, r.get().r32());
+		setALU1(D, r.get().r32());
 
 		ccr_clear(CCR_V);									// This bit is always cleared
 	}
