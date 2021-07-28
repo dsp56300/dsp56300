@@ -54,7 +54,7 @@ namespace dsp56k
 
 	void JitEmitter::ret()
 	{
-		JitBuilder::ret(asmjit::arm::GpX(30));
+		JitBuilder::ret(asmjit::a64::regs::x30);
 	}
 
 	void JitEmitter::jmp(const asmjit::Label& _label)
