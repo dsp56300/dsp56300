@@ -190,41 +190,6 @@ namespace dsp56k
 		store24(m_dsp.regs().sp, _src);
 	}
 
-	void JitDspRegs::getSSH(const JitReg32& _dst) const
-	{
-		getSS(r64(_dst));
-		m_asm.shr(r64(_dst), Imm(24));
-		m_asm.and_(r64(_dst), Imm(0x00ffffff));
-		decSP();
-	}
-
-	void JitDspRegs::setSSH(const JitReg32& _src) const
-	{
-		incSP();
-		const RegGP temp(m_block);
-		getSS(temp);
-		m_asm.ror(temp, Imm(24));
-		m_asm.and_(temp, Imm(0xffffffffff000000));
-		m_asm.or_(temp, r64(_src));
-		m_asm.rol(temp, Imm(24));
-		setSS(temp);
-	}
-
-	void JitDspRegs::getSSL(const JitReg32& _dst) const
-	{
-		getSS(r64(_dst));
-		m_asm.and_(r64(_dst), 0x00ffffff);
-	}
-
-	void JitDspRegs::setSSL(const JitReg32& _src) const
-	{
-		const RegGP temp(m_block);
-		getSS(temp);
-		m_asm.and_(temp, Imm(0xffffffffff000000));
-		m_asm.or_(temp, r64(_src));
-		setSS(temp);
-	}
-
 	JitRegGP JitDspRegs::getLA(AccessType _type)
 	{
 		return pool().get(JitDspRegPool::DspLA, _type & Read, _type & Write);
@@ -261,10 +226,15 @@ namespace dsp56k
 
 		const auto ssIndex = g_funcArgGPs[0];//		const RegGP ssIndex(m_block);
 		getSP(r32(ssIndex));
+
+#ifdef HAVE_ARM64
+		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
+#else
 		m_asm.and_(ssIndex, Imm(0xf));
+#endif
 
 		m_block.mem().ptrToReg(_dst, first);
-		m_asm.mov(_dst, ptr(_dst, ssIndex, 3, 0, 8));
+		m_asm.mov(_dst, Jitmem::makePtr(_dst, ssIndex, 3, 8));
 	}
 
 	void JitDspRegs::setSS(const JitReg64& _src) const
@@ -273,37 +243,36 @@ namespace dsp56k
 
 		const auto ssIndex = g_funcArgGPs[0];
 		getSP(r32(ssIndex));
+#ifdef HAVE_ARM64
+		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
+#else
 		m_asm.and_(ssIndex, Imm(0xf));
-
+#endif
 		const RegGP addr(m_block);
 		m_block.mem().ptrToReg(addr, first);
-		m_asm.mov(ptr(addr, ssIndex, 3, 0, 8), _src);
-	}
-
-	void JitDspRegs::decSP() const
-	{
-		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sp.var)));
-		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sc.var)));
-	}
-
-	void JitDspRegs::incSP() const
-	{
-		m_asm.inc(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sp.var)));
-		m_asm.inc(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sc.var)));
+		m_asm.mov(Jitmem::makePtr(addr, ssIndex, 3, 8), _src);
 	}
 
 	void JitDspRegs::mask56(const JitRegGP& _alu) const
 	{
+#ifdef HAVE_ARM64
+		m_asm.and_(_alu, _alu, Imm(0x00ffffffffffffff));
+#else
 		// we need to work around the fact that there is no AND with 64 bit immediate operand
-		m_asm.shl(_alu, Imm(8));	
+		m_asm.shl(_alu, Imm(8));
 		m_asm.shr(_alu, Imm(8));
+#endif
 	}
 
 	void JitDspRegs::mask48(const JitRegGP& _alu) const
 	{
+#ifdef HAVE_ARM64
+		m_asm.and_(_alu, _alu, Imm(0x0000ffffffffffff));
+#else
 		// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shl(r64(_alu), Imm(16));	
 		m_asm.shr(r64(_alu), Imm(16));
+#endif
 	}
 
 	void JitDspRegs::setPC(const JitRegGP& _pc)

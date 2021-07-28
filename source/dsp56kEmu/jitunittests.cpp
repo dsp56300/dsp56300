@@ -767,7 +767,7 @@ namespace dsp56k
 			dsp.regs().ss[i].var = 0x111111111111 * i;
 
 			_block.regs().getSS(temp);
-			_block.regs().incSP();
+			_ops.incSP();
 			_block.mem().mov(m_checks[i], temp);
 		}
 	}

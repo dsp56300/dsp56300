@@ -67,6 +67,11 @@ namespace dsp56k
 		cond_ge().b(_label);
 	}
 
+	void JitEmitter::shl(const JitRegGP& _dst, const asmjit::Imm& _imm)
+	{
+		lsl(_dst, _dst, _imm);
+	}
+
 	void JitEmitter::shr(const JitRegGP& _dst, const asmjit::Imm& _imm)
 	{
 		lsr(_dst, _dst, _imm);

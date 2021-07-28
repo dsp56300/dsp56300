@@ -61,10 +61,6 @@ namespace dsp56k
 		void setOMR(const JitReg32& _src) const;
 		void getSP(const JitReg32& _dst) const;
 		void setSP(const JitReg32& _src) const;
-		void getSSH(const JitReg32& _dst) const;
-		void setSSH(const JitReg32& _src) const;
-		void getSSL(const JitReg32& _dst) const;
-		void setSSL(const JitReg32& _src) const;
 		void getLA(const JitReg32& _dst);
 		void setLA(const JitReg32& _src);
 		void getLC(const JitReg32& _dst);
@@ -72,9 +68,6 @@ namespace dsp56k
 
 		void getSS(const JitReg64& _dst) const;
 		void setSS(const JitReg64& _src) const;
-
-		void decSP() const;
-		void incSP() const;
 
 		void mask56(const JitRegGP& _alu) const;
 		void mask48(const JitRegGP& _alu) const;

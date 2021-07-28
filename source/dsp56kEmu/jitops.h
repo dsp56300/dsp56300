@@ -386,6 +386,14 @@ namespace dsp56k
 		void setALU1(uint32_t _aluIndex, const JitReg32& _src);
 		void setALU2(uint32_t _aluIndex, const JitReg32& _src);
 
+		void getSSH(const JitReg32& _dst) const;
+		void setSSH(const JitReg32& _src) const;
+		void getSSL(const JitReg32& _dst) const;
+		void setSSL(const JitReg32& _src) const;
+
+		void decSP() const;
+		void incSP() const;
+
 		void transferAluTo24(const JitRegGP& _dst, int _alu);
 		void transfer24ToAlu(int _alu, const JitRegGP& _src);
 		void transferSaturation(const JitRegGP& _dst);

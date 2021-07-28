@@ -344,16 +344,16 @@ namespace dsp56k
 				m_asm.mov(pc, asmjit::Imm(m_pcCurrentOp + m_opSize));
 			}
 
-			m_dspRegs.setSSH(pc.get().r32());
+			setSSH(pc.get().r32());
 		}
 
-		m_dspRegs.setSSL(m_dspRegs.getSR(JitDspRegs::Read).r32());
+		setSSL(m_dspRegs.getSR(JitDspRegs::Read).r32());
 	}
 	void JitOps::popPCSR()
 	{
 		{
 			const RegGP sr(m_block);
-			m_dspRegs.getSSL(sr.get().r32());
+			getSSL(sr.get().r32());
 			setSR(sr.get().r32());
 		}
 		popPC();
@@ -361,7 +361,7 @@ namespace dsp56k
 	void JitOps::popPC()
 	{
 		RegGP pc(m_block);
-		m_dspRegs.getSSH(pc.get().r32());
+		getSSH(pc.get().r32());
 		m_dspRegs.setPC(pc);
 	}
 
@@ -567,6 +567,54 @@ namespace dsp56k
 		m_asm.or_(temp.get(), maskedSource.get());
 		m_asm.rol(temp, asmjit::Imm(48));
 		m_dspRegs.setALU(_aluIndex, temp);
+	}
+
+
+	void JitOps::getSSH(const JitReg32& _dst) const
+	{
+		m_dspRegs.getSS(r64(_dst));
+		m_asm.shr(r64(_dst), asmjit::Imm(24));
+		m_asm.and_(r64(_dst), asmjit::Imm(0x00ffffff));
+		decSP();
+	}
+
+	void JitOps::setSSH(const JitReg32& _src) const
+	{
+		incSP();
+		const RegGP temp(m_block);
+		m_dspRegs.getSS(temp);
+		m_asm.ror(temp, asmjit::Imm(24));
+		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
+		m_asm.or_(temp, r64(_src));
+		m_asm.rol(temp, asmjit::Imm(24));
+		m_dspRegs.setSS(temp);
+	}
+
+	void JitOps::getSSL(const JitReg32& _dst) const
+	{
+		m_dspRegs.getSS(r64(_dst));
+		m_asm.and_(r64(_dst), 0x00ffffff);
+	}
+
+	void JitOps::setSSL(const JitReg32& _src) const
+	{
+		const RegGP temp(m_block);
+		m_dspRegs.getSS(temp);
+		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
+		m_asm.or_(temp, r64(_src));
+		m_dspRegs.setSS(temp);
+	}
+
+	void JitOps::decSP() const
+	{
+		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sp.var)));
+		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sc.var)));
+	}
+
+	void JitOps::incSP() const
+	{
+		m_asm.inc(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sp.var)));
+		m_asm.inc(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sc.var)));
 	}
 
 	void JitOps::transferAluTo24(const JitRegGP& _dst, int _alu)

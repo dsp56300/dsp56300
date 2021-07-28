@@ -418,8 +418,8 @@ namespace dsp56k
 			m_asm.jz(_toFalse);
 		}, [&]()
 		{
-			m_dspRegs.setSSH(m_dspRegs.getLA(JitDspRegs::Read).r32());
-			m_dspRegs.setSSL(m_dspRegs.getLC(JitDspRegs::Read).r32());
+			setSSH(m_dspRegs.getLA(JitDspRegs::Read).r32());
+			setSSL(m_dspRegs.getLC(JitDspRegs::Read).r32());
 
 			m_asm.mov(m_dspRegs.getLA(JitDspRegs::Write), asmjit::Imm(_addr));
 			m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), _lc.get());
@@ -440,20 +440,20 @@ namespace dsp56k
 		// restore previous loop flag
 		{
 			const RegGP r(m_block);
-			m_dspRegs.getSSL(r.get().r32());
+			getSSL(r.get().r32());
 			m_asm.and_(r, asmjit::Imm(SR_LF));
 			m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~SR_LF));
 			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
 		}
 
 		// decrement SP twice, restoring old loop settings
-		m_dspRegs.decSP();
+		decSP();
 
 		const RegGP r(m_block);
-		m_dspRegs.getSSL(r.get().r32());
+		getSSL(r.get().r32());
 		m_dspRegs.setLC(r.get().r32());
 
-		m_dspRegs.getSSH(r.get().r32());
+		getSSH(r.get().r32());
 		m_dspRegs.setLA(r.get().r32());
 
 		m_resultFlags |= WriteToLC | WriteToLA;

@@ -195,8 +195,8 @@ namespace dsp56k
 		case 0x39:	getSR(_dst);			break;
 		case 0x3a:	m_dspRegs.getOMR(_dst);	break;
 		case 0x3b:	m_dspRegs.getSP(_dst);	break;
-		case 0x3c:	m_dspRegs.getSSH(_dst);	break;
-		case 0x3d:	m_dspRegs.getSSL(_dst);	break;
+		case 0x3c:	getSSH(_dst);			break;
+		case 0x3d:	getSSL(_dst);			break;
 		case 0x3e:	m_dspRegs.getLA(_dst);	break;
 		case 0x3f:	m_dspRegs.getLC(_dst);	break;
 		default:
@@ -276,11 +276,11 @@ namespace dsp56k
 
 		// 111GGG - 8 program controller registers
 		case 0x38:	m_dspRegs.setSZ(_src);	break;
-		case 0x39:	setSR(_src);	break;
+		case 0x39:	setSR(_src);			break;
 		case 0x3a:	m_dspRegs.setOMR(_src);	break;
 		case 0x3b:	m_dspRegs.setSP(_src);	break;
-		case 0x3c:	m_dspRegs.setSSH(_src);	break;
-		case 0x3d:	m_dspRegs.setSSL(_src);	break;
+		case 0x3c:	setSSH(_src);			break;
+		case 0x3d:	setSSL(_src);			break;
 		case 0x3e:	m_dspRegs.setLA(_src);	m_resultFlags |= WriteToLA; break;
 		case 0x3f:	m_dspRegs.setLC(_src);	m_resultFlags |= WriteToLC; break;
 		default:
@@ -298,16 +298,16 @@ namespace dsp56k
 		switch( _ddddd )
 		{
 		case 0xa:	m_dspRegs.getEP(_dst);	break;
-		case 0x10:	m_dspRegs.getVBA(_dst); break;
-		case 0x11:	m_dspRegs.getSC(_dst); break;
-		case 0x18:	m_dspRegs.getSZ(_dst); break;
-		case 0x19:	getSR(_dst); break;
-		case 0x1a:	m_dspRegs.getOMR(_dst); break;
-		case 0x1b:	m_dspRegs.getSP(_dst); break;
-		case 0x1c:	m_dspRegs.getSSH(_dst); break;
-		case 0x1d:	m_dspRegs.getSSL(_dst); break;
-		case 0x1e:	m_dspRegs.getLA(_dst); break;
-		case 0x1f:	m_dspRegs.getLC(_dst); break;
+		case 0x10:	m_dspRegs.getVBA(_dst);	break;
+		case 0x11:	m_dspRegs.getSC(_dst);	break;
+		case 0x18:	m_dspRegs.getSZ(_dst);	break;
+		case 0x19:	getSR(_dst);			break;
+		case 0x1a:	m_dspRegs.getOMR(_dst);	break;
+		case 0x1b:	m_dspRegs.getSP(_dst);	break;
+		case 0x1c:	getSSH(_dst);			break;
+		case 0x1d:	getSSL(_dst);			break;
+		case 0x1e:	m_dspRegs.getLA(_dst);	break;
+		case 0x1f:	m_dspRegs.getLC(_dst);	break;
 		default: assert( 0 && "invalid ddddd value" ); break;
 		}
 	}
@@ -322,17 +322,17 @@ namespace dsp56k
 
 		switch( _ddddd )
 		{
-		case 0xa:	m_dspRegs.setEP(_src); break;
-		case 0x10:	m_dspRegs.setVBA(_src); break;
-		case 0x11:	m_dspRegs.setSC(_src); break;
-		case 0x18:	m_dspRegs.setSZ(_src); break;
-		case 0x19:	setSR(_src); break;
+		case 0xa:	m_dspRegs.setEP(_src);	break;
+		case 0x10:	m_dspRegs.setVBA(_src);	break;
+		case 0x11:	m_dspRegs.setSC(_src);	break;
+		case 0x18:	m_dspRegs.setSZ(_src);	break;
+		case 0x19:	setSR(_src);			break;
 		case 0x1a:	m_dspRegs.setOMR(_src); break;
-		case 0x1b:	m_dspRegs.setSP(_src); break;
-		case 0x1c:	m_dspRegs.setSSH(_src); break;
-		case 0x1d:	m_dspRegs.setSSL(_src); break;
-		case 0x1e:	m_dspRegs.setLA(_src); break;
-		case 0x1f:	m_dspRegs.setLC(_src); break;
+		case 0x1b:	m_dspRegs.setSP(_src);	break;
+		case 0x1c:	setSSH(_src);			break;
+		case 0x1d:	setSSL(_src);			break;
+		case 0x1e:	m_dspRegs.setLA(_src);	break;
+		case 0x1f:	m_dspRegs.setLC(_src);	break;
 		default: assert( 0 && "invalid ddddd value" ); break;
 		}
 	}
