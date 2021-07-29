@@ -61,6 +61,18 @@ jitruntimedata.cpp jitruntimedata.h
 jitstackhelper.cpp jitstackhelper.h
 jittypes.h
 jitunittests.cpp jitunittests.h
+
+jitops_alu_aarch64.inl
+jitops_ccr_aarch64.inl
+jitops_decode_aarch64.inl
+jitops_helper_aarch64.inl
+jitops_jmp_aarch64.inl
+
+jitops_alu_x64.inl
+jitops_ccr_x64.inl
+jitops_decode_x64.inl
+jitops_helper_x64.inl
+jitops_jmp_x64.inl
 )
 
 set(SOURCES_VTUNE
