@@ -142,12 +142,12 @@ namespace dsp56k
 
 	void JitDspRegs::getSC(const JitReg32& _dst) const
 	{
-		m_block.mem().mov(_dst.r8(), m_dsp.regs().sc.var);
+		m_block.mem().mov(_dst, m_dsp.regs().sc.var);
 	}
 
 	void JitDspRegs::setSC(const JitReg32& _src) const
 	{
-		m_block.mem().mov(m_dsp.regs().sc.var, _src.r8());
+		m_block.mem().mov(m_dsp.regs().sc.var, _src);
 	}
 
 	void JitDspRegs::getSZ(const JitReg32& _dst) const
@@ -234,7 +234,7 @@ namespace dsp56k
 #endif
 
 		m_block.mem().ptrToReg(_dst, first);
-		m_asm.mov(_dst, Jitmem::makePtr(_dst, ssIndex, 3, 8));
+		m_asm.move(_dst, Jitmem::makePtr(_dst, ssIndex, 3, 8));
 	}
 
 	void JitDspRegs::setSS(const JitReg64& _src) const
