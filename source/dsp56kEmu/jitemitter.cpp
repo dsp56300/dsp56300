@@ -79,6 +79,8 @@ namespace dsp56k
 
 	void JitEmitter::push(const JitRegGP& _reg)
 	{
+		// For now, we use the "Use 16-byte stack slots" quick-n-dirty approach. We do not need a lot of stack space anyway
+		// https://community.arm.com/developer/ip-products/processors/b/processors-ip-blog/posts/using-the-stack-in-aarch64-implementing-push-and-pop
 		str(_reg, ptr_pre(asmjit::a64::regs::sp, -16));
 	}
 
