@@ -803,7 +803,12 @@ namespace dsp56k
 		auto modify = [&]()
 		{
 			_block.asm_().shl(temp, asmjit::Imm(4));
+
+#ifdef HAVE_ARM64
+			_block.asm_().and_(temp, temp, asmjit::Imm(0xffffff));
+#else
 			_block.asm_().and_(temp, asmjit::Imm(0xffffff));
+#endif
 		};
 
 		auto modify64 = [&]()
