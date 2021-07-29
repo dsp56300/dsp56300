@@ -43,6 +43,12 @@ namespace dsp56k
 
 		void shl(const JitRegGP& _dst, const asmjit::Imm& _imm);
 		void shr(const JitRegGP& _dst, const asmjit::Imm& _imm);
+
+		void push(const JitRegGP& _reg);
+		void pop(const JitRegGP& _reg);
+
+		void call(const void* _funcAsPtr);
+
 #endif
 
 		void move(const JitRegGP& _dst, const JitMemPtr& _src);

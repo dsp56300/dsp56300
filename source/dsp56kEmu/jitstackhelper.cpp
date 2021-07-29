@@ -103,12 +103,22 @@ namespace dsp56k
 		const auto offset = alignedStack - usedSize + g_shadowSpaceSize;
 
 		if(offset)
+		{
+#ifdef HAVE_ARM64
+			m_block.asm_().sub(asmjit::a64::regs::sp, asmjit::a64::regs::sp, asmjit::Imm(offset));
+#else
 			m_block.asm_().sub(asmjit::x86::rsp, asmjit::Imm(offset));
+#endif
+		}
 
 		m_block.asm_().call(_funcAsPtr);
 
 		if(offset)
+#ifdef HAVE_ARM64
+			m_block.asm_().add(asmjit::a64::regs::sp, asmjit::a64::regs::sp, asmjit::Imm(offset));
+#else
 			m_block.asm_().add(asmjit::x86::rsp, asmjit::Imm(offset));
+#endif
 	}
 
 	bool JitStackHelper::isFuncArg(const JitRegGP& _gp)

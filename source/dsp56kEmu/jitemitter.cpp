@@ -76,6 +76,21 @@ namespace dsp56k
 	{
 		lsr(_dst, _dst, _imm);
 	}
+
+	void JitEmitter::push(const JitRegGP& _reg)
+	{
+		str(_reg, ptr_pre(asmjit::a64::regs::sp, -16));
+	}
+
+	void JitEmitter::pop(const JitRegGP& _reg)
+	{
+		ldr(_reg, ptr_post(asmjit::a64::regs::sp, 16));
+	}
+
+	void JitEmitter::call(const void* _funcAsPtr)
+	{
+		bl(_funcAsPtr);
+	}
 #endif
 
 	void JitEmitter::move(const JitRegGP& _dst, const JitMemPtr& _src)
