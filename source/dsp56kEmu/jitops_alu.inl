@@ -386,7 +386,7 @@ namespace dsp56k
 
 		if(!_round)
 		{
-			bool canOverflow = !_s1Unsigned || !_s2Unsigned;
+			const bool canOverflow = !_s1Unsigned || !_s2Unsigned;
 
 			const auto vBit = canOverflow ? CCR_V : 0;
 
