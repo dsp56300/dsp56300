@@ -315,8 +315,20 @@ namespace dsp56k
 
 		if( _magnitude )
 		{
+			if(!updateCarry)
+			{
+				signextend56to64(d);
+				signextend56to64(_v);
+			}
+
 			alu_abs(d);
 			alu_abs(_v);
+
+			if (!updateCarry)
+			{
+				m_dspRegs.mask56(d);
+				m_dspRegs.mask56(_v);
+			}
 		}
 
 		m_asm.sub(d, _v);
