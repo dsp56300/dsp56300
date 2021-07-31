@@ -13,6 +13,22 @@
 #include "jitops_mem.inl"
 #include "jitops_move.inl"
 
+#ifdef HAVE_ARM64
+#include "jitops_aarch64.inl"
+#include "jitops_alu_aarch64.inl"
+#include "jitops_ccr_aarch64.inl"
+#include "jitops_decode_aarch64.inl"
+#include "jitops_helper_aarch64.inl"
+#include "jitops_jmp_aarch64.inl"
+#else
+#include "jitops_alu_x64.inl"
+#include "jitops_ccr_x64.inl"
+#include "jitops_decode_x64.inl"
+#include "jitops_helper_x64.inl"
+#include "jitops_jmp_x64.inl"
+#include "jitops_x64.inl"
+#endif
+
 #include "opcodes.h"
 
 namespace dsp56k

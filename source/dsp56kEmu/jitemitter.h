@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jitregtracker.h"
 #include "jittypes.h"
 
 namespace asmjit
@@ -20,9 +21,14 @@ namespace dsp56k
 	public:
 		JitEmitter(asmjit::CodeHolder* _codeHolder) : JitBuilder(_codeHolder) {}
 
+		using JitBuilder::add;
+		using JitBuilder::and_;
 		using JitBuilder::mov;
+		using JitBuilder::sub;
 
 #ifdef HAVE_ARM64
+		void and_(const JitRegGP& _dst, const asmjit::Imm& _imm);
+		
 		void movq(const JitRegGP& _dst, const JitReg128& _src);
 		void movq(const JitReg128& _dst, const JitRegGP& _src);
 		void movq(const JitReg128& _dst, const JitReg128& _src);
@@ -43,11 +49,16 @@ namespace dsp56k
 
 		void shl(const JitRegGP& _dst, const asmjit::Imm& _imm);
 		void shr(const JitRegGP& _dst, const asmjit::Imm& _imm);
+		void sal(const JitRegGP& _dst, const asmjit::Imm& _imm);
+		void sar(const JitRegGP& _dst, const asmjit::Imm& _imm);
 
 		void push(const JitRegGP& _reg);
 		void pop(const JitRegGP& _reg);
 
 		void call(const void* _funcAsPtr);
+
+		void add(const JitRegGP& _dst, const JitRegGP& _src);
+		void sub(const JitRegGP& _dst, const JitRegGP& _src);
 
 #endif
 

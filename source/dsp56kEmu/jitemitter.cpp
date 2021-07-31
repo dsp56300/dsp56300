@@ -6,6 +6,11 @@
 namespace dsp56k
 {
 #ifdef HAVE_ARM64
+	void JitEmitter::and_(const JitRegGP& _dst, const asmjit::Imm& _imm)
+	{
+		JitBuilder::and_(_dst, _dst, _imm);
+	}
+
 	void JitEmitter::movq(const JitRegGP& _dst, const JitReg128& _src)
 	{
 		fmov(r64(_dst), _src);
@@ -77,6 +82,16 @@ namespace dsp56k
 		lsr(_dst, _dst, _imm);
 	}
 
+	void JitEmitter::sal(const JitRegGP& _dst, const asmjit::Imm& _imm)
+	{
+		lsl(_dst, _dst, _imm);
+	}
+
+	void JitEmitter::sar(const JitRegGP& _dst, const asmjit::Imm& _imm)
+	{
+		asr(_dst, _dst, _imm);
+	}
+
 	void JitEmitter::push(const JitRegGP& _reg)
 	{
 		// For now, we use the "Use 16-byte stack slots" quick-n-dirty approach. We do not need a lot of stack space anyway
@@ -92,6 +107,16 @@ namespace dsp56k
 	void JitEmitter::call(const void* _funcAsPtr)
 	{
 		bl(_funcAsPtr);
+	}
+
+	void JitEmitter::add(const JitRegGP& _dst, const JitRegGP& _src)
+	{
+		add(_dst, _dst, _src);
+	}
+
+	void JitEmitter::sub(const JitRegGP& _dst, const JitRegGP& _src)
+	{
+		sub(_dst, _dst, _src);
 	}
 #endif
 

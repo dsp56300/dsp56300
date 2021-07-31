@@ -16,21 +16,6 @@ namespace dsp56k
 		signextend48to56(_dst);
 	}
 
-	void JitOps::XY0to56(const JitReg64& _dst, int _xy) const
-	{
-		m_dspRegs.getXY(_dst, _xy);
-		m_asm.shl(_dst, asmjit::Imm(40));
-		m_asm.sar(_dst, asmjit::Imm(8));
-		m_asm.shr(_dst, asmjit::Imm(8));
-	}
-
-	void JitOps::XY1to56(const JitReg64& _dst, int _xy) const
-	{
-		m_dspRegs.getXY(_dst, _xy);
-		m_asm.shr(_dst, asmjit::Imm(24));	// remove LSWord
-		signed24To56(_dst);
-	}
-
 	inline void JitOps::op_Abs(TWord op)
 	{
 		const auto ab = getFieldValue<Abs, Field_d>(op);
@@ -118,121 +103,6 @@ namespace dsp56k
 		m_asm.shl(_r, asmjit::Imm(24));
 	}
 
-	inline void JitOps::alu_abs(const JitRegGP& _r)
-	{
-		const auto rb = regReturnVal;
-
-		m_asm.mov(rb, _r);		// Copy to backup location
-		m_asm.neg(_r);			// negate
-		m_asm.cmovl(_r, rb);	// if now negative, restore its saved value
-	}
-
-	inline void JitOps::alu_and(const TWord ab, RegGP& _v)
-	{
-		m_asm.shl(_v, asmjit::Imm(24));
-
-		AluRef alu(m_block, ab);
-
-		{
-			const RegGP r(m_block);
-			m_asm.mov(r, alu.get());
-			m_asm.and_(r, _v.get());
-			ccr_update_ifZero(CCRB_Z);
-		}
-
-		{
-			const auto mask = regReturnVal;
-			m_asm.mov(mask, asmjit::Imm(0xff000000ffffff));
-			m_asm.or_(_v, mask);
-			m_asm.and_(alu, _v.get());
-		}
-
-		_v.release();
-		
-		// S L E U N Z V C
-		// v - - - * * * -
-		ccr_n_update_by47(alu);
-		ccr_clear(CCR_V);
-	}
-
-	inline void JitOps::alu_asl(const TWord _abSrc, const TWord _abDst, const ShiftReg& _v)
-	{
-		AluReg alu(m_block, _abDst, false, _abDst != _abSrc);
-		if(_abDst != _abSrc)
-			m_asm.mov(alu.get(), m_dspRegs.getALU(_abSrc, JitDspRegs::Read));
-
-		m_asm.sal(alu, asmjit::Imm(8));				// we want to hit the 64 bit boundary to make use of the native carry flag so pre-shift by 8 bit (56 => 64)
-
-		m_asm.sal(alu, _v.get());					// now do the real shift
-
-		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
-
-		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
-		// The easiest way to check this is to shift back and compare if the initial alu value is identical ot the backshifted one
-		{
-			AluReg oldAlu(m_block, _abSrc, true);
-			m_asm.sal(oldAlu, asmjit::Imm(8));
-			m_asm.sar(alu, _v.get());
-			m_asm.cmp(alu, oldAlu.get());
-		}
-
-		ccr_update_ifNotZero(CCRB_V);
-
-		m_asm.sal(alu, _v.get());					// one more time
-		m_asm.shr(alu, asmjit::Imm(8));				// correction
-
-		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
-	}
-
-	inline void JitOps::alu_asr(const TWord _abSrc, const TWord _abDst, const ShiftReg& _v)
-	{
-		AluRef alu(m_block, _abDst, _abDst == _abSrc, true);
-		if(_abDst != _abSrc)
-			m_asm.mov(alu.get(), m_dspRegs.getALU(_abSrc, JitDspRegs::Read));
-
-		m_asm.sal(alu, asmjit::Imm(8));
-		m_asm.sar(alu, _v.get());
-		m_asm.sar(alu, asmjit::Imm(8));
-		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
-		m_dspRegs.mask56(alu);
-
-		ccr_clear(CCR_V);
-
-		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
-	}
-
-	inline void JitOps::jmp(const JitReg32& _absAddr)
-	{
-		m_dspRegs.setPC(_absAddr);
-	}
-
-	inline void JitOps::jsr(const JitReg32& _absAddr)
-	{
-		pushPCSR();
-		jmp(_absAddr);
-
-		if(m_fastInterrupt)
-		{
-			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
-			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0 | SR_SA | SR_LF)));
-			setDspProcessingMode(DSP::LongInterrupt);			
-		}
-	}
-
-	inline void JitOps::jmp(TWord _absAddr)
-	{
-		const RegGP r(m_block);
-		m_asm.mov(r, asmjit::Imm(_absAddr));
-		jmp(r.get().r32());
-	}
-
-	inline void JitOps::jsr(const TWord _absAddr)
-	{
-		const RegGP r(m_block);
-		m_asm.mov(r.get().r32(), asmjit::Imm(_absAddr));
-		jsr(r.get().r32());
-	}
-
 	inline void JitOps::op_Add_SD(TWord op)
 	{
 		const auto D = getFieldValue<Add_SD, Field_d>(op);
@@ -271,8 +141,11 @@ namespace dsp56k
 
 		signextend56to64(aluD);
 
+#ifdef HAVE_ARM64
+		m_asm.lsl(aluD, aluD, asmjit::Imm(1));
+#else
 		m_asm.sal(aluD, asmjit::Imm(1));
-
+#endif
 		{
 			AluReg aluS(m_block, ab ? 0 : 1, true);
 
@@ -462,34 +335,6 @@ namespace dsp56k
 		}
 
 		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
-	}
-
-	inline void JitOps::alu_lsl(TWord ab, int _shiftAmount)
-	{
-		const RegGP d(m_block);
-		getALU1(d, ab);
-		m_asm.shl(d.get().r32(), _shiftAmount + 8);	// + 8 to use native carry flag
-		ccr_update_ifCarry(CCRB_C);
-		m_asm.shr(d.get().r32(), 8);				// revert shift by 8
-		ccr_update_ifZero(CCRB_Z);
-		m_asm.bt(d.get().r32(), asmjit::Imm(23));
-		ccr_update_ifCarry(CCRB_N);
-		ccr_clear(CCR_V);
-		setALU1(ab, d.get().r32());
-	}
-
-	inline void JitOps::alu_lsr(TWord ab, int _shiftAmount)
-	{
-		const RegGP d(m_block);
-		getALU1(d, ab);
-		m_asm.shr(d.get().r32(), _shiftAmount);
-		ccr_update_ifCarry(CCRB_C);
-		m_asm.cmp(d.get().r32(), asmjit::Imm(0));
-		ccr_update_ifZero(CCRB_Z);
-		m_asm.bt(d.get().r32(), asmjit::Imm(23));
-		ccr_update_ifCarry(CCRB_N);
-		ccr_clear(CCR_V);
-		setALU1(ab, d.get().r32());
 	}
 
 	void JitOps::alu_mpy(TWord ab, RegGP& _s1, RegGP& _s2, bool _negate, bool _accumulate, bool _s1Unsigned, bool _s2Unsigned, bool _round)
@@ -721,9 +566,9 @@ namespace dsp56k
 		const auto dddddd	= getFieldValue<Inst,Field_DDDDDD>(op);
 
 		const RegGP d(m_block);
-		decode_dddddd_read(d.get().r32(), dddddd);
+		decode_dddddd_read(r32(d.get()), dddddd);
 		(this->*_bitmodFunc)(d, getBit<Inst>(op));
-		decode_dddddd_write(dddddd, d.get().r32());
+		decode_dddddd_write(dddddd, r32(d.get()));
 	}
 
 	inline void JitOps::op_Bchg_ea(TWord op)	{ bitmod_ea<Bclr_ea>(op, &JitOps::alu_bchg); }
@@ -748,7 +593,7 @@ namespace dsp56k
 	{
 		RegGP r(m_block);
 		readMem<Btst_ea>(r, op);
-		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_ea>(op)));
+		m_asm.bt(r32(r.get()), asmjit::Imm(getBit<Btst_ea>(op)));
 		ccr_update_ifCarry(CCRB_C);
 	}
 
@@ -756,7 +601,7 @@ namespace dsp56k
 	{
 		RegGP r(m_block);
 		readMem<Btst_aa>(r, op);
-		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_aa>(op)));
+		m_asm.bt(r32(r.get()), asmjit::Imm(getBit<Btst_aa>(op)));
 		ccr_update_ifCarry(CCRB_C);
 	}
 
@@ -764,7 +609,7 @@ namespace dsp56k
 	{
 		RegGP r(m_block);
 		readMem<Btst_pp>(r, op);
-		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_pp>(op)));
+		m_asm.bt(r32(r.get()), asmjit::Imm(getBit<Btst_pp>(op)));
 		ccr_update_ifCarry(CCRB_C);
 	}
 
@@ -772,7 +617,7 @@ namespace dsp56k
 	{
 		RegGP r(m_block);
 		readMem<Btst_qq>(r, op);
-		m_asm.bt(r.get().r32(), asmjit::Imm(getBit<Btst_qq>(op)));
+		m_asm.bt(r32(r.get()), asmjit::Imm(getBit<Btst_qq>(op)));
 		ccr_update_ifCarry(CCRB_C);
 	}
 
@@ -782,9 +627,9 @@ namespace dsp56k
 		const auto bit		= getBit<Btst_D>(op);
 
 		const RegGP r(m_block);
-		decode_dddddd_read(r.get().r32(), dddddd);
+		decode_dddddd_read(r32(r.get()), dddddd);
 
-		m_asm.bt(r.get().r32(), asmjit::Imm(bit));
+		m_asm.bt(r32(r.get()), asmjit::Imm(bit));
 		ccr_update_ifCarry(CCRB_C);
 	}
 
@@ -1204,8 +1049,8 @@ namespace dsp56k
 		const auto ea = m_pcCurrentOp + pcRelativeAddressExt<Lra_xxxx>();
 
 		const RegGP r(m_block);
-		m_asm.mov(r.get().r32(), asmjit::Imm(ea));
-		decode_dddddd_write(ddddd, r.get().r32());
+		m_asm.mov(r32(r.get()), asmjit::Imm(ea));
+		decode_dddddd_write(ddddd, r32(r.get()));
 	}
 
 	inline void JitOps::op_Lsl_D(TWord op)
@@ -1309,9 +1154,9 @@ namespace dsp56k
 		{
 			const RegGP d(m_block);
 			getALU1(d, ab);
-			m_asm.not_(d.get().r32());
+			m_asm.not_(r32(d.get()));
 			m_asm.and_(d, asmjit::Imm(0xffffff));
-			setALU1(ab, d.get().r32());
+			setALU1(ab, r32(d.get()));
 
 			m_asm.bt(d, asmjit::Imm(23));
 			ccr_update_ifCarry(CCRB_N);					// Set if bit 47 of the result is set
@@ -1369,7 +1214,7 @@ namespace dsp56k
 
 		m_asm.or_(r, prevCarry.get());						// Set if bits 47–24 of the result are 0
 		ccr_update_ifZero(CCRB_Z);
-		setALU1(D, r.get().r32());
+		setALU1(D, r32(r.get()));
 
 		ccr_clear(CCR_V);									// This bit is always cleared
 	}
