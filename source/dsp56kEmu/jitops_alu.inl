@@ -401,7 +401,7 @@ namespace dsp56k
 
 			ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z | vBit));
 
-			if(canOverflow)
+			if(canOverflow || _negate)
 				m_dspRegs.mask56(d);
 		}
 		else
