@@ -101,21 +101,21 @@ namespace dsp56k
 
 	inline void JitOps::alu_bclr(const JitReg64& _dst, const TWord _bit)
 	{
-		m_asm.ands(asmjit::a64::regs::xzr, _dst, asmjit::Imm(1ull << _bit));
+		m_asm.testBit(_dst, _bit);
 		ccr_update_ifNotZero(CCRB_C);
 		m_asm.and_(_dst, _dst, asmjit::Imm(~(1ull << _bit)));
 	}
 
 	inline void JitOps::alu_bset(const JitReg64& _dst, const TWord _bit)
 	{
-		m_asm.ands(asmjit::a64::regs::xzr, _dst, asmjit::Imm(1ull << _bit));
+		m_asm.testBit(_dst, _bit);
 		ccr_update_ifNotZero(CCRB_C);
 		m_asm.orr(_dst, _dst, asmjit::Imm(1ull << _bit));
 	}
 
 	inline void JitOps::alu_bchg(const JitReg64& _dst, const TWord _bit)
 	{
-		m_asm.ands(asmjit::a64::regs::xzr, _dst, asmjit::Imm(1ull << _bit));
+		m_asm.testBit(_dst, _bit);
 		ccr_update_ifNotZero(CCRB_C);
 		m_asm.eor(_dst, _dst, asmjit::Imm(1ull << _bit));
 	}
@@ -128,8 +128,8 @@ namespace dsp56k
 		ccr_update_ifCarry(CCRB_C);
 		m_asm.shr(r32(d.get()), 8);				// revert shift by 8
 		ccr_update_ifZero(CCRB_Z);
-		m_asm.bt(r32(d.get()), asmjit::Imm(23));
-		ccr_update_ifCarry(CCRB_N);
+		m_asm.testBit(r32(d.get()), 23);
+		ccr_update_ifNotZero(CCRB_N);
 		ccr_clear(CCR_V);
 		setALU1(ab, r32(d.get()));
 	}
@@ -142,9 +142,68 @@ namespace dsp56k
 		ccr_update_ifCarry(CCRB_C);
 		m_asm.cmp(r32(d.get()), asmjit::Imm(0));
 		ccr_update_ifZero(CCRB_Z);
-		m_asm.bt(r32(d.get()), asmjit::Imm(23));
-		ccr_update_ifCarry(CCRB_N);
+		m_asm.testBit(r32(d.get()), 23);
+		ccr_update_ifNotZero(CCRB_N);
 		ccr_clear(CCR_V);
 		setALU1(ab, r32(d.get()));
+	}
+
+	inline void JitOps::alu_rnd(TWord ab, const JitReg64& d)
+	{
+		RegGP rounder(m_block);
+		m_asm.mov(rounder, asmjit::Imm(0x800000));
+
+		{
+			const ShiftReg shifter(m_block);
+			sr_getBitValue(shifter, SRB_S1);
+			m_asm.shr(rounder, shifter.get());
+			sr_getBitValue(shifter, SRB_S0);
+			m_asm.shl(rounder, shifter.get());
+		}
+
+		signextend56to64(d);
+		m_asm.add(d, rounder.get());
+
+		m_asm.shl(rounder, asmjit::Imm(1));
+
+		{
+			// mask = all the bits to the right of, and including the rounding position
+			const RegGP mask(m_block);
+			m_asm.sub(mask, rounder, asmjit::Imm(1));
+
+			const auto skipNoScalingMode = m_asm.newLabel();
+
+			// if (!sr_test_noCache(SR_RM))
+			m_asm.testBit(m_dspRegs.getSR(JitDspRegs::Read), SRB_SM);
+			m_asm.cond_not_zero().b(skipNoScalingMode);
+
+			// convergent rounding. If all mask bits are cleared
+
+			// then the bit to the left of the rounding position is cleared in the result
+			// if (!(_alu.var & mask)) 
+			//	_alu.var&=~(rounder<<1);
+			m_asm.movn(rounder, rounder);
+
+			{
+				const RegGP aluIfAndWithMaskIsZero(m_block);
+				m_asm.mov(aluIfAndWithMaskIsZero, d);
+				m_asm.and_(aluIfAndWithMaskIsZero, rounder.get());
+
+				rounder.release();
+
+				m_asm.ands(asmjit::a64::regs::xzr, d, mask.get());
+				m_asm.csel(d, d, aluIfAndWithMaskIsZero.get(), asmjit::arm::Cond::kZero);
+			}
+
+			m_asm.bind(skipNoScalingMode);
+
+			// all bits to the right of and including the rounding position are cleared.
+			// _alu.var&=~mask;
+			m_asm.movn(mask, mask);
+			m_asm.and_(d, mask.get());
+		}
+
+		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z | CCR_V));
+		m_dspRegs.mask56(d);
 	}
 }

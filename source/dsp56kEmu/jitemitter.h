@@ -60,6 +60,8 @@ namespace dsp56k
 		void add(const JitRegGP& _dst, const JitRegGP& _src);
 		void sub(const JitRegGP& _dst, const JitRegGP& _src);
 
+		void testBit(const JitRegGP& _src, TWord _bitIndex);
+
 #endif
 
 		void move(const JitRegGP& _dst, const JitMemPtr& _src);

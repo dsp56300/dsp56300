@@ -118,6 +118,11 @@ namespace dsp56k
 	{
 		sub(_dst, _dst, _src);
 	}
+
+	void JitEmitter::testBit(const JitRegGP& _src, TWord _bitIndex)
+	{
+		ands(asmjit::a64::regs::xzr, _src, asmjit::Imm(1ull << _bitIndex));
+	}
 #endif
 
 	void JitEmitter::move(const JitRegGP& _dst, const JitMemPtr& _src)

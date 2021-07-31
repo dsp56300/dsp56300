@@ -359,13 +359,22 @@ namespace dsp56k
 		if(!_s2Unsigned)
 			signextend24to64(_s2.get());
 
+#ifdef HAVE_ARM64
+		m_asm.smull(_s1, _s1, _s2);
+#else
 		m_asm.imul(_s1.get(), _s2.get());
-
+#endif
 		// fractional multiplication requires one post-shift to be correct
 		m_asm.shl(_s1, asmjit::Imm(1));
 
 		if(_negate)
+		{
+#ifdef HAVE_ARM64
+			m_asm.neg(_s1, _s1);
+#else
 			m_asm.neg(_s1);
+#endif
+		}
 
 		AluRef d(m_block, ab, _accumulate, true);
 
@@ -421,13 +430,16 @@ namespace dsp56k
 
 	inline void JitOps::alu_or(TWord ab, const JitRegGP& _v)
 	{
-		RegGP r(m_block);
+		const RegGP r(m_block);
 		m_dspRegs.getALU(r, ab);
 
 		m_asm.shl(_v, asmjit::Imm(24));
 
+#ifdef HAVE_ARM64
+		m_asm.orr(r, r, _v);
+#else
 		m_asm.or_(r, _v);
-
+#endif
 		m_dspRegs.setALU(ab, r);
 
 		// S L E U N Z V C
@@ -445,71 +457,6 @@ namespace dsp56k
 	{
 		AluRef d(m_block, ab);
 		alu_rnd(ab, d.get());
-	}
-
-	inline void JitOps::alu_rnd(TWord ab, const JitReg64& d)
-	{
-		RegGP rounder(m_block);
-		m_asm.mov(rounder, asmjit::Imm(0x800000));
-
-		{
-			const ShiftReg shifter(m_block);
-			m_asm.xor_(shifter, shifter.get());
-			sr_getBitValue(shifter, SRB_S1);
-			m_asm.shr(rounder, shifter.get());
-			sr_getBitValue(shifter, SRB_S0);
-			m_asm.shl(rounder, shifter.get());
-		}
-
-		signextend56to64(d);
-		m_asm.add(d, rounder.get());
-
-		m_asm.shl(rounder, asmjit::Imm(1));
-
-		{
-			// mask = all the bits to the right of, and including the rounding position
-			const RegGP mask(m_block);
-			m_asm.mov(mask, rounder.get());
-			m_asm.dec(mask);
-
-			const auto skipNoScalingMode = m_asm.newLabel();
-
-			// if (!sr_test_noCache(SR_RM))
-			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_SM));
-			m_asm.jc(skipNoScalingMode);
-
-			// convergent rounding. If all mask bits are cleared
-
-			// then the bit to the left of the rounding position is cleared in the result
-			// if (!(_alu.var & mask)) 
-			//	_alu.var&=~(rounder<<1);
-			m_asm.not_(rounder);
-
-			{
-				const RegGP aluIfAndWithMaskIsZero(m_block);
-				m_asm.mov(aluIfAndWithMaskIsZero, d);
-				m_asm.and_(aluIfAndWithMaskIsZero, rounder.get());
-
-				rounder.release();
-
-				{
-					const auto temp = regReturnVal;
-					m_asm.mov(temp, d);
-					m_asm.and_(temp, mask.get());
-					m_asm.cmovz(d, aluIfAndWithMaskIsZero.get());
-				}
-			}
-
-			m_asm.bind(skipNoScalingMode);
-
-			// all bits to the right of and including the rounding position are cleared.
-			// _alu.var&=~mask;
-			m_asm.not_(mask);
-			m_asm.and_(d, mask.get());
-		}
-
-		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z | CCR_V));
-		m_dspRegs.mask56(d);
 	}
 
 	template<Instruction Inst> void JitOps::bitmod_ea(TWord op, void( JitOps::*_bitmodFunc)(const JitReg64&, TWord))
