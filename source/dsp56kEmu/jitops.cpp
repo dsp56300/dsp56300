@@ -652,6 +652,38 @@ namespace dsp56k
 		callDSPFunc(&callDSPPlock, r);
 	}
 
+	inline void JitOps::jmp(const JitReg32& _absAddr)
+	{
+		m_dspRegs.setPC(_absAddr);
+	}
+
+	inline void JitOps::jsr(const JitReg32& _absAddr)
+	{
+		pushPCSR();
+		jmp(_absAddr);
+
+		if (m_fastInterrupt)
+		{
+			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
+			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0 | SR_SA | SR_LF)));
+			setDspProcessingMode(DSP::LongInterrupt);
+		}
+	}
+
+	inline void JitOps::jmp(TWord _absAddr)
+	{
+		const RegGP r(m_block);
+		m_asm.mov(r, asmjit::Imm(_absAddr));
+		jmp(r32(r.get()));
+	}
+
+	inline void JitOps::jsr(const TWord _absAddr)
+	{
+		const RegGP r(m_block);
+		m_asm.mov(r32(r.get()), asmjit::Imm(_absAddr));
+		jsr(r32(r.get()));
+	}
+
 	inline void JitOps::op_Rti(TWord op)
 	{
 		popPCSR();

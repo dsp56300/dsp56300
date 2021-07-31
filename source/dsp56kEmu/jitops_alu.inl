@@ -430,24 +430,6 @@ namespace dsp56k
 		alu_asr(abDst, abSrc, r);
 	}
 
-	inline void JitOps::alu_bclr(const JitReg64& _dst, const TWord _bit)
-	{
-		m_asm.btr(_dst, asmjit::Imm(_bit));
-		ccr_update_ifCarry(CCRB_C);
-	}
-
-	inline void JitOps::alu_bset(const JitReg64& _dst, const TWord _bit)
-	{
-		m_asm.bts(_dst, asmjit::Imm(_bit));
-		ccr_update_ifCarry(CCRB_C);
-	}
-
-	inline void JitOps::alu_bchg(const JitReg64& _dst, const TWord _bit)
-	{
-		m_asm.btc(_dst, asmjit::Imm(_bit));
-		ccr_update_ifCarry(CCRB_C);
-	}
-
 	inline void JitOps::alu_cmp(TWord ab, const JitReg64& _v, bool _magnitude, bool updateCarry/* = true*/)
 	{
 		AluReg d(m_block, ab, true);
