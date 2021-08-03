@@ -214,4 +214,281 @@ namespace dsp56k
 		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z | CCR_V));
 		m_dspRegs.mask56(d);
 	}
+
+	inline void JitOps::op_Btst_ea(TWord op)
+	{
+		RegGP r(m_block);
+		readMem<Btst_ea>(r, op);
+		m_asm.bt(r32(r.get()), asmjit::Imm(getBit<Btst_ea>(op)));
+		ccr_update_ifCarry(CCRB_C);
+	}
+
+	inline void JitOps::op_Btst_aa(TWord op)
+	{
+		RegGP r(m_block);
+		readMem<Btst_aa>(r, op);
+		m_asm.bt(r32(r.get()), asmjit::Imm(getBit<Btst_aa>(op)));
+		ccr_update_ifCarry(CCRB_C);
+	}
+
+	inline void JitOps::op_Btst_pp(TWord op)
+	{
+		RegGP r(m_block);
+		readMem<Btst_pp>(r, op);
+		m_asm.bt(r32(r.get()), asmjit::Imm(getBit<Btst_pp>(op)));
+		ccr_update_ifCarry(CCRB_C);
+	}
+
+	inline void JitOps::op_Btst_qq(TWord op)
+	{
+		RegGP r(m_block);
+		readMem<Btst_qq>(r, op);
+		m_asm.bt(r32(r.get()), asmjit::Imm(getBit<Btst_qq>(op)));
+		ccr_update_ifCarry(CCRB_C);
+	}
+
+	inline void JitOps::op_Btst_D(TWord op)
+	{
+		const auto dddddd = getFieldValue<Btst_D, Field_DDDDDD>(op);
+		const auto bit = getBit<Btst_D>(op);
+
+		const RegGP r(m_block);
+		decode_dddddd_read(r32(r.get()), dddddd);
+
+		m_asm.bt(r32(r.get()), asmjit::Imm(bit));
+		ccr_update_ifCarry(CCRB_C);
+	}
+
+	inline void JitOps::op_Div(TWord op)
+	{
+		const auto ab = getFieldValue<Div, Field_d>(op);
+		const auto jj = getFieldValue<Div, Field_JJ>(op);
+
+		AluRef d(m_block, ab);
+
+		if (m_repMode == RepNone || m_repMode == RepLast)
+		{
+			// V and L updates
+			// V: Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
+			// L: Set if the Overflow bit (V) is set.
+			// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
+			// Nearly identical for L but L is only set, not cleared as it is sticky
+			const RegGP r(m_block);
+			m_asm.mov(r, d.get());
+			m_asm.shr(r, asmjit::Imm(54));
+			m_asm.and_(r, asmjit::Imm(0x3));
+			m_asm.setnp(r.get().r8());
+			ccr_update(r, CCRB_V);
+			m_asm.shl(r, asmjit::Imm(CCRB_L));
+			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
+			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~(CCR_L | CCR_V));
+		}
+
+		{
+			const RegGP s(m_block);
+			decode_JJ_read(s, jj);
+
+			m_asm.shl(s, asmjit::Imm(40));
+			m_asm.sar(s, asmjit::Imm(16));
+
+			const RegGP addOrSub(m_block);
+			m_asm.mov(addOrSub, s.get());
+			m_asm.xor_(addOrSub, d.get());
+
+			m_asm.shl(d, asmjit::Imm(1));
+
+			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
+			m_asm.adc(d.get().r8(), asmjit::Imm(0));
+
+			const auto dLsWord = regReturnVal;
+			m_asm.mov(dLsWord, d.get());
+			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
+
+			const asmjit::Label sub = m_asm.newLabel();
+			const asmjit::Label end = m_asm.newLabel();
+
+			m_asm.bt(addOrSub, asmjit::Imm(55));
+
+			m_asm.jnc(sub);
+			m_asm.add(d, s.get());
+			m_asm.jmp(end);
+
+			m_asm.bind(sub);
+			m_asm.sub(d, s.get());
+
+			m_asm.bind(end);
+			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
+			m_asm.or_(d, dLsWord);
+		}
+
+		// C is set if bit 55 of the result is cleared
+		m_asm.bt(d, asmjit::Imm(55));
+		ccr_update_ifNotCarry(CCRB_C);
+
+		m_dspRegs.mask56(d);
+	}
+
+	inline void JitOps::op_Rep_Div(const TWord _op, const TWord _iterationCount)
+	{
+		m_block.getEncodedInstructionCount() += _iterationCount;
+
+		const auto ab = getFieldValue<Div, Field_d>(_op);
+		const auto jj = getFieldValue<Div, Field_JJ>(_op);
+
+		AluRef d(m_block, ab);
+
+		auto ccrUpdateVL = [&]()
+		{
+			// V and L updates
+			// V: Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
+			// L: Set if the Overflow bit (V) is set.
+			// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
+			// Nearly identical for L but L is only set, not cleared as it is sticky
+			const RegGP r(m_block);
+			m_asm.mov(r, d.get());
+			m_asm.shr(r, asmjit::Imm(54));
+			m_asm.and_(r, asmjit::Imm(0x3));
+			m_asm.setnp(r.get().r8());
+			ccr_update(r, CCRB_V);
+			m_asm.shl(r, asmjit::Imm(CCRB_L));
+			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
+			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~(CCR_L | CCR_V));
+		};
+
+		const auto finished = m_asm.newLabel();
+		const auto regular = m_asm.newLabel();
+		const RegGP s(m_block);
+		decode_JJ_read(s, jj);
+		/* TODO: broken
+		if (_iterationCount<24)
+		{
+			{
+				const RegGP t(m_block);
+				m_asm.mov(t, s.get());
+				m_asm.dec(t);
+				m_asm.and_(t, s.get());
+				m_asm.jnz(regular);
+			}
+			{
+				const ShiftReg t(m_block);
+				m_asm.bsr(t, s.get());
+				m_asm.add(t, asmjit::Imm(_iterationCount + 1));
+				m_asm.shr(d, t.get());
+				m_asm.and_(d, asmjit::Imm((1<<_iterationCount)-1));
+				m_asm.jmp(finished);
+			}
+		}
+		*/
+		m_asm.bind(regular);
+		RegGP addOrSub(m_block);
+		RegGP lc(m_block);
+		RegGP carry(m_block);
+
+		const auto loopIteration = [&](bool last)
+		{
+			m_asm.mov(addOrSub, s.get());
+			m_asm.xor_(addOrSub, d.get());
+
+			m_asm.shl(d, asmjit::Imm(1));
+
+			m_asm.add(d.get().r8(), carry.get().r8());
+
+			const auto dLsWord = regReturnVal;
+			m_asm.mov(dLsWord, d.get());
+			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
+
+			const asmjit::Label sub = m_asm.newLabel();
+			const asmjit::Label end = m_asm.newLabel();
+
+			m_asm.bt(addOrSub, asmjit::Imm(55));
+
+			m_asm.jnc(sub);
+			m_asm.add(d, s.get());
+			m_asm.jmp(end);
+
+			m_asm.bind(sub);
+			m_asm.sub(d, s.get());
+
+			m_asm.bind(end);
+			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
+			m_asm.or_(d, dLsWord);
+
+			// C is set if bit 55 of the result is cleared
+			m_asm.bt(d, asmjit::Imm(55));
+			if (last)
+				ccr_update_ifNotCarry(CCRB_C);
+			else
+				m_asm.setnc(carry);
+		};
+
+		// once
+		m_asm.shl(s, asmjit::Imm(40));
+		m_asm.sar(s, asmjit::Imm(16));
+
+		m_asm.mov(lc, _iterationCount - 2);
+
+		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
+		m_asm.setc(carry);
+
+		// loop
+		const auto start = m_asm.newLabel();
+		m_asm.bind(start);
+		loopIteration(false);
+		m_asm.dec(lc);
+		m_asm.jnz(start);
+		lc.release();
+
+		// once
+		ccrUpdateVL();
+		loopIteration(true);
+
+		m_dspRegs.mask56(d);
+		m_asm.bind(finished);
+	}
+
+	inline void JitOps::op_Not(TWord op)
+	{
+		const auto ab = getFieldValue<Not, Field_d>(op);
+
+		{
+			const RegGP d(m_block);
+			getALU1(d, ab);
+			m_asm.not_(r32(d.get()));
+			m_asm.and_(d, asmjit::Imm(0xffffff));
+			setALU1(ab, r32(d.get()));
+
+			m_asm.bt(d, asmjit::Imm(23));
+			ccr_update_ifCarry(CCRB_N);					// Set if bit 47 of the result is set
+
+			m_asm.cmp(d, asmjit::Imm(0));
+			ccr_update_ifZero(CCRB_Z);					// Set if bits 47–24 of the result are 0
+		}
+
+		ccr_clear(CCR_V);								// Always cleared
+	}
+
+	inline void JitOps::op_Rol(TWord op)
+	{
+		const auto D = getFieldValue<Rol, Field_d>(op);
+
+		RegGP r(m_block);
+		getALU1(r, D);
+
+		const RegGP prevCarry(m_block);
+		m_asm.xor_(prevCarry, prevCarry.get());
+
+		ccr_getBitValue(prevCarry, CCRB_C);
+
+		m_asm.bt(r, asmjit::Imm(23));						// Set if bit 47 of the destination operand is set, and cleared otherwise
+		ccr_update_ifCarry(CCRB_C);
+
+		m_asm.shl(r.get(), asmjit::Imm(1));
+		ccr_n_update_by23(r.get());							// Set if bit 47 of the result is set
+
+		m_asm.or_(r, prevCarry.get());						// Set if bits 47–24 of the result are 0
+		ccr_update_ifZero(CCRB_Z);
+		setALU1(D, r32(r.get()));
+
+		ccr_clear(CCR_V);									// This bit is always cleared
+	}
 }

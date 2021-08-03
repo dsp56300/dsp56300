@@ -11,6 +11,16 @@ namespace dsp56k
 		JitBuilder::and_(_dst, _dst, _imm);
 	}
 
+	void JitEmitter::add(const JitRegGP& _dst, const asmjit::Imm& _imm)
+	{
+		JitBuilder::add(_dst, _dst, _imm);
+	}
+
+	void JitEmitter::jz(const asmjit::Label& _label)
+	{
+		cond_zero().b(_label);
+	}
+
 	void JitEmitter::movq(const JitRegGP& _dst, const JitReg128& _src)
 	{
 		fmov(r64(_dst), _src);
@@ -55,6 +65,11 @@ namespace dsp56k
 	void JitEmitter::movq(const JitMemPtr& _dst, const JitReg128& _src)
 	{
 		str(_src.d(), _dst);
+	}
+
+	void JitEmitter::neg(const JitRegGP& _reg)
+	{
+		JitBuilder::neg(_reg, _reg);
 	}
 
 	void JitEmitter::ret()
@@ -119,9 +134,9 @@ namespace dsp56k
 		sub(_dst, _dst, _src);
 	}
 
-	void JitEmitter::testBit(const JitRegGP& _src, TWord _bitIndex)
+	void JitEmitter::bitTest(const JitRegGP& _src, TWord _bitIndex)
 	{
-		ands(asmjit::a64::regs::xzr, _src, asmjit::Imm(1ull << _bitIndex));
+		tst(_src, asmjit::Imm(1ull << _bitIndex));
 	}
 #endif
 

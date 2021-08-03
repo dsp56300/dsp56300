@@ -28,7 +28,10 @@ namespace dsp56k
 
 #ifdef HAVE_ARM64
 		void and_(const JitRegGP& _dst, const asmjit::Imm& _imm);
-		
+		void add(const JitRegGP& _dst, const asmjit::Imm& _imm);
+
+		void jz(const asmjit::Label& _label);
+
 		void movq(const JitRegGP& _dst, const JitReg128& _src);
 		void movq(const JitReg128& _dst, const JitRegGP& _src);
 		void movq(const JitReg128& _dst, const JitReg128& _src);
@@ -43,6 +46,8 @@ namespace dsp56k
 		void movq(const JitReg128& _dst, const JitMemPtr& _src);
 		void movq(const JitMemPtr& _dst, const JitReg128& _src);
 
+		void neg(const JitRegGP& _reg);
+		
 		void ret();
 		void jmp(const asmjit::Label& _label);
 		void jge(const asmjit::Label& _label);
@@ -60,7 +65,7 @@ namespace dsp56k
 		void add(const JitRegGP& _dst, const JitRegGP& _src);
 		void sub(const JitRegGP& _dst, const JitRegGP& _src);
 
-		void testBit(const JitRegGP& _src, TWord _bitIndex);
+		void bitTest(const JitRegGP& _src, TWord _bitIndex);
 
 #endif
 
