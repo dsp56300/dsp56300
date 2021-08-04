@@ -16,9 +16,31 @@ namespace dsp56k
 		JitBuilder::add(_dst, _dst, _imm);
 	}
 
+	void JitEmitter::bsr(const JitRegGP& _dst, const JitReg32& _src)
+	{
+		rbit(_dst, _src);
+		clz(_dst, _dst);
+		add(_dst, _dst, 1);
+	}
+
+	void JitEmitter::dec(const JitRegGP& _gp)
+	{
+		sub(_gp, _gp, asmjit::Imm(1));
+	}
+
+	void JitEmitter::inc(const JitRegGP& _gp)
+	{
+		add(_gp, _gp, asmjit::Imm(1));
+	}
+
 	void JitEmitter::jz(const asmjit::Label& _label)
 	{
 		cond_zero().b(_label);
+	}
+
+	void JitEmitter::jnz(const asmjit::Label& _label)
+	{
+		cond_not_zero().b(_label);
 	}
 
 	void JitEmitter::movq(const JitRegGP& _dst, const JitReg128& _src)

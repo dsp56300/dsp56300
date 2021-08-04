@@ -434,8 +434,8 @@ namespace dsp56k
 			m_asm.jz(_toFalse);
 		}, [&]()
 		{
-			setSSH(m_dspRegs.getLA(JitDspRegs::Read).r32());
-			setSSL(m_dspRegs.getLC(JitDspRegs::Read).r32());
+			setSSH(r32(m_dspRegs.getLA(JitDspRegs::Read)));
+			setSSL(r32(m_dspRegs.getLC(JitDspRegs::Read)));
 
 			m_asm.mov(m_dspRegs.getLA(JitDspRegs::Write), asmjit::Imm(_addr));
 			m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), _lc.get());
@@ -456,7 +456,7 @@ namespace dsp56k
 		// restore previous loop flag
 		{
 			const RegGP r(m_block);
-			getSSL(r.get().r32());
+			getSSL(r32(r.get()));
 			m_asm.and_(r, asmjit::Imm(SR_LF));
 			m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~SR_LF));
 			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
@@ -466,11 +466,11 @@ namespace dsp56k
 		decSP();
 
 		const RegGP r(m_block);
-		getSSL(r.get().r32());
-		m_dspRegs.setLC(r.get().r32());
+		getSSL(r32(r.get()));
+		m_dspRegs.setLC(r32(r.get()));
 
-		getSSH(r.get().r32());
-		m_dspRegs.setLA(r.get().r32());
+		getSSH(r32(r.get()));
+		m_dspRegs.setLA(r32(r.get()));
 
 		m_resultFlags |= WriteToLC | WriteToLA;
 
@@ -518,7 +518,7 @@ namespace dsp56k
 		const auto dddddd = getFieldValue<Do_S,Field_DDDDDD>(op);
 
 		RegGP lc(m_block);
-		decode_dddddd_read(lc.get().r32(), dddddd );
+		decode_dddddd_read(r32(lc.get()), dddddd );
 
 		do_exec( lc, addr );
 	}
@@ -539,7 +539,7 @@ namespace dsp56k
 		const auto dddddd = getFieldValue<Dor_S,Field_DDDDDD>(op);
 
 		RegGP lc(m_block);
-		decode_dddddd_read(lc.get().r32(), dddddd );
+		decode_dddddd_read(r32(lc.get()), dddddd );
 		
 		const auto displacement = pcRelativeAddressExt<Dor_S>();
 
@@ -605,7 +605,7 @@ namespace dsp56k
 
 		updateAddressRegister( r, mm, rrr, false, true);
 
-		decode_dddddd_write( ddddd, r.get().r32());
+		decode_dddddd_write( ddddd, r32(r.get()));
 	}
 
 	void JitOps::op_Lua_Rn(TWord op)
@@ -624,7 +624,7 @@ namespace dsp56k
 
 		const AguRegM m(m_block, rrr, true);
 
-		updateAddressRegister(r.get().r32(), n.get().r32(), m.get().r32());
+		updateAddressRegister(r32(r.get()), r32(n.get()), r32(m.get()));
 
 		if( dddd < 8 )									// r0-r7
 		{
@@ -747,7 +747,7 @@ namespace dsp56k
 		// backup LC
 		const RegXMM lcBackup(m_block);
 		m_asm.movd(lcBackup, m_dspRegs.getLC(JitDspRegs::Read));
-		m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), _lc.get().r32());
+		m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), r32(_lc.get()));
 		_lc.release();
 
 		if(hasImmediateOperand)
@@ -845,7 +845,7 @@ namespace dsp56k
 	{
 		const auto dddddd = getFieldValue<Rep_S,Field_dddddd>(op);
 		RegGP lc(m_block);
-		decode_dddddd_read(lc.get().r32(), dddddd);
+		decode_dddddd_read(r32(lc.get()), dddddd);
 		rep_exec(lc, std::numeric_limits<TWord>::max());
 	}
 

@@ -30,7 +30,13 @@ namespace dsp56k
 		void and_(const JitRegGP& _dst, const asmjit::Imm& _imm);
 		void add(const JitRegGP& _dst, const asmjit::Imm& _imm);
 
+		void bsr(const JitRegGP& _dst, const JitReg32& _src);
+
+		void dec(const JitRegGP& _gp);
+		void inc(const JitRegGP& _gp);
+
 		void jz(const asmjit::Label& _label);
+		void jnz(const asmjit::Label& _label);
 
 		void movq(const JitRegGP& _dst, const JitReg128& _src);
 		void movq(const JitReg128& _dst, const JitRegGP& _src);
