@@ -299,9 +299,16 @@ namespace dsp56k
 		template <Instruction Inst> void checkCondition(const TWord _op)
 		{
 			const TWord cccc = getFieldValue<Inst,Field_CCCC>(_op);
+
 			const RegGP r(m_block);
+#ifdef HAVE_ARM64
+			m_asm.mov(r, asmjit::a64::xzr);
+			decode_cccc(r, cccc);
+			m_asm.cmp(r.get(), asmjit::Imm(0));
+#else
 			decode_cccc(r, cccc);
 			m_asm.cmp(r.get().r8(), asmjit::Imm(0));
+#endif
 		}
 
 		// extension word access

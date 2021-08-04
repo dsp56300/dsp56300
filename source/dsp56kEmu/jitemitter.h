@@ -28,7 +28,10 @@ namespace dsp56k
 
 #ifdef HAVE_ARM64
 		void and_(const JitRegGP& _dst, const asmjit::Imm& _imm);
+		void and_(const JitRegGP& _dst, const JitRegGP& _src);
+
 		void add(const JitRegGP& _dst, const asmjit::Imm& _imm);
+		void add(const JitRegGP& _dst, const JitRegGP& _src);
 
 		void bsr(const JitRegGP& _dst, const JitReg32& _src);
 
@@ -57,13 +60,16 @@ namespace dsp56k
 		void neg(const JitRegGP& _reg);
 
 		void or_(const JitRegGP& _gp, const asmjit::Imm& _imm);
+		void or_(const JitRegGP& _gp, const JitRegGP& _src);
 
 		void ret();
 		void jmp(const asmjit::Label& _label);
 		void jge(const asmjit::Label& _label);
 
 		void shl(const JitRegGP& _dst, const asmjit::Imm& _imm);
+		void shl(const JitRegGP& _dst, const JitRegGP& _shift);
 		void shr(const JitRegGP& _dst, const asmjit::Imm& _imm);
+		void shr(const JitRegGP& _dst, const JitRegGP& _shift);
 		void sal(const JitRegGP& _dst, const asmjit::Imm& _imm);
 		void sar(const JitRegGP& _dst, const asmjit::Imm& _imm);
 
@@ -72,7 +78,6 @@ namespace dsp56k
 
 		void call(const void* _funcAsPtr);
 
-		void add(const JitRegGP& _dst, const JitRegGP& _src);
 		void sub(const JitRegGP& _dst, const JitRegGP& _src);
 
 		void bitTest(const JitRegGP& _src, TWord _bitIndex);

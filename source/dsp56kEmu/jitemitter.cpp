@@ -11,9 +11,19 @@ namespace dsp56k
 		JitBuilder::and_(_dst, _dst, _imm);
 	}
 
+	void JitEmitter::and_(const JitRegGP& _dst, const JitRegGP& _src)
+	{
+		JitBuilder::and_(_dst, _dst, _src);
+	}
+
 	void JitEmitter::add(const JitRegGP& _dst, const asmjit::Imm& _imm)
 	{
 		JitBuilder::add(_dst, _dst, _imm);
+	}
+
+	void JitEmitter::add(const JitRegGP& _dst, const JitRegGP& _src)
+	{
+		JitBuilder::add(_dst, _dst, _src);
 	}
 
 	void JitEmitter::bsr(const JitRegGP& _dst, const JitReg32& _src)
@@ -109,6 +119,11 @@ namespace dsp56k
 		eor(_gp, _gp, _imm);
 	}
 
+	void JitEmitter::or_(const JitRegGP& _gp, const JitRegGP& _src)
+	{
+		eor(_gp, _gp, _src);
+	}
+
 	void JitEmitter::ret()
 	{
 		JitBuilder::ret(asmjit::a64::regs::x30);
@@ -129,9 +144,19 @@ namespace dsp56k
 		lsl(_dst, _dst, _imm);
 	}
 
+	void JitEmitter::shl(const JitRegGP& _dst, const JitRegGP& _shift)
+	{
+		lsl(_dst, _dst, _shift);
+	}
+
 	void JitEmitter::shr(const JitRegGP& _dst, const asmjit::Imm& _imm)
 	{
 		lsr(_dst, _dst, _imm);
+	}
+
+	void JitEmitter::shr(const JitRegGP& _dst, const JitRegGP& _shift)
+	{
+		lsr(_dst, _dst, _shift);
 	}
 
 	void JitEmitter::sal(const JitRegGP& _dst, const asmjit::Imm& _imm)
@@ -159,11 +184,6 @@ namespace dsp56k
 	void JitEmitter::call(const void* _funcAsPtr)
 	{
 		bl(_funcAsPtr);
-	}
-
-	void JitEmitter::add(const JitRegGP& _dst, const JitRegGP& _src)
-	{
-		add(_dst, _dst, _src);
 	}
 
 	void JitEmitter::sub(const JitRegGP& _dst, const JitRegGP& _src)

@@ -234,7 +234,7 @@ namespace dsp56k
 		m_asm.mov(r, asmjit::a64::regs::xzr);
 		ccr_getBitValue(r, CCRB_V);
 		m_asm.shl(r, CCRB_L);
-		m_asm.or_(m_block.regs().getSR(JitDspRegs::ReadWrite), r);
+		m_asm.or_(m_block.regs().getSR(JitDspRegs::ReadWrite), r.get());
 		ccr_clearDirty(CCR_L);
 	}
 }

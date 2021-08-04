@@ -182,7 +182,7 @@ namespace dsp56k
 			// then the bit to the left of the rounding position is cleared in the result
 			// if (!(_alu.var & mask)) 
 			//	_alu.var&=~(rounder<<1);
-			m_asm.movn(rounder, rounder);
+			m_asm.eor(rounder, rounder, asmjit::Imm(std::numeric_limits<uint64_t>::max()));
 
 			{
 				const RegGP aluIfAndWithMaskIsZero(m_block);
@@ -199,7 +199,7 @@ namespace dsp56k
 
 			// all bits to the right of and including the rounding position are cleared.
 			// _alu.var&=~mask;
-			m_asm.movn(mask, mask);
+			m_asm.eor(mask, mask, asmjit::Imm(std::numeric_limits<uint64_t>::max()));
 			m_asm.and_(d, mask.get());
 		}
 

@@ -37,7 +37,7 @@ namespace dsp56k
 	{
 		AluRef alu(m_block, _ab);
 
-		m_asm.add(alu, _v.get());
+		m_asm.add(alu.get(), _v.get());
 
 		_v.release();
 
@@ -303,7 +303,7 @@ namespace dsp56k
 		alu_asr(abDst, abSrc, r);
 	}
 
-	inline void JitOps::alu_cmp(TWord ab, const JitReg64& _v, bool _magnitude, bool updateCarry/* = true*/)
+	void JitOps::alu_cmp(TWord ab, const JitReg64& _v, bool _magnitude, bool updateCarry/* = true*/)
 	{
 		AluReg d(m_block, ab, true);
 

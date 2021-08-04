@@ -560,10 +560,18 @@ namespace dsp56k
 		If(m_block, [&](auto _toFalse)
 		{
 			const RegGP test(m_block);
+#ifdef HAVE_ARM64
+			m_asm.mov(test, asmjit::a64::xzr);
+			decode_cccc(test, cccc);
+			m_asm.cmp(test.get(), asmjit::Imm(1));
+			m_asm.cond_not_equal().b(_toFalse);
+#else
+			m_asm.mov(test, asmjit::a64::xzr);
 			decode_cccc(test, cccc);
 
 			m_asm.cmp(test.get().r8(), asmjit::Imm(1));
 			m_asm.jne(_toFalse);	
+#endif
 		}, [&]()
 		{
 			auto emitAluOp = [&](const TWord _op)

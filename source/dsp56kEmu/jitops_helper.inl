@@ -436,17 +436,6 @@ namespace dsp56k
 		bitTest<Inst>(_op, r, _bitValue, _skip);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_bbbbb>()>::type*> void JitOps::bitTest(TWord op, const JitRegGP& _value, const ExpectedBitValue _bitValue, const asmjit::Label _skip) const
-	{
-		const auto bit = getBit<Inst>(op);
-		m_asm.bt(_value, asmjit::Imm(bit));
-
-		if(_bitValue == BitSet)
-			m_asm.jnc(_skip);
-		else if(_bitValue == BitClear)
-			m_asm.jc(_skip);
-	}
-
 	void JitOps::callDSPFunc(void(* _func)(DSP*, TWord)) const
 	{
 		m_block.asm_().mov(g_funcArgGPs[0], asmjit::Imm(&m_block.dsp()));
