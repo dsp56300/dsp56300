@@ -4,124 +4,6 @@
 
 namespace dsp56k
 {
-	void JitOps::decode_cccc(const JitRegGP& _dst, const TWord cccc)
-	{
-		switch( cccc )
-		{
-		case CCCC_CarrySet:									// CC(LO)		Carry Set	(lower)
-			ccr_getBitValue(_dst, CCRB_C);
-			break;
-		case CCCC_CarryClear:								// CC(HS)		Carry Clear (higher or same)	
-			ccr_getBitValue(_dst, CCRB_C);
-			m_asm.xor_(_dst, asmjit::Imm(1));
-			break;
-		case CCCC_ExtensionSet:								// ES			Extension set	
-			ccr_getBitValue(_dst, CCRB_E);
-			break;
-		case CCCC_ExtensionClear:							// EC			Extension clear	
-			ccr_getBitValue(_dst, CCRB_E);
-			m_asm.xor_(_dst, asmjit::Imm(1));
-			break;
-		case CCCC_Equal:									// EQ			Equal	
-			ccr_getBitValue(_dst, CCRB_Z);
-			break;
-		case CCCC_NotEqual:									// NE			Not Equal
-			ccr_getBitValue(_dst, CCRB_Z);
-			m_asm.xor_(_dst, asmjit::Imm(1));
-			break;
-		case CCCC_LimitSet:									// LS			Limit set
-			ccr_getBitValue(_dst, CCRB_L);
-			break;
-		case CCCC_LimitClear:								// LC			Limit clear
-			ccr_getBitValue(_dst, CCRB_L);
-			m_asm.xor_(_dst, asmjit::Imm(1));
-			break;
-		case CCCC_Minus:									// MI			Minus
-			ccr_getBitValue(_dst, CCRB_N);
-			break;
-		case CCCC_Plus:										// PL			Plus
-			ccr_getBitValue(_dst, CCRB_N);
-			m_asm.xor_(_dst, asmjit::Imm(1));
-			break;
-		case CCCC_GreaterEqual:								// GE			Greater than or equal
-			{
-				// SRB_N == SRB_V
-				ccr_getBitValue(_dst, CCRB_N);
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_V);
-				m_asm.cmp(_dst.r8(), r.get().r8());
-				m_asm.sete(_dst);
-			}
-			break;
-		case CCCC_LessThan:									// LT			Less than
-			{
-				// SRB_N != SRB_V
-				ccr_getBitValue(_dst, CCRB_N);
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_V);
-				m_asm.cmp(_dst.r8(), r.get().r8());
-				m_asm.setne(_dst);
-			}
-			break;
-		case CCCC_Normalized:								// NR			Normalized
-			{
-				// (SRB_Z + ((!SRB_U) | (!SRB_E))) == 1
-				ccr_getBitValue(_dst, CCRB_U);
-				m_asm.xor_(_dst, asmjit::Imm(1));
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_E);
-				m_asm.xor_(r, asmjit::Imm(1));
-				m_asm.and_(_dst.r8(), r.get().r8());
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(_dst.r8(), r.get().r8());
-				m_asm.cmp(_dst.r8(), asmjit::Imm(1));
-				m_asm.sete(_dst);
-			}
-			break;
-		case CCCC_NotNormalized:							// NN			Not normalized
-			{
-				// (SRB_Z + ((!SRB_U) | !SRB_E)) == 0
-				ccr_getBitValue(_dst, CCRB_U);
-				m_asm.xor_(_dst, asmjit::Imm(1));
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_E);
-				m_asm.xor_(r, asmjit::Imm(1));
-				m_asm.and_(_dst.r8(), r.get().r8());
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(_dst.r8(), r.get().r8());
-				m_asm.setz(_dst);
-			}
-			break;
-		case CCCC_GreaterThan:								// GT			Greater than
-			{
-				// (SRB_Z + (SRB_N != SRB_V)) == 0
-				ccr_getBitValue(_dst, CCRB_N);
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_V);
-				m_asm.xor_(_dst.r8(), r.get().r8());
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(_dst.r8(), r.get().r8());
-				m_asm.setz(_dst);
-			}
-			break;
-		case CCCC_LessEqual:								// LE			Less than or equal
-			{
-				// (SRB_Z + (SRB_N != SRB_V)) == 1
-				ccr_getBitValue(_dst, CCRB_N);
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_V);
-				m_asm.xor_(_dst.r8(), r.get().r8());
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(_dst.r8(), r.get().r8());
-				m_asm.cmp(_dst.r8(), asmjit::Imm(1));
-				m_asm.sete(_dst);
-			}
-			break;
-		default:
-			assert( 0 && "invalid CCCC value" );
-		}
-	}
-
 	void JitOps::decode_dddddd_read( const JitReg32& _dst, const TWord _dddddd )
 	{
 		const auto i = _dddddd & 0x3f;
@@ -539,8 +421,8 @@ namespace dsp56k
 			{
 				const auto alu = _lll & 3;
 				m_dspRegs.getALU(y, alu);
-				m_asm.mov(x.r64(), y.r64());
-				m_asm.shr(x.r64(), asmjit::Imm(24));
+				m_asm.mov(r64(x), r64(y));
+				m_asm.shr(r64(x), asmjit::Imm(24));
 				m_asm.and_(x, asmjit::Imm(0xffffff));
 				m_asm.and_(y, asmjit::Imm(0xffffff));
 			}
@@ -550,8 +432,8 @@ namespace dsp56k
 			{
 				const auto xy = _lll - 2;
 				m_dspRegs.getXY(y, xy);
-				m_asm.mov(x.r64(), y.r64());
-				m_asm.shr(x.r64(), asmjit::Imm(24));
+				m_asm.mov(r64(x), r64(y));
+				m_asm.shr(r64(x), asmjit::Imm(24));
 				m_asm.and_(x, asmjit::Imm(0xffffff));
 				m_asm.and_(y, asmjit::Imm(0xffffff));
 			}
@@ -581,9 +463,9 @@ namespace dsp56k
 				AluRef r(m_block, alu);
 				m_asm.shr(r, asmjit::Imm(48));	// clear 48 LSBs
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.or_(r, x.r64());
+				m_asm.or_(r, r64(x));
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.or_(r, y.r64());
+				m_asm.or_(r, r64(y));
 			}
 			break;
 		case 4:
@@ -593,9 +475,9 @@ namespace dsp56k
 
 				AluRef r(m_block, alu, false, true);
 
-				m_asm.mov(r, x.r64());
+				m_asm.mov(r, r64(x));
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.or_(r, y.r64());
+				m_asm.or_(r, r64(y));
 
 				signextend48to56(r);
 			}
@@ -608,7 +490,7 @@ namespace dsp56k
 				const auto r = m_dspRegs.getXY(xy, JitDspRegs::Write);
 				m_asm.mov(r, x);
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.or_(r, y.r64());
+				m_asm.or_(r, r64(y));
 			}
 			break;
 		case 6:
