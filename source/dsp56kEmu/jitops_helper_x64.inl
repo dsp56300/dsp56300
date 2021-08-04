@@ -170,4 +170,115 @@ namespace dsp56k
 		m_asm.rol(temp, asmjit::Imm(48));
 		m_dspRegs.setALU(_aluIndex, temp);
 	}
+
+	void JitOps::setSSH(const JitReg32& _src) const
+	{
+		incSP();
+		const RegGP temp(m_block);
+		m_dspRegs.getSS(temp);
+		m_asm.ror(temp, asmjit::Imm(24));
+		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
+		m_asm.or_(temp, r64(_src));
+		m_asm.rol(temp, asmjit::Imm(24));
+		m_dspRegs.setSS(temp);
+	}
+
+	void JitOps::setSSL(const JitReg32& _src) const
+	{
+		const RegGP temp(m_block);
+		m_dspRegs.getSS(temp);
+		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
+		m_asm.or_(temp, r64(_src));
+		m_dspRegs.setSS(temp);
+	}
+
+	void JitOps::decSP() const
+	{
+		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sp.var)));
+		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sc.var)));
+	}
+
+	void JitOps::incSP() const
+	{
+		m_asm.inc(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sp.var)));
+		m_asm.inc(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sc.var)));
+	}
+
+	void JitOps::transferSaturation(const JitRegGP& _dst)
+	{
+		// scaling
+
+		/*
+		if( sr_test_noCache(SR_S1) )
+			_scale.var <<= 1;
+		else if( sr_test_noCache(SR_S0) )
+			_scale.var >>= 1;
+		*/
+
+		{
+			const ShiftReg s0s1(m_block);
+			m_asm.xor_(s0s1, s0s1.get());
+
+			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S1));
+			m_asm.setc(s0s1);
+			m_asm.shl(_dst, s0s1.get());
+
+			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S0));
+			m_asm.setc(s0s1);
+			m_asm.shr(_dst, s0s1.get());
+		}
+
+		// saturated transfer
+		/*
+		const int64_t& test = _src.signextend<int64_t>();
+
+		if( test < -140737488355328 )			// ff ff 800000 000000
+		{
+			sr_set( SR_L );
+			_dst = 0x800000;
+		}
+		else if( test > 140737471578112 )		// 00 00 7fffff 000000
+		{
+			sr_set( SR_L );
+			_dst = 0x7FFFFF;
+		}
+		else
+			_dst = static_cast<int>(_src.var >> 24) & 0xffffff;
+		*/
+		{
+			const RegGP tester(m_block);
+			m_asm.mov(tester, _dst);
+			signextend56to64(tester);
+
+			// non-limited default
+			m_asm.shr(_dst, asmjit::Imm(24));
+			m_asm.and_(_dst, asmjit::Imm(0x00ffffff));
+
+			// lower limit
+			{
+				const auto limit = regReturnVal;
+				m_asm.mov(limit, asmjit::Imm(0xffff800000000000));
+				m_asm.cmp(tester, limit);
+			}
+			{
+				const auto minmax = regReturnVal;
+				m_asm.mov(minmax, 0x800000);
+				m_asm.cmovl(_dst, minmax);
+			}
+			ccr_update_ifLess(CCRB_L);
+
+			// upper limit
+			{
+				const auto limit = regReturnVal;
+				m_asm.mov(limit, asmjit::Imm(0x00007fffff000000));
+				m_asm.cmp(tester, limit);
+			}
+			{
+				const auto minmax = regReturnVal;
+				m_asm.mov(minmax, 0x7fffff);
+				m_asm.cmovg(_dst, minmax);
+			}
+		}
+		ccr_update_ifGreater(CCRB_L);
+	}
 }

@@ -757,7 +757,14 @@ namespace dsp56k
 		else
 		{
 			const auto lc = m_dspRegs.getLC(JitDspRegs::Read);
+#ifdef HAVE_ARM64
+			RegGP temp(m_block);
+			m_block.mem().mov(temp, m_block.getExecutedInstructionCount());
+			m_asm.add(temp, lc);
+			m_block.mem().mov(m_block.getExecutedInstructionCount(), temp);
+#else
 			m_asm.add(m_block.mem().ptr(regReturnVal, &m_block.getExecutedInstructionCount()), lc);
+#endif
 		}
 
 		const auto opSize = m_opSize;
