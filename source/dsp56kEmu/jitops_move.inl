@@ -12,8 +12,8 @@ namespace dsp56k
 		const auto iiiiiiii = getFieldValue<Move_xx, Field_iiiiiiii>(op);
 
 		const RegGP i(m_block);
-		m_asm.mov(i.get().r32(), asmjit::Imm(iiiiiiii));
-		decode_dddddd_write(ddddd, i.get().r32(), true);
+		m_asm.mov(r32(i.get()), asmjit::Imm(iiiiiiii));
+		decode_dddddd_write(ddddd, r32(i.get()), true);
 	}
 
 	void JitOps::op_Mover(TWord op)
@@ -22,8 +22,8 @@ namespace dsp56k
 		const auto ddddd = getFieldValue<Mover,Field_ddddd>(op);
 
 		const RegGP r(m_block);
-		decode_dddddd_read(r.get().r32(), eeeee);
-		decode_dddddd_write(ddddd, r.get().r32());
+		decode_dddddd_read(r32(r.get()), eeeee);
+		decode_dddddd_write(ddddd, r32(r.get()));
 	}
 
 	void JitOps::op_Move_ea(TWord op)
@@ -47,11 +47,11 @@ namespace dsp56k
 		if (write)
 		{
 			readMem<Inst>(r, _op, _area);
-			decode_dddddd_write(ddddd, r.get().r32());
+			decode_dddddd_write(ddddd, r32(r.get()));
 		}
 		else
 		{
-			decode_dddddd_read(r.get().r32(), ddddd);
+			decode_dddddd_read(r32(r.get()), ddddd);
 			writeMem<Inst>(_op, _area, r);
 		}
 	}
@@ -65,11 +65,11 @@ namespace dsp56k
 		if (write)
 		{
 			readMem<Inst>(r, _op, _area);
-			decode_dddddd_write(ddddd, r.get().r32());
+			decode_dddddd_write(ddddd, r32(r.get()));
 		}
 		else
 		{
-			decode_dddddd_read(r.get().r32(), ddddd);
+			decode_dddddd_read(r32(r.get()), ddddd);
 			writeMem<Inst>(_op, _area, r);
 		}
 	}
@@ -109,11 +109,11 @@ namespace dsp56k
 		if( write )
 		{
 			readMemOrPeriph(r, _area, ea);
-			decode_dddddd_write(DDDDDD, r.get().r32());
+			decode_dddddd_write(DDDDDD, r32(r.get()));
 		}
 		else
 		{
-			decode_dddddd_read(r.get().r32(), DDDDDD);
+			decode_dddddd_read(r32(r.get()), DDDDDD);
 			writeMemOrPeriph(_area, ea, r);
 		}
 	}
@@ -145,11 +145,11 @@ namespace dsp56k
 		if( write )
 		{
 			readMemOrPeriph(r, _area, ea);
-			decode_dddddd_write(ddddd, r.get().r32());
+			decode_dddddd_write(ddddd, r32(r.get()));
 		}
 		else
 		{
-			decode_dddddd_read(r.get().r32(), ddddd);
+			decode_dddddd_read(r32(r.get()), ddddd);
 			writeMemOrPeriph(_area, ea, r);
 		}		
 	}
@@ -289,11 +289,11 @@ namespace dsp56k
 			readMemOrPeriph(x, MemArea_X, ea);
 			readMemOrPeriph(y, MemArea_Y, ea);
 
-			decode_LLL_write(LLL,  x.get().r32(),y.get().r32());
+			decode_LLL_write(LLL, r32(x.get()), r32(y.get()));
 		}
 		else
 		{
-			decode_LLL_read(LLL, x.get().r32(),y.get().r32());
+			decode_LLL_read(LLL, r32(x.get()), r32(y.get()));
 
 			writeMemOrPeriph(MemArea_X, ea, x);
 			writeMemOrPeriph(MemArea_Y, ea, y);
@@ -319,11 +319,11 @@ namespace dsp56k
 			m_block.mem().readDspMemory(x, MemArea_X, ea);
 			m_block.mem().readDspMemory(y, MemArea_Y, ea);
 
-			decode_LLL_write(LLL, x.get().r32(), y.get().r32());
+			decode_LLL_write(LLL, r32(x.get()), r32(y.get()));
 		}
 		else
 		{
-			decode_LLL_read(LLL, x.get().r32(), y.get().r32());
+			decode_LLL_read(LLL, r32(x.get()), r32(y.get()));
 
 			m_block.mem().writeDspMemory(MemArea_X, ea, x);
 			m_block.mem().writeDspMemory(MemArea_Y, ea, y);
@@ -389,12 +389,12 @@ namespace dsp56k
 			const RegGP r(m_block);
 			readMem<Movec_ea>(r, op);
 
-			decode_ddddd_pcr_write( ddddd, r.get().r32());
+			decode_ddddd_pcr_write( ddddd, r32(r.get()));
 		}
 		else
 		{
 			const RegGP r(m_block);
-			decode_ddddd_pcr_read(r.get().r32(), ddddd);
+			decode_ddddd_pcr_read(r32(r.get()), ddddd);
 
 			writeMem<Movec_ea>(op, r);
 		}
@@ -408,7 +408,7 @@ namespace dsp56k
 		{
 			RegGP r(m_block);
 			readMem<Movec_aa>(r, op);
-			decode_ddddd_pcr_write( ddddd, r.get().r32() );
+			decode_ddddd_pcr_write( ddddd, r32(r.get()) );
 		}
 		else
 		{
@@ -416,7 +416,7 @@ namespace dsp56k
 			const auto area = getFieldValueMemArea<Movec_aa>(op);
 
 			const RegGP r(m_block);
-			decode_ddddd_pcr_read(r.get().r32(), ddddd);
+			decode_ddddd_pcr_read(r32(r.get()), ddddd);
 			m_block.mem().writeDspMemory(area, addr, r);
 		}
 	}
@@ -430,13 +430,13 @@ namespace dsp56k
 
 		if( write )
 		{
-			decode_dddddd_read(r.get().r32(), eeeeee);
-			decode_ddddd_pcr_write(ddddd, r.get().r32());
+			decode_dddddd_read(r32(r.get()), eeeeee);
+			decode_ddddd_pcr_write(ddddd, r32(r.get()));
 		}
 		else
 		{
-			decode_ddddd_pcr_read(r.get().r32(), ddddd);
-			decode_dddddd_write(eeeeee, r.get().r32());
+			decode_ddddd_pcr_read(r32(r.get()), ddddd);
+			decode_dddddd_write(eeeeee, r32(r.get()));
 		}
 	}
 
@@ -446,8 +446,8 @@ namespace dsp56k
 		const auto ddddd	= getFieldValue<Movec_xx,Field_DDDDD>(op);
 
 		const RegGP r(m_block);
-		m_asm.mov(r.get().r32(), asmjit::Imm(iiiiiiii));
-		decode_ddddd_pcr_write( ddddd, r.get().r32());
+		m_asm.mov(r32(r.get()), asmjit::Imm(iiiiiiii));
+		decode_ddddd_pcr_write( ddddd, r32(r.get()));
 	}
 
 	inline void JitOps::op_Movem_ea(TWord op)
@@ -459,14 +459,14 @@ namespace dsp56k
 		{
 			RegGP r(m_block);
 			readMem<Movem_ea>(r, op, MemArea_P);
-			decode_dddddd_write( dddddd, r.get().r32());
+			decode_dddddd_write( dddddd, r32(r.get()));
 		}
 		else
 		{
 			RegGP ea(m_block);
 			effectiveAddress<Movem_ea>(ea, op);
 			RegGP r(m_block);
-			decode_dddddd_read(r.get().r32(), dddddd);
+			decode_dddddd_read(r32(r.get()), dddddd);
 
 			RegGP compare(m_block);
 			m_block.mem().readDspMemory(compare, MemArea_P, ea);
@@ -477,8 +477,8 @@ namespace dsp56k
 
 			m_block.mem().writeDspMemory(MemArea_P, ea, r);
 
-			m_block.mem().mov(m_block.pMemWriteAddress(), ea.get().r32());
-			m_block.mem().mov(m_block.pMemWriteValue(), r.get().r32());
+			m_block.mem().mov(m_block.pMemWriteAddress(), r32(ea.get()));
+			m_block.mem().mov(m_block.pMemWriteValue(), r32(r.get()));
 
 			m_asm.bind(skip);
 
@@ -557,13 +557,13 @@ namespace dsp56k
 
 		if( write )
 		{
-			decode_dddddd_read( r.get().r32(), dddddd );
+			decode_dddddd_read(r32(r.get()), dddddd );
 			m_block.mem().writePeriph(_area, addr, r);
 		}
 		else
 		{
 			m_block.mem().readPeriph(r,_area, addr);
-			decode_dddddd_write( dddddd, r.get().r32());
+			decode_dddddd_write( dddddd, r32(r.get()));
 		}
 	}
 
@@ -588,13 +588,13 @@ namespace dsp56k
 
 		if( write )
 		{
-			decode_dddddd_read( r.get().r32(), dddddd );
+			decode_dddddd_read(r32(r.get()), dddddd );
 			m_block.mem().writePeriph(area, pppppp, r);
 		}
 		else
 		{
 			m_block.mem().readPeriph(r, area, pppppp);
-			decode_dddddd_write(dddddd, r.get().r32());
+			decode_dddddd_write(dddddd, r32(r.get()));
 		}
 	}
 }
