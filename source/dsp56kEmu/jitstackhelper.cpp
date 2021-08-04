@@ -3,7 +3,7 @@
 #include "jitblock.h"
 #include "jitemitter.h"
 
-#include <cassert>
+#include "dspassert.h"
 
 namespace dsp56k
 {
