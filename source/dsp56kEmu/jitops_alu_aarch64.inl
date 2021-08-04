@@ -289,7 +289,7 @@ namespace dsp56k
 
 			m_asm.shl(d, asmjit::Imm(1));
 
-			m_asm.bfi(d.get(), m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C), asmjit::Imm(1));
+			m_asm.ubfx(d.get(), m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C), asmjit::Imm(1));
 
 			const auto dLsWord = regReturnVal;
 			m_asm.mov(dLsWord, d.get());

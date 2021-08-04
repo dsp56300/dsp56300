@@ -72,6 +72,11 @@ namespace dsp56k
 		JitBuilder::neg(_reg, _reg);
 	}
 
+	void JitEmitter::or_(const JitRegGP& _gp, const asmjit::Imm& _imm)
+	{
+		eor(_gp, _gp, _imm);
+	}
+
 	void JitEmitter::ret()
 	{
 		JitBuilder::ret(asmjit::a64::regs::x30);

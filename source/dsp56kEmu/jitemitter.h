@@ -47,7 +47,9 @@ namespace dsp56k
 		void movq(const JitMemPtr& _dst, const JitReg128& _src);
 
 		void neg(const JitRegGP& _reg);
-		
+
+		void or_(const JitRegGP& _gp, const asmjit::Imm& _imm);
+
 		void ret();
 		void jmp(const asmjit::Label& _label);
 		void jge(const asmjit::Label& _label);

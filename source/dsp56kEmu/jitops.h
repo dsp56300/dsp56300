@@ -414,6 +414,10 @@ namespace dsp56k
 
 		void ccr_update(const JitRegGP& _value, CCRBit _bit);
 
+#ifdef HAVE_ARM64
+		void ccr_update(CCRBit _bit, uint32_t _armConditionCode);
+#endif
+		
 		void ccr_u_update(const JitReg64& _alu);
 		void ccr_e_update(const JitReg64& _alu);
 		void ccr_n_update_by55(const JitReg64& _alu);
