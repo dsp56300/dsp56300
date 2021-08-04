@@ -33,7 +33,7 @@ namespace dsp56k
 		const auto dddddd = getFieldValue<Inst,Field_DDDDDD>(op);
 
 		const RegGP r(m_block);
-		decode_dddddd_read(r.get().r32(), dddddd);
+		decode_dddddd_read(r32(r.get()), dddddd);
 
 		If(m_block, [&](auto _toFalse)
 		{
@@ -103,7 +103,7 @@ namespace dsp56k
 		const RegGP r(m_block);
 		m_dspRegs.getR(r, rrr);
 
-		braOrBsr<Bra>(r.get().r32());
+		braOrBsr<Bra>(r32(r.get()));
 	}
 
 	inline void JitOps::op_Bsr_xxxx(TWord op)
@@ -125,7 +125,7 @@ namespace dsp56k
 		const RegGP r(m_block);
 		m_dspRegs.getR(r, rrr);
 
-		braOrBsr<Bsr>(r.get().r32());
+		braOrBsr<Bsr>(r32(r.get()));
 	}
 
 	inline void JitOps::op_Bcc_xxxx(TWord op)
@@ -147,7 +147,7 @@ namespace dsp56k
 		const RegGP r(m_block);
 		m_dspRegs.getR(r, rrr);
 
-		braIfCC<Bcc_Rn, Bra>(op, r.get().r32());
+		braIfCC<Bcc_Rn, Bra>(op, r32(r.get()));
 	}
 
 	inline void JitOps::op_BScc_xxxx(TWord op)
@@ -169,7 +169,7 @@ namespace dsp56k
 		const RegGP r(m_block);
 		m_dspRegs.getR(r, rrr);
 
-		braIfCC<Bcc_Rn, Bsr>(op, r.get().r32());
+		braIfCC<Bcc_Rn, Bsr>(op, r32(r.get()));
 	}
 
 	// ________________________________________________
@@ -215,7 +215,7 @@ namespace dsp56k
 		If(m_block, [&](auto _toFalse)
 		{
 			const RegGP r(m_block);
-			decode_dddddd_read(r.get().r32(), dddddd);
+			decode_dddddd_read(r32(r.get()), dddddd);
 			bitTest<Inst>(op, r, BitValue, _toFalse);
 		}, [&]()
 		{
@@ -250,7 +250,7 @@ namespace dsp56k
 	{
 		RegGP ea(m_block);
 		effectiveAddress<Jcc_ea>(ea, op);
-		jumpIfCC<Jcc_ea, Jump>(op, ea.get().r32());
+		jumpIfCC<Jcc_ea, Jump>(op, r32(ea.get()));
 	}
 
 	inline void JitOps::op_Jcc_xxx(TWord op)
@@ -263,7 +263,7 @@ namespace dsp56k
 	{
 		RegGP ea(m_block);
 		effectiveAddress<Jmp_ea>(ea, op);
-		jumpOrJSR<Jump>(ea.get().r32());
+		jumpOrJSR<Jump>(r32(ea.get()));
 	}
 
 	inline void JitOps::op_Jmp_xxx(TWord op)
@@ -276,7 +276,7 @@ namespace dsp56k
 	{
 		RegGP ea(m_block);
 		effectiveAddress<Jscc_ea>(ea, op);
-		jumpIfCC<Jscc_ea, JSR>(op, ea.get().r32());
+		jumpIfCC<Jscc_ea, JSR>(op, r32(ea.get()));
 	}
 
 	inline void JitOps::op_Jscc_xxx(TWord op)
@@ -289,7 +289,7 @@ namespace dsp56k
 	{
 		RegGP ea(m_block);
 		effectiveAddress<Jsr_ea>(ea, op);
-		jumpOrJSR<JSR>(ea.get().r32());
+		jumpOrJSR<JSR>(r32(ea.get()));
 	}
 
 	inline void JitOps::op_Jsr_xxx(TWord op)
