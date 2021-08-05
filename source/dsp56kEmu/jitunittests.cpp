@@ -129,6 +129,8 @@ namespace dsp56k
 		code.setErrorHandler(&errorHandler);
 
 		JitEmitter m_asm(&code);
+		m_asm.addValidationOptions(asmjit::BaseEmitter::kValidationOptionIntermediate);
+		m_asm.addValidationOptions(asmjit::BaseEmitter::kValidationOptionAssembler);
 
 		JitRuntimeData rtData;
 
