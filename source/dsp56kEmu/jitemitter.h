@@ -10,6 +10,7 @@ namespace asmjit
 
 #ifdef HAVE_ARM64
 #include "asmjit/arm/a64builder.h"
+#include "asmjit/arm/a64assembler.h"
 #else
 #include "asmjit/x86/x86builder.h"
 #endif

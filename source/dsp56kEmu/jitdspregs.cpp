@@ -256,7 +256,10 @@ namespace dsp56k
 	void JitDspRegs::mask56(const JitRegGP& _alu) const
 	{
 #ifdef HAVE_ARM64
-		m_asm.and_(_alu, _alu, Imm(0x00ffffffffffffff));
+		// we need to work around the fact that there is no AND with 64 bit immediate operand and also ubfx cannot work with bits >= 32
+		m_asm.shl(r64(_alu), Imm(8));
+		m_asm.shr(r64(_alu), Imm(8));
+//		m_asm.ubfx(_alu, _alu, Imm(0), Imm(56));
 #else
 		// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shl(_alu, Imm(8));
@@ -267,7 +270,10 @@ namespace dsp56k
 	void JitDspRegs::mask48(const JitRegGP& _alu) const
 	{
 #ifdef HAVE_ARM64
-		m_asm.and_(_alu, _alu, Imm(0x0000ffffffffffff));
+		// we need to work around the fact that there is no AND with 64 bit immediate operand and also ubfx cannot work with bits >= 32
+		m_asm.shl(r64(_alu), Imm(16));
+		m_asm.shr(r64(_alu), Imm(16));
+//		m_asm.ubfx(_alu, _alu, Imm(0), Imm(48));
 #else
 		// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shl(r64(_alu), Imm(16));	

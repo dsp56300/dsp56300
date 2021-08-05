@@ -392,7 +392,7 @@ namespace dsp56k
 	{
 		const RegGP shifted(m_block);
 
-		m_asm.mov(shifted, _src);
+		m_asm.mov(shifted, r64(_src));
 		m_asm.shl(shifted, asmjit::Imm(24));
 
 		const auto temp = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);

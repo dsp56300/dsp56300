@@ -100,7 +100,7 @@ namespace dsp56k
 	{
 		const auto reg = regSmallTemp;
 #ifdef HAVE_ARM64
-		m_block.asm_().strb(_src, ptr(reg, &_dst));
+		m_block.asm_().strb(r32(_src), ptr(reg, &_dst));
 #else
 		m_block.asm_().mov(ptr(reg, &_dst), _src.r8());
 #endif
@@ -119,7 +119,7 @@ namespace dsp56k
 	void Jitmem::mov(const JitRegGP& _dst, const uint8_t& _src) const
 	{
 #ifdef HAVE_ARM64
-		m_block.asm_().ldrb(_dst, ptr(r64(_dst), &_src));
+		m_block.asm_().ldrb(r32(_dst), ptr(r64(_dst), &_src));
 #else
 		m_block.asm_().movzx(_dst.r8(), ptr(r64(_dst), &_src));
 #endif

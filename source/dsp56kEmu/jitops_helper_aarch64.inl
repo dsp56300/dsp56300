@@ -12,21 +12,22 @@ namespace dsp56k
 		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
-		m_asm.cmp(r32(_m), asmjit::Imm(0xffffff));		// linear shortcut
+		m_asm.mov(r32(regReturnVal), asmjit::Imm(0xffffff));	// linear shortcut
+		m_asm.cmp(r32(_m), r32(regReturnVal));
 		m_asm.jz(linear);
 
-		m_asm.tst(_m, asmjit::Imm(0xffff));				// bit reverse
+		m_asm.tst(_m, asmjit::Imm(0xffff));						// bit reverse
 		m_asm.cond_zero().b(bitreverse);
 
-		m_asm.and_(regReturnVal, _m, asmjit::Imm(0xffff));
-		m_asm.cmp(regReturnVal, asmjit::Imm(0x7fff));
-		m_asm.cond_gt().b(multipleWrapModulo);
+		m_asm.and_(r32(regReturnVal), _m, asmjit::Imm(0xffff));
+		m_asm.cmp(r32(regReturnVal), asmjit::Imm(0x8000));
+		m_asm.cond_ge().b(multipleWrapModulo);
 
-		const auto nAbs = r32(regReturnVal);			// compare abs(n) with m
+		const auto nAbs = r32(regReturnVal);					// compare abs(n) with m
 		m_asm.cmp(r32(_n), asmjit::Imm(0));
 		m_asm.cneg(nAbs, r32(_n), asmjit::arm::Cond::kLT);
 
-		m_asm.cmp(nAbs, _m);							// modulo or linear
+		m_asm.cmp(nAbs, _m);									// modulo or linear
 		m_asm.cond_gt().b(linear);
 
 		// modulo:
@@ -58,15 +59,16 @@ namespace dsp56k
 		const auto modulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
-		m_asm.cmp(r32(_m), asmjit::Imm(0xffffff));			// linear shortcut
+		m_asm.mov(r32(regReturnVal), asmjit::Imm(0xffffff));		// linear shortcut
+		m_asm.cmp(r32(_m), r32(regReturnVal));
 		m_asm.jz(linear);
 
-		m_asm.tst(_m, asmjit::Imm(0xffff));					// bit reverse
+		m_asm.tst(_m, asmjit::Imm(0xffff));							// bit reverse
 		m_asm.cond_zero().b(end);
 
-		m_asm.and_(regReturnVal, _m, asmjit::Imm(0xffff));	// multiple-wrap modulo
-		m_asm.cmp(regReturnVal, asmjit::Imm(0x7fff));
-		m_asm.cond_gt().b(end);
+		m_asm.and_(r32(regReturnVal), _m, asmjit::Imm(0xffff));		// multiple-wrap modulo
+		m_asm.cmp(r32(regReturnVal), asmjit::Imm(0x8000));
+		m_asm.cond_ge().b(end);
 
 		// modulo:
 		m_asm.bind(modulo);
@@ -132,19 +134,19 @@ namespace dsp56k
 	void JitOps::setALU0(const uint32_t _aluIndex, const JitRegGP& _src)
 	{
 		AluRef d(m_block, _aluIndex, true, true);
-		m_asm.bfi(d, _src, asmjit::Imm(0), asmjit::Imm(24));
+		m_asm.bfi(d, r64(_src), asmjit::Imm(0), asmjit::Imm(24));
 	}
 
 	void JitOps::setALU1(const uint32_t _aluIndex, const JitReg32& _src)
 	{
 		AluRef d(m_block, _aluIndex, true, true);
-		m_asm.bfi(d, _src, asmjit::Imm(24), asmjit::Imm(24));
+		m_asm.bfi(d, r64(_src), asmjit::Imm(24), asmjit::Imm(24));
 	}
 
 	void JitOps::setALU2(const uint32_t _aluIndex, const JitReg32& _src)
 	{
 		AluRef d(m_block, _aluIndex, true, true);
-		m_asm.bfi(d, _src, asmjit::Imm(48), asmjit::Imm(8));
+		m_asm.bfi(d, r64(_src), asmjit::Imm(48), asmjit::Imm(8));
 	}
 
 	void JitOps::setSSH(const JitReg32& _src) const
@@ -152,7 +154,7 @@ namespace dsp56k
 		incSP();
 		const RegGP temp(m_block);
 		m_dspRegs.getSS(temp);
-		m_asm.bfi(temp, _src, asmjit::Imm(24), asmjit::Imm(24));
+		m_asm.bfi(temp, r64(_src), asmjit::Imm(24), asmjit::Imm(24));
 		m_dspRegs.setSS(temp);
 	}
 
@@ -160,7 +162,7 @@ namespace dsp56k
 	{
 		const RegGP temp(m_block);
 		m_dspRegs.getSS(temp);
-		m_asm.bfi(temp, _src, asmjit::Imm(0), asmjit::Imm(24));
+		m_asm.bfi(temp, r64(_src), asmjit::Imm(0), asmjit::Imm(24));
 		m_dspRegs.setSS(temp);
 	}
 

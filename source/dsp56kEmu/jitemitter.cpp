@@ -28,8 +28,8 @@ namespace dsp56k
 
 	void JitEmitter::bsr(const JitRegGP& _dst, const JitReg32& _src)
 	{
-		rbit(_dst, _src);
-		clz(_dst, _dst);
+		rbit(r32(_dst), _src);
+		clz(r32(_dst), r32(_dst));
 		add(_dst, _dst, 1);
 	}
 
@@ -55,12 +55,12 @@ namespace dsp56k
 
 	void JitEmitter::movq(const JitRegGP& _dst, const JitReg128& _src)
 	{
-		fmov(r64(_dst), _src);
+		fmov(r64(_dst), _src.d());
 	}
 
 	void JitEmitter::movq(const JitReg128& _dst, const JitRegGP& _src)
 	{
-		fmov(_dst, r64(_src));
+		fmov(_dst.d(), r64(_src));
 	}
 
 	void JitEmitter::movq(const JitReg128& _dst, const JitReg128& _src)
@@ -70,12 +70,12 @@ namespace dsp56k
 
 	void JitEmitter::movd(const JitReg128& _dst, const JitRegGP& _src)
 	{
-		fmov(_dst, r32(_src));
+		fmov(_dst.s(), r32(_src));
 	}
 
 	void JitEmitter::movd(const JitRegGP& _dst, const JitReg128& _src)
 	{
-		fmov(r32(_dst), _src);
+		fmov(r32(_dst), _src.s());
 	}
 
 	void JitEmitter::mov(const JitMemPtr& _dst, const JitRegGP& _src)
