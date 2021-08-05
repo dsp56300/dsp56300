@@ -368,7 +368,7 @@ namespace dsp56k
 			signextend24to64(_s2.get());
 
 #ifdef HAVE_ARM64
-		m_asm.smull(_s1, _s1, _s2);
+		m_asm.smull(_s1, r32(_s1), r32(_s2));
 #else
 		m_asm.imul(_s1.get(), _s2.get());
 #endif
@@ -647,7 +647,7 @@ namespace dsp56k
 		if(s2Unsigned)	signextend24to64(s2);
 
 #ifdef HAVE_ARM64
-		m_asm.smull(s1, s1, s2.get());
+		m_asm.smull(s1, r32(s1), r32(s2));
 #else
 		m_asm.imul(s1, s2.get());
 #endif
