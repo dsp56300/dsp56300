@@ -16,7 +16,7 @@ namespace dsp56k
 	constexpr bool g_useAARTranslate = false;
 #endif
 
-#ifdef HAVE_X86_64
+#if defined(HAVE_X86_64) || defined(HAVE_ARM64)
 	constexpr bool g_jitSupported = true;
 #else
 	static_assert(false, "Not compiling for x64. there is no JIT engine support, emulator will be very slow! Remove this static_assert to confirm building anyway");
