@@ -192,6 +192,28 @@ namespace dsp56k
 		m_dspRegs.setSS(temp);
 	}
 
+	void JitOps::setMR(const JitReg64& _src) const
+	{
+		const RegGP r(m_block);
+		m_asm.mov(r, m_dspRegs.getSR(JitDspRegs::Read));
+		m_asm.and_(r, asmjit::Imm(0xff00ff));
+		m_asm.shl(_src, asmjit::Imm(8));
+		m_asm.or_(r, _src);
+		m_asm.shr(_src, asmjit::Imm(8));	// TODO: we don't wanna be destructive to the input for now
+		m_asm.mov(m_dspRegs.getSR(JitDspRegs::Write), r.get());
+	}
+
+	void JitOps::setEOM(const JitReg64& _src) const
+	{
+		const RegGP r(m_block);
+		m_block.mem().mov(r, m_block.dsp().regs().omr);
+		m_asm.and_(r, asmjit::Imm(0xff00ff));
+		m_asm.shl(_src, asmjit::Imm(8));
+		m_asm.or_(r, _src);
+		m_block.mem().mov(m_block.dsp().regs().omr, r);
+		m_asm.shr(_src, asmjit::Imm(8));	// TODO: we don't wanna be destructive to the input for now
+	}
+
 	void JitOps::decSP() const
 	{
 		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sp.var)));

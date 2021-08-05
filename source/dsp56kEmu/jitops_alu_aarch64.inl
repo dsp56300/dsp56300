@@ -42,8 +42,8 @@ namespace dsp56k
 		}
 
 		{
-			m_asm.orr(_v, _v, asmjit::Imm(0xff000000ffffff));
-			m_asm.and_(alu, alu, _v.get());
+			m_asm.lsr(_v, _v, asmjit::Imm(24));
+			m_asm.bfi(alu, _v, asmjit::Imm(24), asmjit::Imm(24));
 		}
 
 		_v.release();

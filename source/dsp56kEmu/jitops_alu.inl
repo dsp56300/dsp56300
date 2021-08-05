@@ -229,7 +229,15 @@ namespace dsp56k
 
 		RegGP r(m_block);
 		decode_EE_read(r, ee);
+#ifdef HAVE_ARM64
+		{
+			RegGP i(m_block);
+			m_asm.mov(i, asmjit::Imm(iiiiii));
+			m_asm.and_(r, i.get());
+		}
+#else
 		m_asm.and_(r, asmjit::Imm(iiiiii));
+#endif
 		decode_EE_write(r, ee);
 	}
 

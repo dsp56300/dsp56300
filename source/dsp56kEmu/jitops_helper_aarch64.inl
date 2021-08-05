@@ -166,6 +166,22 @@ namespace dsp56k
 		m_dspRegs.setSS(temp);
 	}
 
+	void JitOps::setMR(const JitReg64& _src) const
+	{
+		const RegGP r(m_block);
+		m_asm.mov(r, m_dspRegs.getSR(JitDspRegs::Read));
+		m_asm.bfi(r, _src, asmjit::Imm(8), asmjit::Imm(8));
+		m_asm.mov(m_dspRegs.getSR(JitDspRegs::Write), r.get());
+	}
+
+	void JitOps::setEOM(const JitReg64& _src) const
+	{
+		const RegGP r(m_block);
+		m_block.mem().mov(r, m_block.dsp().regs().omr);
+		m_asm.bfi(r, _src, asmjit::Imm(8), asmjit::Imm(8));
+		m_block.mem().mov(m_block.dsp().regs().omr, r);
+	}
+
 	void JitOps::decSP() const
 	{
 		const RegGP r(m_block);
