@@ -64,7 +64,7 @@ namespace dsp56k
 		TWord*												y;
 		TWord*												p;
 
-		TWord												m_bridgedMemoryAddress = 0xffffff;
+		TWord												m_bridgedMemoryAddress;
 
 #if MEMORY_HEAT_MAP
 		mutable std::array<std::vector<uint32_t>, MemArea_COUNT>	m_heatMap;
