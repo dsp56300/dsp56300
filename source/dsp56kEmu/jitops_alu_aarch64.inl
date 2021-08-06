@@ -155,6 +155,7 @@ namespace dsp56k
 
 		{
 			const ShiftReg shifter(m_block);
+			m_asm.mov(shifter, asmjit::a64::xzr);
 			sr_getBitValue(shifter, SRB_S1);
 			m_asm.shr(rounder, shifter.get());
 			sr_getBitValue(shifter, SRB_S0);
@@ -182,7 +183,7 @@ namespace dsp56k
 			// then the bit to the left of the rounding position is cleared in the result
 			// if (!(_alu.var & mask)) 
 			//	_alu.var&=~(rounder<<1);
-			m_asm.eor(rounder, rounder, asmjit::Imm(std::numeric_limits<uint64_t>::max()));
+			m_asm.mvn(rounder, rounder);
 
 			{
 				const RegGP aluIfAndWithMaskIsZero(m_block);
@@ -191,15 +192,15 @@ namespace dsp56k
 
 				rounder.release();
 
-				m_asm.ands(asmjit::a64::regs::xzr, d, mask.get());
-				m_asm.csel(d, d, aluIfAndWithMaskIsZero.get(), asmjit::arm::Cond::kZero);
+				m_asm.tst(d, mask.get());
+				m_asm.csel(d, aluIfAndWithMaskIsZero.get(), d, asmjit::arm::Cond::kZero);
 			}
 
 			m_asm.bind(skipNoScalingMode);
 
 			// all bits to the right of and including the rounding position are cleared.
 			// _alu.var&=~mask;
-			m_asm.eor(mask, mask, asmjit::Imm(std::numeric_limits<uint64_t>::max()));
+			m_asm.mvn(mask, mask);
 			m_asm.and_(d, mask.get());
 		}
 

@@ -167,7 +167,7 @@ namespace dsp56k
 
 	void JitDspRegs::setSR(const JitReg32& _src)
 	{
-		m_asm.mov(getSR(Write), _src);
+		m_asm.mov(r32(getSR(Write)), _src);
 	}
 
 	void JitDspRegs::getOMR(const JitReg32& _dst) const

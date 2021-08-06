@@ -488,7 +488,7 @@ namespace dsp56k
 				const auto xy = _lll - 2;
 
 				const auto r = m_dspRegs.getXY(xy, JitDspRegs::Write);
-				m_asm.mov(r, x);
+				m_asm.mov(r, r64(x));
 				m_asm.shl(r, asmjit::Imm(24));
 				m_asm.or_(r, r64(y));
 			}

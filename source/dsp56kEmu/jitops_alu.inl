@@ -567,8 +567,16 @@ namespace dsp56k
 	{
 		const auto D = getFieldValue<Clr, Field_d>(op);
 		m_dspRegs.clrALU(D);
+#ifdef HAVE_ARM64
+		ccr_clear(CCR_E);	// see ccr_clear why this workaround is needed for ARMv8
+		ccr_clear(CCR_N);
+		ccr_clear(CCR_V);
+		ccr_set(CCR_U);
+		ccr_set(CCR_Z);
+#else
 		ccr_clear( static_cast<CCRMask>(CCR_E | CCR_N | CCR_V) );
-		ccr_set( static_cast<CCRMask>(CCR_U | CCR_Z) );
+		ccr_set(static_cast<CCRMask>(CCR_U | CCR_Z));
+#endif
 	}
 
 	inline void JitOps::op_Cmp_S1S2(TWord op)
@@ -915,7 +923,11 @@ namespace dsp56k
 		RegGP r(m_block);
 		decode_EE_read(r, ee);
 #ifdef HAVE_ARM64
-		m_asm.eor(r, r, asmjit::Imm(iiiiii));
+		{
+			const RegGP temp(m_block);
+			m_asm.mov(temp, asmjit::Imm(iiiiii));
+			m_asm.eor(r, r, temp.get());
+		}
 #else
 		m_asm.or_(r, asmjit::Imm(iiiiii));
 #endif
