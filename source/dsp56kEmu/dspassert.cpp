@@ -5,7 +5,7 @@
 #include "logging.h"
 
 #ifdef _WIN32
-#include <windows.h>
+#include <Windows.h>
 #else
 #include <iostream>
 #endif
