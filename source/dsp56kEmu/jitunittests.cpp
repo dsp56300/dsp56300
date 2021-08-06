@@ -1244,7 +1244,10 @@ namespace dsp56k
 		[&]()
 		{
 			assert(dsp.sr_test(CCR_Z));
-			assert(!dsp.sr_test(static_cast<CCRMask>(CCR_N | CCR_E | CCR_V | CCR_C)));			
+			assert(!dsp.sr_test(CCR_N));
+			assert(!dsp.sr_test(CCR_E));
+			assert(!dsp.sr_test(CCR_V));
+			assert(!dsp.sr_test(CCR_C));
 		});
 		runTest([&](auto& _block, auto& _ops)
 		{
