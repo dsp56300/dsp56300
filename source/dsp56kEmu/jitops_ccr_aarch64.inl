@@ -105,7 +105,7 @@ namespace dsp56k
 			m_asm.lsr(r, _alu, asmjit::Imm(46));
 			m_asm.shr(r, shift.get());
 			m_asm.eor(r, r, r, asmjit::arm::lsr(1));
-			m_asm.and_(r, asmjit::Imm(0x1));
+			m_asm.ands(r, r, asmjit::Imm(0x1));
 		}
 		ccr_update_ifZero(CCRB_U);
 
@@ -163,7 +163,7 @@ namespace dsp56k
 
 				// Don't be distracted by the names, we abuse alu & mask here to store comparison results
 				m_asm.cmp(alu, mask.get());			m_asm.cset(mask, asmjit::arm::Cond::kNotZero);
-				m_asm.cmp(alu, asmjit::Imm(0));		m_asm.cset(mask, asmjit::arm::Cond::kNotZero);
+				m_asm.cmp(alu, asmjit::Imm(0));		m_asm.cset(alu, asmjit::arm::Cond::kNotZero);
 
 				m_asm.and_(mask.get(), alu.get());
 			}

@@ -151,7 +151,11 @@ namespace dsp56k
 
 			signextend56to64(aluS);
 
+#ifdef HAVE_ARM64
+			m_asm.adds(aluD, aluD, aluS.get());
+#else
 			m_asm.add(aluD, aluS.get());
+#endif
 		}
 
 		ccr_update_ifCarry(CCRB_C);
@@ -339,12 +343,19 @@ namespace dsp56k
 			}
 		}
 
+#ifdef HAVE_ARM64
+		m_asm.subs(d, d, _v);
+#else
 		m_asm.sub(d, _v);
-
+#endif
 		if(updateCarry)
+		{
+#ifdef HAVE_ARM64
+			ccr_update_ifNotCarry(CCRB_C);		// we, THAT is unexpected: On ARM, carry means unsigned >= while it means unsigned < on 56k and intel
+#else
 			ccr_update_ifCarry(CCRB_C);
-
-		m_asm.cmp(d, asmjit::Imm(0));
+#endif
+		}
 
 		ccr_clear(CCR_V);			// as cmp is identical to sub, the same for the V bit applies (see sub for details)
 

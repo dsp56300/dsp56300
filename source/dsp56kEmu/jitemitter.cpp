@@ -28,9 +28,9 @@ namespace dsp56k
 
 	void JitEmitter::bsr(const JitRegGP& _dst, const JitReg32& _src)
 	{
-		rbit(r32(_dst), _src);
 		clz(r32(_dst), r32(_dst));
-		add(_dst, _dst, 1);
+		neg(_dst);
+		add(_dst, _dst, asmjit::Imm(32));
 	}
 
 	void JitEmitter::dec(const JitRegGP& _gp)

@@ -39,11 +39,9 @@ namespace dsp56k
 			const RegGP r(m_block);
 			m_asm.and_(r, alu.get(), _v.get());
 			ccr_update_ifZero(CCRB_Z);
-		}
 
-		{
-			m_asm.lsr(_v, _v, asmjit::Imm(24));
-			m_asm.bfi(alu, _v, asmjit::Imm(24), asmjit::Imm(24));
+			m_asm.lsr(r, r, asmjit::Imm(24));
+			m_asm.bfi(alu, r, asmjit::Imm(24), asmjit::Imm(24));
 		}
 
 		_v.release();
@@ -60,11 +58,11 @@ namespace dsp56k
 		if (_abDst != _abSrc)
 			m_asm.mov(alu.get(), m_dspRegs.getALU(_abSrc, JitDspRegs::Read));
 
-		m_asm.lsl(alu, alu, asmjit::Imm(8));		// we want to hit the 64 bit boundary to make use of the native carry flag so pre-shift by 8 bit (56 => 64)
+		m_asm.bitTest(alu, 55);
+		ccr_update_ifNotZero(CCRB_C);
 
-		m_asm.lsl(alu, alu, _v.get());				// now do the real shift
-
-		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
+		m_asm.lsl(alu, alu, asmjit::Imm(8));				// we want to hit the 64 bit boundary to be able to check for overflow
+		m_asm.lsl(alu, alu, _v.get());
 
 		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
 		// The easiest way to check this is to shift back and compare if the initial alu value is identical ot the backshifted one
@@ -124,9 +122,10 @@ namespace dsp56k
 	{
 		const RegGP d(m_block);
 		getALU1(d, ab);
-		m_asm.shl(r32(d.get()), _shiftAmount + 8);	// + 8 to use native carry flag
-		ccr_update_ifCarry(CCRB_C);
-		m_asm.shr(r32(d.get()), 8);				// revert shift by 8
+		m_asm.bitTest(d, 24 - _shiftAmount);
+		ccr_update_ifNotZero(CCRB_C);
+		m_asm.shl(r32(d.get()), _shiftAmount + 8);	// + 8 to be able to check against zero because we move the MSB out or the register
+		m_asm.shr(r32(d.get()), 8);					// revert shift by 8
 		ccr_update_ifZero(CCRB_Z);
 		m_asm.bitTest(r32(d.get()), 23);
 		ccr_update_ifNotZero(CCRB_N);
@@ -138,8 +137,9 @@ namespace dsp56k
 	{
 		const RegGP d(m_block);
 		getALU1(d, ab);
+		m_asm.bitTest(d, _shiftAmount - 1);
+		ccr_update_ifNotZero(CCRB_C);
 		m_asm.shr(r32(d.get()), _shiftAmount);
-		ccr_update_ifCarry(CCRB_C);
 		m_asm.cmp(r32(d.get()), asmjit::Imm(0));
 		ccr_update_ifZero(CCRB_Z);
 		m_asm.bitTest(r32(d.get()), 23);
@@ -270,7 +270,7 @@ namespace dsp56k
 
 			m_asm.eor(r, d, d, asmjit::arm::lsr(1));
 			m_asm.lsr(r, r, asmjit::Imm(54));
-			m_asm.bfi(sr, r, asmjit::Imm(CCR_V), asmjit::Imm(1));
+			m_asm.bfi(sr, r, asmjit::Imm(CCRB_V), asmjit::Imm(1));
 			m_asm.lsl(r, r, asmjit::Imm(CCRB_L));
 			m_asm.orr(sr, sr, r.get());
 
@@ -289,11 +289,11 @@ namespace dsp56k
 
 			m_asm.shl(d, asmjit::Imm(1));
 
-			m_asm.ubfx(d.get(), m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C), asmjit::Imm(1));
+			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), CCRB_C);
+			m_asm.cinc(d, d, asmjit::arm::Cond::kNotZero);
 
 			const auto dLsWord = regReturnVal;
-			m_asm.mov(dLsWord, d.get());
-			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
+			m_asm.and_(dLsWord, d.get(), asmjit::Imm(0xffffff));
 
 			const asmjit::Label sub = m_asm.newLabel();
 			const asmjit::Label end = m_asm.newLabel();
@@ -340,7 +340,7 @@ namespace dsp56k
 
 			m_asm.eor(r, d, d, asmjit::arm::lsr(1));
 			m_asm.lsr(r, r, asmjit::Imm(54));
-			m_asm.bfi(sr, r, asmjit::Imm(CCR_V), asmjit::Imm(1));
+			m_asm.bfi(sr, r, asmjit::Imm(CCRB_V), asmjit::Imm(1));
 			m_asm.lsl(r, r, asmjit::Imm(CCRB_L));
 			m_asm.orr(sr, sr, r.get());
 
@@ -385,8 +385,7 @@ namespace dsp56k
 			m_asm.add(d.get(), d.get(), carry.get());
 
 			const auto dLsWord = regReturnVal;
-			m_asm.mov(dLsWord, d.get());
-			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
+			m_asm.and_(dLsWord, d.get(), asmjit::Imm(0xffffff));
 
 			const asmjit::Label sub = m_asm.newLabel();
 			const asmjit::Label end = m_asm.newLabel();

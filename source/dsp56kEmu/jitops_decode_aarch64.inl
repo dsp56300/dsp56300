@@ -54,7 +54,8 @@ namespace dsp56k
 			m_asm.mov(r, asmjit::a64::xzr);
 			ccr_getBitValue(_dst, CCRB_N);
 			ccr_getBitValue(r, CCRB_V);
-			m_asm.eon(_dst, _dst, r.get());
+			m_asm.cmp(_dst, r.get());
+			m_asm.cset(_dst, asmjit::arm::Cond::kZero);
 		}
 		break;
 		case CCCC_LessThan:									// LT			Less than
