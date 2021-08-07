@@ -633,11 +633,12 @@ namespace dsp56k
 		m_asm.shl(r, asmjit::Imm(8));	// shift left by 8 bits to enable using the host carry bit
 
 #ifdef HAVE_ARM64
-		m_asm.sub(r, r, asmjit::Imm(0x100));
+		m_asm.subs(r, r, asmjit::Imm(0x100));
+		ccr_update_ifNotCarry(CCRB_C);
 #else
 		m_asm.sub(r, asmjit::Imm(0x100));
-#endif
 		ccr_update_ifCarry(CCRB_C);
+#endif
 
 		m_asm.shr(r, asmjit::Imm(8));
 		ccr_clear(CCR_V);				// never set in the simulator, even when wrapping around. Carry is set instead
@@ -791,8 +792,12 @@ namespace dsp56k
 		AluRef r(m_block, ab);
 
 		m_asm.shl(r, asmjit::Imm(8));		// shift left by 8 bits to enable using the host carry bit
-		m_asm.add(r, asmjit::Imm(0x100));
 
+#ifdef HAVE_ARM64
+		m_asm.adds(r, r, asmjit::Imm(0x100));
+#else
+		m_asm.add(r, asmjit::Imm(0x100));
+#endif
 		ccr_update_ifCarry(CCRB_C);
 
 		m_asm.shr(r, asmjit::Imm(8));
