@@ -126,6 +126,7 @@ namespace dsp56k
 		ccr_update_ifNotZero(CCRB_C);
 		m_asm.shl(r32(d.get()), _shiftAmount + 8);	// + 8 to be able to check against zero because we move the MSB out or the register
 		m_asm.shr(r32(d.get()), 8);					// revert shift by 8
+		m_asm.cmp(r32(d.get()), asmjit::Imm(0));
 		ccr_update_ifZero(CCRB_Z);
 		m_asm.bitTest(r32(d.get()), 23);
 		ccr_update_ifNotZero(CCRB_N);
