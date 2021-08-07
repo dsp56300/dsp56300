@@ -37,7 +37,7 @@ namespace dsp56k
 
 		{
 			const RegGP r(m_block);
-			m_asm.and_(r, alu.get(), _v.get());
+			m_asm.ands(r, alu.get(), _v.get());
 			ccr_update_ifZero(CCRB_Z);
 
 			m_asm.lsr(r, r, asmjit::Imm(24));
