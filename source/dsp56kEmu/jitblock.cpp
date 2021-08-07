@@ -181,7 +181,7 @@ namespace dsp56k
 #ifdef HAVE_ARM64
 			RegGP temp(*this);
 			m_asm.mov(temp, asmjit::Imm(m_pcLast));
-			m_asm.mov(dst, temp.get());
+			m_asm.mov(dst, r32(temp.get()));
 #else
 			m_asm.mov(dst, asmjit::Imm(m_pcLast));
 #endif
