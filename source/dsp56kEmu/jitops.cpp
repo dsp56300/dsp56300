@@ -758,7 +758,7 @@ namespace dsp56k
 		// backup LC
 		const RegXMM lcBackup(m_block);
 		m_asm.movd(lcBackup, m_dspRegs.getLC(JitDspRegs::Read));
-		m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), r32(_lc.get()));
+		m_asm.mov(r32(m_dspRegs.getLC(JitDspRegs::Write)), r32(_lc.get()));
 		_lc.release();
 
 		if(hasImmediateOperand)
@@ -770,9 +770,9 @@ namespace dsp56k
 			const auto lc = m_dspRegs.getLC(JitDspRegs::Read);
 #ifdef HAVE_ARM64
 			RegGP temp(m_block);
-			m_block.mem().mov(temp, m_block.getExecutedInstructionCount());
-			m_asm.add(temp, lc);
-			m_block.mem().mov(m_block.getExecutedInstructionCount(), temp);
+			m_block.mem().mov(r32(temp), m_block.getExecutedInstructionCount());
+			m_asm.add(r32(temp), r32(lc));
+			m_block.mem().mov(m_block.getExecutedInstructionCount(), r32(temp));
 #else
 			m_asm.add(m_block.mem().ptr(regReturnVal, &m_block.getExecutedInstructionCount()), lc);
 #endif
