@@ -124,7 +124,20 @@ namespace dsp56k
 		AsmJitErrorHandler errorHandler;
 		asmjit::CodeHolder code;
 		AsmJitLogger logger;
-		code.init(m_rt.environment());
+
+#ifdef HAVE_ARM64
+		constexpr auto arch = asmjit::Environment::kArchAArch64;
+#else
+		constexpr auto arch = asmjit::Environment::kArchX64;
+#endif
+
+		const auto foreignArch = m_rt.environment().arch() != arch;
+
+		if(foreignArch)
+			code.init(asmjit::Environment(arch));
+		else
+			code.init(m_rt.environment());
+
 		code.setLogger(&logger);
 		code.setErrorHandler(&errorHandler);
 
@@ -161,13 +174,20 @@ namespace dsp56k
 			throw std::runtime_error(msg);
 		}
 
-		LOG("Running test code");
+		if(!foreignArch)
+		{
+			LOG("Running test code");
 
-		func();
+			func();
 
-		LOG("Verifying test code");
+			LOG("Verifying test code");
 
-		_verify();
+			_verify();
+		}
+		else
+		{
+			LOG("Run & Verify of code for foreign arch skipped");
+		}
 
 		m_rt.release(&func);
 	}
