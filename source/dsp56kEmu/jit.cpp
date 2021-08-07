@@ -317,7 +317,10 @@ namespace dsp56k
 		}
 		else
 		{
-			e.func = e.block->getFunc();
+			if (g_traceOps)
+				e.func = &funcRun;
+			else
+				e.func = e.block->getFunc();
 		}
 	}
 }
