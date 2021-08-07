@@ -130,6 +130,8 @@ namespace dsp56k
 
 		JitEmitter m_asm(&code);
 
+		LOG("Creating test code");
+
 		JitRuntimeData rtData;
 
 		{
@@ -159,7 +161,11 @@ namespace dsp56k
 			throw std::runtime_error(msg);
 		}
 
+		LOG("Running test code");
+
 		func();
+
+		LOG("Verifying test code");
 
 		_verify();
 
