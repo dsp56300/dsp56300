@@ -152,8 +152,11 @@ namespace dsp56k
 		if(err)
 		{
 			const auto* const errString = asmjit::DebugUtils::errorAsString(err);
-			LOG("JIT failed: " << err << " - " << errString);
-			return;
+			std::stringstream ss;
+			ss << "JIT failed: " << err << " - " << errString;
+			const std::string msg(ss.str());
+			LOG(msg);
+			throw std::runtime_error(msg);
 		}
 
 		func();
