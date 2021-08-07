@@ -197,6 +197,9 @@ namespace dsp56k
 				_block.stack().push(gp);
 			}
 		}
+
+		_block.stack().push(asmjit::a64::regs::x30);
+		m_pushedRegs.push_front(asmjit::a64::regs::x30);
 	}
 
 	PushGPRegs::~PushGPRegs()

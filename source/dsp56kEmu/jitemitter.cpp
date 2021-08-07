@@ -183,7 +183,9 @@ namespace dsp56k
 
 	void JitEmitter::call(const void* _funcAsPtr)
 	{
-		bl(_funcAsPtr);
+//		bl(_funcAsPtr);	// this does not work as the range is limited to +/- 32MB, we need to create our own "veneer"
+		mov(asmjit::a64::regs::x30, asmjit::Imm(_funcAsPtr));
+		blr(asmjit::a64::regs::x30);
 	}
 
 	void JitEmitter::sub(const JitRegGP& _dst, const JitRegGP& _src)
