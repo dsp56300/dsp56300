@@ -176,8 +176,16 @@ namespace dsp56k
 			if (cursorBeforePCUpdate && cursorAfterPCUpdate)
 				m_asm.removeNodes(cursorBeforePCUpdate->next(), cursorAfterPCUpdate);
 
-			m_asm.mov(mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().pc.var)), asmjit::Imm(m_pcLast));
-		}
+			const auto dst = mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().pc.var));
+
+#ifdef HAVE_ARM64
+			RegGP temp(*this);
+			m_asm.mov(temp, asmjit::Imm(m_pcLast));
+			m_asm.mov(dst, temp.get());
+#else
+			m_asm.mov(dst, asmjit::Imm(m_pcLast));
+#endif
+			}
 
 		if(m_dspRegs.ccrDirtyFlags())
 		{
