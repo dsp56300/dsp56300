@@ -2,6 +2,12 @@
 
 #include "jitops.h"
 
+#ifdef HAVE_ARM64
+#include "jitops_jmp_aarch64.inl"
+#else
+#include "jitops_jmp_aarch64.inl"
+#endif
+
 namespace dsp56k
 {
 	// ________________________________________________
@@ -9,9 +15,6 @@ namespace dsp56k
 
 	template <> inline void JitOps::braOrBsr<Bra>(int _offset)	{ jmp(m_pcCurrentOp + _offset); }
 	template <> inline void JitOps::braOrBsr<Bsr>(int _offset)	{ jsr(m_pcCurrentOp + _offset); }
-
-	template <> inline void JitOps::braOrBsr<Bra>(const JitReg32& _offset)	{ m_asm.add(_offset, asmjit::Imm(m_pcCurrentOp)); jmp(_offset); }
-	template <> inline void JitOps::braOrBsr<Bsr>(const JitReg32& _offset)	{ m_asm.add(_offset, asmjit::Imm(m_pcCurrentOp)); jsr(_offset); }
 
 	template<Instruction Inst, BraMode BMode, ExpectedBitValue BitValue> void JitOps::braIfBitTestMem(const TWord op)
 	{

@@ -19,13 +19,11 @@
 #include "jitops_ccr_aarch64.inl"
 #include "jitops_decode_aarch64.inl"
 #include "jitops_helper_aarch64.inl"
-#include "jitops_jmp_aarch64.inl"
 #else
 #include "jitops_alu_x64.inl"
 #include "jitops_ccr_x64.inl"
 #include "jitops_decode_x64.inl"
 #include "jitops_helper_x64.inl"
-#include "jitops_jmp_x64.inl"
 #include "jitops_x64.inl"
 #endif
 
@@ -688,7 +686,13 @@ namespace dsp56k
 		if (m_fastInterrupt)
 		{
 			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
+#ifdef HAVE_ARM64
+			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0)));
+			m_asm.and_(sr, asmjit::Imm(~(SR_SA)));
+			m_asm.and_(sr, asmjit::Imm(~(SR_LF)));
+#else
 			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0 | SR_SA | SR_LF)));
+#endif
 			setDspProcessingMode(DSP::LongInterrupt);
 		}
 	}
