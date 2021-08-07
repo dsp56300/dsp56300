@@ -198,8 +198,10 @@ namespace dsp56k
 			}
 		}
 
+#ifdef HAVE_ARM64
 		_block.stack().push(asmjit::a64::regs::x30);
 		m_pushedRegs.push_front(asmjit::a64::regs::x30);
+#endif
 	}
 
 	PushGPRegs::~PushGPRegs()
