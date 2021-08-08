@@ -125,6 +125,7 @@ namespace dsp56k
 		AsmJitErrorHandler errorHandler;
 		asmjit::CodeHolder code;
 		AsmJitLogger logger;
+		logger.addFlags(asmjit::FormatOptions::kFlagHexImms | /*asmjit::FormatOptions::kFlagHexOffsets |*/ asmjit::FormatOptions::kFlagMachineCode);
 
 #ifdef HAVE_ARM64
 		constexpr auto arch = asmjit::Environment::kArchAArch64;
