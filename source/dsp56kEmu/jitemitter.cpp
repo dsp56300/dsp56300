@@ -110,12 +110,12 @@ namespace dsp56k
 
 	void JitEmitter::or_(const JitRegGP& _gp, const asmjit::Imm& _imm)
 	{
-		eor(_gp, _gp, _imm);
+		orr(_gp, _gp, _imm);
 	}
 
 	void JitEmitter::or_(const JitRegGP& _gp, const JitRegGP& _src)
 	{
-		eor(_gp, _gp, _src);
+		orr(_gp, _gp, _src);
 	}
 
 	void JitEmitter::ret()
