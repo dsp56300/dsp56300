@@ -87,11 +87,11 @@ namespace dsp56k
 		if (_abDst != _abSrc)
 			m_asm.mov(alu.get(), m_dspRegs.getALU(_abSrc, JitDspRegs::Read));
 
-		m_asm.lsl(alu, alu, asmjit::Imm(8));
+		m_asm.lsl(alu, alu, asmjit::Imm(1));	// carry is the last bit shifted out, pre-shift left by 1 to be able to grab it
 		m_asm.asr(alu, alu, _v.get());
-		m_asm.asr(alu, alu, asmjit::Imm(8));
-		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
-		m_dspRegs.mask56(alu);
+		m_asm.bitTest(alu, 0);
+		ccr_update_ifNotZero(CCRB_C);
+		m_asm.lsr(alu, alu, asmjit::Imm(1));	// correction
 
 		ccr_clear(CCR_V);
 		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
