@@ -271,7 +271,7 @@ namespace dsp56k
 			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
 
 			m_asm.eor(r, d, d, asmjit::arm::lsr(1));
-			m_asm.lsr(r, r, asmjit::Imm(54));
+			m_asm.ubfx(r, r, asmjit::Imm(54), asmjit::Imm(1));
 			m_asm.bfi(sr, r, asmjit::Imm(CCRB_V), asmjit::Imm(1));
 			m_asm.lsl(r, r, asmjit::Imm(CCRB_L));
 			m_asm.orr(sr, sr, r.get());
@@ -287,7 +287,7 @@ namespace dsp56k
 			m_asm.sar(s, asmjit::Imm(16));
 
 			const RegGP addOrSub(m_block);
-			m_asm.eor(addOrSub, s.get(), d.get());
+			m_asm.orr(addOrSub, s.get(), d.get());
 
 			m_asm.shl(d, asmjit::Imm(1));
 
@@ -311,7 +311,7 @@ namespace dsp56k
 
 			m_asm.bind(end);
 			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
-			m_asm.eor(d, d, dLsWord);
+			m_asm.orr(d, d, dLsWord);
 		}
 
 		// C is set if bit 55 of the result is cleared
@@ -341,7 +341,7 @@ namespace dsp56k
 			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
 
 			m_asm.eor(r, d, d, asmjit::arm::lsr(1));
-			m_asm.lsr(r, r, asmjit::Imm(54));
+			m_asm.ubfx(r, r, asmjit::Imm(54), asmjit::Imm(1));
 			m_asm.bfi(sr, r, asmjit::Imm(CCRB_V), asmjit::Imm(1));
 			m_asm.lsl(r, r, asmjit::Imm(CCRB_L));
 			m_asm.orr(sr, sr, r.get());
@@ -380,7 +380,7 @@ namespace dsp56k
 
 		const auto loopIteration = [&](bool last)
 		{
-			m_asm.eor(addOrSub, s.get(), d.get());
+			m_asm.orr(addOrSub, s.get(), d.get());
 
 			m_asm.shl(d, asmjit::Imm(1));
 
@@ -403,7 +403,7 @@ namespace dsp56k
 
 			m_asm.bind(end);
 			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
-			m_asm.eor(d, d, dLsWord);
+			m_asm.orr(d, d, dLsWord);
 
 			// C is set if bit 55 of the result is cleared
 			if (last)
@@ -412,7 +412,10 @@ namespace dsp56k
 				ccr_update_ifZero(CCRB_C);
 			}
 			else
+			{
 				m_asm.ubfx(carry, d, 55, 1);
+				m_asm.eor(carry, carry, asmjit::Imm(1));
+			}
 		};
 
 		// once
