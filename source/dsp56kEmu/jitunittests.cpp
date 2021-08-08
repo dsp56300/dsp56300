@@ -120,7 +120,7 @@ namespace dsp56k
 		});
 	}
 
-	void JitUnittests::runTest(std::function<void(JitBlock&, JitOps&)> _build, std::function<void()> _verify)
+	void JitUnittests::runTest(const std::function<void(JitBlock&, JitOps&)>& _build, const std::function<void()>& _verify)
 	{
 		AsmJitErrorHandler errorHandler;
 		asmjit::CodeHolder code;
