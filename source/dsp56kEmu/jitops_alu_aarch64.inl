@@ -87,11 +87,11 @@ namespace dsp56k
 		if (_abDst != _abSrc)
 			m_asm.mov(alu.get(), m_dspRegs.getALU(_abSrc, JitDspRegs::Read));
 
-		m_asm.lsl(alu, alu, asmjit::Imm(1));	// carry is the last bit shifted out, pre-shift left by 1 to be able to grab it
+		m_asm.lsl(alu, alu, asmjit::Imm(8));	// make sign-extend possible in our wide registers
 		m_asm.asr(alu, alu, _v.get());
-		m_asm.bitTest(alu, 0);
+		m_asm.bitTest(alu, 7);					// carry is the last bit shifted out, we can grab it at bit pos 7 now as we pre-shifted left by 8
 		ccr_update_ifNotZero(CCRB_C);
-		m_asm.lsr(alu, alu, asmjit::Imm(1));	// correction
+		m_asm.lsr(alu, alu, asmjit::Imm(8));	// correction
 
 		ccr_clear(CCR_V);
 		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
