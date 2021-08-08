@@ -76,13 +76,15 @@ namespace dsp56k
 
 		const auto isSticky = _bit == CCRB_L || _bit == CCRB_S;
 
-		if (m_ccr_update_clear && !isSticky)
-			ccr_clear(mask);												// clear out old status register value
-		else
-			ccr_clearDirty(mask);
+		ccr_clearDirty(mask);
 
 		if(isSticky)
-			m_asm.orr(m_dspRegs.getSR(JitDspRegs::ReadWrite), ra, mask);
+		{
+			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
+
+			m_asm.lsl(ra, ra, asmjit::Imm(_bit));
+			m_asm.orr(sr, sr, ra);
+		}
 		else
 			m_asm.bfi(m_dspRegs.getSR(JitDspRegs::ReadWrite), ra, asmjit::Imm(_bit), asmjit::Imm(1));
 	}
