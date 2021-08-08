@@ -127,6 +127,7 @@ namespace dsp56k
 		void btst_aa_build(JitBlock& _block, JitOps& _ops);
 		void btst_aa_verify();
 
+		void clr();
 		void cmp();
 		void dec();
 		void div();

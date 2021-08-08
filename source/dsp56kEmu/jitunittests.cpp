@@ -72,6 +72,7 @@ namespace dsp56k
 
 		runTest(&JitUnittests::btst_aa_build, &JitUnittests::btst_aa_verify);
 
+		clr();
 		cmp();
 		dec();
 		div();
@@ -1256,6 +1257,28 @@ namespace dsp56k
 	{
 		assert((m_checks[0] & CCR_C) == 0);
 		assert((m_checks[1] & CCR_C) != 0);
+	}
+
+	void JitUnittests::clr()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.regs().b.var = 0x99aabbccddeeff;
+			dsp.x0(0);
+			dsp.regs().sr.var = 0x080000;
+
+			_ops.emit(0, 0x44f41b, 0x000128);		// clr b #>$128,x0
+		},
+		[&]()
+		{
+			assert(dsp.regs().b == 0);
+			assert(dsp.x0() == 0x128);
+			assert(dsp.sr_test(CCR_U));
+			assert(dsp.sr_test(CCR_Z));
+			assert(!dsp.sr_test(CCR_E));
+			assert(!dsp.sr_test(CCR_N));
+			assert(!dsp.sr_test(CCR_V));
+		});
 	}
 
 	void JitUnittests::cmp()
