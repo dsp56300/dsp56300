@@ -101,8 +101,9 @@ namespace dsp56k
 		const TWord rrr		= getFieldValue<Inst,Field_RRR>(op);
 
 		const int shortDisplacement = pcRelativeAddressExt<Inst>();
+
 		RegGP ea(m_block);
-		decode_RRR_read(ea.get(), rrr, shortDisplacement);
+		decode_RRR_read(ea, rrr, shortDisplacement);
 
 		const RegGP r(m_block);
 
@@ -138,7 +139,7 @@ namespace dsp56k
 		const int shortDisplacement = signextend<int,7>(aaaaaaa);
 
 		RegGP ea(m_block);
-		decode_RRR_read( ea, rrr, shortDisplacement );
+		decode_RRR_read(ea, rrr, shortDisplacement);
 
 		RegGP r(m_block);
 
@@ -151,7 +152,7 @@ namespace dsp56k
 		{
 			decode_dddddd_read(r32(r.get()), ddddd);
 			writeMemOrPeriph(_area, ea, r);
-		}		
+		}
 	}
 
 	void JitOps::op_Movex_Rnxxx(TWord op)

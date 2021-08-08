@@ -333,12 +333,18 @@ namespace dsp56k
 	{
 		const auto regIdx = _mmmrrr & 0x07;
 
-		m_dspRegs.getR(_dst, regIdx);
-
 		if(_shortDisplacement)
 		{
-			m_asm.add(_dst, asmjit::Imm(_shortDisplacement));
+			m_asm.mov(_dst, asmjit::Imm(_shortDisplacement));
+			{
+				AguRegR r(m_block, regIdx, true);
+				m_asm.add(_dst, r.get());
+			}
 			m_asm.and_(_dst, asmjit::Imm(0xffffff));
+		}
+		else
+		{
+			m_dspRegs.getR(_dst, regIdx);
 		}
 	}
 
