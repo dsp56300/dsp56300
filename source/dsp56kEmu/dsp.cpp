@@ -152,10 +152,10 @@ namespace dsp56k
 
 	void DSP::execPeriph()
 	{
-		if (peripheralCounter--)
+		if (peripheralCounter > m_instructions)
 			return;
 
-		peripheralCounter = 20;
+		peripheralCounter += 32;
 
 		perif[0]->exec();
 	}
