@@ -424,7 +424,7 @@ namespace dsp56k
 
 		dsp.ccrCache.dirty = 0;
 		
-		dsp.sr_s_update();
+//		dsp.sr_s_update();
 		dsp.sr_e_update(ccrCache.alu);
 		dsp.sr_u_update(ccrCache.alu);
 		dsp.sr_n_update(ccrCache.alu);
@@ -1179,8 +1179,8 @@ namespace dsp56k
 
 		sr_toggle(CCRB_N, bitvalue<uint64_t, 47>(d));	// Set if bit 47 of the result is set
 		sr_toggle(CCR_Z, masked == 0);					// Set if bits 47–24 of the result are 0
-		sr_clear(CCR_V);									// Always cleared
-		sr_s_update();									// Changed according to the standard definition
+		sr_clear(CCR_V);								// Always cleared
+		//sr_s_update();								// Changed according to the standard definition
 		//sr_l_update_by_v();							// Changed according to the standard definition
 	}
 
