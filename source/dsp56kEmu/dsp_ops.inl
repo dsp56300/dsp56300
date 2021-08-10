@@ -31,9 +31,6 @@ namespace dsp56k
 		sr_toggle( CCR_C, bittestandchange( val, bit ) );
 
 		decode_dddddd_write( dddddd, val );
-
-		sr_s_update();
-		sr_l_update_by_v();
 	}
 	inline void DSP::op_Bclr_ea(const TWord op)	// 0000101001MMMRRR0S0bbbbb
 	{
@@ -173,24 +170,15 @@ namespace dsp56k
 		}
 
 		decode_dddddd_write( d, val );
-
-		sr_s_update();
-		sr_l_update_by_v();
 	}
 
 	inline void DSP::op_Btst_ea(const TWord op)
 	{
 		sr_toggle(CCR_C, bitTestMemory<Btst_ea>(op));
-
-		sr_s_update();
-		sr_l_update_by_v();
 	}
 	inline void DSP::op_Btst_aa(const TWord op)
 	{
 		sr_toggle(CCR_C, bitTestMemory<Btst_aa>(op));
-
-		sr_s_update();
-		sr_l_update_by_v();
 	}
 	inline void DSP::op_Btst_pp(const TWord op)
 	{

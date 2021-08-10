@@ -46,6 +46,7 @@ utils.cpp utils.h
 
 set(SOURCES_JIT
 jit.cpp jit.h
+jitemitter.cpp jitemitter.h
 jitblock.cpp jitblock.h
 jitcacheentry.h
 jithelper.cpp jithelper.h
@@ -60,6 +61,20 @@ jitruntimedata.cpp jitruntimedata.h
 jitstackhelper.cpp jitstackhelper.h
 jittypes.h
 jitunittests.cpp jitunittests.h
+
+jitops_aarch64.inl
+jitops_alu_aarch64.inl
+jitops_ccr_aarch64.inl
+jitops_decode_aarch64.inl
+jitops_helper_aarch64.inl
+jitops_jmp_aarch64.inl
+
+jitops_x64.inl
+jitops_alu_x64.inl
+jitops_ccr_x64.inl
+jitops_decode_x64.inl
+jitops_helper_x64.inl
+jitops_jmp_x64.inl
 )
 
 set(SOURCES_VTUNE

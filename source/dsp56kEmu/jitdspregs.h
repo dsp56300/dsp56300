@@ -47,23 +47,6 @@ namespace dsp56k
 		JitRegGP getXY(int _xy, AccessType _access);
 		void setXY(uint32_t _xy, const JitRegGP& _src);
 
-		void getXY0(const JitRegGP& _dst, uint32_t _aluIndex);
-		void setXY0(uint32_t _xy, const JitRegGP& _src);
-		void getXY1(const JitRegGP& _dst, uint32_t _aluIndex);
-		void setXY1(uint32_t _xy, const JitRegGP& _src);
-
-		void getX0(const JitRegGP& _dst) { return getXY0(_dst, 0); }
-		void getY0(const JitRegGP& _dst) { return getXY0(_dst, 1); }
-		void getX1(const JitRegGP& _dst) { return getXY1(_dst, 0); }
-		void getY1(const JitRegGP& _dst) { return getXY1(_dst, 1); }
-
-		void getALU0(const JitRegGP& _dst, uint32_t _aluIndex);
-		void setALU0(uint32_t _aluIndex, const JitRegGP& _src);
-		void getALU1(const JitRegGP& _dst, uint32_t _aluIndex);
-		void setALU1(uint32_t _aluIndex, const JitReg32& _src);
-		void getALU2signed(const JitRegGP& _dst, uint32_t _aluIndex);
-		void setALU2(uint32_t _aluIndex, const JitReg32& _src);
-
 		void getEP(const JitReg32& _dst) const;
 		void setEP(const JitReg32& _src) const;
 		void getVBA(const JitReg32& _dst) const;
@@ -78,10 +61,6 @@ namespace dsp56k
 		void setOMR(const JitReg32& _src) const;
 		void getSP(const JitReg32& _dst) const;
 		void setSP(const JitReg32& _src) const;
-		void getSSH(const JitReg32& _dst) const;
-		void setSSH(const JitReg32& _src) const;
-		void getSSL(const JitReg32& _dst) const;
-		void setSSL(const JitReg32& _src) const;
 		void getLA(const JitReg32& _dst);
 		void setLA(const JitReg32& _src);
 		void getLC(const JitReg32& _dst);
@@ -89,9 +68,6 @@ namespace dsp56k
 
 		void getSS(const JitReg64& _dst) const;
 		void setSS(const JitReg64& _src) const;
-
-		void decSP() const;
-		void incSP() const;
 
 		void mask56(const JitRegGP& _alu) const;
 		void mask48(const JitRegGP& _alu) const;
@@ -106,7 +82,7 @@ namespace dsp56k
 		void store24(TReg24& _dst, const JitRegGP& _src) const;
 
 		JitBlock& m_block;
-		JitAssembler& m_asm;
+		JitEmitter& m_asm;
 		DSP& m_dsp;
 
 		CCRMask m_ccrDirtyFlags = static_cast<CCRMask>(0);

@@ -2,11 +2,9 @@
 
 #include "dspassert.h"
 #include "jitblock.h"
-#include "jitdspregs.h"
+#include "jitemitter.h"
 #include "jitops.h"
 #include "logging.h"
-
-#include "asmjit/x86/x86builder.h"
 
 namespace dsp56k
 {
@@ -32,7 +30,7 @@ namespace dsp56k
 		}
 	}
 
-	SkipLabel::SkipLabel(JitAssembler& _a) : m_label(_a.newLabel()), m_asm(_a)
+	SkipLabel::SkipLabel(JitEmitter& _a) : m_label(_a.newLabel()), m_asm(_a)
 	{
 	}
 

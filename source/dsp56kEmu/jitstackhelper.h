@@ -37,6 +37,9 @@ namespace dsp56k
 		void setUsed(const JitReg128& _reg);
 
 		bool isUsed(const JitReg& _reg) const;
+
+		uint32_t pushSize(const JitReg& _reg);
+	
 	private:
 		JitBlock& m_block;
 		uint32_t m_pushedBytes = 0;

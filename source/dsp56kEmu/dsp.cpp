@@ -137,12 +137,24 @@ namespace dsp56k
 			}
 
 			m_jit.exec(getPC().var);
-
-			handleICtrCallback();
 		}
 		else
 		{
+#if 0
+			if (m_processingMode == Default)
+			{
+				if (m_pendingInterrupts.empty())
+					execNoPendingInterrupts();
+				else
+					execInterrupts();
+			}
+			else if (m_processingMode == DefaultPreventInterrupt)
+			{
+				m_processingMode = Default;
+			}
+#else
 			(this->*m_interruptFunc)();
+#endif
 
 			pcCurrentInstruction = reg.pc.toWord();
 
@@ -154,10 +166,10 @@ namespace dsp56k
 
 	void DSP::execPeriph()
 	{
-		if (peripheralCounter--)
+		if (peripheralCounter > m_instructions)
 			return;
 
-		peripheralCounter = 20;
+		peripheralCounter += 32;
 
 		perif[0]->exec();
 	}
@@ -170,80 +182,78 @@ namespace dsp56k
 
 	void DSP::execInterrupts()
 	{
+		// TODO: priority sorting, masking
+		const auto minPrio = mr().var & 0x3;
+
+		if(minPrio >= 3)
+			return;
+
+		const auto vba = m_pendingInterrupts.pop_front();
+
+		pcCurrentInstruction = vba;
+		m_processingMode = FastInterrupt;
+
+		if(g_useJIT)
 		{
-			// TODO: priority sorting, masking
-			const auto minPrio = mr().var & 0x3;
-
-			if(minPrio < 3)
+			m_jit.exec(vba);
+			if(m_processingMode != LongInterrupt)
 			{
-				const auto vba = m_pendingInterrupts.pop_front();
+				m_processingMode = DefaultPreventInterrupt;
+				m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+			}
+			else
+			{
+				int d=0;
+			}
+		}
+		else
+		{
+			TWord op0, op1;
+			memReadOpcode(vba, op0, op1);
 
-				pcCurrentInstruction = vba;
-				m_processingMode = FastInterrupt;
+			const auto oldSP = reg.sp.var;
 
-				if(g_useJIT)
-				{
-					m_jit.exec(vba);
-					if(m_processingMode != LongInterrupt)
-					{
-						m_processingMode = DefaultPreventInterrupt;
-						m_interruptFunc = &DSP::execDefaultPreventInterrupt;
-					}
-					else
-					{
-						int d=0;
-					}
-				}
-				else
-				{
-					TWord op0, op1;
-					memReadOpcode(vba, op0, op1);
+			m_opWordB = op1;
 
-					const auto oldSP = reg.sp.var;
+			execOp(op0);
 
-					m_opWordB = op1;
+			const auto jumped = reg.sp.var - oldSP;
 
-					execOp(op0);
+			// only exec the second op if the first one was a one-word op and we did not jump into a long interrupt
+			if(m_currentOpLen == 1 && !jumped)
+			{
+				pcCurrentInstruction = vba+1;
+				m_opWordB = 0;
+				execOp(op1);
 
-					const auto jumped = reg.sp.var - oldSP;
+				// fast interrupt done
+				m_processingMode = DefaultPreventInterrupt;
+				m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+			}
+			else if(jumped)
+			{
+				// Long Interrupt
 
-					// only exec the second op if the first one was a one-word op and we did not jump into a long interrupt
-					if(m_currentOpLen == 1 && !jumped)
-					{
-						pcCurrentInstruction = vba+1;
-						m_opWordB = 0;
-						execOp(op1);
+				// If one of the instructions in the fast routine is a JSR, then a long interrupt routine is formed.
+				// The following actions occur during execution of the JSR instruction when it occurs in the interrupt
+				// starting address or in the next address:
 
-						// fast interrupt done
-						m_processingMode = DefaultPreventInterrupt;
-						m_interruptFunc = &DSP::execDefaultPreventInterrupt;
-					}
-					else if(jumped)
-					{
-						// Long Interrupt
+				// 1.The PC (containing the return address) and the SR are stacked.
+				// 2.The Loop Flag is cleared.
+				// 3.The Scaling mode bits (S[1–0]) in the Status Register (SR) are cleared.
+				// 4.The Sixteen-bit Arithmetic (SA) mode bit is cleared.
+				// 5.The IPL is raised to disallow further interrupts of the same or lower levels.
 
-						// If one of the instructions in the fast routine is a JSR, then a long interrupt routine is formed.
-						// The following actions occur during execution of the JSR instruction when it occurs in the interrupt
-						// starting address or in the next address:
+				sr_clear(static_cast<CCRMask>(SR_S1 | SR_S0 | SR_SA | SR_LF));
 
-						// 1.The PC (containing the return address) and the SR are stacked.
-						// 2.The Loop Flag is cleared.
-						// 3.The Scaling mode bits (S[1–0]) in the Status Register (SR) are cleared.
-						// 4.The Sixteen-bit Arithmetic (SA) mode bit is cleared.
-						// 5.The IPL is raised to disallow further interrupts of the same or lower levels.
-
-						sr_clear(static_cast<CCRMask>(SR_S1 | SR_S0 | SR_SA | SR_LF));
-
-						m_processingMode = LongInterrupt;
-						m_interruptFunc = &DSP::nop;
-					}
-					else
-					{
-						// Default Processing, no interrupt
-						m_processingMode = DefaultPreventInterrupt;
-						m_interruptFunc = &DSP::execDefaultPreventInterrupt;
-					}
-				}
+				m_processingMode = LongInterrupt;
+				m_interruptFunc = &DSP::nop;
+			}
+			else
+			{
+				// Default Processing, no interrupt
+				m_processingMode = DefaultPreventInterrupt;
+				m_interruptFunc = &DSP::execDefaultPreventInterrupt;
 			}
 		}
 	}
@@ -293,7 +303,7 @@ namespace dsp56k
 		if(pcCurrentInstruction == currentOp)
 		{
 			++m_instructions;
-			handleICtrCallback();
+
 			if(g_traceSupported && pcCurrentInstruction == currentOp)
 				traceOp();
 		}
@@ -426,7 +436,7 @@ namespace dsp56k
 
 		dsp.ccrCache.dirty = 0;
 		
-		dsp.sr_s_update();
+//		dsp.sr_s_update();
 		dsp.sr_e_update(ccrCache.alu);
 		dsp.sr_u_update(ccrCache.alu);
 		dsp.sr_n_update(ccrCache.alu);
@@ -498,7 +508,6 @@ namespace dsp56k
 		sr_set( SR_LF );
 
 		++m_instructions;
-		handleICtrCallback();
 
 		traceOp();
 
@@ -555,7 +564,6 @@ namespace dsp56k
 		reg.lc.var = loopCount;
 
 		++m_instructions;
-		handleICtrCallback();
 
 		traceOp();
 
@@ -1181,8 +1189,8 @@ namespace dsp56k
 
 		sr_toggle(CCRB_N, bitvalue<uint64_t, 47>(d));	// Set if bit 47 of the result is set
 		sr_toggle(CCR_Z, masked == 0);					// Set if bits 47–24 of the result are 0
-		sr_clear(CCR_V);									// Always cleared
-		sr_s_update();									// Changed according to the standard definition
+		sr_clear(CCR_V);								// Always cleared
+		//sr_s_update();								// Changed according to the standard definition
 		//sr_l_update_by_v();							// Changed according to the standard definition
 	}
 

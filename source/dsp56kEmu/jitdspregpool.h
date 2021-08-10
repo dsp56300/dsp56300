@@ -4,7 +4,8 @@
 #include <vector>
 
 #include "types.h"
-#include "jitregtypes.h"
+
+#include "jithelper.h"
 
 namespace dsp56k
 {
@@ -224,9 +225,9 @@ namespace dsp56k
 		void mov(const RegType<T,B>& _reg, const JitRegGP& _src)
 		{
 			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
-				mov(makeDspPtr(_reg), _src.r32());
+				mov(makeDspPtr(_reg), r32(_src));
 			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
-				mov(makeDspPtr(_reg), _src.r64());
+				mov(makeDspPtr(_reg), r64(_src));
 		}
 
 		template<typename T, unsigned int B>

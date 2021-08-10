@@ -2,10 +2,9 @@
 
 #include "dsp.h"
 #include "jitblock.h"
+#include "jitemitter.h"
 #include "jithelper.h"
 #include "jitregtracker.h"
-
-#include "asmjit/x86/x86builder.h"
 
 //#define DEBUG_MEMORY_WRITES
 
@@ -45,36 +44,38 @@ namespace dsp56k
 
 	void Jitmem::mov(const JitRegGP& _dst, const TReg24& _src)
 	{
-		m_block.asm_().mov(_dst.r32(), ptr(_dst.r64(), _src));
+		const JitReg32 foo = r32(_dst);
+		const JitMemPtr bar = ptr(r64(_dst), _src);
+		m_block.asm_().move(foo, bar);
 	}
 
 	void Jitmem::mov(const JitRegGP& _dst, const TReg48& _src)
 	{
-		m_block.asm_().mov(_dst.r64(), ptr(_dst.r64(), _src));
+		m_block.asm_().move(r64(_dst), ptr(r64(_dst), _src));
 	}
 
 	void Jitmem::mov(const JitRegGP& _dst, const TReg56& _src)
 	{
 		const auto reg = regSmallTemp;
-		m_block.asm_().mov(_dst.r64(), ptr(reg, _src));
+		m_block.asm_().move(r64(_dst), ptr(reg, _src));
 	}
 
 	void Jitmem::mov(const TReg24& _dst, const JitRegGP& _src)
 	{
 		const auto reg = regSmallTemp;
-		m_block.asm_().mov(ptr(reg, _dst), _src.r32());
+		m_block.asm_().mov(ptr(reg, _dst), r32(_src));
 	}
 
 	void Jitmem::mov(const TReg48& _dst, const JitRegGP& _src)
 	{
 		const auto reg = regSmallTemp;
-		m_block.asm_().mov(ptr(reg, _dst), _src.r64());
+		m_block.asm_().mov(ptr(reg, _dst), r64(_src));
 	}
 
 	void Jitmem::mov(const TReg56& _dst, const JitRegGP& _src)
 	{
 		const auto reg = regSmallTemp;
-		m_block.asm_().mov(ptr(reg, _dst), _src.r64());
+		m_block.asm_().mov(ptr(reg, _dst), r64(_src));
 	}
 
 	void Jitmem::mov(const JitReg128& _dst, TReg56& _src)
@@ -92,28 +93,36 @@ namespace dsp56k
 	void Jitmem::mov(uint32_t& _dst, const JitRegGP& _src) const
 	{
 		const auto reg = regSmallTemp;
-		m_block.asm_().mov(ptr(reg, &_dst), _src.r32());
+		m_block.asm_().mov(ptr(reg, &_dst), r32(_src));
 	}
 
 	void Jitmem::mov(uint8_t& _dst, const JitRegGP& _src) const
 	{
 		const auto reg = regSmallTemp;
-		m_block.asm_().mov(ptr(reg, &_dst), _src);
+#ifdef HAVE_ARM64
+		m_block.asm_().strb(r32(_src), ptr(reg, &_dst));
+#else
+		m_block.asm_().mov(ptr(reg, &_dst), _src.r8());
+#endif
 	}
 
 	void Jitmem::mov(const JitRegGP& _dst, const uint64_t& _src) const
 	{
-		m_block.asm_().mov(_dst, ptr(_dst.r64(), &_src));
+		m_block.asm_().move(_dst, ptr(r64(_dst), &_src));
 	}
 
 	void Jitmem::mov(const JitRegGP& _dst, const uint32_t& _src) const
 	{
-		m_block.asm_().mov(_dst.r32(), ptr(_dst.r64(), &_src));
+		m_block.asm_().move(r32(_dst), ptr(r64(_dst), &_src));
 	}
 
 	void Jitmem::mov(const JitRegGP& _dst, const uint8_t& _src) const
 	{
-		m_block.asm_().movzx(_dst, ptr(_dst.r64(), &_src));
+#ifdef HAVE_ARM64
+		m_block.asm_().ldrb(r32(_dst), ptr(r64(_dst), &_src));
+#else
+		m_block.asm_().movzx(_dst.r8(), ptr(r64(_dst), &_src));
+#endif
 	}
 
 	void Jitmem::mov(void* _dst, void* _src, uint32_t _size)
@@ -122,7 +131,7 @@ namespace dsp56k
 		const auto a = regReturnVal;
 
 		m_block.asm_().mov(a, asmjit::Imm(_src));
-		m_block.asm_().mov(v, makePtr(a, 0, _size));
+		m_block.asm_().move(v, makePtr(a, 0, _size));
 		m_block.asm_().mov(a, asmjit::Imm(_dst));
 		m_block.asm_().mov(makePtr(a, 0, _size), v.get());
 	}
@@ -134,14 +143,22 @@ namespace dsp56k
 		m_block.asm_().mov(makePtr(a, 0, _size), _src);
 	}
 
-	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const JitRegGP& _index, const uint32_t _shift, const int32_t _offset, const uint32_t _size)
+	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const JitRegGP& _index, const uint32_t _shift, const uint32_t _size)
 	{
-		return asmjit::x86::ptr(_base, _index, _shift, _offset, _size);
+#ifdef HAVE_ARM64
+		return asmjit::arm::ptr(_base, _index, asmjit::arm::Shift(asmjit::arm::Shift::kOpLSL, _shift));
+#else
+		return asmjit::x86::ptr(_base, _index, _shift, 0, _size);
+#endif
 	}
 
 	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const uint32_t _offset, const uint32_t _size)
 	{
+#ifdef HAVE_ARM64
+		return asmjit::arm::ptr(_base, _offset);
+#else
 		return asmjit::x86::ptr(_base, _offset, _size);
+#endif
 	}
 
 	void Jitmem::setPtrOffset(JitMemPtr& _mem, const void* _base, const void* _member)
@@ -154,12 +171,12 @@ namespace dsp56k
 		const RegGP t(m_block);
 		const SkipLabel skip(m_block.asm_());
 
-		m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().size()));
+		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size()));
 		m_block.asm_().jge(skip.get());
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
-		m_block.asm_().mov(_dst.r32(), makePtr(t, _offset, 2, 0, sizeof(TWord)));
+		m_block.asm_().move(r32(_dst), makePtr(t, _offset, 2, sizeof(TWord)));
 	}
 	
 	void callDSPMemWrite(DSP* const _dsp, const EMemArea _area, const TWord _offset, const TWord _value)
@@ -187,12 +204,12 @@ namespace dsp56k
 
 		const SkipLabel skip(m_block.asm_());
 
-		m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().size()));
+		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size()));
 		m_block.asm_().jge(skip.get());
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
-		m_block.asm_().mov(makePtr(t, _offset, 2, 0, sizeof(TWord)), _src.r32());
+		m_block.asm_().mov(makePtr(t, _offset, 2, sizeof(TWord)), r32(_src));
 #endif
 	}
 
@@ -210,7 +227,7 @@ namespace dsp56k
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
-		m_block.asm_().mov(_dst.r32(), makePtr(t, 0, sizeof(uint32_t)));
+		m_block.asm_().move(r32(_dst), makePtr(t, 0, sizeof(uint32_t)));
 	}
 
 	void Jitmem::writeDspMemory(EMemArea _area, TWord _offset, const JitRegGP& _src) const
@@ -232,7 +249,7 @@ namespace dsp56k
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
-		m_block.asm_().mov(makePtr(t, 0, sizeof(uint32_t)), _src.r32());
+		m_block.asm_().mov(makePtr(t, 0, sizeof(uint32_t)), r32(_src));
 #endif
 	}
 
@@ -326,8 +343,12 @@ namespace dsp56k
 			// use P memory for all bridged external memory
 			const auto p = regSmallTemp;
 			getMemAreaPtr(p, MemArea_P);
-			m_block.asm_().cmp(_offset.r32(), asmjit::Imm(m_block.dsp().memory().getBridgedMemoryAddress()));
+			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().getBridgedMemoryAddress()));
+#ifdef HAVE_ARM64
+			m_block.asm_().csel(_dst, p, _dst, asmjit::arm::Cond::kGE);
+#else
 			m_block.asm_().cmovge(_dst, p);
+#endif
 		}
 	}
 

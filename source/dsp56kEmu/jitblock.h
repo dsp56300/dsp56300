@@ -24,17 +24,18 @@ namespace dsp56k
 	public:
 		enum JitBlockFlags
 		{
-			Failed		= 0,
-			Success		= 0x0001,
-			WritePMem	= 0x0002,
-			LoopEnd		= 0x0004,
+			Failed				= 0,
+			Success				= 0x0001,
+			WritePMem			= 0x0002,
+			LoopEnd				= 0x0004,
+			InstructionLimit	= 0x0008,
 		};
 
 		typedef void (*JitEntry)(Jit*, TWord, JitBlock*);
 
-		JitBlock(JitAssembler& _a, DSP& _dsp, JitRuntimeData& _runtimeData);
+		JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData);
 
-		JitAssembler& asm_() { return m_asm; }
+		JitEmitter& asm_() { return m_asm; }
 		DSP& dsp() { return m_dsp; }
 		JitStackHelper& stack() { return m_stack; }
 		JitRegpool& gpPool() { return m_gpPool; }
@@ -43,7 +44,7 @@ namespace dsp56k
 		JitDspRegPool& dspRegPool() { return m_dspRegPool; }
 		Jitmem& mem() { return m_mem; }
 
-		operator JitAssembler& ()		{ return m_asm;	}
+		operator JitEmitter& ()		{ return m_asm;	}
 
 		bool emit(TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP);
 		bool empty() const { return m_pMemSize == 0; }
@@ -71,7 +72,7 @@ namespace dsp56k
 		JitEntry m_func = nullptr;
 		JitRuntimeData& m_runtimeData;
 
-		JitAssembler& m_asm;
+		JitEmitter& m_asm;
 		DSP& m_dsp;
 		JitStackHelper m_stack;
 		JitRegpool m_xmmPool;

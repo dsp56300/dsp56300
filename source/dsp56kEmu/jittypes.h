@@ -1,5 +1,36 @@
 #pragma once
 
+#include "buildconfig.h"
+
+#if 0
+#define HAVE_ARM64
+#undef HAVE_X86_64
+#endif
+
+#if defined(HAVE_ARM64)
+#include "asmjit/arm/a64operand.h"
+
+namespace asmjit
+{
+	namespace a64
+	{
+		class Builder;
+	}
+}
+
+namespace dsp56k
+{
+	using JitBuilder = asmjit::a64::Builder;
+
+	using JitMemPtr = asmjit::arm::Mem;
+
+	using JitReg = asmjit::arm::Reg;
+	using JitRegGP = asmjit::arm::Gp;
+	using JitReg32 = asmjit::arm::GpW;
+	using JitReg64 = asmjit::arm::GpX;
+	using JitReg128 = asmjit::arm::VecV;
+}
+#else
 #include "asmjit/x86/x86operand.h"
 
 namespace asmjit
@@ -12,7 +43,7 @@ namespace asmjit
 
 namespace dsp56k
 {
-	using JitAssembler = asmjit::x86::Builder;
+	using JitBuilder = asmjit::x86::Builder;
 
 	using JitMemPtr = asmjit::x86::Mem;
 
@@ -22,3 +53,4 @@ namespace dsp56k
 	using JitReg64 = asmjit::x86::Gpq;
 	using JitReg128 = asmjit::x86::Xmm;
 }
+#endif

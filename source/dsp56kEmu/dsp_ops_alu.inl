@@ -40,7 +40,6 @@ namespace dsp56k
 		sr_toggle( CCR_N, bittest( d, 47 ) );
 		sr_toggle( CCR_Z, (d.var & 0xffffff000000) == 0 );
 		sr_clear( CCR_V );
-		sr_s_update();
 	}
 
 	// _____________________________________________________________________________
@@ -72,7 +71,7 @@ namespace dsp56k
 //		sr_u_update(d);
 //		sr_n_update(d);
 
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 
 	//	dumpCCCC();
 	}
@@ -113,7 +112,7 @@ namespace dsp56k
 		//sr_l_update_by_v();
 		sr_toggle(CCR_C, carry);
 
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 
 		d = oldD;
 	}
@@ -138,7 +137,7 @@ namespace dsp56k
 
 		sr_z_update(d);
 		//sr_l_update_by_v();
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -163,7 +162,7 @@ namespace dsp56k
 		sr_z_update(d);
 		sr_clear(CCR_V);
 		//sr_l_update_by_v();
-		setCCRDirty(abDst, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(abDst, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -196,7 +195,7 @@ namespace dsp56k
 		sr_z_update(d);
 		sr_toggle(CCR_V, isOverflow);
 		sr_l_update_by_v();
-		setCCRDirty(abDst, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(abDst, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -221,7 +220,6 @@ namespace dsp56k
 		sr_toggle( CCR_Z, res == 0 );
 		sr_clear( CCR_V );
 
-		sr_s_update();
 		//sr_l_update_by_v();
 	}
 
@@ -246,9 +244,6 @@ namespace dsp56k
 		sr_toggle( CCR_N, bittest(res,23) );
 		sr_toggle( CCR_Z, res == 0 );
 		sr_clear( CCR_V );
-
-		sr_s_update();
-		//sr_l_update_by_v();
 	}
 
 	void DSP::alu_addl(bool ab)
@@ -265,7 +260,7 @@ namespace dsp56k
 		sr_clear(CCR_V);		// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 		//sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	void DSP::alu_addr(bool ab)
@@ -287,7 +282,7 @@ namespace dsp56k
 		sr_v_update(res, d);
 		sr_l_update_by_v();
 		sr_toggle(CCR_C, carry);
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	void DSP::alu_rol(const bool ab)
@@ -326,9 +321,6 @@ namespace dsp56k
 		sr_toggle( CCR_C, bittest(_val,_bit) );
 
 		_val &= ~(1<<_bit);
-
-		sr_l_update_by_v();
-		sr_s_update();
 
 		return _val;
 	}
@@ -369,7 +361,7 @@ namespace dsp56k
 //		sr_u_update(d);
 //		sr_n_update(d);
 
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 	// _____________________________________________________________________________
 	// alu_mpysuuu
@@ -484,7 +476,7 @@ namespace dsp56k
 		sr_v_update(res,d);
 
 		sr_l_update_by_v();
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -519,7 +511,7 @@ namespace dsp56k
 		sr_v_update(res, _alu);
 
 		sr_l_update_by_v();
-		setCCRDirty(ab, _alu, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, _alu, CCR_E | CCR_U | CCR_N);
 	}
 	
 	inline bool DSP::alu_multiply(const TWord op)
@@ -736,7 +728,7 @@ namespace dsp56k
 		sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);
 		sr_toggle( CCR_C, bittest(d,47) != bittest(old,47) );
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	inline void DSP::op_Div(const TWord op)
@@ -865,7 +857,7 @@ namespace dsp56k
 		sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);	// TODO: what? C updated two times?!
 		sr_toggle( CCR_C, bittest(d,47) != bittest(old,47) );
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 	inline void DSP::op_Insert_S1S2(const TWord op)
 	{

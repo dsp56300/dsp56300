@@ -2,7 +2,7 @@
 
 #include "dsp.h"
 #include "jitblock.h"
-#include "asmjit/x86/x86builder.h"
+#include "jitemitter.h"
 
 #define LOGRP(S)		{}
 //#define LOGRP(S)		LOG(S)
@@ -135,13 +135,13 @@ namespace dsp56k
 	void JitDspRegPool::read(const JitRegGP& _dst, const DspReg _src)
 	{
 		const auto r = get(_src, true, false);
-		m_block.asm_().mov(_dst.r64(), r);
+		m_block.asm_().mov(r64(_dst), r);
 	}
 
 	void JitDspRegPool::write(const DspReg _dst, const JitRegGP& _src)
 	{
 		const auto r = get(_dst, false, true);
-		m_block.asm_().mov(r, _src.r64());
+		m_block.asm_().mov(r, r64(_src));
 	}
 
 	void JitDspRegPool::lock(DspReg _reg)

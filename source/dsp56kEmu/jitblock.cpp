@@ -1,15 +1,15 @@
 #include "dsp.h"
 #include "interrupts.h"
+#include "jitemitter.h"
 #include "jitblock.h"
 #include "jitops.h"
 #include "memory.h"
-#include "asmjit/x86/x86builder.h"
 
 namespace dsp56k
 {
 	constexpr uint32_t g_maxInstructionsPerBlock = 0;	// set to 1 for debugging/tracing
 
-	JitBlock::JitBlock(JitAssembler& _a, DSP& _dsp, JitRuntimeData& _runtimeData)
+	JitBlock::JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData)
 	: m_runtimeData(_runtimeData)
 	, m_asm(_a)
 	, m_dsp(_dsp)
@@ -126,12 +126,20 @@ namespace dsp56k
 			}
 
 			if(g_maxInstructionsPerBlock > 0 && m_encodedInstructionCount >= g_maxInstructionsPerBlock)
-				break;
+			{
+				// we can NOT prematurely interrupt the creation of a fast interrupt block
+				if(!isFastInterrupt)
+				{
+					m_flags |= InstructionLimit;
+					break;
+				}
+			}
 		}
 
 		m_pcLast = m_pcFirst + m_pMemSize;
 
-		if(false && appendLoopCode)	// this block works, but I'm not sure if we want to keep it here as it increases code size, while the code in jit.cpp does the same but exists only once
+#if 0
+		if(appendLoopCode)	// this block works, but I'm not sure if we want to keep it here as it increases code size, while the code in jit.cpp does the same but exists only once
 		{
 			const auto end = m_asm.newLabel();
 			const auto decLC = m_asm.newLabel();
@@ -163,7 +171,7 @@ namespace dsp56k
 			dspRegPool().releaseAll();
 			m_asm.bind(end);
 		}
-
+#endif
 		if(m_possibleBranch)
 		{
 			const RegGP temp(*this);
@@ -175,8 +183,16 @@ namespace dsp56k
 			if (cursorBeforePCUpdate && cursorAfterPCUpdate)
 				m_asm.removeNodes(cursorBeforePCUpdate->next(), cursorAfterPCUpdate);
 
-			m_asm.mov(mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().pc.var)), asmjit::Imm(m_pcLast));
-		}
+			const auto dst = mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().pc.var));
+
+#ifdef HAVE_ARM64
+			RegGP temp(*this);
+			m_asm.mov(temp, asmjit::Imm(m_pcLast));
+			m_asm.mov(dst, r32(temp.get()));
+#else
+			m_asm.mov(dst, asmjit::Imm(m_pcLast));
+#endif
+			}
 
 		if(m_dspRegs.ccrDirtyFlags())
 		{

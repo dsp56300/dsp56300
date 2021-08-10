@@ -238,20 +238,6 @@ namespace dsp56k
 
 		void			terminate						();
 
-		typedef void 	(*IctrCallback)(void *,DSP *dsp);
-		IctrCallback	m_callback = 0;
-		void*			m_callbackData = 0;
-		uint32_t		m_callbackCount = 0;
-		void			setCallback(IctrCallback cb,void *data,uint32_t count) {m_callback=cb;m_callbackData=data;m_callbackCount=count;}
-		void			handleICtrCallback()
-		{
-			if (m_callback && m_instructions >= m_callbackCount)
-			{
-				const IctrCallback c = m_callback;
-				m_callback = nullptr;
-				c(m_callbackData,this);
-			}
-		}
 	private:
 
 		std::string getSSindent() const;

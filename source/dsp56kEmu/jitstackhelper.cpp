@@ -1,14 +1,18 @@
 #include "jitstackhelper.h"
 
-#include <cassert>
-
 #include "jitblock.h"
-#include "asmjit/x86/x86builder.h"
+#include "jitemitter.h"
+
+#include "dspassert.h"
 
 namespace dsp56k
 {
 	constexpr size_t g_stackAlignmentBytes = 16;
+#ifdef HAVE_ARM64
+	constexpr size_t g_functionCallSize = 0;
+#else
 	constexpr size_t g_functionCallSize = 8;
+#endif
 #ifdef _MSC_VER
 	constexpr size_t g_shadowSpaceSize = 32;
 #else
@@ -42,7 +46,7 @@ namespace dsp56k
 		m_block.asm_().push(_reg);
 
 		m_pushedRegs.push_back(_reg);
-		m_pushedBytes += _reg.size();
+		m_pushedBytes += pushSize(_reg);
 	}
 
 	void JitStackHelper::push(const JitReg128& _reg)
@@ -51,16 +55,16 @@ namespace dsp56k
 		m_block.asm_().push(regReturnVal);
 
 		m_pushedRegs.push_back(_reg);
-		m_pushedBytes += regReturnVal.size();
+		m_pushedBytes += pushSize(regReturnVal);
 	}
 
 	void JitStackHelper::pop(const JitRegGP& _reg)
 	{
 		assert(!m_pushedRegs.empty());
-		assert(m_pushedBytes >= _reg.size());
+		assert(m_pushedBytes >= pushSize(_reg));
 
 		m_pushedRegs.pop_back();
-		m_pushedBytes -= _reg.size();
+		m_pushedBytes -= pushSize(_reg);
 
 		m_block.asm_().pop(_reg);
 	}
@@ -103,19 +107,29 @@ namespace dsp56k
 		const auto offset = alignedStack - usedSize + g_shadowSpaceSize;
 
 		if(offset)
+		{
+#ifdef HAVE_ARM64
+			m_block.asm_().sub(asmjit::a64::regs::sp, asmjit::a64::regs::sp, asmjit::Imm(offset));
+#else
 			m_block.asm_().sub(asmjit::x86::rsp, asmjit::Imm(offset));
+#endif
+		}
 
 		m_block.asm_().call(_funcAsPtr);
 
 		if(offset)
+#ifdef HAVE_ARM64
+			m_block.asm_().add(asmjit::a64::regs::sp, asmjit::a64::regs::sp, asmjit::Imm(offset));
+#else
 			m_block.asm_().add(asmjit::x86::rsp, asmjit::Imm(offset));
+#endif
 	}
 
 	bool JitStackHelper::isFuncArg(const JitRegGP& _gp)
 	{
 		for (const auto& gp : g_funcArgGPs)
 		{
-			if (gp.equals(_gp.r64()))
+			if (gp.equals(r64(_gp)))
 				return true;
 		}
 		return false;
@@ -125,7 +139,7 @@ namespace dsp56k
 	{
 		for (const auto& gp : g_nonVolatileGPs)
 		{
-			if(gp.equals(_gp.r64()))
+			if(gp.equals(r64(_gp)))
 				return true;
 		}
 		return false;
@@ -181,5 +195,14 @@ namespace dsp56k
 				return true;
 		}
 		return false;
+	}
+
+	uint32_t JitStackHelper::pushSize(const JitReg& _reg)
+	{
+#ifdef HAVE_ARM64
+		return 16;
+#else
+		return _reg.size();
+#endif
 	}
 }

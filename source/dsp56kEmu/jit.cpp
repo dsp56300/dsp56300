@@ -6,7 +6,6 @@
 #include "jitops.h"
 
 #include "asmjit/core/jitruntime.h"
-#include "asmjit/x86/x86builder.h"
 
 #ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
 #include "../vtuneSdk/include/jitprofiling.h"
@@ -79,12 +78,14 @@ namespace dsp56k
 		// get JIT code
 		auto& cacheEntry = m_jitCache[pc];
 		exec(pc, cacheEntry);
+
+		if(!g_traceOps)
+			m_dsp.m_instructions += m_runtimeData.m_executedInstructionCount;
 	}
 
 	void Jit::exec(const TWord pc, JitCacheEntry& e)
 	{
 		e.func(this, pc, e.block);
-		m_dsp.m_instructions += m_runtimeData.m_executedInstructionCount;
 	}
 
 	void Jit::notifyProgramMemWrite(TWord _offset)
@@ -102,7 +103,7 @@ namespace dsp56k
 		code.setErrorHandler(&errorHandler);
 		code.init(m_rt->environment());
 
-		JitAssembler m_asm(&code);
+		JitEmitter m_asm(&code);
 
 		auto* b = new JitBlock(m_asm, m_dsp, m_runtimeData);
 
@@ -214,14 +215,16 @@ namespace dsp56k
 
 		if(g_traceOps)
 		{
+			m_dsp.m_instructions += _block->getExecutedInstructionCount();
+
 			const TWord lastPC = _pc + _block->getPMemSize() - _block->getLastOpSize();
 			TWord op, opB;
 			m_dsp.mem.getOpcode(lastPC, op, opB);
 			m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
 
 			// make the diff tool happy, interpreter traces two ops. For the sake of simplicity, just trace it once more
-			if(_block->getDisasm().find("rep ") == 0)
-				m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
+//			if (_block->getDisasm().find("rep ") == 0)
+//				m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
 		}
 	}
 
@@ -318,7 +321,10 @@ namespace dsp56k
 		}
 		else
 		{
-			e.func = e.block->getFunc();
+			if (g_traceOps)
+				e.func = &funcRun;
+			else
+				e.func = e.block->getFunc();
 		}
 	}
 }

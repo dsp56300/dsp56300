@@ -4,152 +4,34 @@
 
 namespace dsp56k
 {
-	void JitOps::decode_cccc(const JitRegGP& _dst, const TWord cccc)
-	{
-		switch( cccc )
-		{
-		case CCCC_CarrySet:									// CC(LO)		Carry Set	(lower)
-			ccr_getBitValue(_dst, CCRB_C);
-			break;
-		case CCCC_CarryClear:								// CC(HS)		Carry Clear (higher or same)	
-			ccr_getBitValue(_dst, CCRB_C);
-			m_asm.xor_(_dst, asmjit::Imm(1));
-			break;
-		case CCCC_ExtensionSet:								// ES			Extension set	
-			ccr_getBitValue(_dst, CCRB_E);
-			break;
-		case CCCC_ExtensionClear:							// EC			Extension clear	
-			ccr_getBitValue(_dst, CCRB_E);
-			m_asm.xor_(_dst, asmjit::Imm(1));
-			break;
-		case CCCC_Equal:									// EQ			Equal	
-			ccr_getBitValue(_dst, CCRB_Z);
-			break;
-		case CCCC_NotEqual:									// NE			Not Equal
-			ccr_getBitValue(_dst, CCRB_Z);
-			m_asm.xor_(_dst, asmjit::Imm(1));
-			break;
-		case CCCC_LimitSet:									// LS			Limit set
-			ccr_getBitValue(_dst, CCRB_L);
-			break;
-		case CCCC_LimitClear:								// LC			Limit clear
-			ccr_getBitValue(_dst, CCRB_L);
-			m_asm.xor_(_dst, asmjit::Imm(1));
-			break;
-		case CCCC_Minus:									// MI			Minus
-			ccr_getBitValue(_dst, CCRB_N);
-			break;
-		case CCCC_Plus:										// PL			Plus
-			ccr_getBitValue(_dst, CCRB_N);
-			m_asm.xor_(_dst, asmjit::Imm(1));
-			break;
-		case CCCC_GreaterEqual:								// GE			Greater than or equal
-			{
-				// SRB_N == SRB_V
-				ccr_getBitValue(_dst, CCRB_N);
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_V);
-				m_asm.cmp(_dst.r8(), r.get().r8());
-				m_asm.sete(_dst);
-			}
-			break;
-		case CCCC_LessThan:									// LT			Less than
-			{
-				// SRB_N != SRB_V
-				ccr_getBitValue(_dst, CCRB_N);
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_V);
-				m_asm.cmp(_dst.r8(), r.get().r8());
-				m_asm.setne(_dst);
-			}
-			break;
-		case CCCC_Normalized:								// NR			Normalized
-			{
-				// (SRB_Z + ((!SRB_U) | (!SRB_E))) == 1
-				ccr_getBitValue(_dst, CCRB_U);
-				m_asm.xor_(_dst, asmjit::Imm(1));
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_E);
-				m_asm.xor_(r, asmjit::Imm(1));
-				m_asm.and_(_dst.r8(), r.get().r8());
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(_dst.r8(), r.get().r8());
-				m_asm.cmp(_dst.r8(), asmjit::Imm(1));
-				m_asm.sete(_dst);
-			}
-			break;
-		case CCCC_NotNormalized:							// NN			Not normalized
-			{
-				// (SRB_Z + ((!SRB_U) | !SRB_E)) == 0
-				ccr_getBitValue(_dst, CCRB_U);
-				m_asm.xor_(_dst, asmjit::Imm(1));
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_E);
-				m_asm.xor_(r, asmjit::Imm(1));
-				m_asm.and_(_dst.r8(), r.get().r8());
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(_dst.r8(), r.get().r8());
-				m_asm.setz(_dst);
-			}
-			break;
-		case CCCC_GreaterThan:								// GT			Greater than
-			{
-				// (SRB_Z + (SRB_N != SRB_V)) == 0
-				ccr_getBitValue(_dst, CCRB_N);
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_V);
-				m_asm.xor_(_dst.r8(), r.get().r8());
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(_dst.r8(), r.get().r8());
-				m_asm.setz(_dst);
-			}
-			break;
-		case CCCC_LessEqual:								// LE			Less than or equal
-			{
-				// (SRB_Z + (SRB_N != SRB_V)) == 1
-				ccr_getBitValue(_dst, CCRB_N);
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_V);
-				m_asm.xor_(_dst.r8(), r.get().r8());
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(_dst.r8(), r.get().r8());
-				m_asm.cmp(_dst.r8(), asmjit::Imm(1));
-				m_asm.sete(_dst);
-			}
-			break;
-		default:
-			assert( 0 && "invalid CCCC value" );
-		}
-	}
-
 	void JitOps::decode_dddddd_read( const JitReg32& _dst, const TWord _dddddd )
 	{
 		const auto i = _dddddd & 0x3f;
 		switch( i )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-		case 0x00:	m_dspRegs.getXY0(_dst, 0);	break;
-		case 0x01:	m_dspRegs.getXY1(_dst, 0);	break;
-		case 0x02:	m_dspRegs.getXY0(_dst, 1);	break;
-		case 0x03:	m_dspRegs.getXY1(_dst, 1);	break;
+		case 0x00:	getXY0(_dst, 0);	break;
+		case 0x01:	getXY1(_dst, 0);	break;
+		case 0x02:	getXY0(_dst, 1);	break;
+		case 0x03:	getXY1(_dst, 1);	break;
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	m_dspRegs.getXY0(_dst, 0);	break;
-		case 0x05:	m_dspRegs.getXY1(_dst, 0);	break;
-		case 0x06:	m_dspRegs.getXY0(_dst, 1);	break;
-		case 0x07:	m_dspRegs.getXY1(_dst, 1);	break;
+		case 0x04:	getXY0(_dst, 0);	break;
+		case 0x05:	getXY1(_dst, 0);	break;
+		case 0x06:	getXY0(_dst, 1);	break;
+		case 0x07:	getXY1(_dst, 1);	break;
 
 		// 001DDD - 8 accumulators in data ALU
-		case 0x08:	m_dspRegs.getALU0(_dst, 0);	break;
-		case 0x09:	m_dspRegs.getALU0(_dst, 1);	break;
+		case 0x08:	getALU0(_dst, 0);	break;
+		case 0x09:	getALU0(_dst, 1);	break;
 		case 0x0a:
 		case 0x0b:
 			{
 				const auto aluIndex = i - 0x0a;
-				m_dspRegs.getALU2signed(_dst, aluIndex);
+				getALU2signed(_dst, aluIndex);
 			}
 			break;
-		case 0x0c:	m_dspRegs.getALU1(_dst, 0);	break;
-		case 0x0d:	m_dspRegs.getALU1(_dst, 1);	break;
+		case 0x0c:	getALU1(_dst, 0);	break;
+		case 0x0d:	getALU1(_dst, 1);	break;
 		case 0x0e:	transferAluTo24(_dst, 0);	break;
 		case 0x0f:	transferAluTo24(_dst, 1);	break;
 
@@ -195,8 +77,8 @@ namespace dsp56k
 		case 0x39:	getSR(_dst);			break;
 		case 0x3a:	m_dspRegs.getOMR(_dst);	break;
 		case 0x3b:	m_dspRegs.getSP(_dst);	break;
-		case 0x3c:	m_dspRegs.getSSH(_dst);	break;
-		case 0x3d:	m_dspRegs.getSSL(_dst);	break;
+		case 0x3c:	getSSH(_dst);			break;
+		case 0x3d:	getSSL(_dst);			break;
 		case 0x3e:	m_dspRegs.getLA(_dst);	break;
 		case 0x3f:	m_dspRegs.getLC(_dst);	break;
 		default:
@@ -217,23 +99,23 @@ namespace dsp56k
 		switch( i )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-		case 0x00:	m_dspRegs.setXY0(0, signedFraction(_src));	break;
-		case 0x01:	m_dspRegs.setXY1(0, signedFraction(_src));	break;
-		case 0x02:	m_dspRegs.setXY0(1, signedFraction(_src));	break;
-		case 0x03:	m_dspRegs.setXY1(1, signedFraction(_src));	break;
+		case 0x00:	setXY0(0, signedFraction(_src));	break;
+		case 0x01:	setXY1(0, signedFraction(_src));	break;
+		case 0x02:	setXY0(1, signedFraction(_src));	break;
+		case 0x03:	setXY1(1, signedFraction(_src));	break;
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	m_dspRegs.setXY0(0, signedFraction(_src));	break;
-		case 0x05:	m_dspRegs.setXY1(0, signedFraction(_src));	break;
-		case 0x06:	m_dspRegs.setXY0(1, signedFraction(_src));	break;
-		case 0x07:	m_dspRegs.setXY1(1, signedFraction(_src));	break;
+		case 0x04:	setXY0(0, signedFraction(_src));	break;
+		case 0x05:	setXY1(0, signedFraction(_src));	break;
+		case 0x06:	setXY0(1, signedFraction(_src));	break;
+		case 0x07:	setXY1(1, signedFraction(_src));	break;
 
 		// 001DDD - 8 accumulators in data ALU
-		case 0x08:	m_dspRegs.setALU0(0, _src);	break;
-		case 0x09:	m_dspRegs.setALU0(1, _src);	break;
-		case 0x0a:	m_dspRegs.setALU2(0, _src);	break;
-		case 0x0b:	m_dspRegs.setALU2(1, _src);	break;
-		case 0x0c:	m_dspRegs.setALU1(0, _src);	break;
-		case 0x0d:	m_dspRegs.setALU1(1, _src);	break;
+		case 0x08:	setALU0(0, _src);	break;
+		case 0x09:	setALU0(1, _src);	break;
+		case 0x0a:	setALU2(0, _src);	break;
+		case 0x0b:	setALU2(1, _src);	break;
+		case 0x0c:	setALU1(0, _src);	break;
+		case 0x0d:	setALU1(1, _src);	break;
 		case 0x0e:	transfer24ToAlu(0, signedFraction(_src));	break;	
 		case 0x0f:	transfer24ToAlu(1, signedFraction(_src));	break;
 
@@ -276,11 +158,11 @@ namespace dsp56k
 
 		// 111GGG - 8 program controller registers
 		case 0x38:	m_dspRegs.setSZ(_src);	break;
-		case 0x39:	setSR(_src);	break;
+		case 0x39:	setSR(_src);			break;
 		case 0x3a:	m_dspRegs.setOMR(_src);	break;
 		case 0x3b:	m_dspRegs.setSP(_src);	break;
-		case 0x3c:	m_dspRegs.setSSH(_src);	break;
-		case 0x3d:	m_dspRegs.setSSL(_src);	break;
+		case 0x3c:	setSSH(_src);			break;
+		case 0x3d:	setSSL(_src);			break;
 		case 0x3e:	m_dspRegs.setLA(_src);	m_resultFlags |= WriteToLA; break;
 		case 0x3f:	m_dspRegs.setLC(_src);	m_resultFlags |= WriteToLC; break;
 		default:
@@ -298,16 +180,16 @@ namespace dsp56k
 		switch( _ddddd )
 		{
 		case 0xa:	m_dspRegs.getEP(_dst);	break;
-		case 0x10:	m_dspRegs.getVBA(_dst); break;
-		case 0x11:	m_dspRegs.getSC(_dst); break;
-		case 0x18:	m_dspRegs.getSZ(_dst); break;
-		case 0x19:	getSR(_dst); break;
-		case 0x1a:	m_dspRegs.getOMR(_dst); break;
-		case 0x1b:	m_dspRegs.getSP(_dst); break;
-		case 0x1c:	m_dspRegs.getSSH(_dst); break;
-		case 0x1d:	m_dspRegs.getSSL(_dst); break;
-		case 0x1e:	m_dspRegs.getLA(_dst); break;
-		case 0x1f:	m_dspRegs.getLC(_dst); break;
+		case 0x10:	m_dspRegs.getVBA(_dst);	break;
+		case 0x11:	m_dspRegs.getSC(_dst);	break;
+		case 0x18:	m_dspRegs.getSZ(_dst);	break;
+		case 0x19:	getSR(_dst);			break;
+		case 0x1a:	m_dspRegs.getOMR(_dst);	break;
+		case 0x1b:	m_dspRegs.getSP(_dst);	break;
+		case 0x1c:	getSSH(_dst);			break;
+		case 0x1d:	getSSL(_dst);			break;
+		case 0x1e:	m_dspRegs.getLA(_dst);	break;
+		case 0x1f:	m_dspRegs.getLC(_dst);	break;
 		default: assert( 0 && "invalid ddddd value" ); break;
 		}
 	}
@@ -322,17 +204,17 @@ namespace dsp56k
 
 		switch( _ddddd )
 		{
-		case 0xa:	m_dspRegs.setEP(_src); break;
-		case 0x10:	m_dspRegs.setVBA(_src); break;
-		case 0x11:	m_dspRegs.setSC(_src); break;
-		case 0x18:	m_dspRegs.setSZ(_src); break;
-		case 0x19:	setSR(_src); break;
+		case 0xa:	m_dspRegs.setEP(_src);	break;
+		case 0x10:	m_dspRegs.setVBA(_src);	break;
+		case 0x11:	m_dspRegs.setSC(_src);	break;
+		case 0x18:	m_dspRegs.setSZ(_src);	break;
+		case 0x19:	setSR(_src);			break;
 		case 0x1a:	m_dspRegs.setOMR(_src); break;
-		case 0x1b:	m_dspRegs.setSP(_src); break;
-		case 0x1c:	m_dspRegs.setSSH(_src); break;
-		case 0x1d:	m_dspRegs.setSSL(_src); break;
-		case 0x1e:	m_dspRegs.setLA(_src); break;
-		case 0x1f:	m_dspRegs.setLC(_src); break;
+		case 0x1b:	m_dspRegs.setSP(_src);	break;
+		case 0x1c:	setSSH(_src);			break;
+		case 0x1d:	setSSL(_src);			break;
+		case 0x1e:	m_dspRegs.setLA(_src);	break;
+		case 0x1f:	m_dspRegs.setLC(_src);	break;
 		default: assert( 0 && "invalid ddddd value" ); break;
 		}
 	}
@@ -341,8 +223,8 @@ namespace dsp56k
 	{
 		switch (_ee)
 		{
-		case 0: m_dspRegs.getX0(_dst); break;
-		case 1: m_dspRegs.getX1(_dst); break;
+		case 0: getX0(_dst); break;
+		case 1: getX1(_dst); break;
 		case 2: transferAluTo24(_dst, 0); break;
 		case 3: transferAluTo24(_dst, 1); break;
 		default: assert(0 && "invalid ee value");
@@ -353,8 +235,8 @@ namespace dsp56k
 	{
 		switch (_ee)
 		{
-		case 0: m_dspRegs.setXY0(0, _value); return;
-		case 1: m_dspRegs.setXY1(0, _value); return;
+		case 0: setXY0(0, _value); return;
+		case 1: setXY1(0, _value); return;
 		case 2: transfer24ToAlu(0, _value);	return;
 		case 3: transfer24ToAlu(1, _value);	return;
 		}
@@ -365,8 +247,8 @@ namespace dsp56k
 	{
 		switch (_ff)
 		{
-		case 0: m_dspRegs.getY0(_dst); break;
-		case 1: m_dspRegs.getY1(_dst); break;
+		case 0: getY0(_dst); break;
+		case 1: getY1(_dst); break;
 		case 2: transferAluTo24(_dst, 0); break;
 		case 3: transferAluTo24(_dst, 1); break;
 		default:
@@ -379,8 +261,8 @@ namespace dsp56k
 	{
 		switch (_ff)
 		{
-		case 0: m_dspRegs.setXY0(1, _value); break;
-		case 1: m_dspRegs.setXY1(1, _value); break;
+		case 0: setXY0(1, _value); break;
+		case 1: setXY1(1, _value); break;
 		case 2: transfer24ToAlu(0, _value); break;
 		case 3: transfer24ToAlu(1, _value); break;
 		default: assert(false && "invalid ff value"); break;
@@ -436,11 +318,11 @@ namespace dsp56k
 		{
 		case 0:
 		case 1:
-			m_dspRegs.getXY0(_dst, jj);
+			getXY0(_dst, jj);
 			break;
 		case 2: 
 		case 3:
-			m_dspRegs.getXY1(_dst, jj - 2);
+			getXY1(_dst, jj - 2);
 			break;
 		default:
 			assert(0 && "unreachable, invalid JJ value");
@@ -451,12 +333,18 @@ namespace dsp56k
 	{
 		const auto regIdx = _mmmrrr & 0x07;
 
-		m_dspRegs.getR(_dst, regIdx);
-
 		if(_shortDisplacement)
 		{
-			m_asm.add(_dst, asmjit::Imm(_shortDisplacement));
+			m_asm.mov(_dst, asmjit::Imm(_shortDisplacement));
+			{
+				AguRegR r(m_block, regIdx, true);
+				m_asm.add(_dst, r.get());
+			}
 			m_asm.and_(_dst, asmjit::Imm(0xffffff));
+		}
+		else
+		{
+			m_dspRegs.getR(_dst, regIdx);
 		}
 	}
 
@@ -464,10 +352,10 @@ namespace dsp56k
 	{
 		switch (_qq)
 		{
-		case 0: m_dspRegs.getX0(_dst); break;
-		case 1: m_dspRegs.getY0(_dst); break;
-		case 2: m_dspRegs.getX1(_dst); break;
-		case 3: m_dspRegs.getY1(_dst); break;
+		case 0: getX0(_dst); break;
+		case 1: getY0(_dst); break;
+		case 2: getX1(_dst); break;
+		case 3: getY1(_dst); break;
 		default: assert(0 && "invalid qq value"); break;
 		}
 	}
@@ -476,10 +364,10 @@ namespace dsp56k
 	{
 		switch (_qq)
 		{
-		case 0: m_dspRegs.getY1(_dst);	break;
-		case 1: m_dspRegs.getX0(_dst);	break;
-		case 2: m_dspRegs.getY0(_dst);	break;
-		case 3: m_dspRegs.getX1(_dst);	break;
+		case 0: getY1(_dst);	break;
+		case 1: getX0(_dst);	break;
+		case 2: getY0(_dst);	break;
+		case 3: getX1(_dst);	break;
 		default:	assert(0 && "invalid QQ value");	break;
 		}
 	}
@@ -488,25 +376,25 @@ namespace dsp56k
 	{
 		switch (_qqqq)
 		{
-		case 0:  m_dspRegs.getX0(_s1);	m_dspRegs.getX0(_s2);	return;
-		case 1:  m_dspRegs.getY0(_s1);	m_dspRegs.getY0(_s2);	return;
-		case 2:  m_dspRegs.getX1(_s1);	m_dspRegs.getX0(_s2);	return;
-		case 3:  m_dspRegs.getY1(_s1);	m_dspRegs.getY0(_s2);	return;
+		case 0:  getX0(_s1);	getX0(_s2);	return;
+		case 1:  getY0(_s1);	getY0(_s2);	return;
+		case 2:  getX1(_s1);	getX0(_s2);	return;
+		case 3:  getY1(_s1);	getY0(_s2);	return;
 
-		case 4:  m_dspRegs.getX0(_s1);	m_dspRegs.getY1(_s2);	return;
-		case 5:  m_dspRegs.getY0(_s1);	m_dspRegs.getX0(_s2);	return;
-		case 6:  m_dspRegs.getX1(_s1);	m_dspRegs.getY0(_s2);	return;
-		case 7:  m_dspRegs.getY1(_s1);	m_dspRegs.getX1(_s2);	return;
+		case 4:  getX0(_s1);	getY1(_s2);	return;
+		case 5:  getY0(_s1);	getX0(_s2);	return;
+		case 6:  getX1(_s1);	getY0(_s2);	return;
+		case 7:  getY1(_s1);	getX1(_s2);	return;
 
-		case 8:  m_dspRegs.getX1(_s1);	m_dspRegs.getX1(_s2);	return;
-		case 9:  m_dspRegs.getY1(_s1);	m_dspRegs.getY1(_s2);	return;
-		case 10: m_dspRegs.getX0(_s1);	m_dspRegs.getX1(_s2);	return;
-		case 11: m_dspRegs.getY0(_s1);	m_dspRegs.getY1(_s2);	return;
+		case 8:  getX1(_s1);	getX1(_s2);	return;
+		case 9:  getY1(_s1);	getY1(_s2);	return;
+		case 10: getX0(_s1);	getX1(_s2);	return;
+		case 11: getY0(_s1);	getY1(_s2);	return;
 
-		case 12: m_dspRegs.getY1(_s1);	m_dspRegs.getX0(_s2);	return;
-		case 13: m_dspRegs.getX0(_s1);	m_dspRegs.getY0(_s2);	return;
-		case 14: m_dspRegs.getY0(_s1);	m_dspRegs.getX1(_s2);	return;
-		case 15: m_dspRegs.getX1(_s1);	m_dspRegs.getY1(_s2);	return;
+		case 12: getY1(_s1);	getX0(_s2);	return;
+		case 13: getX0(_s1);	getY0(_s2);	return;
+		case 14: getY0(_s1);	getX1(_s2);	return;
+		case 15: getX1(_s1);	getY1(_s2);	return;
 
 		default: assert(0 && "invalid QQQQ value");				return;
 		}
@@ -516,12 +404,12 @@ namespace dsp56k
 	{
 		switch( _sss )
 		{
-		case 2:		m_dspRegs.getALU1(_dst, 0);			break;
-		case 3:		m_dspRegs.getALU1(_dst, 1);			break;
-		case 4:		m_dspRegs.getXY0(_dst, 0);			break;
-		case 5:		m_dspRegs.getXY0(_dst, 1);			break;
-		case 6:		m_dspRegs.getXY1(_dst, 0);			break;
-		case 7:		m_dspRegs.getXY1(_dst, 1);			break;
+		case 2:		getALU1(_dst, 0);	break;
+		case 3:		getALU1(_dst, 1);	break;
+		case 4:		getXY0(_dst, 0);	break;
+		case 5:		getXY0(_dst, 1);	break;
+		case 6:		getXY1(_dst, 0);	break;
+		case 7:		getXY1(_dst, 1);	break;
 		case 0:
 		case 1:
 		default:
@@ -539,8 +427,8 @@ namespace dsp56k
 			{
 				const auto alu = _lll & 3;
 				m_dspRegs.getALU(y, alu);
-				m_asm.mov(x.r64(), y.r64());
-				m_asm.shr(x.r64(), asmjit::Imm(24));
+				m_asm.mov(r64(x), r64(y));
+				m_asm.shr(r64(x), asmjit::Imm(24));
 				m_asm.and_(x, asmjit::Imm(0xffffff));
 				m_asm.and_(y, asmjit::Imm(0xffffff));
 			}
@@ -550,8 +438,8 @@ namespace dsp56k
 			{
 				const auto xy = _lll - 2;
 				m_dspRegs.getXY(y, xy);
-				m_asm.mov(x.r64(), y.r64());
-				m_asm.shr(x.r64(), asmjit::Imm(24));
+				m_asm.mov(r64(x), r64(y));
+				m_asm.shr(r64(x), asmjit::Imm(24));
 				m_asm.and_(x, asmjit::Imm(0xffffff));
 				m_asm.and_(y, asmjit::Imm(0xffffff));
 			}
@@ -581,9 +469,9 @@ namespace dsp56k
 				AluRef r(m_block, alu);
 				m_asm.shr(r, asmjit::Imm(48));	// clear 48 LSBs
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.or_(r, x.r64());
+				m_asm.or_(r, r64(x));
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.or_(r, y.r64());
+				m_asm.or_(r, r64(y));
 			}
 			break;
 		case 4:
@@ -593,9 +481,9 @@ namespace dsp56k
 
 				AluRef r(m_block, alu, false, true);
 
-				m_asm.mov(r, x.r64());
+				m_asm.mov(r, r64(x));
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.or_(r, y.r64());
+				m_asm.or_(r, r64(y));
 
 				signextend48to56(r);
 			}
@@ -606,9 +494,9 @@ namespace dsp56k
 				const auto xy = _lll - 2;
 
 				const auto r = m_dspRegs.getXY(xy, JitDspRegs::Write);
-				m_asm.mov(r, x);
+				m_asm.mov(r, r64(x));
 				m_asm.shl(r, asmjit::Imm(24));
-				m_asm.or_(r, y.r64());
+				m_asm.or_(r, r64(y));
 			}
 			break;
 		case 6:

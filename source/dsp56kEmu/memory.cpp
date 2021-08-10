@@ -21,6 +21,7 @@ namespace dsp56k
 		: m_memoryMap(_memoryMap)
 		, m_size(_memSize)
 		, m_dsp(nullptr)
+		, m_bridgedMemoryAddress(_memSize)
 	{
 		auto* address = _externalBuffer;
 

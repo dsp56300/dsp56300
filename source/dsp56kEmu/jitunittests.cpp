@@ -1,9 +1,9 @@
 #include "jitunittests.h"
 
 #include "jitblock.h"
-#include "jitops.h"
+#include "jitemitter.h"
 #include "jithelper.h"
-#include "asmjit/x86/x86builder.h"
+#include "jitops.h"
 
 namespace dsp56k
 {
@@ -72,9 +72,11 @@ namespace dsp56k
 
 		runTest(&JitUnittests::btst_aa_build, &JitUnittests::btst_aa_verify);
 
+		clr();
 		cmp();
 		dec();
 		div();
+		rep_div();
 		dmac();
 		extractu();
 		ifcc();
@@ -119,16 +121,32 @@ namespace dsp56k
 		});
 	}
 
-	void JitUnittests::runTest(std::function<void(JitBlock&, JitOps&)> _build, std::function<void()> _verify)
+	void JitUnittests::runTest(const std::function<void(JitBlock&, JitOps&)>& _build, const std::function<void()>& _verify)
 	{
 		AsmJitErrorHandler errorHandler;
 		asmjit::CodeHolder code;
 		AsmJitLogger logger;
-		code.init(m_rt.environment());
-//		code.setLogger(&logger);
+		logger.addFlags(asmjit::FormatOptions::kFlagHexImms | /*asmjit::FormatOptions::kFlagHexOffsets |*/ asmjit::FormatOptions::kFlagMachineCode);
+
+#ifdef HAVE_ARM64
+		constexpr auto arch = asmjit::Environment::kArchAArch64;
+#else
+		constexpr auto arch = asmjit::Environment::kArchX64;
+#endif
+
+		const auto foreignArch = m_rt.environment().arch() != arch;
+
+		if(foreignArch)
+			code.init(asmjit::Environment(arch));
+		else
+			code.init(m_rt.environment());
+
+		code.setLogger(&logger);
 		code.setErrorHandler(&errorHandler);
 
-		JitAssembler m_asm(&code);
+		JitEmitter m_asm(&code);
+
+		LOG("Creating test code");
 
 		JitRuntimeData rtData;
 
@@ -152,13 +170,27 @@ namespace dsp56k
 		if(err)
 		{
 			const auto* const errString = asmjit::DebugUtils::errorAsString(err);
-			LOG("JIT failed: " << err << " - " << errString);
-			return;
+			std::stringstream ss;
+			ss << "JIT failed: " << err << " - " << errString;
+			const std::string msg(ss.str());
+			LOG(msg);
+			throw std::runtime_error(msg);
 		}
 
-		func();
+		if(!foreignArch)
+		{
+			LOG("Running test code");
 
-		_verify();
+			func();
+
+			LOG("Verifying test code");
+
+			_verify();
+		}
+		else
+		{
+			LOG("Run & Verify of code for foreign arch skipped");
+		}
 
 		m_rt.release(&func);
 	}
@@ -215,10 +247,10 @@ namespace dsp56k
 		_block.mem().mov(ra, m_checks[4]);
 		_block.mem().mov(rb, m_checks[5]);
 
-		_ops.signextend24to56(regLA.get().r64());
-		_ops.signextend24to56(regLC.get().r64());
-		_ops.signextend48to56(regSR.get().r64());
-		_ops.signextend48to56(regA.get().r64());
+		_ops.signextend24to56(r64(regLA.get()));
+		_ops.signextend24to56(r64(regLC.get()));
+		_ops.signextend48to56(r64(regSR.get()));
+		_ops.signextend48to56(r64(regA.get()));
 		_ops.signextend56to64(ra);
 		_ops.signextend56to64(rb);
 
@@ -532,15 +564,15 @@ namespace dsp56k
 
 				_ops.emit(0, 0x60f400 + inc, 0x110000 * (i+1));		// move #$110000,ri
 				_block.regs().getR(r, i);
-				_block.mem().mov(m_checks[i], r.get().r32());
+				_block.mem().mov(m_checks[i], r32(r.get()));
 
 				_ops.emit(0, 0x70f400 + inc, 0x001100 * (i+1));		// move #$001100,ni
 				_block.regs().getN(r, i);
-				_block.mem().mov(m_checks[i+8], r.get().r32());
+				_block.mem().mov(m_checks[i+8], r32(r.get()));
 
 				_ops.emit(0, 0x05f420 + i, 0x000011 * (i+1));		// move #$000011,mi
 				_block.regs().getM(r, i);
-				_block.mem().mov(m_checks[i+16], r.get().r32());
+				_block.mem().mov(m_checks[i+16], r32(r.get()));
 			}
 		}, [&]()
 		{
@@ -650,15 +682,15 @@ namespace dsp56k
 
 				_ops.emit(0, 0x600500 + inc);						// asm move ri,x:$5
 				_block.mem().readDspMemory(r, MemArea_X, 0x5);
-				_block.mem().mov(m_checks[i], r.get().r32());
+				_block.mem().mov(m_checks[i], r32(r.get()));
 
 				_ops.emit(0, 0x700500 + inc);						// asm move ni,x:$5
 				_block.mem().readDspMemory(r, MemArea_X, 0x5);
-				_block.mem().mov(m_checks[i+8], r.get().r32());
+				_block.mem().mov(m_checks[i+8], r32(r.get()));
 
 				_ops.emit(0, 0x050520 + i);							// asm move mi,x:$5
 				_block.mem().readDspMemory(r, MemArea_X, 0x5);
-				_block.mem().mov(m_checks[i+16], r.get().r32());
+				_block.mem().mov(m_checks[i+16], r32(r.get()));
 			}
 		}, [&]()
 		{
@@ -681,35 +713,35 @@ namespace dsp56k
 
 			_ops.emit(0, 0x560500);								// a,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x570500);								// b,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x500500);								// a0,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x540500);								// a1,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x520500);								// a2,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x510500);								// b0,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x550500);								// b1,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 
 			_ops.emit(0, 0x530500);								// b2,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 		}, [&]()
 		{
 			int i=0;
@@ -736,16 +768,16 @@ namespace dsp56k
 
 			_ops.emit(0, 0x440500);								// move x0,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 			_ops.emit(0, 0x450500);								// move x1,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 			_ops.emit(0, 0x460500);								// move y0,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 			_ops.emit(0, 0x470500);								// move y1,x:$5
 			_block.mem().readDspMemory(r, MemArea_X, 0x5);
-			_block.mem().mov(m_checks[i++], r.get().r32());
+			_block.mem().mov(m_checks[i++], r32(r.get()));
 		}, [&]()
 		{
 			int i=0;
@@ -767,7 +799,7 @@ namespace dsp56k
 			dsp.regs().ss[i].var = 0x111111111111 * i;
 
 			_block.regs().getSS(temp);
-			_block.regs().incSP();
+			_ops.incSP();
 			_block.mem().mov(m_checks[i], temp);
 		}
 	}
@@ -796,14 +828,19 @@ namespace dsp56k
 		dsp.regs().y.var = 0x0000112233445566;
 
 		const RegGP temp(_block);
-		const auto r = temp.get().r32();
+		const auto r = r32(temp.get());
 
 		auto& regs = _block.regs();
 
 		auto modify = [&]()
 		{
 			_block.asm_().shl(temp, asmjit::Imm(4));
+
+#ifdef HAVE_ARM64
+			_block.asm_().and_(temp, temp, asmjit::Imm(0xffffff));
+#else
 			_block.asm_().and_(temp, asmjit::Imm(0xffffff));
+#endif
 		};
 
 		auto modify64 = [&]()
@@ -820,14 +857,14 @@ namespace dsp56k
 		regs.getLA(r);				modify();		regs.setLA(r);
 		regs.getLC(r);				modify();		regs.setLC(r);
 
-		regs.getALU0(r, 0);			modify64();		regs.setALU0(0,r);
-		regs.getALU1(r, 0);			modify64();		regs.setALU1(0,r);
-		regs.getALU2signed(r, 0);	modify64();		regs.setALU2(0,r);
+		_ops.getALU0(r, 0);			modify64();		_ops.setALU0(0,r);
+		_ops.getALU1(r, 0);			modify64();		_ops.setALU1(0,r);
+		_ops.getALU2signed(r, 0);	modify64();		_ops.setALU2(0,r);
 
 		regs.getALU(temp, 1);		modify64();		regs.setALU(1, temp);
 
-		regs.getXY0(r, 0);			modify();		regs.setXY0(0, r);
-		regs.getXY1(r, 0);			modify();		regs.setXY1(0, r);
+		_ops.getXY0(r, 0);			modify();		_ops.setXY0(0, r);
+		_ops.getXY1(r, 0);			modify();		_ops.setXY1(0, r);
 
 		regs.getXY(r, 1);			modify64();		regs.setXY(1, r);
 	}
@@ -1224,6 +1261,28 @@ namespace dsp56k
 		assert((m_checks[1] & CCR_C) != 0);
 	}
 
+	void JitUnittests::clr()
+	{
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.regs().b.var = 0x99aabbccddeeff;
+			dsp.x0(0);
+			dsp.regs().sr.var = 0x080000;
+
+			_ops.emit(0, 0x44f41b, 0x000128);		// clr b #>$128,x0
+		},
+		[&]()
+		{
+			assert(dsp.regs().b == 0);
+			assert(dsp.x0() == 0x128);
+			assert(dsp.sr_test(CCR_U));
+			assert(dsp.sr_test(CCR_Z));
+			assert(!dsp.sr_test(CCR_E));
+			assert(!dsp.sr_test(CCR_N));
+			assert(!dsp.sr_test(CCR_V));
+		});
+	}
+
 	void JitUnittests::cmp()
 	{
 		runTest([&](auto& _block, auto& _ops)
@@ -1239,7 +1298,10 @@ namespace dsp56k
 		[&]()
 		{
 			assert(dsp.sr_test(CCR_Z));
-			assert(!dsp.sr_test(static_cast<CCRMask>(CCR_N | CCR_E | CCR_V | CCR_C)));			
+			assert(!dsp.sr_test(CCR_N));
+			assert(!dsp.sr_test(CCR_E));
+			assert(!dsp.sr_test(CCR_V));
+			assert(!dsp.sr_test(CCR_C));
 		});
 		runTest([&](auto& _block, auto& _ops)
 		{
@@ -1276,7 +1338,11 @@ namespace dsp56k
 		[&]()
 		{
 			assert(dsp.regs().a.var == 1);
-			assert(!dsp.sr_test(static_cast<CCRMask>(CCR_Z | CCR_N | CCR_E | CCR_V | CCR_C)));
+			assert(!dsp.sr_test(CCR_Z));
+			assert(!dsp.sr_test(CCR_N));
+			assert(!dsp.sr_test(CCR_E));
+			assert(!dsp.sr_test(CCR_V));
+			assert(!dsp.sr_test(CCR_C));
 		});
 		runTest([&](auto& _block, auto& _ops)
 		{
@@ -1287,7 +1353,10 @@ namespace dsp56k
 		{
 			assert(dsp.regs().a.var == 0);
 			assert(dsp.sr_test(CCR_Z));
-			assert(!dsp.sr_test(static_cast<CCRMask>(CCR_N | CCR_E | CCR_V | CCR_C)));
+			assert(!dsp.sr_test(CCR_N));
+			assert(!dsp.sr_test(CCR_E));
+			assert(!dsp.sr_test(CCR_V));
+			assert(!dsp.sr_test(CCR_C));
 		});
 		runTest([&](auto& _block, auto& _ops)
 		{
@@ -1364,7 +1433,77 @@ namespace dsp56k
 		{
 			assert(dsp.regs().a.var == 0xffdf7214000000);
 			assert(dsp.getSR().var == 0x0800d4);		
-		});		
+		});
+	}
+
+	void JitUnittests::rep_div()
+	{
+		{
+			// regular mode for comparison
+
+			dsp.y0(0x218dec);
+			dsp.regs().a.var = 0x00008000000000;
+			dsp.setSR(0x0800d4);
+
+			constexpr uint64_t expectedValues[24] =
+			{
+				0xffdf7214000000,
+				0xffe07214000000,
+				0xffe27214000000,
+				0xffe67214000000,
+				0xffee7214000000,
+				0xfffe7214000000,
+				0x001e7214000000,
+				0x001b563c000001,
+				0x00151e8c000003,
+				0x0008af2c000007,
+				0xffefd06c00000f,
+				0x00012ec400001e,
+				0xffe0cf9c00003d,
+				0xffe32d2400007a,
+				0xffe7e8340000f4,
+				0xfff15e540001e8,
+				0x00044a940003d0,
+				0xffe7073c0007a1,
+				0xffef9c64000f42,
+				0x0000c6b4001e84,
+				0xffdfff7c003d09,
+				0xffe18ce4007a12,
+				0xffe4a7b400f424,
+				0xffeadd5401e848
+			};
+
+			for (size_t i = 0; i < 24; ++i)
+			{
+				runTest([&](auto& _block, auto& _ops)
+				{
+
+					_ops.emit(0, 0x018050);	// div y0,a
+				},
+					[&]()
+				{
+					LOG("Intermediate Value is " << HEX(dsp.regs().a.var));
+					assert(dsp.regs().a.var == expectedValues[i]);
+				});
+			}
+		}
+
+		runTest([&](auto& _block, auto& _ops)
+		{
+			dsp.y0(0x218dec);
+			dsp.regs().a.var = 0x00008000000000;
+			dsp.setSR(0x0800d4);
+
+			dsp.memory().set(MemArea_P, 0, 0x0618a0);	// rep #<18
+			dsp.memory().set(MemArea_P, 1, 0x018050);	// div y0,a
+
+			_ops.emit(0);
+		},
+		[&]()
+		{
+			assert(dsp.regs().a.var == 0xffeadd5401e848);
+			assert(dsp.getSR().var == 0x0800d4);
+		});
 	}
 
 	void JitUnittests::dmac()

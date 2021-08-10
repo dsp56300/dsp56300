@@ -2,15 +2,15 @@
 
 #include "jitblock.h"
 #include "jitdspregs.h"
+#include "jitemitter.h"
 #include "jitregtracker.h"
 #include "jittypes.h"
+
 #include "opcodes.h"
 #include "opcodetypes.h"
 #include "registers.h"
 #include "types.h"
 #include "utils.h"
-
-#include "asmjit/x86/x86builder.h"
 
 namespace dsp56k
 {
@@ -299,9 +299,16 @@ namespace dsp56k
 		template <Instruction Inst> void checkCondition(const TWord _op)
 		{
 			const TWord cccc = getFieldValue<Inst,Field_CCCC>(_op);
+
 			const RegGP r(m_block);
+#ifdef HAVE_ARM64
+			m_asm.mov(r, asmjit::a64::xzr);
+			decode_cccc(r, cccc);
+			m_asm.cmp(r.get(), asmjit::Imm(0));
+#else
 			decode_cccc(r, cccc);
 			m_asm.cmp(r.get().r8(), asmjit::Imm(0));
+#endif
 		}
 
 		// extension word access
@@ -368,6 +375,32 @@ namespace dsp56k
 		JitRegGP getSR(JitDspRegs::AccessType _accessType);
 		void setSR(const JitReg32& _src);
 
+		void getXY0(const JitRegGP& _dst, uint32_t _aluIndex) const;
+		void setXY0(uint32_t _xy, const JitRegGP& _src);
+		void getXY1(const JitRegGP& _dst, uint32_t _aluIndex) const;
+		void setXY1(uint32_t _xy, const JitRegGP& _src);
+
+		void getX0(const JitRegGP& _dst) const { return getXY0(_dst, 0); }
+		void getY0(const JitRegGP& _dst) const { return getXY0(_dst, 1); }
+		void getX1(const JitRegGP& _dst) const { return getXY1(_dst, 0); }
+		void getY1(const JitRegGP& _dst) const { return getXY1(_dst, 1); }
+
+		void getALU0(const JitRegGP& _dst, uint32_t _aluIndex) const;
+		void getALU1(const JitRegGP& _dst, uint32_t _aluIndex) const;
+		void getALU2signed(const JitRegGP& _dst, uint32_t _aluIndex) const;
+
+		void setALU0(uint32_t _aluIndex, const JitRegGP& _src);
+		void setALU1(uint32_t _aluIndex, const JitReg32& _src);
+		void setALU2(uint32_t _aluIndex, const JitReg32& _src);
+
+		void getSSH(const JitReg32& _dst) const;
+		void setSSH(const JitReg32& _src) const;
+		void getSSL(const JitReg32& _dst) const;
+		void setSSL(const JitReg32& _src) const;
+
+		void decSP() const;
+		void incSP() const;
+
 		void transferAluTo24(const JitRegGP& _dst, int _alu);
 		void transfer24ToAlu(int _alu, const JitRegGP& _src);
 		void transferSaturation(const JitRegGP& _dst);
@@ -381,13 +414,19 @@ namespace dsp56k
 		void ccr_update_ifLessEqual(CCRBit _bit);
 		void ccr_update_ifCarry(CCRBit _bit);
 		void ccr_update_ifNotCarry(CCRBit _bit);
+#ifdef HAVE_X86_64
 		void ccr_update_ifParity(CCRBit _bit);
 		void ccr_update_ifNotParity(CCRBit _bit);
+#endif
 		void ccr_update_ifAbove(CCRBit _bit);
 		void ccr_update_ifBelow(CCRBit _bit);
 
 		void ccr_update(const JitRegGP& _value, CCRBit _bit);
 
+#ifdef HAVE_ARM64
+		void ccr_update(CCRBit _bit, uint32_t _armConditionCode);
+#endif
+		
 		void ccr_u_update(const JitReg64& _alu);
 		void ccr_e_update(const JitReg64& _alu);
 		void ccr_n_update_by55(const JitReg64& _alu);
@@ -534,7 +573,7 @@ namespace dsp56k
 		JitBlock& m_block;
 		const Opcodes& m_opcodes;
 		JitDspRegs& m_dspRegs;
-		JitAssembler& m_asm;
+		JitEmitter& m_asm;
 
 		CCRMask& m_ccrDirty;
 		bool m_ccr_update_clear = true;
