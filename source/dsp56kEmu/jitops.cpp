@@ -731,6 +731,7 @@ namespace dsp56k
 	void JitOps::rep_exec(const TWord _lc)
 	{
 		// detect div loops and use custom code to speed them up
+
 		TWord opA;
 		TWord opB;
 		m_block.dsp().mem.getOpcode(m_pcCurrentOp + 1, opA, opB);
@@ -741,6 +742,7 @@ namespace dsp56k
 			if(oi && oi->getInstruction() == Div)
 			{
 				op_Rep_Div(opA, _lc);
+				m_opSize++;
 				return;
 			}
 		}

@@ -337,6 +337,8 @@ namespace dsp56k
 
 		AluRef d(m_block, ab);
 
+		const auto alu = d.get();
+
 		auto ccrUpdateVL = [&]()
 		{
 			// V and L updates
@@ -345,7 +347,7 @@ namespace dsp56k
 			// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
 			// Nearly identical for L but L is only set, not cleared as it is sticky
 			const RegGP r(m_block);
-			m_asm.mov(r, d.get());
+			m_asm.mov(r, alu);
 			m_asm.shr(r, asmjit::Imm(54));
 			m_asm.and_(r, asmjit::Imm(0x3));
 			m_asm.setnp(r.get().r8());
@@ -387,14 +389,14 @@ namespace dsp56k
 		const auto loopIteration = [&](bool last)
 		{
 			m_asm.mov(addOrSub, s.get());
-			m_asm.xor_(addOrSub, d.get());
+			m_asm.xor_(addOrSub, alu);
 
-			m_asm.shl(d, asmjit::Imm(1));
+			m_asm.shl(alu, asmjit::Imm(1));
 
-			m_asm.add(d.get().r8(), carry.get().r8());
+			m_asm.add(alu, carry.get());
 
 			const auto dLsWord = regReturnVal;
-			m_asm.mov(dLsWord, d.get());
+			m_asm.mov(dLsWord, alu);
 			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
 
 			const asmjit::Label sub = m_asm.newLabel();
@@ -403,18 +405,18 @@ namespace dsp56k
 			m_asm.bt(addOrSub, asmjit::Imm(55));
 
 			m_asm.jnc(sub);
-			m_asm.add(d, s.get());
+			m_asm.add(alu, s.get());
 			m_asm.jmp(end);
 
 			m_asm.bind(sub);
-			m_asm.sub(d, s.get());
+			m_asm.sub(alu, s.get());
 
 			m_asm.bind(end);
-			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
-			m_asm.or_(d, dLsWord);
+			m_asm.and_(alu, asmjit::Imm(0xffffffffff000000));
+			m_asm.or_(alu, dLsWord);
 
 			// C is set if bit 55 of the result is cleared
-			m_asm.bt(d, asmjit::Imm(55));
+			m_asm.bt(alu, asmjit::Imm(55));
 			if (last)
 				ccr_update_ifNotCarry(CCRB_C);
 			else
@@ -425,8 +427,9 @@ namespace dsp56k
 		m_asm.shl(s, asmjit::Imm(40));
 		m_asm.sar(s, asmjit::Imm(16));
 
-		m_asm.mov(lc, _iterationCount - 2);
+		m_asm.mov(lc, _iterationCount - 1);
 
+		m_asm.xor_(carry, carry.get());
 		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
 		m_asm.setc(carry);
 
@@ -442,7 +445,7 @@ namespace dsp56k
 		ccrUpdateVL();
 		loopIteration(true);
 
-		m_dspRegs.mask56(d);
+		m_dspRegs.mask56(alu);
 		m_asm.bind(finished);
 	}
 

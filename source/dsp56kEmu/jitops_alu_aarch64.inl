@@ -329,6 +329,7 @@ namespace dsp56k
 		const auto jj = getFieldValue<Div, Field_JJ>(_op);
 
 		AluRef d(m_block, ab);
+		const auto alu = d.get();
 
 		auto ccrUpdateVL = [&]()
 		{
@@ -340,7 +341,7 @@ namespace dsp56k
 			const RegGP r(m_block);
 			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
 
-			m_asm.eor(r, d, d, asmjit::arm::lsr(1));
+			m_asm.eor(r, alu, alu, asmjit::arm::lsr(1));
 			m_asm.ubfx(r, r, asmjit::Imm(54), asmjit::Imm(1));
 			m_asm.bfi(sr, r, asmjit::Imm(CCRB_V), asmjit::Imm(1));
 			m_asm.lsl(r, r, asmjit::Imm(CCRB_L));
@@ -380,14 +381,14 @@ namespace dsp56k
 
 		const auto loopIteration = [&](bool last)
 		{
-			m_asm.orr(addOrSub, s.get(), d.get());
+			m_asm.orr(addOrSub, s.get(), alu);
 
-			m_asm.shl(d, asmjit::Imm(1));
+			m_asm.shl(alu, asmjit::Imm(1));
 
-			m_asm.add(d.get(), d.get(), carry.get());
+			m_asm.add(alu, alu, carry.get());
 
 			const auto dLsWord = regReturnVal;
-			m_asm.and_(dLsWord, d.get(), asmjit::Imm(0xffffff));
+			m_asm.and_(dLsWord, alu, asmjit::Imm(0xffffff));
 
 			const asmjit::Label sub = m_asm.newLabel();
 			const asmjit::Label end = m_asm.newLabel();
@@ -395,25 +396,25 @@ namespace dsp56k
 			m_asm.bitTest(addOrSub, 55);
 
 			m_asm.cond_zero().b(sub);
-			m_asm.add(d, s.get());
+			m_asm.add(alu, s.get());
 			m_asm.jmp(end);
 
 			m_asm.bind(sub);
-			m_asm.sub(d, s.get());
+			m_asm.sub(alu, s.get());
 
 			m_asm.bind(end);
-			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
-			m_asm.orr(d, d, dLsWord);
+			m_asm.and_(alu, asmjit::Imm(0xffffffffff000000));
+			m_asm.orr(alu, alu, dLsWord);
 
 			// C is set if bit 55 of the result is cleared
 			if (last)
 			{
-				m_asm.bitTest(d, 55);
+				m_asm.bitTest(alu, 55);
 				ccr_update_ifZero(CCRB_C);
 			}
 			else
 			{
-				m_asm.ubfx(carry, d, 55, 1);
+				m_asm.ubfx(carry, alu, 55, 1);
 				m_asm.eor(carry, carry, asmjit::Imm(1));
 			}
 		};
@@ -422,7 +423,7 @@ namespace dsp56k
 		m_asm.shl(s, asmjit::Imm(40));
 		m_asm.sar(s, asmjit::Imm(16));
 
-		m_asm.mov(lc, _iterationCount - 2);
+		m_asm.mov(lc, _iterationCount - 1);
 
 		m_asm.ubfx(carry, m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C), 1);
 
@@ -438,7 +439,7 @@ namespace dsp56k
 		ccrUpdateVL();
 		loopIteration(true);
 
-		m_dspRegs.mask56(d);
+		m_dspRegs.mask56(alu);
 		m_asm.bind(finished);
 	}
 

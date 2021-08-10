@@ -131,6 +131,7 @@ namespace dsp56k
 		void cmp();
 		void dec();
 		void div();
+		void rep_div();
 		void dmac();
 		void extractu();
 		void ifcc();
