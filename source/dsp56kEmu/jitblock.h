@@ -24,10 +24,11 @@ namespace dsp56k
 	public:
 		enum JitBlockFlags
 		{
-			Failed		= 0,
-			Success		= 0x0001,
-			WritePMem	= 0x0002,
-			LoopEnd		= 0x0004,
+			Failed				= 0,
+			Success				= 0x0001,
+			WritePMem			= 0x0002,
+			LoopEnd				= 0x0004,
+			InstructionLimit	= 0x0008,
 		};
 
 		typedef void (*JitEntry)(Jit*, TWord, JitBlock*);

@@ -126,7 +126,14 @@ namespace dsp56k
 			}
 
 			if(g_maxInstructionsPerBlock > 0 && m_encodedInstructionCount >= g_maxInstructionsPerBlock)
-				break;
+			{
+				// we can NOT prematurely interrupt the creation of a fast interrupt block
+				if(!isFastInterrupt)
+				{
+					m_flags |= InstructionLimit;
+					break;
+				}
+			}
 		}
 
 		m_pcLast = m_pcFirst + m_pMemSize;
