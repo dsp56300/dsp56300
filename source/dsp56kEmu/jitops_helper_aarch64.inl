@@ -207,11 +207,16 @@ namespace dsp56k
 			_scale.var >>= 1;
 		*/
 
-		m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S1);
-		m_asm.cond_not_zero().lsl(_dst, _dst, asmjit::Imm(1));
+		{
+			const ShiftReg shifter(m_block);
+			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S1);
+			m_asm.cset(shifter, asmjit::arm::Cond::kNotZero);
+			m_asm.lsl(_dst, _dst, shifter.get());
 
-		m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S0);
-		m_asm.cond_not_zero().lsr(_dst, _dst, asmjit::Imm(1));
+			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S0);
+			m_asm.cset(shifter, asmjit::arm::Cond::kNotZero);
+			m_asm.lsr(_dst, _dst, shifter.get());
+		}
 
 		// saturated transfer
 		/*
