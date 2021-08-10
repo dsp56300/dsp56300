@@ -26,7 +26,7 @@ namespace dsp56k
 
 	static constexpr auto regXMMTempA = asmjit::arm::VecV(1);
 
-	static constexpr JitReg128 g_dspPoolXmms[] = { JitReg128(0) , JitReg128(1) ,  JitReg128(2) ,  JitReg128(3) , JitReg128(4) , JitReg128(5) , JitReg128(6) , JitReg128(7),
+	static constexpr JitReg128 g_dspPoolXmms[] = {									JitReg128(2) ,  JitReg128(3) , JitReg128(4) , JitReg128(5) , JitReg128(6) , JitReg128(7),
 												   JitReg128(8) , JitReg128(9) ,  JitReg128(10),  JitReg128(11), JitReg128(12), JitReg128(13), JitReg128(14), JitReg128(15),
 												   JitReg128(16), JitReg128(17),  JitReg128(18),  JitReg128(19), JitReg128(20), JitReg128(21), JitReg128(22), JitReg128(23),
 												   JitReg128(24), JitReg128(25),  JitReg128(26),  JitReg128(27), JitReg128(28), JitReg128(29), JitReg128(30), JitReg128(31) };
