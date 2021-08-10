@@ -931,7 +931,7 @@ namespace dsp56k
 		{
 			const RegGP temp(m_block);
 			m_asm.mov(temp, asmjit::Imm(iiiiii));
-			m_asm.eor(r, r, temp.get());
+			m_asm.orr(r, r, temp.get());
 		}
 #else
 		m_asm.or_(r, asmjit::Imm(iiiiii));
