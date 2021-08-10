@@ -137,8 +137,6 @@ namespace dsp56k
 			}
 
 			m_jit.exec(getPC().var);
-
-			handleICtrCallback();
 		}
 		else
 		{
@@ -291,7 +289,7 @@ namespace dsp56k
 		if(pcCurrentInstruction == currentOp)
 		{
 			++m_instructions;
-			handleICtrCallback();
+
 			if(g_traceSupported && pcCurrentInstruction == currentOp)
 				traceOp();
 		}
@@ -496,7 +494,6 @@ namespace dsp56k
 		sr_set( SR_LF );
 
 		++m_instructions;
-		handleICtrCallback();
 
 		traceOp();
 
@@ -553,7 +550,6 @@ namespace dsp56k
 		reg.lc.var = loopCount;
 
 		++m_instructions;
-		handleICtrCallback();
 
 		traceOp();
 
