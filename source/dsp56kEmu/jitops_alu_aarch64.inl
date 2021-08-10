@@ -480,8 +480,10 @@ namespace dsp56k
 		m_asm.shl(r.get(), asmjit::Imm(1));
 		ccr_n_update_by23(r.get());							// Set if bit 47 of the result is set
 
-		m_asm.orr(r, r, prevCarry.get());					// Set if bits 47–24 of the result are 0
-		ccr_update_ifZero(CCRB_Z);
+		m_asm.orr(r, r, prevCarry.get());
+		m_asm.cmp(r, asmjit::Imm(0));
+		ccr_update_ifZero(CCRB_Z);							// Set if bits 47–24 of the result are 0
+
 		setALU1(D, r32(r.get()));
 
 		ccr_clear(CCR_V);									// This bit is always cleared
