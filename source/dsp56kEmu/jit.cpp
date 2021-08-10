@@ -223,8 +223,8 @@ namespace dsp56k
 			m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
 
 			// make the diff tool happy, interpreter traces two ops. For the sake of simplicity, just trace it once more
-			if(_block->getDisasm().find("rep ") == 0)
-				m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
+//			if (_block->getDisasm().find("rep ") == 0)
+//				m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
 		}
 	}
 
