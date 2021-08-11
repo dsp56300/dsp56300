@@ -146,7 +146,7 @@ namespace dsp56k
 	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const JitRegGP& _index, const uint32_t _shift, const uint32_t _size)
 	{
 #ifdef HAVE_ARM64
-		return asmjit::arm::ptr(_base, _index, asmjit::arm::Shift(asmjit::arm::Shift::kOpLSL, _shift));
+		return asmjit::arm::ptr(_base, _index, asmjit::arm::Shift(asmjit::arm::ShiftOp::kLSL, _shift));
 #else
 		return asmjit::x86::ptr(_base, _index, _shift, 0, _size);
 #endif
