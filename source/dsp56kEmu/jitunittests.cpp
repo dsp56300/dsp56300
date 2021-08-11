@@ -107,7 +107,7 @@ namespace dsp56k
 
 	JitUnittests::~JitUnittests()
 	{
-		m_rt.reset(asmjit::Globals::kResetHard);
+		m_rt.reset(asmjit::ResetPolicy::kHard);
 	}
 
 	void JitUnittests::runTest(void( JitUnittests::* _build)(JitBlock&, JitOps&), void( JitUnittests::* _verify)())
@@ -126,12 +126,12 @@ namespace dsp56k
 		AsmJitErrorHandler errorHandler;
 		asmjit::CodeHolder code;
 		AsmJitLogger logger;
-		logger.addFlags(asmjit::FormatOptions::kFlagHexImms | /*asmjit::FormatOptions::kFlagHexOffsets |*/ asmjit::FormatOptions::kFlagMachineCode);
+		logger.addFlags(asmjit::FormatFlags::kHexImms | /*asmjit::FormatFlags::kHexOffsets |*/ asmjit::FormatFlags::kMachineCode);
 
 #ifdef HAVE_ARM64
-		constexpr auto arch = asmjit::Environment::kArchAArch64;
+		constexpr auto arch = asmjit::Arch::kAArch64;
 #else
-		constexpr auto arch = asmjit::Environment::kArchX64;
+		constexpr auto arch = asmjit::Arch::kX64;
 #endif
 
 		const auto foreignArch = m_rt.environment().arch() != arch;

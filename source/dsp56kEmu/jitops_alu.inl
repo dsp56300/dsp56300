@@ -2,8 +2,6 @@
 
 #include "jitops.h"
 
-#include "asmjit/x86/x86features.h"
-
 namespace dsp56k
 {
 	constexpr int64_t g_alu_max_56		=  0x7FFFFFFFFFFFFF;
@@ -730,7 +728,7 @@ namespace dsp56k
 
 		AluReg s(m_block, abSrc, abSrc != abDst);
 #ifdef HAVE_X86_64
-		if(asmjit::CpuInfo::host().hasFeature(asmjit::x86::Features::kBMI2))
+		if(asmjit::CpuInfo::host().hasFeature(asmjit::CpuFeatures::X86::kBMI2))
 		{
 			m_asm.shrx(s, s, offset.get());	
 		}
