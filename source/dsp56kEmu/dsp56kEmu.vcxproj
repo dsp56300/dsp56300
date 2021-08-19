@@ -5,9 +5,17 @@
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -23,7 +31,18 @@
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
@@ -34,7 +53,13 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -46,7 +71,17 @@
     <IntDir>../../temp/$(Configuration)$(Platform)/$(ProjectName)\</IntDir>
     <TargetName>$(ProjectName)$(Configuration)</TargetName>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>../../temp/$(Configuration)$(Platform)/$(ProjectName)\</OutDir>
+    <IntDir>../../temp/$(Configuration)$(Platform)/$(ProjectName)\</IntDir>
+    <TargetName>$(ProjectName)$(Configuration)</TargetName>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>../../temp/$(Configuration)$(Platform)/$(ProjectName)\</OutDir>
+    <IntDir>../../temp/$(Configuration)$(Platform)/$(ProjectName)\</IntDir>
+    <TargetName>$(ProjectName)$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>../../temp/$(Configuration)$(Platform)/$(ProjectName)\</OutDir>
     <IntDir>../../temp/$(Configuration)$(Platform)/$(ProjectName)\</IntDir>
     <TargetName>$(ProjectName)$(Configuration)</TargetName>
@@ -62,7 +97,27 @@
       </PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>../asmjit/src</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName)$(Configuration).lib</OutputFile>
+      <AdditionalDependencies>../dsp56k/CM56300.LIB</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>../asmjit/src</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)$(ProjectName)$(Configuration).lib</OutputFile>
@@ -79,7 +134,26 @@
       </PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>../asmjit/src</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName)$(Configuration).lib</OutputFile>
+      <AdditionalDependencies>../dsp56k/CM56300.LIB</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>../asmjit/src</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)$(ProjectName)$(Configuration).lib</OutputFile>
@@ -88,15 +162,27 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="agu.cpp" />
-    <ClCompile Include="assert.cpp" />
     <ClCompile Include="audio.cpp" />
     <ClCompile Include="disasm.cpp" />
     <ClCompile Include="dsp.cpp" />
+    <ClCompile Include="dspassert.cpp" />
     <ClCompile Include="error.cpp" />
     <ClCompile Include="esai.cpp" />
     <ClCompile Include="essi.cpp" />
     <ClCompile Include="hdi08.cpp" />
     <ClCompile Include="instructioncache.cpp" />
+    <ClCompile Include="jit.cpp" />
+    <ClCompile Include="jitblock.cpp" />
+    <ClCompile Include="jitdspregpool.cpp" />
+    <ClCompile Include="jitdspregs.cpp" />
+    <ClCompile Include="jitemitter.cpp" />
+    <ClCompile Include="jithelper.cpp" />
+    <ClCompile Include="jitmem.cpp" />
+    <ClCompile Include="jitops.cpp" />
+    <ClCompile Include="jitregtracker.cpp" />
+    <ClCompile Include="jitruntimedata.cpp" />
+    <ClCompile Include="jitstackhelper.cpp" />
+    <ClCompile Include="jitunittests.cpp" />
     <ClCompile Include="logging.cpp" />
     <ClCompile Include="memory.cpp" />
     <ClCompile Include="omfloader.cpp" />
@@ -110,16 +196,31 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="agu.h" />
-    <ClInclude Include="assert.h" />
     <ClInclude Include="audio.h" />
     <ClInclude Include="buildconfig.h" />
     <ClInclude Include="disasm.h" />
     <ClInclude Include="dsp.h" />
+    <ClInclude Include="dspassert.h" />
     <ClInclude Include="error.h" />
     <ClInclude Include="esai.h" />
     <ClInclude Include="essi.h" />
     <ClInclude Include="hdi08.h" />
     <ClInclude Include="instructioncache.h" />
+    <ClInclude Include="jit.h" />
+    <ClInclude Include="jitblock.h" />
+    <ClInclude Include="jitcacheentry.h" />
+    <ClInclude Include="jitdspregpool.h" />
+    <ClInclude Include="jitdspregs.h" />
+    <ClInclude Include="jitemitter.h" />
+    <ClInclude Include="jithelper.h" />
+    <ClInclude Include="jitmem.h" />
+    <ClInclude Include="jitops.h" />
+    <ClInclude Include="jitregtracker.h" />
+    <ClInclude Include="jitregtypes.h" />
+    <ClInclude Include="jitruntimedata.h" />
+    <ClInclude Include="jitstackhelper.h" />
+    <ClInclude Include="jittypes.h" />
+    <ClInclude Include="jitunittests.h" />
     <ClInclude Include="logging.h" />
     <ClInclude Include="memory.h" />
     <ClInclude Include="omfloader.h" />
@@ -133,6 +234,35 @@
     <ClInclude Include="types.h" />
     <ClInclude Include="unittests.h" />
     <ClInclude Include="utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="dsp_decode.inl" />
+    <None Include="dsp_jumptable.inl" />
+    <None Include="dsp_ops.inl" />
+    <None Include="dsp_ops_alu.inl" />
+    <None Include="dsp_ops_bra.inl" />
+    <None Include="dsp_ops_helper.inl" />
+    <None Include="dsp_ops_jmp.inl" />
+    <None Include="dsp_ops_move.inl" />
+    <None Include="jitops_aarch64.inl" />
+    <None Include="jitops_alu.inl" />
+    <None Include="jitops_alu_aarch64.inl" />
+    <None Include="jitops_alu_x64.inl" />
+    <None Include="jitops_ccr.inl" />
+    <None Include="jitops_ccr_aarch64.inl" />
+    <None Include="jitops_ccr_x64.inl" />
+    <None Include="jitops_decode.inl" />
+    <None Include="jitops_decode_aarch64.inl" />
+    <None Include="jitops_decode_x64.inl" />
+    <None Include="jitops_helper.inl" />
+    <None Include="jitops_helper_aarch64.inl" />
+    <None Include="jitops_helper_x64.inl" />
+    <None Include="jitops_jmp.inl" />
+    <None Include="jitops_jmp_aarch64.inl" />
+    <None Include="jitops_jmp_x64.inl" />
+    <None Include="jitops_mem.inl" />
+    <None Include="jitops_move.inl" />
+    <None Include="jitops_x64.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -5,12 +5,12 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx;h</Extensions>
     </Filter>
+    <Filter Include="Source\jit">
+      <UniqueIdentifier>{3c84e638-f249-49f3-a81e-ed80a0312104}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="agu.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="assert.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="disasm.cpp">
@@ -67,12 +67,48 @@
     <ClCompile Include="timers.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="jit.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jitblock.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jitdspregpool.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jitdspregs.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jitemitter.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jithelper.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jitmem.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jitops.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jitregtracker.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jitruntimedata.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jitstackhelper.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="jitunittests.cpp">
+      <Filter>Source\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="dspassert.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="agu.h">
-      <Filter>Source</Filter>
-    </ClInclude>
-    <ClInclude Include="assert.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="disasm.h">
@@ -141,5 +177,136 @@
     <ClInclude Include="timers.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="jit.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitblock.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitcacheentry.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitdspregpool.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitdspregs.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitemitter.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jithelper.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitmem.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitops.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitregtracker.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitregtypes.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitruntimedata.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitstackhelper.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jittypes.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="jitunittests.h">
+      <Filter>Source\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="dspassert.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="jitops_aarch64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_alu.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_alu_aarch64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_alu_x64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_ccr.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_ccr_aarch64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_ccr_x64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_decode.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_decode_aarch64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_decode_x64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_helper.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_helper_aarch64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_helper_x64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_jmp.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_jmp_aarch64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_jmp_x64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_mem.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_move.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="jitops_x64.inl">
+      <Filter>Source\jit</Filter>
+    </None>
+    <None Include="dsp_decode.inl">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="dsp_jumptable.inl">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="dsp_ops.inl">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="dsp_ops_alu.inl">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="dsp_ops_bra.inl">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="dsp_ops_helper.inl">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="dsp_ops_jmp.inl">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="dsp_ops_move.inl">
+      <Filter>Source</Filter>
+    </None>
   </ItemGroup>
 </Project>
