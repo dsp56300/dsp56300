@@ -414,7 +414,7 @@ namespace dsp56k
 		void ccr_update_ifLessEqual(CCRBit _bit);
 		void ccr_update_ifCarry(CCRBit _bit);
 		void ccr_update_ifNotCarry(CCRBit _bit);
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 		void ccr_update_ifParity(CCRBit _bit);
 		void ccr_update_ifNotParity(CCRBit _bit);
 #endif
