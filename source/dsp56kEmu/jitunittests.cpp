@@ -794,7 +794,7 @@ namespace dsp56k
 
 		dsp.regs().sp.var = 0xf0;
 
-		for(size_t i=0; i<dsp.regs().ss.eSize; ++i)
+		for(int i=0; i<dsp.regs().ss.eSize; ++i)
 		{			
 			dsp.regs().ss[i].var = 0x111111111111 * i;
 
@@ -806,7 +806,7 @@ namespace dsp56k
 
 	void JitUnittests::getSS_verify()
 	{
-		for(size_t i=0; i<dsp.regs().ss.eSize; ++i)
+		for(int i=0; i<dsp.regs().ss.eSize; ++i)
 			assert(dsp.regs().ss[i].var == 0x111111111111 * i);
 	}
 
