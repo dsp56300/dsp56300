@@ -65,7 +65,7 @@ float CommandLine::getFloat(const std::string& _key) const
 {
 	const std::string stringResult = get(_key);
 	const double result = atof(stringResult.c_str());
-	if (isinf(result) || isnan(result))
+	if (std::isinf(result) || std::isnan(result))
 	{
 		const std::string msg = "ERROR: invalid value " + stringResult + " for argument " + _key;
 		LOG(msg)
