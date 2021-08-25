@@ -1258,9 +1258,10 @@ namespace dsp56k
 		m_opcodeCache.resize(mem.size(), {&DSP::op_ResolveCache});
 	}
 
-	void DSP::clearOpcodeCache(TWord _address)
+	void DSP::clearOpcodeCache(const TWord _address)
 	{
 		m_opcodeCache[_address].op = &DSP::op_ResolveCache;
+		m_jit.notifyProgramMemWrite(_address);
 	}
 	
 	TInstructionFunc DSP::resolvePermutation(const Instruction _inst, const TWord _op)
