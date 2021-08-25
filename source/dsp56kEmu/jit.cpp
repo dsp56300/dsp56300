@@ -37,6 +37,11 @@ namespace dsp56k
 		_jit->runCheckLoopEnd(_pc, _block);
 	}
 
+	void funcRunCheckLoopEndAndPMemWrite(Jit* _jit, TWord _pc, JitBlock* _block)
+	{
+		_jit->runCheckLoopEndAndPMemWrite(_pc, _block);
+	}
+
 	void funcRun(Jit* _jit, TWord _pc, JitBlock* _block)
 	{
 		_jit->run(_pc, _block);
@@ -232,41 +237,22 @@ namespace dsp56k
 	{
 		m_runtimeData.m_pMemWriteAddress = g_pcInvalid;
 		run(_pc, _block);
-
-		// if JIT code has written to P memory, destroy a JIT block if present at the write location
-		const TWord pMemWriteAddr = _block->pMemWriteAddress();
-		if(pMemWriteAddr != g_pcInvalid)
-		{
-			if (m_jitCache[pMemWriteAddr].block)
-				m_volatileP.insert(pMemWriteAddr);
-
-			notifyProgramMemWrite(_block->pMemWriteAddress());
-			m_dsp.notifyProgramMemWrite(_block->pMemWriteAddress());
-		}
+		checkPMemWrite(_pc, _block);
 	}
 
 	void Jit::runCheckLoopEnd(TWord _pc, JitBlock* _block)
 	{
 		run(_pc, _block);
 
-		// loop processing
-		if(m_dsp.sr_test(SR_LF))
-		{
-			if(m_dsp.getPC().var == m_dsp.regs().la.var + 1)
-			{
-				assert((_block->getFlags() & JitBlock::LoopEnd) != 0);
-				auto& lc = m_dsp.regs().lc.var;
-				if(lc <= 1)
-				{
-					m_dsp.do_end();
-				}
-				else
-				{
-					--lc;
-					m_dsp.setPC(hiword(m_dsp.regs().ss[m_dsp.ssIndex()]));
-				}
-			}
-		}
+		checkLoopEnd(_pc, _block);
+	}
+
+	void Jit::runCheckLoopEndAndPMemWrite(TWord _pc, JitBlock* _block)
+	{
+		m_runtimeData.m_pMemWriteAddress = g_pcInvalid;
+		run(_pc, _block);
+		checkPMemWrite(_pc, _block);
+		checkLoopEnd(_pc, _block);
 	}
 
 	void Jit::create(const TWord _pc, JitBlock* _block)
@@ -311,8 +297,14 @@ namespace dsp56k
 
 		if(f & JitBlock::WritePMem)
 		{
-			assert((f & JitBlock::LoopEnd) == 0);
-			e.func = &funcRunCheckPMemWrite;
+			if((f & JitBlock::LoopEnd) != 0)
+			{
+				e.func = &funcRunCheckLoopEndAndPMemWrite;
+			}
+			else
+			{
+				e.func = &funcRunCheckPMemWrite;
+			}
 		}
 		else if(f & JitBlock::LoopEnd)
 		{
@@ -325,6 +317,43 @@ namespace dsp56k
 				e.func = &funcRun;
 			else
 				e.func = e.block->getFunc();
+		}
+	}
+
+	void Jit::checkPMemWrite(TWord _pc, JitBlock* _block)
+	{
+		// if JIT code has written to P memory, destroy a JIT block if present at the write location
+		const TWord pMemWriteAddr = _block->pMemWriteAddress();
+
+		if (pMemWriteAddr == g_pcInvalid)
+			return;
+
+		if (m_jitCache[pMemWriteAddr].block)
+			m_volatileP.insert(pMemWriteAddr);
+
+		notifyProgramMemWrite(_block->pMemWriteAddress());
+		m_dsp.notifyProgramMemWrite(_block->pMemWriteAddress());
+	}
+
+	void Jit::checkLoopEnd(TWord _pc, JitBlock* _block)
+	{
+		// loop processing
+		if (m_dsp.sr_test(SR_LF))
+		{
+			if (m_dsp.getPC().var == m_dsp.regs().la.var + 1)
+			{
+				assert((_block->getFlags() & JitBlock::LoopEnd) != 0);
+				auto& lc = m_dsp.regs().lc.var;
+				if (lc <= 1)
+				{
+					m_dsp.do_end();
+				}
+				else
+				{
+					--lc;
+					m_dsp.setPC(hiword(m_dsp.regs().ss[m_dsp.ssIndex()]));
+				}
+			}
 		}
 	}
 }
