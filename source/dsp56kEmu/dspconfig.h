@@ -19,7 +19,6 @@ namespace dsp56k
 #if defined(HAVE_X86_64) || defined(HAVE_ARM64)
 	constexpr bool g_jitSupported = true;
 #else
-	static_assert(false, "Not compiling for x64 nor aarch64. There is no JIT engine support, emulator will be very slow! Remove this static_assert to confirm building anyway");
 	constexpr bool g_jitSupported = false;
 #endif
 }
