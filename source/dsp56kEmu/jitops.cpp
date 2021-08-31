@@ -521,6 +521,14 @@ namespace dsp56k
 		do_exec( lc, addr );
 	}
 
+	void JitOps::op_Dor_ea(TWord op)
+	{
+		RegGP lc(m_block);
+		readMem<Dor_ea>(lc, op);
+		const auto displacement = pcRelativeAddressExt<Dor_xxx>();
+		do_exec(lc, m_pcCurrentOp + displacement);
+	}
+
 	void JitOps::op_Dor_xxx(TWord op)
 	{
         const auto loopcount = getFieldValue<Dor_xxx,Field_hhhh, Field_iiiiiiii>(op);

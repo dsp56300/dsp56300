@@ -127,7 +127,7 @@ namespace dsp56k
 		void op_Do_xxx(TWord op);
 		void op_Do_S(TWord op);
 		void op_DoForever(TWord op)			{ errNotImplemented(op); }
-		void op_Dor_ea(TWord op)			{ errNotImplemented(op); }
+		void op_Dor_ea(TWord op);
 		void op_Dor_aa(TWord op)			{ errNotImplemented(op); }
 		void op_Dor_xxx(TWord op);
 		void op_Dor_S(TWord op);
