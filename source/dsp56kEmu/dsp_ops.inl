@@ -253,7 +253,9 @@ namespace dsp56k
 	}
 	inline void DSP::op_Dor_ea(const TWord op)
 	{
-		errNotImplemented("DOR");		
+		const auto loopcount = readMem<Dor_ea>(op);
+		const auto displacement = pcRelativeAddressExt<Dor_ea>();
+		do_exec(loopcount, pcCurrentInstruction + displacement);
 	}
 	inline void DSP::op_Dor_aa(const TWord op)
 	{
