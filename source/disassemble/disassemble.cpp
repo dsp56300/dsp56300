@@ -185,28 +185,10 @@ int main(int _argc, char* _argv[])
 		Opcodes opcodes;
 		Disassembler disasm(opcodes);
 
-		for(TWord i=0; i<input.size();)
-		{
-			const TWord a = input[i];
-			const TWord b = i + 1 < input.size() ? input[i + 1] : 0;
+		std::string assembly;
+		disasm.disassembleMemoryBlock(assembly, input, 0, true, true, true);
 
-			std::string assem;
-			const auto len = disasm.disassemble(assem, a, b, 0, 0, i);
-
-			std::cout << '$' << HEX(i) << " - ";
-
-			if (len == 2)
-				out << '$' << HEX(a) << ' ' << '$' << HEX(b);
-			else
-				out << '$' << HEX(a) << "        ";
-
-			out << " = " << assem << std::endl;
-
-			if (!len)
-				++i;
-			else
-				i += len;
-		}
+		out << assembly;
 
 		return 0;
 	}

@@ -229,6 +229,50 @@ namespace dsp56k
 		dst = m_ss.str();
 	}
 
+	bool Disassembler::disassembleMemoryBlock(std::string& dst, const std::vector<uint32_t>& _memory, TWord _pc, bool _skipNops, bool _writePC, bool _writeOpcodes)
+	{
+		if (_memory.empty())
+			return false;
+
+		std::stringstream out;
+
+		for (TWord i = 0; i < _memory.size();)
+		{
+			const TWord a = _memory[i];
+			const TWord b = i + 1 < _memory.size() ? _memory[i + 1] : 0;
+
+			if (_skipNops && !a)
+			{
+				++i;
+				continue;
+			}
+
+			std::string assem;
+			const auto len = disassemble(assem, a, b, 0, 0, i);
+
+			if(_writePC)
+				out << '$' << HEX(i + _pc) << " - ";
+
+			if(_writeOpcodes)
+			{
+				if (len == 2)
+					out << '$' << HEX(a) << ' ' << '$' << HEX(b);
+				else
+					out << '$' << HEX(a) << "        ";
+			}
+
+			out << " = " << assem << std::endl;
+
+			if (!len)
+				++i;
+			else
+				i += len;
+		}
+
+		dst = std::string(out.str());;
+		return true;
+	}
+
 	int Disassembler::disassembleAlu(std::string& _dst, const OpcodeInfo& _oiAlu, TWord op)
 	{
 		const int res = disassembleAlu(_oiAlu.m_instruction, op);

@@ -43,6 +43,8 @@ namespace dsp56k
 		bool addSymbols(const Memory& _mem);
 		const std::map<TWord,std::string>& getSymbols(const SymbolType _type) const { return m_symbols[_type]; }
 
+		bool disassembleMemoryBlock(std::string& dst, const std::vector<uint32_t>& _memory, TWord _pc, bool _skipNops, bool _writePC, bool _writeOpcodes);
+	
 	private:
 		int disassembleAlu(std::string& _dst, const OpcodeInfo& _oiAlu, TWord op);
 		int disassembleAlu(Instruction inst, TWord op);
