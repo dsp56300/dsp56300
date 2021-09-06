@@ -134,7 +134,7 @@ int main(int _argc, char* _argv[])
 	{
 		const CommandLine cmd(_argc, _argv);
 
-		if (!cmd.contains("i"))
+		if (!cmd.contains("in"))
 		{
 			std::cout << "Motorola DSP 56300 Disassembler" << std::endl;
 			std::cout << std::endl;
