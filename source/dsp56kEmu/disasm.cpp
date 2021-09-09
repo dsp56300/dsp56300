@@ -344,7 +344,7 @@ namespace dsp56k
 	std::string Disassembler::peripheral(EMemArea area, TWord a, TWord _root) const
 	{
 		std::string sym;
-		if(getSymbol(area, a, sym))
+		if(getSymbol(area, _root + a, sym))
 			return sym;
 
 		return std::string(memArea(area)) + "<<" + hex(_root + a);
