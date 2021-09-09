@@ -287,6 +287,8 @@ namespace dsp56k
 			{HDI08::HPCR, "M_HPCR"},
 			{HDI08::HORX, "M_HORX"},
 			{HDI08::HOTX, "M_HOTX"},
+			{HDI08::HDDR, "M_HDDR"},
+			{HDI08::HDR, "M_HDR"},
 
 			// AAR
 			{M_AAR0, "M_AAR0"},
@@ -336,6 +338,8 @@ namespace dsp56k
 			{XIO_IPRP, "M_IPRP"},
 			{XIO_IPRC, "M_IPRC"},
 
+			{0xFFFF90, "M_HCKR"},	// SHI Clock Control Register (HCKR)
+			{0xFFFF91, "M_HCSR"},	// SHI Control/Status Register (HCSR)
 			{0xFFFFF5, "M_ID"}
 		};
 

@@ -16,7 +16,9 @@ namespace dsp56k
 			HSR		= 0xFFFFC3,					// Host Status Register (HSR)
 			HPCR	= 0xFFFFC4,					// Host Port Control Register (HPCR)
 			HORX	= 0xFFFFC6,					// Host Receive Register (HORX)
-			HOTX	= 0xFFFFC7					// Host Transmit Register (HOTX)
+			HOTX	= 0xFFFFC7,					// Host Transmit Register (HOTX)
+			HDDR	= 0xFFFFC8,					// Host Data Direction Register (HDDR)
+			HDR		= 0xFFFFC9					// Host Data Register (HDR)
 		};
 
 		enum HostStatusRegisterBits
