@@ -5,6 +5,8 @@
 #include "commandline.h"
 
 #include "../dsp56kEmu/disasm.h"
+#include "dsp56kEmu/memory.h"
+#include "dsp56kEmu/peripherals.h"
 
 using namespace dsp56k;
 
@@ -184,6 +186,8 @@ int main(int _argc, char* _argv[])
 
 		Opcodes opcodes;
 		Disassembler disasm(opcodes);
+		Peripherals56362 p;
+		p.setSymbols(disasm);	
 
 		std::string assembly;
 		disasm.disassembleMemoryBlock(assembly, input, 0, true, true, true);
