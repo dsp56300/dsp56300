@@ -55,7 +55,7 @@ namespace dsp56k
 			ccr_getBitValue(_dst, CCRB_N);
 			ccr_getBitValue(r, CCRB_V);
 			m_asm.cmp(_dst, r.get());
-			m_asm.cset(_dst, asmjit::arm::Cond::kZero);
+			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
 		}
 		break;
 		case CCCC_LessThan:									// LT			Less than
@@ -83,7 +83,7 @@ namespace dsp56k
 			ccr_getBitValue(r, CCRB_Z);
 			m_asm.add(_dst, r.get());
 			m_asm.cmp(_dst, _dst, asmjit::Imm(1));
-			m_asm.cset(_dst, asmjit::arm::Cond::kZero);
+			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
 		}
 		break;
 		case CCCC_NotNormalized:							// NN			Not normalized
@@ -100,7 +100,7 @@ namespace dsp56k
 			ccr_getBitValue(r, CCRB_Z);
 			m_asm.add(_dst, r.get());
 			m_asm.cmp(_dst, _dst, asmjit::Imm(0));
-			m_asm.cset(_dst, asmjit::arm::Cond::kZero);
+			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
 		}
 		break;
 		case CCCC_GreaterThan:								// GT			Greater than
@@ -116,7 +116,7 @@ namespace dsp56k
 			m_asm.eor(_dst, _dst, r.get());
 			ccr_getBitValue(r, CCRB_Z);
 			m_asm.adds(_dst, _dst, r.get());
-			m_asm.cset(_dst, asmjit::arm::Cond::kZero);
+			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
 		}
 		break;
 		case CCCC_LessEqual:								// LE			Less than or equal
@@ -133,7 +133,7 @@ namespace dsp56k
 			ccr_getBitValue(r, CCRB_Z);
 			m_asm.add(_dst, _dst, r.get());
 			m_asm.cmp(_dst, asmjit::Imm(1));
-			m_asm.cset(_dst, asmjit::arm::Cond::kZero);
+			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
 		}
 		break;
 		default:

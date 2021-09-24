@@ -26,7 +26,7 @@ namespace dsp56k
 	inline void JitOps::alu_abs(const JitRegGP& _r)
 	{
 		m_asm.cmp(_r, asmjit::Imm(0));
-		m_asm.cneg(_r, _r, asmjit::arm::Cond::kLT);			// negate if < 0
+		m_asm.cneg(_r, _r, asmjit::arm::CondCode::kLT);			// negate if < 0
 	}
 	
 	inline void JitOps::alu_and(const TWord ab, RegGP& _v)
@@ -194,7 +194,7 @@ namespace dsp56k
 				rounder.release();
 
 				m_asm.tst(d, mask.get());
-				m_asm.csel(d, aluIfAndWithMaskIsZero.get(), d, asmjit::arm::Cond::kZero);
+				m_asm.csel(d, aluIfAndWithMaskIsZero.get(), d, asmjit::arm::CondCode::kZero);
 			}
 
 			m_asm.bind(skipNoScalingMode);
@@ -292,7 +292,7 @@ namespace dsp56k
 			m_asm.shl(d, asmjit::Imm(1));
 
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), CCRB_C);
-			m_asm.cinc(d, d, asmjit::arm::Cond::kNotZero);
+			m_asm.cinc(d, d, asmjit::arm::CondCode::kNotZero);
 
 			const auto dLsWord = regReturnVal;
 			m_asm.and_(dLsWord, d.get(), asmjit::Imm(0xffffff));

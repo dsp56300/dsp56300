@@ -15,55 +15,55 @@ namespace dsp56k
 
 	inline void JitOps::ccr_update_ifZero(CCRBit _bit)
 	{
-		ccr_update(_bit, asmjit::arm::Cond::kZero);
+		ccr_update(_bit, asmjit::arm::CondCode::kZero);
 	}
 
 	inline void JitOps::ccr_update_ifNotZero(CCRBit _bit)
 	{
-		ccr_update(_bit, asmjit::arm::Cond::kNotZero);
+		ccr_update(_bit, asmjit::arm::CondCode::kNotZero);
 	}
 
 	inline void JitOps::ccr_update_ifGreater(CCRBit _bit)
 	{
-		ccr_update(_bit, asmjit::arm::Cond::kGT);
+		ccr_update(_bit, asmjit::arm::CondCode::kGT);
 	}
 
 	inline void JitOps::ccr_update_ifGreaterEqual(CCRBit _bit)
 	{
-		ccr_update(_bit, asmjit::arm::Cond::kGE);
+		ccr_update(_bit, asmjit::arm::CondCode::kGE);
 	}
 
 	inline void JitOps::ccr_update_ifLess(CCRBit _bit)
 	{
-		ccr_update(_bit, asmjit::arm::Cond::kLT);
+		ccr_update(_bit, asmjit::arm::CondCode::kLT);
 	}
 
 	inline void JitOps::ccr_update_ifLessEqual(CCRBit _bit)
 	{
-		ccr_update(_bit, asmjit::arm::Cond::kLE);
+		ccr_update(_bit, asmjit::arm::CondCode::kLE);
 	}
 
 	inline void JitOps::ccr_update_ifCarry(CCRBit _bit)
 	{
-		ccr_update(_bit, asmjit::arm::Cond::kCS);
+		ccr_update(_bit, asmjit::arm::CondCode::kCS);
 	}
 
 	inline void JitOps::ccr_update_ifNotCarry(CCRBit _bit)
 	{
-		ccr_update(_bit, asmjit::arm::Cond::kCC);
+		ccr_update(_bit, asmjit::arm::CondCode::kCC);
 	}
 
 	inline void JitOps::ccr_update_ifAbove(CCRBit _bit)
 	{
-		ccr_update(_bit, asmjit::arm::Cond::kHI);
+		ccr_update(_bit, asmjit::arm::CondCode::kHI);
 	}
 
 	inline void JitOps::ccr_update_ifBelow(CCRBit _bit)
 	{
-		ccr_update(_bit, asmjit::arm::Cond::kLO);
+		ccr_update(_bit, asmjit::arm::CondCode::kLO);
 	}
 
-	void JitOps::ccr_update(CCRBit _bit, uint32_t _armConditionCode)
+	void JitOps::ccr_update(CCRBit _bit, asmjit::arm::CondCode _armConditionCode)
 	{
 		const RegGP ra(m_block);
 		m_asm.cset(ra, _armConditionCode);
@@ -169,8 +169,8 @@ namespace dsp56k
 				// res = alu != mask && alu != 0
 
 				// Don't be distracted by the names, we abuse alu & mask here to store comparison results
-				m_asm.cmp(alu, mask.get());			m_asm.cset(mask, asmjit::arm::Cond::kNotZero);
-				m_asm.cmp(alu, asmjit::Imm(0));		m_asm.cset(alu, asmjit::arm::Cond::kNotZero);
+				m_asm.cmp(alu, mask.get());			m_asm.cset(mask, asmjit::arm::CondCode::kNotZero);
+				m_asm.cmp(alu, asmjit::Imm(0));		m_asm.cset(alu, asmjit::arm::CondCode::kNotZero);
 
 				m_asm.and_(mask.get(), alu.get());
 			}

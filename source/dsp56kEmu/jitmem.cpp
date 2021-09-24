@@ -345,7 +345,7 @@ namespace dsp56k
 			getMemAreaPtr(p, MemArea_P);
 			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().getBridgedMemoryAddress()));
 #ifdef HAVE_ARM64
-			m_block.asm_().csel(_dst, p, _dst, asmjit::arm::Cond::kGE);
+			m_block.asm_().csel(_dst, p, _dst, asmjit::arm::CondCode::kGE);
 #else
 			m_block.asm_().cmovge(_dst, p);
 #endif

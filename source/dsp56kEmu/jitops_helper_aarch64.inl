@@ -25,7 +25,7 @@ namespace dsp56k
 
 		const auto nAbs = r32(regReturnVal);					// compare abs(n) with m
 		m_asm.cmp(r32(_n), asmjit::Imm(0));
-		m_asm.cneg(nAbs, r32(_n), asmjit::arm::Cond::kLT);
+		m_asm.cneg(nAbs, r32(_n), asmjit::arm::CondCode::kLT);
 
 		m_asm.cmp(nAbs, _m);									// modulo or linear
 		m_asm.cond_gt().b(linear);
@@ -210,11 +210,11 @@ namespace dsp56k
 		{
 			const ShiftReg shifter(m_block);
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S1);
-			m_asm.cset(shifter, asmjit::arm::Cond::kNotZero);
+			m_asm.cset(shifter, asmjit::arm::CondCode::kNotZero);
 			m_asm.lsl(_dst, _dst, shifter.get());
 
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S0);
-			m_asm.cset(shifter, asmjit::arm::Cond::kNotZero);
+			m_asm.cset(shifter, asmjit::arm::CondCode::kNotZero);
 			m_asm.lsr(_dst, _dst, shifter.get());
 		}
 
@@ -253,7 +253,7 @@ namespace dsp56k
 			{
 				const auto minmax = regReturnVal;
 				m_asm.mov(minmax, 0x800000);
-				m_asm.csel(_dst, minmax, _dst, asmjit::arm::Cond::kLT);
+				m_asm.csel(_dst, minmax, _dst, asmjit::arm::CondCode::kLT);
 			}
 			ccr_update_ifLess(CCRB_L);
 
@@ -266,7 +266,7 @@ namespace dsp56k
 			{
 				const auto minmax = regReturnVal;
 				m_asm.mov(minmax, 0x7fffff);
-				m_asm.csel(_dst, minmax, _dst, asmjit::arm::Cond::kGT);
+				m_asm.csel(_dst, minmax, _dst, asmjit::arm::CondCode::kGT);
 			}
 		}
 		ccr_update_ifGreater(CCRB_L);
