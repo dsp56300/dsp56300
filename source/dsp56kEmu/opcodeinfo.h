@@ -368,7 +368,7 @@ namespace dsp56k
 		OpcodeInfo(Sub_xxxx,		"0000000101ooooo011ood100",	"SUB #xxxx,D", ImmediateData),
 
 		OpcodeInfo(Subl,			"????????????????0001d110",	"SUBL S,D"),
-		OpcodeInfo(subr,			"????????????????0000d110",	"SUBR S,D"),
+		OpcodeInfo(Subr,			"????????????????0000d110",	"SUBR S,D"),
 
 		OpcodeInfo(Tcc_S1D1,		"00000010CCCC0ooo0JJJdooo",	"Tcc S1,D1", None, OpFlagCondition),
 		OpcodeInfo(Tcc_S1D1S2D2,	"00000011CCCCottt0JJJdTTT",	"Tcc S1,D1 S2,D2", None, OpFlagCondition),

@@ -180,7 +180,7 @@ namespace dsp56k
 		Stop,
 		Sub_SD,	Sub_xx,	Sub_xxxx,
 		Subl,
-		subr,
+		Subr,
 		Tcc_S1D1,			Tcc_S1D1S2D2,			Tcc_S2D2,
 		Tfr,
 		Trap,
