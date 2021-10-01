@@ -21,6 +21,8 @@ namespace dsp56k
 		testAdd();
 		testAddr();
 		testSub();
+		testSubl();
+		testSubr();
 		testCMP();
 		testASL();
 		testASR();
@@ -207,6 +209,30 @@ namespace dsp56k
 		// sub b,a
 		execOpcode(0x200014);
 		assert(dsp.reg.a.var == 0x7fffffffffffff);
+		assert(!dsp.sr_test(CCR_C));
+		assert(!dsp.sr_test(CCR_V));
+	}
+
+	void UnitTests::testSubl()
+	{
+		dsp.reg.a.var = 0x00400000000000;
+		dsp.reg.b.var = 0x00200000000000;
+
+		// subl b,a
+		execOpcode(0x200016);
+		assert(dsp.reg.a.var == 0x00600000000000);
+		assert(!dsp.sr_test(CCR_C));
+		assert(!dsp.sr_test(CCR_V));
+	}
+
+	void UnitTests::testSubr()
+	{
+		dsp.reg.a.var = 0x00600000000000;
+		dsp.reg.b.var = 0x00020000000000;
+
+		// subr b,a
+		execOpcode(0x200006);
+		assert(dsp.reg.a.var == 0x002e0000000000);
 		assert(!dsp.sr_test(CCR_C));
 		assert(!dsp.sr_test(CCR_V));
 	}

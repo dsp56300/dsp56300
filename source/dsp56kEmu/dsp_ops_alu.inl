@@ -1095,11 +1095,37 @@ namespace dsp56k
 	}
 	inline void DSP::op_Subl(const TWord op)
 	{
-		errNotImplemented("subl");
+		const auto ab = getFieldValue<Subl, Field_d>(op);
+
+		TReg56&			d = ab ? reg.b : reg.a;
+		const TReg56&	s = ab ? reg.a : reg.b;
+
+		const TReg56 old = d;
+		const TInt64 res = (d.signextend<TInt64>() << 1) - s.signextend<TInt64>();
+		d.var = res;
+		d.doMasking();
+		// Carry bit note: "The Carry bit (C) is set correctly if the source operand does not overflow as a result of the left shift operation.", we do not care at the moment
+		sr_toggle(CCR_V, bittest(old, 55) != bittest(d, 55));
+		sr_z_update(d);
+		//sr_l_update_by_v();
+		sr_c_update_arithmetic(old, d);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
-	inline void DSP::op_subr(const TWord op)
+	inline void DSP::op_Subr(const TWord op)
 	{
-		errNotImplemented("subr");
+		const auto ab = getFieldValue<Subr, Field_d>(op);
+
+		TReg56&			d = ab ? reg.b : reg.a;
+		const TReg56&	s = ab ? reg.a : reg.b;
+
+		const TReg56 old = d;
+		const TInt64 res = (d.signextend<TInt64>() >> 1) - s.signextend<TInt64>();
+		d.var = res;
+		d.doMasking();
+		sr_z_update(d);
+		//sr_l_update_by_v();
+		sr_c_update_arithmetic(old, d);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 	inline void DSP::op_Tfr(const TWord op)
 	{

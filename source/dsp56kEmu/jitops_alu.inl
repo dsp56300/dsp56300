@@ -971,6 +971,16 @@ namespace dsp56k
 		alu_sub( ab, r );		// TODO use immediate data
 	}
 
+	inline void JitOps::op_Subl(TWord op)
+	{
+		errNotImplemented(op);
+	}
+
+	inline void JitOps::op_Subr(TWord op)
+	{
+		errNotImplemented(op);
+	}
+
 	inline void JitOps::op_Tcc_S1D1(TWord op)
 	{
 		const auto JJJ = getFieldValue<Tcc_S1D1,Field_JJJ>(op);
