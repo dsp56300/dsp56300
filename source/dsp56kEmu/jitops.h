@@ -463,13 +463,13 @@ namespace dsp56k
 		void decode_EE_write(const JitReg64& _src, TWord _ee);
 		void decode_ff_read(const JitRegGP& _dst, TWord _ff);
 		void decode_ff_write(TWord _ff, const JitRegGP& _value);
-		void decode_JJJ_read_56(JitReg64 _dst, TWord JJJ, bool _b) const;
-		void decode_JJ_read(JitReg64 _dst, TWord jj) const;
+		void decode_JJJ_read_56(const JitReg64& _dst, TWord JJJ, bool _b) const;
+		void decode_JJ_read(const JitReg64& _dst, TWord jj) const;
 		void decode_RRR_read(const JitRegGP& _dst, TWord _mmmrrr, int _shortDisplacement = 0);
 		void decode_qq_read(const JitRegGP& _dst, TWord _qq);
 		void decode_QQ_read(const JitRegGP& _dst, TWord _qq);
 		void decode_QQQQ_read(const JitRegGP& _s1, const JitRegGP& _s2, TWord _qqqq) const;
-		void decode_sss_read(JitReg64 _dst, TWord _sss) const;
+		void decode_sss_read(const JitReg64& _dst, TWord _sss) const;
 		void decode_LLL_read(TWord _lll, const JitReg32& x, const JitReg32& y);
 		void decode_LLL_write(TWord _lll, const JitReg32& x, const JitReg32& y);
 		void decode_XMove_MMRRR(const JitReg64& _dst, TWord _mm, TWord _rrr);
