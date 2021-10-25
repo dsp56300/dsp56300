@@ -141,7 +141,7 @@ namespace dsp56k
 		size_t				m_removePos;
 		std::atomic<size_t>	m_usage;
 
-		typedef typename std::conditional<Lock, Semaphore, NopSemaphore>::type Sem;
+		typedef typename std::conditional<Lock, SpscSemaphore, NopSemaphore>::type Sem;
 
 		Sem					m_readSem;
 		Sem					m_writeSem;
