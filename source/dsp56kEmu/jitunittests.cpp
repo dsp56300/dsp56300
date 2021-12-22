@@ -146,6 +146,9 @@ namespace dsp56k
 
 		JitEmitter m_asm(&code);
 
+		m_asm.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateIntermediate);
+		m_asm.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateAssembler);
+
 		LOG("Creating test code");
 
 		JitRuntimeData rtData;
