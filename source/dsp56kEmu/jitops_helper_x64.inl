@@ -131,7 +131,7 @@ namespace dsp56k
 	void JitOps::setALU0(const uint32_t _aluIndex, const JitRegGP& _src)
 	{
 		const RegGP maskedSource(m_block);
-		m_asm.mov(maskedSource, _src);
+		m_asm.mov(maskedSource, _src.r64());
 		m_asm.and_(maskedSource, asmjit::Imm(0xffffff));
 
 		const RegGP temp(m_block);
@@ -144,7 +144,7 @@ namespace dsp56k
 	void JitOps::setALU1(const uint32_t _aluIndex, const JitReg32& _src)
 	{
 		const RegGP maskedSource(m_block);
-		m_asm.mov(maskedSource, _src);
+		m_asm.mov(maskedSource, _src.r64());
 		m_asm.and_(maskedSource, asmjit::Imm(0xffffff));
 
 		const RegGP temp(m_block);

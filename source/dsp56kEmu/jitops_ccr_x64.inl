@@ -11,96 +11,96 @@ namespace dsp56k
 	{
 		updateDirtyCCR(static_cast<CCRMask>(1 << _bit));
 		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(_bit));
-		m_asm.setc(_dst);
+		m_asm.setc(_dst.r8());
 	}
 
 	inline void JitOps::sr_getBitValue(const JitRegGP& _dst, SRBit _bit) const
 	{
 		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(_bit));
-		m_asm.setc(_dst);
+		m_asm.setc(_dst.r8());
 	}
 
 	inline void JitOps::ccr_update_ifZero(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setz(ra);										// set reg to 1 if last operation returned zero, 0 otherwise
+		m_asm.setz(ra.get().r8());							// set reg to 1 if last operation returned zero, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifNotZero(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setnz(ra);									// set reg to 1 if last operation returned != 0, 0 otherwise
+		m_asm.setnz(ra.get().r8());							// set reg to 1 if last operation returned != 0, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifGreater(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setg(ra);										// set reg to 1 if last operation returned >, 0 otherwise
+		m_asm.setg(ra.get().r8());							// set reg to 1 if last operation returned >, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifGreaterEqual(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setge(ra);									// set reg to 1 if last operation returned >=, 0 otherwise
+		m_asm.setge(ra.get().r8());							// set reg to 1 if last operation returned >=, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifLess(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setl(ra);										// set reg to 1 if last operation returned <, 0 otherwise
+		m_asm.setl(ra.get().r8());							// set reg to 1 if last operation returned <, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifLessEqual(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setle(ra);									// set reg to 1 if last operation returned <=, 0 otherwise
+		m_asm.setle(ra.get().r8());							// set reg to 1 if last operation returned <=, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifCarry(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setc(ra);										// set reg to 1 if last operation generated carry, 0 otherwise
+		m_asm.setc(ra.get().r8());							// set reg to 1 if last operation generated carry, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifNotCarry(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setnc(ra);									// set reg to 1 if last operation did NOT generate carry, 0 otherwise
+		m_asm.setnc(ra.get().r8());							// set reg to 1 if last operation did NOT generate carry, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifParity(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setp(ra);										// set reg to 1 if number of 1 bits is even, 0 otherwise
+		m_asm.setp(ra.get().r8());							// set reg to 1 if number of 1 bits is even, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifNotParity(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setnp(ra);									// set reg to 1 if number of 1 bits is odd, 0 otherwise
+		m_asm.setnp(ra.get().r8());							// set reg to 1 if number of 1 bits is odd, 0 otherwise
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifAbove(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.seta(ra);
+		m_asm.seta(ra.get().r8());
 		ccr_update(ra, _bit);
 	}
 
 	inline void JitOps::ccr_update_ifBelow(CCRBit _bit)
 	{
 		const RegGP ra(m_block);
-		m_asm.setb(ra);
+		m_asm.setb(ra.get().r8());
 		ccr_update(ra, _bit);
 	}
 
@@ -198,8 +198,8 @@ namespace dsp56k
 				// res = alu != mask && alu != 0
 
 				// Don't be distracted by the names, we abuse alu & mask here to store comparison results
-				m_asm.cmp(alu, mask.get());			m_asm.setnz(mask);
-				m_asm.cmp(alu, asmjit::Imm(0));		m_asm.setnz(alu);
+				m_asm.cmp(alu, mask.get());			m_asm.setnz(mask.get().r8());
+				m_asm.cmp(alu, asmjit::Imm(0));		m_asm.setnz(alu.get().r8());
 
 				m_asm.and_(mask.get().r8(), alu.get().r8());
 			}

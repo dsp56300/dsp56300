@@ -110,6 +110,9 @@ namespace dsp56k
 
 		JitEmitter m_asm(&code);
 
+//		m_asm.addDiagnosticOptions(DiagnosticOptions::kValidateIntermediate);
+//		m_asm.addDiagnosticOptions(DiagnosticOptions::kValidateAssembler);
+		
 		auto* b = new JitBlock(m_asm, m_dsp, m_runtimeData);
 
 		if(!b->emit(_pc, m_jitCache, m_volatileP))
