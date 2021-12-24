@@ -317,66 +317,27 @@ namespace dsp56k
 	bool DSP::exec_parallel(const TInstructionFunc& funcMove, const TInstructionFunc& funcAlu, const TWord op)
 	{
 		// simulate latches registers for parallel instructions
-		const auto preMoveX = reg.x;
-		const auto preMoveY = reg.y;
-		const auto preMoveA = reg.a;
-		const auto preMoveB = reg.b;
 
-		exec_jump(funcMove, op);
-
-		const auto postMoveX = reg.x;
-		const auto postMoveY = reg.y;
-		const auto postMoveA = reg.a;
-		const auto postMoveB = reg.b;
-
-		// restore previous state for the ALU to process them
-		reg.x = preMoveX;
-		reg.y = preMoveY;
-		reg.a = preMoveA;
-		reg.b = preMoveB;
+		// ALU op can only write to either A or B
+		const auto preAluA = reg.a;
+		const auto preAluB = reg.b;
 
 		exec_jump(funcAlu, op);
 
-		// now check what has changed and get the final values for all registers
-		if( postMoveX != preMoveX )
-		{
-			assert( preMoveX == reg.x && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.x = postMoveX;
-		}
-		else if( reg.x != preMoveX )
-		{
-			assert( preMoveX == postMoveX && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
+		const auto postAluA = reg.a;
+		const auto postAluB = reg.b;
 
-		if( postMoveY != preMoveY )
-		{
-			assert( preMoveY == reg.y && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.y = postMoveY;
-		}
-		else if( reg.y != preMoveY )
-		{
-			assert( preMoveY == postMoveY && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
+		reg.a = preAluA;
+		reg.b = preAluB;
 
-		if( postMoveA != preMoveA )
-		{
-			assert( preMoveA == reg.a && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.a = postMoveA;
-		}
-		else if( reg.a != preMoveA )
-		{
-			assert( preMoveA == postMoveA && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
+		exec_jump(funcMove, op);
 
-		if( postMoveB != preMoveB )
-		{
-			assert( preMoveB == reg.b && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.b = postMoveB;
-		}
-		else if( reg.b != preMoveB )
-		{
-			assert( preMoveB == postMoveB && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
+		if (postAluA != preAluA)
+			reg.a = postAluA;
+
+		if (postAluB != preAluB)
+			reg.b = postAluB;
+
 		return true;
 	}
 
