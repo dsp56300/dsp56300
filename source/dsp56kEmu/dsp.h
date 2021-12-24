@@ -16,8 +16,9 @@ namespace dsp56k
 	class JitUnittests;
 	class JitDspRegs;
 	class JitOps;
+	class AotRuntime;
 	
-	using TInstructionFunc = void (DSP::*)(TWord op);
+	using TInstructionFunc = void (DSP::*)(TWord _op);
 
 	class DSP final
 	{
@@ -26,6 +27,7 @@ namespace dsp56k
 		friend class JitDspRegs;
 		friend class JitOps;
 		friend class Jit;
+		friend class AotRuntime;
 
 		// _____________________________________________________________________________
 		// types
@@ -229,8 +231,8 @@ namespace dsp56k
 		const Opcodes&	opcodes							() const									{ return m_opcodes; }
 		Disassembler&	disassembler					()											{ return m_disasm; }
 
-		void			setPeriph						(size_t _index, IPeripherals* _periph)		{ perif[_index] = _periph; _periph->setDSP(this); }
-		IPeripherals*	getPeriph						(size_t _index)								{ return perif[_index]; }
+		void			setPeriph						(const size_t _index, IPeripherals* _periph)	{ perif[_index] = _periph; _periph->setDSP(this); }
+		IPeripherals*	getPeriph						(const size_t _index)							{ return perif[_index]; }
 		
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
 
@@ -261,19 +263,19 @@ namespace dsp56k
 
 		void 	execOp							(TWord op);
 
-		void	exec_jump						(const TInstructionFunc& _func, TWord op);
+		void	exec_jump						(const TInstructionFunc& _func, TWord _op);
 		
-		bool	exec_parallel					(const TInstructionFunc& instMove, const TInstructionFunc& instAlu, TWord op);
+		bool	exec_parallel					(const TInstructionFunc& _instMove, const TInstructionFunc& _instAlu, TWord _op);
 
-		bool	alu_multiply					(TWord op);
+		bool	alu_multiply					(TWord _op);
 
 		bool	do_exec							( TWord _loopcount, TWord _addr );
 		bool	do_end							();
 
-		bool	rep_exec						(TWord loopCount);
+		bool	rep_exec						(TWord _loopCount);
 
 		void	traceOp							();
-		void	traceOp							(TWord pc, TWord opA, TWord opB, TWord opLen);
+		void	traceOp							(TWord _pc, TWord _opA, TWord _opB, TWord _opLen);
 
 		// -- decoding helper functions
 
@@ -337,7 +339,7 @@ namespace dsp56k
 
 		void 	sr_toggle				( CCRMask _bits, bool _set )		{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
 		void 	sr_toggle				( SRMask _bits, bool _set )			{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
-		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, int32_t(_bit), _value); }
+		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, static_cast<int32_t>(_bit), _value); }
 
 	public:
 		int 	sr_test					( CCRMask _bits ) const				{ updateDirtyCCR(); return sr_test_noCache(_bits); }
@@ -608,7 +610,7 @@ namespace dsp56k
 		void	setB			( const TReg56& _src )				{ reg.b = _src; }
 
 		TWord 	moduloMask[8], modulo[8];
-		void 	set_m			( const int which, const TWord val);
+		void 	set_m			(int which, TWord val);
 
 		
 		// STACK

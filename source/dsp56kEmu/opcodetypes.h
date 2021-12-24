@@ -83,7 +83,7 @@ namespace dsp56k
 	enum Instruction
 	{
 		Abs,
-		ADC ,
+		ADC,
 		Add_SD,		Add_xx,		Add_xxxx,
 		Addl,		Addr,
 		And_SD,		And_xx,		And_xxxx,

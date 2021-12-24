@@ -309,12 +309,12 @@ namespace dsp56k
 		}
 	}
 
-	void DSP::exec_jump(const TInstructionFunc& _func, TWord op)
+	void DSP::exec_jump(const TInstructionFunc& _func, TWord _op)
 	{
-		(this->*_func)(op);
+		(this->*_func)(_op);
 	}
 
-	bool DSP::exec_parallel(const TInstructionFunc& funcMove, const TInstructionFunc& funcAlu, const TWord op)
+	bool DSP::exec_parallel(const TInstructionFunc& funcMove, const TInstructionFunc& funcAlu, const TWord _op)
 	{
 		// simulate latches registers for parallel instructions
 
@@ -322,7 +322,7 @@ namespace dsp56k
 		const auto preAluA = reg.a;
 		const auto preAluB = reg.b;
 
-		exec_jump(funcAlu, op);
+		exec_jump(funcAlu, _op);
 
 		const auto postAluA = reg.a;
 		const auto postAluB = reg.b;
@@ -330,7 +330,7 @@ namespace dsp56k
 		reg.a = preAluA;
 		reg.b = preAluB;
 
-		exec_jump(funcMove, op);
+		exec_jump(funcMove, _op);
 
 		if (postAluA != preAluA)
 			reg.a = postAluA;
@@ -519,10 +519,10 @@ namespace dsp56k
 		return true;
 	}
 
-	bool DSP::rep_exec(const TWord loopCount)
+	bool DSP::rep_exec(const TWord _loopCount)
 	{
 		const auto lcBackup = reg.lc;
-		reg.lc.var = loopCount;
+		reg.lc.var = _loopCount;
 
 		++m_instructions;
 
@@ -561,12 +561,12 @@ namespace dsp56k
 		traceOp(pcCurrentInstruction, op, m_opWordB, m_currentOpLen);
 	}
 
-	void DSP::traceOp(const TWord pc, const TWord op, const TWord opB, const TWord opLen)
+	void DSP::traceOp(const TWord _pc, const TWord op, const TWord _opB, const TWord _opLen)
 	{
 		std::stringstream ss;
-		ss << "p:$" << HEX(pc) << ' ' << HEX(op);
-		if(opLen > 1)
-			ss << ' ' << HEX(opB);
+		ss << "p:$" << HEX(_pc) << ' ' << HEX(op);
+		if(_opLen > 1)
+			ss << ' ' << HEX(_opB);
 		else
 			ss << "       ";
 		ss << " = ";
@@ -574,7 +574,7 @@ namespace dsp56k
 			ss << getSSindent();
 
 		std::string disasm;
-		m_disasm.disassemble(disasm, op, opB, reg.sr.var, reg.omr.var, pc);
+		m_disasm.disassemble(disasm, op, _opB, reg.sr.var, reg.omr.var, _pc);
 		
 		ss << disasm;
 		const std::string str(ss.str());

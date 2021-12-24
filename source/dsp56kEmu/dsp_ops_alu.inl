@@ -514,13 +514,13 @@ namespace dsp56k
 		setCCRDirty(ab, _alu, CCR_E | CCR_U | CCR_N);
 	}
 	
-	inline bool DSP::alu_multiply(const TWord op)
+	inline bool DSP::alu_multiply(const TWord _op)
 	{
-		const auto round = op & 0x1;
-		const auto mulAcc = (op>>1) & 0x1;
-		const auto negative = (op>>2) & 0x1;
-		const auto ab = (op>>3) & 0x1;
-		const auto qqq = (op>>4) & 0x7;
+		const auto round = _op & 0x1;
+		const auto mulAcc = (_op>>1) & 0x1;
+		const auto negative = (_op>>2) & 0x1;
+		const auto ab = (_op>>3) & 0x1;
+		const auto qqq = (_op>>4) & 0x7;
 
 		TReg24 s1, s2;
 
