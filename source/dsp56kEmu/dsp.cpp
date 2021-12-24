@@ -46,8 +46,8 @@ namespace dsp56k
 		: mem(_memory)
 		, perif({_pX, _pY})
 		, pcCurrentInstruction(0xffffff)
-		, m_disasm(m_opcodes)
 		, m_jit(*this)
+		, m_disasm(m_opcodes)
 	{
 		mem.setDSP(this);
 
