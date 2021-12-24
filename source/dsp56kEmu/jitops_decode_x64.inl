@@ -53,7 +53,7 @@ namespace dsp56k
 			const RegGP r(m_block);
 			ccr_getBitValue(r, CCRB_V);
 			m_asm.cmp(_dst.r8(), r.get().r8());
-			m_asm.sete(_dst);
+			m_asm.sete(_dst.r8());
 		}
 		break;
 		case CCCC_LessThan:									// LT			Less than
@@ -63,7 +63,7 @@ namespace dsp56k
 			const RegGP r(m_block);
 			ccr_getBitValue(r, CCRB_V);
 			m_asm.cmp(_dst.r8(), r.get().r8());
-			m_asm.setne(_dst);
+			m_asm.setne(_dst.r8());
 		}
 		break;
 		case CCCC_Normalized:								// NR			Normalized
@@ -78,7 +78,7 @@ namespace dsp56k
 			ccr_getBitValue(r, CCRB_Z);
 			m_asm.add(_dst.r8(), r.get().r8());
 			m_asm.cmp(_dst.r8(), asmjit::Imm(1));
-			m_asm.sete(_dst);
+			m_asm.sete(_dst.r8());
 		}
 		break;
 		case CCCC_NotNormalized:							// NN			Not normalized
@@ -92,7 +92,7 @@ namespace dsp56k
 			m_asm.and_(_dst.r8(), r.get().r8());
 			ccr_getBitValue(r, CCRB_Z);
 			m_asm.add(_dst.r8(), r.get().r8());
-			m_asm.setz(_dst);
+			m_asm.setz(_dst.r8());
 		}
 		break;
 		case CCCC_GreaterThan:								// GT			Greater than
@@ -104,7 +104,7 @@ namespace dsp56k
 			m_asm.xor_(_dst.r8(), r.get().r8());
 			ccr_getBitValue(r, CCRB_Z);
 			m_asm.add(_dst.r8(), r.get().r8());
-			m_asm.setz(_dst);
+			m_asm.setz(_dst.r8());
 		}
 		break;
 		case CCCC_LessEqual:								// LE			Less than or equal
@@ -117,7 +117,7 @@ namespace dsp56k
 			ccr_getBitValue(r, CCRB_Z);
 			m_asm.add(_dst.r8(), r.get().r8());
 			m_asm.cmp(_dst.r8(), asmjit::Imm(1));
-			m_asm.sete(_dst);
+			m_asm.sete(_dst.r8());
 		}
 		break;
 		default:

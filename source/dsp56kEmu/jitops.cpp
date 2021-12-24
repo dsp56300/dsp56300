@@ -589,14 +589,14 @@ namespace dsp56k
 			{
 				// TODO: alus should not update the CCR so we don't have to use backup stuff
 				const RegXMM ccrBackup(m_block);
-				m_asm.movd(ccrBackup, getSR(JitDspRegs::Read));
+				m_asm.movd(ccrBackup, r32(getSR(JitDspRegs::Read)));
 
 				emitAluOp(op);
 
 				updateDirtyCCR();
 
 				const RegGP r(m_block);
-				m_asm.movd(r.get(), ccrBackup);
+				m_asm.movd(r32(r.get()), ccrBackup);
 				m_asm.and_(r, asmjit::Imm(0xff));
 				m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(0xffff00));
 				m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());

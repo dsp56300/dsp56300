@@ -255,11 +255,11 @@ namespace dsp56k
 
 			const RegGP bit46(m_block);
 			m_asm.bt(_alu, bit.get());
-			m_asm.setc(bit46);
+			m_asm.setc(bit46.get().r8());
 
 			m_asm.dec(bit);
 			m_asm.bt(_alu, bit.get());
-			m_asm.setc(bit);
+			m_asm.setc(bit.get().r8());
 			m_asm.xor_(bit, bit46.get());
 		}
 

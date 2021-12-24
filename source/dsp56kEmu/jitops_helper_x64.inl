@@ -75,9 +75,9 @@ namespace dsp56k
 			const auto& p64 = shifter;
 			const auto p = r32(p64.get());
 
-			m_asm.bsr(shifter, _m);								// returns index of MSB that is 1
+			m_asm.bsr(p, _m);								// returns index of MSB that is 1
 			m_asm.mov(moduloMask, asmjit::Imm(2));
-			m_asm.shl(moduloMask, shifter.get());
+			m_asm.shl(moduloMask, shifter.get().r8());
 			m_asm.dec(moduloMask);
 
 			m_asm.mov(p, _r);
@@ -144,7 +144,7 @@ namespace dsp56k
 	void JitOps::setALU1(const uint32_t _aluIndex, const JitReg32& _src)
 	{
 		const RegGP maskedSource(m_block);
-		m_asm.mov(maskedSource, _src.r64());
+		m_asm.mov(maskedSource, r64(_src));
 		m_asm.and_(maskedSource, asmjit::Imm(0xffffff));
 
 		const RegGP temp(m_block);
@@ -159,7 +159,7 @@ namespace dsp56k
 	void JitOps::setALU2(const uint32_t _aluIndex, const JitReg32& _src)
 	{
 		const RegGP maskedSource(m_block);
-		m_asm.mov(maskedSource, _src);
+		m_asm.mov(maskedSource, r64(_src));
 		m_asm.and_(maskedSource, asmjit::Imm(0xff));
 
 		const RegGP temp(m_block);
@@ -242,12 +242,12 @@ namespace dsp56k
 			m_asm.xor_(s0s1, s0s1.get());
 
 			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S1));
-			m_asm.setc(s0s1);
-			m_asm.shl(_dst, s0s1.get());
+			m_asm.setc(s0s1.get().r8());
+			m_asm.shl(_dst, s0s1.get().r8());
 
 			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S0));
-			m_asm.setc(s0s1);
-			m_asm.shr(_dst, s0s1.get());
+			m_asm.setc(s0s1.get().r8());
+			m_asm.shr(_dst, s0s1.get().r8());
 		}
 
 		// saturated transfer
