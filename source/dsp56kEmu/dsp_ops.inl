@@ -105,19 +105,14 @@ namespace dsp56k
 
 		if(ea >= XIO_Reserved_High_First)
 		{
-			// god WHY is this even possible! Bset_pp/qq are for peripherals and even save one word!	TODO: code optimizer? We could rewrite as Bset_qq/pp + one nop
 			auto val = memReadPeriph( S, ea );
-
 			sr_toggle( CCR_C, bittestandset( val, bit ) );
-
 			memWritePeriph( S, ea, val );
 		}
 		else
 		{
 			auto val = memRead( S, ea );
-
 			sr_toggle( CCR_C, bittestandset( val, bit ) );
-
 			memWrite( S, ea, val );
 		}
 	}
