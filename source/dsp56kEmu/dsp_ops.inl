@@ -182,19 +182,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Btst_pp(const TWord op)
 	{
-		const TWord bitNum	= getBit<Btst_pp>(op);
-		const TWord pppppp	= getFieldValue<Btst_pp,Field_pppppp>(op);
-		const EMemArea S	= getFieldValueMemArea<Btst_pp>(op);
-
-		const TWord memVal	= memReadPeriphFFFFC0( S, pppppp );
-
-		const bool bitSet	= ( memVal & (1<<bitNum)) != 0;
-
-		sr_toggle( CCR_C, bitSet );
+		sr_toggle(CCR_C, bitTestMemory<Btst_pp>(op));
 	}
 	inline void DSP::op_Btst_qq(const TWord op)
 	{
-		errNotImplemented("BTST qq");
+		sr_toggle(CCR_C, bitTestMemory<Btst_qq>(op));
 	}
 	inline void DSP::op_Btst_D(const TWord op)
 	{
