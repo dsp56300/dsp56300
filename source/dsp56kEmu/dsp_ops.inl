@@ -340,20 +340,19 @@ namespace dsp56k
 		const TWord a		= getFieldValue<Lua_Rn,Field_aaa, Field_aaaa>(op);
 		const TWord rrr		= getFieldValue<Lua_Rn,Field_RRR>(op);
 
-		const TReg24 _r = reg.r[rrr];
-
 		const int aSigned = signextend<int,7>(a);
 
-		// TODO: modulo not taken into account, but it IS USED, it tested this in the simulator
-		const TReg24 val = TReg24(_r.var + aSigned);
+		TWord r = reg.r[rrr].var;
+
+		AGU::updateAddressRegister(r, aSigned, reg.m[rrr].var, moduloMask[rrr], modulo[rrr]);
 
 		if( dddd < 8 )									// r0-r7
 		{
-			convert(reg.r[dddd],val);
+			convert(reg.r[dddd],r);
 		}
 		else
 		{
-			convert(reg.n[dddd&0x07],val);
+			convert(reg.n[dddd&0x07],r);
 		}
 	}
 	inline void DSP::op_Nop(TWord)
