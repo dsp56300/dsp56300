@@ -802,7 +802,7 @@ namespace dsp56k
 	{
 		errNotImplemented("EXTRACT");
 	}
-	inline void DSP::alu_extractu(bool abDst, bool abSrc, const TWord widthOffset)
+	void DSP::alu_extractu(bool abDst, bool abSrc, const TWord widthOffset)
 	{
 		const auto width = (widthOffset >> 12) & 0x3f;
 		const auto offset = widthOffset & 0x3f;
