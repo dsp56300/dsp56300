@@ -267,8 +267,6 @@ namespace dsp56k
 		
 		bool	exec_parallel					(const TInstructionFunc& _instMove, const TInstructionFunc& _instAlu, TWord _op);
 
-		bool	alu_multiply					(TWord _op);
-
 		bool	do_exec							( TWord _loopcount, TWord _addr );
 		bool	do_end							();
 
@@ -656,6 +654,8 @@ namespace dsp56k
 
 		void	alu_rnd				( bool _ab );
 
+		bool	alu_multiply		(TWord _op);
+
 		void	alu_abs				( bool ab );
 
 		void	alu_tfr				( bool ab, const TReg56& src);
@@ -665,6 +665,8 @@ namespace dsp56k
 		void	alu_neg				(bool ab);
 
 		void	alu_not				(bool ab);
+
+		void	alu_extractu		(bool abDst, bool abSrc, TWord widthOffset);
 
 		// -- memory
 
