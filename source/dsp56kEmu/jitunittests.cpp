@@ -2029,6 +2029,7 @@ namespace dsp56k
 			assert(dsp.regs().r[2].var == 0x123456);
 		});
 
+		// op_Mover
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
 			dsp.regs().a.var = 0x00223344556677;
@@ -2519,7 +2520,7 @@ namespace dsp56k
 		{
 			peripherals.write(0xffffc5, 0x8899aa);
 			dsp.y1(0);
-			_ops.emit(0, 0x094705);	// asm movep y:<<$ffffc5,y1
+			_ops.emit(0, 0x094705);	// movep y:<<$ffffc5,y1
 		},
 		[&]()
 		{
