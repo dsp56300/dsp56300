@@ -290,9 +290,11 @@ namespace dsp56k
 		auto& d = ab ? reg.b.var : reg.a.var;
 
 		const auto c = bitvalue<uint64_t,47>(d);
-
-		auto shifted = (d << 1) & 0x00ffffff000000;
-		shifted |= sr_val(CCRB_C) << 24;
+		auto shifted = d << 16;	// cut MSBs
+		shifted >>= 40;			// cut LSBs
+		shifted <<= 1;
+		shifted |= sr_val(CCRB_C);
+		shifted <<= 24;			// move back
 		
 		d &= 0xff000000ffffff;
 		d |= shifted;
