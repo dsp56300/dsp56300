@@ -9,7 +9,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// decode_cccc
 	//
-	int DSP::decode_cccc( TWord cccc ) const
+	inline int DSP::decode_cccc( TWord cccc ) const
 	{
 //	#define			SRT_C			sr_val(CCRB_C)			// carry
 	#define 		SRT_V			sr_val(CCRB_V)			// overflow
@@ -338,7 +338,7 @@ namespace dsp56k
 	template<TWord ee>
 	TReg24 DSP::decode_ee_read()
 	{
-		static_assert(ee >= 0 && ee <= 3, "invalid ee value");
+		static_assert(ee <= 3, "invalid ee value");
 		
 		if constexpr (ee == 0)	return x0();
 		if constexpr (ee == 1)	return x1();
@@ -590,7 +590,7 @@ namespace dsp56k
 		}
 	}
 
-	void DSP::decode_LLL_read(TWord _lll, TWord& x, TWord& y)
+	inline void DSP::decode_LLL_read(TWord _lll, TWord& x, TWord& y)
 	{
 		switch (_lll)
 		{
@@ -612,7 +612,7 @@ namespace dsp56k
 		assert(0 && "invalid LLL value");
 	}
 
-	void DSP::decode_LLL_write(TWord _lll, TReg24 x, TReg24 y)
+	inline void DSP::decode_LLL_write(TWord _lll, TReg24 x, TReg24 y)
 	{
 		switch (_lll)
 		{
@@ -728,7 +728,7 @@ namespace dsp56k
 		return res;
 	}
 
-	TWord DSP::decode_sssss(const TWord _sssss)
+	inline TWord DSP::decode_sssss(const TWord _sssss)
 	{
 		return 0x800000 >> _sssss;
 	}

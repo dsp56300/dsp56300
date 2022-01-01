@@ -2,6 +2,8 @@
 
 #include "jitops.h"
 
+#include "dsp_decode.inl"
+
 namespace dsp56k
 {
 	constexpr int64_t g_alu_max_56		=  0x7FFFFFFFFFFFFF;
