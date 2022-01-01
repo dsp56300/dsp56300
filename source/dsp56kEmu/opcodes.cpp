@@ -1,37 +1,54 @@
 #include "opcodes.h"
 
+#include <array>
+
 namespace dsp56k
 {
 	struct RuntimeFieldInfo
 	{
-		FieldInfo m_fieldInfos[Field_COUNT];
+		std::array<FieldInfo, Field_COUNT> fieldInfos;
 
-		constexpr RuntimeFieldInfo() : m_fieldInfos() {}
-		constexpr RuntimeFieldInfo(const Instruction _i) : m_fieldInfos()
+		explicit constexpr RuntimeFieldInfo(const Instruction _i) : fieldInfos(initFieldInfos(_i))
 		{
-			for(auto f=0; f<Field::Field_COUNT; ++f)
-				m_fieldInfos[f] = initField(g_opcodes[_i].m_opcode, g_fieldParseConfigs[f].ch, g_fieldParseConfigs[f].count);
+		}
+
+		template<uint32_t... F>
+		constexpr static std::array<FieldInfo, Field_COUNT> initFieldInfos(const Instruction _instruction, std::integer_sequence<uint32_t, F...>)
+		{
+			return std::array<FieldInfo, Field_COUNT>{initField(g_opcodes[_instruction].m_opcode, g_fieldParseConfigs[F].ch, g_fieldParseConfigs[F].count)...};
+		}
+		constexpr static std::array<FieldInfo, Field_COUNT> initFieldInfos(const Instruction _instruction)
+		{
+			return initFieldInfos(_instruction, std::make_integer_sequence<uint32_t, Field_COUNT>());
 		}
 	};
 
 	struct RuntimeFieldInfos
 	{
-		RuntimeFieldInfo m_fieldInfos[g_opcodeCount];
+		const std::array<RuntimeFieldInfo, g_opcodeCount> fieldInfos;
 
-		constexpr RuntimeFieldInfos() : m_fieldInfos()
+		constexpr RuntimeFieldInfos() : fieldInfos(initFieldInfos())
 		{
-			for(size_t i=0; i<g_opcodeCount; ++i)
-				m_fieldInfos[i] = RuntimeFieldInfo(static_cast<Instruction>(i));
+		}
+
+		template<uint32_t... I>
+		constexpr static std::array<RuntimeFieldInfo, g_opcodeCount> initFieldInfos(std::integer_sequence<uint32_t, I...>)
+		{
+			return std::array<RuntimeFieldInfo, g_opcodeCount>{RuntimeFieldInfo(static_cast<Instruction>(I))...};
+		}
+		constexpr static std::array<RuntimeFieldInfo, g_opcodeCount> initFieldInfos()
+		{
+			return initFieldInfos(std::make_integer_sequence<uint32_t, g_opcodeCount>());
 		}
 	};
 
-	RuntimeFieldInfos g_runtimeFieldInfos;
+	constexpr RuntimeFieldInfos g_runtimeFieldInfos;
 
 	static_assert(getFieldInfoCE<Bsset_S, Field_DDDDDD>().bit == 8, "invalid");
 
 	const FieldInfo& getFieldInfo(const Instruction _i, const Field _f)
 	{
-		return g_runtimeFieldInfos.m_fieldInfos[_i].m_fieldInfos[_f];
+		return g_runtimeFieldInfos.fieldInfos[_i].fieldInfos[_f];
 	}
 
 	Opcodes::Opcodes()
