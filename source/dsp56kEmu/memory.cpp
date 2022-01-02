@@ -438,7 +438,7 @@ namespace dsp56k
 		}
 	}
 
-	const std::string& Memory::getSymbol(EMemArea _memArea, const TWord addr)
+	const std::string& Memory::getSymbol(EMemArea _memArea, const TWord addr) const
 	{
 		static std::string empty;
 
