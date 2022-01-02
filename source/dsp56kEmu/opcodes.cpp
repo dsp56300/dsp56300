@@ -42,7 +42,7 @@ namespace dsp56k
 		}
 	};
 
-	constexpr RuntimeFieldInfos g_runtimeFieldInfos;
+	const RuntimeFieldInfos g_runtimeFieldInfos;
 
 	static_assert(getFieldInfoCE<Bsset_S, Field_DDDDDD>().bit == 8, "invalid");
 
