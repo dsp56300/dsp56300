@@ -24,6 +24,7 @@ namespace dsp56k
 			MemX,
 			MemY,
 			MemP,
+			MemL,
 			Immediate,
 
 			SymbolTypeCount

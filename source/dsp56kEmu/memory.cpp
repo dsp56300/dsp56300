@@ -430,7 +430,7 @@ namespace dsp56k
 			{
 				auto& symbol = itAddress->second;
 
-				if(symbol.names.find(_name) != symbol.names.end())
+				if(symbol.names.find(_name) == symbol.names.end())
 				{
 					symbol.names.insert(_name);
 				}
