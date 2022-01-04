@@ -20,8 +20,8 @@ namespace dsp56k
 	Memory::Memory(const IMemoryValidator& _memoryMap, TWord _memSize/* = 0xc00000*/, TWord* _externalBuffer/* = nullptr*/)
 		: m_memoryMap(_memoryMap)
 		, m_size(_memSize)
-		, m_dsp(nullptr)
 		, m_bridgedMemoryAddress(_memSize)
+		, m_dsp(nullptr)
 	{
 		auto* address = _externalBuffer;
 
