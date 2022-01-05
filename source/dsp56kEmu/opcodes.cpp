@@ -1,44 +1,27 @@
 #include "opcodes.h"
 
-#include <array>
-
 namespace dsp56k
 {
 	struct RuntimeFieldInfo
 	{
-		std::array<FieldInfo, Field_COUNT> fieldInfos;
+		FieldInfo fieldInfos[Field_COUNT];
 
-		explicit constexpr RuntimeFieldInfo(const Instruction _i) : fieldInfos(initFieldInfos(_i))
+		constexpr RuntimeFieldInfo() : fieldInfos() {}
+		constexpr RuntimeFieldInfo(const Instruction _i) : fieldInfos()
 		{
-		}
-
-		template<uint32_t... F>
-		constexpr static std::array<FieldInfo, Field_COUNT> initFieldInfos(const Instruction _instruction, std::integer_sequence<uint32_t, F...>)
-		{
-			return std::array<FieldInfo, Field_COUNT>{initField(g_opcodes[_instruction].m_opcode, g_fieldParseConfigs[F].ch, g_fieldParseConfigs[F].count)...};
-		}
-		constexpr static std::array<FieldInfo, Field_COUNT> initFieldInfos(const Instruction _instruction)
-		{
-			return initFieldInfos(_instruction, std::make_integer_sequence<uint32_t, Field_COUNT>());
+			for (auto f = 0; f < Field::Field_COUNT; ++f)
+				fieldInfos[f] = initField(g_opcodes[_i].m_opcode, g_fieldParseConfigs[f].ch, g_fieldParseConfigs[f].count);
 		}
 	};
 
 	struct RuntimeFieldInfos
 	{
-		const std::array<RuntimeFieldInfo, g_opcodeCount> fieldInfos;
+		RuntimeFieldInfo fieldInfos[g_opcodeCount];
 
-		constexpr RuntimeFieldInfos() : fieldInfos(initFieldInfos())
+		constexpr RuntimeFieldInfos() : fieldInfos()
 		{
-		}
-
-		template<uint32_t... I>
-		constexpr static std::array<RuntimeFieldInfo, g_opcodeCount> initFieldInfos(std::integer_sequence<uint32_t, I...>)
-		{
-			return std::array<RuntimeFieldInfo, g_opcodeCount>{RuntimeFieldInfo(static_cast<Instruction>(I))...};
-		}
-		constexpr static std::array<RuntimeFieldInfo, g_opcodeCount> initFieldInfos()
-		{
-			return initFieldInfos(std::make_integer_sequence<uint32_t, g_opcodeCount>());
+			for (size_t i = 0; i < g_opcodeCount; ++i)
+				fieldInfos[i] = RuntimeFieldInfo(static_cast<Instruction>(i));
 		}
 	};
 
