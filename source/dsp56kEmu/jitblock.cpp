@@ -69,10 +69,11 @@ namespace dsp56k
 				break;
 
 			// for a volatile P address, if you have some code, break now. if not, generate this one op, and then return.
-			if (_volatileP.find(pc)!=_volatileP.end())
+			if (_volatileP.find(pc) != _volatileP.end())
 			{
-				if (m_encodedInstructionCount) break;
-				else shouldEmit=false;
+				if (m_encodedInstructionCount) 
+					break;
+				shouldEmit = false;
 			}
 
 			JitOps ops(*this, isFastInterrupt);
