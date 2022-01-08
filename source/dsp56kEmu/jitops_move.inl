@@ -464,19 +464,23 @@ namespace dsp56k
 		}
 		else
 		{
-			RegGP ea(m_block);
-			effectiveAddress<Movem_ea>(ea, op);
-			RegGP r(m_block);
+			const RegGP ea(m_block);
+			const auto eaType = effectiveAddress<Movem_ea>(ea, op);
+
+			const RegGP r(m_block);
 			decode_dddddd_read(r32(r.get()), dddddd);
 
-			RegGP compare(m_block);
-			m_block.mem().readDspMemory(compare, MemArea_P, ea);
+			const RegGP compare(m_block);
+
+			if (eaType == Dynamic)	m_block.mem().readDspMemory(compare, MemArea_P, ea);
+			else					m_block.mem().readDspMemory(compare, MemArea_P, m_opWordB);
 
 			const auto skip = m_asm.newLabel();
 			m_asm.cmp(compare, r.get());
 			m_asm.jz(skip);
 
-			m_block.mem().writeDspMemory(MemArea_P, ea, r);
+			if (eaType == Dynamic)	m_block.mem().writeDspMemory(MemArea_P, ea, r);
+			else					m_block.mem().writeDspMemory(MemArea_P, m_opWordB, r);
 
 			m_block.mem().mov(m_block.pMemWriteAddress(), r32(ea.get()));
 			m_block.mem().mov(m_block.pMemWriteValue(), r32(r.get()));
