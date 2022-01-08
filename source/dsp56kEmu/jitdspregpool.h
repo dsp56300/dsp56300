@@ -80,6 +80,16 @@ namespace dsp56k
 
 		void parallelOpEpilog();
 
+		void resetDirty()
+		{
+			m_dirty = false;
+		}
+
+		bool isDirty() const
+		{
+			return m_dirty;
+		}
+
 	private:
 		void parallelOpEpilog(DspReg _aluReadReg, DspReg _aluWriteReg);
 		
@@ -100,8 +110,8 @@ namespace dsp56k
 				_dst.push_back(_src);
 		}
 
-		void setWritten(DspReg _reg)			{ m_writtenDspRegs |= (1ull<<static_cast<uint64_t>(_reg)); }											  
-		void clearWritten(DspReg _reg)			{ m_writtenDspRegs &= ~(1ull<<static_cast<uint64_t>(_reg)); }
+		void setWritten(DspReg _reg);
+		void clearWritten(DspReg _reg);
 
 		void setLocked(DspReg _reg)				{ m_lockedGps |= (1ull<<static_cast<uint64_t>(_reg)); }											  
 		void clearLocked(DspReg _reg)			{ m_lockedGps &= ~(1ull<<static_cast<uint64_t>(_reg)); }
@@ -257,5 +267,6 @@ namespace dsp56k
 		bool m_isParallelOp = false;
 		bool m_repMode = false;
 		JitMemPtr m_dspPtr;
+		bool m_dirty = false;
 	};
 }

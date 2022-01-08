@@ -94,6 +94,8 @@ namespace dsp56k
 			return res;
 		}
 
+		m_dirty = true;
+
 		// No space left? Move some other GP reg to an XMM reg
 		if(m_gpList.isFull())
 		{
@@ -652,6 +654,23 @@ namespace dsp56k
 		}
 
 		return true;
+	}
+
+	void JitDspRegPool::setWritten(DspReg _reg)
+	{
+		const auto last = m_writtenDspRegs;
+		m_writtenDspRegs |= (1ull << static_cast<uint64_t>(_reg));
+
+		if (m_writtenDspRegs != last)
+			m_dirty = true;
+	}
+
+	void JitDspRegPool::clearWritten(DspReg _reg)
+	{
+		const auto last = m_writtenDspRegs;
+		m_writtenDspRegs &= ~(1ull<<static_cast<uint64_t>(_reg));
+		if (m_writtenDspRegs != last)
+			m_dirty = true;
 	}
 
 	JitMemPtr JitDspRegPool::makeDspPtr(const void* _ptr, const size_t _size)
