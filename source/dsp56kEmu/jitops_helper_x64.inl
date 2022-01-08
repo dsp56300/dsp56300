@@ -134,11 +134,10 @@ namespace dsp56k
 		m_asm.mov(maskedSource, _src);
 		m_asm.and_(maskedSource, asmjit::Imm(0xffffff));
 
-		const RegGP temp(m_block);
-		m_dspRegs.getALU(temp, _aluIndex);
-		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
+		AluRef temp(m_block, _aluIndex, true, true);
+
+		m_asm.and_(temp.get(), asmjit::Imm(0xffffffffff000000));
 		m_asm.or_(temp.get(), maskedSource.get());
-		m_dspRegs.setALU(_aluIndex, temp);
 	}
 
 	void JitOps::setALU1(const uint32_t _aluIndex, const JitReg32& _src)
@@ -147,13 +146,12 @@ namespace dsp56k
 		m_asm.mov(maskedSource, _src);
 		m_asm.and_(maskedSource, asmjit::Imm(0xffffff));
 
-		const RegGP temp(m_block);
-		m_dspRegs.getALU(temp, _aluIndex);
+		AluRef temp(m_block, _aluIndex, true, true);;
+
 		m_asm.ror(temp, asmjit::Imm(24));
 		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
 		m_asm.or_(temp.get(), maskedSource.get());
 		m_asm.rol(temp, asmjit::Imm(24));
-		m_dspRegs.setALU(_aluIndex, temp);
 	}
 
 	void JitOps::setALU2(const uint32_t _aluIndex, const JitReg32& _src)
@@ -162,13 +160,12 @@ namespace dsp56k
 		m_asm.mov(maskedSource, _src);
 		m_asm.and_(maskedSource, asmjit::Imm(0xff));
 
-		const RegGP temp(m_block);
-		m_dspRegs.getALU(temp, _aluIndex);
+		AluRef temp(m_block, _aluIndex);
+
 		m_asm.ror(temp, asmjit::Imm(48));
 		m_asm.and_(temp.get(), asmjit::Imm(0xffffffffffffff00));
 		m_asm.or_(temp.get(), maskedSource.get());
 		m_asm.rol(temp, asmjit::Imm(48));
-		m_dspRegs.setALU(_aluIndex, temp);
 	}
 
 	void JitOps::setSSH(const JitReg32& _src) const
