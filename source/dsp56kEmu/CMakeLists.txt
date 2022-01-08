@@ -12,6 +12,7 @@ buildconfig.h
 disasm.cpp disasm.h
 dspassert.cpp dspassert.h
 dspconfig.h
+dsplistener.h
 dsp.cpp dsp.h 
 dsp_decode.inl
 dsp_jumptable.inl

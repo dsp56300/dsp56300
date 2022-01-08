@@ -8,6 +8,7 @@
 #include "opcodes.h"
 #include "logging.h"
 #include "jit.h"
+#include "dsplistener.h"
 
 namespace dsp56k
 {
@@ -164,6 +165,8 @@ namespace dsp56k
 		std::string		m_asm;
 		Disassembler	m_disasm;
 
+		DSPListener*	m_listener = nullptr;
+
 		// _____________________________________________________________________________
 		// implementation
 		//
@@ -240,6 +243,7 @@ namespace dsp56k
 
 		void			terminate						();
 
+		void			setListener						(DSPListener* _listener) { m_listener = _listener; }
 	private:
 
 		std::string getSSindent() const;
@@ -670,6 +674,7 @@ namespace dsp56k
 
 		// -- memory
 
+		bool	memWriteP			( TWord _offset, TWord _value );
 		bool	memWrite			( EMemArea _area, TWord _offset, TWord _value );
 		bool	memWritePeriph		( EMemArea _area, TWord _offset, TWord _value );
 		bool	memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value );

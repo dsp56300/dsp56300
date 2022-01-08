@@ -969,10 +969,18 @@ namespace dsp56k
 	bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
 	{
 		aarTranslate(_area, _offset);
-	
-		const auto res = mem.dspWrite( _area, _offset, _value );
+		return mem.dspWrite( _area, _offset, _value );
+	}
 
-		if(_area == MemArea_P && _offset < m_opcodeCache.size())
+	inline bool DSP::memWriteP(TWord _offset, TWord _value)
+	{
+		aarTranslate(MemArea_P, _offset);
+
+		const auto oldValue = mem.get(MemArea_P, _offset);
+
+		const auto res = mem.set(MemArea_P, _offset, _value);
+
+		if (_offset < m_opcodeCache.size() && oldValue != _value)
 		{
 			notifyProgramMemWrite(_offset);
 			m_jit.notifyProgramMemWrite(_offset);
@@ -998,6 +1006,9 @@ namespace dsp56k
 	void DSP::notifyProgramMemWrite(TWord _offset)
 	{
 		m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
+
+		if (m_listener)
+			m_listener->onPmemWrite(_offset);
 	}
 
 	// _____________________________________________________________________________
