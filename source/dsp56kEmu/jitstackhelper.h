@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "jitregtypes.h"
+#include "jittypes.h"
 
 namespace dsp56k
 {
