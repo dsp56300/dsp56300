@@ -314,20 +314,33 @@ namespace dsp56k
 		{
 			LOGRP("No XMM temps left, writing a DSP reg back to memory");
 
-			for(auto it = m_xmList.used().begin(); it != m_xmList.used().end(); ++it)
+			auto discardXMM = [&](const bool _writtenReg)
 			{
-				const auto dspReg = *it;
-				
-				if(dspReg == _wantedReg)
-					continue;
+				for (auto it = m_xmList.used().begin(); it != m_xmList.used().end(); ++it)
+				{
+					const auto dspReg = *it;
 
-				LOGRP("Writing DSP reg " <<g_dspRegNames[dspReg] << " back to memory to make space");
+					if (dspReg == _wantedReg)
+						continue;
 
-				// TODO: discard a register that was NOT written first
-				
-				const auto res = release(dspReg);
-				assert(res && "unable to release XMM reg");
-				break;
+					if (isWritten(dspReg) != _writtenReg)
+						continue;
+
+					LOGRP("Writing DSP reg " << g_dspRegNames[dspReg] << " back to memory to make space");
+
+					const auto res = release(dspReg);
+					assert(res && "unable to release XMM reg");
+					return true;
+				}
+				return false;
+			};
+
+			if (!discardXMM(false))
+			{
+				if(!discardXMM(true))
+				{
+					LOGRP("Failed to make space, unable to move XMM back to memory");
+				}
 			}
 		}
 
