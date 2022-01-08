@@ -339,6 +339,10 @@ namespace dsp56k
 	{
 		getMemAreaPtr(_dst, _area);
 
+		// as we bridge to P memory there is no need to do anything here if area is P already
+		if (_area == MemArea_P)
+			return;
+
 		{
 			// use P memory for all bridged external memory
 			const auto p = regSmallTemp;
