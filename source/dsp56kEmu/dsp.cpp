@@ -46,8 +46,8 @@ namespace dsp56k
 		: mem(_memory)
 		, perif({_pX, _pY})
 		, pcCurrentInstruction(0xffffff)
-		, m_disasm(m_opcodes)
 		, m_jit(*this)
+		, m_disasm(m_opcodes)
 	{
 		mem.setDSP(this);
 
@@ -309,74 +309,35 @@ namespace dsp56k
 		}
 	}
 
-	void DSP::exec_jump(const TInstructionFunc& _func, TWord op)
+	void DSP::exec_jump(const TInstructionFunc& _func, TWord _op)
 	{
-		(this->*_func)(op);
+		(this->*_func)(_op);
 	}
 
-	bool DSP::exec_parallel(const TInstructionFunc& funcMove, const TInstructionFunc& funcAlu, const TWord op)
+	bool DSP::exec_parallel(const TInstructionFunc& funcMove, const TInstructionFunc& funcAlu, const TWord _op)
 	{
 		// simulate latches registers for parallel instructions
-		const auto preMoveX = reg.x;
-		const auto preMoveY = reg.y;
-		const auto preMoveA = reg.a;
-		const auto preMoveB = reg.b;
 
-		exec_jump(funcMove, op);
+		// ALU op can only write to either A or B
+		const auto preAluA = reg.a;
+		const auto preAluB = reg.b;
 
-		const auto postMoveX = reg.x;
-		const auto postMoveY = reg.y;
-		const auto postMoveA = reg.a;
-		const auto postMoveB = reg.b;
+		exec_jump(funcAlu, _op);
 
-		// restore previous state for the ALU to process them
-		reg.x = preMoveX;
-		reg.y = preMoveY;
-		reg.a = preMoveA;
-		reg.b = preMoveB;
+		const auto postAluA = reg.a;
+		const auto postAluB = reg.b;
 
-		exec_jump(funcAlu, op);
+		reg.a = preAluA;
+		reg.b = preAluB;
 
-		// now check what has changed and get the final values for all registers
-		if( postMoveX != preMoveX )
-		{
-			assert( preMoveX == reg.x && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.x = postMoveX;
-		}
-		else if( reg.x != preMoveX )
-		{
-			assert( preMoveX == postMoveX && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
+		exec_jump(funcMove, _op);
 
-		if( postMoveY != preMoveY )
-		{
-			assert( preMoveY == reg.y && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.y = postMoveY;
-		}
-		else if( reg.y != preMoveY )
-		{
-			assert( preMoveY == postMoveY && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
+		if (postAluA != preAluA)
+			reg.a = postAluA;
 
-		if( postMoveA != preMoveA )
-		{
-			assert( preMoveA == reg.a && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.a = postMoveA;
-		}
-		else if( reg.a != preMoveA )
-		{
-			assert( preMoveA == postMoveA && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
+		if (postAluB != preAluB)
+			reg.b = postAluB;
 
-		if( postMoveB != preMoveB )
-		{
-			assert( preMoveB == reg.b && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.b = postMoveB;
-		}
-		else if( reg.b != preMoveB )
-		{
-			assert( preMoveB == postMoveB && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
 		return true;
 	}
 
@@ -558,10 +519,10 @@ namespace dsp56k
 		return true;
 	}
 
-	bool DSP::rep_exec(const TWord loopCount)
+	bool DSP::rep_exec(const TWord _loopCount)
 	{
 		const auto lcBackup = reg.lc;
-		reg.lc.var = loopCount;
+		reg.lc.var = _loopCount;
 
 		++m_instructions;
 
@@ -600,12 +561,12 @@ namespace dsp56k
 		traceOp(pcCurrentInstruction, op, m_opWordB, m_currentOpLen);
 	}
 
-	void DSP::traceOp(const TWord pc, const TWord op, const TWord opB, const TWord opLen)
+	void DSP::traceOp(const TWord _pc, const TWord op, const TWord _opB, const TWord _opLen)
 	{
 		std::stringstream ss;
-		ss << "p:$" << HEX(pc) << ' ' << HEX(op);
-		if(opLen > 1)
-			ss << ' ' << HEX(opB);
+		ss << "p:$" << HEX(_pc) << ' ' << HEX(op);
+		if(_opLen > 1)
+			ss << ' ' << HEX(_opB);
 		else
 			ss << "       ";
 		ss << " = ";
@@ -613,7 +574,7 @@ namespace dsp56k
 			ss << getSSindent();
 
 		std::string disasm;
-		m_disasm.disassemble(disasm, op, opB, reg.sr.var, reg.omr.var, pc);
+		m_disasm.disassemble(disasm, op, _opB, reg.sr.var, reg.omr.var, _pc);
 		
 		ss << disasm;
 		const std::string str(ss.str());
@@ -1008,10 +969,18 @@ namespace dsp56k
 	bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
 	{
 		aarTranslate(_area, _offset);
-	
-		const auto res = mem.dspWrite( _area, _offset, _value );
+		return mem.dspWrite( _area, _offset, _value );
+	}
 
-		if(_area == MemArea_P && _offset < m_opcodeCache.size())
+	inline bool DSP::memWriteP(TWord _offset, TWord _value)
+	{
+		aarTranslate(MemArea_P, _offset);
+
+		const auto oldValue = mem.get(MemArea_P, _offset);
+
+		const auto res = mem.set(MemArea_P, _offset, _value);
+
+		if (_offset < m_opcodeCache.size() && oldValue != _value)
 		{
 			notifyProgramMemWrite(_offset);
 			m_jit.notifyProgramMemWrite(_offset);
@@ -1037,6 +1006,9 @@ namespace dsp56k
 	void DSP::notifyProgramMemWrite(TWord _offset)
 	{
 		m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
+
+		if (m_listener)
+			m_listener->onPmemWrite(_offset);
 	}
 
 	// _____________________________________________________________________________

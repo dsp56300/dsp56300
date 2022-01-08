@@ -83,7 +83,7 @@ namespace dsp56k
 	enum Instruction
 	{
 		Abs,
-		ADC ,
+		ADC,
 		Add_SD,		Add_xx,		Add_xxxx,
 		Addl,		Addr,
 		And_SD,		And_xx,		And_xxxx,
@@ -215,5 +215,6 @@ namespace dsp56k
 		OpFlagPopPC			= (1<<4),
 		OpFlagRepImmediate	= (1<<5),
 		OpFlagRepDynamic	= (1<<6),
+		OpFlagPushPC		= (1<<7),
 	};
 }

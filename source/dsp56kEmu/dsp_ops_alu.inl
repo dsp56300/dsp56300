@@ -290,9 +290,11 @@ namespace dsp56k
 		auto& d = ab ? reg.b.var : reg.a.var;
 
 		const auto c = bitvalue<uint64_t,47>(d);
-
-		auto shifted = (d << 1) & 0x00ffffff000000;
-		shifted |= sr_val(CCRB_C) << 24;
+		auto shifted = d << 16;	// cut MSBs
+		shifted >>= 40;			// cut LSBs
+		shifted <<= 1;
+		shifted |= sr_val(CCRB_C);
+		shifted <<= 24;			// move back
 		
 		d &= 0xff000000ffffff;
 		d |= shifted;
@@ -514,13 +516,13 @@ namespace dsp56k
 		setCCRDirty(ab, _alu, CCR_E | CCR_U | CCR_N);
 	}
 	
-	inline bool DSP::alu_multiply(const TWord op)
+	inline bool DSP::alu_multiply(const TWord _op)
 	{
-		const auto round = op & 0x1;
-		const auto mulAcc = (op>>1) & 0x1;
-		const auto negative = (op>>2) & 0x1;
-		const auto ab = (op>>3) & 0x1;
-		const auto qqq = (op>>4) & 0x7;
+		const auto round = _op & 0x1;
+		const auto mulAcc = (_op>>1) & 0x1;
+		const auto negative = (_op>>2) & 0x1;
+		const auto ab = (_op>>3) & 0x1;
+		const auto qqq = (_op>>4) & 0x7;
 
 		TReg24 s1, s2;
 
@@ -800,14 +802,8 @@ namespace dsp56k
 	{
 		errNotImplemented("EXTRACT");
 	}
-	inline void DSP::op_Extractu_S1S2(const TWord op)  // 00001100 00011010 100sSSSD
+	void DSP::alu_extractu(bool abDst, bool abSrc, const TWord widthOffset)
 	{
-		const auto sss = getFieldValue<Extractu_S1S2, Field_SSS>(op);
-		const auto widthOffset = decode_sss_read<TWord>(sss);
-
-		const bool abDst = getFieldValue<Extractu_S1S2, Field_D>(op);
-		const bool abSrc = getFieldValue<Extractu_S1S2, Field_s>(op);
-
 		const auto width = (widthOffset >> 12) & 0x3f;
 		const auto offset = widthOffset & 0x3f;
 
@@ -821,25 +817,24 @@ namespace dsp56k
 		sr_z_update(dDst);
 		setCCRDirty(abDst, dDst, CCR_E | CCR_U | CCR_N);
 	}
-	inline void DSP::op_Extractu_CoS2(const TWord op)  // 00001100 00011000 100s000D
+	inline void DSP::op_Extractu_S1S2(const TWord op)
+	{
+		const auto sss = getFieldValue<Extractu_S1S2, Field_SSS>(op);
+		const auto widthOffset = decode_sss_read<TWord>(sss);
+
+		const bool abDst = getFieldValue<Extractu_S1S2, Field_D>(op);
+		const bool abSrc = getFieldValue<Extractu_S1S2, Field_s>(op);
+
+		alu_extractu(abDst, abSrc, widthOffset);
+	}
+	inline void DSP::op_Extractu_CoS2(const TWord op)
 	{
 		const TWord width_offset = fetchOpWordB();
 
 		const bool abDst = getFieldValue<Extractu_CoS2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extractu_CoS2, Field_s>(op);
 
-		const auto width = (width_offset >> 12) & 0x3f;
-		const auto offset = width_offset & 0x3f;
-
-		const TReg56& dSrc = abSrc ? reg.b : reg.a;
-		TReg56& dDst = abDst ? reg.b : reg.a;
-		const auto mask = 0xFFFFFFFFFFFFFF >> (56 - width);
-		dDst.var = (dSrc.var >> offset) & mask;
-
-		sr_clear(CCR_C);
-		sr_clear(CCR_V);
-		sr_z_update(dDst);
-		setCCRDirty(abDst, dDst, CCR_E | CCR_U | CCR_N);
+		alu_extractu(abDst, abSrc, width_offset);
 	}
 	inline void DSP::op_Inc(const TWord op)
 	{

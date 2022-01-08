@@ -150,9 +150,9 @@ namespace dsp56k
 			*/
 
 			const ShiftReg shifter(m_block);
-			m_asm.bsr(shifter, m);								// returns index of MSB that is 1
+			m_asm.bsr(r32(shifter), m);								// returns index of MSB that is 1
 			m_asm.mov(moduloMask, asmjit::Imm(2));
-			m_asm.shl(moduloMask, shifter.get());
+			m_asm.shl(moduloMask, shifter.get().r8());
 			m_asm.dec(moduloMask);
 
 			/*

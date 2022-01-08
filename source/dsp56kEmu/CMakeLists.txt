@@ -12,6 +12,7 @@ buildconfig.h
 disasm.cpp disasm.h
 dspassert.cpp dspassert.h
 dspconfig.h
+dsplistener.h
 dsp.cpp dsp.h 
 dsp_decode.inl
 dsp_jumptable.inl
@@ -115,6 +116,10 @@ if(WIN32)
 			target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_MOTOROLA_UNASM)
 		endif()
 	endif()
+endif()
+
+if(MSVC)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /constexpr:steps10000000")
 endif()
 
 if(UNIX AND NOT APPLE)

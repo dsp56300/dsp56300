@@ -12,9 +12,12 @@
 
 namespace asmjit
 {
-	namespace a64
+	inline namespace _abi_1_8
 	{
-		class Builder;
+		namespace a64
+		{
+			class Builder;
+		}
 	}
 }
 
@@ -35,9 +38,12 @@ namespace dsp56k
 
 namespace asmjit
 {
-	namespace x86
+	inline namespace _abi_1_8
 	{
-		class Builder;
+		namespace x86
+		{
+			class Builder;
+		}
 	}
 }
 

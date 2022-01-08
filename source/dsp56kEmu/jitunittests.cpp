@@ -146,6 +146,9 @@ namespace dsp56k
 
 		JitEmitter m_asm(&code);
 
+		m_asm.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateIntermediate);
+		m_asm.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateAssembler);
+
 		LOG("Creating test code");
 
 		JitRuntimeData rtData;
@@ -1249,16 +1252,16 @@ namespace dsp56k
 	{
 		dsp.memory().set(MemArea_X, 0x2, 0xaabbc4);
 
-		_ops.emit(0, 0x0b0222);	// bset #$2,x:<$2
-		_block.asm_().mov(_block.regs().getSR(JitDspRegs::ReadWrite), m_checks[0]);
-		_ops.emit(0, 0x0b0223);	// bset #$3,x:<$2
-		_block.asm_().mov(_block.regs().getSR(JitDspRegs::ReadWrite), m_checks[1]);	// TODO: args swapped! Why doesn't the test fail???
+		_ops.emit(0, 0x0b0222);	// btst #$2,x:<$2
+		_block.mem().mov(m_checks[0], _block.regs().getSR(JitDspRegs::Read));
+		_ops.emit(0, 0x0b0223);	// btst #$3,x:<$2
+		_block.mem().mov(m_checks[1], _block.regs().getSR(JitDspRegs::Read));
 	}
 
 	void JitUnittests::btst_aa_verify()
 	{
-		assert((m_checks[0] & CCR_C) == 0);
-		assert((m_checks[1] & CCR_C) != 0);
+		assert((m_checks[0] & CCR_C) != 0);
+		assert((m_checks[1] & CCR_C) == 0);
 	}
 
 	void JitUnittests::clr()
@@ -2026,6 +2029,7 @@ namespace dsp56k
 			assert(dsp.regs().r[2].var == 0x123456);
 		});
 
+		// op_Mover
 		runTest([&](JitBlock& _block, JitOps& _ops)
 		{
 			dsp.regs().a.var = 0x00223344556677;
@@ -2516,7 +2520,7 @@ namespace dsp56k
 		{
 			peripherals.write(0xffffc5, 0x8899aa);
 			dsp.y1(0);
-			_ops.emit(0, 0x094705);	// asm movep y:<<$ffffc5,y1
+			_ops.emit(0, 0x094705);	// movep y:<<$ffffc5,y1
 		},
 		[&]()
 		{

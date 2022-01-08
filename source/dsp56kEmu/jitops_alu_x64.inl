@@ -66,7 +66,7 @@ namespace dsp56k
 
 		m_asm.sal(alu, asmjit::Imm(8));				// we want to hit the 64 bit boundary to make use of the native carry flag so pre-shift by 8 bit (56 => 64)
 
-		m_asm.sal(alu, _v.get());					// now do the real shift
+		m_asm.sal(alu, _v.get().r8());				// now do the real shift
 
 		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
 
@@ -75,13 +75,13 @@ namespace dsp56k
 		{
 			AluReg oldAlu(m_block, _abSrc, true);
 			m_asm.sal(oldAlu, asmjit::Imm(8));
-			m_asm.sar(alu, _v.get());
+			m_asm.sar(alu, _v.get().r8());
 			m_asm.cmp(alu, oldAlu.get());
 		}
 
 		ccr_update_ifNotZero(CCRB_V);
 
-		m_asm.sal(alu, _v.get());					// one more time
+		m_asm.sal(alu, _v.get().r8());				// one more time
 		m_asm.shr(alu, asmjit::Imm(8));				// correction
 
 		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
@@ -94,7 +94,7 @@ namespace dsp56k
 			m_asm.mov(alu.get(), m_dspRegs.getALU(_abSrc, JitDspRegs::Read));
 
 		m_asm.sal(alu, asmjit::Imm(8));
-		m_asm.sar(alu, _v.get());
+		m_asm.sar(alu, _v.get().r8());
 		m_asm.sar(alu, asmjit::Imm(8));
 		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
 		m_dspRegs.mask56(alu);
@@ -159,9 +159,9 @@ namespace dsp56k
 			const ShiftReg shifter(m_block);
 			m_asm.xor_(shifter, shifter.get());
 			sr_getBitValue(shifter, SRB_S1);
-			m_asm.shr(rounder, shifter.get());
+			m_asm.shr(rounder, shifter.get().r8());
 			sr_getBitValue(shifter, SRB_S0);
-			m_asm.shl(rounder, shifter.get());
+			m_asm.shl(rounder, shifter.get().r8());
 		}
 
 		signextend56to64(d);
@@ -420,7 +420,7 @@ namespace dsp56k
 			if (last)
 				ccr_update_ifNotCarry(CCRB_C);
 			else
-				m_asm.setnc(carry);
+				m_asm.setnc(carry.get().r8());
 		};
 
 		// once
@@ -431,7 +431,7 @@ namespace dsp56k
 
 		m_asm.xor_(carry, carry.get());
 		m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
-		m_asm.setc(carry);
+		m_asm.setc(carry.get().r8());
 
 		// loop
 		const auto start = m_asm.newLabel();

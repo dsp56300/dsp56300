@@ -20,8 +20,8 @@ namespace dsp56k
 	Memory::Memory(const IMemoryValidator& _memoryMap, TWord _memSize/* = 0xc00000*/, TWord* _externalBuffer/* = nullptr*/)
 		: m_memoryMap(_memoryMap)
 		, m_size(_memSize)
-		, m_dsp(nullptr)
 		, m_bridgedMemoryAddress(_memSize)
+		, m_dsp(nullptr)
 	{
 		auto* address = _externalBuffer;
 
@@ -430,7 +430,7 @@ namespace dsp56k
 			{
 				auto& symbol = itAddress->second;
 
-				if(symbol.names.find(_name) != symbol.names.end())
+				if(symbol.names.find(_name) == symbol.names.end())
 				{
 					symbol.names.insert(_name);
 				}
@@ -438,7 +438,7 @@ namespace dsp56k
 		}
 	}
 
-	const std::string& Memory::getSymbol(EMemArea _memArea, const TWord addr)
+	const std::string& Memory::getSymbol(EMemArea _memArea, const TWord addr) const
 	{
 		static std::string empty;
 

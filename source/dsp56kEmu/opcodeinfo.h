@@ -1,5 +1,7 @@
 #pragma once
+
 #include <cstdint>
+#include <cstddef>
 
 #include "opcodetypes.h"
 
@@ -125,15 +127,15 @@ namespace dsp56k
 		OpcodeInfo(Brset_qq,		"0000010010qqqqqq0S1bbbbb",	"BRSET #n,[X or Y]:qq,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
 		OpcodeInfo(Brset_S,			"0000110011DDDDDD101bbbbb",	"BRSET #n,S,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
 
-		OpcodeInfo(BScc_xxxx,		"00001101000100000000CCCC",	"BScc xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(BScc_xxx,		"00000101CCCC00aaaa0aaaaa",	"BScc xxx", None, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(BScc_Rn,			"0000110100011RRR0000CCCC",	"BScc Rn", None, OpFlagBranch | OpFlagCondition),
+		OpcodeInfo(BScc_xxxx,		"00001101000100000000CCCC",	"BScc xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(BScc_xxx,		"00000101CCCC00aaaa0aaaaa",	"BScc xxx", None, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(BScc_Rn,			"0000110100011RRR0000CCCC",	"BScc Rn", None, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
 
-		OpcodeInfo(Bsclr_ea,		"0000110110MMMRRR0S0bbbbb",	"BSCLR #n,[X or Y]:ea,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Bsclr_aa,		"0000110110aaaaaa1S0bbbbb",	"BSCLR #n,[X or Y]:aa,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Bsclr_pp,		"0000110111pppppp0S0bbbbb",	"BSCLR #n,[X or Y]:pp,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Bsclr_qq,		"0000010010qqqqqq1S0bbbbb",	"BSCLR #n,[X or Y]:qq,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Bsclr_S,			"0000110111DDDDDD100bbbbb",	"BSCLR #n,S,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
+		OpcodeInfo(Bsclr_ea,		"0000110110MMMRRR0S0bbbbb",	"BSCLR #n,[X or Y]:ea,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Bsclr_aa,		"0000110110aaaaaa1S0bbbbb",	"BSCLR #n,[X or Y]:aa,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Bsclr_pp,		"0000110111pppppp0S0bbbbb",	"BSCLR #n,[X or Y]:pp,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Bsclr_qq,		"0000010010qqqqqq1S0bbbbb",	"BSCLR #n,[X or Y]:qq,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Bsclr_S,			"0000110111DDDDDD100bbbbb",	"BSCLR #n,S,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
 
 		OpcodeInfo(Bset_ea,			"0000101001MMMRRR0S1bbbbb",	"BSET #n,[X or Y]:ea", EffectiveAddress),
 		OpcodeInfo(Bset_aa,			"0000101000aaaaaa0S1bbbbb",	"BSET #n,[X or Y]:aa"),
@@ -141,15 +143,15 @@ namespace dsp56k
 		OpcodeInfo(Bset_qq,			"0000000100qqqqqq0S1bbbbb",	"BSET #n,[X or Y]:qq"),
 		OpcodeInfo(Bset_D,			"0000101011DDDDDD011bbbbb",	"BSET #n,D"),
 
-		OpcodeInfo(Bsr_xxxx,		"000011010001000010000000",	"BSR xxxx", PCRelativeAddressExt, OpFlagBranch),
-		OpcodeInfo(Bsr_xxx,			"00000101000010aaaa0aaaaa",	"BSR xxx", None, OpFlagBranch),
-		OpcodeInfo(Bsr_Rn,			"0000110100011RRR10000000",	"BSR Rn", None, OpFlagBranch),
+		OpcodeInfo(Bsr_xxxx,		"000011010001000010000000",	"BSR xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagPushPC),
+		OpcodeInfo(Bsr_xxx,			"00000101000010aaaa0aaaaa",	"BSR xxx", None, OpFlagBranch | OpFlagPushPC),
+		OpcodeInfo(Bsr_Rn,			"0000110100011RRR10000000",	"BSR Rn", None, OpFlagBranch | OpFlagPushPC),
 
-		OpcodeInfo(Bsset_ea,		"0000110110MMMRRR0S1bbbbb",	"BSSET #n,[X or Y]:ea,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Bsset_aa,		"0000110110aaaaaa1S1bbbbb",	"BSSET #n,[X or Y]:aa,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Bsset_pp,		"0000110111pppppp0S1bbbbb",	"BSSET #n,[X or Y]:pp,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Bsset_qq,		"0000010010qqqqqq1S1bbbbb",	"BSSET #n,[X or Y]:qq,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Bsset_S,			"0000110111DDDDDD101bbbbb",	"BSSET #n,S,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition),
+		OpcodeInfo(Bsset_ea,		"0000110110MMMRRR0S1bbbbb",	"BSSET #n,[X or Y]:ea,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Bsset_aa,		"0000110110aaaaaa1S1bbbbb",	"BSSET #n,[X or Y]:aa,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Bsset_pp,		"0000110111pppppp0S1bbbbb",	"BSSET #n,[X or Y]:pp,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Bsset_qq,		"0000010010qqqqqq1S1bbbbb",	"BSSET #n,[X or Y]:qq,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Bsset_S,			"0000110111DDDDDD101bbbbb",	"BSSET #n,S,xxxx", PCRelativeAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
 
 		OpcodeInfo(Btst_ea,			"0000101101MMMRRR0S1bbbbb",	"BTST #n,[X or Y]:ea", EffectiveAddress),		// Note: Doc typo, was ROS not R0S
 		OpcodeInfo(Btst_aa,			"0000101100aaaaaa0S1bbbbb",	"BTST #n,[X or Y]:aa"),
@@ -175,17 +177,17 @@ namespace dsp56k
 
 		OpcodeInfo(Dmac,			"000000010010010s1SdkQQQQ",	"DMAC (+/-)S1,S2,D"),
 
-		OpcodeInfo(Do_ea,			"0000011001MMMRRR0S000000",	"DO [X or Y]:ea, expr", AbsoluteAddressExt, OpFlagLoop),
-		OpcodeInfo(Do_aa,			"0000011000aaaaaa0S000000",	"DO [X or Y]:aa, expr", AbsoluteAddressExt, OpFlagLoop),
-		OpcodeInfo(Do_xxx,			"00000110iiiiiiii1000hhhh",	"DO #xxx, expr", AbsoluteAddressExt, OpFlagLoop),
-		OpcodeInfo(Do_S,			"0000011011DDDDDD00000000",	"DO S, expr", AbsoluteAddressExt, OpFlagLoop),
-		OpcodeInfo(DoForever,		"000000000000001000000011",	"DO FOREVER", AbsoluteAddressExt, OpFlagLoop),
+		OpcodeInfo(Do_ea,			"0000011001MMMRRR0S000000",	"DO [X or Y]:ea, expr", AbsoluteAddressExt, OpFlagLoop | OpFlagPushPC),
+		OpcodeInfo(Do_aa,			"0000011000aaaaaa0S000000",	"DO [X or Y]:aa, expr", AbsoluteAddressExt, OpFlagLoop | OpFlagPushPC),
+		OpcodeInfo(Do_xxx,			"00000110iiiiiiii1000hhhh",	"DO #xxx, expr", AbsoluteAddressExt, OpFlagLoop | OpFlagPushPC),
+		OpcodeInfo(Do_S,			"0000011011DDDDDD00000000",	"DO S, expr", AbsoluteAddressExt, OpFlagLoop | OpFlagPushPC),
+		OpcodeInfo(DoForever,		"000000000000001000000011",	"DO FOREVER", AbsoluteAddressExt, OpFlagLoop | OpFlagPushPC),
 
-		OpcodeInfo(Dor_ea,			"0000011001MMMRRR0S010000",	"DOR [X or Y]:ea,label", PCRelativeAddressExt, OpFlagLoop),
-		OpcodeInfo(Dor_aa,			"0000011000aaaaaa0S010000",	"DOR [X or Y]:aa,label", PCRelativeAddressExt, OpFlagLoop),
-		OpcodeInfo(Dor_xxx,			"00000110iiiiiiii1001hhhh",	"DOR #xxx, label", PCRelativeAddressExt, OpFlagLoop),
-		OpcodeInfo(Dor_S,			"0000011011DDDDDD00010000",	"DOR S, label", PCRelativeAddressExt, OpFlagLoop),
-		OpcodeInfo(DorForever,		"000000000000001000000010",	"DOR FOREVER", PCRelativeAddressExt, OpFlagLoop),
+		OpcodeInfo(Dor_ea,			"0000011001MMMRRR0S010000",	"DOR [X or Y]:ea,label", PCRelativeAddressExt, OpFlagLoop | OpFlagPushPC),
+		OpcodeInfo(Dor_aa,			"0000011000aaaaaa0S010000",	"DOR [X or Y]:aa,label", PCRelativeAddressExt, OpFlagLoop | OpFlagPushPC),
+		OpcodeInfo(Dor_xxx,			"00000110iiiiiiii1001hhhh",	"DOR #xxx, label", PCRelativeAddressExt, OpFlagLoop | OpFlagPushPC),
+		OpcodeInfo(Dor_S,			"0000011011DDDDDD00010000",	"DOR S, label", PCRelativeAddressExt, OpFlagLoop | OpFlagPushPC),
+		OpcodeInfo(DorForever,		"000000000000001000000010",	"DOR FOREVER", PCRelativeAddressExt, OpFlagLoop | OpFlagPushPC),
 
 		OpcodeInfo(Enddo,			"00000000000000001o0o1100",	"ENDDO", None, OpFlagPopPC),
 
@@ -220,14 +222,14 @@ namespace dsp56k
 		OpcodeInfo(Jmp_ea,			"0000101011MMMRRR10000000",	"JMP ea", EffectiveAddress, OpFlagBranch),
 		OpcodeInfo(Jmp_xxx,			"000011000000aaaaaaaaaaaa",	"JMP xxx", None, OpFlagBranch),
 
-		OpcodeInfo(Jscc_xxx,		"00001111CCCCaaaaaaaaaaaa",	"JScc xxx", None, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Jscc_ea,			"0000101111MMMRRR1010CCCC",	"JScc ea", EffectiveAddress, OpFlagBranch | OpFlagCondition),
+		OpcodeInfo(Jscc_xxx,		"00001111CCCCaaaaaaaaaaaa",	"JScc xxx", None, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Jscc_ea,			"0000101111MMMRRR1010CCCC",	"JScc ea", EffectiveAddress, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
 
-		OpcodeInfo(Jsclr_ea,		"0000101101MMMRRR1S0bbbbb",	"JSCLR #n,[X or Y]:ea,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Jsclr_aa,		"0000101100aaaaaa1S0bbbbb",	"JSCLR #n,[X or Y]:aa,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Jsclr_pp,		"0000101110pppppp1S0bbbbb",	"JSCLR #n,[X or Y]:pp,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Jsclr_qq,		"0000000111qqqqqq1S0bbbbb",	"JSCLR #n,[X or Y]:qq,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Jsclr_S,			"0000101111DDDDDD000bbbbb",	"JSCLR #n,S,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
+		OpcodeInfo(Jsclr_ea,		"0000101101MMMRRR1S0bbbbb",	"JSCLR #n,[X or Y]:ea,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Jsclr_aa,		"0000101100aaaaaa1S0bbbbb",	"JSCLR #n,[X or Y]:aa,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Jsclr_pp,		"0000101110pppppp1S0bbbbb",	"JSCLR #n,[X or Y]:pp,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Jsclr_qq,		"0000000111qqqqqq1S0bbbbb",	"JSCLR #n,[X or Y]:qq,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Jsclr_S,			"0000101111DDDDDD000bbbbb",	"JSCLR #n,S,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
 
 		OpcodeInfo(Jset_ea,			"0000101001MMMRRR1S1bbbbb",	"JSET #n,[X or Y]:ea,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
 		OpcodeInfo(Jset_aa,			"0000101000aaaaaa1S1bbbbb",	"JSET #n,[X or Y]:aa,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
@@ -235,14 +237,14 @@ namespace dsp56k
 		OpcodeInfo(Jset_qq,			"0000000110qqqqqq1S1bbbbb",	"JSET #n,[X or Y]:qq,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
 		OpcodeInfo(Jset_S,			"0000101011DDDDDD001bbbbb",	"JSET #n,S,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
 
-		OpcodeInfo(Jsr_ea,			"0000101111MMMRRR10000000",	"JSR ea", EffectiveAddress, OpFlagBranch),
-		OpcodeInfo(Jsr_xxx,			"000011010000aaaaaaaaaaaa",	"JSR xxx", None, OpFlagBranch),
+		OpcodeInfo(Jsr_ea,			"0000101111MMMRRR10000000",	"JSR ea", EffectiveAddress, OpFlagBranch | OpFlagPushPC),
+		OpcodeInfo(Jsr_xxx,			"000011010000aaaaaaaaaaaa",	"JSR xxx", None, OpFlagBranch | OpFlagPushPC),
 
-		OpcodeInfo(Jsset_ea,		"0000101101MMMRRR1S1bbbbb",	"JSSET #n,[X or Y]:ea,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Jsset_aa,		"0000101100aaaaaa1S1bbbbb",	"JSSET #n,[X or Y]:aa,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Jsset_pp,		"0000101110pppppp1S1bbbbb",	"JSSET #n,[X or Y]:pp,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Jsset_qq,		"0000000111qqqqqq1S1bbbbb",	"JSSET #n,[X or Y]:qq,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
-		OpcodeInfo(Jsset_S,			"0000101111DDDDDD001bbbbb",	"JSSET #n,S,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition),
+		OpcodeInfo(Jsset_ea,		"0000101101MMMRRR1S1bbbbb",	"JSSET #n,[X or Y]:ea,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Jsset_aa,		"0000101100aaaaaa1S1bbbbb",	"JSSET #n,[X or Y]:aa,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Jsset_pp,		"0000101110pppppp1S1bbbbb",	"JSSET #n,[X or Y]:pp,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Jsset_qq,		"0000000111qqqqqq1S1bbbbb",	"JSSET #n,[X or Y]:qq,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
+		OpcodeInfo(Jsset_S,			"0000101111DDDDDD001bbbbb",	"JSSET #n,S,xxxx", AbsoluteAddressExt, OpFlagBranch | OpFlagCondition | OpFlagPushPC),
 
 		OpcodeInfo(Lra_Rn,			"0000010011000RRR000ddddd",	"LRA Rn,D"),
 		OpcodeInfo(Lra_xxxx,		"0000010001oooooo010ddddd",	"LRA xxxx,D", PCRelativeAddressExt),

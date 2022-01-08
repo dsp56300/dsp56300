@@ -3,11 +3,6 @@
 #include "jitregtracker.h"
 #include "jittypes.h"
 
-namespace asmjit
-{
-	class CodeHolder;
-}
-
 #ifdef HAVE_ARM64
 #include "asmjit/arm/a64builder.h"
 #include "asmjit/arm/a64assembler.h"

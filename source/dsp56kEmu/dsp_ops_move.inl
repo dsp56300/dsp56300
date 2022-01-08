@@ -119,15 +119,14 @@ namespace dsp56k
 		const TWord ddddd	= getFieldValue<Movex_Rnxxx,Field_DDDD>(op);
 		const auto	write	= getFieldValue<Movex_Rnxxx,Field_W>(op);
 		const TWord ea		= effectiveAddress<Movex_Rnxxx>(op);
-		constexpr auto area	= MemArea_X;
 
 		if( write )
 		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( area, ea )) );
+			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead(MemArea_X, ea )) );
 		}
 		else
 		{
-			memWrite( area, ea, decode_ddddd_read<TWord>( ddddd ) );
+			memWrite(MemArea_X, ea, decode_ddddd_read<TWord>( ddddd ) );
 		}		
 	}
 	inline void DSP::op_Movey_Rnxxx(const TWord op)
@@ -136,15 +135,14 @@ namespace dsp56k
 		const TWord ddddd	= getFieldValue<Movey_Rnxxx,Field_DDDD>(op);
 		const auto	write	= getFieldValue<Movey_Rnxxx,Field_W>(op);
 		const TWord ea		= effectiveAddress<Movey_Rnxxx>(op);
-		constexpr auto area	= MemArea_Y;
 
 		if( write )
 		{
-			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead( area, ea )) );
+			decode_ddddd_write<TReg24>( ddddd, TReg24(memRead(MemArea_Y, ea )) );
 		}
 		else
 		{
-			memWrite( area, ea, decode_ddddd_read<TWord>( ddddd ) );
+			memWrite(MemArea_Y, ea, decode_ddddd_read<TWord>( ddddd ) );
 		}		
 	}
 	inline void DSP::op_Movexr_ea(const TWord op)
@@ -345,7 +343,7 @@ namespace dsp56k
 		else
 		{
 			const TWord ea = effectiveAddress<Movem_ea>(op);
-			memWrite( MemArea_P, ea, decode_dddddd_read(dddddd).toWord() );
+			memWriteP(ea, decode_dddddd_read(dddddd).toWord() );
 		}
 	}
 	inline void DSP::op_Movem_aa(const TWord op)

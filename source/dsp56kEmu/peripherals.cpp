@@ -149,7 +149,7 @@ namespace dsp56k
 		return value;
 	}
 
-	void Peripherals56362::write(TWord _addr, TWord _val)
+	void Peripherals56362::write(const TWord _addr, const TWord _val)
 	{
 		switch (_addr)
 		{

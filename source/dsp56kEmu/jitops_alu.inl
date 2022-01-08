@@ -2,6 +2,8 @@
 
 #include "jitops.h"
 
+#include "dsp_decode.inl"
+
 namespace dsp56k
 {
 	constexpr int64_t g_alu_max_56		=  0x7FFFFFFFFFFFFF;
@@ -724,7 +726,7 @@ namespace dsp56k
 
 		const auto& mask = widthOffset;
 		m_asm.mov(mask, asmjit::Imm(g_alu_max_56_u));
-		m_asm.shr(mask, width.get());
+		m_asm.shr(mask, width.get().r8());
 
 		AluReg s(m_block, abSrc, abSrc != abDst);
 #ifdef HAVE_X86_64
@@ -737,7 +739,7 @@ namespace dsp56k
 		{
 			const ShiftReg shift(m_block);
 			m_asm.mov(shift, offset.get());
-			m_asm.shr(s, shift.get());
+			m_asm.shr(s, shift.get().r8());
 		}
 
 		m_asm.and_(s, mask.get());
