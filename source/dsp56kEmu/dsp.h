@@ -307,6 +307,7 @@ namespace dsp56k
 
 		template<TWord ee> TReg24 decode_ee_read();
 		template<TWord ee> void decode_ee_write(const TReg24& _value);
+		TReg24 decode_ee_read(TWord _ee);
 		void decode_ee_write(TWord _ee, const TReg24& _value);
 
 		template<TWord ff>
