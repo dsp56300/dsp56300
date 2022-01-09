@@ -649,6 +649,7 @@ namespace dsp56k
 			case MMMRRR_ImmediateData:
 				break;
 			default:
+				read(Register::R0, rrr);
 				if (mmm == MMM_RnMinusNn || mmm == MMM_RnPlusNn || mmm == MMM_RnPlusNnNoUpdate)
 					read(Register::N0, rrr);
 				if(mmm != MMM_RnPlusNnNoUpdate && mmm != MMM_Rn)
