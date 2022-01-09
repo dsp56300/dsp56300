@@ -435,7 +435,7 @@ namespace dsp56k
 		if constexpr (_mmm == 1) {	a = r;	AGU::updateAddressRegister(r,+n,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 001 (Rn)+Nn */
 		if constexpr (_mmm == 2) {	a = r;	AGU::updateAddressRegister(r,-1,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 010 (Rn)-   */
 		if constexpr (_mmm == 3) {	a = r;	AGU::updateAddressRegister(r,+1,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 011 (Rn)+   */
-		if constexpr (_mmm == 5) {	a = r;	AGU::updateAddressRegister(a,+n, m,moduloMask[_rrr],modulo[_rrr]);				}	/* 101 (Rn+Nn) */
+		if constexpr (_mmm == 5) {	a = r;	AGU::updateAddressRegister(a,+n,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 101 (Rn+Nn) */
 		if constexpr (_mmm == 7) {			AGU::updateAddressRegister(r,-1,m,moduloMask[_rrr],modulo[_rrr]);		a = r;	}	/* 111 -(Rn)   */
 
 		_r.var = r;
