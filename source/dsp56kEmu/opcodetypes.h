@@ -216,5 +216,6 @@ namespace dsp56k
 		OpFlagRepImmediate	= (1<<5),
 		OpFlagRepDynamic	= (1<<6),
 		OpFlagPushPC		= (1<<7),
+		OpFlagCCR			= (1<<8),
 	};
 }
