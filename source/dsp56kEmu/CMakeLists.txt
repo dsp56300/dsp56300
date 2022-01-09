@@ -31,6 +31,7 @@ logging.cpp logging.h
 memory.cpp memory.h
 omfloader.cpp omfloader.h
 opcodes.cpp opcodes.h
+opcodeanalysis.h
 opcodefields.h
 opcodeinfo.cpp opcodeinfo.h
 opcodetypes.h
