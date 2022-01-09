@@ -335,6 +335,18 @@ namespace dsp56k
 		assert(0 && "invalid EE value");
 	}
 
+	inline TReg24 DSP::decode_ee_read(const TWord _ee)
+	{
+		switch(_ee)
+		{
+		case 0:	return x0();
+		case 1:	return x1();
+		case 2:	return getA<TReg24>();
+		case 3:	return getB<TReg24>();
+		}
+		return TReg24(0xbadbad);
+	}
+
 	template<TWord ee>
 	TReg24 DSP::decode_ee_read()
 	{

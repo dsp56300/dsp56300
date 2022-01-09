@@ -182,7 +182,7 @@ namespace dsp56k
 		if( write )
 			readMem<Movexr_ea>(r, op, MemArea_X);
 		else
-			decode_ff_read(r, ff);
+			decode_ee_read(r, ff);
 
 		// S2 D2 write
 		if(F)		setXY1(1, ab);
