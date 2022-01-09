@@ -49,7 +49,7 @@ namespace dsp56k
 
 		Instruction getInstruction() const { return m_instruction; }
 
-		static bool isParallelOpcode(const uint32_t _word)
+		static constexpr bool isParallelOpcode(const uint32_t _word)
 		{
 			return (_word >= 0x100000) || ((_word & 0xFE4000) == 0x080000);
 		}
