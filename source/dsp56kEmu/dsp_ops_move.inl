@@ -207,7 +207,7 @@ namespace dsp56k
 		else
 		{
 			const TWord ea = effectiveAddress<Moveyr_ea>(op);
-			memWrite( MemArea_Y, ea, decode_ff_read( ff ).toWord() );
+			writeMem<Moveyr_ea>(op, MemArea_Y, decode_ff_read(ff).toWord());
 		}
 	}
 	inline void DSP::op_Moveyr_A(const TWord op)
