@@ -161,7 +161,7 @@ namespace dsp56k
 		case Register::SR:		return RegisterMask::SR;
 		case Register::OMR:		return RegisterMask::OMR;
 		default:
-			assert(_reg < 64);
+			assert(static_cast<uint32_t>(_reg) < 64);
 			return static_cast<RegisterMask>(1ull << static_cast<uint64_t>(_reg));
 		}
 	}
@@ -516,7 +516,7 @@ namespace dsp56k
 				return getRegister_RRR(rrY);
 			}
 		case Field_RRR: 
-			return getRegister_RRR(getFieldValue(_inst, Field_L, Field_LL, _op));
+			return getRegister_RRR(getFieldValue(_inst, Field_RRR, _op));
 		case Field_s:
 			switch (_inst)
 			{
@@ -561,9 +561,9 @@ namespace dsp56k
 
 		constexpr auto add = [](RegisterMask& _target, Register _src, uint32_t _offset)
 		{
-			const auto r = static_cast<Register>(static_cast<uint32_t>(_src) + _offset);
-			if (r == Register::Invalid)
+			if (_src == Register::Invalid)
 				return;
+			const auto r = static_cast<Register>(static_cast<uint32_t>(_src) + _offset);
 			dsp56k::add(_target, convert(r));
 		};
 
