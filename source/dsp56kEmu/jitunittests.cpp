@@ -416,7 +416,7 @@ namespace dsp56k
 		_block.regs().getR(temp, 0);
 		_block.mem().mov(m_checks[ci++], temp);
 
-		_ops.updateAddressRegister(temp.get(), MMM_RnPlusNnUpdate, 0);
+		_ops.updateAddressRegister(temp.get(), MMM_RnPlusNnNoUpdate, 0);
 		_block.mem().mov(m_checks[ci++], temp);
 		_block.regs().getR(temp, 0);
 		_block.mem().mov(m_checks[ci++], temp);
