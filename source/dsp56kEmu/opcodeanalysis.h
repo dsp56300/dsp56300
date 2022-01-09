@@ -89,6 +89,8 @@ namespace dsp56k
 		R6 = (1ull << static_cast<uint64_t>(Register::R6)),
 		R7 = (1ull << static_cast<uint64_t>(Register::R7)),
 
+		R = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7,
+
 		N0 = (1ull << static_cast<uint64_t>(Register::N0)),
 		N1 = (1ull << static_cast<uint64_t>(Register::N1)),
 		N2 = (1ull << static_cast<uint64_t>(Register::N2)),
@@ -98,6 +100,8 @@ namespace dsp56k
 		N6 = (1ull << static_cast<uint64_t>(Register::N6)),
 		N7 = (1ull << static_cast<uint64_t>(Register::N7)),
 
+		N = N0 | N1 | N2 | N3 | N4 | N5 | N6 | N7,
+
 		M0 = (1ull << static_cast<uint64_t>(Register::M0)),
 		M1 = (1ull << static_cast<uint64_t>(Register::M1)),
 		M2 = (1ull << static_cast<uint64_t>(Register::M2)),
@@ -106,6 +110,8 @@ namespace dsp56k
 		M5 = (1ull << static_cast<uint64_t>(Register::M5)),
 		M6 = (1ull << static_cast<uint64_t>(Register::M6)),
 		M7 = (1ull << static_cast<uint64_t>(Register::M7)),
+
+		M = M0 | M1 | M2 | M3 | M4 | M5 | M6 | M7,
 
 		PC = (1ull << static_cast<uint64_t>(Register::PC)),
 		LA = (1ull << static_cast<uint64_t>(Register::LA)),
@@ -124,6 +130,26 @@ namespace dsp56k
 		SR = MR | CCR,
 		OMR = EOM | COM,
 	};
+
+	constexpr RegisterMask operator | (RegisterMask _a, RegisterMask _b)
+	{
+		return static_cast<RegisterMask>(static_cast<uint64_t>(_a) | static_cast<uint64_t>(_b));
+	}
+
+	constexpr RegisterMask operator & (RegisterMask _a, RegisterMask _b)
+	{
+		return static_cast<RegisterMask>(static_cast<uint64_t>(_a) & static_cast<uint64_t>(_b));
+	}
+
+	constexpr RegisterMask& operator |= (RegisterMask& _a, const RegisterMask _b)
+	{
+		return _a = _a | _b;
+	}
+
+	constexpr bool any(const RegisterMask _a, const RegisterMask _b)
+	{
+		return (_a & _b) != RegisterMask::None;
+	}
 
 	static void add(RegisterMask& _a, const RegisterMask _b)
 	{
