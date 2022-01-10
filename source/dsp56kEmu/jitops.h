@@ -11,6 +11,7 @@
 #include "registers.h"
 #include "types.h"
 #include "utils.h"
+#include "opcodeanalysis.h"
 
 namespace dsp56k
 {
@@ -558,6 +559,9 @@ namespace dsp56k
 		bool checkResultFlag(const ResultFlags _flag) const { return (m_resultFlags & _flag) != 0; }
 		uint32_t getResultFlags() const { return m_resultFlags; }
 
+		RegisterMask getWrittenRegs() const { return m_writtenRegs; }
+		RegisterMask getReadRegs() const { return m_readRegs; }
+
 	private:
 		enum RepMode
 		{
@@ -587,6 +591,8 @@ namespace dsp56k
 
 		uint32_t m_resultFlags = None;
 		RepMode m_repMode = RepNone;
+		RegisterMask m_writtenRegs = RegisterMask::None;
+		RegisterMask m_readRegs = RegisterMask::None;
 		bool m_fastInterrupt = false;
 	};
 }

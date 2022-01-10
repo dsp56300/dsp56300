@@ -381,6 +381,8 @@ namespace dsp56k
 	{
 		m_instruction = _inst;
 
+		getRegisters(m_writtenRegs, m_readRegs, _inst, _op);
+
 		m_block.dspRegPool().setIsParallelOp(false);
 
 		emitOpProlog();
@@ -397,6 +399,13 @@ namespace dsp56k
 
 		const auto& funcMove = g_opcodeFuncs[_instMove];
 		const auto& funcAlu = g_opcodeFuncs[_instAlu];
+
+		getRegisters(m_writtenRegs, m_readRegs, _instMove, _op);
+
+		RegisterMask written, read;
+		getRegisters(written, read, _instAlu, _op);
+		add(m_writtenRegs, written);
+		add(m_readRegs, read);
 
 		m_block.dspRegPool().setIsParallelOp(true);
 
