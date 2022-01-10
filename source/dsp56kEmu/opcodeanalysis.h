@@ -131,6 +131,9 @@ namespace dsp56k
 		OMR = EOM | COM,
 	};
 
+	constexpr TWord g_invalidAddress = 0xffffffff;
+	constexpr TWord g_dynamicAddress = 0xff000000;
+
 	constexpr RegisterMask operator | (RegisterMask _a, RegisterMask _b)
 	{
 		return static_cast<RegisterMask>(static_cast<uint64_t>(_a) | static_cast<uint64_t>(_b));
@@ -1052,5 +1055,50 @@ namespace dsp56k
 			break;
 		default:;
 		}
+	}
+
+	inline TWord getBranchTarget(const Instruction _inst, const TWord op, const TWord opB, const TWord _pc)
+	{
+		const auto& oi = dsp56k::g_opcodes[_inst];
+
+		if (!oi.flag(dsp56k::OpFlagBranch))
+			return g_invalidAddress;
+
+		if (oi.m_extensionWordType & dsp56k::AbsoluteAddressExt)
+			return opB;
+
+		if (oi.m_extensionWordType & dsp56k::PCRelativeAddressExt)
+			return _pc + dsp56k::signextend<int, 24>(static_cast<int>(opB));
+
+		if (hasField(oi, Field_aaaa) && hasField(oi, Field_aaaaa))
+		{
+			const auto o = dsp56k::getFieldValue(oi.getInstruction(), Field_aaaa, Field_aaaaa, op);
+			const auto offset = dsp56k::signextend<int, 9>(static_cast<int>(o));
+			return _pc + offset;
+		}
+
+		if (hasField(oi, dsp56k::Field_aaaaaaaaaaaa))
+			return dsp56k::getFieldValue(oi.getInstruction(), dsp56k::Field_aaaaaaaaaaaa, op);
+
+		if (hasField(oi, dsp56k::Field_MMM) && hasField(oi, dsp56k::Field_RRR))
+		{
+			// no chance to follow branch as target address is dynamic
+			const auto mmmrrr = dsp56k::getFieldValue(oi.getInstruction(), dsp56k::Field_MMM, dsp56k::Field_RRR, op);
+			if (mmmrrr == dsp56k::MMMRRR_ImmediateData || mmmrrr == dsp56k::MMMRRR_AbsAddr)
+			{
+				return opB;
+			}
+
+			return g_dynamicAddress;
+		}
+
+		if (hasField(oi, dsp56k::Field_RRR))
+		{
+			// no chance to follow branch as target address is dynamic
+			return g_dynamicAddress;
+		}
+
+		assert(false && "unknown type of branch");
+		return g_invalidAddress;
 	}
 }
