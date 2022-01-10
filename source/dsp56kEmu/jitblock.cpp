@@ -119,7 +119,26 @@ namespace dsp56k
 			{
 				const auto& oi = g_opcodes[res];
 
-				if(oi.flag(OpFlagBranch) || oi.flag(OpFlagPopPC))
+				if(oi.flag(OpFlagBranch))
+				{
+					// if the last instruction of a JIT block is a branch to an address known at compile time, and this branch is fixed, i.e. is not dependant
+					// on a condition: Store that address to be able to call the next JIT block from the current block without having to have a transition to the C++ code
+					TWord opA;
+					TWord opB;
+					m_dsp.memory().getOpcode(pc, opA, opB);
+					const auto branchTarget = getBranchTarget(oi.getInstruction(), opA, opB, pc);
+					if(branchTarget != g_invalidAddress && branchTarget != g_dynamicAddress && branchTarget != m_pcFirst)
+					{
+						assert(branchTarget < m_dsp.memory().size());
+						if(!hasField(oi.getInstruction(), Field_CCCC))
+						{
+							m_child = branchTarget;
+						}
+					}
+					break;
+				}
+
+				if (oi.flag(OpFlagPopPC))
 					break;
 
 				if(oi.flag(OpFlagLoop))

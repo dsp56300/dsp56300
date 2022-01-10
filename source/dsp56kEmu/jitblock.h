@@ -15,6 +15,8 @@
 
 #include "jittypes.h"
 
+#include "opcodeanalysis.h"
+
 namespace dsp56k
 {
 	class DSP;
@@ -68,6 +70,8 @@ namespace dsp56k
 		TWord getSingleOpWord() const { return m_singleOpWord; }
 		uint32_t getFlags() const { return m_flags; }
 
+		TWord getChild() const { return m_child; }
+
 	private:
 		JitEntry m_func = nullptr;
 		JitRuntimeData& m_runtimeData;
@@ -91,5 +95,6 @@ namespace dsp56k
 		std::string m_dspAsm;
 		bool m_possibleBranch = false;
 		uint32_t m_flags = 0;
+		TWord m_child = g_invalidAddress;			// JIT block that we call
 	};
 }
