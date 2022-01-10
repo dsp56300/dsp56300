@@ -156,7 +156,6 @@ namespace dsp56k
 		{
 			iJIT_Method_Load jmethod = {0};
 			jmethod.method_id = iJIT_GetNewMethodID();
-			std::stringstream ss;
 			char temp[64];
 			sprintf(temp, "$%06x-$%06x", first, last-1);
 			if(b->getFlags() & JitBlock::LoopEnd)
