@@ -231,6 +231,11 @@ namespace dsp56k
 
 		Memory&			memory							()											{ return mem; }
 		SRegs&			regs							()											{ return reg; }
+		const TWord*	getModuloMasks					() const									{ return moduloMask; }
+		const TWord*	getModulos						() const									{ return modulo; }
+		TWord*			getModuloMasks()				{ return moduloMask; }
+		TWord*			getModulos()					{ return modulo; }
+
 		const Opcodes&	opcodes							() const									{ return m_opcodes; }
 		Disassembler&	disassembler					()											{ return m_disasm; }
 
@@ -614,7 +619,6 @@ namespace dsp56k
 
 		TWord 	moduloMask[8], modulo[8];
 		void 	set_m			(int which, TWord val);
-
 		
 		// STACK
 		void	decSP			();

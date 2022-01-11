@@ -18,6 +18,9 @@ namespace dsp56k
 		"n0",	"n1",	"n2",	"n3",	"n4",	"n5",	"n6",	"n7",
 		"m0",	"m1",	"m2",	"m3",	"m4",	"m5",	"m6",	"m7",
 
+		"m0mod",	"m1mod",	"m2mod",	"m3mod",	"m4mod",	"m5mod",	"m6mod",	"m7mod",
+		"m0mask",	"m1mask",	"m2mask",	"m3mask",	"m4mask",	"m5mask",	"m6mask",	"m7mask",
+
 		"ar",	"br",
 		"aw",	"bw",
 
@@ -430,6 +433,26 @@ namespace dsp56k
 		case DspM7:
 			m.mov(_dst, r.m[_src - DspM0]);
 			break;
+		case DspM0mod:
+		case DspM1mod:
+		case DspM2mod:
+		case DspM3mod:
+		case DspM4mod:
+		case DspM5mod:
+		case DspM6mod:
+		case DspM7mod:
+			m.mov(_dst, m_block.dsp().getModulos()[_src - DspM0mod]);
+			break;
+		case DspM0mask:
+		case DspM1mask:
+		case DspM2mask:
+		case DspM3mask:
+		case DspM4mask:
+		case DspM5mask:
+		case DspM6mask:
+		case DspM7mask:
+			m.mov(_dst, m_block.dsp().getModulos()[_src - DspM7mask]);
+			break;
 		case DspA:
 			if(!isLocked(DspAwrite) && isInUse(DspAwrite))
 			{
@@ -521,6 +544,26 @@ namespace dsp56k
 		case DspM7:
 			mov(r.m[_dst - DspM0], _src);
 			break;
+		case DspM0mod:
+		case DspM1mod:
+		case DspM2mod:
+		case DspM3mod:
+		case DspM4mod:
+		case DspM5mod:
+		case DspM6mod:
+		case DspM7mod:
+			m_block.mem().mov(m_block.dsp().getModulos()[_dst - DspM0mod], _src);
+			break;
+		case DspM0mask:
+		case DspM1mask:
+		case DspM2mask:
+		case DspM3mask:
+		case DspM4mask:
+		case DspM5mask:
+		case DspM6mask:
+		case DspM7mask:
+			m_block.mem().mov(m_block.dsp().getModulos()[_dst - DspM0mask], _src);
+			break;
 		case DspA:
 		case DspAwrite:
 			mov(r.a, _src);
@@ -589,6 +632,26 @@ namespace dsp56k
 		case DspM6:
 		case DspM7:
 			mov(r.m[_dst - DspM0], _src);
+			break;
+		case DspM0mod:
+		case DspM1mod:
+		case DspM2mod:
+		case DspM3mod:
+		case DspM4mod:
+		case DspM5mod:
+		case DspM6mod:
+		case DspM7mod:
+			m_block.mem().mov(m_block.dsp().getModulos()[_dst - DspM0mod], _src);
+			break;
+		case DspM0mask:
+		case DspM1mask:
+		case DspM2mask:
+		case DspM3mask:
+		case DspM4mask:
+		case DspM5mask:
+		case DspM6mask:
+		case DspM7mask:
+			m_block.mem().mov(m_block.dsp().getModulos()[_dst - DspM0mask], _src);
 			break;
 		case DspA:
 		case DspAwrite:
