@@ -164,7 +164,7 @@ namespace dsp56k
 				strcat(temp, " P");
 			jmethod.method_name = temp;
 			jmethod.class_file_name = const_cast<char*>("dsp56k::Jit");
-			jmethod.source_file_name = __FILE__;
+			jmethod.source_file_name = temp;
 			jmethod.method_load_address = static_cast<void*>(func);
 			jmethod.method_size = static_cast<unsigned int>(code.codeSize());
 
