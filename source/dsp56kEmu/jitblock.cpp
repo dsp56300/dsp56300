@@ -78,7 +78,7 @@ namespace dsp56k
 
 			JitOps ops(*this, isFastInterrupt);
 
-			if(false)
+#if defined(_MSC_VER) && defined(_DEBUG)
 			{
 				std::string disasm;
 				TWord opA;
@@ -88,7 +88,7 @@ namespace dsp56k
 //				LOG(HEX(pc) << ": " << disasm);
 				m_dspAsm += disasm + '\n';
 			}
-
+#endif
 			m_asm.nop();
 			ops.emit(pc);
 			m_asm.nop();
