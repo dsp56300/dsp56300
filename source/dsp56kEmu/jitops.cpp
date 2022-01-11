@@ -646,7 +646,7 @@ namespace dsp56k
 
 		const AguRegM m(m_block, rrr, true);
 
-		updateAddressRegister(r32(r.get()), r32(n.get()), r32(m.get()));
+		updateAddressRegister(r32(r.get()), r32(n.get()), r32(m.get()), rrr);
 
 		if( dddd < 8 )									// r0-r7
 		{

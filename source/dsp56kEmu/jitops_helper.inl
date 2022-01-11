@@ -63,7 +63,7 @@ namespace dsp56k
 		if(_mmm == 7)													/* 111 -(Rn)   */
 		{
 			m_dspRegs.getR(_r, _rrr);
-			updateAddressRegisterConst(r32(_r),-1, r32(m.get()));
+			updateAddressRegisterConst(r32(_r),-1, r32(m.get()), _rrr);
 			if(_writeR)
 				m_block.regs().setR(_rrr, _r);
 			return;
@@ -77,7 +77,7 @@ namespace dsp56k
 			m_dspRegs.getN(n, _rrr);
 			signextend24To32(r32(n.get()));
 			m_asm.mov(_r, r.get());
-			updateAddressRegister(r32(_r), r32(n.get()), r32(m.get()));
+			updateAddressRegister(r32(_r), r32(n.get()), r32(m.get()), _rrr);
 			return;
 		}
 
@@ -103,22 +103,22 @@ namespace dsp56k
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			m_asm.neg(n);
-			updateAddressRegister(r32_, r32(n.get()), r32(m.get()));
+			updateAddressRegister(r32_, r32(n.get()), r32(m.get()), _rrr);
 		}	
 		if(_mmm == 1)													/* 001 (Rn)+Nn */
 		{
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			signextend24To32(r32(n.get()));
-			updateAddressRegister(r32_, r32(n.get()), r32(m.get()));
+			updateAddressRegister(r32_, r32(n.get()), r32(m.get()), _rrr);
 		}
 		if(_mmm == 2)													/* 010 (Rn)-   */
 		{
-			updateAddressRegisterConst(r32_,-1, r32(m.get()));
+			updateAddressRegisterConst(r32_,-1, r32(m.get()), _rrr);
 		}
 		if(_mmm == 3)													/* 011 (Rn)+   */
 		{
-			updateAddressRegisterConst(r32_,1, r32(m.get()));
+			updateAddressRegisterConst(r32_,1, r32(m.get()), _rrr);
 		}
 
 		if(_writeR)
@@ -130,7 +130,7 @@ namespace dsp56k
 		}
 	}
 
-	inline void JitOps::updateAddressRegisterModulo(const JitReg32& r, const JitReg32& n, const JitReg32& m) const
+	inline void JitOps::updateAddressRegisterModulo(const JitReg32& r, const JitReg32& n, const JitReg32& m, uint32_t _rrr) const
 	{
 /*
 		const int32_t p				= (r&moduloMask) + n;

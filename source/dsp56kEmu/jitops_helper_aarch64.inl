@@ -4,7 +4,7 @@
 
 namespace dsp56k
 {
-	inline void JitOps::updateAddressRegister(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m)
+	inline void JitOps::updateAddressRegister(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m, uint32_t _rrr)
 	{
 		const auto linear = m_asm.newLabel();
 		const auto bitreverse = m_asm.newLabel();
@@ -53,7 +53,7 @@ namespace dsp56k
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
 	}
 
-	inline void JitOps::updateAddressRegisterConst(const JitReg32& _r, const int _n, const JitReg32& _m)
+	inline void JitOps::updateAddressRegisterConst(const JitReg32& _r, const int _n, const JitReg32& _m, uint32_t _rrr)
 	{
 		const auto linear = m_asm.newLabel();
 		const auto modulo = m_asm.newLabel();
