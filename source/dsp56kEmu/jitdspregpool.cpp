@@ -451,7 +451,7 @@ namespace dsp56k
 		case DspM5mask:
 		case DspM6mask:
 		case DspM7mask:
-			m.mov(_dst, m_block.dsp().getModulos()[_src - DspM7mask]);
+			m.mov(_dst, m_block.dsp().getModuloMasks()[_src - DspM0mask]);
 			break;
 		case DspA:
 			if(!isLocked(DspAwrite) && isInUse(DspAwrite))
@@ -562,7 +562,7 @@ namespace dsp56k
 		case DspM5mask:
 		case DspM6mask:
 		case DspM7mask:
-			m_block.mem().mov(m_block.dsp().getModulos()[_dst - DspM0mask], _src);
+			m_block.mem().mov(m_block.dsp().getModuloMasks()[_dst - DspM0mask], _src);
 			break;
 		case DspA:
 		case DspAwrite:
@@ -651,7 +651,7 @@ namespace dsp56k
 		case DspM5mask:
 		case DspM6mask:
 		case DspM7mask:
-			m_block.mem().mov(m_block.dsp().getModulos()[_dst - DspM0mask], _src);
+			m_block.mem().mov(m_block.dsp().getModuloMasks()[_dst - DspM0mask], _src);
 			break;
 		case DspA:
 		case DspAwrite:
