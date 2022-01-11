@@ -145,7 +145,7 @@ namespace dsp56k
 	class AguReg : public DSPReg
 	{
 	public:
-		AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly = false);
+		AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly = false, bool writeOnly = false);
 	};
 
 	class AguRegR : public AguReg
@@ -164,6 +164,18 @@ namespace dsp56k
 	{
 	public:
 		AguRegM(JitBlock& _block, int _aguIndex, bool readOnly = true) : AguReg(_block, JitDspRegPool::DspM0, _aguIndex, readOnly) {}
+	};
+
+	class AguRegMmod : public AguReg
+	{
+	public:
+		AguRegMmod(JitBlock& _block, int _aguIndex, bool readOnly = true, bool writeOnly = false) : AguReg(_block, JitDspRegPool::DspM0mod, _aguIndex, readOnly, writeOnly) {}
+	};
+
+	class AguRegMmask : public AguReg
+	{
+	public:
+		AguRegMmask(JitBlock& _block, int _aguIndex, bool readOnly = true, bool writeOnly = false) : AguReg(_block, JitDspRegPool::DspM0mask, _aguIndex, readOnly, writeOnly) {}
 	};
 
 	class PushGP
