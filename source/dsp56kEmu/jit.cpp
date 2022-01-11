@@ -84,7 +84,7 @@ namespace dsp56k
 		auto& cacheEntry = m_jitCache[pc];
 		exec(pc, cacheEntry);
 
-		if(!g_traceOps)
+		if constexpr(!g_traceOps)
 			m_dsp.m_instructions += m_runtimeData.m_executedInstructionCount;
 	}
 
