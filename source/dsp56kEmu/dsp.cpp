@@ -1169,12 +1169,16 @@ namespace dsp56k
 	void DSP::set_m( const int which, const TWord val)
 	{
 		reg.m[which].var = val;
-		if (val == 0xffffff) {
-			modulo[which]=0;
-			moduloMask[which]=0xffffff;
+
+		if (val == 0xffffff)
+		{
+			modulo[which] = 0;
+			moduloMask[which] = 0xffffff;
 			return;
 		}
+
 		const TWord moduloTest = (val & 0xffff);
+
 		if (moduloTest == 0)
 		{
 			moduloMask[which] = 0;
