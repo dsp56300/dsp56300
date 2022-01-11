@@ -231,10 +231,10 @@ namespace dsp56k
 
 		Memory&			memory							()											{ return mem; }
 		SRegs&			regs							()											{ return reg; }
-		const TWord*	getModuloMasks					() const									{ return moduloMask; }
-		const TWord*	getModulos						() const									{ return modulo; }
-		TWord*			getModuloMasks()				{ return moduloMask; }
-		TWord*			getModulos()					{ return modulo; }
+		const auto&		getModuloMasks					() const									{ return moduloMask; }
+		const auto&		getModulos						() const									{ return modulo; }
+		auto&			getModuloMasks					()											{ return moduloMask; }
+		auto&			getModulos						()											{ return modulo; }
 
 		const Opcodes&	opcodes							() const									{ return m_opcodes; }
 		Disassembler&	disassembler					()											{ return m_disasm; }
@@ -617,7 +617,9 @@ namespace dsp56k
 		void	setA			( const TReg56& _src )				{ reg.a = _src; }
 		void	setB			( const TReg56& _src )				{ reg.b = _src; }
 
-		TWord 	moduloMask[8], modulo[8];
+		std::array<TWord, 8> moduloMask;
+		std::array<TWord, 8> modulo;
+
 		void 	set_m			(int which, TWord val);
 		
 		// STACK
