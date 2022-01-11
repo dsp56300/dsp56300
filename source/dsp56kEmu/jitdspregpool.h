@@ -20,9 +20,6 @@ namespace dsp56k
 			DspN0,	DspN1,	DspN2,	DspN3,	DspN4,	DspN5,	DspN6,	DspN7,
 			DspM0,	DspM1,	DspM2,	DspM3,	DspM4,	DspM5,	DspM6,	DspM7,
 
-			DspM0mod,	DspM1mod,	DspM2mod,	DspM3mod,	DspM4mod,	DspM5mod,	DspM6mod,	DspM7mod,
-			DspM0mask,	DspM1mask,	DspM2mask,	DspM3mask,	DspM4mask,	DspM5mask,	DspM6mask,	DspM7mask,
-
 			DspA,		DspB,
 			DspAwrite,	DspBwrite,
 
@@ -34,6 +31,9 @@ namespace dsp56k
 			DspLA,
 
 			TempA, TempB, TempC, TempD, TempE, TempF, TempG, TempH, LastTemp = TempH,
+
+			DspM0mod, DspM1mod, DspM2mod, DspM3mod, DspM4mod, DspM5mod, DspM6mod, DspM7mod,
+			DspM0mask, DspM1mask, DspM2mask, DspM3mask, DspM4mask, DspM5mask, DspM6mask, DspM7mask,
 
 			DspCount
 		};

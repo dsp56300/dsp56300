@@ -18,9 +18,6 @@ namespace dsp56k
 		"n0",	"n1",	"n2",	"n3",	"n4",	"n5",	"n6",	"n7",
 		"m0",	"m1",	"m2",	"m3",	"m4",	"m5",	"m6",	"m7",
 
-		"m0mod",	"m1mod",	"m2mod",	"m3mod",	"m4mod",	"m5mod",	"m6mod",	"m7mod",
-		"m0mask",	"m1mask",	"m2mask",	"m3mask",	"m4mask",	"m5mask",	"m6mask",	"m7mask",
-
 		"ar",	"br",
 		"aw",	"bw",
 
@@ -31,7 +28,10 @@ namespace dsp56k
 		"lc",
 		"la",
 
-		"ta", "tb", "tc", "td", "te", "tf", "tg", "th"
+		"ta", "tb", "tc", "td", "te", "tf", "tg", "th",
+
+		"m0mod",	"m1mod",	"m2mod",	"m3mod",	"m4mod",	"m5mod",	"m6mod",	"m7mod",
+		"m0mask",	"m1mask",	"m2mask",	"m3mask",	"m4mask",	"m5mask",	"m6mask",	"m7mask",
 	};
 
 	static_assert(std::size(g_dspRegNames) == JitDspRegPool::DspCount);
@@ -552,6 +552,7 @@ namespace dsp56k
 		case DspM5mod:
 		case DspM6mod:
 		case DspM7mod:
+			m_dspPtr.reset();
 			m_block.mem().mov(m_block.dsp().getModulos()[_dst - DspM0mod], _src);
 			break;
 		case DspM0mask:
@@ -562,6 +563,7 @@ namespace dsp56k
 		case DspM5mask:
 		case DspM6mask:
 		case DspM7mask:
+			m_dspPtr.reset();
 			m_block.mem().mov(m_block.dsp().getModuloMasks()[_dst - DspM0mask], _src);
 			break;
 		case DspA:
