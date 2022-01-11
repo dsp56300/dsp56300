@@ -22,9 +22,9 @@ namespace dsp56k
 
 	static constexpr std::initializer_list<JitReg> g_regGPTemps = { JitReg64(11), JitReg64(12), JitReg64(13), JitReg64(14), JitReg64(15) };
 
-	static constexpr auto regLastModAlu = asmjit::arm::VecV(0);
+	static constexpr auto regLastModAlu = JitReg128(0);
 
-	static constexpr auto regXMMTempA = asmjit::arm::VecV(1);
+	static constexpr auto regXMMTempA = JitReg128(1);
 
 	static constexpr JitReg128 g_dspPoolXmms[] = {									JitReg128(2) ,  JitReg128(3) , JitReg128(4) , JitReg128(5) , JitReg128(6) , JitReg128(7),
 												   JitReg128(8) , JitReg128(9) ,  JitReg128(10),  JitReg128(11), JitReg128(12), JitReg128(13), JitReg128(14), JitReg128(15),
@@ -38,24 +38,24 @@ namespace dsp56k
 #ifdef _MSC_VER
 	static constexpr JitReg64 g_funcArgGPs[] = {asmjit::x86::rcx, asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9};
 
-	static constexpr JitReg64 g_nonVolatileGPs[] = { asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::rdi, asmjit::x86::rsi// not needed, asmjit::x86::rsp
+	static constexpr JitReg64 g_nonVolatileGPs[] = { asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::rdi, asmjit::x86::rsi, asmjit::x86::rsp
 	                                               , asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::r14, asmjit::x86::r15};
 
 	static constexpr JitReg128 g_nonVolatileXMMs[] = { asmjit::x86::xmm6, asmjit::x86::xmm7, asmjit::x86::xmm8, asmjit::x86::xmm9, asmjit::x86::xmm10, asmjit::x86::xmm11, asmjit::x86::xmm12, asmjit::x86::xmm13, asmjit::x86::xmm14, asmjit::x86::xmm15 };
 
-	static constexpr JitRegGP g_dspPoolGps[] =		{ asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r10, asmjit::x86::r11, asmjit::x86::rsi, asmjit::x86::rdi};
+	static constexpr JitRegGP g_dspPoolGps[] = { asmjit::x86::rbx, asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r10, asmjit::x86::r11, asmjit::x86::rsi, asmjit::x86::rdi};
 
 #else
 	static constexpr JitReg64 g_funcArgGPs[] = { asmjit::x86::rdi, asmjit::x86::rsi, asmjit::x86::rdx, asmjit::x86::rcx };
 
 	// Note: rcx is not used in any pools because it is needed as shift register
 
-	static constexpr JitReg64 g_nonVolatileGPs[] = { asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::rsi// not needed, asmjit::x86::rsp
+	static constexpr JitReg64 g_nonVolatileGPs[] = { asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::rsi, asmjit::x86::rsp
 	                                               , asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::r14, asmjit::x86::r15};
 	
 	static constexpr JitReg128 g_nonVolatileXMMs[] = { asmjit::x86::xmm6, asmjit::x86::xmm7, asmjit::x86::xmm8, asmjit::x86::xmm9, asmjit::x86::xmm10, asmjit::x86::xmm11, asmjit::x86::xmm12, asmjit::x86::xmm13, asmjit::x86::xmm14, asmjit::x86::xmm15 };
 
-	static constexpr JitRegGP g_dspPoolGps[] =		{ asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r10, asmjit::x86::r11, asmjit::x86::rsi};
+	static constexpr JitRegGP g_dspPoolGps[] = { asmjit::x86::rbx, asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r10, asmjit::x86::r11, asmjit::x86::rsi};
 	
 #endif
 
