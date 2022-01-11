@@ -130,7 +130,7 @@ namespace dsp56k
 					if(branchTarget != g_invalidAddress && branchTarget != g_dynamicAddress && branchTarget != m_pcFirst)
 					{
 						assert(branchTarget < m_dsp.memory().size());
-						if(!hasField(oi.getInstruction(), Field_CCCC))
+						if(!hasField(oi.getInstruction(), Field_CCCC) && !hasField(oi.getInstruction(), Field_bbbbb))
 						{
 							m_child = branchTarget;
 						}
