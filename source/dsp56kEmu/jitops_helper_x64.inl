@@ -12,7 +12,7 @@ namespace dsp56k
 		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
-		AguRegMmask moduloMask(m_block, _rrr);
+		const AguRegMmask moduloMask(m_block, _rrr);
 
 		m_asm.cmp(r32(_m), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.jz(linear);

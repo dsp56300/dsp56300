@@ -36,8 +36,6 @@ namespace dsp56k
 												   JitReg128(8) , JitReg128(9) ,  JitReg128(10),  JitReg128(11), JitReg128(12), JitReg128(13), JitReg128(14), JitReg128(15),
 												   JitReg128(16), JitReg128(17),  JitReg128(18),  JitReg128(19), JitReg128(20), JitReg128(21), JitReg128(22), JitReg128(23),
 												   JitReg128(24), JitReg128(25),  JitReg128(26),  JitReg128(27), JitReg128(28), JitReg128(29), JitReg128(30), JitReg128(31) };
-
-}
 #else
 #ifdef _MSC_VER
 	static constexpr JitReg64 g_funcArgGPs[] = {asmjit::x86::rcx, asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9};

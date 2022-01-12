@@ -76,7 +76,12 @@ namespace dsp56k
 		const asmjit::Label isModuloZero = m_asm.newLabel();
 		const asmjit::Label isModulo = m_asm.newLabel();
 
+#ifdef HAVE_ARM64
+		m_asm.mov(regReturnVal, Imm(0xffffff));
+		m_asm.cmp(_src, r32(regReturnVal));
+#else
 		m_asm.cmp(_src, Imm(0xffffff));
+#endif
 		m_asm.jz(isLinear);
 
 		m_asm.mov(mod, _src);
@@ -85,7 +90,13 @@ namespace dsp56k
 		m_asm.cmp(mod, asmjit::Imm(0));
 		m_asm.jz(isModuloZero);
 
+#ifdef HAVE_ARM64
+		m_asm.mov(regReturnVal, Imm(0x007fff));
+		m_asm.cmp(mod, r32(regReturnVal));
+#else
 		m_asm.cmp(mod, asmjit::Imm(0x007fff));
+#endif
+
 		m_asm.jle(isModulo);
 		m_asm.jmp(end);
 
@@ -98,9 +109,14 @@ namespace dsp56k
 		m_asm.bind(isModulo);
 
 		const ShiftReg shifter(m_block);
-		m_asm.bsr(r32(shifter), _src);								// returns index of MSB that is 1
+		m_asm.bsr(r32(shifter), r32(_src));								// returns index of MSB that is 1
 		m_asm.mov(mask, asmjit::Imm(2));
-		m_asm.shl(mask, shifter.get().r8());
+
+#ifdef HAVE_ARM64
+		m_asm.shl(mask, r32(shifter.get()));
+#else
+		m_asm.shl(mask, shiftOperand(shifter));
+#endif
 		m_asm.dec(mask);
 
 		m_asm.inc(mod);

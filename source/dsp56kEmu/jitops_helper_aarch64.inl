@@ -12,6 +12,8 @@ namespace dsp56k
 		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
+		const AguRegMmask moduloMask(m_block, _rrr);
+
 		m_asm.mov(r32(regReturnVal), asmjit::Imm(0xffffff));	// linear shortcut
 		m_asm.cmp(r32(_m), r32(regReturnVal));
 		m_asm.jz(linear);
@@ -32,7 +34,7 @@ namespace dsp56k
 
 		// modulo:
 		m_asm.bind(modulo);
-		updateAddressRegisterModulo(r32(_r), _n, r32(_m));
+		updateAddressRegisterModulo(r32(_r), _n, r32(_m), r32(moduloMask));
 		m_asm.jmp(end);
 
 		// multiple-wrap modulo:

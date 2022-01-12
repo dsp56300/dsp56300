@@ -70,4 +70,13 @@ namespace dsp56k
 		return _reg.r64();
 #endif
 	}
+
+	static auto shiftOperand(const JitRegGP& _reg)
+	{
+#ifdef HAVE_ARM64
+		return _reg;
+#else
+		return _reg.r8();
+#endif
+	}
 }

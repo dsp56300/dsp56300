@@ -53,6 +53,11 @@ namespace dsp56k
 		cond_not_zero().b(_label);
 	}
 
+	void JitEmitter::jle(const asmjit::Label& _label)
+	{
+		cond_le().b(_label);
+	}
+
 	void JitEmitter::movq(const JitRegGP& _dst, const JitReg128& _src)
 	{
 		fmov(r64(_dst), _src.d());
