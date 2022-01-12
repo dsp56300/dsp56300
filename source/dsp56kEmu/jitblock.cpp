@@ -194,14 +194,14 @@ namespace dsp56k
 #endif
 		if(m_possibleBranch)
 		{
-			mem().mov(m_dspRegPool.get(JitDspRegPool::DspPC, false, true), nextPC());
+			mem().mov(r32(m_dspRegPool.get(JitDspRegPool::DspPC, false, true)), nextPC());
 		}
 		else if(!isFastInterrupt)
 		{
 			if (cursorBeforePCUpdate && cursorAfterPCUpdate)
 				m_asm.removeNodes(cursorBeforePCUpdate->next(), cursorAfterPCUpdate);
 
-			m_asm.mov(m_dspRegPool.get(JitDspRegPool::DspPC, false, true), asmjit::Imm(m_pcLast));
+			m_asm.mov(r32(m_dspRegPool.get(JitDspRegPool::DspPC, false, true)), asmjit::Imm(m_pcLast));
 		}
 
 		if(m_dspRegs.ccrDirtyFlags())
