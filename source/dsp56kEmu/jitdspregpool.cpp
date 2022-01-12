@@ -441,7 +441,7 @@ namespace dsp56k
 		case DspM5mod:
 		case DspM6mod:
 		case DspM7mod:
-			m.mov(_dst, m_block.dsp().getModulos()[_src - DspM0mod]);
+			m.mov(_dst, r.mModulo[_src - DspM0mod]);
 			break;
 		case DspM0mask:
 		case DspM1mask:
@@ -451,7 +451,7 @@ namespace dsp56k
 		case DspM5mask:
 		case DspM6mask:
 		case DspM7mask:
-			m.mov(_dst, m_block.dsp().getModuloMasks()[_src - DspM0mask]);
+			m.mov(_dst, r.mMask[_src - DspM0mask]);
 			break;
 		case DspA:
 			if(!isLocked(DspAwrite) && isInUse(DspAwrite))
@@ -510,7 +510,7 @@ namespace dsp56k
 
 	void JitDspRegPool::store(const DspReg _dst, JitRegGP& _src, bool _resetBasePtr/* = true*/)
 	{
-		const auto& r = m_block.dsp().regs();
+		auto& r = m_block.dsp().regs();
 
 		switch (_dst)
 		{
@@ -553,7 +553,7 @@ namespace dsp56k
 		case DspM6mod:
 		case DspM7mod:
 			m_dspPtr.reset();
-			m_block.mem().mov(m_block.dsp().getModulos()[_dst - DspM0mod], _src);
+			m_block.mem().mov(r.mModulo[_dst - DspM0mod], _src);
 			break;
 		case DspM0mask:
 		case DspM1mask:
@@ -564,7 +564,7 @@ namespace dsp56k
 		case DspM6mask:
 		case DspM7mask:
 			m_dspPtr.reset();
-			m_block.mem().mov(m_block.dsp().getModuloMasks()[_dst - DspM0mask], _src);
+			m_block.mem().mov(r.mMask[_dst - DspM0mask], _src);
 			break;
 		case DspA:
 		case DspAwrite:
@@ -643,7 +643,7 @@ namespace dsp56k
 		case DspM5mod:
 		case DspM6mod:
 		case DspM7mod:
-			m_block.mem().mov(m_block.dsp().getModulos()[_dst - DspM0mod], _src);
+			m_block.mem().mov(r.mModulo[_dst - DspM0mod], _src);
 			break;
 		case DspM0mask:
 		case DspM1mask:
@@ -653,7 +653,7 @@ namespace dsp56k
 		case DspM5mask:
 		case DspM6mask:
 		case DspM7mask:
-			m_block.mem().mov(m_block.dsp().getModuloMasks()[_dst - DspM0mask], _src);
+			m_block.mem().mov(r.mMask[_dst - DspM0mask], _src);
 			break;
 		case DspA:
 		case DspAwrite:

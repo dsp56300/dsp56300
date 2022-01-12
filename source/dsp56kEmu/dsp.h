@@ -41,9 +41,11 @@ namespace dsp56k
 			TReg56 a,b;						// 56 bit
 
 			// ---- AGU ----
-			StaticArray< TReg24, 8> r;
-			StaticArray< TReg24, 8> n;
-			StaticArray< TReg24, 8> m;
+			std::array<TReg24, 8> r;
+			std::array<TReg24, 8> n;
+			std::array<TReg24, 8> m;
+			std::array<TWord, 8> mMask;
+			std::array<TWord, 8> mModulo;
 
 			// ---- PCU ----
 			TReg24 sr;						// status register (SR_..)
@@ -231,10 +233,6 @@ namespace dsp56k
 
 		Memory&			memory							()											{ return mem; }
 		SRegs&			regs							()											{ return reg; }
-		const auto&		getModuloMasks					() const									{ return moduloMask; }
-		const auto&		getModulos						() const									{ return modulo; }
-		auto&			getModuloMasks					()											{ return moduloMask; }
-		auto&			getModulos						()											{ return modulo; }
 
 		const Opcodes&	opcodes							() const									{ return m_opcodes; }
 		Disassembler&	disassembler					()											{ return m_disasm; }
@@ -616,9 +614,6 @@ namespace dsp56k
 
 		void	setA			( const TReg56& _src )				{ reg.a = _src; }
 		void	setB			( const TReg56& _src )				{ reg.b = _src; }
-
-		std::array<TWord, 8> moduloMask;
-		std::array<TWord, 8> modulo;
 
 		void 	set_m			(int which, TWord val);
 		

@@ -322,12 +322,15 @@ namespace dsp56k
 		TWord			_r = reg.r[regIdx].var;
 		const TReg24	_m = reg.m[regIdx];
 
+		const auto& mask = reg.mMask[regIdx];
+		const auto& mod = reg.mModulo[regIdx];
+
 		switch( mmrrr & 0x18 )
 		{
-		case 0x00:	/* 00 */	AGU::updateAddressRegister( _r, -_n.var, _m.var,moduloMask[regIdx],modulo[regIdx] );		break;
-		case 0x08:	/* 01 */	AGU::updateAddressRegister( _r, +_n.var, _m.var,moduloMask[regIdx],modulo[regIdx] );		break;
-		case 0x10:	/* 10 */	AGU::updateAddressRegister( _r, -1, _m.var,moduloMask[regIdx],modulo[regIdx] );			break;
-		case 0x18:	/* 11 */	AGU::updateAddressRegister( _r, +1, _m.var,moduloMask[regIdx],modulo[regIdx] );			break;
+		case 0x00:	/* 00 */	AGU::updateAddressRegister( _r, -_n.var, _m.var, mask, mod);		break;
+		case 0x08:	/* 01 */	AGU::updateAddressRegister( _r, +_n.var, _m.var, mask, mod);		break;
+		case 0x10:	/* 10 */	AGU::updateAddressRegister( _r, -1, _m.var, mask, mod);			break;
+		case 0x18:	/* 11 */	AGU::updateAddressRegister( _r, +1, _m.var, mask, mod);			break;
 		default:
 			assert(0 && "impossible to happen" );
 		}
@@ -344,7 +347,7 @@ namespace dsp56k
 
 		TWord r = reg.r[rrr].var;
 
-		AGU::updateAddressRegister(r, aSigned, reg.m[rrr].var, moduloMask[rrr], modulo[rrr]);
+		AGU::updateAddressRegister(r, aSigned, reg.m[rrr].var, reg.mMask[rrr], reg.mModulo[rrr]);
 
 		if( dddd < 8 )									// r0-r7
 		{

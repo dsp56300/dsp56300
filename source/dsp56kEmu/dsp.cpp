@@ -1172,8 +1172,8 @@ namespace dsp56k
 
 		if (val == 0xffffff)
 		{
-			modulo[which] = 0;
-			moduloMask[which] = 0xffffff;
+			reg.mModulo[which] = 0;
+			reg.mMask[which] = 0xffffff;
 			return;
 		}
 
@@ -1181,12 +1181,12 @@ namespace dsp56k
 
 		if (moduloTest == 0)
 		{
-			moduloMask[which] = 0;
+			reg.mMask[which] = 0;
 		}
 		else if( moduloTest <= 0x007fff )
 		{
-			moduloMask[which] = AGU::calcModuloMask(val);
-			modulo[which] = val + 1;
+			reg.mMask[which] = AGU::calcModuloMask(val);
+			reg.mModulo[which] = val + 1;
 		}
 		else
 		{

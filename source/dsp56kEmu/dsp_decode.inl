@@ -441,14 +441,17 @@ namespace dsp56k
 		const auto&	n  = reg.n[_rrr].var;
 		const auto&	m  = reg.m[_rrr].var;
 
+		const auto& mask = reg.mMask[_rrr];
+		const auto& mod = reg.mModulo[_rrr];
+
 		TWord a;
 
-		if constexpr (_mmm == 0) {	a = r;	AGU::updateAddressRegister(r,-n,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 000 (Rn)-Nn */
-		if constexpr (_mmm == 1) {	a = r;	AGU::updateAddressRegister(r,+n,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 001 (Rn)+Nn */
-		if constexpr (_mmm == 2) {	a = r;	AGU::updateAddressRegister(r,-1,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 010 (Rn)-   */
-		if constexpr (_mmm == 3) {	a = r;	AGU::updateAddressRegister(r,+1,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 011 (Rn)+   */
-		if constexpr (_mmm == 5) {	a = r;	AGU::updateAddressRegister(a,+n,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 101 (Rn+Nn) */
-		if constexpr (_mmm == 7) {			AGU::updateAddressRegister(r,-1,m,moduloMask[_rrr],modulo[_rrr]);		a = r;	}	/* 111 -(Rn)   */
+		if constexpr (_mmm == 0) {	a = r;	AGU::updateAddressRegister(r,-n,m, mask, mod);				}	/* 000 (Rn)-Nn */
+		if constexpr (_mmm == 1) {	a = r;	AGU::updateAddressRegister(r,+n,m, mask, mod);				}	/* 001 (Rn)+Nn */
+		if constexpr (_mmm == 2) {	a = r;	AGU::updateAddressRegister(r,-1,m, mask, mod);				}	/* 010 (Rn)-   */
+		if constexpr (_mmm == 3) {	a = r;	AGU::updateAddressRegister(r,+1,m, mask, mod);				}	/* 011 (Rn)+   */
+		if constexpr (_mmm == 5) {	a = r;	AGU::updateAddressRegister(a,+n,m, mask, mod);				}	/* 101 (Rn+Nn) */
+		if constexpr (_mmm == 7) {			AGU::updateAddressRegister(r,-1,m, mask, mod);		a = r;	}	/* 111 -(Rn)   */
 
 		_r.var = r;
 
@@ -469,20 +472,23 @@ namespace dsp56k
 		TReg24&			_r = reg.r[regIdx];
 		const TReg24	_m = reg.m[regIdx];
 
+		const auto& mask = reg.mMask[regIdx];
+		const auto& mod = reg.mModulo[regIdx];
+
 		TWord r = _r.toWord();
 
 		TWord a;
 
 		switch( _mmm )
 		{
-		case 0:	/* 000 (Rn)-Nn */	a = r;		AGU::updateAddressRegister(r,-_n.var,_m.var,moduloMask[regIdx],modulo[regIdx]);					break;
-		case 1:	/* 001 (Rn)+Nn */	a = r;		AGU::updateAddressRegister(r,+_n.var,_m.var,moduloMask[regIdx],modulo[regIdx]);					break;
-		case 2:	/* 010 (Rn)-   */	a = r;		AGU::updateAddressRegister(r,-1,_m.var,moduloMask[regIdx],modulo[regIdx]);						break;
-		case 3:	/* 011 (Rn)+   */	a = r;		AGU::updateAddressRegister(r,+1,_m.var,moduloMask[regIdx],modulo[regIdx]);						break;
-		case 4:	/* 100 (Rn)    */	a = r;																		break;
-		case 5:	/* 101 (Rn+Nn) */	a = r;		AGU::updateAddressRegister(a,+_n.var, _m.var,moduloMask[regIdx],modulo[regIdx]);					break;
+		case 0:	/* 000 (Rn)-Nn */	a = r;		AGU::updateAddressRegister(r,-_n.var,_m.var, mask, mod);					break;
+		case 1:	/* 001 (Rn)+Nn */	a = r;		AGU::updateAddressRegister(r,+_n.var,_m.var, mask, mod);					break;
+		case 2:	/* 010 (Rn)-   */	a = r;		AGU::updateAddressRegister(r,-1,_m.var, mask, mod);						break;
+		case 3:	/* 011 (Rn)+   */	a = r;		AGU::updateAddressRegister(r,+1,_m.var, mask, mod);						break;
+		case 4:	/* 100 (Rn)    */	a = r;																					break;
+		case 5:	/* 101 (Rn+Nn) */	a = r;		AGU::updateAddressRegister(a,+_n.var, _m.var, mask, mod);					break;
 		// case 6: special case handled above, either immediate data or absolute address in extension word
-		case 7:	/* 111 -(Rn)   */				AGU::updateAddressRegister(r,-1,_m.var,moduloMask[regIdx],modulo[regIdx]);			a = r;		break;
+		case 7:	/* 111 -(Rn)   */				AGU::updateAddressRegister(r,-1,_m.var, mask, mod);			a = r;		break;
 
 		default:
 			assert(0 && "impossible to happen" );
@@ -501,16 +507,19 @@ namespace dsp56k
 		TReg24&			_r = reg.r[_rrr];
 		const TReg24	_m = reg.m[_rrr];
 
+		const auto& mask = reg.mMask[_rrr];
+		const auto& mod = reg.mModulo[_rrr];
+
 		TWord r = _r.toWord();
 
 		TWord a;
 
 		switch( _mm )
 		{
-		case 0:	/* 00 */	a = r;																				break;
-		case 1:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var,moduloMask[_rrr],modulo[_rrr]);	break;
-		case 2:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var,moduloMask[_rrr],modulo[_rrr]);		break;
-		case 3:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var,moduloMask[_rrr],modulo[_rrr]);		break;
+		case 0:	/* 00 */	a = r;																break;
+		case 1:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var, mask, mod);	break;
+		case 2:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var, mask, mod);		break;
+		case 3:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var, mask, mod);		break;
 		}
 
 		_r.var = r;
