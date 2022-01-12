@@ -284,7 +284,7 @@ namespace dsp56k
 		void updateAddressRegister(const JitReg64& _r, TWord _mmm, TWord _rrr, bool _writeR = true, bool _returnPostR = false);
 		void updateAddressRegister(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m, uint32_t _rrr);
 		void updateAddressRegisterConst(const JitReg32& _r, const int _n, const JitReg32& _m, uint32_t _rrr);
-		void updateAddressRegisterModulo(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m, uint32_t _rrr) const;
+		void updateAddressRegisterModulo(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m, const JitReg32& _mMask) const;
 		void updateAddressRegisterMultipleWrapModulo(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m);
 		static void updateAddressRegisterBitreverse(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m);
 

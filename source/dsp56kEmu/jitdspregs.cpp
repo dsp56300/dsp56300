@@ -61,7 +61,58 @@ namespace dsp56k
 
 	void JitDspRegs::setM(int _agu, const JitRegGP& _src)
 	{
+		// reference impl at DSP::set_m
+
 		pool().write(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspM0 + _agu), _src);
+
+		const AguRegMmod mMod(m_block, _agu, false, true);
+		const AguRegMmask mMask(m_block, _agu, false, true);
+
+		const auto mod = r32(mMod);
+		const auto mask = r32(mMask);
+
+		const asmjit::Label end = m_asm.newLabel();
+		const asmjit::Label isLinear = m_asm.newLabel();
+		const asmjit::Label isModuloZero = m_asm.newLabel();
+		const asmjit::Label isModulo = m_asm.newLabel();
+
+		m_asm.cmp(_src, Imm(0xffffff));
+		m_asm.jz(isLinear);
+
+		m_asm.mov(mod, _src);
+
+		m_asm.and_(mod, asmjit::Imm(0xffff));
+		m_asm.cmp(mod, asmjit::Imm(0));
+		m_asm.jz(isModuloZero);
+
+		m_asm.cmp(mod, asmjit::Imm(0x007fff));
+		m_asm.jle(isModulo);
+		m_asm.jmp(end);
+
+		// zero modulo
+		m_asm.bind(isModuloZero);
+		m_asm.mov(mod, asmjit::Imm(0));
+		m_asm.jmp(end);
+
+		// modulo
+		m_asm.bind(isModulo);
+
+		const ShiftReg shifter(m_block);
+		m_asm.bsr(r32(shifter), _src);								// returns index of MSB that is 1
+		m_asm.mov(mask, asmjit::Imm(2));
+		m_asm.shl(mask, shifter.get().r8());
+		m_asm.dec(mask);
+
+		m_asm.inc(mod);
+
+		m_asm.jmp(end);
+
+		// linear
+		m_asm.bind(isLinear);
+		m_asm.mov(mod, asmjit::Imm(0));
+		m_asm.mov(mask, asmjit::Imm(0xffffff));
+
+		m_asm.bind(end);
 	}
 
 	JitRegGP JitDspRegs::getSR(AccessType _type)

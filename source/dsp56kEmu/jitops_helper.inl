@@ -130,7 +130,7 @@ namespace dsp56k
 		}
 	}
 
-	inline void JitOps::updateAddressRegisterModulo(const JitReg32& r, const JitReg32& n, const JitReg32& m, uint32_t _rrr) const
+	inline void JitOps::updateAddressRegisterModulo(const JitReg32& r, const JitReg32& n, const JitReg32& m, const JitReg32& mMask) const
 	{
 /*
 		const int32_t p				= (r&moduloMask) + n;
@@ -138,22 +138,9 @@ namespace dsp56k
 		r							+= n + ((p>>31) & modulo) - (((mt)>>31) & modulo);
  */
 
-		const auto moduloMask = regReturnVal;
-
 		// Compute p
 		{
-			/* modulo mask mm = m
-			mm |= mm >> 1;
-			mm |= mm >> 2;
-			mm |= mm >> 4;
-			mm |= mm >> 8;
-			*/
-
 			const ShiftReg shifter(m_block);
-			m_asm.bsr(r32(shifter), m);								// returns index of MSB that is 1
-			m_asm.mov(moduloMask, asmjit::Imm(2));
-			m_asm.shl(moduloMask, shifter.get().r8());
-			m_asm.dec(moduloMask);
 
 			/*
 			rOffset = r & moduloMask
@@ -164,7 +151,7 @@ namespace dsp56k
 			const auto& p64 = shifter;
 			const auto p = r32(p64.get());
 			m_asm.mov(p, r);
-			m_asm.and_(p, r32(moduloMask));
+			m_asm.and_(p, r32(mMask));
 			m_asm.add(r, n);		// Increment r by n here.
 			m_asm.add(n, p);
 		}
@@ -172,7 +159,7 @@ namespace dsp56k
 		// r += ((p>>31) & modulo) - (((mt-p)>>31) & modulo);
 		const auto p = n;		// We hid p in n.
 		const auto& modulo = m;	// and modulo is m+1
-		const auto& mtMinusP64 = moduloMask;
+		const auto& mtMinusP64 = regReturnVal;
 		const auto mtMinusP = r32(mtMinusP64);
 
 		m_asm.mov(mtMinusP, m);

@@ -12,6 +12,8 @@ namespace dsp56k
 		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
+		AguRegMmask moduloMask(m_block, _rrr);
+
 		m_asm.cmp(r32(_m), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.jz(linear);
 
@@ -31,7 +33,7 @@ namespace dsp56k
 
 		// modulo:
 		m_asm.bind(modulo);
-		updateAddressRegisterModulo(r32(_r), _n, r32(_m), _rrr);
+		updateAddressRegisterModulo(r32(_r), _n, r32(_m), moduloMask.r32());
 		m_asm.jmp(end);
 
 		// multiple-wrap modulo:
@@ -58,6 +60,8 @@ namespace dsp56k
 		const auto modulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
+		const AguRegMmask moduloMask(m_block, _rrr, true);
+
 		m_asm.cmp(r32(_m), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.jz(linear);
 
@@ -70,15 +74,9 @@ namespace dsp56k
 		// modulo:
 		m_asm.bind(modulo);
 		{
-			const auto moduloMask = regReturnVal;
 			const ShiftReg shifter(m_block);
 			const auto& p64 = shifter;
 			const auto p = r32(p64.get());
-
-			m_asm.bsr(p, _m);								// returns index of MSB that is 1
-			m_asm.mov(moduloMask, asmjit::Imm(2));
-			m_asm.shl(moduloMask, shifter.get().r8());
-			m_asm.dec(moduloMask);
 
 			m_asm.mov(p, _r);
 			m_asm.and_(p, r32(moduloMask));
@@ -99,7 +97,7 @@ namespace dsp56k
 				m_asm.inc(_r);		// Increment r by n here.
 				m_asm.inc(p);
 
-				const auto& mtMinusP64 = moduloMask;
+				const auto& mtMinusP64 = regReturnVal;
 				const auto mtMinusP = r32(mtMinusP64);
 
 				m_asm.mov(mtMinusP, _m);

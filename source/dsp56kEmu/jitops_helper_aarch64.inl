@@ -59,6 +59,8 @@ namespace dsp56k
 		const auto modulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
+		const AguRegMmask moduloMask(m_block, _rrr, true);
+
 		m_asm.mov(r32(regReturnVal), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.cmp(r32(_m), r32(regReturnVal));
 		m_asm.jz(linear);
@@ -73,15 +75,9 @@ namespace dsp56k
 		// modulo:
 		m_asm.bind(modulo);
 		{
-			const auto moduloMask = regReturnVal;
 			const ShiftReg shifter(m_block);
 			const auto& p64 = shifter;
 			const auto p = r32(p64.get());
-
-			m_asm.bsr(shifter, _m);								// returns index of MSB that is 1
-			m_asm.mov(moduloMask, asmjit::Imm(2));
-			m_asm.shl(moduloMask, shifter.get());
-			m_asm.dec(moduloMask);
 
 			m_asm.mov(p, _r);
 			m_asm.and_(p, r32(moduloMask));
@@ -102,7 +98,7 @@ namespace dsp56k
 				m_asm.inc(_r);		// Increment r by n here.
 				m_asm.inc(p);
 
-				const auto& mtMinusP64 = moduloMask;
+				const auto& mtMinusP64 = regReturnVal;
 				const auto mtMinusP = r32(mtMinusP64);
 
 				m_asm.mov(mtMinusP, _m);
