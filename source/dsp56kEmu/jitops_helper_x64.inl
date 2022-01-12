@@ -56,14 +56,25 @@ namespace dsp56k
 
 	inline void JitOps::updateAddressRegisterConst(const JitReg32& _r, const int _n, const JitReg32& _m, uint32_t _rrr)
 	{
-		const auto linear = m_asm.newLabel();
+		const auto notLinear = m_asm.newLabel();
 		const auto modulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
 		const AguRegMmask moduloMask(m_block, _rrr, true);
 
 		m_asm.cmp(r32(_m), asmjit::Imm(0xffffff));		// linear shortcut
-		m_asm.jz(linear);
+		m_asm.jnz(notLinear);
+
+		if (_n == 1)
+			m_asm.inc(_r);
+		else if (_n == -1)
+			m_asm.dec(_r);
+		else
+			m_asm.add(_r, _n);
+
+		m_asm.jmp(end);
+
+		m_asm.bind(notLinear);
 
 		m_asm.or_(_m.r16(), _m.r16());					// bit reverse
 		m_asm.jz(end);
@@ -110,17 +121,6 @@ namespace dsp56k
 			}
 
 		}
-		m_asm.jmp(end);
-
-		// linear:
-		m_asm.bind(linear);
-
-		if (_n == 1)
-			m_asm.inc(_r);
-		else if (_n == -1)
-			m_asm.dec(_r);
-		else
-			m_asm.add(_r, _n);
 
 		m_asm.bind(end);
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
