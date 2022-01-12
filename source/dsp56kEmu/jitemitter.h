@@ -45,6 +45,7 @@ namespace dsp56k
 		void movd(const JitRegGP& _dst, const JitReg128& _src);
 
 		void mov(const JitMemPtr& _dst, const JitRegGP& _src);
+		void mov(const JitRegGP& _dst, const JitMemPtr& _src);
 		
 		void movd(const JitReg128& _dst, const JitMemPtr& _src);
 		void movd(const JitMemPtr& _dst, const JitReg128& _src);
