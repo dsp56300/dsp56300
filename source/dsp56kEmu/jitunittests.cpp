@@ -385,7 +385,7 @@ namespace dsp56k
 	{
 		dsp.regs().r[0].var = 0x1000;
 		dsp.regs().n[0].var = 0x10;
-		dsp.regs().m[0].var = 0xffffff;
+		dsp.set_m(0, 0xffffff);
 
 		uint32_t ci=0;
 
@@ -442,7 +442,7 @@ namespace dsp56k
 	{
 		dsp.regs().r[0].var = 0x100;
 		dsp.regs().n[0].var = 0x200;
-		dsp.regs().m[0].var = 0xfff;
+		dsp.set_m(0, 0xfff);
 
 		const RegGP temp(_block);
 
@@ -471,7 +471,7 @@ namespace dsp56k
 	{
 		dsp.regs().r[0].var = 0x70;
 		dsp.regs().n[0].var = 0x20;
-		dsp.regs().m[0].var = 0x100;
+		dsp.set_m(0, 0x100);
 
 		const RegGP temp(_block);
 
@@ -681,7 +681,7 @@ namespace dsp56k
 
 				dsp.regs().r[i].var = (i+1) * 0x110000;
 				dsp.regs().n[i].var = (i+1) * 0x001100;
-				dsp.regs().m[i].var = (i+1) * 0x000011;
+				dsp.set_m(i, (i+1) * 0x000011);
 
 				_ops.emit(0, 0x600500 + inc);						// asm move ri,x:$5
 				_block.mem().readDspMemory(r, MemArea_X, 0x5);
@@ -1172,7 +1172,7 @@ namespace dsp56k
 		dsp.regs().r[1].var = 0x22;
 
 		dsp.regs().n[0].var = dsp.regs().n[1].var = 0;
-		dsp.regs().m[0].var = dsp.regs().m[1].var = 0xffffff;
+		dsp.set_m(0, 0xffffff); dsp.set_m(1, 0xffffff);
 
 		_ops.emit(0, 0xa6014);	// bclr #$14,x:(r0)
 		_ops.emit(0, 0xa6150);	// bclr #$10,y:(r1)
@@ -1687,7 +1687,7 @@ namespace dsp56k
 		runTest([&](auto& _block, auto& _ops)
 		{
 			dsp.regs().r[0].var = 0x0000f0;
-			dsp.regs().m[0].var = 0xffffff;
+			dsp.set_m(0, 0xffffff);
 
 			_ops.emit(0, 0x04180b);				// lua (r0+$30),n3
 		},
@@ -1699,7 +1699,7 @@ namespace dsp56k
 		runTest([&](auto& _block, auto& _ops)
 		{
 			dsp.regs().r[0].var = 0x0000f0;
-			dsp.regs().m[0].var = 0x0000ff;
+			dsp.set_m(0, 0x0000ff);
 
 			_ops.emit(0, 0x04180b);				// lua (r0+$30),n3
 		},
