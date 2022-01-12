@@ -40,7 +40,8 @@ namespace dsp56k
 
 		void release();
 
-	protected:
+		const JitReg& get() const { return m_reg; }
+	private:
 		JitReg m_reg;
 	private:
 		JitBlock& m_block;
@@ -53,7 +54,7 @@ namespace dsp56k
 	public:
 		RegGP(JitBlock& _block);
 
-		const JitReg64& get() const { return m_reg.as<JitReg64>(); }
+		const JitReg64& get() const { return JitScopedReg::get().as<JitReg64>(); }
 		operator const JitReg64& () const { return get(); }
 	};
 	
@@ -62,7 +63,7 @@ namespace dsp56k
 	public:
 		RegXMM(JitBlock& _block);
 
-		const JitReg128& get() const { return m_reg.as<JitReg128>(); }
+		const JitReg128& get() const { return JitScopedReg::get().as<JitReg128>(); }
 		operator const JitReg128& () const { return get(); }
 	};
 
