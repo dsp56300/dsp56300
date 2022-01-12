@@ -88,11 +88,6 @@ namespace dsp56k
 		str(_src, _dst);
 	}
 
-	void JitEmitter::mov(const JitRegGP& _dst, const JitMemPtr& _src)
-	{
-		ldr(_dst, _src);
-	}
-
 	void JitEmitter::movd(const JitReg128& _dst, const JitMemPtr& _src)
 	{
 		ldr(_dst.s(), _src);

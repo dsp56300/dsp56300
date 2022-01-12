@@ -21,11 +21,11 @@ namespace dsp56k
 
 	static constexpr JitReg128 g_nonVolatileXMMs[] = {JitReg128()};	// none
 
-	static constexpr JitRegGP g_dspPoolGps[] = {JitReg64(2), JitReg64(3), JitReg64(4), JitReg64(5), JitReg64(6), JitReg64(7), JitReg64(9)};
+	static constexpr JitRegGP g_dspPoolGps[] = { JitReg64(1), JitReg64(2), JitReg64(3), JitReg64(4), JitReg64(5), JitReg64(6), JitReg64(7)};
 
 	static constexpr auto regReturnVal = JitReg64(0);
 
-	static constexpr auto regDspPtr = JitReg64(1);
+	static constexpr auto regDspPtr = JitReg64(9);
 
 	// compared to X64, we use one additional temp because we do not have a fixed shift register, which leads to one additional temp register
 	static constexpr std::initializer_list<JitReg> g_regGPTemps = { JitReg64(10), JitReg64(11), JitReg64(12), JitReg64(13), JitReg64(14), JitReg64(15) };
