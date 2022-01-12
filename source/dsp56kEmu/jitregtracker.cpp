@@ -198,6 +198,9 @@ namespace dsp56k
 			}
 		}
 
+		_block.stack().push(regDspPtr);
+		m_pushedRegs.push_front(regDspPtr);
+
 #ifdef HAVE_ARM64
 		_block.stack().push(asmjit::a64::regs::x30);
 		m_pushedRegs.push_front(asmjit::a64::regs::x30);
