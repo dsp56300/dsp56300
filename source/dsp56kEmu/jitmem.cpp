@@ -136,17 +136,27 @@ namespace dsp56k
 		const RegGP v(m_block);
 		const auto a = regReturnVal;
 
-		m_block.asm_().mov(a, asmjit::Imm(_src));
+		makeBasePtr(a, _src);
 		m_block.asm_().move(v, makePtr(a, 0, _size));
-		m_block.asm_().mov(a, asmjit::Imm(_dst));
+		makeBasePtr(a, _dst);
 		m_block.asm_().mov(makePtr(a, 0, _size), v.get());
 	}
 
 	void Jitmem::mov(void* _dst, const JitRegGP& _src, uint32_t _size)
 	{
 		const auto a = regReturnVal;
-		m_block.asm_().mov(a, asmjit::Imm(_dst));
+		makeBasePtr(a, _dst);
 		m_block.asm_().mov(makePtr(a, 0, _size), _src);
+	}
+
+	void Jitmem::makeBasePtr(const JitReg64& _base, const void* _ptr) const
+	{
+//#ifdef HAVE_ARM64
+		m_block.asm_().mov(_base, asmjit::Imm(_ptr));
+//#else
+		// relocation offset out of range, not useable atm
+//		m_block.asm_().lea(_base, asmjit::x86::ptr_rel(reinterpret_cast<uint64_t>(_ptr)));
+//#endif
 	}
 
 	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const JitRegGP& _index, const uint32_t _shift, const uint32_t _size)
@@ -372,7 +382,7 @@ namespace dsp56k
 	template <typename T> void Jitmem::ptrToReg(const JitReg64& _r, const T* _t) const
 	{
 		if constexpr (sizeof(T*) == sizeof(uint64_t))
-			m_block.asm_().mov(_r, reinterpret_cast<uint64_t>(_t));
+			makeBasePtr(_r, _t);
 		else if constexpr (sizeof(T*) == sizeof(uint32_t))
 			m_block.asm_().mov(_r, reinterpret_cast<uint32_t>(_t));
 		else
