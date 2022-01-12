@@ -194,25 +194,15 @@ namespace dsp56k
 #endif
 		if(m_possibleBranch)
 		{
-			const RegGP temp(*this);
-			mem().mov(temp, nextPC());
-			mem().mov(m_dsp.regs().pc, temp);
+			mem().mov(m_dspRegPool.get(JitDspRegPool::DspPC, false, true), nextPC());
 		}
 		else if(!isFastInterrupt)
 		{
 			if (cursorBeforePCUpdate && cursorAfterPCUpdate)
 				m_asm.removeNodes(cursorBeforePCUpdate->next(), cursorAfterPCUpdate);
 
-			const auto dst = mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_dsp.regs().pc.var));
-
-#ifdef HAVE_ARM64
-			RegGP temp(*this);
-			m_asm.mov(temp, asmjit::Imm(m_pcLast));
-			m_asm.mov(dst, r32(temp.get()));
-#else
-			m_asm.mov(dst, asmjit::Imm(m_pcLast));
-#endif
-			}
+			m_asm.mov(m_dspRegPool.get(JitDspRegPool::DspPC, false, true), asmjit::Imm(m_pcLast));
+		}
 
 		if(m_dspRegs.ccrDirtyFlags())
 		{
