@@ -2,11 +2,16 @@
 
 #include "jittypes.h"
 
-#if defined(HAVE_ARM64)
 namespace dsp56k
 {
-	// We do NOT use the following registers:
-	// X8 = XR, X16 = IP0, X17 = IP1, X18 = PR, X29 = FP, X30 = LR
+#if defined(HAVE_ARM64)
+	// We do NOT use the following GP registers:
+	// X8 = XR
+	// X16 = IP0
+	// X17 = IP1
+	// X18 = PR
+	// X29 = FP
+	// X30 = LR
 
 	// Furthermore, we have so many GPs, we do not use the ones that are callee-save. We use vector registers instead to prevent that we have to push/pop when calling C functions
 
@@ -16,11 +21,12 @@ namespace dsp56k
 
 	static constexpr JitReg128 g_nonVolatileXMMs[] = {JitReg128()};	// none
 
-	static constexpr JitRegGP g_dspPoolGps[] = {JitReg64(1), JitReg64(2), JitReg64(3), JitReg64(4), JitReg64(5), JitReg64(6), JitReg64(7), JitReg64(9), JitReg64(10)};
+	static constexpr JitRegGP g_dspPoolGps[] = {JitReg64(1), JitReg64(2), JitReg64(3), JitReg64(4), JitReg64(5), JitReg64(6), JitReg64(7), JitReg64(9)};
 
 	static constexpr auto regReturnVal = JitReg64(0);
 
-	static constexpr std::initializer_list<JitReg> g_regGPTemps = { JitReg64(11), JitReg64(12), JitReg64(13), JitReg64(14), JitReg64(15) };
+	// compared to X64, we use one additional temp because we do not have a fixed shift register, which leads to one additional temp register
+	static constexpr std::initializer_list<JitReg> g_regGPTemps = { JitReg64(10), JitReg64(11), JitReg64(12), JitReg64(13), JitReg64(14), JitReg64(15) };
 
 	static constexpr auto regLastModAlu = JitReg128(0);
 
@@ -33,8 +39,6 @@ namespace dsp56k
 
 }
 #else
-namespace dsp56k
-{
 #ifdef _MSC_VER
 	static constexpr JitReg64 g_funcArgGPs[] = {asmjit::x86::rcx, asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9};
 
@@ -69,6 +73,5 @@ namespace dsp56k
 
 	static constexpr JitReg128 g_dspPoolXmms[] =	{ asmjit::x86::xmm2, asmjit::x86::xmm3,  asmjit::x86::xmm4,  asmjit::x86::xmm5,  asmjit::x86::xmm6,  asmjit::x86::xmm7,  asmjit::x86::xmm8,
 													  asmjit::x86::xmm9, asmjit::x86::xmm10, asmjit::x86::xmm11, asmjit::x86::xmm12, asmjit::x86::xmm13, asmjit::x86::xmm14, asmjit::x86::xmm15};
-
-}
 #endif
+}
