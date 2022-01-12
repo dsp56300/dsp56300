@@ -86,6 +86,14 @@ namespace dsp56k
 
 		if constexpr(!g_traceOps)
 			m_dsp.m_instructions += m_runtimeData.m_executedInstructionCount;
+
+		const auto child = cacheEntry.block->getChild();
+
+		if (child != g_invalidAddress)
+		{
+			assert(m_dsp.getPC().toWord() == child);
+			exec(child);
+		}
 	}
 
 	void Jit::exec(const TWord pc, JitCacheEntry& e)
