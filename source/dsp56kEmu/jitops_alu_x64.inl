@@ -295,6 +295,16 @@ namespace dsp56k
 			m_asm.mov(addOrSub, s.get());
 			m_asm.xor_(addOrSub, d.get());
 
+			{
+				const auto sNeg = regReturnVal;
+				m_asm.mov(sNeg, s);
+				m_asm.neg(sNeg);
+
+				m_asm.bt(addOrSub, asmjit::Imm(55));
+
+				m_asm.cmovnc(s, sNeg);
+			}
+
 			m_asm.shl(d, asmjit::Imm(1));
 
 			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
@@ -304,19 +314,8 @@ namespace dsp56k
 			m_asm.mov(dLsWord, d.get());
 			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
 
-			const asmjit::Label sub = m_asm.newLabel();
-			const asmjit::Label end = m_asm.newLabel();
+			m_asm.add(d, s);
 
-			m_asm.bt(addOrSub, asmjit::Imm(55));
-
-			m_asm.jnc(sub);
-			m_asm.add(d, s.get());
-			m_asm.jmp(end);
-
-			m_asm.bind(sub);
-			m_asm.sub(d, s.get());
-
-			m_asm.bind(end);
 			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
 			m_asm.or_(d, dLsWord);
 		}
@@ -385,11 +384,21 @@ namespace dsp56k
 		RegGP addOrSub(m_block);
 		RegGP lc(m_block);
 		RegGP carry(m_block);
+		ShiftReg sNeg(m_block);
 
 		const auto loopIteration = [&](bool last)
 		{
 			m_asm.mov(addOrSub, s.get());
 			m_asm.xor_(addOrSub, alu);
+
+			{
+				m_asm.mov(sNeg, s);
+				m_asm.neg(sNeg);
+
+				m_asm.bt(addOrSub, asmjit::Imm(55));
+
+				m_asm.cmovc(sNeg, s);
+			}
 
 			m_asm.shl(alu, asmjit::Imm(1));
 
@@ -399,19 +408,8 @@ namespace dsp56k
 			m_asm.mov(dLsWord, alu);
 			m_asm.and_(dLsWord, asmjit::Imm(0xffffff));
 
-			const asmjit::Label sub = m_asm.newLabel();
-			const asmjit::Label end = m_asm.newLabel();
+			m_asm.add(alu, sNeg.get());
 
-			m_asm.bt(addOrSub, asmjit::Imm(55));
-
-			m_asm.jnc(sub);
-			m_asm.add(alu, s.get());
-			m_asm.jmp(end);
-
-			m_asm.bind(sub);
-			m_asm.sub(alu, s.get());
-
-			m_asm.bind(end);
 			m_asm.and_(alu, asmjit::Imm(0xffffffffff000000));
 			m_asm.or_(alu, dLsWord);
 
