@@ -184,14 +184,14 @@ namespace dsp56k
 	{
 		const RegGP r(m_block);
 		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().sp);		m_asm.dec(r);		m_block.dspRegPool().movDspReg(m_block.dsp().regs().sp, r);
-		m_block.mem().mov(r, m_block.dsp().regs().sc.var);	m_asm.dec(r);		m_block.mem().mov(m_block.dsp().regs().sc.var, r);
+		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().sc);		m_asm.dec(r);		m_block.dspRegPool().movDspReg(m_block.dsp().regs().sc.var, r);
 	}
 
 	void JitOps::incSP() const
 	{
 		const RegGP r(m_block);
 		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().sp);		m_asm.inc(r);		m_block.dspRegPool().movDspReg(m_block.dsp().regs().sp, r);
-		m_block.mem().mov(r, m_block.dsp().regs().sc.var);	m_asm.inc(r);		m_block.mem().mov(m_block.dsp().regs().sc.var, r);
+		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().sc);		m_asm.inc(r);		m_block.dspRegPool().movDspReg(m_block.dsp().regs().sc, r);
 	}
 
 	void JitOps::transferSaturation(const JitRegGP& _dst)

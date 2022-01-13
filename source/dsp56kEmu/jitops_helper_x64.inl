@@ -211,14 +211,14 @@ namespace dsp56k
 
 	void JitOps::decSP() const
 	{
-		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sp.var)));
-		m_asm.dec(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sc.var)));
+		m_asm.dec(m_block.dspRegPool().makeDspPtr(m_block.dsp().regs().sp));
+		m_asm.dec(m_block.dspRegPool().makeDspPtr(m_block.dsp().regs().sc));
 	}
 
 	void JitOps::incSP() const
 	{
-		m_asm.inc(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sp.var)));
-		m_asm.inc(m_block.mem().ptr(regReturnVal, reinterpret_cast<const uint32_t*>(&m_block.dsp().regs().sc.var)));
+		m_asm.inc(m_block.dspRegPool().makeDspPtr(m_block.dsp().regs().sp));
+		m_asm.inc(m_block.dspRegPool().makeDspPtr(m_block.dsp().regs().sc));
 	}
 
 	void JitOps::transferSaturation(const JitRegGP& _dst)

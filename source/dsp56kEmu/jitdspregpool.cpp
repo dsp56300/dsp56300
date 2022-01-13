@@ -759,6 +759,15 @@ namespace dsp56k
 		m_block.asm_().movq(_dst, _src);
 	}
 
+	void JitDspRegPool::movb(const JitMemPtr& _dst, const JitRegGP& _src) const
+	{
+#ifdef HAVE_ARM64
+		m_block.asm_().strb(r32(_src), _dst);
+#else
+		m_block.asm_().mov(_dst, _src.r8());
+#endif
+	}
+
 	void JitDspRegPool::mov(const JitRegGP& _dst, const JitMemPtr& _src) const
 	{
 #ifdef HAVE_ARM64
@@ -776,5 +785,14 @@ namespace dsp56k
 	void JitDspRegPool::movq(const JitReg128& _dst, const JitMemPtr& _src) const
 	{
 		m_block.asm_().movq(_dst, _src);
+	}
+
+	void JitDspRegPool::movb(const JitRegGP& _dst, const JitMemPtr& _src) const
+	{
+#ifdef HAVE_ARM64
+		m_block.asm_().ldrb(r32(_dst), _src);
+#else
+		m_block.asm_().movzx(r32(_dst), _src);
+#endif
 	}
 }

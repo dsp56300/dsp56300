@@ -209,12 +209,12 @@ namespace dsp56k
 
 	void JitDspRegs::getSC(const JitReg32& _dst) const
 	{
-		m_block.mem().mov(_dst, m_dsp.regs().sc.var);
+		m_block.dspRegPool().movDspReg(_dst, m_dsp.regs().sc);
 	}
 
 	void JitDspRegs::setSC(const JitReg32& _src) const
 	{
-		m_block.mem().mov(m_dsp.regs().sc.var, _src);
+		m_block.dspRegPool().movDspReg(m_dsp.regs().sc, _src);
 	}
 
 	void JitDspRegs::getSZ(const JitReg32& _dst) const
