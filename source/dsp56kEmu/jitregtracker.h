@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stack>
+#include <list>
 
 #include "jitdspregpool.h"
 #include "types.h"
@@ -21,9 +21,10 @@ namespace dsp56k
 		void put(const JitReg& _reg);
 		JitReg get();
 		bool empty() const;
+		bool isInUse(const JitReg& _gp) const;
 
 	private:
-		std::stack<JitReg> m_availableRegs;	// TODO: do we want a FIFO instead to have more register spread? Is it any better performance-wise?
+		std::list<JitReg> m_availableRegs;
 	};
 
 	class JitScopedReg

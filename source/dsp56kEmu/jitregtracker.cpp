@@ -181,7 +181,7 @@ namespace dsp56k
 	{
 		for (auto gp : g_dspPoolGps)
 		{
-			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp))
+			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp) && m_block.dspRegPool().isInUse(gp))
 			{
 				m_pushedRegs.push_front(gp);
 				_block.stack().push(gp);
@@ -191,7 +191,7 @@ namespace dsp56k
 		{
 			const auto gp = reg.as<JitRegGP>();
 
-			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp))
+			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp) && m_block.gpPool().isInUse(gp))
 			{
 				m_pushedRegs.push_front(gp);
 				_block.stack().push(gp);
@@ -222,25 +222,30 @@ namespace dsp56k
 	JitRegpool::JitRegpool(std::initializer_list<JitReg> _availableRegs)
 	{
 		for (const auto& r : _availableRegs)
-			m_availableRegs.push(r);
+			m_availableRegs.push_back(r);
 	}
 
 	void JitRegpool::put(const JitReg& _reg)
 	{
-		m_availableRegs.push(_reg);
+		m_availableRegs.push_back(_reg);
 	}
 
 	JitReg JitRegpool::get()
 	{
 		assert(!m_availableRegs.empty() && "no more temporary registers left");
-		const auto ret = m_availableRegs.top();
-		m_availableRegs.pop();
+		const auto ret = m_availableRegs.back();
+		m_availableRegs.pop_back();
 		return ret;
 	}
 
 	bool JitRegpool::empty() const
 	{
 		return m_availableRegs.empty();
+	}
+
+	bool JitRegpool::isInUse(const JitReg& _gp) const
+	{
+		return std::find(m_availableRegs.begin(), m_availableRegs.end(), _gp) == m_availableRegs.end();
 	}
 
 	void JitScopedReg::acquire()
