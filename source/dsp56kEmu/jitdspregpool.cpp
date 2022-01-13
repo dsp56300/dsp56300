@@ -460,7 +460,7 @@ namespace dsp56k
 				}
 			}
 			else
-				m.mov(_dst, r.a);
+				movDspReg(_dst, r.a);
 			break;
 		case DspAwrite:
 			// write only
@@ -725,7 +725,7 @@ namespace dsp56k
 			m_dirty = true;
 	}
 
-	JitMemPtr JitDspRegPool::makeDspPtr(const void* _ptr, const size_t _size)
+	JitMemPtr JitDspRegPool::makeDspPtr(const void* _ptr, const size_t _size) const
 	{
 		const void* base = &m_block.dsp().regs();
 		const auto offset = static_cast<const uint8_t*>(_ptr) - static_cast<const uint8_t*>(base);

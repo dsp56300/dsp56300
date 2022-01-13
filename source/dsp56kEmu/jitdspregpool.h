@@ -93,6 +93,50 @@ namespace dsp56k
 			return m_dirty;
 		}
 
+
+		template<typename T, unsigned int B>
+		void movDspReg(const RegType<T, B>& _reg, const JitRegGP& _src) const
+		{
+			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
+				mov(makeDspPtr(_reg), r32(_src));
+			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
+				mov(makeDspPtr(_reg), r64(_src));
+		}
+
+		template<typename T, unsigned int B>
+		void movDspReg(const RegType<T, B>& _reg, const JitReg128& _src) const
+		{
+			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
+				movd(makeDspPtr(_reg), _src);
+			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
+				movq(makeDspPtr(_reg), _src);
+		}
+
+		void movDspReg(const TWord& _reg, const JitReg128& _src) const
+		{
+			movd(makeDspPtr(&_reg, sizeof(_reg)), _src);
+		}
+
+		void movDspReg(const TWord& _reg, const JitRegGP& _src) const
+		{
+			mov(makeDspPtr(&_reg, sizeof(_reg)), r32(_src));
+		}
+
+
+		template<typename T, unsigned int B>
+		void movDspReg(const JitRegGP& _dst, const RegType<T, B>& _reg) const
+		{
+			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
+				mov(r32(_dst), makeDspPtr(_reg));
+			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
+				mov(r64(_dst), makeDspPtr(_reg));
+		}
+
+		void movDspReg(const JitRegGP& _dst, const TWord& _reg) const
+		{
+			mov(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
+		}
+
 	private:
 		void parallelOpEpilog(DspReg _aluReadReg, DspReg _aluWriteReg);
 		
@@ -227,55 +271,12 @@ namespace dsp56k
 		};
 
 		template<typename T, unsigned int B>
-		JitMemPtr makeDspPtr(const RegType<T,B>& _reg)
+		JitMemPtr makeDspPtr(const RegType<T,B>& _reg) const
 		{
 			return makeDspPtr(&_reg, sizeof(_reg.var));
 		}
 
-		JitMemPtr makeDspPtr(const void* _ptr, size_t _size);
-
-		template<typename T, unsigned int B>
-		void movDspReg(const RegType<T,B>& _reg, const JitRegGP& _src)
-		{
-			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
-				mov(makeDspPtr(_reg), r32(_src));
-			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
-				mov(makeDspPtr(_reg), r64(_src));
-		}
-
-		template<typename T, unsigned int B>
-		void movDspReg(const RegType<T,B>& _reg, const JitReg128& _src)
-		{
-			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
-				movd(makeDspPtr(_reg), _src);
-			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
-				movq(makeDspPtr(_reg), _src);
-		}
-
-		void movDspReg(const TWord& _reg, const JitReg128& _src)
-		{
-			movd(makeDspPtr(&_reg, sizeof(_reg)), _src);
-		}
-
-		void movDspReg(const TWord& _reg, const JitRegGP& _src)
-		{
-			mov(makeDspPtr(&_reg, sizeof(_reg)), r32(_src));
-		}
-
-
-		template<typename T, unsigned int B>
-		void movDspReg(const JitRegGP& _dst, const RegType<T, B>& _reg)
-		{
-			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
-				mov(r32(_dst), makeDspPtr(_reg));
-			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
-				mov(r64(_dst), makeDspPtr(_reg));
-		}
-
-		void movDspReg(const JitRegGP& _dst, const TWord& _reg)
-		{
-			mov(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
-		}
+		JitMemPtr makeDspPtr(const void* _ptr, size_t _size) const;
 
 		void mov (const JitMemPtr& _dst, const JitRegGP& _src) const;
 		void movd(const JitMemPtr& _dst, const JitReg128& _src) const;
@@ -297,7 +298,7 @@ namespace dsp56k
 
 		bool m_isParallelOp = false;
 		bool m_repMode = false;
-		JitMemPtr m_dspPtr;
+		mutable JitMemPtr m_dspPtr;
 		bool m_dirty = false;
 	};
 }

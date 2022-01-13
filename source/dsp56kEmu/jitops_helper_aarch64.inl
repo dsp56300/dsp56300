@@ -175,22 +175,22 @@ namespace dsp56k
 	void JitOps::setEOM(const JitReg64& _src) const
 	{
 		const RegGP r(m_block);
-		m_block.mem().mov(r, m_block.dsp().regs().omr);
+		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().omr);
 		m_asm.bfi(r, _src, asmjit::Imm(8), asmjit::Imm(8));
-		m_block.mem().mov(m_block.dsp().regs().omr, r);
+		m_block.dspRegPool().movDspReg(m_block.dsp().regs().omr, r);
 	}
 
 	void JitOps::decSP() const
 	{
 		const RegGP r(m_block);
-		m_block.mem().mov(r, m_block.dsp().regs().sp);		m_asm.dec(r);		m_block.mem().mov(m_block.dsp().regs().sp, r);
+		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().sp);		m_asm.dec(r);		m_block.dspRegPool().movDspReg(m_block.dsp().regs().sp, r);
 		m_block.mem().mov(r, m_block.dsp().regs().sc.var);	m_asm.dec(r);		m_block.mem().mov(m_block.dsp().regs().sc.var, r);
 	}
 
 	void JitOps::incSP() const
 	{
 		const RegGP r(m_block);
-		m_block.mem().mov(r, m_block.dsp().regs().sp);		m_asm.inc(r);		m_block.mem().mov(m_block.dsp().regs().sp, r);
+		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().sp);		m_asm.inc(r);		m_block.dspRegPool().movDspReg(m_block.dsp().regs().sp, r);
 		m_block.mem().mov(r, m_block.dsp().regs().sc.var);	m_asm.inc(r);		m_block.mem().mov(m_block.dsp().regs().sc.var, r);
 	}
 

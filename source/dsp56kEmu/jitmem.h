@@ -13,22 +13,6 @@ namespace dsp56k
 	public:
 		Jitmem(JitBlock& _block) : m_block(_block) {}
 
-		void mov(TReg24& _dst, const JitReg128& _src);
-		void mov(TReg48& _dst, const JitReg128& _src);
-		void mov(TReg56& _dst, const JitReg128& _src);
-
-		void mov(const JitReg128& _dst, TReg24& _src);
-		void mov(const JitReg128& _dst, TReg56& _src);
-		void mov(const JitReg128& _dst, TReg48& _src);
-
-		void mov(const JitRegGP& _dst, const TReg24& _src);
-		void mov(const JitRegGP& _dst, const TReg48& _src);
-		void mov(const JitRegGP& _dst, const TReg56& _src);
-
-		void mov(const TReg24& _dst, const JitRegGP& _src);
-		void mov(const TReg48& _dst, const JitRegGP& _src);
-		void mov(const TReg56& _dst, const JitRegGP& _src);
-
 		void mov(uint64_t& _dst, const JitRegGP& _src) const;
 		void mov(uint32_t& _dst, const JitRegGP& _src) const;
 		void mov(uint8_t& _dst, const JitRegGP& _src) const;
@@ -38,9 +22,6 @@ namespace dsp56k
 		void mov(const JitRegGP& _dst, const uint64_t& _src) const;
 		void mov(const JitRegGP& _dst, const uint32_t& _src) const;
 		void mov(const JitRegGP& _dst, const uint8_t& _src) const;
-
-		void mov(void* _dst, void* _src, uint32_t _size);
-		void mov(void* _dst, const JitRegGP& _src, uint32_t _size);
 
 		template<typename T, unsigned int B>
 		JitMemPtr ptr(const JitReg64& _temp, const RegType<T, B>& _reg)

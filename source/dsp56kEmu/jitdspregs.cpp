@@ -36,12 +36,12 @@ namespace dsp56k
 
 	void JitDspRegs::load24(const JitRegGP& _dst, const TReg24& _src) const
 	{
-		m_block.mem().mov(_dst, _src);
+		m_block.dspRegPool().movDspReg(_dst, _src);
 	}
 
 	void JitDspRegs::store24(TReg24& _dst, const JitRegGP& _src) const
 	{
-		m_block.mem().mov(_dst, _src);
+		m_block.dspRegPool().movDspReg(_dst, _src);
 	}
 
 	JitDspRegPool& JitDspRegs::pool() const

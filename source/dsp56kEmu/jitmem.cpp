@@ -12,78 +12,6 @@ namespace dsp56k
 {
 	const auto regSmallTemp = regReturnVal;
 	
-	void Jitmem::mov(TReg24& _dst, const JitReg128& _src)
-	{
-		const auto reg = regSmallTemp;
-		m_block.asm_().movd(ptr(reg, _dst), _src);
-	}
-
-	void Jitmem::mov(TReg48& _dst, const JitReg128& _src)
-	{
-		const auto reg = regSmallTemp;
-		m_block.asm_().movq(ptr(reg, _dst), _src);
-	}
-
-	void Jitmem::mov(TReg56& _dst, const JitReg128& _src)
-	{
-		const auto reg = regSmallTemp;
-		m_block.asm_().movq(ptr(reg, _dst), _src);
-	}
-
-	void Jitmem::mov(const JitReg128& _dst, TReg24& _src)
-	{
-		const auto reg = regSmallTemp;
-		m_block.asm_().movd(_dst, ptr(reg, _src));
-	}
-
-	void Jitmem::mov(const JitReg128& _dst, TReg48& _src)
-	{
-		const auto reg = regSmallTemp;
-		m_block.asm_().movq(_dst, ptr(reg, _src));
-	}
-
-	void Jitmem::mov(const JitRegGP& _dst, const TReg24& _src)
-	{
-		const JitReg32 foo = r32(_dst);
-		const JitMemPtr bar = ptr(r64(_dst), _src);
-		m_block.asm_().move(foo, bar);
-	}
-
-	void Jitmem::mov(const JitRegGP& _dst, const TReg48& _src)
-	{
-		m_block.asm_().move(r64(_dst), ptr(r64(_dst), _src));
-	}
-
-	void Jitmem::mov(const JitRegGP& _dst, const TReg56& _src)
-	{
-		const auto reg = regSmallTemp;
-		m_block.asm_().move(r64(_dst), ptr(reg, _src));
-	}
-
-	void Jitmem::mov(const TReg24& _dst, const JitRegGP& _src)
-	{
-		const auto reg = regSmallTemp;
-		m_block.asm_().mov(ptr(reg, _dst), r32(_src));
-	}
-
-	void Jitmem::mov(const TReg48& _dst, const JitRegGP& _src)
-	{
-		const auto reg = regSmallTemp;
-		m_block.asm_().mov(ptr(reg, _dst), r64(_src));
-	}
-
-	void Jitmem::mov(const TReg56& _dst, const JitRegGP& _src)
-	{
-		const auto reg = regSmallTemp;
-		m_block.asm_().mov(ptr(reg, _dst), r64(_src));
-	}
-
-	void Jitmem::mov(const JitReg128& _dst, TReg56& _src)
-	{
-		const auto reg = regSmallTemp;
-		m_block.asm_().movq(_dst, ptr(reg, _src));
-	}
-
 	void Jitmem::mov(uint64_t& _dst, const JitRegGP& _src) const
 	{
 		const auto reg = regSmallTemp;
@@ -129,24 +57,6 @@ namespace dsp56k
 #else
 		m_block.asm_().movzx(r32(_dst), ptr(r64(_dst), &_src));
 #endif
-	}
-
-	void Jitmem::mov(void* _dst, void* _src, uint32_t _size)
-	{
-		const RegGP v(m_block);
-		const auto a = regReturnVal;
-
-		makeBasePtr(a, _src);
-		m_block.asm_().move(v, makePtr(a, 0, _size));
-		makeBasePtr(a, _dst);
-		m_block.asm_().mov(makePtr(a, 0, _size), v.get());
-	}
-
-	void Jitmem::mov(void* _dst, const JitRegGP& _src, uint32_t _size)
-	{
-		const auto a = regReturnVal;
-		makeBasePtr(a, _dst);
-		m_block.asm_().mov(makePtr(a, 0, _size), _src);
 	}
 
 	void Jitmem::makeBasePtr(const JitReg64& _base, const void* _ptr) const

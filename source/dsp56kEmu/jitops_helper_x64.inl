@@ -201,11 +201,11 @@ namespace dsp56k
 	void JitOps::setEOM(const JitReg64& _src) const
 	{
 		const RegGP r(m_block);
-		m_block.mem().mov(r, m_block.dsp().regs().omr);
+		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().omr);
 		m_asm.and_(r, asmjit::Imm(0xff00ff));
 		m_asm.shl(_src, asmjit::Imm(8));
 		m_asm.or_(r, _src);
-		m_block.mem().mov(m_block.dsp().regs().omr, r);
+		m_block.dspRegPool().movDspReg(m_block.dsp().regs().omr, r);
 		m_asm.shr(_src, asmjit::Imm(8));	// TODO: we don't wanna be destructive to the input for now
 	}
 
