@@ -184,7 +184,7 @@ namespace dsp56k
 	{
 		const RegGP r(m_block);
 		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().sp);		m_asm.dec(r);		m_block.dspRegPool().movDspReg(m_block.dsp().regs().sp, r);
-		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().sc);		m_asm.dec(r);		m_block.dspRegPool().movDspReg(m_block.dsp().regs().sc.var, r);
+		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().sc);		m_asm.dec(r);		m_block.dspRegPool().movDspReg(m_block.dsp().regs().sc, r);
 	}
 
 	void JitOps::incSP() const
