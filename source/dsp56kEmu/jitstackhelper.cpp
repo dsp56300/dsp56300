@@ -51,11 +51,11 @@ namespace dsp56k
 
 	void JitStackHelper::push(const JitReg128& _reg)
 	{
-		m_block.asm_().movq(regReturnVal, _reg);
-		m_block.asm_().push(regReturnVal);
+		stackRegSub(pushSize(_reg));
+		m_block.asm_().movq(ptr(asmjit::x86::rsp), _reg);
 
 		m_pushedRegs.push_back(_reg);
-		m_pushedBytes += pushSize(regReturnVal);
+		m_pushedBytes += pushSize(_reg);
 	}
 
 	void JitStackHelper::pop(const JitRegGP& _reg)
@@ -71,8 +71,14 @@ namespace dsp56k
 
 	void JitStackHelper::pop(const JitReg128& _reg)
 	{
-		pop(regReturnVal);
-		m_block.asm_().movq(_reg, regReturnVal);
+		assert(!m_pushedRegs.empty());
+		assert(m_pushedBytes >= pushSize(_reg));
+
+		m_pushedRegs.pop_back();
+		m_pushedBytes -= pushSize(_reg);
+
+		m_block.asm_().movq(_reg, ptr(asmjit::x86::rsp));
+		stackRegAdd(pushSize(_reg));
 	}
 
 	void JitStackHelper::pop(const JitReg& _reg)
@@ -106,23 +112,11 @@ namespace dsp56k
 
 		const auto offset = alignedStack - usedSize + g_shadowSpaceSize;
 
-		if(offset)
-		{
-#ifdef HAVE_ARM64
-			m_block.asm_().sub(asmjit::a64::regs::sp, asmjit::a64::regs::sp, asmjit::Imm(offset));
-#else
-			m_block.asm_().sub(asmjit::x86::rsp, asmjit::Imm(offset));
-#endif
-		}
+		stackRegSub(offset);
 
 		m_block.asm_().call(_funcAsPtr);
 
-		if(offset)
-#ifdef HAVE_ARM64
-			m_block.asm_().add(asmjit::a64::regs::sp, asmjit::a64::regs::sp, asmjit::Imm(offset));
-#else
-			m_block.asm_().add(asmjit::x86::rsp, asmjit::Imm(offset));
-#endif
+		stackRegAdd(offset);
 	}
 
 	bool JitStackHelper::isFuncArg(const JitRegGP& _gp)
@@ -203,6 +197,30 @@ namespace dsp56k
 		return 16;
 #else
 		return _reg.size();
+#endif
+	}
+
+	void JitStackHelper::stackRegAdd(uint64_t offset) const
+	{
+		if (!offset)
+			return;
+
+#ifdef HAVE_ARM64
+		m_block.asm_().add(asmjit::a64::regs::sp, asmjit::a64::regs::sp, asmjit::Imm(offset));
+#else
+		m_block.asm_().add(asmjit::x86::rsp, asmjit::Imm(offset));
+#endif
+	}
+
+	void JitStackHelper::stackRegSub(uint64_t offset) const
+	{
+		if (!offset)
+			return;
+
+#ifdef HAVE_ARM64
+		m_block.asm_().sub(asmjit::a64::regs::sp, asmjit::a64::regs::sp, asmjit::Imm(offset));
+#else
+		m_block.asm_().sub(asmjit::x86::rsp, asmjit::Imm(offset));
 #endif
 	}
 }
