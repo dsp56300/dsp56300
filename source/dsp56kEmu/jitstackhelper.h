@@ -15,10 +15,10 @@ namespace dsp56k
 		JitStackHelper(JitBlock& _block);
 		~JitStackHelper();
 
-		void push(const JitRegGP& _reg);
+		void push(const JitReg64& _reg);
 		void push(const JitReg128& _reg);
 
-		void pop(const JitRegGP& _reg);
+		void pop(const JitReg64& _reg);
 		void pop(const JitReg128& _reg);
 		void pop(const JitReg& _reg);
 		void pop();

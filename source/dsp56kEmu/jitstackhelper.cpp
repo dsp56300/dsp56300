@@ -41,7 +41,7 @@ namespace dsp56k
 			setUsed(reg);
 	}
 
-	void JitStackHelper::push(const JitRegGP& _reg)
+	void JitStackHelper::push(const JitReg64& _reg)
 	{
 		m_block.asm_().push(_reg);
 
@@ -58,7 +58,7 @@ namespace dsp56k
 		m_pushedBytes += pushSize(_reg);
 	}
 
-	void JitStackHelper::pop(const JitRegGP& _reg)
+	void JitStackHelper::pop(const JitReg64& _reg)
 	{
 		assert(!m_pushedRegs.empty());
 		assert(m_pushedBytes >= pushSize(_reg));
@@ -84,7 +84,7 @@ namespace dsp56k
 	void JitStackHelper::pop(const JitReg& _reg)
 	{
 		if(_reg.isGp())
-			pop(_reg.as<JitRegGP>());
+			pop(_reg.as<JitReg64>());
 		else if(_reg.isVec())
 			pop(_reg.as<JitReg128>());
 		else
@@ -165,7 +165,7 @@ namespace dsp56k
 			return;
 
 		if(isNonVolatile(_reg))
-			push(_reg);
+			push(r64(_reg));
 
 		m_usedRegs.push_back(_reg);
 	}

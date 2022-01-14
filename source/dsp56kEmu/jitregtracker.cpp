@@ -184,7 +184,7 @@ namespace dsp56k
 			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp))
 			{
 				m_pushedRegs.push_front(gp);
-				_block.stack().push(gp);
+				_block.stack().push(r64(gp));
 			}
 		}
 		for (auto reg : g_regGPTemps)
@@ -194,7 +194,7 @@ namespace dsp56k
 			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp))
 			{
 				m_pushedRegs.push_front(gp);
-				_block.stack().push(gp);
+				_block.stack().push(r64(gp));
 			}
 		}
 
