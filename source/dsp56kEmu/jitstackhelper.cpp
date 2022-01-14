@@ -39,6 +39,8 @@ namespace dsp56k
 	{
 		for (const auto& reg : g_nonVolatileGPs)
 			setUsed(reg);
+		for (const auto& reg : g_nonVolatileXMMs)
+			setUsed(reg);
 	}
 
 	void JitStackHelper::push(const JitReg64& _reg)
