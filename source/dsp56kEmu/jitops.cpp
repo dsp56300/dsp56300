@@ -753,7 +753,7 @@ namespace dsp56k
 		TWord opB;
 		m_block.dsp().mem.getOpcode(m_pcCurrentOp + 1, opA, opB);
 
-		if(!OpcodeInfo::isParallelOpcode(opA))
+		if(opA && !OpcodeInfo::isParallelOpcode(opA))
 		{
 			const auto* oi = m_block.dsp().opcodes().findNonParallelOpcodeInfo(opA);
 			if(oi && oi->getInstruction() == Div)
