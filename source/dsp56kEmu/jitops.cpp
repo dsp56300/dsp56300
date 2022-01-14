@@ -776,7 +776,7 @@ namespace dsp56k
 
 		// backup LC
 		const RegXMM lcBackup(m_block);
-		m_asm.movd(lcBackup, m_dspRegs.getLC(JitDspRegs::Read));
+		m_asm.movd(lcBackup, r32(m_dspRegs.getLC(JitDspRegs::Read)));
 		m_asm.mov(r32(m_dspRegs.getLC(JitDspRegs::Write)), r32(_lc.get()));
 		_lc.release();
 
@@ -786,7 +786,7 @@ namespace dsp56k
 		}
 		else
 		{
-			const auto lc = m_dspRegs.getLC(JitDspRegs::Read);
+			const auto lc = r32(m_dspRegs.getLC(JitDspRegs::Read));
 #ifdef HAVE_ARM64
 			RegGP temp(m_block);
 			m_block.mem().mov(r32(temp), m_block.getExecutedInstructionCount());
@@ -865,7 +865,7 @@ namespace dsp56k
 		m_repMode = RepNone;
 
 		// restore previous LC
-		m_asm.movd(m_dspRegs.getLC(JitDspRegs::Write), lcBackup);
+		m_asm.movd(r32(m_dspRegs.getLC(JitDspRegs::Write)), lcBackup);
 
 		// op size is the sum of the rep plus the child op
 		assert(m_opSize == 1 && "repeated instruction needs to be a single word instruction");
