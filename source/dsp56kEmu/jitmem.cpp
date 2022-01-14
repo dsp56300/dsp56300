@@ -281,12 +281,13 @@ namespace dsp56k
 
 	void Jitmem::readPeriph(const JitReg64& _dst, EMemArea _area, const TWord& _offset) const
 	{
+		FuncArg r0(m_block, 0);
 		FuncArg r1(m_block, 1);
 		FuncArg r2(m_block, 2);
 
-		m_block.asm_().mov(g_funcArgGPs[0], asmjit::Imm(&m_block.dsp()));
-		m_block.asm_().mov(g_funcArgGPs[1], _area == MemArea_Y ? 1 : 0);
-		m_block.asm_().mov(g_funcArgGPs[2], asmjit::Imm(_offset));
+		m_block.asm_().mov(r0, asmjit::Imm(&m_block.dsp()));
+		m_block.asm_().mov(r1, _area == MemArea_Y ? 1 : 0);
+		m_block.asm_().mov(r2, asmjit::Imm(_offset));
 
 		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
 
@@ -295,12 +296,13 @@ namespace dsp56k
 
 	void Jitmem::readPeriph(const JitReg64& _dst, const EMemArea _area, const JitReg64& _offset) const
 	{
+		FuncArg r0(m_block, 0);
 		FuncArg r1(m_block, 1);
 		FuncArg r2(m_block, 2);
 
-		m_block.asm_().mov(g_funcArgGPs[0], asmjit::Imm(&m_block.dsp()));
-		m_block.asm_().mov(g_funcArgGPs[1], _area == MemArea_Y ? 1 : 0);
-		m_block.asm_().mov(g_funcArgGPs[2], _offset);
+		m_block.asm_().mov(r0, asmjit::Imm(&m_block.dsp()));
+		m_block.asm_().mov(r1, _area == MemArea_Y ? 1 : 0);
+		m_block.asm_().mov(r2, _offset);
 
 		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
 
@@ -309,29 +311,30 @@ namespace dsp56k
 
 	void Jitmem::writePeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value) const
 	{
+		FuncArg r0(m_block, 0);
 		FuncArg r1(m_block, 1);
 		FuncArg r2(m_block, 2);
 		FuncArg r3(m_block, 3);
 
-		m_block.asm_().mov(g_funcArgGPs[0], asmjit::Imm(&m_block.dsp()));
-		m_block.asm_().mov(g_funcArgGPs[1], _area == MemArea_Y ? 1 : 0);
-		m_block.asm_().mov(g_funcArgGPs[2], _offset);
-		m_block.asm_().mov(g_funcArgGPs[3], _value);
+		m_block.asm_().mov(r0, asmjit::Imm(&m_block.dsp()));
+		m_block.asm_().mov(r1, _area == MemArea_Y ? 1 : 0);
+		m_block.asm_().mov(r2, _offset);
+		m_block.asm_().mov(r3, _value);
 
 		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
 	}
 
 	void Jitmem::writePeriph(EMemArea _area, const TWord& _offset, const JitReg64& _value) const
 	{
+		FuncArg r0(m_block, 0);
 		FuncArg r1(m_block, 1);
 		FuncArg r2(m_block, 2);
 		FuncArg r3(m_block, 3);
 
-		m_block.asm_().mov(g_funcArgGPs[0], asmjit::Imm(&m_block.dsp()));
-		m_block.asm_().mov(g_funcArgGPs[1], _area == MemArea_Y ? 1 : 0);
-
-		m_block.asm_().mov(g_funcArgGPs[2], asmjit::Imm(_offset));
-		m_block.asm_().mov(g_funcArgGPs[3], _value);
+		m_block.asm_().mov(r0, asmjit::Imm(&m_block.dsp()));
+		m_block.asm_().mov(r1, _area == MemArea_Y ? 1 : 0);
+		m_block.asm_().mov(r2, asmjit::Imm(_offset));
+		m_block.asm_().mov(r3, _value);
 
 		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
 	}
