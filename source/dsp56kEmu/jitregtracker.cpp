@@ -163,6 +163,8 @@ namespace dsp56k
 	{
 		for (const auto& xm : g_nonVolatileXMMs)
 		{
+			if (!xm.isValid())
+				continue;
 			if (m_block.dspRegPool().isInUse(xm))
 			{
 				m_pushedRegs.push_front(xm);
