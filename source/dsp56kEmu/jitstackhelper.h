@@ -15,10 +15,10 @@ namespace dsp56k
 		JitStackHelper(JitBlock& _block);
 		~JitStackHelper();
 
-		void push(const JitRegGP& _reg);
+		void push(const JitReg64& _reg);
 		void push(const JitReg128& _reg);
 
-		void pop(const JitRegGP& _reg);
+		void pop(const JitReg64& _reg);
 		void pop(const JitReg128& _reg);
 		void pop(const JitReg& _reg);
 		void pop();
@@ -41,6 +41,9 @@ namespace dsp56k
 		uint32_t pushSize(const JitReg& _reg);
 	
 	private:
+		void stackRegAdd(uint64_t _offset) const;
+		void stackRegSub(uint64_t _offset) const;
+
 		JitBlock& m_block;
 		uint32_t m_pushedBytes = 0;
 		std::vector<JitReg> m_pushedRegs;

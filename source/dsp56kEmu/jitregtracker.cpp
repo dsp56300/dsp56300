@@ -184,7 +184,7 @@ namespace dsp56k
 			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp) && m_block.dspRegPool().isInUse(gp))
 			{
 				m_pushedRegs.push_front(gp);
-				_block.stack().push(gp);
+				_block.stack().push(r64(gp));
 			}
 		}
 		for (auto reg : g_regGPTemps)
@@ -194,16 +194,19 @@ namespace dsp56k
 			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp) && m_block.gpPool().isInUse(gp))
 			{
 				m_pushedRegs.push_front(gp);
-				_block.stack().push(gp);
+				_block.stack().push(r64(gp));
 			}
 		}
 
-		_block.stack().push(regDspPtr);
-		m_pushedRegs.push_front(regDspPtr);
+		if(!JitStackHelper::isNonVolatile(regDspPtr))
+		{
+			m_pushedRegs.push_front(regDspPtr);
+			_block.stack().push(regDspPtr);
+		}
 
 #ifdef HAVE_ARM64
-		_block.stack().push(asmjit::a64::regs::x30);
 		m_pushedRegs.push_front(asmjit::a64::regs::x30);
+		_block.stack().push(asmjit::a64::regs::x30);
 #endif
 	}
 

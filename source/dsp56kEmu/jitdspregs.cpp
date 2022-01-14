@@ -291,7 +291,7 @@ namespace dsp56k
 	{
 		const auto* first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
 
-		const auto ssIndex = g_funcArgGPs[0];//		const RegGP ssIndex(m_block);
+		const RegGP ssIndex(m_block);
 		getSP(r32(ssIndex));
 
 #ifdef HAVE_ARM64
@@ -308,7 +308,7 @@ namespace dsp56k
 	{
 		const auto* first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
 
-		const auto ssIndex = g_funcArgGPs[0];
+		const RegGP ssIndex(m_block);
 		getSP(r32(ssIndex));
 #ifdef HAVE_ARM64
 		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
