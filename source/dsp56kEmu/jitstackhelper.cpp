@@ -10,8 +10,10 @@ namespace dsp56k
 	constexpr size_t g_stackAlignmentBytes = 16;
 #ifdef HAVE_ARM64
 	constexpr size_t g_functionCallSize = 0;
+	constexpr auto g_stackReg = asmjit::a64::regs::sp;
 #else
 	constexpr size_t g_functionCallSize = 8;
+	constexpr auto g_stackReg = asmjit::x86::rsp;
 #endif
 #ifdef _MSC_VER
 	constexpr size_t g_shadowSpaceSize = 32;
@@ -54,7 +56,7 @@ namespace dsp56k
 	void JitStackHelper::push(const JitReg128& _reg)
 	{
 		stackRegSub(pushSize(_reg));
-		m_block.asm_().movq(ptr(asmjit::x86::rsp), _reg);
+		m_block.asm_().movq(ptr(g_stackReg), _reg);
 
 		m_pushedRegs.push_back(_reg);
 		m_pushedBytes += pushSize(_reg);
@@ -79,7 +81,7 @@ namespace dsp56k
 		m_pushedRegs.pop_back();
 		m_pushedBytes -= pushSize(_reg);
 
-		m_block.asm_().movq(_reg, ptr(asmjit::x86::rsp));
+		m_block.asm_().movq(_reg, ptr(g_stackReg));
 		stackRegAdd(pushSize(_reg));
 	}
 
@@ -208,9 +210,9 @@ namespace dsp56k
 			return;
 
 #ifdef HAVE_ARM64
-		m_block.asm_().add(asmjit::a64::regs::sp, asmjit::a64::regs::sp, asmjit::Imm(offset));
+		m_block.asm_().add(g_stackReg, g_stackReg, asmjit::Imm(offset));
 #else
-		m_block.asm_().add(asmjit::x86::rsp, asmjit::Imm(offset));
+		m_block.asm_().add(g_stackReg, asmjit::Imm(offset));
 #endif
 	}
 
@@ -220,9 +222,9 @@ namespace dsp56k
 			return;
 
 #ifdef HAVE_ARM64
-		m_block.asm_().sub(asmjit::a64::regs::sp, asmjit::a64::regs::sp, asmjit::Imm(offset));
+		m_block.asm_().sub(g_stackReg, g_stackReg, asmjit::Imm(offset));
 #else
-		m_block.asm_().sub(asmjit::x86::rsp, asmjit::Imm(offset));
+		m_block.asm_().sub(g_stackReg, asmjit::Imm(offset));
 #endif
 	}
 }
