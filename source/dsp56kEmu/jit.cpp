@@ -267,6 +267,8 @@ namespace dsp56k
 
 	void Jit::create(const TWord _pc, JitBlock* _block)
 	{
+//		LOG("Create @ " << HEX(_pc));// << std::endl << cacheEntry.block->getDisasm());
+
 		auto& cacheEntry = m_jitCache[_pc];
 
 		if(m_jitCache[_pc+1].block != nullptr)
