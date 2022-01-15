@@ -35,8 +35,10 @@ namespace dsp56k
 
 		void run(TWord _pc, JitBlock* _block);
 		void runCheckPMemWrite(TWord _pc, JitBlock* _block);
-		void create(TWord _pc, JitBlock* _block);
+		void create(TWord _pc, JitBlock* _block, bool _execute);
 		void recreate(TWord _pc, JitBlock* _block);
+
+		JitBlock* getBlock(TWord _pc);
 
 	private:
 		void emit(TWord _pc);

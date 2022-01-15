@@ -22,7 +22,7 @@ namespace dsp56k
 	{
 	}
 
-	bool JitBlock::emit(const TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP)
+	bool JitBlock::emit(Jit* _jit, const TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP)
 	{
 		const bool isFastInterrupt = _pc < Vba_End;
 
@@ -116,7 +116,7 @@ namespace dsp56k
 			{
 				const auto& oi = g_opcodes[res];
 
-				if(oi.flag(OpFlagBranch))
+				if(_jit && oi.flag(OpFlagBranch))
 				{
 					// if the last instruction of a JIT block is a branch to an address known at compile time, and this branch is fixed, i.e. is not dependant
 					// on a condition: Store that address to be able to call the next JIT block from the current block without having to have a transition to the C++ code
@@ -129,6 +129,9 @@ namespace dsp56k
 						assert(branchTarget < m_dsp.memory().size());
 						if(!hasField(oi.getInstruction(), Field_CCCC) && !hasField(oi.getInstruction(), Field_bbbbb))
 						{
+							auto* child = _jit->getBlock(branchTarget);
+							assert(child);
+							child->addParent(m_pcFirst);
 							m_child = branchTarget;
 						}
 					}
@@ -230,6 +233,16 @@ namespace dsp56k
 			m_flags |= WritePMem;
 		if(appendLoopCode)
 			m_flags |= LoopEnd;
+
+		if(false && _jit && m_child != g_invalidAddress)
+		{
+			if((m_flags & WritePMem) == 0)
+			{
+				const auto* child = _jit->getBlock(m_child);
+				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
+			}
+		}
+
 		return true;
 	}
 
@@ -237,5 +250,11 @@ namespace dsp56k
 	{
 		m_dspRegPool.movDspReg(m_dsp.regs().pc, _pc);
 		m_possibleBranch = true;
+	}
+
+	void JitBlock::addParent(TWord _pc)
+	{
+		assert(m_parents.find(_pc) == m_parents.end());
+		m_parents.insert(_pc);
 	}
 }

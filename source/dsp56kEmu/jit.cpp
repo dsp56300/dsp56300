@@ -19,7 +19,7 @@ namespace dsp56k
 
 	void funcCreate(Jit* _jit, TWord _pc, JitBlock* _block)
 	{
-		_jit->create(_pc, _block);
+		_jit->create(_pc, _block, true);
 	}
 
 	void funcRecreate(Jit* _jit, TWord _pc, JitBlock* _block)
@@ -112,7 +112,7 @@ namespace dsp56k
 		
 		auto* b = new JitBlock(m_asm, m_dsp, m_runtimeData);
 
-		if(!b->emit(_pc, m_jitCache, m_volatileP))
+		if(!b->emit(this, _pc, m_jitCache, m_volatileP))
 		{
 			LOG("FATAL: code generation failed for PC " << HEX(_pc));
 			delete b;
@@ -177,6 +177,11 @@ namespace dsp56k
 
 	void Jit::destroy(JitBlock* _block)
 	{
+		const auto& parents = _block->getParents();
+
+		for (const auto parent : parents)
+			destroy(parent);
+
 		const auto first = _block->getPCFirst();
 		const auto last = first + _block->getPMemSize();
 
@@ -250,7 +255,7 @@ namespace dsp56k
 		checkPMemWrite(_pc, _block);
 	}
 
-	void Jit::create(const TWord _pc, JitBlock* _block)
+	void Jit::create(const TWord _pc, JitBlock*, bool _execute)
 	{
 //		LOG("Create @ " << HEX(_pc));// << std::endl << cacheEntry.block->getDisasm());
 
@@ -277,7 +282,8 @@ namespace dsp56k
 			}
 		}
 		emit(_pc);
-		exec(_pc, cacheEntry);
+		if(_execute)
+			exec(_pc, cacheEntry);
 	}
 
 	void Jit::recreate(const TWord _pc, JitBlock* _block)
@@ -285,7 +291,17 @@ namespace dsp56k
 		// there is code, but the JIT block does not start at the PC position that we want to run. We need to throw the block away and regenerate
 //		LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
 		destroy(_block);
-		create(_pc, _block);
+		create(_pc, _block, true);
+	}
+
+	JitBlock* Jit::getBlock(TWord _pc)
+	{
+		const auto& e = m_jitCache[_pc];
+		if (e.block)
+			return e.block;
+		create(_pc, nullptr, false);
+		assert(e.block);
+		return e.block;
 	}
 
 	void Jit::updateRunFunc(JitCacheEntry& e)

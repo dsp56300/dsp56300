@@ -48,7 +48,7 @@ namespace dsp56k
 
 		operator JitEmitter& ()		{ return m_asm;	}
 
-		bool emit(TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP);
+		bool emit(Jit* _jit, TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP);
 		bool empty() const { return m_pMemSize == 0; }
 		TWord getPCFirst() const { return m_pcFirst; }
 		TWord getPMemSize() const { return m_pMemSize; }
@@ -72,8 +72,11 @@ namespace dsp56k
 
 		TWord getChild() const { return m_child; }
 		size_t codeSize() const { return m_codeSize; }
+		const std::set<TWord>& getParents() const { return m_parents; }
 
 	private:
+		void addParent(TWord _pc);
+
 		JitEntry m_func = nullptr;
 		JitRuntimeData& m_runtimeData;
 
@@ -98,5 +101,7 @@ namespace dsp56k
 		uint32_t m_flags = 0;
 		TWord m_child = g_invalidAddress;			// JIT block that we call
 		size_t m_codeSize = 0;
+
+		std::set<TWord> m_parents;
 	};
 }
