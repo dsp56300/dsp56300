@@ -44,6 +44,7 @@ namespace dsp56k
 		void emit(TWord _pc);
 		void destroy(JitBlock* _block);
 		void destroy(TWord _pc);
+		void release(const JitBlock* _block);
 		
 		void exec(TWord pc, JitCacheEntry& e);
 
@@ -59,5 +60,6 @@ namespace dsp56k
 		asmjit::_abi_1_8::JitRuntime* m_rt = nullptr;
 		std::vector<JitCacheEntry> m_jitCache;
 		std::set<TWord> m_volatileP;
+		size_t m_codeSize = 0;
 	};
 }

@@ -65,8 +65,7 @@ namespace dsp56k
 
 			for(auto it = e.singleOpCache.begin(); it != e.singleOpCache.end(); ++it)
 			{
-				m_rt->release(it->second->getFunc());
-				delete it->second;
+				release(it->second);
 			}
 			e.singleOpCache.clear();
 		}
@@ -145,7 +144,10 @@ namespace dsp56k
 			return;
 		}
 
-		b->setFunc(func);
+		b->setFunc(func, code.codeSize());
+		m_codeSize += code.codeSize();
+
+//		LOG("Total code size now " << (m_codeSize >> 10) << "kb");
 
 		const auto first = b->getPCFirst();
 		const auto last = first + b->getPMemSize();
@@ -211,9 +213,7 @@ namespace dsp56k
 			}
 		}
 
-		m_rt->release(_block->getFunc());
-
-		delete _block;
+		release(_block);
 	}
 
 	void Jit::destroy(TWord _pc)
@@ -222,6 +222,16 @@ namespace dsp56k
 		if(!block)
 			return;
 		destroy(block);
+	}
+
+	void Jit::release(const JitBlock* _block)
+	{
+		assert(m_codeSize >= _block->codeSize());
+		m_codeSize -= _block->codeSize();
+		m_rt->release(_block->getFunc());
+		delete _block;
+
+//		LOG("Total code size now " << (m_codeSize >> 10) << "kb");
 	}
 
 	void Jit::run(TWord _pc, JitBlock* _block)

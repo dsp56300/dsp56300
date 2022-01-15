@@ -53,7 +53,7 @@ namespace dsp56k
 		TWord getPCFirst() const { return m_pcFirst; }
 		TWord getPMemSize() const { return m_pMemSize; }
 
-		void setFunc(const JitEntry _func) { m_func = _func; }
+		void setFunc(const JitEntry _func, size_t _codeSize) { m_func = _func; m_codeSize = _codeSize; }
 		const JitEntry& getFunc() const { return m_func; }
 
 		TWord& getEncodedInstructionCount() { return m_encodedInstructionCount; }
@@ -71,6 +71,7 @@ namespace dsp56k
 		uint32_t getFlags() const { return m_flags; }
 
 		TWord getChild() const { return m_child; }
+		size_t codeSize() const { return m_codeSize; }
 
 	private:
 		JitEntry m_func = nullptr;
@@ -96,5 +97,6 @@ namespace dsp56k
 		bool m_possibleBranch = false;
 		uint32_t m_flags = 0;
 		TWord m_child = g_invalidAddress;			// JIT block that we call
+		size_t m_codeSize = 0;
 	};
 }
