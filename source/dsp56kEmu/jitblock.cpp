@@ -33,19 +33,17 @@ namespace dsp56k
 		m_dspAsm.clear();
 		bool shouldEmit = true;
 
-		asmjit::BaseNode* cursorBeforePCUpdate = nullptr;
-		asmjit::BaseNode* cursorAfterPCUpdate = nullptr;
+		asmjit::BaseNode* cursorInsertPc = nullptr;
+		JitRegGP insertPcTempReg;
 
 		if(!isFastInterrupt)
 		{
-			// This code is only used to set the value of the next PC to the default value. Might be overwritten by a branch.
-			// If this code does not have a branch (only known after generation has finished), this code block is removed
-
-			const RegGP temp(*this);
-			cursorBeforePCUpdate = m_asm.cursor();
-			m_mem.mov(temp, m_pcLast);
-			m_mem.mov(nextPC(), temp);
-			cursorAfterPCUpdate = m_asm.cursor();
+			// This code is only used to set the value of the next PC to the default value (next instruction following this block)
+			// Might be overwritten by a branching instruction
+			const auto temp = regReturnVal;
+			insertPcTempReg = temp;
+			cursorInsertPc = m_asm.cursor();	// inserted later below: m_asm.mov(temp, asmjit::Imm(m_pcLast)); once m_pcLast is known
+			m_dspRegPool.movDspReg(m_dsp.regs().pc, temp);
 		}
 
 		{
@@ -158,6 +156,14 @@ namespace dsp56k
 
 		m_pcLast = m_pcFirst + m_pMemSize;
 
+		if(cursorInsertPc)
+		{
+			// as it is now known, inject the next PC into the setter at the start of this block
+			m_asm.setCursor(cursorInsertPc);
+			m_asm.mov(insertPcTempReg, asmjit::Imm(m_pcLast));
+			m_asm.setCursor(m_asm.lastNode());
+		}
+
 #if 0
 		if(appendLoopCode)	// this block works, but I'm not sure if we want to keep it here as it increases code size, while the code in jit.cpp does the same but exists only once
 		{
@@ -192,17 +198,6 @@ namespace dsp56k
 			m_asm.bind(end);
 		}
 #endif
-		if(m_possibleBranch)
-		{
-			mem().mov(r32(m_dspRegPool.get(JitDspRegPool::DspPC, false, true)), nextPC());
-		}
-		else if(!isFastInterrupt)
-		{
-			if (cursorBeforePCUpdate && cursorAfterPCUpdate)
-				m_asm.removeNodes(cursorBeforePCUpdate->next(), cursorAfterPCUpdate);
-
-			m_asm.mov(r32(m_dspRegPool.get(JitDspRegPool::DspPC, false, true)), asmjit::Imm(m_pcLast));
-		}
 
 		if(m_dspRegs.ccrDirtyFlags())
 		{
@@ -224,7 +219,7 @@ namespace dsp56k
 
 	void JitBlock::setNextPC(const JitRegGP& _pc)
 	{
-		mem().mov(nextPC(), _pc);
+		m_dspRegPool.movDspReg(m_dsp.regs().pc, _pc);
 		m_possibleBranch = true;
 	}
 }
