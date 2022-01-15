@@ -206,7 +206,7 @@ namespace dsp56k
 
 		bool	readRegToInt					( EReg _reg, int64_t& _dst ) const;
 
-		uint32_t	getInstructionCounter		() const									{ return m_instructions; }
+		const uint32_t&	getInstructionCounter		() const									{ return m_instructions; }
 
 		const char*			getASM						(TWord wordA, TWord wordB);
 		const std::string&	getASM						() const							{ return m_asm; }

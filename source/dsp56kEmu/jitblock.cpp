@@ -36,7 +36,6 @@ namespace dsp56k
 		asmjit::BaseNode* cursorInsertPc = nullptr;
 		const JitRegGP insertPcTempReg = regReturnVal;
 		asmjit::BaseNode* cursorInsertEncodedInstructionCount = nullptr;
-		const JitRegGP insertEncodedInstructionCountTemp = insertPcTempReg == g_funcArgGPs[0] ? g_funcArgGPs[1] : g_funcArgGPs[0];
 
 		if(!isFastInterrupt)
 		{
@@ -45,11 +44,13 @@ namespace dsp56k
 			cursorInsertPc = m_asm.cursor();						// inserted later below:	m_asm.mov(temp, asmjit::Imm(m_pcLast)); once m_pcLast is known
 			m_dspRegPool.movDspReg(m_dsp.regs().pc, insertPcTempReg);
 		}
-
+		else
 		{
-			cursorInsertEncodedInstructionCount = m_asm.cursor();	// inserted later below:	m_mem.mov(temp, getEncodedInstructionCount());
-			m_mem.mov(getExecutedInstructionCount(), insertEncodedInstructionCountTemp);
+			// needed so that the dsp register is available
+			dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(TWord));
 		}
+
+		cursorInsertEncodedInstructionCount = m_asm.cursor();	// inserted later below:	m_mem.mov(temp, getEncodedInstructionCount());
 
 		uint32_t opFlags = 0;
 		bool appendLoopCode = false;
@@ -167,7 +168,7 @@ namespace dsp56k
 		}
 
 		m_asm.setCursor(cursorInsertEncodedInstructionCount);
-		m_asm.mov(insertEncodedInstructionCountTemp, asmjit::Imm(getEncodedInstructionCount()));
+		increaseInstructionCount(asmjit::Imm(getEncodedInstructionCount()));
 		m_asm.setCursor(m_asm.lastNode());
 
 		if(appendLoopCode)
@@ -250,6 +251,29 @@ namespace dsp56k
 	{
 		m_dspRegPool.movDspReg(m_dsp.regs().pc, _pc);
 		m_possibleBranch = true;
+	}
+
+	void JitBlock::increaseInstructionCount(const asmjit::Operand& _count)
+	{
+		const auto ptr = dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(TWord));
+
+#ifdef HAVE_ARM64
+		m_asm.ldr(r32(regReturnVal), ptr);
+		if (_count.isImm())
+			m_asm.add(regReturnVal, regReturnVal, _count.as<asmjit::Imm>());
+		else
+			m_asm.add(regReturnVal, regReturnVal, _count.as<JitRegGP>());
+		m_asm.str(r32(regReturnVal), ptr);
+#else
+		if(_count.isImm())
+		{
+			m_asm.add(ptr, _count.as<asmjit::Imm>());
+		}
+		else
+		{
+			m_asm.add(ptr, _count.as<JitRegGP>());
+		}
+#endif
 	}
 
 	void JitBlock::addParent(TWord _pc)

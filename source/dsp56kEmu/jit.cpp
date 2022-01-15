@@ -73,9 +73,6 @@ namespace dsp56k
 		auto& cacheEntry = m_jitCache[pc];
 		exec(pc, cacheEntry);
 
-		if constexpr(!g_traceOps)
-			m_dsp.m_instructions += m_runtimeData.m_executedInstructionCount;
-
 		const auto child = cacheEntry.block->getChild();
 
 		if (child != g_invalidAddress)
@@ -235,8 +232,6 @@ namespace dsp56k
 
 		if(g_traceOps)
 		{
-			m_dsp.m_instructions += _block->getExecutedInstructionCount();
-
 			const TWord lastPC = _pc + _block->getPMemSize() - _block->getLastOpSize();
 			TWord op, opB;
 			m_dsp.mem.getOpcode(lastPC, op, opB);

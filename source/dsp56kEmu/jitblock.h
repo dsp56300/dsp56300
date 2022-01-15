@@ -59,7 +59,6 @@ namespace dsp56k
 		TWord& getEncodedInstructionCount() { return m_encodedInstructionCount; }
 
 		// JIT code writes these
-		TWord& getExecutedInstructionCount() const { return m_runtimeData.m_executedInstructionCount; }
 		TWord& nextPC() { return m_runtimeData.m_nextPC; }
 		uint32_t& pMemWriteAddress() { return m_runtimeData.m_pMemWriteAddress; }
 		uint32_t& pMemWriteValue() { return m_runtimeData.m_pMemWriteValue; }
@@ -73,6 +72,8 @@ namespace dsp56k
 		TWord getChild() const { return m_child; }
 		size_t codeSize() const { return m_codeSize; }
 		const std::set<TWord>& getParents() const { return m_parents; }
+
+		void increaseInstructionCount(const asmjit::Operand& _count);
 
 	private:
 		void addParent(TWord _pc);

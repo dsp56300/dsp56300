@@ -8,7 +8,6 @@ namespace dsp56k
 
 	struct JitRuntimeData
 	{
-		TWord m_executedInstructionCount = 0;
 		TWord m_nextPC = g_pcInvalid;
 		TWord m_pMemWriteAddress = g_pcInvalid;
 		TWord m_pMemWriteValue = 0;
