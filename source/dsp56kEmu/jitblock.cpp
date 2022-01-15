@@ -188,10 +188,11 @@ namespace dsp56k
 			// check loop flag
 #ifdef HAVE_ARM64
 			m_asm.bitTest(sr, SRB_LF);
+			m_asm.jz(skip);
 #else
 			m_asm.bt(sr, asmjit::Imm(SRB_LF));
-#endif
 			m_asm.jnc(skip);
+#endif
 			m_asm.cmp(lc, asmjit::Imm(1));
 			m_asm.jle(enddo);
 			m_asm.dec(lc);
