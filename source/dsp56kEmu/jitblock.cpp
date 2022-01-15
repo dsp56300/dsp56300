@@ -36,7 +36,7 @@ namespace dsp56k
 		asmjit::BaseNode* cursorInsertPc = nullptr;
 		const JitRegGP insertPcTempReg = regReturnVal;
 		asmjit::BaseNode* cursorInsertEncodedInstructionCount = nullptr;
-		const JitRegGP insertEncodedInstructionCountTemp = g_funcArgGPs[0];
+		const JitRegGP insertEncodedInstructionCountTemp = insertPcTempReg == g_funcArgGPs[0] ? g_funcArgGPs[1] : g_funcArgGPs[0];
 
 		if(!isFastInterrupt)
 		{
