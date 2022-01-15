@@ -460,9 +460,13 @@ namespace dsp56k
 
 	void JitOps::do_end()
 	{
+		const RegGP r(m_block);
+		do_end(r);
+	}
+	void JitOps::do_end(const RegGP& r)
+	{
 		// restore previous loop flag
 		{
-			const RegGP r(m_block);
 			getSSL(r32(r.get()));
 			m_asm.and_(r, asmjit::Imm(SR_LF));
 			m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~SR_LF));
@@ -472,7 +476,6 @@ namespace dsp56k
 		// decrement SP twice, restoring old loop settings
 		decSP();
 
-		const RegGP r(m_block);
 		getSSL(r32(r.get()));
 		m_dspRegs.setLC(r32(r.get()));
 

@@ -35,8 +35,6 @@ namespace dsp56k
 
 		void run(TWord _pc, JitBlock* _block);
 		void runCheckPMemWrite(TWord _pc, JitBlock* _block);
-		void runCheckLoopEnd(TWord _pc, JitBlock* _block);
-		void runCheckLoopEndAndPMemWrite(TWord _pc, JitBlock* _block);
 		void create(TWord _pc, JitBlock* _block);
 		void recreate(TWord _pc, JitBlock* _block);
 
@@ -51,7 +49,6 @@ namespace dsp56k
 		static void updateRunFunc(JitCacheEntry& e);
 
 		void checkPMemWrite(TWord _pc, JitBlock* _block);
-		void checkLoopEnd(TWord _pc, JitBlock* _block);
 
 		JitRuntimeData m_runtimeData;
 

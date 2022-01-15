@@ -525,6 +525,7 @@ namespace dsp56k
 
 		// loops
 		void do_exec(RegGP& _lc, TWord _addr);
+		void do_end(const RegGP& _temp);
 		void do_end();
 		void rep_exec(TWord _lc);
 		void rep_exec(RegGP& _lc, TWord _lcImmediateOperand);

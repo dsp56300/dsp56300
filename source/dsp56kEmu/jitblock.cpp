@@ -167,40 +167,47 @@ namespace dsp56k
 		m_asm.mov(insertEncodedInstructionCountTemp, asmjit::Imm(getEncodedInstructionCount()));
 		m_asm.setCursor(m_asm.lastNode());
 
-#if 0
-		if(appendLoopCode)	// this block works, but I'm not sure if we want to keep it here as it increases code size, while the code in jit.cpp does the same but exists only once
+		if(appendLoopCode)
 		{
-			const auto end = m_asm.newLabel();
-			const auto decLC = m_asm.newLabel();
-
-			dspRegPool().releaseAll();
-			stack().pushNonVolatiles();
+			const auto skip = m_asm.newLabel();
+			const auto enddo = m_asm.newLabel();
 
 			JitOps ops(*this, isFastInterrupt);
-//			DSPReg lc(*this, JitDspRegPool::DspLC, true, true);
-			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_LF));	// check loop flag
-			m_asm.jnc(end);
-			m_asm.cmp(m_dspRegs.getLC(JitDspRegs::Read), asmjit::Imm(1));
-			dspRegPool().releaseAll();
-			m_asm.jg(decLC);
-			ops.do_end();
-			dspRegPool().releaseAll();
-			m_asm.jmp(end);
 
-			m_asm.bind(decLC);
-			m_asm.dec(m_dspRegs.getLC(JitDspRegs::ReadWrite));
+			// It is important that this code does not allocate any temp registers inside of the branches. thefore, we prewarm everything
+			RegGP temp(*this);
+
+			const auto& sr = m_dspRegPool.get(JitDspRegPool::DspSR, true, true);
+			const auto& la = m_dspRegPool.get(JitDspRegPool::DspLA, true, true);	// we don't use it here but do_end does
+			const auto& lc = m_dspRegPool.get(JitDspRegPool::DspLC, true, true);
+
+			m_dspRegPool.lock(JitDspRegPool::DspSR);
+			m_dspRegPool.lock(JitDspRegPool::DspLA);
+			m_dspRegPool.lock(JitDspRegPool::DspLC);
+
+			m_asm.bt(sr, asmjit::Imm(SRB_LF));	// check loop flag
+			m_asm.jnc(skip);
+			m_asm.cmp(lc, asmjit::Imm(1));
+			m_asm.jle(enddo);
+			m_asm.dec(lc);
 			{
-				const RegGP ss(*this);
+				const auto& ss = temp;
 				m_dspRegs.getSS(ss);
 				m_asm.shr(ss, asmjit::Imm(24));
 				m_asm.and_(ss, asmjit::Imm(0xffffff));
 				setNextPC(ss);
 			}
+			m_asm.jmp(skip);
 
-			dspRegPool().releaseAll();
-			m_asm.bind(end);
+			m_asm.bind(enddo);
+			ops.do_end(temp);
+
+			m_asm.bind(skip);
+
+			m_dspRegPool.unlock(JitDspRegPool::DspSR);
+			m_dspRegPool.unlock(JitDspRegPool::DspLA);
+			m_dspRegPool.unlock(JitDspRegPool::DspLC);
 		}
-#endif
 
 		if(m_dspRegs.ccrDirtyFlags())
 		{
