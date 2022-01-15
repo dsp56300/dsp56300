@@ -185,7 +185,12 @@ namespace dsp56k
 			m_dspRegPool.lock(JitDspRegPool::DspLA);
 			m_dspRegPool.lock(JitDspRegPool::DspLC);
 
-			m_asm.bt(sr, asmjit::Imm(SRB_LF));	// check loop flag
+			// check loop flag
+#ifdef HAVE_ARM64
+			m_asm.bitTest(sr, SRB_LF);
+#else
+			m_asm.bt(sr, asmjit::Imm(SRB_LF));
+#endif
 			m_asm.jnc(skip);
 			m_asm.cmp(lc, asmjit::Imm(1));
 			m_asm.jle(enddo);

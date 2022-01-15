@@ -37,6 +37,7 @@ namespace dsp56k
 		void jz(const asmjit::Label& _label);
 		void jnz(const asmjit::Label& _label);
 		void jle(const asmjit::Label& _label);
+		void jnc(const asmjit::Label& _label);
 
 		void movq(const JitRegGP& _dst, const JitReg128& _src);
 		void movq(const JitReg128& _dst, const JitRegGP& _src);
