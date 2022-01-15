@@ -58,10 +58,11 @@ namespace dsp56k
 		reg.cursorFirst = reg.cursorFirst->next();
 		reg.cursorLast = m_block.asm_().cursor();
 		reg.reg = _reg;
+
+		m_pushedBytes += pushSize(_reg);
 		reg.stackOffset = m_pushedBytes;
 
 		m_pushedRegs.push_back(reg);
-		m_pushedBytes += pushSize(_reg);
 	}
 
 	void JitStackHelper::push(const JitReg128& _reg)
@@ -73,10 +74,11 @@ namespace dsp56k
 		m_block.asm_().movq(ptr(g_stackReg), _reg);
 		reg.cursorLast = m_block.asm_().cursor();
 		reg.reg = _reg;
+
+		m_pushedBytes += pushSize(_reg);
 		reg.stackOffset = m_pushedBytes;
 
 		m_pushedRegs.push_back(reg);
-		m_pushedBytes += pushSize(_reg);
 	}
 
 	void JitStackHelper::pop(const JitReg64& _reg)
@@ -120,8 +122,48 @@ namespace dsp56k
 
 	void JitStackHelper::popAll()
 	{
-		while(!m_pushedRegs.empty())
-			pop();
+		// we push stack-relative if there is at least one used vector register as we can save a bunch of instructions this way
+		bool haveVectors = false;
+		for (auto r : m_pushedRegs)
+		{
+			if(r.reg.isVec())
+			{
+				haveVectors = true;
+				break;
+			}
+		}
+
+		if(haveVectors)
+		{
+			// sort in order of memory address
+			std::sort(m_pushedRegs.begin(), m_pushedRegs.end());
+
+			stackRegAdd(m_pushedBytes);
+
+			for(size_t i=0; i<m_pushedRegs.size(); ++i)
+			{
+				const auto& r = m_pushedRegs[i];
+				const int offset = -static_cast<int>(m_pushedRegs[i].stackOffset);
+
+				const auto memPtr = ptr(g_stackReg, offset);
+
+				if(r.reg.isVec())
+				{
+					m_block.asm_().movq(r.reg.as<JitReg128>(), memPtr);
+				}
+				else
+				{
+					m_block.asm_().mov(r64(r.reg.as<JitRegGP>()), memPtr);
+				}
+			}
+
+			m_pushedRegs.clear();
+		}
+		else
+		{
+			while (!m_pushedRegs.empty())
+				pop();
+		}
 	}
 
 	void JitStackHelper::call(const void* _funcAsPtr) const

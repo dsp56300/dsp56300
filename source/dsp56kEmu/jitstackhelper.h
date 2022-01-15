@@ -69,7 +69,7 @@ namespace dsp56k
 
 			bool operator < (const PushedReg& _r) const
 			{
-				return stackOffset < _r.stackOffset;
+				return stackOffset > _r.stackOffset;	// reversed as stack is downwards
 			}
 		};
 
