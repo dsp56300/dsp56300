@@ -5,6 +5,8 @@
 
 #include "dspassert.h"
 
+#include "asmjit/core/builder.h"
+
 namespace dsp56k
 {
 	constexpr size_t g_stackAlignmentBytes = 16;
@@ -50,18 +52,30 @@ namespace dsp56k
 
 	void JitStackHelper::push(const JitReg64& _reg)
 	{
+		PushedReg reg;
+		reg.cursorFirst = m_block.asm_().cursor();
 		m_block.asm_().push(_reg);
+		reg.cursorFirst = reg.cursorFirst->next();
+		reg.cursorLast = m_block.asm_().cursor();
+		reg.reg = _reg;
+		reg.stackOffset = m_pushedBytes;
 
-		m_pushedRegs.push_back(_reg);
+		m_pushedRegs.push_back(reg);
 		m_pushedBytes += pushSize(_reg);
 	}
 
 	void JitStackHelper::push(const JitReg128& _reg)
 	{
+		PushedReg reg;
+		reg.cursorFirst = m_block.asm_().cursor();
 		stackRegSub(pushSize(_reg));
+		reg.cursorFirst = reg.cursorFirst->next();
 		m_block.asm_().movq(ptr(g_stackReg), _reg);
+		reg.cursorLast = m_block.asm_().cursor();
+		reg.reg = _reg;
+		reg.stackOffset = m_pushedBytes;
 
-		m_pushedRegs.push_back(_reg);
+		m_pushedRegs.push_back(reg);
 		m_pushedBytes += pushSize(_reg);
 	}
 
@@ -101,7 +115,7 @@ namespace dsp56k
 	void JitStackHelper::pop()
 	{
 		const auto reg = m_pushedRegs.back();
-		pop(reg);
+		pop(reg.reg);
 	}
 
 	void JitStackHelper::popAll()
@@ -124,6 +138,29 @@ namespace dsp56k
 		m_block.asm_().call(_funcAsPtr);
 
 		stackRegAdd(offset);
+	}
+
+	void JitStackHelper::movePushesTo(asmjit::BaseNode* _baseNode, size_t _firstIndex)
+	{
+		m_block.asm_().setCursor(_baseNode->next());
+
+		for(size_t i=_firstIndex; i<m_pushedRegs.size(); ++i)
+		{
+			auto* c = m_pushedRegs[i].cursorFirst;
+
+			if (m_pushedRegs[i].reg.isVec())
+				int foo = 0;
+			while(true)
+			{
+				auto* next = c->next();
+				auto* node = m_block.asm_().removeNode(c);
+				m_block.asm_().addNode(node);
+				if (c == m_pushedRegs[i].cursorLast)
+					break;
+				c = next;
+			}
+		}
+		m_block.asm_().setCursor(m_block.asm_().lastNode());
 	}
 
 	bool JitStackHelper::isFuncArg(const JitRegGP& _gp)
