@@ -289,34 +289,34 @@ namespace dsp56k
 
 	void JitDspRegs::getSS(const JitReg64& _dst) const
 	{
-		const auto* first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
-
-		const RegGP ssIndex(m_block);
+		const auto ssIndex = regReturnVal;
 		getSP(r32(ssIndex));
 
 #ifdef HAVE_ARM64
 		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
+		m_asm.add(_dst, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, DSP::SRegs::ss)));
 #else
 		m_asm.and_(ssIndex, Imm(0xf));
+		m_asm.lea(_dst, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
 #endif
 
-		m_block.mem().ptrToReg(_dst, first);
 		m_asm.move(_dst, Jitmem::makePtr(_dst, ssIndex, 3, 8));
 	}
 
 	void JitDspRegs::setSS(const JitReg64& _src) const
 	{
-		const auto* first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
-
-		const RegGP ssIndex(m_block);
+		const auto ssIndex = regReturnVal;
 		getSP(r32(ssIndex));
+
+		const RegGP addr(m_block);
+
 #ifdef HAVE_ARM64
 		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
+		m_asm.add(addr, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, DSP::SRegs::ss)));
 #else
 		m_asm.and_(ssIndex, Imm(0xf));
+		m_asm.lea(addr, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
 #endif
-		const RegGP addr(m_block);
-		m_block.mem().ptrToReg(addr, first);
 		m_asm.mov(Jitmem::makePtr(addr, ssIndex, 3, 8), _src);
 	}
 
