@@ -34,22 +34,21 @@ namespace dsp56k
 		bool shouldEmit = true;
 
 		asmjit::BaseNode* cursorInsertPc = nullptr;
-		JitRegGP insertPcTempReg;
+		const JitRegGP insertPcTempReg = regReturnVal;
+		asmjit::BaseNode* cursorInsertEncodedInstructionCount = nullptr;
+		const JitRegGP insertEncodedInstructionCountTemp = g_funcArgGPs[0];
 
 		if(!isFastInterrupt)
 		{
 			// This code is only used to set the value of the next PC to the default value (next instruction following this block)
 			// Might be overwritten by a branching instruction
-			const auto temp = regReturnVal;
-			insertPcTempReg = temp;
-			cursorInsertPc = m_asm.cursor();	// inserted later below: m_asm.mov(temp, asmjit::Imm(m_pcLast)); once m_pcLast is known
-			m_dspRegPool.movDspReg(m_dsp.regs().pc, temp);
+			cursorInsertPc = m_asm.cursor();						// inserted later below:	m_asm.mov(temp, asmjit::Imm(m_pcLast)); once m_pcLast is known
+			m_dspRegPool.movDspReg(m_dsp.regs().pc, insertPcTempReg);
 		}
 
 		{
-			const RegGP temp(*this);
-			m_mem.mov(temp, getEncodedInstructionCount());
-			m_mem.mov(getExecutedInstructionCount(), temp.get());
+			cursorInsertEncodedInstructionCount = m_asm.cursor();	// inserted later below:	m_mem.mov(temp, getEncodedInstructionCount());
+			m_mem.mov(getExecutedInstructionCount(), insertEncodedInstructionCountTemp);
 		}
 
 		uint32_t opFlags = 0;
@@ -163,6 +162,10 @@ namespace dsp56k
 			m_asm.mov(insertPcTempReg, asmjit::Imm(m_pcLast));
 			m_asm.setCursor(m_asm.lastNode());
 		}
+
+		m_asm.setCursor(cursorInsertEncodedInstructionCount);
+		m_asm.mov(insertEncodedInstructionCountTemp, asmjit::Imm(getEncodedInstructionCount()));
+		m_asm.setCursor(m_asm.lastNode());
 
 #if 0
 		if(appendLoopCode)	// this block works, but I'm not sure if we want to keep it here as it increases code size, while the code in jit.cpp does the same but exists only once
