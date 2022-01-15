@@ -153,7 +153,11 @@ namespace dsp56k
 				}
 				else
 				{
+#ifdef HAVE_ARM64
+					m_block.asm_().ldr(r64(r.reg.as<JitRegGP>()), memPtr);
+#else
 					m_block.asm_().mov(r64(r.reg.as<JitRegGP>()), memPtr);
+#endif
 				}
 			}
 
