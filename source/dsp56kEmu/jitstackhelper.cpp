@@ -7,6 +7,8 @@
 
 #include "asmjit/core/builder.h"
 
+#include <algorithm>	// std::sort
+
 namespace dsp56k
 {
 	constexpr size_t g_stackAlignmentBytes = 16;
