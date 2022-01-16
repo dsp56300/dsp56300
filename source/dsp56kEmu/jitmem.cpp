@@ -97,8 +97,16 @@ namespace dsp56k
 		const RegGP t(m_block);
 		const SkipLabel skip(m_block.asm_());
 
-		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size()));
-		m_block.asm_().jge(skip.get());
+		// just return garbage in case memory is read from an invalid address
+		if(asmjit::Support::isPowerOf2(m_block.dsp().memory().size()))
+		{
+			m_block.asm_().and_(_offset, asmjit::Imm(asmjit::Imm(m_block.dsp().memory().size()-1)));
+		}
+		else
+		{
+			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size()));
+			m_block.asm_().jge(skip.get());
+		}
 
 		getMemAreaPtr(t.get(), _area, _offset);
 
