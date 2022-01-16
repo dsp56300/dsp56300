@@ -87,6 +87,7 @@ namespace dsp56k
 	void Jit::emit(const TWord _pc)
 	{
 		AsmJitLogger logger;
+		logger.addFlags(asmjit::FormatFlags::kHexImms | /*asmjit::FormatFlags::kHexOffsets |*/ asmjit::FormatFlags::kMachineCode);
 		AsmJitErrorHandler errorHandler;
 		CodeHolder code;
 
