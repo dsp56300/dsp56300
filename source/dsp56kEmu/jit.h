@@ -38,7 +38,7 @@ namespace dsp56k
 		void create(TWord _pc, JitBlock* _block, bool _execute);
 		void recreate(TWord _pc, JitBlock* _block);
 
-		JitBlock* getBlock(TWord _pc);
+		JitBlock* getChildBlock(TWord _pc);
 		bool canBeDefaultExecuted(TWord _pc) const;
 
 	private:

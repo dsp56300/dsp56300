@@ -48,7 +48,7 @@ namespace dsp56k
 
 		operator JitEmitter& ()		{ return m_asm;	}
 
-		bool emit(Jit* _jit, TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP);
+		bool emit(Jit* _jit, TWord _pc, const std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP);
 		bool empty() const { return m_pMemSize == 0; }
 		TWord getPCFirst() const { return m_pcFirst; }
 		TWord getPMemSize() const { return m_pMemSize; }

@@ -91,21 +91,24 @@ namespace dsp56k
 		AsmJitErrorHandler errorHandler;
 		CodeHolder code;
 
-//		code.setLogger(&logger);
 		code.setErrorHandler(&errorHandler);
 		code.init(m_rt->environment());
 
 		JitEmitter m_asm(&code);
 
+//		code.setLogger(&logger);
 //		m_asm.addDiagnosticOptions(DiagnosticOptions::kValidateIntermediate);
 //		m_asm.addDiagnosticOptions(DiagnosticOptions::kValidateAssembler);
 		
 		auto* b = new JitBlock(m_asm, m_dsp, m_runtimeData);
 
+		m_jitCache[_pc].func = nullptr;
+
 		if(!b->emit(this, _pc, m_jitCache, m_volatileP))
 		{
 			LOG("FATAL: code generation failed for PC " << HEX(_pc));
 			delete b;
+			m_jitCache[_pc].func = funcCreate;
 			return;
 		}
 
@@ -282,9 +285,15 @@ namespace dsp56k
 		create(_pc, _block, true);
 	}
 
-	JitBlock* Jit::getBlock(TWord _pc)
+	JitBlock* Jit::getChildBlock(TWord _pc)
 	{
 		const auto& e = m_jitCache[_pc];
+
+		// if func is nullptr, this code block is just being generated. In this case, return nullptr to prevent endless circles of parent JIT
+		// blocks that try to generate child blocks
+		if (e.func == nullptr)
+			return nullptr;
+
 		if (e.block)
 		{
 			if (e.block->getPCFirst() == _pc)

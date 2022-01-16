@@ -22,7 +22,7 @@ namespace dsp56k
 	{
 	}
 
-	bool JitBlock::emit(Jit* _jit, const TWord _pc, std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP)
+	bool JitBlock::emit(Jit* _jit, const TWord _pc, const std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP)
 	{
 		const bool isFastInterrupt = _pc < Vba_End;
 
@@ -131,10 +131,10 @@ namespace dsp56k
 
 						m_childIsDynamic = hasField(oi.getInstruction(), Field_CCCC) || hasField(oi.getInstruction(), Field_bbbbb);
 
-						if(!m_childIsDynamic)	 // TODO: may create endless circle
+						auto* child = _jit->getChildBlock(branchTarget);
+
+						if(child)
 						{
-							auto* child = _jit->getBlock(branchTarget);
-							assert(child);
 							child->addParent(m_pcFirst);
 							m_child = branchTarget;
 						}
@@ -236,7 +236,12 @@ namespace dsp56k
 			JitOps op(*this, isFastInterrupt);
 			op.updateDirtyCCR();
 		}
+
 		m_dspRegPool.releaseAll();
+
+		const auto canBranch = _jit && m_child != g_invalidAddress && _jit->canBeDefaultExecuted(m_child);
+		if(canBranch && m_childIsDynamic)
+			m_dspRegPool.movDspReg(regReturnVal, m_dsp.regs().pc);
 
 		m_stack.popAll();
 
@@ -247,11 +252,23 @@ namespace dsp56k
 		if(appendLoopCode)
 			m_flags |= LoopEnd;
 
-		if(_jit && m_child != g_invalidAddress && !m_childIsDynamic)
+		if(canBranch)
 		{
-			const auto* child = _jit->getBlock(m_child);
+			const auto* child = _jit->getChildBlock(m_child);
 
-			if(_jit->canBeDefaultExecuted(m_child))
+			if(m_childIsDynamic)
+			{
+				// we need to check if the PC has been set to the target address
+				asmjit::Label skip = m_asm.newLabel();
+
+				m_asm.cmp(r32(regReturnVal), asmjit::Imm(m_child));
+
+				m_asm.jne(skip);
+				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
+
+				m_asm.bind(skip);
+			}
+			else
 			{
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
 			}
@@ -291,7 +308,6 @@ namespace dsp56k
 
 	void JitBlock::addParent(TWord _pc)
 	{
-		assert(m_parents.find(_pc) == m_parents.end());
 		m_parents.insert(_pc);
 	}
 }
