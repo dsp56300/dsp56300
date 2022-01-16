@@ -288,12 +288,13 @@ namespace dsp56k
 		const auto ptr = dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(TWord));
 
 #ifdef HAVE_ARM64
-		m_asm.ldr(r32(regReturnVal), ptr);
+		const auto r = r32(regReturnVal);
+		m_asm.ldr(r, ptr);
 		if (_count.isImm())
-			m_asm.add(regReturnVal, regReturnVal, _count.as<asmjit::Imm>());
+			m_asm.add(r, r, _count.as<asmjit::Imm>());
 		else
-			m_asm.add(regReturnVal, regReturnVal, _count.as<JitRegGP>());
-		m_asm.str(r32(regReturnVal), ptr);
+			m_asm.add(r, r, _count.as<JitRegGP>());
+		m_asm.str(r, ptr);
 #else
 		if(_count.isImm())
 		{
