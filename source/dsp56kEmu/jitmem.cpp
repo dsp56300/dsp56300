@@ -259,40 +259,57 @@ namespace dsp56k
 		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
 	}
 
-	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, TWord offset/* = 0*/) const
+	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, TWord offset/* = 0*/, const JitRegGP& _ptrToPmem/* = JitRegGP()*/) const
 	{
 		auto& mem = m_block.dsp().memory();
 
+		TWord* ptr = nullptr;
+
 		switch (_area)
 		{
-		case MemArea_X:		ptrToReg(_dst, mem.x + offset);	break;
-		case MemArea_Y:		ptrToReg(_dst, mem.y + offset);	break;
-		case MemArea_P:		ptrToReg(_dst, mem.p + offset);	break;
+		case MemArea_X:		ptr = mem.x; break;
+		case MemArea_Y:		ptr = mem.y; break;
+		case MemArea_P:		ptr = mem.p; break;
 		default:
 			assert(0 && "invalid memory area");
 			break;
+		}
+
+		if(_ptrToPmem.isValid())
+		{
+			const auto off = reinterpret_cast<int64_t>(ptr) - reinterpret_cast<int64_t>(mem.p) + static_cast<int64_t>(offset) * sizeof(TWord);
+#ifdef HAVE_ARM64
+			m_block.asm_().add(_dst, _ptrToPmem, off);
+#else
+			m_block.asm_().lea(_dst, asmjit::x86::ptr(_ptrToPmem, static_cast<int>(off)));
+#endif
+		}
+		else
+		{
+			return ptrToReg(_dst, ptr + offset);
 		}
 	}
 
 	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitRegGP& _offset) const
 	{
-		getMemAreaPtr(_dst, _area);
-
 		// as we bridge to P memory there is no need to do anything here if area is P already
 		if (_area == MemArea_P)
-			return;
-
 		{
-			// use P memory for all bridged external memory
-			const auto p = regSmallTemp;
-			getMemAreaPtr(p, MemArea_P);
-			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().getBridgedMemoryAddress()));
-#ifdef HAVE_ARM64
-			m_block.asm_().csel(_dst, p, _dst, asmjit::arm::CondCode::kGE);
-#else
-			m_block.asm_().cmovge(_dst, p);
-#endif
+			getMemAreaPtr(_dst, _area);
+			return;
 		}
+
+		// use P memory for all bridged external memory
+		const auto p = regSmallTemp;
+		getMemAreaPtr(p, MemArea_P);
+		getMemAreaPtr(_dst, _area, 0, p);
+
+		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().getBridgedMemoryAddress()));
+#ifdef HAVE_ARM64
+		m_block.asm_().csel(_dst, p, _dst, asmjit::arm::CondCode::kGE);
+#else
+		m_block.asm_().cmovge(_dst, p);
+#endif
 	}
 
 	template<typename T>
