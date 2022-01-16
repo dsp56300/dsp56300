@@ -34,20 +34,20 @@ namespace dsp56k
 		bool shouldEmit = true;
 
 		asmjit::BaseNode* cursorInsertPc = nullptr;
-		const JitRegGP insertPcTempReg = regReturnVal;
+		asmjit::BaseNode* cursorEndInsertPc = nullptr;
 		asmjit::BaseNode* cursorInsertEncodedInstructionCount = nullptr;
+
+		// needed so that the dsp register is available
+		dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(TWord));
 
 		if(!isFastInterrupt)
 		{
+			// TODO: remove the whole block is the function statically jumps to m_child
 			// This code is only used to set the value of the next PC to the default value (next instruction following this block)
 			// Might be overwritten by a branching instruction
 			cursorInsertPc = m_asm.cursor();						// inserted later below:	m_asm.mov(temp, asmjit::Imm(m_pcLast)); once m_pcLast is known
-			m_dspRegPool.movDspReg(m_dsp.regs().pc, insertPcTempReg);
-		}
-		else
-		{
-			// needed so that the dsp register is available
-			dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(TWord));
+			m_dspRegPool.movDspReg(m_dsp.regs().pc, regReturnVal);
+			cursorEndInsertPc = m_asm.cursor();
 		}
 
 		cursorInsertEncodedInstructionCount = m_asm.cursor();	// inserted later below:	m_mem.mov(temp, getEncodedInstructionCount());
@@ -162,17 +162,26 @@ namespace dsp56k
 
 		m_pcLast = m_pcFirst + m_pMemSize;
 
-		if(cursorInsertPc)
-		{
-			// as it is now known, inject the next PC into the setter at the start of this block
-			m_asm.setCursor(cursorInsertPc);
-			m_asm.mov(insertPcTempReg, asmjit::Imm(m_pcLast));
-			m_asm.setCursor(m_asm.lastNode());
-		}
-
 		m_asm.setCursor(cursorInsertEncodedInstructionCount);
 		increaseInstructionCount(asmjit::Imm(getEncodedInstructionCount()));
 		m_asm.setCursor(m_asm.lastNode());
+
+		if(cursorInsertPc)
+		{
+			if(m_child != g_invalidAddress && !m_childIsDynamic)
+			{
+				// remove the initial PC update completely, we know that we'll definitely branch
+				int foo = 0;
+				m_asm.removeNodes(cursorInsertPc->next(), cursorEndInsertPc);
+			}
+			else
+			{
+				// Inject the next PC into the setter at the start of this block
+				m_asm.setCursor(cursorInsertPc);
+				m_asm.mov(regReturnVal, asmjit::Imm(m_pcLast));
+				m_asm.setCursor(m_asm.lastNode());
+			}
+		}
 
 		if(appendLoopCode)
 		{
