@@ -101,6 +101,7 @@ namespace dsp56k
 		bool m_possibleBranch = false;
 		uint32_t m_flags = 0;
 		TWord m_child = g_invalidAddress;			// JIT block that we call
+		bool m_childIsDynamic = false;
 		size_t m_codeSize = 0;
 
 		std::set<TWord> m_parents;

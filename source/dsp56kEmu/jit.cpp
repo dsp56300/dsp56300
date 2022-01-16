@@ -72,14 +72,6 @@ namespace dsp56k
 		// get JIT code
 		auto& cacheEntry = m_jitCache[pc];
 		exec(pc, cacheEntry);
-
-		const auto child = cacheEntry.block->getChild();
-
-		if (child != g_invalidAddress)
-		{
-			assert(m_dsp.getPC().toWord() == child);
-			exec(child);
-		}
 	}
 
 	void Jit::exec(const TWord pc, JitCacheEntry& e)
@@ -293,10 +285,23 @@ namespace dsp56k
 	{
 		const auto& e = m_jitCache[_pc];
 		if (e.block)
-			return e.block;
+		{
+			if (e.block->getPCFirst() == _pc)
+				return e.block;
+
+			destroy(e.block);
+		}
 		create(_pc, nullptr, false);
 		assert(e.block);
 		return e.block;
+	}
+
+	bool Jit::canBeDefaultExecuted(TWord _pc) const
+	{
+		const auto& e = m_jitCache[_pc];
+		if (!e.block)
+			return false;
+		return e.func == e.block->getFunc();
 	}
 
 	void Jit::updateRunFunc(JitCacheEntry& e)

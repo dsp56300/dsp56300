@@ -128,7 +128,10 @@ namespace dsp56k
 					if(branchTarget != g_invalidAddress && branchTarget != g_dynamicAddress && branchTarget != m_pcFirst)
 					{
 						assert(branchTarget < m_dsp.memory().size());
-						if(!hasField(oi.getInstruction(), Field_CCCC) && !hasField(oi.getInstruction(), Field_bbbbb))
+
+						m_childIsDynamic = hasField(oi.getInstruction(), Field_CCCC) || hasField(oi.getInstruction(), Field_bbbbb);
+
+						if(!m_childIsDynamic)	 // TODO: may create endless circle
 						{
 							auto* child = _jit->getBlock(branchTarget);
 							assert(child);
@@ -235,11 +238,12 @@ namespace dsp56k
 		if(appendLoopCode)
 			m_flags |= LoopEnd;
 
-		if(false && _jit && m_child != g_invalidAddress)
+		if(_jit && m_child != g_invalidAddress && !m_childIsDynamic)
 		{
-			if((m_flags & WritePMem) == 0)
+			const auto* child = _jit->getBlock(m_child);
+
+			if(_jit->canBeDefaultExecuted(m_child))
 			{
-				const auto* child = _jit->getBlock(m_child);
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
 			}
 		}
