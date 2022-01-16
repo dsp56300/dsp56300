@@ -263,7 +263,7 @@ namespace dsp56k
 
 				m_asm.cmp(r32(regReturnVal), asmjit::Imm(m_child));
 
-				m_asm.jne(skip);
+				m_asm.jnz(skip);
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
 
 				m_asm.bind(skip);
