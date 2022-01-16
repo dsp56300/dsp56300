@@ -261,7 +261,12 @@ namespace dsp56k
 				// we need to check if the PC has been set to the target address
 				asmjit::Label skip = m_asm.newLabel();
 
+#if HAVE_ARM64
+				m_asm.mov(r32(g_funcArgGPs[1]), asmjit::Imm(m_child));
+				m_asm.cmp(r32(regReturnVal), r32(g_funcArgGPs[1]));
+#else
 				m_asm.cmp(r32(regReturnVal), asmjit::Imm(m_child));
+#endif
 
 				m_asm.jnz(skip);
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
