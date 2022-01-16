@@ -130,7 +130,7 @@ namespace dsp56k
 		b->setFunc(func, code.codeSize());
 		m_codeSize += code.codeSize();
 
-//		LOG("Total code size now " << (m_codeSize >> 10) << "kb");
+		LOG("Total code size now " << (m_codeSize >> 10) << "kb");
 
 		const auto first = b->getPCFirst();
 		const auto last = first + b->getPMemSize();
