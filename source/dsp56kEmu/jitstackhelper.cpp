@@ -163,6 +163,8 @@ namespace dsp56k
 				}
 			}
 
+			m_pushedBytes = 0;
+
 			m_pushedRegs.clear();
 		}
 		else
