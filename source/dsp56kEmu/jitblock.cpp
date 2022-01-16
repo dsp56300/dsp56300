@@ -214,7 +214,7 @@ namespace dsp56k
 			m_asm.dec(lc);
 			{
 				const auto& ss = temp;
-				m_dspRegs.getSS(ss);
+				m_dspRegs.getSS(ss);	// note: not calling getSSH as it will dec the SP
 				m_asm.shr(ss, asmjit::Imm(24));
 				m_asm.and_(ss, asmjit::Imm(0xffffff));
 				setNextPC(ss);

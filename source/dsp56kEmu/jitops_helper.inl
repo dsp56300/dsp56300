@@ -193,22 +193,14 @@ namespace dsp56k
 
 	void JitOps::pushPCSR()
 	{
-		{
-			const RegGP pc(m_block);
+		const RegGP pc(m_block);
 
-			if(m_fastInterrupt)
-			{
-				m_block.dspRegPool().movDspReg(pc, m_block.dsp().regs().pc);
-			}
-			else
-			{
-				m_asm.mov(pc, asmjit::Imm(m_pcCurrentOp + m_opSize));
-			}
+		if (m_fastInterrupt)
+			m_block.dspRegPool().movDspReg(pc, m_block.dsp().regs().pc);
+		else
+			m_asm.mov(pc, asmjit::Imm(m_pcCurrentOp + m_opSize));
 
-			setSSH(r32(pc.get()));
-		}
-
-		setSSL(r32(m_dspRegs.getSR(JitDspRegs::Read)));
+		setSSHSSL(r32(pc.get()), r32(m_dspRegs.getSR(JitDspRegs::Read)));
 	}
 	void JitOps::popPCSR()
 	{

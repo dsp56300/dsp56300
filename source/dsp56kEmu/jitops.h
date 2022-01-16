@@ -398,6 +398,7 @@ namespace dsp56k
 		void setSSH(const JitReg32& _src) const;
 		void getSSL(const JitReg32& _dst) const;
 		void setSSL(const JitReg32& _src) const;
+		void setSSHSSL(const JitReg32& _ssh, const JitReg32& _ssl);
 
 		void decSP() const;
 		void incSP() const;

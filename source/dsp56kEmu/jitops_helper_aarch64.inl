@@ -150,18 +150,28 @@ namespace dsp56k
 	void JitOps::setSSH(const JitReg32& _src) const
 	{
 		incSP();
-		const RegGP temp(m_block);
-		m_dspRegs.getSS(temp);
-		m_asm.bfi(temp, r64(_src), asmjit::Imm(24), asmjit::Imm(24));
-		m_dspRegs.setSS(temp);
+		m_dspRegs.modifySS([&](const JitReg64& _ss)
+		{
+			m_asm.bfi(_ss, r64(_src), asmjit::Imm(24), asmjit::Imm(24));
+		}, true, true);
 	}
 
 	void JitOps::setSSL(const JitReg32& _src) const
 	{
-		const RegGP temp(m_block);
-		m_dspRegs.getSS(temp);
-		m_asm.bfi(temp, r64(_src), asmjit::Imm(0), asmjit::Imm(24));
-		m_dspRegs.setSS(temp);
+		m_dspRegs.modifySS([&](const JitReg64& _ss)
+		{
+			m_asm.bfi(_ss, r64(_src), asmjit::Imm(0), asmjit::Imm(24));
+		}, true, true);
+	}
+
+	inline void JitOps::setSSHSSL(const JitReg32& _ssh, const JitReg32& _ssl)
+	{
+		incSP();
+		m_dspRegs.modifySS([&](const JitReg64& _ss)
+		{
+			m_asm.bfi(_ss, r64(_ssh), asmjit::Imm(24), asmjit::Imm(24));
+			m_asm.bfi(_ss, r64(_ssl), asmjit::Imm(0), asmjit::Imm(24));
+		}, false, true);
 	}
 
 	void JitOps::setMR(const JitReg64& _src) const

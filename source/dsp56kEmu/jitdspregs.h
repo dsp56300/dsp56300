@@ -68,6 +68,7 @@ namespace dsp56k
 
 		void getSS(const JitReg64& _dst) const;
 		void setSS(const JitReg64& _src) const;
+		void modifySS(const std::function<void(const JitReg64&)>& _func, bool _read, bool _write) const;
 
 		void mask56(const JitRegGP& _alu) const;
 		void mask48(const JitRegGP& _alu) const;

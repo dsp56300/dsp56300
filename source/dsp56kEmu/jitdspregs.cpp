@@ -320,6 +320,35 @@ namespace dsp56k
 		m_asm.mov(Jitmem::makePtr(addr, ssIndex, 3, 8), _src);
 	}
 
+	void JitDspRegs::modifySS(const std::function<void(const JitReg64&)>& _func, bool _read, bool _write) const
+	{
+		const auto ssIndex = regReturnVal;
+		getSP(r32(ssIndex));
+
+		const RegGP ptrReg(m_block);
+#ifdef HAVE_ARM64
+		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
+		m_asm.add(ptrReg, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, DSP::SRegs::ss)));
+#else
+		m_asm.and_(ssIndex, Imm(0xf));
+		m_asm.lea(ptrReg, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
+#endif
+		if(_read && !_write)
+		{
+			m_asm.move(ptrReg, Jitmem::makePtr(ptrReg, ssIndex, 3, 8));
+			_func(r64(ptrReg.get()));
+		}
+		else
+		{
+			const RegGP ss(m_block);
+			if (_read)
+				m_asm.move(ss, Jitmem::makePtr(ptrReg, ssIndex, 3, 8));
+			_func(r64(ss.get()));
+			if(_write)
+				m_asm.mov(Jitmem::makePtr(ptrReg, ssIndex, 3, 8), ss);
+		}
+	}
+
 	void JitDspRegs::mask56(const JitRegGP& _alu) const
 	{
 #ifdef HAVE_ARM64

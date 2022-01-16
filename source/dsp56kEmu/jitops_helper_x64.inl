@@ -169,22 +169,33 @@ namespace dsp56k
 	void JitOps::setSSH(const JitReg32& _src) const
 	{
 		incSP();
-		const RegGP temp(m_block);
-		m_dspRegs.getSS(temp);
-		m_asm.ror(temp, asmjit::Imm(24));
-		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
-		m_asm.or_(temp, r64(_src));
-		m_asm.rol(temp, asmjit::Imm(24));
-		m_dspRegs.setSS(temp);
+		m_dspRegs.modifySS([&](const JitReg64& _ss)
+		{
+			m_asm.ror(_ss, asmjit::Imm(24));
+			m_asm.and_(_ss, asmjit::Imm(0xffffffffff000000));
+			m_asm.or_(_ss, r64(_src));
+			m_asm.rol(_ss, asmjit::Imm(24));
+		}, true, true);
 	}
 
 	void JitOps::setSSL(const JitReg32& _src) const
 	{
-		const RegGP temp(m_block);
-		m_dspRegs.getSS(temp);
-		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
-		m_asm.or_(temp, r64(_src));
-		m_dspRegs.setSS(temp);
+		m_dspRegs.modifySS([&](const JitReg64& _ss)
+		{
+			m_asm.and_(_ss, asmjit::Imm(0xffffffffff000000));
+			m_asm.or_(_ss, r64(_src));
+		}, true, true);
+	}
+
+	inline void JitOps::setSSHSSL(const JitReg32& _ssh, const JitReg32& _ssl)
+	{
+		incSP();
+		m_dspRegs.modifySS([&](const JitReg64& _ss)
+		{
+			m_asm.mov(r32(_ss), r32(_ssh));
+			m_asm.shl(r64(_ss), asmjit::Imm(24));
+			m_asm.or_(r64(_ss), r64(_ssl));
+		}, false, true);
 	}
 
 	void JitOps::setMR(const JitReg64& _src) const

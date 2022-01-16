@@ -441,8 +441,7 @@ namespace dsp56k
 			m_asm.jz(_toFalse);
 		}, [&]()
 		{
-			setSSH(r32(m_dspRegs.getLA(JitDspRegs::Read)));
-			setSSL(r32(m_dspRegs.getLC(JitDspRegs::Read)));
+			setSSHSSL(r32(m_dspRegs.getLA(JitDspRegs::Read)), r32(m_dspRegs.getLC(JitDspRegs::Read)));
 
 			m_asm.mov(m_dspRegs.getLA(JitDspRegs::Write), asmjit::Imm(_addr));
 			m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), _lc.get());
