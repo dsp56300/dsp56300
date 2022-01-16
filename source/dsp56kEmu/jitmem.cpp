@@ -98,11 +98,13 @@ namespace dsp56k
 		const SkipLabel skip(m_block.asm_());
 
 		// just return garbage in case memory is read from an invalid address
+#ifdef HAVE_X86_64
 		if(asmjit::Support::isPowerOf2(m_block.dsp().memory().size()))
 		{
 			m_block.asm_().and_(_offset, asmjit::Imm(asmjit::Imm(m_block.dsp().memory().size()-1)));
 		}
 		else
+#endif
 		{
 			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size()));
 			m_block.asm_().jge(skip.get());
