@@ -302,10 +302,16 @@ namespace dsp56k
 		create(_pc, _block, true);
 	}
 
-	JitBlock* Jit::getChildBlock(JitBlock* _parent, TWord _pc)
+	JitBlock* Jit::getChildBlock(JitBlock* _parent, TWord _pc, bool _allowCreate/* = true*/)
 	{
 		if(_parent)
 			occupyArea(_parent);
+
+		if (m_volatileP.find(_pc) != m_volatileP.end())
+			return nullptr;
+
+		if (!_allowCreate)
+			return nullptr;
 
 		const auto& e = m_jitCache[_pc];
 
