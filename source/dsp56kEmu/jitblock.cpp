@@ -252,7 +252,7 @@ namespace dsp56k
 		if(appendLoopCode)
 			m_flags |= LoopEnd;
 
-		if(canBranch)
+		if(canBranch && _volatileP.find(m_child) != _volatileP.end())
 		{
 			const auto* child = _jit->getChildBlock(m_child);
 
