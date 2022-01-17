@@ -125,18 +125,22 @@ namespace dsp56k
 					TWord opB;
 					m_dsp.memory().getOpcode(pc, opA, opB);
 					const auto branchTarget = getBranchTarget(oi.getInstruction(), opA, opB, pc);
-					if(branchTarget != g_invalidAddress && branchTarget != g_dynamicAddress && branchTarget != m_pcFirst)
+					if(branchTarget != g_invalidAddress && branchTarget != g_dynamicAddress && branchTarget != m_pcFirst && _volatileP.find(branchTarget) == _volatileP.end())
 					{
 						assert(branchTarget < m_dsp.memory().size());
 
 						m_childIsDynamic = hasField(oi.getInstruction(), Field_CCCC) || hasField(oi.getInstruction(), Field_bbbbb);
 
-						auto* child = _jit->getChildBlock(branchTarget);
-
-						if(child)
+						// do not branch into ourself
+						if (branchTarget < m_pcFirst || branchTarget >= (m_pcFirst + m_pMemSize))
 						{
-							child->addParent(m_pcFirst);
-							m_child = branchTarget;
+							auto* child = _jit->getChildBlock(this, branchTarget);
+
+							if (child)
+							{
+								child->addParent(m_pcFirst);
+								m_child = branchTarget;
+							}
 						}
 					}
 					break;
@@ -160,7 +164,7 @@ namespace dsp56k
 			}
 		}
 
-		m_pcLast = m_pcFirst + m_pMemSize;
+		auto pcNext = m_pcFirst + m_pMemSize;
 
 		m_asm.setCursor(cursorInsertEncodedInstructionCount);
 		increaseInstructionCount(asmjit::Imm(getEncodedInstructionCount()));
@@ -178,7 +182,7 @@ namespace dsp56k
 			{
 				// Inject the next PC into the setter at the start of this block
 				m_asm.setCursor(cursorInsertPc);
-				m_asm.mov(regReturnVal, asmjit::Imm(m_pcLast));
+				m_asm.mov(regReturnVal, asmjit::Imm(pcNext));
 				m_asm.setCursor(m_asm.lastNode());
 			}
 		}
@@ -239,7 +243,12 @@ namespace dsp56k
 
 		m_dspRegPool.releaseAll();
 
-		const auto canBranch = _jit && m_child != g_invalidAddress && _jit->canBeDefaultExecuted(m_child);
+		if (opFlags & JitOps::WritePMem)
+			m_flags |= WritePMem;
+		if (appendLoopCode)
+			m_flags |= LoopEnd;
+
+		const auto canBranch = (opFlags & WritePMem) == 0 && _jit && m_child != g_invalidAddress && _jit->canBeDefaultExecuted(m_child);
 		if(canBranch && m_childIsDynamic)
 			m_dspRegPool.movDspReg(regReturnVal, m_dsp.regs().pc);
 
@@ -247,14 +256,10 @@ namespace dsp56k
 
 		if(empty())
 			return false;
-		if(opFlags & JitOps::WritePMem)
-			m_flags |= WritePMem;
-		if(appendLoopCode)
-			m_flags |= LoopEnd;
 
-		if(canBranch && _volatileP.find(m_child) != _volatileP.end())
+		if(canBranch)
 		{
-			const auto* child = _jit->getChildBlock(m_child);
+			const auto* child = _jit->getChildBlock(nullptr, m_child);
 
 			if(m_childIsDynamic)
 			{

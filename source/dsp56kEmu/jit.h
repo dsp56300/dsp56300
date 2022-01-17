@@ -38,11 +38,14 @@ namespace dsp56k
 		void create(TWord _pc, JitBlock* _block, bool _execute);
 		void recreate(TWord _pc, JitBlock* _block);
 
-		JitBlock* getChildBlock(TWord _pc);
+		JitBlock* getChildBlock(JitBlock* _parent, TWord _pc);
 		bool canBeDefaultExecuted(TWord _pc) const;
+
+		void occupyArea(JitBlock* _block);
 
 	private:
 		void emit(TWord _pc);
+		void destroyParents(const JitBlock* _block);
 		void destroy(JitBlock* _block);
 		void destroy(TWord _pc);
 		void release(const JitBlock* _block);
@@ -60,6 +63,7 @@ namespace dsp56k
 		asmjit::_abi_1_8::JitRuntime* m_rt = nullptr;
 		std::vector<JitCacheEntry> m_jitCache;
 		std::set<TWord> m_volatileP;
+		std::map<TWord, JitBlock*> m_generatingBlocks;
 		size_t m_codeSize = 0;
 	};
 }

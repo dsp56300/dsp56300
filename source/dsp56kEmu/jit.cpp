@@ -102,15 +102,17 @@ namespace dsp56k
 		
 		auto* b = new JitBlock(m_asm, m_dsp, m_runtimeData);
 
-		m_jitCache[_pc].func = nullptr;
+		m_generatingBlocks.insert(std::make_pair(_pc, b));
 
 		if(!b->emit(this, _pc, m_jitCache, m_volatileP))
 		{
 			LOG("FATAL: code generation failed for PC " << HEX(_pc));
 			delete b;
-			m_jitCache[_pc].func = funcCreate;
+			m_generatingBlocks.erase(_pc);
 			return;
 		}
+
+		m_generatingBlocks.erase(_pc);
 
 		m_asm.ret();
 
@@ -132,17 +134,7 @@ namespace dsp56k
 
 //		LOG("Total code size now " << (m_codeSize >> 10) << "kb");
 
-		const auto first = b->getPCFirst();
-		const auto last = first + b->getPMemSize();
-
-		for(auto i=first; i<last; ++i)
-		{			
-			m_jitCache[i].block = b;
-			if(i == first)
-				updateRunFunc(m_jitCache[i]);
-			else
-				m_jitCache[i].func = &funcRecreate;
-		}
+		occupyArea(b);
 
 #ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
 		if(iJIT_IsProfilingActive() == iJIT_SAMPLING_ON)
@@ -150,7 +142,7 @@ namespace dsp56k
 			iJIT_Method_Load jmethod = {0};
 			jmethod.method_id = iJIT_GetNewMethodID();
 			char temp[64];
-			sprintf(temp, "$%06x-$%06x", first, last-1);
+			sprintf(temp, "$%06x-$%06x", b->getPCFirst(), b->getPCFirst() + b->getPMemSize() - 1);
 			if(b->getFlags() & JitBlock::LoopEnd)
 				strcat(temp, " L");
 			if(b->getFlags() & JitBlock::WritePMem)
@@ -168,12 +160,35 @@ namespace dsp56k
 //		LOG("New block generated @ " << HEX(_pc) << " up to " << HEX(_pc + b->getPMemSize() - 1) << ", instruction count " << b->getEncodedInstructionCount() << ", disasm " << b->getDisasm());
 	}
 
+	void Jit::destroyParents(const JitBlock* _block)
+	{
+		for (const auto parent : _block->getParents())
+		{
+			auto& e = m_jitCache[parent];
+
+			if (e.block)
+				destroy(e.block);
+
+			// single op cached entries that are calling the parent block need to go, too. They have been created at a time where _block was not a volatile P block yet
+			for(auto it = e.singleOpCache.begin(); it != e.singleOpCache.end();)
+			{
+				const auto* b = it->second;
+				if (b->getChild() == _block->getPCFirst())
+				{
+					release(b);
+					e.singleOpCache.erase(it++);
+				}
+				else
+				{
+					++it;
+				}
+			}
+		}
+	}
+
 	void Jit::destroy(JitBlock* _block)
 	{
-		const auto& parents = _block->getParents();
-
-		for (const auto parent : parents)
-			destroy(parent);
+		destroyParents(_block);
 
 		const auto first = _block->getPCFirst();
 		const auto last = first + _block->getPMemSize();
@@ -199,6 +214,7 @@ namespace dsp56k
 				cacheEntry.singleOpCache.insert(std::make_pair(op, _block));
 				return;
 			}
+			destroyParents(_block);
 		}
 
 		release(_block);
@@ -259,7 +275,7 @@ namespace dsp56k
 			TWord opB;
 			m_dsp.memory().getOpcode(_pc, opA, opB);
 
-			auto it = cacheEntry.singleOpCache.find(opA);
+			const auto it = cacheEntry.singleOpCache.find(opA);
 
 			if(it != cacheEntry.singleOpCache.end())
 			{
@@ -268,7 +284,8 @@ namespace dsp56k
 				cacheEntry.block = it->second;
 				cacheEntry.singleOpCache.erase(it);
 				updateRunFunc(cacheEntry);
-				exec(_pc, cacheEntry);
+				if(_execute)
+					exec(_pc, cacheEntry);
 				return;
 			}
 		}
@@ -285,22 +302,28 @@ namespace dsp56k
 		create(_pc, _block, true);
 	}
 
-	JitBlock* Jit::getChildBlock(TWord _pc)
+	JitBlock* Jit::getChildBlock(JitBlock* _parent, TWord _pc)
 	{
+		if(_parent)
+			occupyArea(_parent);
+
 		const auto& e = m_jitCache[_pc];
 
-		// if func is nullptr, this code block is just being generated. In this case, return nullptr to prevent endless circles of parent JIT
-		// blocks that try to generate child blocks
-		if (e.func == nullptr)
-			return nullptr;
+		if (e.block && e.block->getPCFirst() == _pc)
+			return e.block;
 
-		if (e.block)
+		// Do not jump into the middle of blocks that we are just generating
+		for (const auto& it : m_generatingBlocks)
 		{
-			if (e.block->getPCFirst() == _pc)
-				return e.block;
-
-			destroy(e.block);
+			const auto* b = it.second;
+			if(_pc >= b->getPCFirst() && _pc < (b->getPCFirst() + b->getPMemSize()))
+				return nullptr;
 		}
+
+		// regenerate otherwise
+		if (e.block)
+			destroy(e.block);
+
 		create(_pc, nullptr, false);
 		assert(e.block);
 		return e.block;
@@ -312,6 +335,22 @@ namespace dsp56k
 		if (!e.block)
 			return false;
 		return e.func == e.block->getFunc();
+	}
+
+	void Jit::occupyArea(JitBlock* _block)
+	{
+		const auto first = _block->getPCFirst();
+		const auto last = first + _block->getPMemSize();
+
+		for (auto i = first; i < last; ++i)
+		{
+			assert(m_jitCache[i].block == nullptr || m_jitCache[i].block == _block);
+			m_jitCache[i].block = _block;
+			if (i == first)
+				updateRunFunc(m_jitCache[i]);
+			else
+				m_jitCache[i].func = &funcRecreate;
+		}
 	}
 
 	void Jit::updateRunFunc(JitCacheEntry& e)
