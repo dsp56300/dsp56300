@@ -5,6 +5,7 @@
 #include "opcodes.h"
 #include "opcodetypes.h"
 #include "types.h"
+#include "peripherals.h"
 
 namespace dsp56k
 {
@@ -1100,5 +1101,26 @@ namespace dsp56k
 
 		assert(false && "unknown type of branch");
 		return g_invalidAddress;
+	}
+
+	inline bool accessesPeripherals(const Instruction _inst, const TWord _op, const TWord _opB)
+	{
+		const auto& oi = dsp56k::g_opcodes[_inst];
+
+		if (hasField(oi, Field_qqqqqq) || hasField(oi, Field_qqqqq) || hasField(oi, Field_q) || hasField(oi, Field_pppppp))
+			return true;
+
+		if(hasField(oi, Field_MMM) && hasField(oi, Field_RRR))
+		{
+			const auto mmmrrr = dsp56k::getFieldValue(oi.getInstruction(), dsp56k::Field_MMM, dsp56k::Field_RRR, _op);
+
+			if (mmmrrr == dsp56k::MMMRRR_ImmediateData || mmmrrr == dsp56k::MMMRRR_AbsAddr)
+			{
+				if (_opB >= XIO_Reserved_High_First)
+					return true;
+			}
+		}
+
+		return false;
 	}
 }
