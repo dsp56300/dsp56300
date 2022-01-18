@@ -294,7 +294,7 @@ namespace dsp56k
 
 #ifdef HAVE_ARM64
 		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
-		m_asm.add(_dst, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, DSP::SRegs::ss)));
+		m_asm.add(_dst, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
 #else
 		m_asm.and_(ssIndex, Imm(0xf));
 		m_asm.lea(_dst, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
@@ -312,7 +312,7 @@ namespace dsp56k
 
 #ifdef HAVE_ARM64
 		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
-		m_asm.add(addr, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, DSP::SRegs::ss)));
+		m_asm.add(addr, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
 #else
 		m_asm.and_(ssIndex, Imm(0xf));
 		m_asm.lea(addr, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
@@ -328,7 +328,7 @@ namespace dsp56k
 		const RegGP ptrReg(m_block);
 #ifdef HAVE_ARM64
 		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
-		m_asm.add(ptrReg, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, DSP::SRegs::ss)));
+		m_asm.add(ptrReg, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
 #else
 		m_asm.and_(ssIndex, Imm(0xf));
 		m_asm.lea(ptrReg, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
