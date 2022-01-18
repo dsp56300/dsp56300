@@ -166,10 +166,12 @@ namespace dsp56k
 
 	void DSP::execPeriph()
 	{
-		if (peripheralCounter > m_instructions)
+		const auto diff = m_peripheralCounter - m_instructions;
+
+		if (diff > 0 && diff < 32)
 			return;
 
-		peripheralCounter += 32;
+		m_peripheralCounter += 32;
 
 		perif[0]->exec();
 	}
