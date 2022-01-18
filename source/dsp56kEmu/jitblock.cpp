@@ -261,6 +261,8 @@ namespace dsp56k
 		{
 			const auto* child = _jit->getChildBlock(nullptr, m_child);
 
+			assert(child->getFunc());
+
 			if(m_childIsDynamic)
 			{
 				// we need to check if the PC has been set to the target address

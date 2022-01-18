@@ -304,7 +304,7 @@ namespace dsp56k
 
 	JitBlock* Jit::getChildBlock(JitBlock* _parent, TWord _pc, bool _allowCreate/* = true*/)
 	{
-		if(_parent)
+		if (_parent)
 			occupyArea(_parent);
 
 		if (m_volatileP.find(_pc) != m_volatileP.end())
@@ -316,7 +316,12 @@ namespace dsp56k
 		const auto& e = m_jitCache[_pc];
 
 		if (e.block && e.block->getPCFirst() == _pc)
+		{
+			// block is still being generated (circular reference)
+			if (e.func == nullptr)
+				return nullptr;
 			return e.block;
+		}
 
 		// Do not jump into the middle of blocks that we are just generating
 		for (const auto& it : m_generatingBlocks)
