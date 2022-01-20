@@ -138,8 +138,10 @@ namespace dsp56k
 
 						m_childIsDynamic = hasField(oi.getInstruction(), Field_CCCC) || hasField(oi.getInstruction(), Field_bbbbb);
 
+						const auto pcLast = m_pcFirst + m_pMemSize;
+
 						// do not branch into ourself
-						if (branchTarget < m_pcFirst || branchTarget >= (m_pcFirst + m_pMemSize))
+						if (branchTarget < m_pcFirst || branchTarget >= pcLast)
 						{
 							auto* child = _jit->getChildBlock(this, branchTarget);
 
@@ -147,6 +149,16 @@ namespace dsp56k
 							{
 								child->addParent(m_pcFirst);
 								m_child = branchTarget;
+
+								if(m_childIsDynamic)
+								{
+									auto* nonBranchChild = _jit->getChildBlock(this, pcLast);
+									if (nonBranchChild)
+									{
+										nonBranchChild->addParent(m_pcFirst);
+										m_nonBranchChild = pcLast;
+									}
+								}
 							}
 						}
 					}
@@ -274,6 +286,7 @@ namespace dsp56k
 			{
 				// we need to check if the PC has been set to the target address
 				asmjit::Label skip = m_asm.newLabel();
+				asmjit::Label end = m_asm.newLabel();
 
 #ifdef HAVE_ARM64
 				m_asm.mov(r32(g_funcArgGPs[1]), asmjit::Imm(m_child));
@@ -285,7 +298,24 @@ namespace dsp56k
 				m_asm.jnz(skip);
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
 
+				if (m_nonBranchChild != g_invalidAddress)
+					m_asm.jmp(end);
+
 				m_asm.bind(skip);
+
+				if(m_nonBranchChild != g_invalidAddress)
+				{
+					const auto nonBranchChild = _jit->getChildBlock(nullptr, m_nonBranchChild);
+#ifdef HAVE_ARM64
+					m_asm.mov(r32(g_funcArgGPs[1]), asmjit::Imm(pcNext));
+					m_asm.cmp(r32(regReturnVal), r32(g_funcArgGPs[1]));
+#else
+					m_asm.cmp(r32(regReturnVal), asmjit::Imm(pcNext));
+#endif
+					m_asm.jnz(end);
+					m_stack.call(asmjit::func_as_ptr(nonBranchChild->getFunc()));
+				}
+				m_asm.bind(end);
 			}
 			else
 			{
