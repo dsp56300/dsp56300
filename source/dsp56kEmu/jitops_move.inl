@@ -280,15 +280,32 @@ namespace dsp56k
 		const auto write	= getFieldValue<Inst,Field_W>(op);
 
 		const RegGP ea(m_block);
-		effectiveAddress<Inst>(ea, op);
+		const auto eaType = effectiveAddress<Inst>(ea, op);
 
 		const RegGP x(m_block);
 		const RegGP y(m_block);
 
 		if( write )
 		{
-			readMemOrPeriph(x, MemArea_X, ea);
-			readMemOrPeriph(y, MemArea_Y, ea);
+			switch (eaType)
+			{
+			case Immediate:
+				m_asm.mov(r32(x), asmjit::Imm(m_opWordB));
+				m_asm.mov(r32(y), asmjit::Imm(m_opWordB));
+				break;
+			case Peripherals:
+				m_block.mem().readPeriph(x, MemArea_X, m_opWordB);
+				m_block.mem().readPeriph(y, MemArea_Y, m_opWordB);
+				break;
+			case Memory:
+				m_block.mem().readDspMemory(x, y, m_opWordB);
+				break;
+			case Dynamic:
+				m_block.mem().readDspMemory(x, y, ea);
+//				readMemOrPeriph(x, MemArea_X, ea);
+//				readMemOrPeriph(y, MemArea_Y, ea);
+				break;
+			}
 
 			decode_LLL_write(LLL, r32(x.get()), r32(y.get()));
 		}
@@ -350,6 +367,25 @@ namespace dsp56k
 		const RegGP eaY(m_block);
 		decode_XMove_MMRRR( eaY, mm, (rr + regIdxOffset) & 7 );
 
+		if(writeX && writeY)
+		{
+			const RegGP rx(m_block);
+			const RegGP ry(m_block);
+			m_block.mem().readDspMemory(rx, ry, eaX, eaY);
+			decode_ee_write(ee, rx);
+			decode_ff_write(ff, ry);
+			return;
+		}
+		/* we're running out of temps here :-/
+		if (!writeX && !writeY)
+		{
+			const RegGP rx(m_block);
+			decode_ee_read(rx, ee);
+			const RegGP ry(m_block);
+			decode_ff_read(ry, ff);
+			m_block.mem().writeDspMemory(eaX, eaY, rx, ry);
+			return;
+		}*/
 		if(!writeX)
 		{
 			const RegGP r(m_block);

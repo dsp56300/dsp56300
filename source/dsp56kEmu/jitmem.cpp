@@ -92,7 +92,7 @@ namespace dsp56k
 		_mem.setOffset(reinterpret_cast<uint64_t>(_member) - reinterpret_cast<uint64_t>(_base));
 	}
 
-	void Jitmem::readDspMemory(const JitRegGP& _dst, const EMemArea _area, const JitRegGP& _offset) const
+	void Jitmem::readDspMemory(const JitRegGP& _dst, const EMemArea _area, const JitRegGP& _offset, const JitReg64& _basePtrPmem/* = JitRegGP()*/) const
 	{
 		const RegGP t(m_block);
 		const SkipLabel skip(m_block.asm_());
@@ -110,11 +110,62 @@ namespace dsp56k
 			m_block.asm_().jge(skip.get());
 		}
 
-		getMemAreaPtr(t.get(), _area, _offset);
+		getMemAreaPtr(t.get(), _area, _offset, _basePtrPmem);
 
 		m_block.asm_().move(r32(_dst), makePtr(t, _offset, 2, sizeof(TWord)));
 	}
-	
+
+	void Jitmem::readDspMemory(const JitRegGP& _dstX, const JitRegGP& _dstY, const JitRegGP& _offsetX, const JitRegGP& _offsetY) const
+	{
+		const auto pMem = regSmallTemp;
+		getMemAreaPtr(pMem, MemArea_P, 0);
+
+		readDspMemory(_dstX, MemArea_X, _offsetX, pMem);
+		readDspMemory(_dstY, MemArea_Y, _offsetY, pMem);
+	}
+
+	void Jitmem::readDspMemory(const JitRegGP& _dstX, const JitRegGP& _dstY, const JitRegGP& _offset) const
+	{
+		const RegGP t(m_block);
+		const SkipLabel skip(m_block.asm_());
+
+		// just return garbage in case memory is read from an invalid address
+#ifdef HAVE_X86_64
+		if (asmjit::Support::isPowerOf2(m_block.dsp().memory().size()))
+		{
+			m_block.asm_().and_(_offset, asmjit::Imm(asmjit::Imm(m_block.dsp().memory().size() - 1)));
+		}
+		else
+#endif
+		{
+			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size()));
+			m_block.asm_().jge(skip.get());
+		}
+
+		getMemAreaPtr(regSmallTemp, MemArea_P, 0);
+
+		getMemAreaPtr(t.get(), MemArea_X, _offset, regSmallTemp);
+		m_block.asm_().move(r32(_dstX), makePtr(t, _offset, 2, sizeof(TWord)));
+
+		getMemAreaPtr(t.get(), MemArea_Y, _offset, regSmallTemp);
+		m_block.asm_().move(r32(_dstY), makePtr(t, _offset, 2, sizeof(TWord)));
+	}
+
+	void Jitmem::readDspMemory(const JitRegGP& _dstX, const JitRegGP& _dstY, const TWord& _offset) const
+	{
+		if (_offset >= m_block.dsp().memory().size())
+			return;
+
+		getMemAreaPtr(regSmallTemp, MemArea_X, _offset);
+		m_block.asm_().move(r32(_dstX), makePtr(regSmallTemp, 0, sizeof(TWord)));
+
+		const auto& mem = m_block.dsp().memory();
+		const auto off = reinterpret_cast<uint64_t>(mem.y) - reinterpret_cast<uint64_t>(mem.x);
+
+		m_block.asm_().add(r64(regSmallTemp), off);
+		m_block.asm_().move(r32(_dstY), makePtr(regSmallTemp, 0, sizeof(TWord)));
+	}
+
 	void callDSPMemWrite(DSP* const _dsp, const EMemArea _area, const TWord _offset, const TWord _value)
 	{
 		EMemArea a(_area);
@@ -122,7 +173,7 @@ namespace dsp56k
 		_dsp->memory().dspWrite(a, o, _value);
 	}
 
-	void Jitmem::writeDspMemory(const EMemArea _area, const JitRegGP& _offset, const JitRegGP& _src) const
+	void Jitmem::writeDspMemory(const EMemArea _area, const JitRegGP& _offset, const JitRegGP& _src, const JitReg64& _basePtrPmem/* = JitReg64()*/) const
 	{
 #ifdef DEBUG_MEMORY_WRITES
 		FuncArg r1(m_block, 1);
@@ -143,10 +194,19 @@ namespace dsp56k
 		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size()));
 		m_block.asm_().jge(skip.get());
 
-		getMemAreaPtr(t.get(), _area, _offset);
+		getMemAreaPtr(t.get(), _area, _offset, _basePtrPmem);
 
 		m_block.asm_().mov(makePtr(t, _offset, 2, sizeof(TWord)), r32(_src));
 #endif
+	}
+
+	void Jitmem::writeDspMemory(const JitRegGP& _offsetX, const JitRegGP& _offsetY, const JitRegGP& _srcX, const JitRegGP& _srcY) const
+	{
+		const auto pMem = regSmallTemp;
+		getMemAreaPtr(pMem, MemArea_P, 0);
+
+		writeDspMemory(MemArea_X, _offsetX, _srcX, pMem);
+		writeDspMemory(MemArea_Y, _offsetY, _srcY, pMem);
 	}
 
 	void Jitmem::readDspMemory(const JitRegGP& _dst, EMemArea _area, TWord _offset) const
@@ -290,7 +350,7 @@ namespace dsp56k
 		}
 	}
 
-	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitRegGP& _offset) const
+	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitRegGP& _offset, const JitReg64& _ptrToPmem/* = JitRegGP()*/) const
 	{
 		// as we bridge to P memory there is no need to do anything here if area is P already
 		if (_area == MemArea_P)
@@ -300,8 +360,12 @@ namespace dsp56k
 		}
 
 		// use P memory for all bridged external memory
-		const auto p = regSmallTemp;
-		getMemAreaPtr(p, MemArea_P);
+		auto p = _ptrToPmem;
+		if(!p.isValid())
+		{
+			p = regSmallTemp;
+			getMemAreaPtr(p, MemArea_P);
+		}
 		getMemAreaPtr(_dst, _area, 0, p);
 
 		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().getBridgedMemoryAddress()));

@@ -42,8 +42,12 @@ namespace dsp56k
 
 		static void setPtrOffset(JitMemPtr& _mem, const void* _base, const void* _member);
 		
-		void readDspMemory(const JitRegGP& _dst, EMemArea _area, const JitRegGP& _offset) const;
-		void writeDspMemory(EMemArea _area, const JitRegGP& _offset, const JitRegGP& _src) const;
+		void readDspMemory(const JitRegGP& _dst, EMemArea _area, const JitRegGP& _offset, const JitReg64& _basePtrPmem = JitReg64()) const;
+		void readDspMemory(const JitRegGP& _dstX, const JitRegGP& _dstY, const JitRegGP& _offsetX, const JitRegGP& _offsetY) const;
+		void readDspMemory(const JitRegGP& _dstX, const JitRegGP& _dstY, const JitRegGP& _offset) const;
+		void readDspMemory(const JitRegGP& _dstX, const JitRegGP& _dstY, const TWord& _offset) const;
+		void writeDspMemory(EMemArea _area, const JitRegGP& _offset, const JitRegGP& _src, const JitReg64& _basePtrPmem = JitReg64()) const;
+		void writeDspMemory(const JitRegGP& _offsetX, const JitRegGP& _offsetY, const JitRegGP& _srcX, const JitRegGP& _srcY) const;
 
 		void readDspMemory(const JitRegGP& _dst, EMemArea _area, TWord _offset) const;
 		void writeDspMemory(EMemArea _area, TWord _offset, const JitRegGP& _src) const;
@@ -55,7 +59,7 @@ namespace dsp56k
 
 	private:
 		void getMemAreaPtr(const JitReg64& _dst, EMemArea _area, TWord offset = 0, const JitRegGP& _ptrToPmem = JitRegGP()) const;
-		void getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitRegGP& _offset) const;
+		void getMemAreaPtr(const JitReg64& _dst, EMemArea _area, const JitRegGP& _offset, const JitReg64& _ptrToPmem = JitReg64()) const;
 		JitBlock& m_block;
 	};
 }
