@@ -22,8 +22,15 @@ namespace dsp56k
 	{
 	}
 
+	JitBlock::~JitBlock()
+	{
+		assert(m_generating == false);
+	}
+
 	bool JitBlock::emit(Jit* _jit, const TWord _pc, const std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP)
 	{
+		JitBlockGenerating generating(*this);
+
 		const bool isFastInterrupt = _pc < Vba_End;
 
 		const TWord pcMax = isFastInterrupt ? (_pc + 2) : m_dsp.memory().size();

@@ -34,6 +34,7 @@ namespace dsp56k
 		typedef void (*JitEntry)(Jit*, TWord, JitBlock*);
 
 		JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData);
+		~JitBlock();
 
 		JitEmitter& asm_() { return m_asm; }
 		DSP& dsp() { return m_dsp; }
@@ -76,6 +77,17 @@ namespace dsp56k
 	private:
 		void addParent(TWord _pc);
 
+		class JitBlockGenerating
+		{
+		public:
+			JitBlockGenerating(JitBlock& _block) : m_block(_block) { _block.m_generating = true; }
+			~JitBlockGenerating() { m_block.m_generating = false; }
+		private:
+			JitBlock& m_block;
+		};
+
+		friend class JitBlockGenerating;
+
 		JitEntry m_func = nullptr;
 		JitRuntimeData& m_runtimeData;
 
@@ -102,5 +114,6 @@ namespace dsp56k
 		size_t m_codeSize = 0;
 
 		std::set<TWord> m_parents;
+		bool m_generating = false;
 	};
 }
