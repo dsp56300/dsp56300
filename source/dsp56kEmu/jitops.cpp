@@ -466,8 +466,8 @@ namespace dsp56k
 	{
 		// restore previous loop flag
 		{
-			getSSL(r32(r.get()));
-			m_asm.and_(r, asmjit::Imm(SR_LF));
+			m_dspRegs.getSS(r64(r.get()));
+			m_asm.and_(r64(r), asmjit::Imm(SR_LF));
 			m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~SR_LF));
 			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
 		}
