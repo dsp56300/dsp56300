@@ -49,6 +49,8 @@ namespace dsp56k
 		void destroy(JitBlock* _block);
 		void destroy(TWord _pc);
 		void release(const JitBlock* _block);
+		bool isBeingGeneratedRecursive(const JitBlock* _block) const;
+		bool isBeingGenerated(const JitBlock* _block) const;
 		
 		void exec(TWord pc, JitCacheEntry& e);
 

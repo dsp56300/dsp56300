@@ -238,6 +238,36 @@ namespace dsp56k
 //		LOG("Total code size now " << (m_codeSize >> 10) << "kb");
 	}
 
+	bool Jit::isBeingGeneratedRecursive(const JitBlock* _block) const
+	{
+		if (!_block)
+			return false;
+
+		if (isBeingGenerated(_block))
+			return true;
+
+		for (const auto parent : _block->getParents())
+		{
+			const auto& e = m_jitCache[parent];
+			if (isBeingGenerated(e.block))
+				return true;
+		}
+		return false;
+	}
+
+	bool Jit::isBeingGenerated(const JitBlock* _block) const
+	{
+		if (_block == nullptr)
+			return false;
+
+		for (auto it : m_generatingBlocks)
+		{
+			if (it.second == _block)
+				return true;
+		}
+		return false;
+	}
+
 	void Jit::run(TWord _pc, JitBlock* _block)
 	{
 		_block->getFunc()(this, _pc, _block);
@@ -323,13 +353,10 @@ namespace dsp56k
 			return e.block;
 		}
 
-		// Do not jump into the middle of blocks that we are just generating
-		for (const auto& it : m_generatingBlocks)
-		{
-			const auto* b = it.second;
-			if(_pc >= b->getPCFirst() && _pc < (b->getPCFirst() + b->getPMemSize()))
-				return nullptr;
-		}
+		// If we jump in the middle of a block, this block needs to be regenerated.
+		// We can only destroy blocks that are not part of the recursive generation at the moment
+		if (isBeingGeneratedRecursive(e.block))
+			return nullptr;
 
 		// regenerate otherwise
 		if (e.block)
