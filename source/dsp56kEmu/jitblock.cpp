@@ -216,9 +216,9 @@ namespace dsp56k
 			// It is important that this code does not allocate any temp registers inside of the branches. thefore, we prewarm everything
 			RegGP temp(*this);
 
-			const auto& sr = m_dspRegPool.get(JitDspRegPool::DspSR, true, true);
-			const auto& la = m_dspRegPool.get(JitDspRegPool::DspLA, true, true);	// we don't use it here but do_end does
-			const auto& lc = m_dspRegPool.get(JitDspRegPool::DspLC, true, true);
+			const auto& sr = r32(m_dspRegPool.get(JitDspRegPool::DspSR, true, true));
+			const auto& la = r32(m_dspRegPool.get(JitDspRegPool::DspLA, true, true));	// we don't use it here but do_end does
+			const auto& lc = r32(m_dspRegPool.get(JitDspRegPool::DspLC, true, true));
 
 			m_dspRegPool.lock(JitDspRegPool::DspSR);
 			m_dspRegPool.lock(JitDspRegPool::DspLA);
