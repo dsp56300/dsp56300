@@ -765,6 +765,13 @@ namespace dsp56k
 				return;
 			}
 		}
+		else if(!opA)
+		{
+			// rep nop => do nothing
+			m_block.getEncodedInstructionCount() += _lc;
+			m_opSize++;
+			return;
+		}
 
 		// regular processing
 		RegGP lc(m_block);
