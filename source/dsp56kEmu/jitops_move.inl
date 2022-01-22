@@ -278,9 +278,7 @@ namespace dsp56k
 	{
 		const auto LLL		= getFieldValue<Inst,Field_L, Field_LL>(op);
 		const auto write	= getFieldValue<Inst,Field_W>(op);
-
-		const RegGP ea(m_block);
-		const auto eaType = effectiveAddress<Inst>(ea, op);
+		const auto eaType	= effectiveAddressType<Inst>(op);
 
 		const RegGP x(m_block);
 		const RegGP y(m_block);
@@ -290,20 +288,24 @@ namespace dsp56k
 			switch (eaType)
 			{
 			case Immediate:
-				m_asm.mov(r32(x), asmjit::Imm(m_opWordB));
+				m_asm.mov(r32(x), asmjit::Imm(getOpWordB()));
 				m_asm.mov(r32(y), asmjit::Imm(m_opWordB));
 				break;
 			case Peripherals:
-				m_block.mem().readPeriph(x, MemArea_X, m_opWordB);
+				m_block.mem().readPeriph(x, MemArea_X, getOpWordB());
 				m_block.mem().readPeriph(y, MemArea_Y, m_opWordB);
 				break;
 			case Memory:
-				m_block.mem().readDspMemory(x, y, m_opWordB);
+				m_block.mem().readDspMemory(x, y, getOpWordB());
 				break;
 			case Dynamic:
-				m_block.mem().readDspMemory(x, y, ea);
-//				readMemOrPeriph(x, MemArea_X, ea);
-//				readMemOrPeriph(y, MemArea_Y, ea);
+				{
+					const RegGP ea(m_block);
+					effectiveAddress<Inst>(ea, op);
+					m_block.mem().readDspMemory(x, y, ea);
+//					readMemOrPeriph(x, MemArea_X, ea);
+//					readMemOrPeriph(y, MemArea_Y, ea);
+				}
 				break;
 			}
 
@@ -313,8 +315,30 @@ namespace dsp56k
 		{
 			decode_LLL_read(LLL, r32(x.get()), r32(y.get()));
 
-			writeMemOrPeriph(MemArea_X, ea, x);
-			writeMemOrPeriph(MemArea_Y, ea, y);
+			switch (eaType)
+			{
+			case Immediate:
+				assert(false && "unable to write to immediate");
+				getOpWordB();
+				break;
+			case Peripherals:
+				m_block.mem().writePeriph(MemArea_X, getOpWordB(), x);
+				m_block.mem().writePeriph(MemArea_Y, m_opWordB, y);
+				break;
+			case Memory:
+				m_block.mem().writeDspMemory(getOpWordB(), x.get(), y.get());
+				break;
+			case Dynamic:
+				{
+					const RegGP ea(m_block);
+					effectiveAddress<Inst>(ea, op);
+					m_block.mem().writeDspMemory(ea, x, y);
+//					writeMemOrPeriph(MemArea_X, ea, x);
+//					writeMemOrPeriph(MemArea_Y, ea, y);
+				}
+				break;
+			}
+
 		}
 	}
 

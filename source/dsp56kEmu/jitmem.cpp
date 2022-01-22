@@ -87,20 +87,15 @@ namespace dsp56k
 #endif
 	}
 
-	void Jitmem::setPtrOffset(JitMemPtr& _mem, const void* _base, const void* _member)
-	{
-		_mem.setOffset(reinterpret_cast<uint64_t>(_member) - reinterpret_cast<uint64_t>(_base));
-	}
-
 	void Jitmem::readDspMemory(const JitRegGP& _dst, const EMemArea _area, const JitRegGP& _offset, const JitReg64& _basePtrPmem/* = JitRegGP()*/) const
 	{
 		const RegGP t(m_block);
 		const SkipLabel skip(m_block.asm_());
 
-		// just return garbage in case memory is read from an invalid address
 #ifdef HAVE_X86_64
 		if(asmjit::Support::isPowerOf2(m_block.dsp().memory().size()))
 		{
+			// just return garbage in case memory is read from an invalid address
 			m_block.asm_().and_(_offset, asmjit::Imm(asmjit::Imm(m_block.dsp().memory().size()-1)));
 		}
 		else
@@ -129,10 +124,10 @@ namespace dsp56k
 		const RegGP t(m_block);
 		const SkipLabel skip(m_block.asm_());
 
-		// just return garbage in case memory is read from an invalid address
 #ifdef HAVE_X86_64
 		if (asmjit::Support::isPowerOf2(m_block.dsp().memory().size()))
 		{
+			// just return garbage in case memory is read from an invalid address
 			m_block.asm_().and_(_offset, asmjit::Imm(asmjit::Imm(m_block.dsp().memory().size() - 1)));
 		}
 		else
@@ -164,6 +159,23 @@ namespace dsp56k
 
 		m_block.asm_().add(r64(regSmallTemp), off);
 		m_block.asm_().move(r32(_dstY), makePtr(regSmallTemp, 0, sizeof(TWord)));
+	}
+
+	void Jitmem::readDspMemory(const JitRegGP& _dst, EMemArea _area, TWord _offset) const
+	{
+		const auto& mem = m_block.dsp().memory();
+		mem.memTranslateAddress(_area, _offset);
+
+		assert(_offset < mem.size() && "memory address out of range");
+
+		if (_offset >= mem.size())
+			return;
+
+		const RegGP t(m_block);
+
+		getMemAreaPtr(t.get(), _area, _offset);
+
+		m_block.asm_().move(r32(_dst), makePtr(t, 0, sizeof(uint32_t)));
 	}
 
 	void callDSPMemWrite(DSP* const _dsp, const EMemArea _area, const TWord _offset, const TWord _value)
@@ -209,21 +221,36 @@ namespace dsp56k
 		writeDspMemory(MemArea_Y, _offsetY, _srcY, pMem);
 	}
 
-	void Jitmem::readDspMemory(const JitRegGP& _dst, EMemArea _area, TWord _offset) const
+	void Jitmem::writeDspMemory(const JitRegGP& _offset, const JitRegGP& _srcX, const JitRegGP& _srcY) const
 	{
-		auto& mem = m_block.dsp().memory();
-		mem.memTranslateAddress(_area, _offset);
+		const RegGP t(m_block);
+		const SkipLabel skip(m_block.asm_());
 
-		assert(_offset < mem.size() && "memory address out of range");
+		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size()));
+		m_block.asm_().jge(skip.get());
 
-		if(_offset >= mem.size())
+		getMemAreaPtr(regSmallTemp, MemArea_P, 0);
+
+		getMemAreaPtr(t.get(), MemArea_X, _offset, regSmallTemp);
+		m_block.asm_().mov(makePtr(t, _offset, 2, sizeof(TWord)), r32(_srcX));
+
+		getMemAreaPtr(t.get(), MemArea_Y, _offset, regSmallTemp);
+		m_block.asm_().mov(makePtr(t, _offset, 2, sizeof(TWord)), r32(_srcY));
+	}
+
+	void Jitmem::writeDspMemory(const TWord& _offset, const JitRegGP& _srcX, const JitRegGP& _srcY) const
+	{
+		if (_offset >= m_block.dsp().memory().size())
 			return;
 
-		const RegGP t(m_block);
+		getMemAreaPtr(regSmallTemp, MemArea_X, _offset);
+		m_block.asm_().mov(makePtr(regSmallTemp, 0, sizeof(TWord)), r32(_srcX));
 
-		getMemAreaPtr(t.get(), _area, _offset);
+		const auto& mem = m_block.dsp().memory();
+		const auto off = reinterpret_cast<uint64_t>(mem.y) - reinterpret_cast<uint64_t>(mem.x);
 
-		m_block.asm_().move(r32(_dst), makePtr(t, 0, sizeof(uint32_t)));
+		m_block.asm_().add(r64(regSmallTemp), off);
+		m_block.asm_().mov(makePtr(regSmallTemp, 0, sizeof(TWord)), r32(_srcY));
 	}
 
 	void Jitmem::writeDspMemory(EMemArea _area, TWord _offset, const JitRegGP& _src) const

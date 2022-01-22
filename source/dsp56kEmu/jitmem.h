@@ -40,16 +40,16 @@ namespace dsp56k
 		static JitMemPtr makePtr(const JitReg64& _base, const JitRegGP& _index, uint32_t _shift = 0, uint32_t _size = 0);
 		static JitMemPtr makePtr(const JitReg64& _base, uint32_t _offset, uint32_t _size);
 
-		static void setPtrOffset(JitMemPtr& _mem, const void* _base, const void* _member);
-		
 		void readDspMemory(const JitRegGP& _dst, EMemArea _area, const JitRegGP& _offset, const JitReg64& _basePtrPmem = JitReg64()) const;
 		void readDspMemory(const JitRegGP& _dstX, const JitRegGP& _dstY, const JitRegGP& _offsetX, const JitRegGP& _offsetY) const;
 		void readDspMemory(const JitRegGP& _dstX, const JitRegGP& _dstY, const JitRegGP& _offset) const;
 		void readDspMemory(const JitRegGP& _dstX, const JitRegGP& _dstY, const TWord& _offset) const;
+		void readDspMemory(const JitRegGP& _dst, EMemArea _area, TWord _offset) const;
+
 		void writeDspMemory(EMemArea _area, const JitRegGP& _offset, const JitRegGP& _src, const JitReg64& _basePtrPmem = JitReg64()) const;
 		void writeDspMemory(const JitRegGP& _offsetX, const JitRegGP& _offsetY, const JitRegGP& _srcX, const JitRegGP& _srcY) const;
-
-		void readDspMemory(const JitRegGP& _dst, EMemArea _area, TWord _offset) const;
+		void writeDspMemory(const JitRegGP& _offset, const JitRegGP& _srcX, const JitRegGP& _srcY) const;
+		void writeDspMemory(const TWord& _offset, const JitRegGP& _srcX, const JitRegGP& _srcY) const;
 		void writeDspMemory(EMemArea _area, TWord _offset, const JitRegGP& _src) const;
 
 		void readPeriph(const JitReg64& _dst, EMemArea _area, const TWord& _offset) const;
