@@ -18,7 +18,7 @@ namespace dsp56k
 			DspReg56
 		};
 
-		void set(JitReg& _reg, Origin _origin, uint32_t _bitSize, uint32_t _shiftAmount = 0, bool _isMasked = true);
+		void set(const JitRegGP& _reg, Origin _origin, uint32_t _bitSize, uint32_t _shiftAmount = 0, bool _isMasked = true);
 
 		bool isValid() const
 		{
