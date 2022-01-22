@@ -306,13 +306,6 @@ namespace dsp56k
 				if(m_nonBranchChild != g_invalidAddress)
 				{
 					const auto nonBranchChild = _jit->getChildBlock(nullptr, m_nonBranchChild);
-#ifdef HAVE_ARM64
-					m_asm.mov(r32(g_funcArgGPs[1]), asmjit::Imm(pcNext));
-					m_asm.cmp(r32(regReturnVal), r32(g_funcArgGPs[1]));
-#else
-					m_asm.cmp(r32(regReturnVal), asmjit::Imm(pcNext));
-#endif
-					m_asm.jnz(end);
 					m_stack.call(asmjit::func_as_ptr(nonBranchChild->getFunc()));
 				}
 				m_asm.bind(end);
