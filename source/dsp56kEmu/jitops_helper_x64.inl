@@ -245,7 +245,6 @@ namespace dsp56k
 
 		{
 			const ShiftReg s0s1(m_block);
-			m_asm.xor_(s0s1, s0s1.get());
 
 			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S1));
 			m_asm.setc(s0s1.get().r8());
@@ -280,7 +279,7 @@ namespace dsp56k
 
 			// non-limited default
 			m_asm.shr(_dst, asmjit::Imm(24));
-			m_asm.and_(_dst, asmjit::Imm(0x00ffffff));
+			m_asm.and_(r32(_dst), asmjit::Imm(0x00ffffff));
 
 			// lower limit
 			{
@@ -290,8 +289,8 @@ namespace dsp56k
 			}
 			{
 				const auto minmax = regReturnVal;
-				m_asm.mov(minmax, 0x800000);
-				m_asm.cmovl(_dst, minmax);
+				m_asm.mov(r32(minmax), 0x800000);
+				m_asm.cmovl(r32(_dst), r32(minmax));
 			}
 			ccr_update_ifLess(CCRB_L);
 
@@ -303,8 +302,8 @@ namespace dsp56k
 			}
 			{
 				const auto minmax = regReturnVal;
-				m_asm.mov(minmax, 0x7fffff);
-				m_asm.cmovg(_dst, minmax);
+				m_asm.mov(r32(minmax), 0x7fffff);
+				m_asm.cmovg(r32(_dst), r32(minmax));
 			}
 		}
 		ccr_update_ifGreater(CCRB_L);
