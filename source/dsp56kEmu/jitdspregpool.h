@@ -4,7 +4,8 @@
 #include <vector>
 
 #include "types.h"
-#include "jitregtypes.h"
+
+#include "jithelper.h"
 
 namespace dsp56k
 {
@@ -24,12 +25,15 @@ namespace dsp56k
 
 			DspX,	DspY,
 
-			DspExtMem,
+			DspPC,
 			DspSR,
 			DspLC,
 			DspLA,
 
 			TempA, TempB, TempC, TempD, TempE, TempF, TempG, TempH, LastTemp = TempH,
+
+			DspM0mod, DspM1mod, DspM2mod, DspM3mod, DspM4mod, DspM5mod, DspM6mod, DspM7mod,
+			DspM0mask, DspM1mask, DspM2mask, DspM3mask, DspM4mask, DspM5mask, DspM6mask, DspM7mask,
 
 			DspCount
 		};
@@ -37,10 +41,10 @@ namespace dsp56k
 		JitDspRegPool(JitBlock& _block);
 		~JitDspRegPool();
 
-		JitReg get(DspReg _reg, bool _read, bool _write);
+		JitRegGP get(DspReg _reg, bool _read, bool _write);
 
-		void read(const JitReg& _dst, DspReg _src);
-		void write(DspReg _dst, const JitReg& _src);
+		void read(const JitRegGP& _dst, DspReg _src);
+		void write(DspReg _dst, const JitRegGP& _src);
 
 		void lock(DspReg _reg);
 		void unlock(DspReg _reg);
@@ -52,7 +56,7 @@ namespace dsp56k
 
 		void setRepMode(bool _repMode) { m_repMode = _repMode; }
 		bool isInUse(const JitReg128& _xmm) const;
-		bool isInUse(const JitReg& _gp) const;
+		bool isInUse(const JitRegGP& _gp) const;
 		bool isInUse(DspReg _reg) const;
 
 		DspReg aquireTemp();
@@ -68,7 +72,7 @@ namespace dsp56k
 		}
 
 		bool move(DspReg _dst, DspReg _src);
-		bool move(const JitReg& _dst, DspReg _src);
+		bool move(const JitRegGP& _dst, DspReg _src);
 
 		void setIsParallelOp(bool _isParallelOp);
 
@@ -79,14 +83,92 @@ namespace dsp56k
 
 		void parallelOpEpilog();
 
+		void resetDirty()
+		{
+			m_dirty = false;
+		}
+
+		bool isDirty() const
+		{
+			return m_dirty;
+		}
+
+
+		template<typename T, unsigned int B>
+		void movDspReg(const RegType<T, B>& _reg, const JitRegGP& _src) const
+		{
+			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
+				mov(makeDspPtr(_reg), r32(_src));
+			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
+				mov(makeDspPtr(_reg), r64(_src));
+			else if constexpr (sizeof(_reg.var) == sizeof(uint8_t))
+				movb(makeDspPtr(_reg), r64(_src));
+			static_assert(sizeof(_reg.var) == sizeof(uint64_t) || sizeof(_reg.var) == sizeof(uint32_t) || sizeof(_reg.var) == sizeof(uint8_t), "unknown register size");
+		}
+
+		template<typename T, unsigned int B>
+		void movDspReg(const RegType<T, B>& _reg, const JitReg128& _src) const
+		{
+			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
+				movd(makeDspPtr(_reg), _src);
+			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
+				movq(makeDspPtr(_reg), _src);
+			static_assert(sizeof(_reg.var) == sizeof(uint64_t) || sizeof(_reg.var) == sizeof(uint32_t), "unknown register size");
+		}
+
+		void movDspReg(const TWord& _reg, const JitReg128& _src) const
+		{
+			movd(makeDspPtr(&_reg, sizeof(_reg)), _src);
+		}
+
+		void movDspReg(const TWord& _reg, const JitRegGP& _src) const
+		{
+			mov(makeDspPtr(&_reg, sizeof(_reg)), r32(_src));
+		}
+
+		void movDspReg(const int8_t& _reg, const JitRegGP& _src) const
+		{
+			movb(makeDspPtr(&_reg, sizeof(_reg)), r32(_src));
+		}
+
+		template<typename T, unsigned int B>
+		void movDspReg(const JitRegGP& _dst, const RegType<T, B>& _reg) const
+		{
+			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
+				mov(r32(_dst), makeDspPtr(_reg));
+			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
+				mov(r64(_dst), makeDspPtr(_reg));
+			else if constexpr (sizeof(_reg.var) == sizeof(uint8_t))
+				movb(_dst, makeDspPtr(_reg));
+			static_assert(sizeof(_reg.var) == sizeof(uint64_t) || sizeof(_reg.var) == sizeof(uint32_t) || sizeof(_reg.var) == sizeof(uint8_t), "unknown register size");
+		}
+
+		void movDspReg(const JitRegGP& _dst, const TWord& _reg) const
+		{
+			mov(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
+		}
+
+		void movDspReg(const JitRegGP& _dst, const int8_t& _reg) const
+		{
+			movb(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
+		}
+
+		template<typename T, unsigned int B>
+		JitMemPtr makeDspPtr(const RegType<T, B>& _reg) const
+		{
+			return makeDspPtr(&_reg, sizeof(_reg.var));
+		}
+
+		JitMemPtr makeDspPtr(const void* _ptr, size_t _size) const;
+
 	private:
 		void parallelOpEpilog(DspReg _aluReadReg, DspReg _aluWriteReg);
 		
 		void makeSpace(DspReg _wantedReg);
 		void clear();
 
-		void load(JitReg& _dst, DspReg _src);
-		void store(DspReg _dst, JitReg& _src, bool _resetBasePtr = true);
+		void load(JitRegGP& _dst, DspReg _src);
+		void store(DspReg _dst, JitRegGP& _src, bool _resetBasePtr = true);
 		void store(DspReg _dst, JitReg128& _src, bool _resetBasePtr = true);
 
 		bool release(DspReg _dst, bool _resetBasePtr = true);
@@ -99,8 +181,8 @@ namespace dsp56k
 				_dst.push_back(_src);
 		}
 
-		void setWritten(DspReg _reg)			{ m_writtenDspRegs |= (1ull<<static_cast<uint64_t>(_reg)); }											  
-		void clearWritten(DspReg _reg)			{ m_writtenDspRegs &= ~(1ull<<static_cast<uint64_t>(_reg)); }
+		void setWritten(DspReg _reg);
+		void clearWritten(DspReg _reg);
 
 		void setLocked(DspReg _reg)				{ m_lockedGps |= (1ull<<static_cast<uint64_t>(_reg)); }											  
 		void clearLocked(DspReg _reg)			{ m_lockedGps &= ~(1ull<<static_cast<uint64_t>(_reg)); }
@@ -212,49 +294,29 @@ namespace dsp56k
 			T m_usedMap[DspCount];
 		};
 
-		template<typename T, unsigned int B>
-		asmjit::x86::Mem makeDspPtr(const RegType<T,B>& _reg)
-		{
-			return makeDspPtr(&_reg, sizeof(_reg.var));
-		}
+		void mov (const JitMemPtr& _dst, const JitRegGP& _src) const;
+		void movd(const JitMemPtr& _dst, const JitReg128& _src) const;
+		void movq(const JitMemPtr& _dst, const JitReg128& _src) const;
+		void movb(const JitMemPtr& _dst, const JitRegGP& _src) const;
 
-		asmjit::x86::Mem makeDspPtr(const void* _ptr, size_t _size);
-
-		template<typename T, unsigned int B>
-		void mov(const RegType<T,B>& _reg, const JitReg& _src)
-		{
-			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
-				mov(makeDspPtr(_reg), _src.r32());
-			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
-				mov(makeDspPtr(_reg), _src.r64());
-		}
-
-		template<typename T, unsigned int B>
-		void mov(const RegType<T,B>& _reg, const JitReg128& _src)
-		{
-			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
-				movd(makeDspPtr(_reg), _src);
-			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
-				movq(makeDspPtr(_reg), _src);
-		}
-
-		void mov(const asmjit::x86::Mem& _dst, const JitReg& _src) const;
-		void movd(const asmjit::x86::Mem& _dst, const JitReg128& _src) const;
-		void movq(const asmjit::x86::Mem& _dst, const JitReg128& _src) const;
-
+		void mov (const JitRegGP& _dst , const JitMemPtr& _src) const;
+		void movd(const JitReg128& _dst, const JitMemPtr& _src) const;
+		void movq(const JitReg128& _dst, const JitMemPtr& _src) const;
+		void movb(const JitRegGP& _dst, const JitMemPtr& _src) const;
 
 		JitBlock& m_block;
 
 		uint64_t m_lockedGps;
 		uint64_t m_writtenDspRegs;
 
-		RegisterList<JitReg> m_gpList;
+		RegisterList<JitRegGP> m_gpList;
 		RegisterList<JitReg128> m_xmList;
 
 		std::vector<DspReg> m_availableTemps;
 
 		bool m_isParallelOp = false;
 		bool m_repMode = false;
-		asmjit::x86::Mem m_dspPtr;
+		mutable JitMemPtr m_dspPtr;
+		bool m_dirty = false;
 	};
 }

@@ -64,7 +64,7 @@ namespace dsp56k
 		TWord*												y;
 		TWord*												p;
 
-		TWord												m_bridgedMemoryAddress = 0xffffff;
+		TWord												m_bridgedMemoryAddress;
 
 #if MEMORY_HEAT_MAP
 		mutable std::array<std::vector<uint32_t>, MemArea_COUNT>	m_heatMap;
@@ -122,7 +122,7 @@ namespace dsp56k
 		void				setDSP				( DSP* _dsp )	{ m_dsp = _dsp; }
 
 		void				setSymbol			(char _area, TWord _address, const std::string& _name);
-		const std::string&	getSymbol			(EMemArea _memArea, TWord addr);
+		const std::string&	getSymbol			(EMemArea _memArea, TWord addr) const;
 		const std::map<char, std::map<TWord, SSymbol>>& getSymbols() const { return m_symbols; }
 
 		TWord				size				() const	{ return m_size; }

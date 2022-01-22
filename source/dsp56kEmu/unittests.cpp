@@ -21,6 +21,8 @@ namespace dsp56k
 		testAdd();
 		testAddr();
 		testSub();
+		testSubl();
+		testSubr();
 		testCMP();
 		testASL();
 		testASR();
@@ -211,6 +213,30 @@ namespace dsp56k
 		assert(!dsp.sr_test(CCR_V));
 	}
 
+	void UnitTests::testSubl()
+	{
+		dsp.reg.a.var = 0x00400000000000;
+		dsp.reg.b.var = 0x00200000000000;
+
+		// subl b,a
+		execOpcode(0x200016);
+		assert(dsp.reg.a.var == 0x00600000000000);
+		assert(!dsp.sr_test(CCR_C));
+		assert(!dsp.sr_test(CCR_V));
+	}
+
+	void UnitTests::testSubr()
+	{
+		dsp.reg.a.var = 0x00600000000000;
+		dsp.reg.b.var = 0x00020000000000;
+
+		// subr b,a
+		execOpcode(0x200006);
+		assert(dsp.reg.a.var == 0x002e0000000000);
+		assert(!dsp.sr_test(CCR_C));
+		assert(!dsp.sr_test(CCR_V));
+	}
+
 	void UnitTests::testAdd(int64_t a, int y0, int64_t expectedResult)
 	{
 		dsp.reg.a.var = a;
@@ -354,54 +380,88 @@ namespace dsp56k
 
 	void UnitTests::testDIV()
 	{
-		dsp.setSR(dsp.getSR().var & 0xfe);
-
-		constexpr uint64_t expectedValues[24] =
 		{
-			0xffef590e000000,
-			0xffef790e000000,
-			0xffefb90e000000,
-			0xfff0390e000000,
-			0xfff1390e000000,
-			0xfff3390e000000,
-			0xfff7390e000000,
-			0xffff390e000000,
-			0x000f390e000000,
-			0x000dab2a000001,
-			0x000a8f62000003,
-			0x000457d2000007,
-			0xfff7e8b200000f,
-			0x0000985600001e,
-			0xfff069ba00003d,
-			0xfff19a6600007a,
-			0xfff3fbbe0000f4,
-			0xfff8be6e0001e8,
-			0x000243ce0003d0,
-			0xfff3c0aa0007a1,
-			0xfff84846000f42,
-			0x0001577e001e84,
-			0xfff1e80a003d09,
-			0xfff49706007a12
-		};
+			dsp.setSR(dsp.getSR().var & 0xfe);
 
-		dsp.reg.a.var = 0x00001000000000;
-		dsp.reg.y.var =   0x04444410c6f2;
+			constexpr uint64_t expectedValues[24] =
+			{
+				0xffef590e000000,
+				0xffef790e000000,
+				0xffefb90e000000,
+				0xfff0390e000000,
+				0xfff1390e000000,
+				0xfff3390e000000,
+				0xfff7390e000000,
+				0xffff390e000000,
+				0x000f390e000000,
+				0x000dab2a000001,
+				0x000a8f62000003,
+				0x000457d2000007,
+				0xfff7e8b200000f,
+				0x0000985600001e,
+				0xfff069ba00003d,
+				0xfff19a6600007a,
+				0xfff3fbbe0000f4,
+				0xfff8be6e0001e8,
+				0x000243ce0003d0,
+				0xfff3c0aa0007a1,
+				0xfff84846000f42,
+				0x0001577e001e84,
+				0xfff1e80a003d09,
+				0xfff49706007a12
+			};
 
-		for(size_t i=0; i<24; ++i)
-		{
-			// div y0,a
-			execOpcode(0x018050);
-			assert(dsp.reg.a.var == expectedValues[i]);
+			dsp.reg.a.var = 0x00001000000000;
+			dsp.reg.y.var = 0x04444410c6f2;
+
+			for (size_t i = 0; i < 24; ++i)
+			{
+				// div y0,a
+				execOpcode(0x018050);
+				assert(dsp.reg.a.var == expectedValues[i]);
+			}
 		}
 
-		dsp.y0(0x218dec);
-		dsp.reg.a.var = 0x00008000000000;
-		dsp.setSR(0x0800d4);
+		{
+			dsp.y0(0x218dec);
+			dsp.reg.a.var = 0x00008000000000;
+			dsp.setSR(0x0800d4);
 
-		// div y0,a
-		execOpcode(0x018050);
-		assert(dsp.reg.a.var == 0xffdf7214000000);
-		assert(dsp.getSR().var == 0x0800d4);		
+			constexpr uint64_t expectedValues[24] =
+			{
+				0xffdf7214000000,
+				0xffe07214000000,
+				0xffe27214000000,
+				0xffe67214000000,
+				0xffee7214000000,
+				0xfffe7214000000,
+				0x001e7214000000,
+				0x001b563c000001,
+				0x00151e8c000003,
+				0x0008af2c000007,
+				0xffefd06c00000f,
+				0x00012ec400001e,
+				0xffe0cf9c00003d,
+				0xffe32d2400007a,
+				0xffe7e8340000f4,
+				0xfff15e540001e8,
+				0x00044a940003d0,
+				0xffe7073c0007a1,
+				0xffef9c64000f42,
+				0x0000c6b4001e84,
+				0xffdfff7c003d09,
+				0xffe18ce4007a12,
+				0xffe4a7b400f424,
+				0xffeadd5401e848
+			};
+
+			for (size_t i = 0; i < 24; ++i)
+			{
+				// div y0,a
+				execOpcode(0x018050);
+				assert(dsp.reg.a.var == expectedValues[i]);
+			}
+		}
 	}
 
 	void UnitTests::testROL()

@@ -233,7 +233,7 @@ namespace dsp56k
 		&DSP::op_Sub_xx,						// Sub_xx 
 		&DSP::op_Sub_xxxx,						// Sub_xxxx 
 		&DSP::op_Subl,							// Subl 
-		&DSP::op_subr,							// subr 
+		&DSP::op_Subr,							// subr 
 		&DSP::op_Tcc_S1D1,						// Tcc_S1D1 
 		&DSP::op_Tcc_S1D1S2D2,					// Tcc_S1D1S2D2 
 		&DSP::op_Tcc_S2D2,						// Tcc_S2D2 

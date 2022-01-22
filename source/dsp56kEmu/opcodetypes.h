@@ -83,7 +83,7 @@ namespace dsp56k
 	enum Instruction
 	{
 		Abs,
-		ADC ,
+		ADC,
 		Add_SD,		Add_xx,		Add_xxxx,
 		Addl,		Addr,
 		And_SD,		And_xx,		And_xxxx,
@@ -180,7 +180,7 @@ namespace dsp56k
 		Stop,
 		Sub_SD,	Sub_xx,	Sub_xxxx,
 		Subl,
-		subr,
+		Subr,
 		Tcc_S1D1,			Tcc_S1D1S2D2,			Tcc_S2D2,
 		Tfr,
 		Trap,
@@ -215,5 +215,7 @@ namespace dsp56k
 		OpFlagPopPC			= (1<<4),
 		OpFlagRepImmediate	= (1<<5),
 		OpFlagRepDynamic	= (1<<6),
+		OpFlagPushPC		= (1<<7),
+		OpFlagCCR			= (1<<8),
 	};
 }

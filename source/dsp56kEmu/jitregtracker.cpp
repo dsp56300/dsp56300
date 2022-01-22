@@ -1,5 +1,7 @@
 #include "jitregtracker.h"
+
 #include "jitblock.h"
+#include "jitemitter.h"
 
 namespace dsp56k
 {
@@ -86,14 +88,14 @@ namespace dsp56k
 
 		auto& p = m_block.dspRegPool();
 
-		JitReg r;
+		JitRegGP r;
 
 		const auto dspRegR = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA      + m_aluIndex);
 		const auto dspRegW = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspAwrite + m_aluIndex);
 
 		if(p.isParallelOp() && m_write)
 		{
-			JitReg rRead;
+			JitRegGP rRead;
 
 			if(m_read)
 			{
@@ -121,7 +123,7 @@ namespace dsp56k
 		return m_reg;
 	}
 
-	AguReg::AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly) : DSPReg(_block, static_cast<JitDspRegPool::DspReg>(_regBase + _aguIndex), true, !readOnly)
+	AguReg::AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly, bool writeOnly) : DSPReg(_block, static_cast<JitDspRegPool::DspReg>(_regBase + _aguIndex), !writeOnly, !readOnly)
 	{
 	}
 
@@ -137,47 +139,14 @@ namespace dsp56k
 			m_block.stack().pop(m_reg);
 	}
 
-	PushShadowSpace::PushShadowSpace(JitBlock& _block) : m_block(_block)
-	{
-#ifdef _MSC_VER
-		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
-		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
-		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
-		m_block.asm_().push(asmjit::Imm(0xbada55c0deba5e));
-#endif
-	}
-
-	PushShadowSpace::~PushShadowSpace()
-	{
-#ifdef _MSC_VER
-		const RegGP temp(m_block);
-		m_block.asm_().pop(temp);
-		m_block.asm_().pop(temp);
-		m_block.asm_().pop(temp);
-		m_block.asm_().pop(temp);
-#endif
-	}
-
-	constexpr bool g_push128Bits = false;
-	
-	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(m_block.dspRegPool().isInUse(asmjit::x86::xmm(_xmmIndex)))
+	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(m_block.dspRegPool().isInUse(JitReg128(_xmmIndex)))
 	{
 		if(!m_isLoaded)
 			return;
 
-		const auto xm = asmjit::x86::xmm(_xmmIndex);
+		const auto xm = JitReg128(_xmmIndex);
 
 		_block.stack().push(xm);
-
-		if(g_push128Bits)
-		{
-			const RegGP r(_block);
-			_block.asm_().psrldq(xm, asmjit::Imm(8));
-
-			_block.asm_().movq(r, xm);
-			
-			_block.stack().push(r.get());
-		}
 	}
 
 	PushXMM::~PushXMM()
@@ -185,64 +154,103 @@ namespace dsp56k
 		if(!m_isLoaded)
 			return;
 
-		const auto xm = asmjit::x86::xmm(m_xmmIndex);
+		const auto xm = JitReg128(m_xmmIndex);
 
 		m_block.stack().pop(xm);
-
-		if(g_push128Bits)
-		{
-			const RegGP r(m_block);
-			m_block.stack().pop(r.get());
-
-			m_block.asm_().pslldq(xm, asmjit::Imm(8));
-
-			RegXMM xt(m_block);
-			m_block.asm_().movq(xt, r);
-			m_block.asm_().movsd(xm, xt);
-		}
 	}
 
-	PushXMMRegs::PushXMMRegs(JitBlock& _block): m_xmm0(_block, 0), m_xmm1(_block, 1), m_xmm2(_block, 2),
-	                                            m_xmm3(_block, 3), m_xmm4(_block, 4), m_xmm5(_block, 5), m_block(_block)
+	PushXMMRegs::PushXMMRegs(JitBlock& _block) : m_block(_block)
 	{
+		for (const auto& xm : g_nonVolatileXMMs)
+		{
+			if (!xm.isValid())
+				continue;
+			if (m_block.dspRegPool().isInUse(xm))
+			{
+				m_pushedRegs.push_front(xm);
+				m_block.stack().push(xm);
+			}
+		}
 	}
 
 	PushXMMRegs::~PushXMMRegs()
 	{
+		for (const auto& xm : m_pushedRegs)
+			m_block.stack().pop(xm);
 	}
 
-	PushGPRegs::PushGPRegs(JitBlock& _block)
-	: m_r8(_block, asmjit::x86::r8, true), m_r9(_block, asmjit::x86::r9, true)
-	, m_r10(_block, asmjit::x86::r10, true), m_r11(_block, asmjit::x86::r11, true)
+	PushGPRegs::PushGPRegs(JitBlock& _block) : m_block(_block)
 	{
+		for (auto gp : g_dspPoolGps)
+		{
+			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp) && m_block.dspRegPool().isInUse(gp))
+			{
+				m_pushedRegs.push_front(gp);
+				_block.stack().push(r64(gp));
+			}
+		}
+		for (auto reg : g_regGPTemps)
+		{
+			const auto gp = reg.as<JitRegGP>();
+
+			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp) && m_block.gpPool().isInUse(gp))
+			{
+				m_pushedRegs.push_front(gp);
+				_block.stack().push(r64(gp));
+			}
+		}
+
+		if(!JitStackHelper::isNonVolatile(regDspPtr))
+		{
+			m_pushedRegs.push_front(regDspPtr);
+			_block.stack().push(regDspPtr);
+		}
+
+#ifdef HAVE_ARM64
+		m_pushedRegs.push_front(asmjit::a64::regs::x30);
+		_block.stack().push(asmjit::a64::regs::x30);
+#endif
+	}
+
+	PushGPRegs::~PushGPRegs()
+	{
+		for (auto gp : m_pushedRegs)
+		{
+			m_block.stack().pop(gp);
+		}
 	}
 
 	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block) : m_xmm(_block) , m_gp(_block)
 	{
 	}
 
-	JitRegpool::JitRegpool(std::initializer_list<asmjit::x86::Reg> _availableRegs)
+	JitRegpool::JitRegpool(std::initializer_list<JitReg> _availableRegs)
 	{
 		for (const auto& r : _availableRegs)
-			m_availableRegs.push(r);
+			m_availableRegs.push_back(r);
 	}
 
-	void JitRegpool::put(const asmjit::x86::Reg& _reg)
+	void JitRegpool::put(const JitReg& _reg)
 	{
-		m_availableRegs.push(_reg);
+		m_availableRegs.push_back(_reg);
 	}
 
-	asmjit::x86::Reg JitRegpool::get()
+	JitReg JitRegpool::get()
 	{
 		assert(!m_availableRegs.empty() && "no more temporary registers left");
-		const auto ret = m_availableRegs.top();
-		m_availableRegs.pop();
+		const auto ret = m_availableRegs.back();
+		m_availableRegs.pop_back();
 		return ret;
 	}
 
 	bool JitRegpool::empty() const
 	{
 		return m_availableRegs.empty();
+	}
+
+	bool JitRegpool::isInUse(const JitReg& _gp) const
+	{
+		return std::find(m_availableRegs.begin(), m_availableRegs.end(), _gp) == m_availableRegs.end();
 	}
 
 	void JitScopedReg::acquire()

@@ -40,7 +40,6 @@ namespace dsp56k
 		sr_toggle( CCR_N, bittest( d, 47 ) );
 		sr_toggle( CCR_Z, (d.var & 0xffffff000000) == 0 );
 		sr_clear( CCR_V );
-		sr_s_update();
 	}
 
 	// _____________________________________________________________________________
@@ -72,7 +71,7 @@ namespace dsp56k
 //		sr_u_update(d);
 //		sr_n_update(d);
 
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 
 	//	dumpCCCC();
 	}
@@ -113,7 +112,7 @@ namespace dsp56k
 		//sr_l_update_by_v();
 		sr_toggle(CCR_C, carry);
 
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 
 		d = oldD;
 	}
@@ -138,7 +137,7 @@ namespace dsp56k
 
 		sr_z_update(d);
 		//sr_l_update_by_v();
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -163,7 +162,7 @@ namespace dsp56k
 		sr_z_update(d);
 		sr_clear(CCR_V);
 		//sr_l_update_by_v();
-		setCCRDirty(abDst, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(abDst, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -196,7 +195,7 @@ namespace dsp56k
 		sr_z_update(d);
 		sr_toggle(CCR_V, isOverflow);
 		sr_l_update_by_v();
-		setCCRDirty(abDst, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(abDst, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -221,7 +220,6 @@ namespace dsp56k
 		sr_toggle( CCR_Z, res == 0 );
 		sr_clear( CCR_V );
 
-		sr_s_update();
 		//sr_l_update_by_v();
 	}
 
@@ -246,9 +244,6 @@ namespace dsp56k
 		sr_toggle( CCR_N, bittest(res,23) );
 		sr_toggle( CCR_Z, res == 0 );
 		sr_clear( CCR_V );
-
-		sr_s_update();
-		//sr_l_update_by_v();
 	}
 
 	void DSP::alu_addl(bool ab)
@@ -265,7 +260,7 @@ namespace dsp56k
 		sr_clear(CCR_V);		// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 		//sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	void DSP::alu_addr(bool ab)
@@ -287,7 +282,7 @@ namespace dsp56k
 		sr_v_update(res, d);
 		sr_l_update_by_v();
 		sr_toggle(CCR_C, carry);
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	void DSP::alu_rol(const bool ab)
@@ -295,9 +290,11 @@ namespace dsp56k
 		auto& d = ab ? reg.b.var : reg.a.var;
 
 		const auto c = bitvalue<uint64_t,47>(d);
-
-		auto shifted = (d << 1) & 0x00ffffff000000;
-		shifted |= sr_val(CCRB_C) << 24;
+		auto shifted = d << 16;	// cut MSBs
+		shifted >>= 40;			// cut LSBs
+		shifted <<= 1;
+		shifted |= sr_val(CCRB_C);
+		shifted <<= 24;			// move back
 		
 		d &= 0xff000000ffffff;
 		d |= shifted;
@@ -326,9 +323,6 @@ namespace dsp56k
 		sr_toggle( CCR_C, bittest(_val,_bit) );
 
 		_val &= ~(1<<_bit);
-
-		sr_l_update_by_v();
-		sr_s_update();
 
 		return _val;
 	}
@@ -369,7 +363,7 @@ namespace dsp56k
 //		sr_u_update(d);
 //		sr_n_update(d);
 
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 	// _____________________________________________________________________________
 	// alu_mpysuuu
@@ -484,7 +478,7 @@ namespace dsp56k
 		sr_v_update(res,d);
 
 		sr_l_update_by_v();
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	// _____________________________________________________________________________
@@ -519,16 +513,16 @@ namespace dsp56k
 		sr_v_update(res, _alu);
 
 		sr_l_update_by_v();
-		setCCRDirty(ab, _alu, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, _alu, CCR_E | CCR_U | CCR_N);
 	}
 	
-	inline bool DSP::alu_multiply(const TWord op)
+	inline bool DSP::alu_multiply(const TWord _op)
 	{
-		const auto round = op & 0x1;
-		const auto mulAcc = (op>>1) & 0x1;
-		const auto negative = (op>>2) & 0x1;
-		const auto ab = (op>>3) & 0x1;
-		const auto qqq = (op>>4) & 0x7;
+		const auto round = _op & 0x1;
+		const auto mulAcc = (_op>>1) & 0x1;
+		const auto negative = (_op>>2) & 0x1;
+		const auto ab = (_op>>3) & 0x1;
+		const auto qqq = (_op>>4) & 0x7;
 
 		TReg24 s1, s2;
 
@@ -736,7 +730,7 @@ namespace dsp56k
 		sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);
 		sr_toggle( CCR_C, bittest(d,47) != bittest(old,47) );
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
 	inline void DSP::op_Div(const TWord op)
@@ -808,14 +802,8 @@ namespace dsp56k
 	{
 		errNotImplemented("EXTRACT");
 	}
-	inline void DSP::op_Extractu_S1S2(const TWord op)  // 00001100 00011010 100sSSSD
+	void DSP::alu_extractu(bool abDst, bool abSrc, const TWord widthOffset)
 	{
-		const auto sss = getFieldValue<Extractu_S1S2, Field_SSS>(op);
-		const auto widthOffset = decode_sss_read<TWord>(sss);
-
-		const bool abDst = getFieldValue<Extractu_S1S2, Field_D>(op);
-		const bool abSrc = getFieldValue<Extractu_S1S2, Field_s>(op);
-
 		const auto width = (widthOffset >> 12) & 0x3f;
 		const auto offset = widthOffset & 0x3f;
 
@@ -829,25 +817,24 @@ namespace dsp56k
 		sr_z_update(dDst);
 		setCCRDirty(abDst, dDst, CCR_E | CCR_U | CCR_N);
 	}
-	inline void DSP::op_Extractu_CoS2(const TWord op)  // 00001100 00011000 100s000D
+	inline void DSP::op_Extractu_S1S2(const TWord op)
+	{
+		const auto sss = getFieldValue<Extractu_S1S2, Field_SSS>(op);
+		const auto widthOffset = decode_sss_read<TWord>(sss);
+
+		const bool abDst = getFieldValue<Extractu_S1S2, Field_D>(op);
+		const bool abSrc = getFieldValue<Extractu_S1S2, Field_s>(op);
+
+		alu_extractu(abDst, abSrc, widthOffset);
+	}
+	inline void DSP::op_Extractu_CoS2(const TWord op)
 	{
 		const TWord width_offset = fetchOpWordB();
 
 		const bool abDst = getFieldValue<Extractu_CoS2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extractu_CoS2, Field_s>(op);
 
-		const auto width = (width_offset >> 12) & 0x3f;
-		const auto offset = width_offset & 0x3f;
-
-		const TReg56& dSrc = abSrc ? reg.b : reg.a;
-		TReg56& dDst = abDst ? reg.b : reg.a;
-		const auto mask = 0xFFFFFFFFFFFFFF >> (56 - width);
-		dDst.var = (dSrc.var >> offset) & mask;
-
-		sr_clear(CCR_C);
-		sr_clear(CCR_V);
-		sr_z_update(dDst);
-		setCCRDirty(abDst, dDst, CCR_E | CCR_U | CCR_N);
+		alu_extractu(abDst, abSrc, width_offset);
 	}
 	inline void DSP::op_Inc(const TWord op)
 	{
@@ -865,7 +852,7 @@ namespace dsp56k
 		sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);	// TODO: what? C updated two times?!
 		sr_toggle( CCR_C, bittest(d,47) != bittest(old,47) );
-		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 	inline void DSP::op_Insert_S1S2(const TWord op)
 	{
@@ -1103,11 +1090,37 @@ namespace dsp56k
 	}
 	inline void DSP::op_Subl(const TWord op)
 	{
-		errNotImplemented("subl");
+		const auto ab = getFieldValue<Subl, Field_d>(op);
+
+		TReg56&			d = ab ? reg.b : reg.a;
+		const TReg56&	s = ab ? reg.a : reg.b;
+
+		const TReg56 old = d;
+		const TInt64 res = (d.signextend<TInt64>() << 1) - s.signextend<TInt64>();
+		d.var = res;
+		d.doMasking();
+		// Carry bit note: "The Carry bit (C) is set correctly if the source operand does not overflow as a result of the left shift operation.", we do not care at the moment
+		sr_toggle(CCR_V, bittest(old, 55) != bittest(d, 55));
+		sr_z_update(d);
+		//sr_l_update_by_v();
+		sr_c_update_arithmetic(old, d);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
-	inline void DSP::op_subr(const TWord op)
+	inline void DSP::op_Subr(const TWord op)
 	{
-		errNotImplemented("subr");
+		const auto ab = getFieldValue<Subr, Field_d>(op);
+
+		TReg56&			d = ab ? reg.b : reg.a;
+		const TReg56&	s = ab ? reg.a : reg.b;
+
+		const TReg56 old = d;
+		const TInt64 res = (d.signextend<TInt64>() >> 1) - s.signextend<TInt64>();
+		d.var = res;
+		d.doMasking();
+		sr_z_update(d);
+		//sr_l_update_by_v();
+		sr_c_update_arithmetic(old, d);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 	inline void DSP::op_Tfr(const TWord op)
 	{

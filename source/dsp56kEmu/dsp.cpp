@@ -46,8 +46,8 @@ namespace dsp56k
 		: mem(_memory)
 		, perif({_pX, _pY})
 		, pcCurrentInstruction(0xffffff)
-		, m_disasm(m_opcodes)
 		, m_jit(*this)
+		, m_disasm(m_opcodes)
 	{
 		mem.setDSP(this);
 
@@ -133,18 +133,28 @@ namespace dsp56k
 			}
 			else if(m_processingMode == DefaultPreventInterrupt)
 			{
-				execDefaultPreventInterrupt();
+				m_processingMode = Default;
 			}
 
-			pcCurrentInstruction = reg.pc.toWord();
-
 			m_jit.exec(getPC().var);
-
-			handleICtrCallback();
 		}
 		else
 		{
+#if 0
+			if (m_processingMode == Default)
+			{
+				if (m_pendingInterrupts.empty())
+					execNoPendingInterrupts();
+				else
+					execInterrupts();
+			}
+			else if (m_processingMode == DefaultPreventInterrupt)
+			{
+				m_processingMode = Default;
+			}
+#else
 			(this->*m_interruptFunc)();
+#endif
 
 			pcCurrentInstruction = reg.pc.toWord();
 
@@ -156,91 +166,96 @@ namespace dsp56k
 
 	void DSP::execPeriph()
 	{
-		if ((peripheralCounter--)) return;
-		peripheralCounter = 20;
-		perif[0]->exec();
+		const auto diff = m_peripheralCounter - m_instructions;
 
-		if(perif[1] != perif[0])
-			perif[1]->exec();
+		if (diff > 0 && diff < 32)
+			return;
+
+		m_peripheralCounter += 32;
+
+		perif[0]->exec();
+	}
+
+	void DSP::tryExecInterrupts()
+	{
+		if (!m_pendingInterrupts.empty())
+			execInterrupts();
 	}
 
 	void DSP::execInterrupts()
 	{
-		if(!m_pendingInterrupts.empty())
+		// TODO: priority sorting, masking
+		const auto minPrio = mr().var & 0x3;
+
+		if(minPrio >= 3)
+			return;
+
+		const auto vba = m_pendingInterrupts.pop_front();
+
+		pcCurrentInstruction = vba;
+		m_processingMode = FastInterrupt;
+
+		if(g_useJIT)
 		{
-			// TODO: priority sorting, masking
-			const auto minPrio = mr().var & 0x3;
-
-			if(minPrio < 3)
+			m_jit.exec(vba);
+			if(m_processingMode != LongInterrupt)
 			{
-				const auto vba = m_pendingInterrupts.pop_front();
+				m_processingMode = DefaultPreventInterrupt;
+				m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+			}
+			else
+			{
+				int d=0;
+			}
+		}
+		else
+		{
+			TWord op0, op1;
+			memReadOpcode(vba, op0, op1);
 
-				pcCurrentInstruction = vba;
-				m_processingMode = FastInterrupt;
+			const auto oldSP = reg.sp.var;
 
-				if(g_useJIT)
-				{
-					m_jit.exec(vba);
-					if(m_processingMode != LongInterrupt)
-					{
-						m_processingMode = DefaultPreventInterrupt;
-						m_interruptFunc = &DSP::execDefaultPreventInterrupt;
-					}
-					else
-					{
-						int d=0;
-					}
-				}
-				else
-				{
-					TWord op0, op1;
-					memReadOpcode(vba, op0, op1);
+			m_opWordB = op1;
 
-					const auto oldSP = reg.sp.var;
+			execOp(op0);
 
-					m_opWordB = op1;
+			const auto jumped = reg.sp.var - oldSP;
 
-					execOp(op0);
+			// only exec the second op if the first one was a one-word op and we did not jump into a long interrupt
+			if(m_currentOpLen == 1 && !jumped)
+			{
+				pcCurrentInstruction = vba+1;
+				m_opWordB = 0;
+				execOp(op1);
 
-					const auto jumped = reg.sp.var - oldSP;
+				// fast interrupt done
+				m_processingMode = DefaultPreventInterrupt;
+				m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+			}
+			else if(jumped)
+			{
+				// Long Interrupt
 
-					// only exec the second op if the first one was a one-word op and we did not jump into a long interrupt
-					if(m_currentOpLen == 1 && !jumped)
-					{
-						pcCurrentInstruction = vba+1;
-						m_opWordB = 0;
-						execOp(op1);
+				// If one of the instructions in the fast routine is a JSR, then a long interrupt routine is formed.
+				// The following actions occur during execution of the JSR instruction when it occurs in the interrupt
+				// starting address or in the next address:
 
-						// fast interrupt done
-						m_processingMode = DefaultPreventInterrupt;
-						m_interruptFunc = &DSP::execDefaultPreventInterrupt;
-					}
-					else if(jumped)
-					{
-						// Long Interrupt
+				// 1.The PC (containing the return address) and the SR are stacked.
+				// 2.The Loop Flag is cleared.
+				// 3.The Scaling mode bits (S[1–0]) in the Status Register (SR) are cleared.
+				// 4.The Sixteen-bit Arithmetic (SA) mode bit is cleared.
+				// 5.The IPL is raised to disallow further interrupts of the same or lower levels.
 
-						// If one of the instructions in the fast routine is a JSR, then a long interrupt routine is formed.
-						// The following actions occur during execution of the JSR instruction when it occurs in the interrupt
-						// starting address or in the next address:
+				sr_clear(static_cast<CCRMask>(SR_S1 | SR_S0 | SR_SA | SR_LF));
 
-						// 1.The PC (containing the return address) and the SR are stacked.
-						// 2.The Loop Flag is cleared.
-						// 3.The Scaling mode bits (S[1–0]) in the Status Register (SR) are cleared.
-						// 4.The Sixteen-bit Arithmetic (SA) mode bit is cleared.
-						// 5.The IPL is raised to disallow further interrupts of the same or lower levels.
-
-						sr_clear(static_cast<CCRMask>(SR_S1 | SR_S0 | SR_SA | SR_LF));
-
-						m_processingMode = LongInterrupt;
-						m_interruptFunc = &DSP::nop;
-					}
-					else
-					{
-						// Default Processing, no interrupt
-						m_processingMode = DefaultPreventInterrupt;
-						m_interruptFunc = &DSP::execDefaultPreventInterrupt;
-					}
-				}
+				m_processingMode = LongInterrupt;
+				m_interruptFunc = &DSP::nop;
+			}
+			else
+			{
+				// Default Processing, no interrupt
+				m_processingMode = DefaultPreventInterrupt;
+				m_interruptFunc = &DSP::execDefaultPreventInterrupt;
 			}
 		}
 	}
@@ -290,80 +305,41 @@ namespace dsp56k
 		if(pcCurrentInstruction == currentOp)
 		{
 			++m_instructions;
-			handleICtrCallback();
+
 			if(g_traceSupported && pcCurrentInstruction == currentOp)
 				traceOp();
 		}
 	}
 
-	void DSP::exec_jump(const TInstructionFunc& _func, TWord op)
+	void DSP::exec_jump(const TInstructionFunc& _func, TWord _op)
 	{
-		(this->*_func)(op);
+		(this->*_func)(_op);
 	}
 
-	bool DSP::exec_parallel(const TInstructionFunc& funcMove, const TInstructionFunc& funcAlu, const TWord op)
+	bool DSP::exec_parallel(const TInstructionFunc& funcMove, const TInstructionFunc& funcAlu, const TWord _op)
 	{
 		// simulate latches registers for parallel instructions
-		const auto preMoveX = reg.x;
-		const auto preMoveY = reg.y;
-		const auto preMoveA = reg.a;
-		const auto preMoveB = reg.b;
 
-		exec_jump(funcMove, op);
+		// ALU op can only write to either A or B
+		const auto preAluA = reg.a;
+		const auto preAluB = reg.b;
 
-		const auto postMoveX = reg.x;
-		const auto postMoveY = reg.y;
-		const auto postMoveA = reg.a;
-		const auto postMoveB = reg.b;
+		exec_jump(funcAlu, _op);
 
-		// restore previous state for the ALU to process them
-		reg.x = preMoveX;
-		reg.y = preMoveY;
-		reg.a = preMoveA;
-		reg.b = preMoveB;
+		const auto postAluA = reg.a;
+		const auto postAluB = reg.b;
 
-		exec_jump(funcAlu, op);
+		reg.a = preAluA;
+		reg.b = preAluB;
 
-		// now check what has changed and get the final values for all registers
-		if( postMoveX != preMoveX )
-		{
-			assert( preMoveX == reg.x && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.x = postMoveX;
-		}
-		else if( reg.x != preMoveX )
-		{
-			assert( preMoveX == postMoveX && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
+		exec_jump(funcMove, _op);
 
-		if( postMoveY != preMoveY )
-		{
-			assert( preMoveY == reg.y && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.y = postMoveY;
-		}
-		else if( reg.y != preMoveY )
-		{
-			assert( preMoveY == postMoveY && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
+		if (postAluA != preAluA)
+			reg.a = postAluA;
 
-		if( postMoveA != preMoveA )
-		{
-			assert( preMoveA == reg.a && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.a = postMoveA;
-		}
-		else if( reg.a != preMoveA )
-		{
-			assert( preMoveA == postMoveA && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
+		if (postAluB != preAluB)
+			reg.b = postAluB;
 
-		if( postMoveB != preMoveB )
-		{
-			assert( preMoveB == reg.b && "ALU changed a register at the same time the MOVE command changed it!" );
-			reg.b = postMoveB;
-		}
-		else if( reg.b != preMoveB )
-		{
-			assert( preMoveB == postMoveB && "ALU changed a register at the same time the MOVE command changed it!" );
-		}
 		return true;
 	}
 
@@ -423,7 +399,7 @@ namespace dsp56k
 
 		dsp.ccrCache.dirty = 0;
 		
-		dsp.sr_s_update();
+//		dsp.sr_s_update();
 		dsp.sr_e_update(ccrCache.alu);
 		dsp.sr_u_update(ccrCache.alu);
 		dsp.sr_n_update(ccrCache.alu);
@@ -495,7 +471,6 @@ namespace dsp56k
 		sr_set( SR_LF );
 
 		++m_instructions;
-		handleICtrCallback();
 
 		traceOp();
 
@@ -546,13 +521,12 @@ namespace dsp56k
 		return true;
 	}
 
-	bool DSP::rep_exec(const TWord loopCount)
+	bool DSP::rep_exec(const TWord _loopCount)
 	{
 		const auto lcBackup = reg.lc;
-		reg.lc.var = loopCount;
+		reg.lc.var = _loopCount;
 
 		++m_instructions;
-		handleICtrCallback();
 
 		traceOp();
 
@@ -589,12 +563,12 @@ namespace dsp56k
 		traceOp(pcCurrentInstruction, op, m_opWordB, m_currentOpLen);
 	}
 
-	void DSP::traceOp(const TWord pc, const TWord op, const TWord opB, const TWord opLen)
+	void DSP::traceOp(const TWord _pc, const TWord op, const TWord _opB, const TWord _opLen)
 	{
 		std::stringstream ss;
-		ss << "p:$" << HEX(pc) << ' ' << HEX(op);
-		if(opLen > 1)
-			ss << ' ' << HEX(opB);
+		ss << "p:$" << HEX(_pc) << ' ' << HEX(op);
+		if(_opLen > 1)
+			ss << ' ' << HEX(_opB);
 		else
 			ss << "       ";
 		ss << " = ";
@@ -602,7 +576,7 @@ namespace dsp56k
 			ss << getSSindent();
 
 		std::string disasm;
-		m_disasm.disassemble(disasm, op, opB, reg.sr.var, reg.omr.var, pc);
+		m_disasm.disassemble(disasm, op, _opB, reg.sr.var, reg.omr.var, _pc);
 		
 		ss << disasm;
 		const std::string str(ss.str());
@@ -997,10 +971,18 @@ namespace dsp56k
 	bool DSP::memWrite( EMemArea _area, TWord _offset, TWord _value )
 	{
 		aarTranslate(_area, _offset);
-	
-		const auto res = mem.dspWrite( _area, _offset, _value );
+		return mem.dspWrite( _area, _offset, _value );
+	}
 
-		if(_area == MemArea_P && _offset < m_opcodeCache.size())
+	inline bool DSP::memWriteP(TWord _offset, TWord _value)
+	{
+		aarTranslate(MemArea_P, _offset);
+
+		const auto oldValue = mem.get(MemArea_P, _offset);
+
+		const auto res = mem.set(MemArea_P, _offset, _value);
+
+		if (_offset < m_opcodeCache.size() && oldValue != _value)
 		{
 			notifyProgramMemWrite(_offset);
 			m_jit.notifyProgramMemWrite(_offset);
@@ -1026,6 +1008,9 @@ namespace dsp56k
 	void DSP::notifyProgramMemWrite(TWord _offset)
 	{
 		m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
+
+		if (m_listener)
+			m_listener->onPmemWrite(_offset);
 	}
 
 	// _____________________________________________________________________________
@@ -1178,28 +1163,32 @@ namespace dsp56k
 
 		sr_toggle(CCRB_N, bitvalue<uint64_t, 47>(d));	// Set if bit 47 of the result is set
 		sr_toggle(CCR_Z, masked == 0);					// Set if bits 47–24 of the result are 0
-		sr_clear(CCR_V);									// Always cleared
-		sr_s_update();									// Changed according to the standard definition
+		sr_clear(CCR_V);								// Always cleared
+		//sr_s_update();								// Changed according to the standard definition
 		//sr_l_update_by_v();							// Changed according to the standard definition
 	}
 
 	void DSP::set_m( const int which, const TWord val)
 	{
 		reg.m[which].var = val;
-		if (val == 0xffffff) {
-			modulo[which]=0;
-			moduloMask[which]=0xffffff;
+
+		if (val == 0xffffff)
+		{
+			reg.mModulo[which] = 0;
+			reg.mMask[which] = 0xffffff;
 			return;
 		}
+
 		const TWord moduloTest = (val & 0xffff);
+
 		if (moduloTest == 0)
 		{
-			moduloMask[which] = 0;
+			reg.mMask[which] = 0;
 		}
 		else if( moduloTest <= 0x007fff )
 		{
-			moduloMask[which] = AGU::calcModuloMask(val);
-			modulo[which] = val + 1;
+			reg.mMask[which] = AGU::calcModuloMask(val);
+			reg.mModulo[which] = val + 1;
 		}
 		else
 		{
@@ -1238,7 +1227,7 @@ namespace dsp56k
 		m_pendingInterrupts.push_back(_interruptVectorAddress);
 
 		if(m_interruptFunc == &DSP::execNoPendingInterrupts)
-			m_interruptFunc = &DSP::execInterrupts;
+			m_interruptFunc = &DSP::tryExecInterrupts;
 	}
 
 	void DSP::clearOpcodeCache()
@@ -1247,9 +1236,10 @@ namespace dsp56k
 		m_opcodeCache.resize(mem.size(), {&DSP::op_ResolveCache});
 	}
 
-	void DSP::clearOpcodeCache(TWord _address)
+	void DSP::clearOpcodeCache(const TWord _address)
 	{
 		m_opcodeCache[_address].op = &DSP::op_ResolveCache;
+		m_jit.notifyProgramMemWrite(_address);
 	}
 	
 	TInstructionFunc DSP::resolvePermutation(const Instruction _inst, const TWord _op)

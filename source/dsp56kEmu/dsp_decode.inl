@@ -9,7 +9,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// decode_cccc
 	//
-	int DSP::decode_cccc( TWord cccc ) const
+	inline int DSP::decode_cccc( TWord cccc ) const
 	{
 //	#define			SRT_C			sr_val(CCRB_C)			// carry
 	#define 		SRT_V			sr_val(CCRB_V)			// overflow
@@ -335,10 +335,22 @@ namespace dsp56k
 		assert(0 && "invalid EE value");
 	}
 
+	inline TReg24 DSP::decode_ee_read(const TWord _ee)
+	{
+		switch(_ee)
+		{
+		case 0:	return x0();
+		case 1:	return x1();
+		case 2:	return getA<TReg24>();
+		case 3:	return getB<TReg24>();
+		}
+		return TReg24(0xbadbad);
+	}
+
 	template<TWord ee>
 	TReg24 DSP::decode_ee_read()
 	{
-		static_assert(ee >= 0 && ee <= 3, "invalid ee value");
+		static_assert(ee <= 3, "invalid ee value");
 		
 		if constexpr (ee == 0)	return x0();
 		if constexpr (ee == 1)	return x1();
@@ -429,14 +441,17 @@ namespace dsp56k
 		const auto&	n  = reg.n[_rrr].var;
 		const auto&	m  = reg.m[_rrr].var;
 
+		const auto& mask = reg.mMask[_rrr];
+		const auto& mod = reg.mModulo[_rrr];
+
 		TWord a;
 
-		if constexpr (_mmm == 0) {	a = r;	AGU::updateAddressRegister(r,-n,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 000 (Rn)-Nn */
-		if constexpr (_mmm == 1) {	a = r;	AGU::updateAddressRegister(r,+n,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 001 (Rn)+Nn */
-		if constexpr (_mmm == 2) {	a = r;	AGU::updateAddressRegister(r,-1,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 010 (Rn)-   */
-		if constexpr (_mmm == 3) {	a = r;	AGU::updateAddressRegister(r,+1,m,moduloMask[_rrr],modulo[_rrr]);				}	/* 011 (Rn)+   */
-		if constexpr (_mmm == 5) {	a = r;	AGU::updateAddressRegister(a,+n, m,moduloMask[_rrr],modulo[_rrr]);				}	/* 101 (Rn+Nn) */
-		if constexpr (_mmm == 7) {			AGU::updateAddressRegister(r,-1,m,moduloMask[_rrr],modulo[_rrr]);		a = r;	}	/* 111 -(Rn)   */
+		if constexpr (_mmm == 0) {	a = r;	AGU::updateAddressRegister(r,-n,m, mask, mod);				}	/* 000 (Rn)-Nn */
+		if constexpr (_mmm == 1) {	a = r;	AGU::updateAddressRegister(r,+n,m, mask, mod);				}	/* 001 (Rn)+Nn */
+		if constexpr (_mmm == 2) {	a = r;	AGU::updateAddressRegister(r,-1,m, mask, mod);				}	/* 010 (Rn)-   */
+		if constexpr (_mmm == 3) {	a = r;	AGU::updateAddressRegister(r,+1,m, mask, mod);				}	/* 011 (Rn)+   */
+		if constexpr (_mmm == 5) {	a = r;	AGU::updateAddressRegister(a,+n,m, mask, mod);				}	/* 101 (Rn+Nn) */
+		if constexpr (_mmm == 7) {			AGU::updateAddressRegister(r,-1,m, mask, mod);		a = r;	}	/* 111 -(Rn)   */
 
 		_r.var = r;
 
@@ -457,20 +472,23 @@ namespace dsp56k
 		TReg24&			_r = reg.r[regIdx];
 		const TReg24	_m = reg.m[regIdx];
 
+		const auto& mask = reg.mMask[regIdx];
+		const auto& mod = reg.mModulo[regIdx];
+
 		TWord r = _r.toWord();
 
 		TWord a;
 
 		switch( _mmm )
 		{
-		case 0:	/* 000 (Rn)-Nn */	a = r;		AGU::updateAddressRegister(r,-_n.var,_m.var,moduloMask[regIdx],modulo[regIdx]);					break;
-		case 1:	/* 001 (Rn)+Nn */	a = r;		AGU::updateAddressRegister(r,+_n.var,_m.var,moduloMask[regIdx],modulo[regIdx]);					break;
-		case 2:	/* 010 (Rn)-   */	a = r;		AGU::updateAddressRegister(r,-1,_m.var,moduloMask[regIdx],modulo[regIdx]);						break;
-		case 3:	/* 011 (Rn)+   */	a = r;		AGU::updateAddressRegister(r,+1,_m.var,moduloMask[regIdx],modulo[regIdx]);						break;
-		case 4:	/* 100 (Rn)    */	a = r;																		break;
-		case 5:	/* 101 (Rn+Nn) */	a = r;		AGU::updateAddressRegister(a,+_n.var, _m.var,moduloMask[regIdx],modulo[regIdx]);					break;
+		case 0:	/* 000 (Rn)-Nn */	a = r;		AGU::updateAddressRegister(r,-_n.var,_m.var, mask, mod);					break;
+		case 1:	/* 001 (Rn)+Nn */	a = r;		AGU::updateAddressRegister(r,+_n.var,_m.var, mask, mod);					break;
+		case 2:	/* 010 (Rn)-   */	a = r;		AGU::updateAddressRegister(r,-1,_m.var, mask, mod);						break;
+		case 3:	/* 011 (Rn)+   */	a = r;		AGU::updateAddressRegister(r,+1,_m.var, mask, mod);						break;
+		case 4:	/* 100 (Rn)    */	a = r;																					break;
+		case 5:	/* 101 (Rn+Nn) */	a = r;		AGU::updateAddressRegister(a,+_n.var, _m.var, mask, mod);					break;
 		// case 6: special case handled above, either immediate data or absolute address in extension word
-		case 7:	/* 111 -(Rn)   */				AGU::updateAddressRegister(r,-1,_m.var,moduloMask[regIdx],modulo[regIdx]);			a = r;		break;
+		case 7:	/* 111 -(Rn)   */				AGU::updateAddressRegister(r,-1,_m.var, mask, mod);			a = r;		break;
 
 		default:
 			assert(0 && "impossible to happen" );
@@ -489,16 +507,19 @@ namespace dsp56k
 		TReg24&			_r = reg.r[_rrr];
 		const TReg24	_m = reg.m[_rrr];
 
+		const auto& mask = reg.mMask[_rrr];
+		const auto& mod = reg.mModulo[_rrr];
+
 		TWord r = _r.toWord();
 
 		TWord a;
 
 		switch( _mm )
 		{
-		case 0:	/* 00 */	a = r;																				break;
-		case 1:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var,moduloMask[_rrr],modulo[_rrr]);	break;
-		case 2:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var,moduloMask[_rrr],modulo[_rrr]);		break;
-		case 3:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var,moduloMask[_rrr],modulo[_rrr]);		break;
+		case 0:	/* 00 */	a = r;																break;
+		case 1:	/* 01 */	a = r;	AGU::updateAddressRegister(r,+_n.var,_m.var, mask, mod);	break;
+		case 2:	/* 10 */	a = r;	AGU::updateAddressRegister(r,-1,_m.var, mask, mod);		break;
+		case 3:	/* 11 */	a =	r;	AGU::updateAddressRegister(r,+1,_m.var, mask, mod);		break;
 		}
 
 		_r.var = r;
@@ -590,7 +611,7 @@ namespace dsp56k
 		}
 	}
 
-	void DSP::decode_LLL_read(TWord _lll, TWord& x, TWord& y)
+	inline void DSP::decode_LLL_read(TWord _lll, TWord& x, TWord& y)
 	{
 		switch (_lll)
 		{
@@ -612,7 +633,7 @@ namespace dsp56k
 		assert(0 && "invalid LLL value");
 	}
 
-	void DSP::decode_LLL_write(TWord _lll, TReg24 x, TReg24 y)
+	inline void DSP::decode_LLL_write(TWord _lll, TReg24 x, TReg24 y)
 	{
 		switch (_lll)
 		{
@@ -728,7 +749,7 @@ namespace dsp56k
 		return res;
 	}
 
-	TWord DSP::decode_sssss(const TWord _sssss)
+	inline TWord DSP::decode_sssss(const TWord _sssss)
 	{
 		return 0x800000 >> _sssss;
 	}

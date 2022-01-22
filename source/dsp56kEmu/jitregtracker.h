@@ -1,20 +1,13 @@
 #pragma once
 
-#include <stack>
+#include <list>
 
 #include "jitdspregpool.h"
 #include "types.h"
 #include "jitregtypes.h"
+#include "jithelper.h"
 
 #include "asmjit/x86/x86operand.h"
-
-namespace asmjit
-{
-	namespace x86
-	{
-		class Assembler;
-	}
-}
 
 namespace dsp56k
 {
@@ -23,14 +16,15 @@ namespace dsp56k
 	class JitRegpool
 	{
 	public:
-		JitRegpool(std::initializer_list<asmjit::x86::Reg> _availableRegs);
+		JitRegpool(std::initializer_list<JitReg> _availableRegs);
 
-		void put(const asmjit::x86::Reg& _reg);
-		asmjit::x86::Reg get();
+		void put(const JitReg& _reg);
+		JitReg get();
 		bool empty() const;
+		bool isInUse(const JitReg& _gp) const;
 
 	private:
-		std::stack<asmjit::x86::Reg> m_availableRegs;	// TODO: do we want a FIFO instead to have more register spread? Is it any better performance-wise?
+		std::list<JitReg> m_availableRegs;
 	};
 
 	class JitScopedReg
@@ -47,8 +41,9 @@ namespace dsp56k
 
 		void release();
 
-	protected:
-		asmjit::x86::Reg m_reg;
+		const JitReg& get() const { return m_reg; }
+	private:
+		JitReg m_reg;
 	private:
 		JitBlock& m_block;
 		JitRegpool& m_pool;
@@ -60,7 +55,7 @@ namespace dsp56k
 	public:
 		RegGP(JitBlock& _block);
 
-		const JitReg64& get() const { return m_reg.as<JitReg64>(); }
+		const JitReg64& get() const { return JitScopedReg::get().as<JitReg64>(); }
 		operator const JitReg64& () const { return get(); }
 	};
 	
@@ -69,7 +64,7 @@ namespace dsp56k
 	public:
 		RegXMM(JitBlock& _block);
 
-		const JitReg128& get() const { return m_reg.as<JitReg128>(); }
+		const JitReg128& get() const { return JitScopedReg::get().as<JitReg128>(); }
 		operator const JitReg128& () const { return get(); }
 	};
 
@@ -79,11 +74,11 @@ namespace dsp56k
 		DSPReg(JitBlock& _block, JitDspRegPool::DspReg _reg, bool _read = true, bool _write = true);
 		~DSPReg();
 
-		JitReg get() const { return m_reg; }
-		operator JitReg() const { return get(); }
+		JitRegGP get() const { return m_reg; }
+		operator JitRegGP() const { return get(); }
 
-		JitReg32 r32() const { return get().r32(); }
-		JitReg64 r64() const { return get().r64(); }
+		JitReg32 r32() const { return dsp56k::r32(get()); }
+		JitReg64 r64() const { return dsp56k::r64(get()); }
 
 		void write();
 
@@ -92,7 +87,7 @@ namespace dsp56k
 	private:
 		JitBlock& m_block;
 		const JitDspRegPool::DspReg m_dspReg;
-		const JitReg m_reg;
+		const JitRegGP m_reg;
 	};
 	
 	class DSPRegTemp
@@ -101,7 +96,7 @@ namespace dsp56k
 		DSPRegTemp(JitBlock& _block);
 		~DSPRegTemp();
 
-		JitReg64 get() const { return m_reg.r64(); }
+		JitReg64 get() const { return r64(m_reg); }
 		operator JitReg64() const { return get(); }
 
 		void acquire();
@@ -112,7 +107,7 @@ namespace dsp56k
 	private:
 		JitBlock& m_block;
 		JitDspRegPool::DspReg m_dspReg = JitDspRegPool::DspCount;
-		JitReg m_reg;
+		JitRegGP m_reg;
 	};
 
 	class AluReg
@@ -152,7 +147,7 @@ namespace dsp56k
 	class AguReg : public DSPReg
 	{
 	public:
-		AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly = false);
+		AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly = false, bool writeOnly = false);
 	};
 
 	class AguRegR : public AguReg
@@ -173,6 +168,18 @@ namespace dsp56k
 		AguRegM(JitBlock& _block, int _aguIndex, bool readOnly = true) : AguReg(_block, JitDspRegPool::DspM0, _aguIndex, readOnly) {}
 	};
 
+	class AguRegMmod : public AguReg
+	{
+	public:
+		AguRegMmod(JitBlock& _block, int _aguIndex, bool readOnly = true, bool writeOnly = false) : AguReg(_block, JitDspRegPool::DspM0mod, _aguIndex, readOnly, writeOnly) {}
+	};
+
+	class AguRegMmask : public AguReg
+	{
+	public:
+		AguRegMmask(JitBlock& _block, int _aguIndex, bool readOnly = true, bool writeOnly = false) : AguReg(_block, JitDspRegPool::DspM0mask, _aguIndex, readOnly, writeOnly) {}
+	};
+
 	class PushGP
 	{
 	public:
@@ -188,26 +195,21 @@ namespace dsp56k
 		const bool m_pushed;
 	};
 
-	class FuncArg : PushGP
+	class FuncArg : public PushGP
 	{
 	public:
-		FuncArg(JitBlock& _block, const JitReg64& _reg) : PushGP(_block, _reg, true) {}
+		FuncArg(JitBlock& _block, const uint32_t& _argIndex) : PushGP(_block, g_funcArgGPs[_argIndex], true) {}
 	};
 
+#ifdef HAVE_X86_64
 	class ShiftReg : public PushGP
 	{
 	public:
 		ShiftReg(JitBlock& _block) : PushGP(_block, asmjit::x86::rcx, true) {}
 	};
-
-	class PushShadowSpace
-	{
-	public:
-		PushShadowSpace(JitBlock& _block);
-		~PushShadowSpace();
-	private:
-		JitBlock& m_block;
-	};
+#else
+	using ShiftReg = RegGP;
+#endif
 
 	class PushXMM
 	{
@@ -229,24 +231,18 @@ namespace dsp56k
 		~PushXMMRegs();
 
 	private:
-		PushXMM m_xmm0;
-		PushXMM m_xmm1;
-		PushXMM m_xmm2;
-		PushXMM m_xmm3;
-		PushXMM m_xmm4;
-		PushXMM m_xmm5;
 		JitBlock& m_block;
+		std::list<JitReg128> m_pushedRegs;
 	};
 
 	class PushGPRegs
 	{
 	public:
 		PushGPRegs(JitBlock& _block);
+		~PushGPRegs();
 	private:
-		PushGP m_r8;
-		PushGP m_r9;
-		PushGP m_r10;
-		PushGP m_r11;
+		JitBlock& m_block;
+		std::list<JitRegGP> m_pushedRegs;
 	};
 
 	class PushBeforeFunctionCall

@@ -12,6 +12,7 @@ buildconfig.h
 disasm.cpp disasm.h
 dspassert.cpp dspassert.h
 dspconfig.h
+dsplistener.h
 dsp.cpp dsp.h 
 dsp_decode.inl
 dsp_jumptable.inl
@@ -30,6 +31,7 @@ logging.cpp logging.h
 memory.cpp memory.h
 omfloader.cpp omfloader.h
 opcodes.cpp opcodes.h
+opcodeanalysis.h
 opcodefields.h
 opcodeinfo.cpp opcodeinfo.h
 opcodetypes.h
@@ -46,6 +48,7 @@ utils.cpp utils.h
 
 set(SOURCES_JIT
 jit.cpp jit.h
+jitemitter.cpp jitemitter.h
 jitblock.cpp jitblock.h
 jitcacheentry.h
 jithelper.cpp jithelper.h
@@ -59,7 +62,22 @@ jitregtracker.cpp jitregtracker.h
 jitregtypes.h
 jitruntimedata.cpp jitruntimedata.h
 jitstackhelper.cpp jitstackhelper.h
+jittypes.h
 jitunittests.cpp jitunittests.h
+
+jitops_aarch64.inl
+jitops_alu_aarch64.inl
+jitops_ccr_aarch64.inl
+jitops_decode_aarch64.inl
+jitops_helper_aarch64.inl
+jitops_jmp_aarch64.inl
+
+jitops_x64.inl
+jitops_alu_x64.inl
+jitops_ccr_x64.inl
+jitops_decode_x64.inl
+jitops_helper_x64.inl
+jitops_jmp_x64.inl
 )
 
 set(SOURCES_VTUNE
@@ -100,6 +118,10 @@ if(WIN32)
 			target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_MOTOROLA_UNASM)
 		endif()
 	endif()
+endif()
+
+if(MSVC)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /constexpr:steps10000000")
 endif()
 
 if(UNIX AND NOT APPLE)

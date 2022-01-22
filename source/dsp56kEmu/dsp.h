@@ -8,6 +8,7 @@
 #include "opcodes.h"
 #include "logging.h"
 #include "jit.h"
+#include "dsplistener.h"
 
 namespace dsp56k
 {
@@ -16,8 +17,9 @@ namespace dsp56k
 	class JitUnittests;
 	class JitDspRegs;
 	class JitOps;
+	class AotRuntime;
 	
-	using TInstructionFunc = void (DSP::*)(TWord op);
+	using TInstructionFunc = void (DSP::*)(TWord _op);
 
 	class DSP final
 	{
@@ -26,6 +28,7 @@ namespace dsp56k
 		friend class JitDspRegs;
 		friend class JitOps;
 		friend class Jit;
+		friend class AotRuntime;
 
 		// _____________________________________________________________________________
 		// types
@@ -38,9 +41,11 @@ namespace dsp56k
 			TReg56 a,b;						// 56 bit
 
 			// ---- AGU ----
-			StaticArray< TReg24, 8> r;
-			StaticArray< TReg24, 8> n;
-			StaticArray< TReg24, 8> m;
+			std::array<TReg24, 8> r;
+			std::array<TReg24, 8> n;
+			std::array<TReg24, 8> m;
+			std::array<TWord, 8> mMask;
+			std::array<TWord, 8> mModulo;
 
 			// ---- PCU ----
 			TReg24 sr;						// status register (SR_..)
@@ -107,7 +112,7 @@ namespace dsp56k
 		//
 		Memory&							mem;
 		std::array<IPeripherals*, 2>	perif;
-		uint32_t						peripheralCounter = 0;
+		uint32_t						m_peripheralCounter = 0;
 		
 		TWord							pcCurrentInstruction = 0;
 		TWord							m_opWordB = 0;
@@ -162,6 +167,8 @@ namespace dsp56k
 		std::string		m_asm;
 		Disassembler	m_disasm;
 
+		DSPListener*	m_listener = nullptr;
+
 		// _____________________________________________________________________________
 		// implementation
 		//
@@ -181,6 +188,7 @@ namespace dsp56k
 
 		void 	exec							();
 		void	execPeriph						();
+		void	tryExecInterrupts				();
 		void	execInterrupts					();
 		void	execDefaultPreventInterrupt		();
 		void	execNoPendingInterrupts			();
@@ -198,7 +206,7 @@ namespace dsp56k
 
 		bool	readRegToInt					( EReg _reg, int64_t& _dst ) const;
 
-		uint32_t	getInstructionCounter		() const									{ return m_instructions; }
+		const uint32_t&	getInstructionCounter		() const									{ return m_instructions; }
 
 		const char*			getASM						(TWord wordA, TWord wordB);
 		const std::string&	getASM						() const							{ return m_asm; }
@@ -225,11 +233,12 @@ namespace dsp56k
 
 		Memory&			memory							()											{ return mem; }
 		SRegs&			regs							()											{ return reg; }
+
 		const Opcodes&	opcodes							() const									{ return m_opcodes; }
 		Disassembler&	disassembler					()											{ return m_disasm; }
 
-		void			setPeriph						(size_t _index, IPeripherals* _periph)		{ perif[_index] = _periph; _periph->setDSP(this); }
-		IPeripherals*	getPeriph						(size_t _index)								{ return perif[_index]; }
+		void			setPeriph						(const size_t _index, IPeripherals* _periph)	{ perif[_index] = _periph; _periph->setDSP(this); }
+		IPeripherals*	getPeriph						(const size_t _index)							{ return perif[_index]; }
 		
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
 
@@ -237,12 +246,7 @@ namespace dsp56k
 
 		void			terminate						();
 
-		typedef void 	(*IctrCallback)(void *,DSP *dsp);
-		IctrCallback	m_callback = 0;
-		void*			m_callbackData = 0;
-		uint32_t		m_callbackCount = 0;
-		void			setCallback(IctrCallback cb,void *data,uint32_t count) {m_callback=cb;m_callbackData=data;m_callbackCount=count;}
-		void			handleICtrCallback() {if (m_callback && m_instructions>=m_callbackCount){IctrCallback c=m_callback;m_callback=0;c(m_callbackData,this);}}
+		void			setListener						(DSPListener* _listener) { m_listener = _listener; }
 	private:
 
 		std::string getSSindent() const;
@@ -266,19 +270,17 @@ namespace dsp56k
 
 		void 	execOp							(TWord op);
 
-		void	exec_jump						(const TInstructionFunc& _func, TWord op);
+		void	exec_jump						(const TInstructionFunc& _func, TWord _op);
 		
-		bool	exec_parallel					(const TInstructionFunc& instMove, const TInstructionFunc& instAlu, TWord op);
-
-		bool	alu_multiply					(TWord op);
+		bool	exec_parallel					(const TInstructionFunc& _instMove, const TInstructionFunc& _instAlu, TWord _op);
 
 		bool	do_exec							( TWord _loopcount, TWord _addr );
 		bool	do_end							();
 
-		bool	rep_exec						(TWord loopCount);
+		bool	rep_exec						(TWord _loopCount);
 
 		void	traceOp							();
-		void	traceOp							(TWord pc, TWord opA, TWord opB, TWord opLen);
+		void	traceOp							(TWord _pc, TWord _opA, TWord _opB, TWord _opLen);
 
 		// -- decoding helper functions
 
@@ -308,7 +310,8 @@ namespace dsp56k
 
 		template<TWord ee> TReg24 decode_ee_read();
 		template<TWord ee> void decode_ee_write(const TReg24& _value);
-		void decode_ee_write(TWord ee, const TReg24& _value);
+		TReg24 decode_ee_read(TWord _ee);
+		void decode_ee_write(TWord _ee, const TReg24& _value);
 
 		template<TWord ff>
 		TReg24 decode_ff_read();
@@ -342,7 +345,7 @@ namespace dsp56k
 
 		void 	sr_toggle				( CCRMask _bits, bool _set )		{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
 		void 	sr_toggle				( SRMask _bits, bool _set )			{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
-		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, int32_t(_bit), _value); }
+		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, static_cast<int32_t>(_bit), _value); }
 
 	public:
 		int 	sr_test					( CCRMask _bits ) const				{ updateDirtyCCR(); return sr_test_noCache(_bits); }
@@ -612,9 +615,7 @@ namespace dsp56k
 		void	setA			( const TReg56& _src )				{ reg.a = _src; }
 		void	setB			( const TReg56& _src )				{ reg.b = _src; }
 
-		TWord 	moduloMask[8], modulo[8];
-		void 	set_m			( const int which, const TWord val);
-
+		void 	set_m			(int which, TWord val);
 		
 		// STACK
 		void	decSP			();
@@ -659,6 +660,8 @@ namespace dsp56k
 
 		void	alu_rnd				( bool _ab );
 
+		bool	alu_multiply		(TWord _op);
+
 		void	alu_abs				( bool ab );
 
 		void	alu_tfr				( bool ab, const TReg56& src);
@@ -669,8 +672,11 @@ namespace dsp56k
 
 		void	alu_not				(bool ab);
 
+		void	alu_extractu		(bool abDst, bool abSrc, TWord widthOffset);
+
 		// -- memory
 
+		bool	memWriteP			( TWord _offset, TWord _value );
 		bool	memWrite			( EMemArea _area, TWord _offset, TWord _value );
 		bool	memWritePeriph		( EMemArea _area, TWord _offset, TWord _value );
 		bool	memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value );
@@ -920,7 +926,7 @@ namespace dsp56k
 		void op_Sub_xx(TWord op);
 		void op_Sub_xxxx(TWord op);
 		void op_Subl(TWord op);
-		void op_subr(TWord op);
+		void op_Subr(TWord op);
 		void op_Tcc_S1D1(TWord op);
 		void op_Tcc_S1D1S2D2(TWord op);
 		void op_Tcc_S2D2(TWord op);

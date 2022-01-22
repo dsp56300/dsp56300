@@ -4,34 +4,34 @@ namespace dsp56k
 {
 	struct RuntimeFieldInfo
 	{
-		FieldInfo m_fieldInfos[Field_COUNT];
+		FieldInfo fieldInfos[Field_COUNT];
 
-		constexpr RuntimeFieldInfo() : m_fieldInfos() {}
-		constexpr RuntimeFieldInfo(const Instruction _i) : m_fieldInfos()
+		constexpr RuntimeFieldInfo() : fieldInfos() {}
+		constexpr RuntimeFieldInfo(const Instruction _i) : fieldInfos()
 		{
-			for(auto f=0; f<Field::Field_COUNT; ++f)
-				m_fieldInfos[f] = initField(g_opcodes[_i].m_opcode, g_fieldParseConfigs[f].ch, g_fieldParseConfigs[f].count);
+			for (auto f = 0; f < Field::Field_COUNT; ++f)
+				fieldInfos[f] = initField(g_opcodes[_i].m_opcode, g_fieldParseConfigs[f].ch, g_fieldParseConfigs[f].count);
 		}
 	};
 
 	struct RuntimeFieldInfos
 	{
-		RuntimeFieldInfo m_fieldInfos[g_opcodeCount];
+		RuntimeFieldInfo fieldInfos[g_opcodeCount];
 
-		constexpr RuntimeFieldInfos() : m_fieldInfos()
+		constexpr RuntimeFieldInfos() : fieldInfos()
 		{
-			for(size_t i=0; i<g_opcodeCount; ++i)
-				m_fieldInfos[i] = RuntimeFieldInfo(static_cast<Instruction>(i));
+			for (size_t i = 0; i < g_opcodeCount; ++i)
+				fieldInfos[i] = RuntimeFieldInfo(static_cast<Instruction>(i));
 		}
 	};
 
-	RuntimeFieldInfos g_runtimeFieldInfos;
+	const RuntimeFieldInfos g_runtimeFieldInfos;
 
 	static_assert(getFieldInfoCE<Bsset_S, Field_DDDDDD>().bit == 8, "invalid");
 
 	const FieldInfo& getFieldInfo(const Instruction _i, const Field _f)
 	{
-		return g_runtimeFieldInfos.m_fieldInfos[_i].m_fieldInfos[_f];
+		return g_runtimeFieldInfos.fieldInfos[_i].fieldInfos[_f];
 	}
 
 	Opcodes::Opcodes()

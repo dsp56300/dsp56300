@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <cstddef>
 
 #include "opcodefields.h"
 #include "opcodeinfo.h"

@@ -10,7 +10,10 @@
 
 namespace asmjit
 {
-	class JitRuntime;
+	inline namespace _abi_1_8
+	{
+		class JitRuntime;
+	}
 }
 
 namespace dsp56k
@@ -32,25 +35,37 @@ namespace dsp56k
 
 		void run(TWord _pc, JitBlock* _block);
 		void runCheckPMemWrite(TWord _pc, JitBlock* _block);
-		void runCheckLoopEnd(TWord _pc, JitBlock* _block);
-		void create(TWord _pc, JitBlock* _block);
+		void create(TWord _pc, JitBlock* _block, bool _execute);
 		void recreate(TWord _pc, JitBlock* _block);
+
+		JitBlock* getChildBlock(JitBlock* _parent, TWord _pc, bool _allowCreate = true);
+		bool canBeDefaultExecuted(TWord _pc) const;
+
+		void occupyArea(JitBlock* _block);
 
 	private:
 		void emit(TWord _pc);
+		void destroyParents(const JitBlock* _block);
 		void destroy(JitBlock* _block);
 		void destroy(TWord _pc);
+		void release(const JitBlock* _block);
+		bool isBeingGeneratedRecursive(const JitBlock* _block) const;
+		bool isBeingGenerated(const JitBlock* _block) const;
 		
 		void exec(TWord pc, JitCacheEntry& e);
 
 		static void updateRunFunc(JitCacheEntry& e);
 
+		void checkPMemWrite(TWord _pc, JitBlock* _block);
+
 		JitRuntimeData m_runtimeData;
 
 		DSP& m_dsp;
 
-		asmjit::JitRuntime* m_rt = nullptr;
+		asmjit::_abi_1_8::JitRuntime* m_rt = nullptr;
 		std::vector<JitCacheEntry> m_jitCache;
 		std::set<TWord> m_volatileP;
+		std::map<TWord, JitBlock*> m_generatingBlocks;
+		size_t m_codeSize = 0;
 	};
 }

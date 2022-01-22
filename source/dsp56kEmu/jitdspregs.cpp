@@ -4,9 +4,10 @@
 #include "jitblock.h"
 
 #include "dsp.h"
+#include "jithelper.h"
+#include "jitemitter.h"
 
 using namespace asmjit;
-using namespace x86;
 
 namespace dsp56k
 {
@@ -18,29 +19,29 @@ namespace dsp56k
 	{
 	}
 
-	void JitDspRegs::getR(const JitReg& _dst, const int _agu)
+	void JitDspRegs::getR(const JitRegGP& _dst, const int _agu)
 	{
 		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspR0 + _agu));
 	}
 
-	void JitDspRegs::getN(const JitReg& _dst, const int _agu)
+	void JitDspRegs::getN(const JitRegGP& _dst, const int _agu)
 	{
 		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspN0 + _agu));
 	}
 
-	void JitDspRegs::getM(const JitReg& _dst, const int _agu)
+	void JitDspRegs::getM(const JitRegGP& _dst, const int _agu)
 	{
 		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspM0 + _agu));
 	}
 
-	void JitDspRegs::load24(const Gp& _dst, const TReg24& _src) const
+	void JitDspRegs::load24(const JitRegGP& _dst, const TReg24& _src) const
 	{
-		m_block.mem().mov(_dst, _src);
+		m_block.dspRegPool().movDspReg(_dst, _src);
 	}
 
-	void JitDspRegs::store24(TReg24& _dst, const Gp& _src) const
+	void JitDspRegs::store24(TReg24& _dst, const JitRegGP& _src) const
 	{
-		m_block.mem().mov(_dst, _src);
+		m_block.dspRegPool().movDspReg(_dst, _src);
 	}
 
 	JitDspRegPool& JitDspRegs::pool() const
@@ -48,39 +49,106 @@ namespace dsp56k
 		return m_block.dspRegPool();
 	}
 
-	void JitDspRegs::setR(int _agu, const JitReg& _src)
+	void JitDspRegs::setR(int _agu, const JitRegGP& _src)
 	{
 		pool().write(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspR0 + _agu), _src);
 	}
 
-	void JitDspRegs::setN(int _agu, const JitReg& _src)
+	void JitDspRegs::setN(int _agu, const JitRegGP& _src)
 	{
 		pool().write(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspN0 + _agu), _src);
 	}
 
-	void JitDspRegs::setM(int _agu, const JitReg& _src)
+	void JitDspRegs::setM(int _agu, const JitRegGP& _src)
 	{
+		// reference impl at DSP::set_m
+
 		pool().write(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspM0 + _agu), _src);
+
+		const AguRegMmod mMod(m_block, _agu, false, true);
+		const AguRegMmask mMask(m_block, _agu, false, true);
+
+		const auto mod = r32(mMod);
+		const auto mask = r32(mMask);
+
+		const asmjit::Label end = m_asm.newLabel();
+		const asmjit::Label isLinear = m_asm.newLabel();
+		const asmjit::Label isModuloZero = m_asm.newLabel();
+		const asmjit::Label isModulo = m_asm.newLabel();
+
+#ifdef HAVE_ARM64
+		m_asm.mov(regReturnVal, Imm(0xffffff));
+		m_asm.cmp(_src, r32(regReturnVal));
+#else
+		m_asm.cmp(_src, Imm(0xffffff));
+#endif
+		m_asm.jz(isLinear);
+
+		m_asm.mov(mod, _src);
+
+		m_asm.and_(mod, asmjit::Imm(0xffff));
+		m_asm.cmp(mod, asmjit::Imm(0));
+		m_asm.jz(isModuloZero);
+
+#ifdef HAVE_ARM64
+		m_asm.mov(regReturnVal, Imm(0x007fff));
+		m_asm.cmp(mod, r32(regReturnVal));
+#else
+		m_asm.cmp(mod, asmjit::Imm(0x007fff));
+#endif
+
+		m_asm.jle(isModulo);
+		m_asm.jmp(end);
+
+		// zero modulo
+		m_asm.bind(isModuloZero);
+		m_asm.mov(mod, asmjit::Imm(0));
+		m_asm.jmp(end);
+
+		// modulo
+		m_asm.bind(isModulo);
+
+		const ShiftReg shifter(m_block);
+		m_asm.bsr(r32(shifter), r32(_src));								// returns index of MSB that is 1
+		m_asm.mov(mask, asmjit::Imm(2));
+
+#ifdef HAVE_ARM64
+		m_asm.shl(mask, r32(shifter.get()));
+#else
+		m_asm.shl(mask, shiftOperand(shifter));
+#endif
+		m_asm.dec(mask);
+
+		m_asm.inc(mod);
+
+		m_asm.jmp(end);
+
+		// linear
+		m_asm.bind(isLinear);
+		m_asm.mov(mod, asmjit::Imm(0));
+		m_asm.mov(mask, asmjit::Imm(0xffffff));
+
+		m_asm.bind(end);
 	}
 
-	JitReg JitDspRegs::getSR(AccessType _type)
+	JitRegGP JitDspRegs::getSR(AccessType _type)
 	{
 		return pool().get(JitDspRegPool::DspSR, _type & Read, _type & Write);
 	}
 
-	void JitDspRegs::getALU(const JitReg& _dst, const int _alu)
+	void JitDspRegs::getALU(const JitRegGP& _dst, const int _alu)
 	{
 		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu));
 	}
 
-	JitReg JitDspRegs::getALU(int _alu, AccessType _access)
+	JitRegGP JitDspRegs::getALU(int _alu, AccessType _access)
 	{
 		assert((_access != (Read | Write)) && "unable to read & write to the same register");
 		const auto baseReg = _access & Write ? JitDspRegPool::DspAwrite : JitDspRegPool::DspA;
 		return pool().get(static_cast<JitDspRegPool::DspReg>(baseReg + _alu), _access & Read, _access & Write);
 	}
 
-	void JitDspRegs::setALU(const int _alu, const JitReg& _src, const bool _needsMasking)
+	void JitDspRegs::setALU(const int _alu, const JitRegGP& _src, const bool _needsMasking)
 	{
 		const auto r = static_cast<JitDspRegPool::DspReg>((pool().isParallelOp() ? JitDspRegPool::DspAwrite : JitDspRegPool::DspA) + _alu);
 
@@ -97,123 +165,26 @@ namespace dsp56k
 	{
 		const auto r = static_cast<JitDspRegPool::DspReg>((pool().isParallelOp() ? JitDspRegPool::DspAwrite : JitDspRegPool::DspA) + _alu);
 		const auto alu = pool().get(r, false, true);
-		m_asm.xor_(alu, alu);
+		m_asm.clr(alu);
 
 		if(pool().isParallelOp() && !pool().isLocked(r))
 			pool().lock(r);
 	}
 
-	void JitDspRegs::getXY(const JitReg& _dst, int _xy)
+	void JitDspRegs::getXY(const JitRegGP& _dst, int _xy)
 	{
 		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy));
 	}
 
-	JitReg JitDspRegs::getXY(int _xy, AccessType _access)
+	JitRegGP JitDspRegs::getXY(int _xy, AccessType _access)
 	{
 		return pool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), _access & Read, _access & Write);
 	}
 
-	void JitDspRegs::getXY0(const JitReg& _dst, const uint32_t _aluIndex)
-	{
-		getXY(_dst, _aluIndex);
-		m_asm.and_(_dst, Imm(0xffffff));
-	}
-
-	void JitDspRegs::getXY1(const JitReg& _dst, const uint32_t _aluIndex)
-	{
-		getXY(_dst.r64(), _aluIndex);
-		m_asm.shr(_dst.r64(), Imm(24));
-	}
-
-	void JitDspRegs::getALU0(const JitReg& _dst, uint32_t _aluIndex)
-	{
-		getALU(_dst, _aluIndex);
-		m_asm.and_(_dst, Imm(0xffffff));
-	}
-
-	void JitDspRegs::getALU1(const JitReg& _dst, uint32_t _aluIndex)
-	{
-		getALU(_dst.r64(), _aluIndex);
-		m_asm.shr(_dst.r64(), Imm(24));
-		m_asm.and_(_dst.r64(), Imm(0xffffff));
-	}
-
-	void JitDspRegs::getALU2signed(const JitReg& _dst, uint32_t _aluIndex)
-	{
-		const RegGP temp(m_block);
-		getALU(temp, _aluIndex);
-		m_asm.sal(temp, Imm(8));
-		m_asm.sar(temp, Imm(56));
-		m_asm.and_(temp, Imm(0xffffff));
-		m_asm.mov(_dst.r32(), temp.get().r32());
-	}
-
-	void JitDspRegs::setXY(const uint32_t _xy, const JitReg& _src)
+	void JitDspRegs::setXY(const uint32_t _xy, const JitRegGP& _src)
 	{
 		mask48(_src);
 		pool().write(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), _src);
-	}
-
-	void JitDspRegs::setXY0(const uint32_t _xy, const JitReg& _src)
-	{
-		const auto temp = pool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);
-		m_asm.and_(temp, Imm(0xffffffffff000000));
-		m_asm.or_(temp, _src.r64());
-	}
-
-	void JitDspRegs::setXY1(const uint32_t _xy, const JitReg& _src)
-	{
-		const RegGP shifted(m_block);
-
-		m_asm.mov(shifted, _src);
-		m_asm.shl(shifted, Imm(24));
-
-		const auto temp = pool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);
-		m_asm.and_(temp, Imm(0xffffff));
-		m_asm.or_(temp, shifted.get());
-	}
-
-	void JitDspRegs::setALU0(const uint32_t _aluIndex, const JitReg& _src)
-	{
-		const RegGP maskedSource(m_block);
-		m_asm.mov(maskedSource, _src);
-		m_asm.and_(maskedSource, Imm(0xffffff));
-
-		const RegGP temp(m_block);
-		getALU(temp, _aluIndex);
-		m_asm.and_(temp, Imm(0xffffffffff000000));
-		m_asm.or_(temp.get(), maskedSource.get());
-		setALU(_aluIndex, temp);
-	}
-
-	void JitDspRegs::setALU1(const uint32_t _aluIndex, const JitReg32& _src)
-	{
-		const RegGP maskedSource(m_block);
-		m_asm.mov(maskedSource, _src);
-		m_asm.and_(maskedSource, Imm(0xffffff));
-
-		const RegGP temp(m_block);
-		getALU(temp, _aluIndex);
-		m_asm.ror(temp, Imm(24));
-		m_asm.and_(temp, Imm(0xffffffffff000000));
-		m_asm.or_(temp.get(), maskedSource.get());
-		m_asm.rol(temp, Imm(24));
-		setALU(_aluIndex, temp);
-	}
-
-	void JitDspRegs::setALU2(const uint32_t _aluIndex, const JitReg32& _src)
-	{
-		const RegGP maskedSource(m_block);
-		m_asm.mov(maskedSource, _src);
-		m_asm.and_(maskedSource, Imm(0xff));
-
-		const RegGP temp(m_block);
-		getALU(temp, _aluIndex);
-		m_asm.ror(temp, Imm(48));
-		m_asm.and_(temp.get(), Imm(0xffffffffffffff00));
-		m_asm.or_(temp.get(), maskedSource.get());
-		m_asm.rol(temp, Imm(48));
-		setALU(_aluIndex, temp);
 	}
 
 	void JitDspRegs::getEP(const JitReg32& _dst) const
@@ -238,12 +209,12 @@ namespace dsp56k
 
 	void JitDspRegs::getSC(const JitReg32& _dst) const
 	{
-		m_block.mem().mov(_dst.r8(), m_dsp.regs().sc.var);
+		m_block.dspRegPool().movDspReg(_dst, m_dsp.regs().sc);
 	}
 
 	void JitDspRegs::setSC(const JitReg32& _src) const
 	{
-		m_block.mem().mov(m_dsp.regs().sc.var, _src.r8());
+		m_block.dspRegPool().movDspReg(m_dsp.regs().sc, _src);
 	}
 
 	void JitDspRegs::getSZ(const JitReg32& _dst) const
@@ -258,12 +229,12 @@ namespace dsp56k
 
 	void JitDspRegs::getSR(const JitReg32& _dst)
 	{
-		m_asm.mov(_dst, getSR(Read).r32());
+		m_asm.mov(_dst, r32(getSR(Read)));
 	}
 
 	void JitDspRegs::setSR(const JitReg32& _src)
 	{
-		m_asm.mov(getSR(Write), _src);
+		m_asm.mov(r32(getSR(Write)), _src);
 	}
 
 	void JitDspRegs::getOMR(const JitReg32& _dst) const
@@ -286,49 +257,14 @@ namespace dsp56k
 		store24(m_dsp.regs().sp, _src);
 	}
 
-	void JitDspRegs::getSSH(const JitReg32& _dst) const
-	{
-		getSS(_dst.r64());
-		m_asm.shr(_dst.r64(), Imm(24));
-		m_asm.and_(_dst.r64(), Imm(0x00ffffff));
-		decSP();
-	}
-
-	void JitDspRegs::setSSH(const JitReg32& _src) const
-	{
-		incSP();
-		const RegGP temp(m_block);
-		getSS(temp);
-		m_asm.ror(temp, Imm(24));
-		m_asm.and_(temp, Imm(0xffffffffff000000));
-		m_asm.or_(temp, _src.r64());
-		m_asm.rol(temp, Imm(24));
-		setSS(temp);
-	}
-
-	void JitDspRegs::getSSL(const JitReg32& _dst) const
-	{
-		getSS(_dst.r64());
-		m_asm.and_(_dst.r64(), 0x00ffffff);
-	}
-
-	void JitDspRegs::setSSL(const JitReg32& _src) const
-	{
-		const RegGP temp(m_block);
-		getSS(temp);
-		m_asm.and_(temp, Imm(0xffffffffff000000));
-		m_asm.or_(temp, _src.r64());
-		setSS(temp);
-	}
-
-	JitReg JitDspRegs::getLA(AccessType _type)
+	JitRegGP JitDspRegs::getLA(AccessType _type)
 	{
 		return pool().get(JitDspRegPool::DspLA, _type & Read, _type & Write);
 	}
 
 	void JitDspRegs::getLA(const JitReg32& _dst)
 	{
-		return pool().read(_dst.r64(), JitDspRegPool::DspLA);
+		return pool().read(r64(_dst), JitDspRegPool::DspLA);
 	}
 
 	void JitDspRegs::setLA(const JitReg32& _src)
@@ -336,14 +272,14 @@ namespace dsp56k
 		return pool().write(JitDspRegPool::DspLA, _src);
 	}
 
-	JitReg JitDspRegs::getLC(AccessType _type)
+	JitRegGP JitDspRegs::getLC(AccessType _type)
 	{
 		return pool().get(JitDspRegPool::DspLC, _type & Read, _type & Write);
 	}
 
 	void JitDspRegs::getLC(const JitReg32& _dst)
 	{
-		return pool().read(_dst.r64(), JitDspRegPool::DspLC);
+		return pool().read(r64(_dst), JitDspRegPool::DspLC);
 	}
 
 	void JitDspRegs::setLC(const JitReg32& _src)
@@ -353,60 +289,95 @@ namespace dsp56k
 
 	void JitDspRegs::getSS(const JitReg64& _dst) const
 	{
-		const auto* first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
+		const auto ssIndex = regReturnVal;
+		getSP(r32(ssIndex));
 
-		const auto ssIndex = regArg0;//		const RegGP ssIndex(m_block);
-		getSP(ssIndex.r32());
+#ifdef HAVE_ARM64
+		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
+		m_asm.add(_dst, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
+#else
 		m_asm.and_(ssIndex, Imm(0xf));
+		m_asm.lea(_dst, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
+#endif
 
-		m_block.mem().ptrToReg(_dst, first);
-		m_asm.mov(_dst, ptr(_dst, ssIndex, 3, 0, 8));
+		m_asm.move(_dst, Jitmem::makePtr(_dst, ssIndex, 3, 8));
 	}
 
 	void JitDspRegs::setSS(const JitReg64& _src) const
 	{
-		const auto* first = reinterpret_cast<const uint64_t*>(&m_dsp.regs().ss[0].var);
-
-		const auto ssIndex = regArg0;
-		getSP(ssIndex.r32());
-		m_asm.and_(ssIndex, Imm(0xf));
+		const auto ssIndex = regReturnVal;
+		getSP(r32(ssIndex));
 
 		const RegGP addr(m_block);
-		m_block.mem().ptrToReg(addr, first);
-		m_asm.mov(ptr(addr, ssIndex, 3, 0, 8), _src);
+
+#ifdef HAVE_ARM64
+		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
+		m_asm.add(addr, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
+#else
+		m_asm.and_(ssIndex, Imm(0xf));
+		m_asm.lea(addr, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
+#endif
+		m_asm.mov(Jitmem::makePtr(addr, ssIndex, 3, 8), _src);
 	}
 
-	void JitDspRegs::decSP() const
+	void JitDspRegs::modifySS(const std::function<void(const JitReg64&)>& _func, bool _read, bool _write) const
 	{
-		const RegGP temp(m_block);
+		const auto ssIndex = regReturnVal;
+		getSP(r32(ssIndex));
 
-		m_asm.dec(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sp.var)));
-		m_asm.dec(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sc.var)));
+		const RegGP ptrReg(m_block);
+#ifdef HAVE_ARM64
+		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
+		m_asm.add(ptrReg, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
+#else
+		m_asm.and_(ssIndex, Imm(0xf));
+		m_asm.lea(ptrReg, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
+#endif
+		if(_read && !_write)
+		{
+			m_asm.move(ptrReg, Jitmem::makePtr(ptrReg, ssIndex, 3, 8));
+			_func(r64(ptrReg.get()));
+		}
+		else
+		{
+			const RegGP ss(m_block);
+			if (_read)
+				m_asm.move(ss, Jitmem::makePtr(ptrReg, ssIndex, 3, 8));
+			_func(r64(ss.get()));
+			if(_write)
+				m_asm.mov(Jitmem::makePtr(ptrReg, ssIndex, 3, 8), ss);
+		}
 	}
 
-	void JitDspRegs::incSP() const
+	void JitDspRegs::mask56(const JitRegGP& _alu) const
 	{
-		const RegGP temp(m_block);
-
-		m_asm.inc(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sp.var)));
-		m_asm.inc(m_block.mem().ptr(temp, reinterpret_cast<const uint32_t*>(&m_dsp.regs().sc.var)));
-	}
-
-	void JitDspRegs::mask56(const JitReg& _alu) const
-	{
+#ifdef HAVE_ARM64
+		// we need to work around the fact that there is no AND with 64 bit immediate operand and also ubfx cannot work with bits >= 32
+		m_asm.shl(r64(_alu), Imm(8));
+		m_asm.shr(r64(_alu), Imm(8));
+//		m_asm.ubfx(_alu, _alu, Imm(0), Imm(56));
+#else
 		// we need to work around the fact that there is no AND with 64 bit immediate operand
-		m_asm.shl(_alu, Imm(8));	
+		m_asm.shl(_alu, Imm(8));
 		m_asm.shr(_alu, Imm(8));
+#endif
 	}
 
-	void JitDspRegs::mask48(const JitReg& _alu) const
+	void JitDspRegs::mask48(const JitRegGP& _alu) const
 	{
+#ifdef HAVE_ARM64
+		// we need to work around the fact that there is no AND with 64 bit immediate operand and also ubfx cannot work with bits >= 32
+		m_asm.shl(r64(_alu), Imm(16));
+		m_asm.shr(r64(_alu), Imm(16));
+//		m_asm.ubfx(_alu, _alu, Imm(0), Imm(48));
+#else
 		// we need to work around the fact that there is no AND with 64 bit immediate operand
-		m_asm.shl(_alu.r64(), Imm(16));	
-		m_asm.shr(_alu.r64(), Imm(16));
+		m_asm.shl(r64(_alu), Imm(16));	
+		m_asm.shr(r64(_alu), Imm(16));
+#endif
 	}
 
-	void JitDspRegs::setPC(const JitReg& _pc)
+	void JitDspRegs::setPC(const JitRegGP& _pc)
 	{
 		m_block.setNextPC(_pc);
 	}

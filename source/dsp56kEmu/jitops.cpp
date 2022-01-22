@@ -13,6 +13,20 @@
 #include "jitops_mem.inl"
 #include "jitops_move.inl"
 
+#ifdef HAVE_ARM64
+#include "jitops_aarch64.inl"
+#include "jitops_alu_aarch64.inl"
+#include "jitops_ccr_aarch64.inl"
+#include "jitops_decode_aarch64.inl"
+#include "jitops_helper_aarch64.inl"
+#else
+#include "jitops_alu_x64.inl"
+#include "jitops_ccr_x64.inl"
+#include "jitops_decode_x64.inl"
+#include "jitops_helper_x64.inl"
+#include "jitops_x64.inl"
+#endif
+
 #include "opcodes.h"
 
 namespace dsp56k
@@ -367,6 +381,8 @@ namespace dsp56k
 	{
 		m_instruction = _inst;
 
+		getRegisters(m_writtenRegs, m_readRegs, _inst, _op);
+
 		m_block.dspRegPool().setIsParallelOp(false);
 
 		emitOpProlog();
@@ -383,6 +399,13 @@ namespace dsp56k
 
 		const auto& funcMove = g_opcodeFuncs[_instMove];
 		const auto& funcAlu = g_opcodeFuncs[_instAlu];
+
+		getRegisters(m_writtenRegs, m_readRegs, _instMove, _op);
+
+		RegisterMask written, read;
+		getRegisters(written, read, _instAlu, _op);
+		add(m_writtenRegs, written);
+		add(m_readRegs, read);
 
 		m_block.dspRegPool().setIsParallelOp(true);
 
@@ -418,8 +441,7 @@ namespace dsp56k
 			m_asm.jz(_toFalse);
 		}, [&]()
 		{
-			m_dspRegs.setSSH(m_dspRegs.getLA(JitDspRegs::Read).r32());
-			m_dspRegs.setSSL(m_dspRegs.getLC(JitDspRegs::Read).r32());
+			setSSHSSL(r32(m_dspRegs.getLA(JitDspRegs::Read)), r32(m_dspRegs.getLC(JitDspRegs::Read)));
 
 			m_asm.mov(m_dspRegs.getLA(JitDspRegs::Write), asmjit::Imm(_addr));
 			m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), _lc.get());
@@ -437,24 +459,27 @@ namespace dsp56k
 
 	void JitOps::do_end()
 	{
+		const RegGP r(m_block);
+		do_end(r);
+	}
+	void JitOps::do_end(const RegGP& r)
+	{
 		// restore previous loop flag
 		{
-			const RegGP r(m_block);
-			m_dspRegs.getSSL(r.get().r32());
-			m_asm.and_(r, asmjit::Imm(SR_LF));
-			m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~SR_LF));
-			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
+			m_dspRegs.getSS(r64(r.get()));
+			m_asm.and_(r32(r), asmjit::Imm(SR_LF));
+			m_asm.and_(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), asmjit::Imm(~SR_LF));
+			m_asm.or_(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), r32(r.get()));
 		}
 
 		// decrement SP twice, restoring old loop settings
-		m_dspRegs.decSP();
+		decSP();
 
-		const RegGP r(m_block);
-		m_dspRegs.getSSL(r.get().r32());
-		m_dspRegs.setLC(r.get().r32());
+		getSSL(r32(r.get()));
+		m_dspRegs.setLC(r32(r.get()));
 
-		m_dspRegs.getSSH(r.get().r32());
-		m_dspRegs.setLA(r.get().r32());
+		getSSH(r32(r.get()));
+		m_dspRegs.setLA(r32(r.get()));
 
 		m_resultFlags |= WriteToLC | WriteToLA;
 
@@ -502,9 +527,17 @@ namespace dsp56k
 		const auto dddddd = getFieldValue<Do_S,Field_DDDDDD>(op);
 
 		RegGP lc(m_block);
-		decode_dddddd_read(lc.get().r32(), dddddd );
+		decode_dddddd_read(r32(lc.get()), dddddd );
 
 		do_exec( lc, addr );
+	}
+
+	void JitOps::op_Dor_ea(TWord op)
+	{
+		RegGP lc(m_block);
+		readMem<Dor_ea>(lc, op);
+		const auto displacement = pcRelativeAddressExt<Dor_xxx>();
+		do_exec(lc, m_pcCurrentOp + displacement);
 	}
 
 	void JitOps::op_Dor_xxx(TWord op)
@@ -523,7 +556,7 @@ namespace dsp56k
 		const auto dddddd = getFieldValue<Dor_S,Field_DDDDDD>(op);
 
 		RegGP lc(m_block);
-		decode_dddddd_read(lc.get().r32(), dddddd );
+		decode_dddddd_read(r32(lc.get()), dddddd );
 		
 		const auto displacement = pcRelativeAddressExt<Dor_S>();
 
@@ -544,10 +577,17 @@ namespace dsp56k
 		If(m_block, [&](auto _toFalse)
 		{
 			const RegGP test(m_block);
+#ifdef HAVE_ARM64
+			m_asm.mov(test, asmjit::a64::xzr);
+			decode_cccc(test, cccc);
+			m_asm.cmp(test.get(), asmjit::Imm(1));
+			m_asm.cond_not_equal().b(_toFalse);
+#else
 			decode_cccc(test, cccc);
 
 			m_asm.cmp(test.get().r8(), asmjit::Imm(1));
 			m_asm.jne(_toFalse);	
+#endif
 		}, [&]()
 		{
 			auto emitAluOp = [&](const TWord _op)
@@ -560,14 +600,14 @@ namespace dsp56k
 			{
 				// TODO: alus should not update the CCR so we don't have to use backup stuff
 				const RegXMM ccrBackup(m_block);
-				m_asm.movd(ccrBackup, getSR(JitDspRegs::Read));
+				m_asm.movd(ccrBackup, r32(getSR(JitDspRegs::Read)));
 
 				emitAluOp(op);
 
 				updateDirtyCCR();
 
 				const RegGP r(m_block);
-				m_asm.movd(r.get(), ccrBackup);
+				m_asm.movd(r32(r.get()), ccrBackup);
 				m_asm.and_(r, asmjit::Imm(0xff));
 				m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(0xffff00));
 				m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
@@ -589,7 +629,7 @@ namespace dsp56k
 
 		updateAddressRegister( r, mm, rrr, false, true);
 
-		decode_dddddd_write( ddddd, r.get().r32());
+		decode_dddddd_write( ddddd, r32(r.get()));
 	}
 
 	void JitOps::op_Lua_Rn(TWord op)
@@ -608,7 +648,7 @@ namespace dsp56k
 
 		const AguRegM m(m_block, rrr, true);
 
-		updateAddressRegister(r.get().r32(), n.get().r32(), m.get().r32());
+		updateAddressRegister(r32(r.get()), r32(n.get()), r32(m.get()), rrr);
 
 		if( dddd < 8 )									// r0-r7
 		{
@@ -652,6 +692,44 @@ namespace dsp56k
 		callDSPFunc(&callDSPPlock, r);
 	}
 
+	inline void JitOps::jmp(const JitReg32& _absAddr)
+	{
+		m_dspRegs.setPC(_absAddr);
+	}
+
+	inline void JitOps::jsr(const JitReg32& _absAddr)
+	{
+		pushPCSR();
+		jmp(_absAddr);
+
+		if (m_fastInterrupt)
+		{
+			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
+#ifdef HAVE_ARM64
+			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0)));
+			m_asm.and_(sr, asmjit::Imm(~(SR_SA)));
+			m_asm.and_(sr, asmjit::Imm(~(SR_LF)));
+#else
+			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0 | SR_SA | SR_LF)));
+#endif
+			setDspProcessingMode(DSP::LongInterrupt);
+		}
+	}
+
+	inline void JitOps::jmp(TWord _absAddr)
+	{
+		const RegGP r(m_block);
+		m_asm.mov(r, asmjit::Imm(_absAddr));
+		jmp(r32(r.get()));
+	}
+
+	inline void JitOps::jsr(const TWord _absAddr)
+	{
+		const RegGP r(m_block);
+		m_asm.mov(r32(r.get()), asmjit::Imm(_absAddr));
+		jsr(r32(r.get()));
+	}
+
 	inline void JitOps::op_Rti(TWord op)
 	{
 		popPCSR();
@@ -672,16 +750,18 @@ namespace dsp56k
 	void JitOps::rep_exec(const TWord _lc)
 	{
 		// detect div loops and use custom code to speed them up
+
 		TWord opA;
 		TWord opB;
 		m_block.dsp().mem.getOpcode(m_pcCurrentOp + 1, opA, opB);
 
-		if(!OpcodeInfo::isParallelOpcode(opA))
+		if(opA && !OpcodeInfo::isParallelOpcode(opA))
 		{
 			const auto* oi = m_block.dsp().opcodes().findNonParallelOpcodeInfo(opA);
 			if(oi && oi->getInstruction() == Div)
 			{
 				op_Rep_Div(opA, _lc);
+				m_opSize++;
 				return;
 			}
 		}
@@ -698,8 +778,8 @@ namespace dsp56k
 
 		// backup LC
 		const RegXMM lcBackup(m_block);
-		m_asm.movd(lcBackup, m_dspRegs.getLC(JitDspRegs::Read));
-		m_asm.mov(m_dspRegs.getLC(JitDspRegs::Write), _lc.get().r32());
+		m_asm.movd(lcBackup, r32(m_dspRegs.getLC(JitDspRegs::Read)));
+		m_asm.mov(r32(m_dspRegs.getLC(JitDspRegs::Write)), r32(_lc.get()));
 		_lc.release();
 
 		if(hasImmediateOperand)
@@ -708,8 +788,9 @@ namespace dsp56k
 		}
 		else
 		{
-			const RegGP temp(m_block);
-			m_asm.add(m_block.mem().ptr(temp, &m_block.getExecutedInstructionCount()), m_dspRegs.getLC(JitDspRegs::Read));
+			const auto lc = r32(m_dspRegs.getLC(JitDspRegs::Read));
+
+			m_block.increaseInstructionCount(lc);
 		}
 
 		const auto opSize = m_opSize;
@@ -780,7 +861,7 @@ namespace dsp56k
 		m_repMode = RepNone;
 
 		// restore previous LC
-		m_asm.movd(m_dspRegs.getLC(JitDspRegs::Write), lcBackup);
+		m_asm.movd(r32(m_dspRegs.getLC(JitDspRegs::Write)), lcBackup);
 
 		// op size is the sum of the rep plus the child op
 		assert(m_opSize == 1 && "repeated instruction needs to be a single word instruction");
@@ -797,7 +878,7 @@ namespace dsp56k
 	{
 		const auto dddddd = getFieldValue<Rep_S,Field_dddddd>(op);
 		RegGP lc(m_block);
-		decode_dddddd_read(lc.get().r32(), dddddd);
+		decode_dddddd_read(r32(lc.get()), dddddd);
 		rep_exec(lc, std::numeric_limits<TWord>::max());
 	}
 

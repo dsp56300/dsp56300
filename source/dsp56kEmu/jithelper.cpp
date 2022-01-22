@@ -2,11 +2,9 @@
 
 #include "dspassert.h"
 #include "jitblock.h"
-#include "jitdspregs.h"
+#include "jitemitter.h"
 #include "jitops.h"
 #include "logging.h"
-
-#include "asmjit/x86/x86assembler.h"
 
 namespace dsp56k
 {
@@ -32,7 +30,7 @@ namespace dsp56k
 		}
 	}
 
-	SkipLabel::SkipLabel(asmjit::x86::Assembler& _a) : m_label(_a.newLabel()), m_asm(_a)
+	SkipLabel::SkipLabel(JitEmitter& _a) : m_label(_a.newLabel()), m_asm(_a)
 	{
 	}
 
@@ -45,32 +43,59 @@ namespace dsp56k
 	{
 		auto& a = _block.asm_();
 
-		const auto isFalse = a.newLabel();
-		const auto end = a.newLabel();
-
-		updateDirtyCCR(_block);
-		_block.dspRegPool().releaseAll();
-		_block.stack().pushNonVolatiles();
-
-		_jumpIfFalse(isFalse);
-
-		_true();
-		updateDirtyCCR(_block);
-		_block.dspRegPool().releaseAll();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
-
-		if(_hasFalseFunc)
-			a.jmp(end);
-
-		a.bind(isFalse);
-
-		if (_hasFalseFunc)
+		auto execIf = [&](bool _pushNonVolatiles, bool _releaseRegPool, bool _updateDirtyCCR)
 		{
-			_false();
-			updateDirtyCCR(_block);
-			_block.dspRegPool().releaseAll();
-		}
+			const auto isFalse = a.newLabel();
+			const auto end = a.newLabel();
 
-		a.bind(end);
+			if(_updateDirtyCCR)
+				updateDirtyCCR(_block);
+
+			if(_releaseRegPool)
+				_block.dspRegPool().releaseAll();
+
+			if(_pushNonVolatiles)
+				_block.stack().pushNonVolatiles();
+
+			const auto oldPushedRegCount = _block.stack().pushedRegCount();
+			auto* cursorBeforeJump = _block.asm_().cursor();
+
+			_jumpIfFalse(isFalse);
+
+			_true();
+
+			if(_updateDirtyCCR)
+				updateDirtyCCR(_block);
+
+			if(_releaseRegPool)
+				_block.dspRegPool().releaseAll();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
+
+			if (_hasFalseFunc)
+				a.jmp(end);
+
+			a.bind(isFalse);
+
+			if (_hasFalseFunc)
+			{
+				_false();
+
+				if(_updateDirtyCCR)
+					updateDirtyCCR(_block);
+				if(_releaseRegPool)
+					_block.dspRegPool().releaseAll();
+			}
+
+			a.bind(end);
+
+			return std::make_pair(cursorBeforeJump, oldPushedRegCount);
+		};
+
+		// we move all register pushed that happened inside the branches to the outside to make sure they are always executed
+
+		auto data = execIf(false, true, true);
+		const auto newPushedRegCount = _block.stack().pushedRegCount();
+		if (newPushedRegCount > data.second)
+			_block.stack().movePushesTo(data.first, data.second);
 	}
 
 	void If::updateDirtyCCR(JitBlock& _block)

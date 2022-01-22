@@ -19,7 +19,7 @@ namespace dsp56k
 
 	private:
 		void runTest(void(JitUnittests::*_build)(JitBlock&, JitOps&), void( JitUnittests::*_verify)());
-		void runTest(std::function<void(JitBlock&, JitOps&)> _build, std::function<void()> _verify);
+		void runTest(const std::function<void(JitBlock&, JitOps&)>& _build, const std::function<void()>& _verify);
 		static void nop(JitBlock& _block, size_t _count = 1);
 		
 		// helper function tests
@@ -127,9 +127,11 @@ namespace dsp56k
 		void btst_aa_build(JitBlock& _block, JitOps& _ops);
 		void btst_aa_verify();
 
+		void clr();
 		void cmp();
 		void dec();
 		void div();
+		void rep_div();
 		void dmac();
 		void extractu();
 		void ifcc();

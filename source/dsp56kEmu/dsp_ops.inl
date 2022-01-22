@@ -31,9 +31,6 @@ namespace dsp56k
 		sr_toggle( CCR_C, bittestandchange( val, bit ) );
 
 		decode_dddddd_write( dddddd, val );
-
-		sr_s_update();
-		sr_l_update_by_v();
 	}
 	inline void DSP::op_Bclr_ea(const TWord op)	// 0000101001MMMRRR0S0bbbbb
 	{
@@ -108,19 +105,14 @@ namespace dsp56k
 
 		if(ea >= XIO_Reserved_High_First)
 		{
-			// god WHY is this even possible! Bset_pp/qq are for peripherals and even save one word!	TODO: code optimizer? We could rewrite as Bset_qq/pp + one nop
 			auto val = memReadPeriph( S, ea );
-
 			sr_toggle( CCR_C, bittestandset( val, bit ) );
-
 			memWritePeriph( S, ea, val );
 		}
 		else
 		{
 			auto val = memRead( S, ea );
-
 			sr_toggle( CCR_C, bittestandset( val, bit ) );
-
 			memWrite( S, ea, val );
 		}
 	}
@@ -173,40 +165,23 @@ namespace dsp56k
 		}
 
 		decode_dddddd_write( d, val );
-
-		sr_s_update();
-		sr_l_update_by_v();
 	}
 
 	inline void DSP::op_Btst_ea(const TWord op)
 	{
 		sr_toggle(CCR_C, bitTestMemory<Btst_ea>(op));
-
-		sr_s_update();
-		sr_l_update_by_v();
 	}
 	inline void DSP::op_Btst_aa(const TWord op)
 	{
 		sr_toggle(CCR_C, bitTestMemory<Btst_aa>(op));
-
-		sr_s_update();
-		sr_l_update_by_v();
 	}
 	inline void DSP::op_Btst_pp(const TWord op)
 	{
-		const TWord bitNum	= getBit<Btst_pp>(op);
-		const TWord pppppp	= getFieldValue<Btst_pp,Field_pppppp>(op);
-		const EMemArea S	= getFieldValueMemArea<Btst_pp>(op);
-
-		const TWord memVal	= memReadPeriphFFFFC0( S, pppppp );
-
-		const bool bitSet	= ( memVal & (1<<bitNum)) != 0;
-
-		sr_toggle( CCR_C, bitSet );
+		sr_toggle(CCR_C, bitTestMemory<Btst_pp>(op));
 	}
 	inline void DSP::op_Btst_qq(const TWord op)
 	{
-		errNotImplemented("BTST qq");
+		sr_toggle(CCR_C, bitTestMemory<Btst_qq>(op));
 	}
 	inline void DSP::op_Btst_D(const TWord op)
 	{
@@ -265,11 +240,15 @@ namespace dsp56k
 	}
 	inline void DSP::op_Dor_ea(const TWord op)
 	{
-		errNotImplemented("DOR");		
+		const auto loopcount = readMem<Dor_ea>(op);
+		const auto displacement = pcRelativeAddressExt<Dor_ea>();
+		do_exec(loopcount, pcCurrentInstruction + displacement);
 	}
 	inline void DSP::op_Dor_aa(const TWord op)
 	{
-		errNotImplemented("DOR");		
+		const auto loopCount = effectiveAddress<Do_aa>(op);
+		const auto displacement = pcRelativeAddressExt<Dor_ea>();
+		do_exec(loopCount, pcCurrentInstruction + displacement);
 	}
 	inline void DSP::op_Dor_xxx(const TWord op)
 	{
@@ -343,12 +322,15 @@ namespace dsp56k
 		TWord			_r = reg.r[regIdx].var;
 		const TReg24	_m = reg.m[regIdx];
 
+		const auto& mask = reg.mMask[regIdx];
+		const auto& mod = reg.mModulo[regIdx];
+
 		switch( mmrrr & 0x18 )
 		{
-		case 0x00:	/* 00 */	AGU::updateAddressRegister( _r, -_n.var, _m.var,moduloMask[regIdx],modulo[regIdx] );		break;
-		case 0x08:	/* 01 */	AGU::updateAddressRegister( _r, +_n.var, _m.var,moduloMask[regIdx],modulo[regIdx] );		break;
-		case 0x10:	/* 10 */	AGU::updateAddressRegister( _r, -1, _m.var,moduloMask[regIdx],modulo[regIdx] );			break;
-		case 0x18:	/* 11 */	AGU::updateAddressRegister( _r, +1, _m.var,moduloMask[regIdx],modulo[regIdx] );			break;
+		case 0x00:	/* 00 */	AGU::updateAddressRegister( _r, -_n.var, _m.var, mask, mod);		break;
+		case 0x08:	/* 01 */	AGU::updateAddressRegister( _r, +_n.var, _m.var, mask, mod);		break;
+		case 0x10:	/* 10 */	AGU::updateAddressRegister( _r, -1, _m.var, mask, mod);			break;
+		case 0x18:	/* 11 */	AGU::updateAddressRegister( _r, +1, _m.var, mask, mod);			break;
 		default:
 			assert(0 && "impossible to happen" );
 		}
@@ -361,20 +343,19 @@ namespace dsp56k
 		const TWord a		= getFieldValue<Lua_Rn,Field_aaa, Field_aaaa>(op);
 		const TWord rrr		= getFieldValue<Lua_Rn,Field_RRR>(op);
 
-		const TReg24 _r = reg.r[rrr];
-
 		const int aSigned = signextend<int,7>(a);
 
-		// TODO: modulo not taken into account, but it IS USED, it tested this in the simulator
-		const TReg24 val = TReg24(_r.var + aSigned);
+		TWord r = reg.r[rrr].var;
+
+		AGU::updateAddressRegister(r, aSigned, reg.m[rrr].var, reg.mMask[rrr], reg.mModulo[rrr]);
 
 		if( dddd < 8 )									// r0-r7
 		{
-			convert(reg.r[dddd],val);
+			convert(reg.r[dddd],r);
 		}
 		else
 		{
-			convert(reg.n[dddd&0x07],val);
+			convert(reg.n[dddd&0x07],r);
 		}
 	}
 	inline void DSP::op_Nop(TWord)
