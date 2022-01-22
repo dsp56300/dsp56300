@@ -340,9 +340,6 @@ namespace dsp56k
 		if (m_volatileP.find(_pc) != m_volatileP.end())
 			return nullptr;
 
-		if (!_allowCreate)
-			return nullptr;
-
 		const auto& e = m_jitCache[_pc];
 
 		if (e.block && e.block->getPCFirst() == _pc)
@@ -352,6 +349,9 @@ namespace dsp56k
 				return nullptr;
 			return e.block;
 		}
+
+		if (!_allowCreate)
+			return nullptr;
 
 		// If we jump in the middle of a block, this block needs to be regenerated.
 		// We can only destroy blocks that are not part of the recursive generation at the moment
