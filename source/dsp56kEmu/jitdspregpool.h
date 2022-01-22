@@ -168,10 +168,10 @@ namespace dsp56k
 		void clear();
 
 		void load(JitRegGP& _dst, DspReg _src);
-		void store(DspReg _dst, JitRegGP& _src, bool _resetBasePtr = true);
-		void store(DspReg _dst, JitReg128& _src, bool _resetBasePtr = true);
+		void store(DspReg _dst, const JitRegGP& _src) const;
+		void store(DspReg _dst, const JitReg128& _src) const;
 
-		bool release(DspReg _dst, bool _resetBasePtr = true);
+		bool release(DspReg _dst);
 
 		template<typename T> void push(std::list<T>& _dst, const T& _src)
 		{

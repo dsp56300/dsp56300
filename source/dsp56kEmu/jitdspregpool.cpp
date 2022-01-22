@@ -70,14 +70,14 @@ namespace dsp56k
 					if(isInUse(DspAwrite))
 					{
 						clearWritten(DspAwrite);
-						release(DspAwrite, false);
+						release(DspAwrite);
 					}
 					break;
 				case DspB:
 					if(isInUse(DspBwrite))
 					{
 						clearWritten(DspBwrite);
-						release(DspBwrite, false);					
+						release(DspBwrite);					
 					}
 					break;
 				}
@@ -166,7 +166,7 @@ namespace dsp56k
 	void JitDspRegPool::releaseAll()
 	{
 		for(size_t i=0; i<DspCount; ++i)
-			release(static_cast<DspReg>(i), false);
+			release(static_cast<DspReg>(i));
 
 		assert(m_gpList.empty());
 		assert(m_xmList.empty());
@@ -190,7 +190,7 @@ namespace dsp56k
 		{
 			const auto r = static_cast<DspReg>(i);
 			if(isWritten(r))
-				release(r, false);
+				release(r);
 		}
 	}
 
@@ -503,7 +503,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitDspRegPool::store(const DspReg _dst, JitRegGP& _src, bool _resetBasePtr/* = true*/)
+	void JitDspRegPool::store(const DspReg _dst, const JitRegGP& _src) const
 	{
 		auto& r = m_block.dsp().regs();
 
@@ -588,7 +588,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitDspRegPool::store(const DspReg _dst, JitReg128& _src, bool _resetBasePtr/* = true*/)
+	void JitDspRegPool::store(const DspReg _dst, const JitReg128& _src) const
 	{
 		auto& r = m_block.dsp().regs();
 		auto& m = m_block.mem();
@@ -674,7 +674,7 @@ namespace dsp56k
 		}
 	}
 
-	bool JitDspRegPool::release(DspReg _dst, bool _resetBasePtr)
+	bool JitDspRegPool::release(DspReg _dst)
 	{
 		if(isLocked(_dst))
 		{
@@ -688,7 +688,7 @@ namespace dsp56k
 			if(isWritten(_dst))
 			{
 				LOGRP("Storing modified DSP reg " << g_dspRegNames[_dst] << " from GP");
-				store(_dst, gpReg, _resetBasePtr);
+				store(_dst, gpReg);
 				clearWritten(_dst);
 			}
 			return true;
@@ -700,7 +700,7 @@ namespace dsp56k
 			if(isWritten(_dst))
 			{
 				LOGRP("Storing modified DSP reg " << g_dspRegNames[_dst] << " from XMM");
-				store(_dst, xmReg, _resetBasePtr);
+				store(_dst, xmReg);
 				clearWritten(_dst);
 			}						
 		}
