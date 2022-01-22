@@ -322,6 +322,15 @@ namespace dsp56k
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
 			}
 		}
+		else if (!m_possibleBranch && !isFastInterrupt && _jit && _cache[pcNext].block && !opFlags && !m_flags && m_child == g_invalidAddress)
+		{
+			auto* child = _jit->getChildBlock(this, pcNext, false);
+			if(child)
+			{
+				child->addParent(m_pcFirst);
+				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
+			}
+		}
 
 		return true;
 	}
