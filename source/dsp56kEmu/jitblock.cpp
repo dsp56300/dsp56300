@@ -132,11 +132,9 @@ namespace dsp56k
 					TWord opB;
 					m_dsp.memory().getOpcode(pc, opA, opB);
 					const auto branchTarget = getBranchTarget(oi.getInstruction(), opA, opB, pc);
-					if(branchTarget != g_invalidAddress && branchTarget != g_dynamicAddress && branchTarget != m_pcFirst && _volatileP.find(branchTarget) == _volatileP.end())
+					if(branchTarget != g_invalidAddress && branchTarget != g_dynamicAddress)
 					{
 						assert(branchTarget < m_dsp.memory().size());
-
-						m_childIsDynamic = hasField(oi.getInstruction(), Field_CCCC) || hasField(oi.getInstruction(), Field_bbbbb);
 
 						const auto pcLast = m_pcFirst + m_pMemSize;
 
@@ -150,10 +148,12 @@ namespace dsp56k
 								child->addParent(m_pcFirst);
 								m_child = branchTarget;
 
+								m_childIsDynamic = hasField(oi.getInstruction(), Field_CCCC) || hasField(oi.getInstruction(), Field_bbbbb);
+
 								if(m_childIsDynamic)
 								{
 									auto* nonBranchChild = _jit->getChildBlock(this, pcLast);
-									if (nonBranchChild)
+									if (nonBranchChild && _jit->canBeDefaultExecuted(pcLast))
 									{
 										nonBranchChild->addParent(m_pcFirst);
 										m_nonBranchChild = pcLast;
@@ -315,8 +315,9 @@ namespace dsp56k
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
 			}
 		}
-		else if (!m_possibleBranch && !isFastInterrupt && _jit && _cache[pcNext].block && !opFlags && !m_flags && m_child == g_invalidAddress)
+		else if (!m_possibleBranch && !isFastInterrupt && _jit && _cache[pcNext].block && !opFlags && !m_flags && m_child == g_invalidAddress && _jit->canBeDefaultExecuted(pcNext))
 		{
+			return;	// FIXME doesn't work, what condition did we miss where it does NOT continue at the next PC after this block?
 			auto* child = _jit->getChildBlock(this, pcNext, false);
 			if(child)
 			{
