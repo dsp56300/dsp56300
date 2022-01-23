@@ -317,7 +317,7 @@ namespace dsp56k
 		}
 		else if (!m_possibleBranch && !isFastInterrupt && _jit && _cache[pcNext].block && !opFlags && !m_flags && m_child == g_invalidAddress && _jit->canBeDefaultExecuted(pcNext))
 		{
-			return;	// FIXME doesn't work, what condition did we miss where it does NOT continue at the next PC after this block?
+			return true;	// FIXME doesn't work, what condition did we miss where it does NOT continue at the next PC after this block?
 			auto* child = _jit->getChildBlock(this, pcNext, false);
 			if(child)
 			{
