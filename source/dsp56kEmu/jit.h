@@ -45,7 +45,7 @@ namespace dsp56k
 
 	private:
 		void emit(TWord _pc);
-		void destroyParents(const JitBlock* _block);
+		void destroyParents(JitBlock* _block);
 		void destroy(JitBlock* _block);
 		void destroy(TWord _pc);
 		void release(const JitBlock* _block);

@@ -74,6 +74,7 @@ namespace dsp56k
 		const std::set<TWord>& getParents() const { return m_parents; }
 
 		void increaseInstructionCount(const asmjit::Operand& _count);
+		void clearParents() { m_parents.clear(); }
 
 	private:
 		void addParent(TWord _pc);

@@ -160,7 +160,7 @@ namespace dsp56k
 //		LOG("New block generated @ " << HEX(_pc) << " up to " << HEX(_pc + b->getPMemSize() - 1) << ", instruction count " << b->getEncodedInstructionCount() << ", disasm " << b->getDisasm());
 	}
 
-	void Jit::destroyParents(const JitBlock* _block)
+	void Jit::destroyParents(JitBlock* _block)
 	{
 		for (const auto parent : _block->getParents())
 		{
@@ -184,6 +184,7 @@ namespace dsp56k
 				}
 			}
 		}
+		_block->clearParents();
 	}
 
 	void Jit::destroy(JitBlock* _block)
@@ -214,7 +215,6 @@ namespace dsp56k
 				cacheEntry.singleOpCache.insert(std::make_pair(op, _block));
 				return;
 			}
-			destroyParents(_block);
 		}
 
 		release(_block);
