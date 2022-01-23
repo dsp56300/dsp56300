@@ -315,12 +315,12 @@ namespace dsp56k
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
 			}
 		}
-		else if (!m_possibleBranch && !isFastInterrupt && _jit && _cache[pcNext].block && !opFlags && !m_flags && m_child == g_invalidAddress && _jit->canBeDefaultExecuted(pcNext))
+		else if (!appendLoopCode && !m_possibleBranch && !isFastInterrupt && _jit && _cache[pcNext].block && !opFlags && !m_flags && m_child == g_invalidAddress && _jit->canBeDefaultExecuted(pcNext))
 		{
-			return true;	// FIXME doesn't work, what condition did we miss where it does NOT continue at the next PC after this block?
 			auto* child = _jit->getChildBlock(this, pcNext, false);
 			if(child)
 			{
+				m_child = pcNext;
 				child->addParent(m_pcFirst);
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
 			}

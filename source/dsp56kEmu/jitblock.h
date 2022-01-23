@@ -69,6 +69,7 @@ namespace dsp56k
 		uint32_t getFlags() const { return m_flags; }
 
 		TWord getChild() const { return m_child; }
+		TWord getNonBranchChild() const { return m_nonBranchChild; }
 		size_t codeSize() const { return m_codeSize; }
 		const std::set<TWord>& getParents() const { return m_parents; }
 

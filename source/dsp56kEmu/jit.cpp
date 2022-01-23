@@ -173,7 +173,7 @@ namespace dsp56k
 			for(auto it = e.singleOpCache.begin(); it != e.singleOpCache.end();)
 			{
 				const auto* b = it->second;
-				if (b->getChild() == _block->getPCFirst())
+				if (b->getChild() == _block->getPCFirst() || b->getNonBranchChild() == _block->getPCFirst())
 				{
 					release(b);
 					e.singleOpCache.erase(it++);
