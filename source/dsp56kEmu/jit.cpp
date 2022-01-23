@@ -347,6 +347,10 @@ namespace dsp56k
 			// block is still being generated (circular reference)
 			if (e.func == nullptr)
 				return nullptr;
+
+			if (!canBeDefaultExecuted(_pc))
+				return nullptr;
+
 			return e.block;
 		}
 
@@ -363,7 +367,9 @@ namespace dsp56k
 			destroy(e.block);
 
 		create(_pc, nullptr, false);
-		assert(e.block);
+
+		if (!canBeDefaultExecuted(_pc))
+			return nullptr;
 		return e.block;
 	}
 
