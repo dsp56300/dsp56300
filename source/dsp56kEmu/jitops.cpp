@@ -486,12 +486,35 @@ namespace dsp56k
 	//	LOG( "DO END: loop flag = " << sr_test(SR_LF) << " sc=" << (int)sc.var << " lc:" << std::hex << lc.var << " la:" << std::hex << la.var );
 	}
 
+	inline void JitOps::op_Stop(TWord op)
+	{
+#ifdef HAVE_X86_64
+		m_block.asm_().int3();
+#else
+		m_block.asm_().brk(asmjit::Imm(m_pcCurrentOp & 0xffff));
+#endif
+	}
+
 	inline void JitOps::op_Debug(TWord op)
 	{
+		op_Stop(op);
 	}
 
 	inline void JitOps::op_Debugcc(TWord op)
 	{
+		If(m_block, [&](auto _toFalse)
+		{
+			checkCondition<Debugcc>(op);
+			m_asm.jz(_toFalse);
+		}, [&]()
+		{
+			op_Debug(op);
+		});
+	}
+
+	inline void JitOps::op_Wait(TWord op)
+	{
+		op_Stop(op);
 	}
 
 	void JitOps::op_Do_ea(TWord op)

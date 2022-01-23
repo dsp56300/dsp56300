@@ -257,7 +257,7 @@ namespace dsp56k
 		void op_Rti(TWord op);
 		void op_Rts(TWord op);
 		void op_Sbc(TWord op)					{ errNotImplemented(op); }
-		void op_Stop(TWord op)					{ errNotImplemented(op); }
+		void op_Stop(TWord op);
 		void op_Sub_SD(TWord op);
 		void op_Sub_xx(TWord op);
 		void op_Sub_xxxx(TWord op);
@@ -271,7 +271,7 @@ namespace dsp56k
 		void op_Trapcc(TWord op)				{ errNotImplemented(op); }
 		void op_Tst(TWord op);
 		void op_Vsl(TWord op)					{ errNotImplemented(op); }
-		void op_Wait(TWord op)					{ errNotImplemented(op); }
+		void op_Wait(TWord op);
 
 		// helpers
 		void signextend56to64(const JitReg64& _reg) const;
