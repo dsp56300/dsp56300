@@ -4,6 +4,7 @@
 #include "essi.h"
 #include "hdi08.h"
 #include "hi08.h"
+#include "opcodetypes.h"
 #include "timers.h"
 #include "types.h"
 #include "staticArray.h"
@@ -87,7 +88,7 @@ namespace dsp56k
 			return *m_dsp;
 		};
 
-		virtual TWord read(TWord _addr) = 0;
+		virtual TWord read(TWord _addr, Instruction _inst) = 0;
 		virtual void write(TWord _addr, TWord _value) = 0;
 		virtual void exec() = 0;
 		virtual void reset() = 0;
@@ -111,7 +112,7 @@ namespace dsp56k
 	public:
 		Peripherals56303();
 		
-		TWord read(TWord _addr) override;
+		TWord read(TWord _addr, Instruction _inst) override;
 		void write(TWord _addr, TWord _val) override;
 
 		void exec() override;
@@ -142,7 +143,7 @@ namespace dsp56k
 	public:
 		Peripherals56362();
 		
-		TWord read(TWord _addr) override;
+		TWord read(TWord _addr, Instruction _inst) override;
 		void write(TWord _addr, TWord _val) override;
 
 		void exec() override;

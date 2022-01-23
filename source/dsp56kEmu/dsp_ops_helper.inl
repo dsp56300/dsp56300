@@ -69,7 +69,7 @@ namespace dsp56k
 
 		// TODO: I don't like this. There are special instructions to access peripherals, but the decoding allows to access peripherals with regular addressing.
 		if(ea >= XIO_Reserved_High_First)
-			return memReadPeriph(area, ea);
+			return memReadPeriph(area, ea, Inst);
 		return memRead(area, ea);
 	}
 
@@ -87,7 +87,7 @@ namespace dsp56k
 
 		// TODO: I don't like this. There are special instructions to access peripherals, but the decoding allows to access peripherals with regular addressing.
 		if(ea >= XIO_Reserved_High_First)
-			return memReadPeriph(area, ea);
+			return memReadPeriph(area, ea, Inst);
 		return memRead(area, ea);
 	}
 
@@ -108,12 +108,12 @@ namespace dsp56k
 
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> TWord DSP::readMem(const TWord op) const
 	{
-		return memReadPeriphFFFF80(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_qqqqqq>(op));
+		return memReadPeriphFFFF80(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_qqqqqq>(op), Inst);
 	}
 
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type*> TWord DSP::readMem(const TWord op) const
 	{
-		return memReadPeriphFFFFC0(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_pppppp>(op));
+		return memReadPeriphFFFFC0(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_pppppp>(op), Inst);
 	}
 
 	// Memory Write	

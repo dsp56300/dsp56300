@@ -1214,8 +1214,8 @@ namespace dsp56k
 
 	void JitUnittests::bclr_qqpp_verify()
 	{
-		const auto a = dsp.getPeriph(0)->read(0xffff90);
-		const auto b = dsp.getPeriph(0)->read(0xffffd0);
+		const auto a = dsp.getPeriph(0)->read(0xffff90, Bclr_qq);
+		const auto b = dsp.getPeriph(0)->read(0xffffd0, Bclr_pp);
 		assert(a == 0x334451);	// bit 2 cleared
 		assert(b == 0x556667);	// bit 4 cleared
 	}
@@ -2466,7 +2466,7 @@ namespace dsp56k
 		},
 		[&]()
 		{
-			assert(dsp.memReadPeriph(MemArea_X, 0xffffc5) == 0xffeeff);
+			assert(dsp.memReadPeriph(MemArea_X, 0xffffc5, Movep_ppea) == 0xffeeff);
 		});
 
 		// op_Movep_Xqqea
@@ -2477,7 +2477,7 @@ namespace dsp56k
 		},
 		[&]()
 		{
-			assert(dsp.memReadPeriph(MemArea_X, 0xffff85) == 0x334455);
+			assert(dsp.memReadPeriph(MemArea_X, 0xffff85, Movep_Xqqea) == 0x334455);
 		});
 
 		// op_Movep_Yqqea
@@ -2488,7 +2488,7 @@ namespace dsp56k
 		},
 		[&]()
 		{
-			assert(dsp.memReadPeriph(MemArea_Y, 0xffff82) == 0x556677);
+			assert(dsp.memReadPeriph(MemArea_Y, 0xffff82, Movep_Yqqea) == 0x556677);
 		});
 
 		// op_Movep_SXqq
@@ -2500,7 +2500,7 @@ namespace dsp56k
 		},
 		[&]()
 		{
-			assert(dsp.memReadPeriph(MemArea_X, 0xffff84) == 0x334455);
+			assert(dsp.memReadPeriph(MemArea_X, 0xffff84, Movep_SXqq) == 0x334455);
 		});
 
 		// op_Movep_SYqq

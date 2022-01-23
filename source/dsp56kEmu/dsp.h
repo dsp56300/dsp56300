@@ -520,8 +520,8 @@ namespace dsp56k
 		void	iprc			(const TWord _value)				{ memWritePeriph(MemArea_X, XIO_IPRC, _value); }
 		void	iprp			(const TWord _value)				{ memWritePeriph(MemArea_X, XIO_IPRP, _value); }
 
-		TWord	iprc			() const							{ return memReadPeriph(MemArea_X, XIO_IPRC); }
-		TWord	iprp			() const							{ return memReadPeriph(MemArea_X, XIO_IPRP); }
+		TWord	iprc			() const							{ return memReadPeriph(MemArea_X, XIO_IPRC, Nop); }
+		TWord	iprp			() const							{ return memReadPeriph(MemArea_X, XIO_IPRP, Nop); }
 
 		template<typename T> T getA()
 		{
@@ -686,9 +686,9 @@ namespace dsp56k
 		
 		TWord	memRead				( EMemArea _area, TWord _offset ) const;
 		void	memReadOpcode		( TWord _offset, TWord& _wordA, TWord& _wordB ) const;
-		TWord	memReadPeriph		( EMemArea _area, TWord _offset ) const;
-		TWord	memReadPeriphFFFF80	( EMemArea _area, TWord _offset ) const;
-		TWord	memReadPeriphFFFFC0	( EMemArea _area, TWord _offset ) const;
+		TWord	memReadPeriph		( EMemArea _area, TWord _offset, Instruction _inst) const;
+		TWord	memReadPeriphFFFF80	( EMemArea _area, TWord _offset, Instruction _inst) const;
+		TWord	memReadPeriphFFFFC0	( EMemArea _area, TWord _offset, Instruction _inst) const;
 
 		void	aarTranslate		( EMemArea _area, TWord& _offset ) const;
 

@@ -491,7 +491,7 @@ namespace dsp56k
 		case Peripherals:
 			{
 				const TWord offset = getOpWordB();
-				m_block.mem().readPeriph(regMem, area, offset);
+				m_block.mem().readPeriph(regMem, area, offset, Inst);
 				(this->*_bitmodFunc)(regMem, getBit<Inst>(op));
 				m_block.mem().writePeriph(area, offset, regMem);
 			}
@@ -508,7 +508,7 @@ namespace dsp56k
 			{
 				const RegGP offset(m_block);
 				effectiveAddress<Inst>(offset, op);			
-				readMemOrPeriph(regMem, area, offset);
+				readMemOrPeriph(regMem, area, offset, Inst);
 				(this->*_bitmodFunc)(regMem, getBit<Inst>(op));
 				writeMemOrPeriph(area, offset, regMem);
 			}

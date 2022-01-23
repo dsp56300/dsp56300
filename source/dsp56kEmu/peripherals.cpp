@@ -18,7 +18,7 @@ namespace dsp56k
 		m_mem[XIO_IDR - XIO_Reserved_High_First] = 0x001362;
 	}
 
-	TWord Peripherals56303::read(TWord _addr)
+	TWord Peripherals56303::read(TWord _addr, Instruction _inst)
 	{
 //		LOG( "Periph read @ " << std::hex << _addr );
 
@@ -78,7 +78,7 @@ namespace dsp56k
 	{
 	}
 
-	TWord Peripherals56362::read(TWord _addr)
+	TWord Peripherals56362::read(TWord _addr, Instruction _inst)
 	{
 		switch (_addr)
 		{
@@ -89,7 +89,7 @@ namespace dsp56k
 		case HDI08::HPCR:
 			return m_hdi08.readPortControlRegister();
 		case HDI08::HORX:
-			return m_hdi08.readRX();
+			return m_hdi08.readRX(_inst);
 
 		case Esai::M_RCR:
 			return m_esai.readReceiveControlRegister();

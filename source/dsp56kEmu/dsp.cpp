@@ -678,10 +678,10 @@ namespace dsp56k
 		case Reg_IPRP:	_res.var = iprp();		break;
 		case Reg_IPRC:	_res.var = iprc();		break;
 
-		case Reg_AAR0:	_res.var = memReadPeriph(MemArea_X, M_AAR0);		break;
-		case Reg_AAR1:	_res.var = memReadPeriph(MemArea_X, M_AAR1);		break;
-		case Reg_AAR2:	_res.var = memReadPeriph(MemArea_X, M_AAR2);		break;
-		case Reg_AAR3:	_res.var = memReadPeriph(MemArea_X, M_AAR3);		break;
+		case Reg_AAR0:	_res.var = memReadPeriph(MemArea_X, M_AAR0, Nop);	break;
+		case Reg_AAR1:	_res.var = memReadPeriph(MemArea_X, M_AAR1, Nop);	break;
+		case Reg_AAR2:	_res.var = memReadPeriph(MemArea_X, M_AAR2, Nop);	break;
+		case Reg_AAR3:	_res.var = memReadPeriph(MemArea_X, M_AAR3, Nop);	break;
 
 		case Reg_REPLACE:	_res.var = 0;/* reg.replace; */	break;
 		case Reg_HIT:		_res.var = 0;/* reg.hit;	 */	break;
@@ -1049,17 +1049,17 @@ namespace dsp56k
 		mem.getOpcode(_offset, _wordA, _wordB);
 	}
 
-	TWord DSP::memReadPeriph(EMemArea _area, TWord _offset) const
+	TWord DSP::memReadPeriph(EMemArea _area, TWord _offset, Instruction _inst) const
 	{
-		return perif[_area - MemArea_X]->read(_offset);
+		return perif[_area - MemArea_X]->read(_offset, _inst);
 	}
-	TWord DSP::memReadPeriphFFFF80(EMemArea _area, TWord _offset) const
+	TWord DSP::memReadPeriphFFFF80(EMemArea _area, TWord _offset, Instruction _inst) const
 	{
-		return memReadPeriph(_area, _offset + 0xffff80);
+		return memReadPeriph(_area, _offset + 0xffff80, _inst);
 	}
-	TWord DSP::memReadPeriphFFFFC0(EMemArea _area, TWord _offset) const
+	TWord DSP::memReadPeriphFFFFC0(EMemArea _area, TWord _offset, Instruction _inst) const
 	{
-		return memReadPeriph(_area, _offset + 0xffffc0);
+		return memReadPeriph(_area, _offset + 0xffffc0, _inst);
 	}
 
 	void DSP::aarTranslate(EMemArea _area, TWord& _offset) const
@@ -1078,7 +1078,7 @@ namespace dsp56k
 
 		for(int i=3; i>=0; --i)
 		{
-			const auto aar = memReadPeriph(MemArea_X, aarRegs[i]);
+			const auto aar = memReadPeriph(MemArea_X, aarRegs[i], Nop);
 
 			if(!bittest(aar, areaEnabled[_area]))
 				continue;

@@ -54,11 +54,11 @@ namespace dsp56k
 			m_block.mem().readDspMemory(_dst, _area, getOpWordB());
 			break;
 		case Peripherals:
-			m_block.mem().readPeriph(_dst, _area, getOpWordB());
+			m_block.mem().readPeriph(_dst, _area, getOpWordB(), Inst);
 			break;
 		case Dynamic:
 			effectiveAddress<Inst>(_dst, _op);
-			readMemOrPeriph(_dst, _area, _dst);
+			readMemOrPeriph(_dst, _area, _dst, Inst);
 			break;
 		}
 		return eaType;
@@ -69,14 +69,14 @@ namespace dsp56k
 		const auto area = getFieldValueMemArea<Inst>(op);
 		const auto offset = getFieldValue<Inst,Field_qqqqqq>(op);
 		m_asm.mov(_dst, asmjit::Imm(offset + 0xffff80));
-		m_block.mem().readPeriph(_dst, area, _dst);
+		m_block.mem().readPeriph(_dst, area, _dst, Inst);
 	}
 	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, TWord op) const
 	{
 		const auto area = getFieldValueMemArea<Inst>(op);
 		const auto offset = getFieldValue<Inst,Field_pppppp>(op);
 		m_asm.mov(_dst, asmjit::Imm(offset + 0xffffc0));
-		m_block.mem().readPeriph(_dst, area, _dst);	
+		m_block.mem().readPeriph(_dst, area, _dst, Inst);
 	}
 	template <Instruction Inst, typename std::enable_if<!hasField<Inst, Field_s>() && hasFields<Inst, Field_aaaaaa, Field_S>()>::type*> void JitOps::readMem(const JitReg64& _dst, TWord op) const
 	{
@@ -140,7 +140,7 @@ namespace dsp56k
 		m_block.mem().writeDspMemory(_area, offset, _src);
 	}
 
-	void JitOps::readMemOrPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset)
+	void JitOps::readMemOrPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset, Instruction _inst)
 	{
 		// Disabled writing to peripherals with dynamic addressing (such as (r0)+) for now as it is costly but most likely unused
 		m_block.mem().readDspMemory(_dst, _area, _offset);
@@ -164,7 +164,7 @@ namespace dsp56k
 		m_asm.jmp(end);
 
 		m_asm.bind(readPeriph);
-		m_block.mem().readPeriph(_dst, _area, _offset);
+		m_block.mem().readPeriph(_dst, _area, _offset, _inst);
 		m_asm.bind(end);		
 	}
 	void JitOps::writeMemOrPeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value)

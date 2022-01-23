@@ -369,7 +369,7 @@ namespace dsp56k
 				memWritePeriphFFFFC0( s, pp, memRead( S, ea ) );
 		}
 		else
-			memWrite( S, ea, memReadPeriphFFFFC0( s, pp ) );
+			memWrite( S, ea, memReadPeriphFFFFC0( s, pp, Movep_ppea) );
 	}
 	inline void DSP::op_Movep_Xqqea(const TWord op)
 	{
@@ -385,7 +385,7 @@ namespace dsp56k
 		}
 		else
 		{
-			writeMem<Movep_Xqqea>(op, memReadPeriphFFFF80( area, qAddr ));
+			writeMem<Movep_Xqqea>(op, memReadPeriphFFFF80( area, qAddr, Movep_Xqqea));
 		}
 	}
 	inline void DSP::op_Movep_Yqqea(const TWord op)
@@ -403,7 +403,7 @@ namespace dsp56k
 		}
 		else
 		{
-			writeMem<Movep_Yqqea>(op, memReadPeriphFFFF80( area, qAddr ));
+			writeMem<Movep_Yqqea>(op, memReadPeriphFFFF80( area, qAddr, Movep_Yqqea ));
 		}
 	}
 	inline void DSP::op_Movep_eapp(const TWord op)
@@ -424,7 +424,7 @@ namespace dsp56k
 		if( write )
 			memWritePeriphFFFFC0( area, pppppp, decode_dddddd_read( dddddd ).toWord() );
 		else
-			decode_dddddd_write( dddddd, TReg24(memReadPeriphFFFFC0( area, pppppp )) );
+			decode_dddddd_write( dddddd, TReg24(memReadPeriphFFFFC0( area, pppppp, Movep_Spp )) );
 	}
 	inline void DSP::op_Movep_SXqq(const TWord op)
 	{
@@ -437,7 +437,7 @@ namespace dsp56k
 		if( write )
 			memWritePeriphFFFF80( area, addr, decode_dddddd_read( dddddd ).toWord() );
 		else
-			decode_dddddd_write( dddddd, TReg24(memReadPeriphFFFF80( area, addr )) );
+			decode_dddddd_write( dddddd, TReg24(memReadPeriphFFFF80( area, addr, Movep_SXqq )) );
 	}
 	inline void DSP::op_Movep_SYqq(const TWord op)
 	{
@@ -451,6 +451,6 @@ namespace dsp56k
 		if( write )
 			memWritePeriphFFFF80( area, addr, decode_dddddd_read( dddddd ).toWord() );
 		else
-			decode_dddddd_write( dddddd, TReg24(memReadPeriphFFFF80( area, addr )) );
+			decode_dddddd_write( dddddd, TReg24(memReadPeriphFFFF80( area, addr, Movep_SYqq )) );
 	}	
 }

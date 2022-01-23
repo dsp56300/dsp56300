@@ -42,7 +42,7 @@ namespace dsp56k
 		
 		if(ea >= XIO_Reserved_High_First)
 		{
-			auto mem = memReadPeriph( S, ea );
+			auto mem = memReadPeriph( S, ea, Bclr_ea);
 			mem = alu_bclr( bbbbb, mem );
 			memWritePeriph( S, ea, mem);
 		}
@@ -65,7 +65,7 @@ namespace dsp56k
 
 		const EMemArea S = getFieldValueMemArea<Bclr_pp>(op);
 
-		const TWord res = alu_bclr( bit, memReadPeriphFFFFC0( S, ea ) );
+		const TWord res = alu_bclr( bit, memReadPeriphFFFFC0( S, ea, Bclr_pp ) );
 
 		memWritePeriphFFFFC0( S, ea, res );			
 	}
@@ -76,7 +76,7 @@ namespace dsp56k
 
 		const EMemArea S = getFieldValueMemArea<Bclr_qq>(op);
 
-		const TWord res = alu_bclr( bit, memReadPeriphFFFF80( S, ea ) );
+		const TWord res = alu_bclr( bit, memReadPeriphFFFF80( S, ea, Bclr_qq ) );
 
 		memWritePeriphFFFF80( S, ea, res );			
 	}
@@ -105,7 +105,7 @@ namespace dsp56k
 
 		if(ea >= XIO_Reserved_High_First)
 		{
-			auto val = memReadPeriph( S, ea );
+			auto val = memReadPeriph( S, ea, Bset_ea );
 			sr_toggle( CCR_C, bittestandset( val, bit ) );
 			memWritePeriph( S, ea, val );
 		}
@@ -128,7 +128,7 @@ namespace dsp56k
 
 		const TWord ea		= pppppp;
 
-		TWord val = memReadPeriphFFFFC0( S, ea );
+		TWord val = memReadPeriphFFFFC0( S, ea, Bset_pp );
 
 		sr_toggle( CCR_C, bittestandset( val, bit ) );
 
@@ -142,7 +142,7 @@ namespace dsp56k
 
 		const TWord ea		= qqqqqq;
 
-		TWord val = memReadPeriphFFFF80( S, ea );
+		TWord val = memReadPeriphFFFF80( S, ea, Bset_qq );
 
 		sr_toggle( CCR_C, bittestandset( val, bit ) );
 

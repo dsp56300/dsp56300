@@ -2,6 +2,7 @@
 
 #include "jitregtracker.h"
 #include "jitregtypes.h"
+#include "opcodetypes.h"
 #include "types.h"
 
 namespace dsp56k
@@ -52,8 +53,8 @@ namespace dsp56k
 		void writeDspMemory(const TWord& _offset, const JitRegGP& _srcX, const JitRegGP& _srcY) const;
 		void writeDspMemory(EMemArea _area, TWord _offset, const JitRegGP& _src) const;
 
-		void readPeriph(const JitReg64& _dst, EMemArea _area, const TWord& _offset) const;
-		void readPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset) const;
+		void readPeriph(const JitReg64& _dst, EMemArea _area, const TWord& _offset, Instruction _inst) const;
+		void readPeriph(const JitReg64& _dst, EMemArea _area, const JitReg64& _offset, Instruction _inst) const;
 		void writePeriph(EMemArea _area, const JitReg64& _offset, const JitReg64& _value) const;
 		void writePeriph(EMemArea _area, const TWord& _offset, const JitReg64& _value) const;
 

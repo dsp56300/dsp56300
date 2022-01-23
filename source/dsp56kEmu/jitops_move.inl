@@ -109,7 +109,7 @@ namespace dsp56k
 
 		if( write )
 		{
-			readMemOrPeriph(r, _area, ea);
+			readMemOrPeriph(r, _area, ea, Inst);
 			decode_dddddd_write(DDDDDD, r32(r.get()));
 		}
 		else
@@ -145,7 +145,7 @@ namespace dsp56k
 
 		if( write )
 		{
-			readMemOrPeriph(r, _area, ea);
+			readMemOrPeriph(r, _area, ea, Inst);
 			decode_dddddd_write(ddddd, r32(r.get()));
 		}
 		else
@@ -292,8 +292,8 @@ namespace dsp56k
 				m_asm.mov(r32(y), asmjit::Imm(m_opWordB));
 				break;
 			case Peripherals:
-				m_block.mem().readPeriph(x, MemArea_X, getOpWordB());
-				m_block.mem().readPeriph(y, MemArea_Y, m_opWordB);
+				m_block.mem().readPeriph(x, MemArea_X, getOpWordB(), Inst);
+				m_block.mem().readPeriph(y, MemArea_Y, m_opWordB, Inst);
 				break;
 			case Memory:
 				m_block.mem().readDspMemory(x, y, getOpWordB());
@@ -303,8 +303,8 @@ namespace dsp56k
 					const RegGP ea(m_block);
 					effectiveAddress<Inst>(ea, op);
 					m_block.mem().readDspMemory(x, y, ea);
-//					readMemOrPeriph(x, MemArea_X, ea);
-//					readMemOrPeriph(y, MemArea_Y, ea);
+//					readMemOrPeriph(x, MemArea_X, ea, Inst);
+//					readMemOrPeriph(y, MemArea_Y, ea, Inst);
 				}
 				break;
 			}
@@ -426,7 +426,7 @@ namespace dsp56k
 		if( writeX )
 		{
 			const RegGP r(m_block);
-			readMemOrPeriph(r, MemArea_X, eaX);
+			readMemOrPeriph(r, MemArea_X, eaX, Movexy);
 			decode_ee_write( ee, r );
 		}
 
@@ -435,7 +435,7 @@ namespace dsp56k
 		if( writeY )
 		{
 			const RegGP r(m_block);
-			readMemOrPeriph(r, MemArea_Y, eaY);
+			readMemOrPeriph(r, MemArea_Y, eaY, Movexy);
 			decode_ff_write( ff, r);
 		}
 	}
@@ -572,14 +572,14 @@ namespace dsp56k
 			else
 			{
 				const RegGP r(m_block);
-				readMemOrPeriph(r, sm, ea);
+				readMemOrPeriph(r, sm, ea, Movep_ppea);
 				m_block.mem().writePeriph(sp, pp, r);
 			}
 		}
 		else
 		{
 			const RegGP r(m_block);
-			m_block.mem().readPeriph(r, sp, pp);
+			m_block.mem().readPeriph(r, sp, pp, Movep_ppea);
 			writeMemOrPeriph(sm, ea, r);
 		}
 	}
@@ -598,7 +598,7 @@ namespace dsp56k
 		else
 		{
 			const RegGP r(m_block);			
-			m_block.mem().readPeriph(r, _area, qAddr);
+			m_block.mem().readPeriph(r, _area, qAddr, Inst);
 			writeMem<Inst>(op, r);
 		}
 	}
@@ -627,7 +627,7 @@ namespace dsp56k
 		}
 		else
 		{
-			m_block.mem().readPeriph(r,_area, addr);
+			m_block.mem().readPeriph(r,_area, addr, Inst);
 			decode_dddddd_write( dddddd, r32(r.get()));
 		}
 	}
@@ -658,7 +658,7 @@ namespace dsp56k
 		}
 		else
 		{
-			m_block.mem().readPeriph(r, area, pppppp);
+			m_block.mem().readPeriph(r, area, pppppp, Movep_Spp);
 			decode_dddddd_write(dddddd, r32(r.get()));
 		}
 	}

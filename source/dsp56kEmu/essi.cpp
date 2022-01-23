@@ -85,6 +85,6 @@ namespace dsp56k
 
 	TWord Essi::get(const EssiIndex _index, const EssiRegX _reg) const
 	{
-		return m_periph.read(address(_index, _reg));
+		return m_periph.read(address(_index, _reg), Nop);
 	}
 };

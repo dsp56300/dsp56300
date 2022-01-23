@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include "opcodetypes.h"
+
 namespace dsp56k
 {
 	class IPeripherals;
@@ -80,7 +82,7 @@ namespace dsp56k
 
 		void exec();
 
-		TWord readRX();
+		TWord readRX(Instruction _inst);
 
 		void writeRX(const std::vector<TWord>& _data)		{ writeRX(&_data[0], _data.size()); }
 		void writeRX(const TWord* _data, size_t _count);

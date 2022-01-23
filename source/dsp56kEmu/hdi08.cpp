@@ -21,14 +21,31 @@ namespace dsp56k
 		}
 	}
 
-	TWord HDI08::readRX()
+	TWord HDI08::readRX(Instruction _inst)
 	{
-		if (m_data.empty()) {
+		if (m_data.empty())
+		{
 			LOG("Empty read");
 			return 0;
 		}
 
-		return m_data.pop_front() & 0xFFFFFF;
+		TWord res;
+
+		switch (_inst)
+		{
+		case Btst_pp:
+		case Btst_D:
+		case Btst_qq:
+		case Btst_ea:
+		case Btst_aa:
+			res = m_data.front();
+			break;
+		default:
+			res = m_data.pop_front();
+			break;
+		}
+
+		return res;
 	}
 
 	void HDI08::writeRX(const TWord* _data, const size_t _count)
