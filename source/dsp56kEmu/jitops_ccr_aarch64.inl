@@ -88,9 +88,7 @@ namespace dsp56k
 		if(isSticky)
 		{
 			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
-
-			m_asm.lsl(ra, ra, asmjit::Imm(_bit));
-			m_asm.orr(sr, sr, ra);
+			m_asm.orr(sr, sr, ra, asmjit::arm::lsl(_bit));
 		}
 		else
 			m_asm.bfi(m_dspRegs.getSR(JitDspRegs::ReadWrite), ra, asmjit::Imm(_bit), asmjit::Imm(1));

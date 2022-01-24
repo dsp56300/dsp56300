@@ -379,17 +379,20 @@ namespace dsp56k
 			signextend24to64(_s2.get());
 
 #ifdef HAVE_ARM64
-		m_asm.smull(_s1, r32(_s1), r32(_s2));
+		if (_negate)
+			m_asm.smnegl(_s1, r32(_s1), r32(_s2));
+		else
+			m_asm.smull(_s1, r32(_s1), r32(_s2));
 #else
 		m_asm.imul(_s1.get(), _s2.get());
+
+		if (_negate)
+			m_asm.neg(_s1);
+
 #endif
+
 		// fractional multiplication requires one post-shift to be correct
 		m_asm.shl(_s1, asmjit::Imm(1));
-
-		if(_negate)
-		{
-			m_asm.neg(_s1);
-		}
 
 		AluRef d(m_block, ab, _accumulate, true);
 

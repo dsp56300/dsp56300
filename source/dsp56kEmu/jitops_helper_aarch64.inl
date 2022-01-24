@@ -114,9 +114,8 @@ namespace dsp56k
 
 				m_asm.sub(mtMinusP, _m, p);
 				m_asm.sar(mtMinusP, asmjit::Imm(31));
-				m_asm.inc(modulo);
-				m_asm.and_(mtMinusP, modulo);
-				m_asm.dec(modulo);
+				m_asm.add(p, modulo, asmjit::Imm(1));	// p = m + 1
+				m_asm.and_(mtMinusP, p);
 				m_asm.sub(_r, mtMinusP);
 			}
 

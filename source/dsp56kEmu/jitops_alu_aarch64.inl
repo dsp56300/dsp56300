@@ -188,8 +188,7 @@ namespace dsp56k
 
 			{
 				const RegGP aluIfAndWithMaskIsZero(m_block);
-				m_asm.mov(aluIfAndWithMaskIsZero, d);
-				m_asm.and_(aluIfAndWithMaskIsZero, rounder.get());
+				m_asm.and_(aluIfAndWithMaskIsZero, d, rounder.get());
 
 				rounder.release();
 
@@ -350,61 +349,30 @@ namespace dsp56k
 			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~(CCR_L | CCR_V));
 		};
 
-		const auto finished = m_asm.newLabel();
-		const auto regular = m_asm.newLabel();
 		const RegGP s(m_block);
+
 		decode_JJ_read(s, jj);
-		/* TODO: broken
-		if (_iterationCount<24)
-		{
-			{
-				const RegGP t(m_block);
-				m_asm.mov(t, s.get());
-				m_asm.dec(t);
-				m_asm.and_(t, s.get());
-				m_asm.jnz(regular);
-			}
-			{
-				const ShiftReg t(m_block);
-				m_asm.bsr(t, s.get());
-				m_asm.add(t, asmjit::Imm(_iterationCount + 1));
-				m_asm.shr(d, t.get());
-				m_asm.and_(d, asmjit::Imm((1<<_iterationCount)-1));
-				m_asm.jmp(finished);
-			}
-		}
-		*/
-		m_asm.bind(regular);
+
 		RegGP addOrSub(m_block);
 		RegGP lc(m_block);
 		RegGP carry(m_block);
+		const RegGP sNeg(m_block);
 
 		const auto loopIteration = [&](bool last)
 		{
 			m_asm.orr(addOrSub, s.get(), alu);
 
-			m_asm.shl(alu, asmjit::Imm(1));
+			{
+				m_asm.bitTest(addOrSub, 55);
+				m_asm.cneg(sNeg, s, asmjit::arm::CondCode::kZero);
+			}
 
-			m_asm.add(alu, alu, carry.get());
+			m_asm.add(alu, carry.get(), alu, asmjit::arm::lsl(1));
 
 			const auto dLsWord = regReturnVal;
 			m_asm.and_(dLsWord, alu, asmjit::Imm(0xffffff));
-
-			const asmjit::Label sub = m_asm.newLabel();
-			const asmjit::Label end = m_asm.newLabel();
-
-			m_asm.bitTest(addOrSub, 55);
-
-			m_asm.cond_zero().b(sub);
-			m_asm.add(alu, s.get());
-			m_asm.jmp(end);
-
-			m_asm.bind(sub);
-			m_asm.sub(alu, s.get());
-
-			m_asm.bind(end);
-			m_asm.and_(alu, asmjit::Imm(0xffffffffff000000));
-			m_asm.orr(alu, alu, dLsWord);
+			m_asm.add(alu, sNeg.get());
+			m_asm.bfi(alu, dLsWord, asmjit::Imm(0), asmjit::Imm(24));
 
 			// C is set if bit 55 of the result is cleared
 			if (last)
@@ -440,7 +408,6 @@ namespace dsp56k
 		loopIteration(true);
 
 		m_dspRegs.mask56(alu);
-		m_asm.bind(finished);
 	}
 
 	inline void JitOps::op_Not(TWord op)
