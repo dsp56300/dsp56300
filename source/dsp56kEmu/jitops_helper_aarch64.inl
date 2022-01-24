@@ -57,7 +57,7 @@ namespace dsp56k
 
 	inline void JitOps::updateAddressRegisterConst(const JitReg32& _r, const int _n, const JitReg32& _m, uint32_t _rrr)
 	{
-		const auto linear = m_asm.newLabel();
+		const auto notLinear = m_asm.newLabel();
 		const auto modulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
@@ -65,7 +65,18 @@ namespace dsp56k
 
 		m_asm.mov(r32(regReturnVal), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.cmp(r32(_m), r32(regReturnVal));
-		m_asm.jz(linear);
+		m_asm.jnz(notLinear);
+
+		if (_n == 1)
+			m_asm.inc(_r);
+		else if (_n == -1)
+			m_asm.dec(_r);
+		else
+			m_asm.add(_r, _n);
+
+		m_asm.jmp(end);
+
+		m_asm.bind(notLinear);
 
 		m_asm.tst(_m, asmjit::Imm(0xffff));							// bit reverse
 		m_asm.cond_zero().b(end);
@@ -81,8 +92,7 @@ namespace dsp56k
 			const auto& p64 = shifter;
 			const auto p = r32(p64.get());
 
-			m_asm.mov(p, _r);
-			m_asm.and_(p, r32(moduloMask));
+			m_asm.and_(p, _r, r32(moduloMask));
 			const auto& modulo = _m;	// and modulo is m+1
 			if (_n == -1)
 			{
@@ -90,9 +100,8 @@ namespace dsp56k
 				m_asm.dec(p);
 
 				m_asm.sar(p, asmjit::Imm(31));
-				m_asm.inc(modulo);
-				m_asm.and_(p, modulo);
-				m_asm.dec(modulo);
+				m_asm.add(r32(regReturnVal), r32(modulo), asmjit::Imm(1));
+				m_asm.and_(p, r32(regReturnVal));
 				m_asm.add(_r, p);
 			}
 			else	// _n==1
@@ -103,8 +112,7 @@ namespace dsp56k
 				const auto& mtMinusP64 = regReturnVal;
 				const auto mtMinusP = r32(mtMinusP64);
 
-				m_asm.mov(mtMinusP, _m);
-				m_asm.sub(mtMinusP, p);
+				m_asm.sub(mtMinusP, _m, p);
 				m_asm.sar(mtMinusP, asmjit::Imm(31));
 				m_asm.inc(modulo);
 				m_asm.and_(mtMinusP, modulo);
@@ -113,17 +121,6 @@ namespace dsp56k
 			}
 
 		}
-		m_asm.jmp(end);
-
-		// linear:
-		m_asm.bind(linear);
-
-		if (_n == 1)
-			m_asm.inc(_r);
-		else if (_n == -1)
-			m_asm.dec(_r);
-		else
-			m_asm.add(_r, _n);
 
 		m_asm.bind(end);
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
