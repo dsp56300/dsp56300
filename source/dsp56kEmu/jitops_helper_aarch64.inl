@@ -129,6 +129,43 @@ namespace dsp56k
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
 	}
 
+
+	void JitOps::getXY0(const JitRegGP& _dst, const uint32_t _aluIndex) const
+	{
+		const auto& src = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _aluIndex), true, false);
+		m_asm.ubfx(r64(_dst), r64(src), asmjit::Imm(0), asmjit::Imm(24));
+	}
+
+	void JitOps::getXY1(const JitRegGP& _dst, const uint32_t _aluIndex) const
+	{
+		const auto& src = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _aluIndex), true, false);
+		m_asm.ubfx(r64(_dst), r64(src), asmjit::Imm(24), asmjit::Imm(24));
+	}
+
+	void JitOps::setXY0(const uint32_t _xy, const JitRegGP& _src)
+	{
+		const auto temp = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);
+		m_asm.bfi(r64(temp), r64(_src), asmjit::Imm(0), asmjit::Imm(24));
+	}
+
+	void JitOps::setXY1(const uint32_t _xy, const JitRegGP& _src)
+	{
+		const auto temp = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);
+		m_asm.bfi(r64(temp), r64(_src), asmjit::Imm(24), asmjit::Imm(24));
+	}
+
+	void JitOps::getALU0(const JitRegGP& _dst, uint32_t _aluIndex) const
+	{
+		AluRef src(m_block, _aluIndex, true, false);
+		m_asm.ubfx(r64(_dst), r64(src), asmjit::Imm(0), asmjit::Imm(24));
+	}
+
+	void JitOps::getALU1(const JitRegGP& _dst, uint32_t _aluIndex) const
+	{
+		AluRef src(m_block, _aluIndex, true, false);
+		m_asm.ubfx(r64(_dst), r64(src), asmjit::Imm(24), asmjit::Imm(24));
+	}
+
 	void JitOps::setALU0(const uint32_t _aluIndex, const JitRegGP& _src)
 	{
 		AluRef d(m_block, _aluIndex, true, true);
