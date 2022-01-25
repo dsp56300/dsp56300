@@ -62,6 +62,8 @@ namespace dsp56k
 		uint32_t opFlags = 0;
 		bool appendLoopCode = false;
 
+		bool isLoopStart = m_pcFirst == hiword(m_dsp.regs().ss[m_dsp.ssIndex()]).var;
+
 		while(shouldEmit)
 		{
 			const auto pc = m_pcFirst + m_pMemSize;

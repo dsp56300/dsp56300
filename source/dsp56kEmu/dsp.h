@@ -620,7 +620,9 @@ namespace dsp56k
 		// STACK
 		void	decSP			();
 		void	incSP			();
+	public:
 		TWord	ssIndex			() const							{ return reg.sp.var & 0xf; }
+	private:
 		void	ssIndex			(const TWord _index)				{ reg.sp.var = (reg.sp.var & ~0xf) | (_index & 0xf); }
 
 		TReg24	ssh()				{ TReg24 res = hiword(reg.ss[ssIndex()]); decSP(); return res; }
