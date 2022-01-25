@@ -5,6 +5,9 @@
 #include "jithelper.h"
 #include "jitops.h"
 
+#undef assert
+#define assert(S)	{ if(!(S)) { LOG("Unit Test failed: " << (#S)); throw std::string("JIT Unit Test failed: " #S); } }
+
 namespace dsp56k
 {
 	JitUnittests::JitUnittests()
