@@ -9,12 +9,11 @@ namespace dsp56k
 	class JitBlock;
 	class Jit;
 
-	typedef void (*TJitUpdateFunc)(Jit*, TWord, JitBlock*);
+	typedef void (*TJitFunc)(Jit*, TWord);
 
 	struct JitCacheEntry
 	{
-		TJitUpdateFunc func;
-		JitBlock* block;
+		JitBlock* block = nullptr;
 		std::map<TWord,JitBlock*> singleOpCache;
 	};
 }

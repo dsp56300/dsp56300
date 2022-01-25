@@ -17,29 +17,30 @@ namespace dsp56k
 {
 	constexpr bool g_traceOps = false;
 
-	void funcCreate(Jit* _jit, TWord _pc, JitBlock* _block)
+	void funcCreate(Jit* _jit, const TWord _pc)
 	{
-		_jit->create(_pc, _block, true);
+		_jit->create(_pc, true);
 	}
 
-	void funcRecreate(Jit* _jit, TWord _pc, JitBlock* _block)
+	void funcRecreate(Jit* _jit, const TWord _pc)
 	{
-		_jit->recreate(_pc, _block);
+		_jit->recreate(_pc);
 	}
 
-	void funcRunCheckPMemWrite(Jit* _jit, TWord _pc, JitBlock* _block)
+	void funcRunCheckPMemWrite(Jit* _jit, const TWord _pc)
 	{
-		_jit->runCheckPMemWrite(_pc, _block);
+		_jit->runCheckPMemWrite(_pc);
 	}
 
-	void funcRun(Jit* _jit, TWord _pc, JitBlock* _block)
+	void funcRun(Jit* _jit, TWord _pc)
 	{
-		_jit->run(_pc, _block);
+		_jit->run(_pc);
 	}
 
 	Jit::Jit(DSP& _dsp) : m_dsp(_dsp)
 	{
-		m_jitCache.resize(_dsp.memory().size(), JitCacheEntry{&funcCreate, nullptr});
+		m_jitCache.resize(_dsp.memory().size());
+		m_jitFuncs.resize(_dsp.memory().size(), &funcCreate);
 
 		m_rt = new JitRuntime();
 	}
@@ -63,25 +64,6 @@ namespace dsp56k
 		m_jitCache.clear();
 
 		delete m_rt;
-	}
-
-	void Jit::exec(const TWord pc)
-	{
-//		LOG("Exec @ " << HEX(pc));
-
-		// get JIT code
-		auto& cacheEntry = m_jitCache[pc];
-		exec(pc, cacheEntry);
-	}
-
-	void Jit::exec(const TWord pc, JitCacheEntry& e)
-	{
-		e.func(this, pc, e.block);
-	}
-
-	void Jit::notifyProgramMemWrite(TWord _offset)
-	{
-		destroy(_offset);
 	}
 
 	void Jit::emit(const TWord _pc)
@@ -118,7 +100,7 @@ namespace dsp56k
 
 		m_asm.finalize();
 
-		JitBlock::JitEntry func;
+		TJitFunc func;
 
 		const auto err = m_rt->add(&func, &code);
 
@@ -199,7 +181,7 @@ namespace dsp56k
 		for(auto i=first; i<last; ++i)
 		{
 			m_jitCache[i].block = nullptr;
-			m_jitCache[i].func = &funcCreate;
+			m_jitFuncs[i] = &funcCreate;
 		}
 
 		if(_block->getPMemSize() == 1)
@@ -218,14 +200,6 @@ namespace dsp56k
 		}
 
 		release(_block);
-	}
-
-	void Jit::destroy(TWord _pc)
-	{
-		const auto block = m_jitCache[_pc].block;
-		if(!block)
-			return;
-		destroy(block);
 	}
 
 	void Jit::release(const JitBlock* _block)
@@ -268,31 +242,32 @@ namespace dsp56k
 		return false;
 	}
 
-	void Jit::run(TWord _pc, JitBlock* _block)
+	void Jit::run(const TWord _pc)
 	{
-		_block->getFunc()(this, _pc, _block);
+		const JitBlock* block = m_jitCache[_pc].block;
+		block->getFunc()(this, _pc);
 
 		if(g_traceOps)
 		{
-			const TWord lastPC = _pc + _block->getPMemSize() - _block->getLastOpSize();
+			const TWord lastPC = _pc + block->getPMemSize() - block->getLastOpSize();
 			TWord op, opB;
 			m_dsp.mem.getOpcode(lastPC, op, opB);
-			m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
+			m_dsp.traceOp(lastPC, op, opB, block->getLastOpSize());
 
 			// make the diff tool happy, interpreter traces two ops. For the sake of simplicity, just trace it once more
-//			if (_block->getDisasm().find("rep ") == 0)
-//				m_dsp.traceOp(lastPC, op, opB, _block->getLastOpSize());
+//			if (block->getDisasm().find("rep ") == 0)
+//				m_dsp.traceOp(lastPC, op, opB, block->getLastOpSize());
 		}
 	}
 
-	void Jit::runCheckPMemWrite(TWord _pc, JitBlock* _block)
+	void Jit::runCheckPMemWrite(TWord _pc)
 	{
 		m_runtimeData.m_pMemWriteAddress = g_pcInvalid;
-		run(_pc, _block);
-		checkPMemWrite(_pc, _block);
+		run(_pc);
+		checkPMemWrite();
 	}
 
-	void Jit::create(const TWord _pc, JitBlock*, bool _execute)
+	void Jit::create(const TWord _pc, bool _execute)
 	{
 //		LOG("Create @ " << HEX(_pc));// << std::endl << cacheEntry.block->getDisasm());
 
@@ -313,23 +288,23 @@ namespace dsp56k
 				assert(cacheEntry.block == nullptr);
 				cacheEntry.block = it->second;
 				cacheEntry.singleOpCache.erase(it);
-				updateRunFunc(cacheEntry);
+				m_jitFuncs[_pc] = updateRunFunc(cacheEntry);
 				if(_execute)
-					exec(_pc, cacheEntry);
+					exec(_pc, m_jitFuncs[_pc]);
 				return;
 			}
 		}
 		emit(_pc);
 		if(_execute)
-			exec(_pc, cacheEntry);
+			exec(_pc, m_jitFuncs[_pc]);
 	}
 
-	void Jit::recreate(const TWord _pc, JitBlock* _block)
+	void Jit::recreate(const TWord _pc)
 	{
 		// there is code, but the JIT block does not start at the PC position that we want to run. We need to throw the block away and regenerate
 //		LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
-		destroy(_block);
-		create(_pc, _block, true);
+		destroy(_pc);
+		create(_pc, true);
 	}
 
 	JitBlock* Jit::getChildBlock(JitBlock* _parent, TWord _pc, bool _allowCreate/* = true*/)
@@ -345,7 +320,7 @@ namespace dsp56k
 		if (e.block && e.block->getPCFirst() == _pc)
 		{
 			// block is still being generated (circular reference)
-			if (e.func == nullptr)
+			if (m_jitFuncs[_pc] == nullptr)
 				return nullptr;
 
 			if (!canBeDefaultExecuted(_pc))
@@ -366,7 +341,7 @@ namespace dsp56k
 		if (e.block)
 			destroy(e.block);
 
-		create(_pc, nullptr, false);
+		create(_pc, false);
 
 		if (!canBeDefaultExecuted(_pc))
 			return nullptr;
@@ -378,7 +353,7 @@ namespace dsp56k
 		const auto& e = m_jitCache[_pc];
 		if (!e.block)
 			return false;
-		return e.func == e.block->getFunc();
+		return m_jitFuncs[_pc] == e.block->getFunc();
 	}
 
 	void Jit::occupyArea(JitBlock* _block)
@@ -391,33 +366,31 @@ namespace dsp56k
 			assert(m_jitCache[i].block == nullptr || m_jitCache[i].block == _block);
 			m_jitCache[i].block = _block;
 			if (i == first)
-				updateRunFunc(m_jitCache[i]);
+				m_jitFuncs[i] = updateRunFunc(m_jitCache[i]);
 			else
-				m_jitCache[i].func = &funcRecreate;
+				m_jitFuncs[i] = &funcRecreate;
 		}
 	}
 
-	void Jit::updateRunFunc(JitCacheEntry& e)
+	TJitFunc Jit::updateRunFunc(const JitCacheEntry& e)
 	{
 		const auto f = e.block->getFlags();
 
 		if(f & JitBlock::WritePMem)
 		{
-			e.func = &funcRunCheckPMemWrite;
+			return &funcRunCheckPMemWrite;
 		}
-		else
-		{
-			if (g_traceOps)
-				e.func = &funcRun;
-			else
-				e.func = e.block->getFunc();
-		}
+
+		if (g_traceOps)
+			return &funcRun;
+
+		return e.block->getFunc();
 	}
 
-	void Jit::checkPMemWrite(TWord _pc, JitBlock* _block)
+	void Jit::checkPMemWrite()
 	{
 		// if JIT code has written to P memory, destroy a JIT block if present at the write location
-		const TWord pMemWriteAddr = _block->pMemWriteAddress();
+		const TWord pMemWriteAddr = m_runtimeData.m_pMemWriteAddress;
 
 		if (pMemWriteAddr == g_pcInvalid)
 			return;
@@ -425,7 +398,7 @@ namespace dsp56k
 		if (m_jitCache[pMemWriteAddr].block)
 			m_volatileP.insert(pMemWriteAddr);
 
-		notifyProgramMemWrite(_block->pMemWriteAddress());
-		m_dsp.notifyProgramMemWrite(_block->pMemWriteAddress());
+		notifyProgramMemWrite(pMemWriteAddr);
+		m_dsp.notifyProgramMemWrite(pMemWriteAddr);
 	}
 }

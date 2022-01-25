@@ -8,6 +8,8 @@
 
 #include "jitruntimedata.h"
 
+#include "logging.h"
+
 namespace asmjit
 {
 	inline namespace _abi_1_8
@@ -29,14 +31,23 @@ namespace dsp56k
 
 		DSP& dsp() { return m_dsp; }
 
-		void exec(TWord pc);
+		void exec(const TWord _pc)
+		{
+//			LOG("Exec @ " << HEX(pc));
 
-		void notifyProgramMemWrite(TWord _offset);
+			// get JIT code
+			exec(_pc, m_jitFuncs[_pc]);
+		}
 
-		void run(TWord _pc, JitBlock* _block);
-		void runCheckPMemWrite(TWord _pc, JitBlock* _block);
-		void create(TWord _pc, JitBlock* _block, bool _execute);
-		void recreate(TWord _pc, JitBlock* _block);
+		void notifyProgramMemWrite(const TWord _offset)
+		{
+			destroy(_offset);
+		}
+
+		void run(TWord _pc);
+		void runCheckPMemWrite(TWord _pc);
+		void create(TWord _pc, bool _execute);
+		void recreate(TWord _pc);
 
 		JitBlock* getChildBlock(JitBlock* _parent, TWord _pc, bool _allowCreate = true);
 		bool canBeDefaultExecuted(TWord _pc) const;
@@ -47,16 +58,24 @@ namespace dsp56k
 		void emit(TWord _pc);
 		void destroyParents(JitBlock* _block);
 		void destroy(JitBlock* _block);
-		void destroy(TWord _pc);
+		void destroy(TWord _pc)
+		{
+			const auto block = m_jitCache[_pc].block;
+			if (block)
+				destroy(block);
+		}
 		void release(const JitBlock* _block);
 		bool isBeingGeneratedRecursive(const JitBlock* _block) const;
 		bool isBeingGenerated(const JitBlock* _block) const;
-		
-		void exec(TWord pc, JitCacheEntry& e);
 
-		static void updateRunFunc(JitCacheEntry& e);
+		void exec(TWord _pc, const TJitFunc& _f)
+		{
+			_f(this, _pc);
+		}
 
-		void checkPMemWrite(TWord _pc, JitBlock* _block);
+		static TJitFunc updateRunFunc(const JitCacheEntry& e);
+
+		void checkPMemWrite();
 
 		JitRuntimeData m_runtimeData;
 
@@ -64,6 +83,7 @@ namespace dsp56k
 
 		asmjit::_abi_1_8::JitRuntime* m_rt = nullptr;
 		std::vector<JitCacheEntry> m_jitCache;
+		std::vector<TJitFunc> m_jitFuncs;
 		std::set<TWord> m_volatileP;
 		std::map<TWord, JitBlock*> m_generatingBlocks;
 		size_t m_codeSize = 0;

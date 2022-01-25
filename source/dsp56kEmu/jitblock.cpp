@@ -359,7 +359,7 @@ namespace dsp56k
 #endif
 	}
 
-	void JitBlock::addParent(TWord _pc)
+	void JitBlock::addParent(const TWord _pc)
 	{
 		m_parents.insert(_pc);
 	}

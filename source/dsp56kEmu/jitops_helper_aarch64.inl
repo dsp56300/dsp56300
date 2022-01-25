@@ -118,7 +118,6 @@ namespace dsp56k
 				m_asm.and_(mtMinusP, p);
 				m_asm.sub(_r, mtMinusP);
 			}
-
 		}
 
 		m_asm.bind(end);

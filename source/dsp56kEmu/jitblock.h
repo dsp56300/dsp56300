@@ -31,8 +31,6 @@ namespace dsp56k
 			InstructionLimit	= 0x0008,
 		};
 
-		typedef void (*JitEntry)(Jit*, TWord, JitBlock*);
-
 		JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData);
 		~JitBlock();
 
@@ -52,8 +50,8 @@ namespace dsp56k
 		TWord getPCFirst() const { return m_pcFirst; }
 		TWord getPMemSize() const { return m_pMemSize; }
 
-		void setFunc(const JitEntry _func, size_t _codeSize) { m_func = _func; m_codeSize = _codeSize; }
-		const JitEntry& getFunc() const { return m_func; }
+		void setFunc(const TJitFunc _func, size_t _codeSize) { m_func = _func; m_codeSize = _codeSize; }
+		const TJitFunc& getFunc() const { return m_func; }
 
 		TWord& getEncodedInstructionCount() { return m_encodedInstructionCount; }
 
@@ -90,7 +88,7 @@ namespace dsp56k
 
 		friend class JitBlockGenerating;
 
-		JitEntry m_func = nullptr;
+		TJitFunc m_func = nullptr;
 		JitRuntimeData& m_runtimeData;
 
 		JitEmitter& m_asm;
