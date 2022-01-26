@@ -40,6 +40,9 @@ namespace dsp56k
 		m_dspAsm.clear();
 		bool shouldEmit = true;
 
+		auto loopBegin = m_asm.newNamedLabel("loopBegin");
+		m_asm.bind(loopBegin);
+
 		asmjit::BaseNode* cursorInsertPc = nullptr;
 		asmjit::BaseNode* cursorEndInsertPc = nullptr;
 		asmjit::BaseNode* cursorInsertEncodedInstructionCount = nullptr;
@@ -62,7 +65,8 @@ namespace dsp56k
 		uint32_t opFlags = 0;
 		bool appendLoopCode = false;
 
-		bool isLoopStart = m_pcFirst == hiword(m_dsp.regs().ss[m_dsp.ssIndex()]).var;
+		const auto loopBeginAddr = hiword(m_dsp.regs().ss[m_dsp.ssIndex()]).var;
+		bool isLoopStart = m_pcFirst == loopBeginAddr;
 
 		while(shouldEmit)
 		{
@@ -262,8 +266,6 @@ namespace dsp56k
 			op.updateDirtyCCR();
 		}
 
-		m_dspRegPool.releaseAll();
-
 		if (opFlags & JitOps::WritePMem)
 			m_flags |= WritePMem;
 		if (appendLoopCode)
@@ -272,7 +274,10 @@ namespace dsp56k
 		const auto canBranch = (opFlags & WritePMem) == 0 && _jit && m_child != g_invalidAddress && _jit->canBeDefaultExecuted(m_child);
 		if(canBranch && m_childIsDynamic)
 			m_dspRegPool.movDspReg(regReturnVal, m_dsp.regs().pc);
+		else if(appendLoopCode && isLoopStart)
+			m_dspRegPool.movDspReg(regReturnVal, m_dsp.regs().pc);
 
+		m_dspRegPool.releaseAll();
 		m_stack.popAll();
 
 		if(empty())
@@ -326,6 +331,16 @@ namespace dsp56k
 				child->addParent(m_pcFirst);
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
 			}
+		}
+		else if(appendLoopCode && isLoopStart)
+		{
+#ifdef HAVE_ARM64
+			m_asm.mov(r32(g_funcArgGPs[1]), asmjit::Imm(loopBeginAddr));
+			m_asm.cmp(r32(g_funcArgGPs[1]), r32(regReturnVal));
+#else
+			m_asm.cmp(regReturnVal, asmjit::Imm(loopBeginAddr));
+#endif
+			m_asm.jz(loopBegin);
 		}
 
 		return true;
