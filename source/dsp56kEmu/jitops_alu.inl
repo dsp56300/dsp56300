@@ -125,9 +125,11 @@ namespace dsp56k
 	{
 		const auto ab = getFieldValue<Add_xxxx,Field_d>(op);
 
+		const auto opB = signed24To56(getOpWordB());
+
 		RegGP r(m_block);
-		getOpWordB(r.get());
-		signed24To56(r);
+		m_asm.mov(r64(r), asmjit::Imm(opB));
+
 		alu_add(ab, r);
 	}
 
@@ -971,8 +973,8 @@ namespace dsp56k
 		const auto ab = getFieldValue<Sub_xxxx,Field_d>(op);
 
 		RegGP r(m_block);
-		getOpWordB(r.get());
-		signed24To56(r);
+		const auto opB = signed24To56(getOpWordB());
+		m_asm.mov(r64(r), opB);
 		alu_sub( ab, r );		// TODO use immediate data
 	}
 

@@ -289,6 +289,10 @@ namespace dsp56k
 		static void updateAddressRegisterBitreverse(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m);
 
 		void signed24To56(const JitReg64& _r) const;
+		constexpr static uint64_t signed24To56(const TWord _src)
+		{
+			return static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 8ull) >> 8ull;
+		}
 
 		void callDSPFunc(void(* _func)(DSP*, TWord)) const;
 		void callDSPFunc(void(* _func)(DSP*, TWord), TWord _arg) const;
