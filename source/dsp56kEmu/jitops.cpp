@@ -745,7 +745,7 @@ namespace dsp56k
 	inline void JitOps::jmp(TWord _absAddr)
 	{
 		const RegGP r(m_block);
-		m_asm.mov(r, asmjit::Imm(_absAddr));
+		m_asm.mov(r32(r), asmjit::Imm(_absAddr));
 		jmp(r32(r.get()));
 	}
 
