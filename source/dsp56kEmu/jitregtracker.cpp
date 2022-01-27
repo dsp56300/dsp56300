@@ -127,7 +127,7 @@ namespace dsp56k
 	{
 	}
 
-	PushGP::PushGP(JitBlock& _block, const JitReg64& _reg, bool _onlyIfUsedInPool/* = true*/) : m_block(_block), m_reg(_reg), m_pushed(!_onlyIfUsedInPool || _block.dspRegPool().isInUse(_reg))
+	PushGP::PushGP(JitBlock& _block, const JitReg64& _reg) : m_block(_block), m_reg(_reg), m_pushed(_block.dspRegPool().isInUse(_reg) || _reg == regDspPtr)
 	{
 		if(m_pushed)
 			m_block.stack().push(_reg);
@@ -227,7 +227,7 @@ namespace dsp56k
 	JitRegpool::JitRegpool(std::initializer_list<JitReg> _availableRegs)
 	{
 		for (const auto& r : _availableRegs)
-			m_availableRegs.push_back(r);
+			m_availableRegs.push_front(r);
 	}
 
 	void JitRegpool::put(const JitReg& _reg)

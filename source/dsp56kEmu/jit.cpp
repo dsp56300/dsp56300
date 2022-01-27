@@ -260,7 +260,7 @@ namespace dsp56k
 		}
 	}
 
-	void Jit::runCheckPMemWrite(TWord _pc)
+	void Jit::runCheckPMemWrite(const TWord _pc)
 	{
 		m_runtimeData.m_pMemWriteAddress = g_pcInvalid;
 		run(_pc);

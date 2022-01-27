@@ -183,7 +183,7 @@ namespace dsp56k
 	class PushGP
 	{
 	public:
-		PushGP(JitBlock& _block, const JitReg64& _reg, bool _onlyIfUsedInPool = false);
+		PushGP(JitBlock& _block, const JitReg64& _reg);
 		~PushGP();
 
 		const JitReg64& get() const { return m_reg; }
@@ -198,14 +198,14 @@ namespace dsp56k
 	class FuncArg : public PushGP
 	{
 	public:
-		FuncArg(JitBlock& _block, const uint32_t& _argIndex) : PushGP(_block, g_funcArgGPs[_argIndex], true) {}
+		FuncArg(JitBlock& _block, const uint32_t& _argIndex) : PushGP(_block, g_funcArgGPs[_argIndex]) {}
 	};
 
 #ifdef HAVE_X86_64
 	class ShiftReg : public PushGP
 	{
 	public:
-		ShiftReg(JitBlock& _block) : PushGP(_block, asmjit::x86::rcx, true) {}
+		ShiftReg(JitBlock& _block) : PushGP(_block, asmjit::x86::rcx) {}
 	};
 #else
 	using ShiftReg = RegGP;
