@@ -257,6 +257,8 @@ namespace dsp56k
 		const auto ab = getFieldValue<Div, Field_d>(op);
 		const auto jj = getFieldValue<Div, Field_JJ>(op);
 
+		updateDirtyCCR(CCR_C);
+
 		AluRef d(m_block, ab);
 
 		if (m_repMode == RepNone || m_repMode == RepLast)
@@ -326,6 +328,8 @@ namespace dsp56k
 
 		const auto ab = getFieldValue<Div, Field_d>(_op);
 		const auto jj = getFieldValue<Div, Field_JJ>(_op);
+
+		updateDirtyCCR(CCR_C);
 
 		AluRef d(m_block, ab);
 		const auto alu = d.get();
