@@ -301,19 +301,33 @@ namespace dsp56k
 		void setDspProcessingMode(uint32_t _mode);
 		
 		// Check Condition
-		template <Instruction Inst> void checkCondition(const TWord _op)
+		void checkCondition(const TWord _cc, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc, bool _updateDirtyCCR)
+		{
+			If(m_block, [&](const asmjit::Label& _toFalse)
+			{
+				const RegGP r(m_block);
+#ifdef HAVE_ARM64
+				m_asm.mov(r, asmjit::a64::xzr);
+				decode_cccc(r, _cc);
+				m_asm.cmp(r.get(), asmjit::Imm(0));
+#else
+				decode_cccc(r, _cc);
+				m_asm.cmp(r.get().r8(), asmjit::Imm(0));
+#endif
+				m_block.dspRegPool().releaseAll();
+				m_asm.jz(_toFalse);
+			}, _true, _false, _hasFalseFunc, _updateDirtyCCR);
+		}
+		template <Instruction Inst> void checkCondition(const TWord _op, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc, bool _updateDirtyCCR)
 		{
 			const TWord cccc = getFieldValue<Inst,Field_CCCC>(_op);
 
-			const RegGP r(m_block);
-#ifdef HAVE_ARM64
-			m_asm.mov(r, asmjit::a64::xzr);
-			decode_cccc(r, cccc);
-			m_asm.cmp(r.get(), asmjit::Imm(0));
-#else
-			decode_cccc(r, cccc);
-			m_asm.cmp(r.get().r8(), asmjit::Imm(0));
-#endif
+			checkCondition(cccc, _true, _false, _hasFalseFunc, _updateDirtyCCR);
+		}
+
+		template <Instruction Inst> void checkCondition(const TWord _op, const std::function<void()>& _true, bool _updateDirtyCCR = true)
+		{
+			checkCondition<Inst>(_op, _true, [] {}, false, _updateDirtyCCR);
 		}
 
 		// extension word access

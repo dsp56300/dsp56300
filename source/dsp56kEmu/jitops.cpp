@@ -509,11 +509,7 @@ namespace dsp56k
 
 	inline void JitOps::op_Debugcc(TWord op)
 	{
-		If(m_block, [&](auto _toFalse)
-		{
-			checkCondition<Debugcc>(op);
-			m_asm.jz(_toFalse);
-		}, [&]()
+		checkCondition<Debugcc>(op, [&]()
 		{
 			op_Debug(op);
 		});

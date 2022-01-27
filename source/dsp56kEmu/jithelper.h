@@ -46,11 +46,9 @@ namespace dsp56k
 	class If
 	{
 	public:
-		If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false) : If(_block, _jumpIfFalse, _true, _false, true) {}
-		If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true) : If(_block, _jumpIfFalse, _true, [](){}, false) {}
-	private:
-		If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc);
-		void updateDirtyCCR(JitBlock& _block);
+		If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false, bool _updateDirtyCCR = true) : If(_block, _jumpIfFalse, _true, _false, true, _updateDirtyCCR) {}
+		If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, bool _updateDirtyCCR = true) : If(_block, _jumpIfFalse, _true, [](){}, false, _updateDirtyCCR) {}
+		If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc, bool _updateDirtyCCR);
 	};
 
 	static JitReg32 r32(const JitRegGP& _reg)

@@ -39,17 +39,24 @@ namespace dsp56k
 		m_asm.bind(m_label);
 	}
 
-	If::If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc)
+	If::If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc, bool _updateDirtyCCR)
 	{
 		auto& a = _block.asm_();
 
-		auto execIf = [&](bool _pushNonVolatiles, bool _releaseRegPool, bool _updateDirtyCCR)
+		auto updateDirtyCCR = [&]()
+		{
+			if (!_updateDirtyCCR)
+				return;
+			JitOps ops(_block);
+			ops.updateDirtyCCR();
+		};
+
+		auto execIf = [&](bool _pushNonVolatiles, bool _releaseRegPool)
 		{
 			const auto isFalse = a.newLabel();
 			const auto end = a.newLabel();
 
-			if(_updateDirtyCCR)
-				updateDirtyCCR(_block);
+			updateDirtyCCR();
 
 			if(_releaseRegPool)
 				_block.dspRegPool().releaseAll();
@@ -62,13 +69,14 @@ namespace dsp56k
 
 			_jumpIfFalse(isFalse);
 
-			_true();
+			{
+				_true();
 
-			if(_updateDirtyCCR)
-				updateDirtyCCR(_block);
+				updateDirtyCCR();
 
-			if(_releaseRegPool)
-				_block.dspRegPool().releaseAll();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
+				if(_releaseRegPool)
+					_block.dspRegPool().releaseAll();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
+			}
 
 			if (_hasFalseFunc)
 				a.jmp(end);
@@ -79,8 +87,8 @@ namespace dsp56k
 			{
 				_false();
 
-				if(_updateDirtyCCR)
-					updateDirtyCCR(_block);
+				updateDirtyCCR();
+
 				if(_releaseRegPool)
 					_block.dspRegPool().releaseAll();
 			}
@@ -92,15 +100,9 @@ namespace dsp56k
 
 		// we move all register pushed that happened inside the branches to the outside to make sure they are always executed
 
-		auto data = execIf(false, true, true);
+		const auto data = execIf(false, true);
 		const auto newPushedRegCount = _block.stack().pushedRegCount();
 		if (newPushedRegCount > data.second)
 			_block.stack().movePushesTo(data.first, data.second);
-	}
-
-	void If::updateDirtyCCR(JitBlock& _block)
-	{
-		JitOps ops(_block);
-		ops.updateDirtyCCR();
 	}
 }

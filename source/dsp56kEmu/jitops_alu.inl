@@ -993,16 +993,12 @@ namespace dsp56k
 		const auto JJJ = getFieldValue<Tcc_S1D1,Field_JJJ>(op);
 		const bool ab = getFieldValue<Tcc_S1D1,Field_d>(op);
 
-		If(m_block, [&](auto _toFalse)
-		{
-			checkCondition<Tcc_S1D1>(op);
-			m_asm.jz(_toFalse);
-		}, [&]()
+		checkCondition<Tcc_S1D1>(op, [&]()
 		{
 			const RegGP r(m_block);
 			decode_JJJ_read_56(r, JJJ, !ab);
 			m_dspRegs.setALU(ab, r);
-		});
+		}, false);
 	}
 
 	inline void JitOps::op_Tcc_S1D1S2D2(TWord op)
@@ -1012,11 +1008,7 @@ namespace dsp56k
 		const auto ttt		= getFieldValue<Tcc_S1D1S2D2,Field_ttt>(op);
 		const auto ab		= getFieldValue<Tcc_S1D1S2D2,Field_d>(op);
 
-		If(m_block, [&](auto _toFalse)
-		{
-			checkCondition<Tcc_S1D1S2D2>(op);
-			m_asm.jz(_toFalse);
-		}, [&]()
+		checkCondition<Tcc_S1D1S2D2>(op, [&]()
 		{
 			{
 				const RegGP r(m_block);
@@ -1029,7 +1021,7 @@ namespace dsp56k
 				AguRegR r(m_block, ttt, true);
 				m_dspRegs.setR(TTT, r);
 			}
-		});
+		}, false);
 	}
 
 	inline void JitOps::op_Tcc_S2D2(TWord op)
@@ -1040,15 +1032,11 @@ namespace dsp56k
 		if(TTT == ttt)
 			return;
 
-		If(m_block, [&](auto _toFalse)
-		{
-			checkCondition<Tcc_S2D2>(op);
-			m_asm.jz(_toFalse);
-		}, [&]()
+		checkCondition<Tcc_S2D2>(op, [&]()
 		{
 			AguRegR r(m_block, ttt, true);
 			m_dspRegs.setR(TTT, r);
-		});
+		}, false);
 	}
 
 	inline void JitOps::op_Tfr(TWord op)

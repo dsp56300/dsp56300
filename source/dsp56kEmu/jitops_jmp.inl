@@ -77,11 +77,7 @@ namespace dsp56k
 
 	template<Instruction Inst, BraMode Bmode, typename TOff> void JitOps::braIfCC(const TWord op, const TOff& offset)
 	{
-		If(m_block, [&](auto _toFalse)
-		{
-			checkCondition<Inst>(op);
-			m_asm.jz(_toFalse);
-		}, [&]()
+		checkCondition<Inst>(op, [&]()
 		{
 			braOrBsr<Bmode>(offset);
 		});
@@ -186,11 +182,7 @@ namespace dsp56k
 	
 	template<Instruction Inst, JumpMode Bmode, typename TAbsAddr> void JitOps::jumpIfCC(const TWord op, const TAbsAddr& offset)
 	{
-		If(m_block, [&](auto _toFalse)
-		{
-			checkCondition<Inst>(op);
-			m_asm.jz(_toFalse);
-		}, [&]()
+		checkCondition<Inst>(op, [&]()
 		{
 			jumpOrJSR<Bmode>(offset);
 		});
