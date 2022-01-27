@@ -475,11 +475,18 @@ namespace dsp56k
 		// decrement SP twice, restoring old loop settings
 		decSP();
 
-		getSSL(r32(r.get()));
-		m_dspRegs.setLC(r32(r.get()));
+		m_dspRegs.getSS(r64(r));
 
-		getSSH(r32(r.get()));
-		m_dspRegs.setLA(r32(r.get()));
+		const auto lc = m_dspRegs.getLC(JitDspRegs::Write);
+		m_asm.mov(r64(lc), r64(r));
+		m_asm.and_(r32(lc), asmjit::Imm(0xffffff));
+
+		const auto la = m_dspRegs.getLA(JitDspRegs::Write);
+		m_asm.mov(r64(la), r64(r));
+		m_asm.shr(r64(la), asmjit::Imm(24));
+		m_asm.and_(r32(la), asmjit::Imm(0xffffff));
+
+		decSP();
 
 		m_resultFlags |= WriteToLC | WriteToLA;
 
