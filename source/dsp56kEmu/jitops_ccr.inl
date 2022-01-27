@@ -60,7 +60,12 @@ namespace dsp56k
 	{
 		m_ccr_update_clear = false;
 
+#ifdef HAVE_ARM64
+		m_asm.mov(r32(regReturnVal), asmjit::Imm(~_dirtyBits));
+		m_asm.and_(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), r32(regReturnVal));
+#else
 		m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~_dirtyBits));
+#endif
 
 		if(_dirtyBits & CCR_V)
 		{
