@@ -200,7 +200,7 @@ namespace dsp56k
 		else
 			m_asm.mov(pc, asmjit::Imm(m_pcCurrentOp + m_opSize));
 
-		setSSHSSL(r32(pc.get()), r32(m_dspRegs.getSR(JitDspRegs::Read)));
+		setSSHSSL(r32(pc.get()), r32(getSR(JitDspRegs::Read)));
 	}
 	void JitOps::popPCSR()
 	{
