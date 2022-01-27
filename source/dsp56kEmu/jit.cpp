@@ -223,7 +223,7 @@ namespace dsp56k
 		for (const auto parent : _block->getParents())
 		{
 			const auto& e = m_jitCache[parent];
-			if (isBeingGenerated(e.block))
+			if (isBeingGeneratedRecursive(e.block))
 				return true;
 		}
 		return false;
