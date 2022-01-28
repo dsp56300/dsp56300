@@ -279,8 +279,11 @@ namespace dsp56k
 		_dst.release();
 		updateDirtyCCR();
 		_dst.acquire();
-		m_asm.mov(_dst, m_dspRegs.getSR(JitDspRegs::Read));
-		m_asm.and_(_dst, asmjit::Imm(0xff));
+#ifdef HAVE_ARM64
+		m_asm.ubfx(r32(_dst), r32(m_dspRegs.getSR(JitDspRegs::Read)), asmjit::Imm(0), asmjit::Imm(8));
+#else
+		m_asm.movzx(r64(_dst), m_dspRegs.getSR(JitDspRegs::Read).r8());
+#endif
 	}
 
 	void JitOps::getCOM(const JitReg64& _dst) const
