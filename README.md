@@ -8,6 +8,12 @@ The emulator should compile just fine on any platform that supports C++17, no co
 
 The build system used is [cmake](https://cmake.org/).
 
+### License
+
+The Open-Source version of this emulator is licensed as GPL v3, i.e. any derivative work must be open source, too.
+
+If you want to use this emulator for commercial projects, plese get in touch. A closed source derivative work exists that does static recompilation of existing DSP 56300 code and is available for purchase.
+
 ### Development
 
 Please not that this project is a generic DSP emulator and outputs nothing but a static library after building. To use it, you need to create a project on your own, which can be a command line app, a VST plugin or whatever and instantiate the DSP class and feed data into it.
@@ -53,13 +59,9 @@ The [SoundArt Chameleon](https://www.chameleon.synth.net/english/index.shtml) wa
 The Chameleon Emulator wraps the SDK, compiles to VST2 and runs the DSP code in this emulator instead of the real device. All knobs of the unit are exposed as VST parameters. [Visit the Chameleon Emulator project](https://github.com/Lyve1981/chameleonEmulator/) if you want to know more.
 It can currently run the dspthru example in polling mode and in interrupt mode.
 
-### Join us on Discord
+### Emulation of Access Virus B & C
 
-A core team of several people now work together to make the emulator do something more *"useful"* 😊
-Contributions are welcome! If you want to help or just want to follow the state of the project, feel free to join us on Discord: https://discord.gg/WJ9cxySnsM
+One derivative work emulates the Access Virus B & C synthesizers, this emulator project is used to execute the DSP code from the original synthesizer ROMs.
 
-### Visit our Homepage
-
-🎧We have some audio & video examples ready!🎵
-Visit our homepage:
-[DSP 56300 Emulation Blog](https://dsp56300.wordpress.com/)
+If you want to follow the state of the project, join on Discord: https://discord.gg/WJ9cxySnsM
+Or visit the homepage with several audio & video examples, VST and AU plugins and more: [DSP 56300 Emulation Blog](https://dsp56300.wordpress.com/)
