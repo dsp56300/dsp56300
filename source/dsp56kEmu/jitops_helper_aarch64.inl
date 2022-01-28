@@ -26,7 +26,7 @@ namespace dsp56k
 		m_asm.cond_ge().b(multipleWrapModulo);
 
 		const auto nAbs = r32(regReturnVal);					// compare abs(n) with m
-		m_asm.cmp(r32(_n), asmjit::Imm(0));
+		m_asm.test(r32(_n));
 		m_asm.cneg(nAbs, r32(_n), asmjit::arm::CondCode::kLT);
 
 		m_asm.cmp(nAbs, _m);									// modulo or linear

@@ -175,7 +175,7 @@ namespace dsp56k
 
 				// Don't be distracted by the names, we abuse alu & mask here to store comparison results
 				m_asm.cmp(alu, mask.get());			m_asm.cset(mask, asmjit::arm::CondCode::kNotZero);
-				m_asm.cmp(alu, asmjit::Imm(0));		m_asm.cset(alu, asmjit::arm::CondCode::kNotZero);
+				m_asm.test(alu);					m_asm.cset(alu, asmjit::arm::CondCode::kNotZero);
 
 				m_asm.and_(mask.get(), alu.get());
 			}

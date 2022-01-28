@@ -74,7 +74,7 @@ namespace dsp56k
 		}
 		if(_dirtyBits & CCR_Z)
 		{
-			m_asm.cmp(_alu, asmjit::Imm(0));
+			m_asm.test(_alu);
 			ccr_update_ifZero(CCRB_Z);
 		}
 		if(_dirtyBits & CCR_N)

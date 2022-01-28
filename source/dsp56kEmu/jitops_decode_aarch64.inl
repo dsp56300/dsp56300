@@ -99,7 +99,7 @@ namespace dsp56k
 			m_asm.and_(_dst, r.get());
 			ccr_getBitValue(r, CCRB_Z);
 			m_asm.add(_dst, r.get());
-			m_asm.cmp(_dst, _dst, asmjit::Imm(0));
+			m_asm.test(_dst);
 			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
 		}
 		break;

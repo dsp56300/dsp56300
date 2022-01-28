@@ -223,4 +223,13 @@ namespace dsp56k
 		JitBuilder::xor_(_gp, _gp);
 #endif
 	}
+
+	void JitEmitter::test(const JitRegGP& _gp)
+	{
+#ifdef HAVE_ARM64
+		JitBuilder::tst(_gp, _gp);
+#else
+		JitBuilder::test(_gp, _gp);
+#endif
+	}
 }

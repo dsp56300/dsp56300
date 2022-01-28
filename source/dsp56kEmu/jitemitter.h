@@ -83,5 +83,7 @@ namespace dsp56k
 		void move(const JitRegGP& _dst, const JitMemPtr& _src);
 
 		void clr(const JitRegGP& _gp);
+
+		void test(const JitRegGP& _gp);
 	};
 }

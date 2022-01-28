@@ -87,7 +87,7 @@ namespace dsp56k
 		m_asm.mov(mod, _src);
 
 		m_asm.and_(mod, asmjit::Imm(0xffff));
-		m_asm.cmp(mod, asmjit::Imm(0));
+		m_asm.test(mod);
 		m_asm.jz(isModuloZero);
 
 #ifdef HAVE_ARM64
@@ -102,7 +102,7 @@ namespace dsp56k
 
 		// zero modulo
 		m_asm.bind(isModuloZero);
-		m_asm.mov(mod, asmjit::Imm(0));
+		m_asm.clr(mod);
 		m_asm.jmp(end);
 
 		// modulo
@@ -125,7 +125,7 @@ namespace dsp56k
 
 		// linear
 		m_asm.bind(isLinear);
-		m_asm.mov(mod, asmjit::Imm(0));
+		m_asm.clr(mod);
 		m_asm.mov(mask, asmjit::Imm(0xffffff));
 
 		m_asm.bind(end);

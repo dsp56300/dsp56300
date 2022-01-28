@@ -370,7 +370,7 @@ namespace dsp56k
 			RegGP r(_block);
 
 			_block.asm_().mov(r, m_checks[i]);
-			_block.asm_().mov(_block.regs().getSR(JitDspRegs::Write), asmjit::Imm(0));
+			_block.asm_().clr(_block.regs().getSR(JitDspRegs::Write));
 			_ops.ccr_s_update(r);
 			_block.mem().mov(m_checks[i], _block.regs().getSR(JitDspRegs::Read));
 		}

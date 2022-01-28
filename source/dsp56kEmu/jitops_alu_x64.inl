@@ -142,7 +142,7 @@ namespace dsp56k
 		getALU1(d, ab);
 		m_asm.shr(r32(d.get()), _shiftAmount);
 		ccr_update_ifCarry(CCRB_C);
-		m_asm.cmp(r32(d.get()), asmjit::Imm(0));
+		m_asm.test(r32(d.get()));
 		ccr_update_ifZero(CCRB_Z);
 		m_asm.bt(r32(d.get()), asmjit::Imm(23));
 		ccr_update_ifCarry(CCRB_N);
@@ -442,7 +442,7 @@ namespace dsp56k
 			m_asm.bt(d, asmjit::Imm(23));
 			ccr_update_ifCarry(CCRB_N);					// Set if bit 47 of the result is set
 
-			m_asm.cmp(d, asmjit::Imm(0));
+			m_asm.test(d);
 			ccr_update_ifZero(CCRB_Z);					// Set if bits 47–24 of the result are 0
 		}
 

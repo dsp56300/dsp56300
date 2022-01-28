@@ -309,10 +309,10 @@ namespace dsp56k
 #ifdef HAVE_ARM64
 				m_asm.mov(r, asmjit::a64::xzr);
 				decode_cccc(r, _cc);
-				m_asm.cmp(r.get(), asmjit::Imm(0));
+				m_asm.test(r.get());
 #else
 				decode_cccc(r, _cc);
-				m_asm.cmp(r.get().r8(), asmjit::Imm(0));
+				m_asm.test(r.get().r8());
 #endif
 				m_block.dspRegPool().releaseAll();
 				m_asm.jz(_toFalse);

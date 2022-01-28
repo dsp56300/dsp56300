@@ -437,7 +437,7 @@ namespace dsp56k
 	{
 		If(m_block, [&](auto _toFalse)
 		{
-			m_asm.cmp(_lc, asmjit::Imm(0));
+			m_asm.test(_lc);
 			m_asm.jz(_toFalse);
 		}, [&]()
 		{

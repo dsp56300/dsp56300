@@ -126,7 +126,7 @@ namespace dsp56k
 		ccr_update_ifNotZero(CCRB_C);
 		m_asm.shl(r32(d.get()), _shiftAmount + 8);	// + 8 to be able to check against zero because we move the MSB out or the register
 		m_asm.shr(r32(d.get()), 8);					// revert shift by 8
-		m_asm.cmp(r32(d.get()), asmjit::Imm(0));
+		m_asm.test(r32(d.get()));
 		ccr_update_ifZero(CCRB_Z);
 		m_asm.bitTest(r32(d.get()), 23);
 		ccr_update_ifNotZero(CCRB_N);
@@ -141,7 +141,7 @@ namespace dsp56k
 		m_asm.bitTest(d, _shiftAmount - 1);
 		ccr_update_ifNotZero(CCRB_C);
 		m_asm.shr(r32(d.get()), _shiftAmount);
-		m_asm.cmp(r32(d.get()), asmjit::Imm(0));
+		m_asm.test(r32(d.get()));
 		ccr_update_ifZero(CCRB_Z);
 		m_asm.bitTest(r32(d.get()), 23);
 		ccr_update_ifNotZero(CCRB_N);
@@ -428,7 +428,7 @@ namespace dsp56k
 			m_asm.bitTest(d, 23);
 			ccr_update_ifNotZero(CCRB_N);				// Set if bit 47 of the result is set
 
-			m_asm.cmp(d, asmjit::Imm(0));
+			m_asm.test(d);
 			ccr_update_ifZero(CCRB_Z);					// Set if bits 47–24 of the result are 0
 		}
 
@@ -452,7 +452,7 @@ namespace dsp56k
 		ccr_n_update_by23(r.get());							// Set if bit 47 of the result is set
 
 		m_asm.orr(r, r, prevCarry.get());
-		m_asm.cmp(r, asmjit::Imm(0));
+		m_asm.test(r);
 		ccr_update_ifZero(CCRB_Z);							// Set if bits 47–24 of the result are 0
 
 		setALU1(D, r32(r.get()));

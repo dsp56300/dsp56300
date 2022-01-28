@@ -17,7 +17,7 @@ namespace dsp56k
 		m_asm.cmp(r32(_m), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.jz(linear);
 
-		m_asm.or_(_m.r16(), _m.r16());					// bit reverse
+		m_asm.test(_m.r16());							// bit reverse
 		m_asm.jz(bitreverse);
 
 		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));
@@ -76,7 +76,7 @@ namespace dsp56k
 
 		m_asm.bind(notLinear);
 
-		m_asm.or_(_m.r16(), _m.r16());					// bit reverse
+		m_asm.test(_m.r16());							// bit reverse
 		m_asm.jz(end);
 
 		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));
