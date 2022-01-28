@@ -244,8 +244,12 @@ namespace dsp56k
 			{
 				const auto& ss = temp;
 				m_dspRegs.getSS(ss);	// note: not calling getSSH as it will dec the SP
+#ifdef HAVE_ARM64
+				m_asm.ubfx(ss, ss, asmjit::Imm(24), asmjit::Imm(24));
+#else
 				m_asm.shr(ss, asmjit::Imm(24));
 				m_asm.and_(ss, asmjit::Imm(0xffffff));
+#endif
 				setNextPC(ss);
 			}
 			m_asm.jmp(skip);
