@@ -377,65 +377,89 @@ namespace dsp56k
 		const auto MM		= getFieldValue<Movexy,Field_MM>(op);
 		const auto RRR		= getFieldValue<Movexy,Field_RRR>(op);
 		const auto mm		= getFieldValue<Movexy,Field_mm>(op);
-		const auto rr		= getFieldValue<Movexy,Field_rr>(op);
+		      auto rr		= getFieldValue<Movexy,Field_rr>(op);
 		const auto writeX	= getFieldValue<Movexy,Field_W>(op);
 		const auto writeY	= getFieldValue<Movexy,Field_w>(op);
 		const auto ee		= getFieldValue<Movexy,Field_ee>(op);
 		const auto ff		= getFieldValue<Movexy,Field_ff>(op);
 
 		const TWord regIdxOffset = RRR >= 4 ? 0 : 4;
+		rr = (rr + regIdxOffset) & 7;
 
-		RegGP eaX(m_block);
-		decode_XMove_MMRRR( eaX, MM, RRR );
+		if (!writeX && !writeY)
+		{
+			// we need to read the values first to prevent running out of temps
 
-		const RegGP eaY(m_block);
-		decode_XMove_MMRRR( eaY, mm, (rr + regIdxOffset) & 7 );
+			const RegGP rx(m_block);
+			decode_ee_read(rx, ee);
+			const RegGP ry(m_block);
+			decode_ff_read(ry, ff);
+
+			const RegGP eaX(m_block);
+			decode_XMove_MMRRR(eaX, MM, RRR);
+
+			const RegGP eaY(m_block);
+			decode_XMove_MMRRR(eaY, mm, rr);
+
+			m_block.mem().writeDspMemory(eaX, eaY, rx, ry);
+			return;
+		}
 
 		if(writeX && writeY)
 		{
 			const RegGP rx(m_block);
 			const RegGP ry(m_block);
-			m_block.mem().readDspMemory(rx, ry, eaX, eaY);
+
+			{
+				RegGP eaX(m_block);
+				decode_XMove_MMRRR(eaX, MM, RRR);
+
+				const RegGP eaY(m_block);
+				decode_XMove_MMRRR(eaY, mm, rr);
+
+				m_block.mem().readDspMemory(rx, ry, eaX, eaY);
+			}
+
 			decode_ee_write(ee, rx);
 			decode_ff_write(ff, ry);
 			return;
 		}
-		/* we're running out of temps here :-/
-		if (!writeX && !writeY)
-		{
-			const RegGP rx(m_block);
-			decode_ee_read(rx, ee);
-			const RegGP ry(m_block);
-			decode_ff_read(ry, ff);
-			m_block.mem().writeDspMemory(eaX, eaY, rx, ry);
-			return;
-		}*/
+
+		const RegGP basePtr(m_block);
+		m_block.mem().getPMemBasePtr(basePtr);
+
 		if(!writeX)
 		{
 			const RegGP r(m_block);
 			decode_ee_read( r, ee );
-			writeMemOrPeriph(MemArea_X, eaX, r);
+			RegGP eaX(m_block);
+			decode_XMove_MMRRR(eaX, MM, RRR);
+			m_block.mem().writeDspMemory(MemArea_X, eaX, r, basePtr);
 		}
 		if(!writeY)
 		{
 			const RegGP r(m_block);
 			decode_ff_read( r, ff );
-			writeMemOrPeriph( MemArea_Y, eaY, r);
+			const RegGP eaY(m_block);
+			decode_XMove_MMRRR(eaY, mm, rr);
+			m_block.mem().writeDspMemory( MemArea_Y, eaY, r, basePtr);
 		}
 
 		if( writeX )
 		{
 			const RegGP r(m_block);
-			readMemOrPeriph(r, MemArea_X, eaX, Movexy);
+			RegGP eaX(m_block);
+			decode_XMove_MMRRR(eaX, MM, RRR);
+			m_block.mem().readDspMemory(r, MemArea_X, eaX, basePtr);
 			decode_ee_write( ee, r );
 		}
-
-		eaX.release();
 
 		if( writeY )
 		{
 			const RegGP r(m_block);
-			readMemOrPeriph(r, MemArea_Y, eaY, Movexy);
+			const RegGP eaY(m_block);
+			decode_XMove_MMRRR(eaY, mm, rr);
+			m_block.mem().readDspMemory(r, MemArea_Y, eaY, basePtr);
 			decode_ff_write( ff, r);
 		}
 	}

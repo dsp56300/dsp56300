@@ -340,6 +340,11 @@ namespace dsp56k
 		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
 	}
 
+	void Jitmem::getPMemBasePtr(const JitReg64& _dst) const
+	{
+		getMemAreaPtr(_dst, MemArea_P);
+	}
+
 	void Jitmem::getMemAreaPtr(const JitReg64& _dst, EMemArea _area, TWord offset/* = 0*/, const JitRegGP& _ptrToPmem/* = JitRegGP()*/) const
 	{
 		auto& mem = m_block.dsp().memory();
