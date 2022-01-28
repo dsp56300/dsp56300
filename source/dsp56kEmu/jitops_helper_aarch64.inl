@@ -201,8 +201,7 @@ namespace dsp56k
 		incSP();
 		m_dspRegs.modifySS([&](const JitReg64& _ss)
 		{
-			m_asm.bfi(_ss, r64(_ssh), asmjit::Imm(24), asmjit::Imm(24));
-			m_asm.bfi(_ss, r64(_ssl), asmjit::Imm(0), asmjit::Imm(24));
+			m_asm.orr(r64(_ss), r64(_ssl), r64(_ssh), asmjit::arm::lsl(24));
 		}, false, true);
 	}
 

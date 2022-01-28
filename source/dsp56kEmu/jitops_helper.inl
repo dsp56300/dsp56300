@@ -8,40 +8,66 @@ namespace dsp56k
 {
 	void JitOps::signextend56to64(const JitReg64& _reg) const
 	{
+#ifdef HAVE_ARM64
+		m_asm.sbfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(56));
+#else
 		m_asm.sal(_reg, asmjit::Imm(8));
 		m_asm.sar(_reg, asmjit::Imm(8));
+#endif
 	}
 
 	void JitOps::signextend48to64(const JitReg64& _reg) const
 	{
+#ifdef HAVE_ARM64
+		m_asm.sbfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(48));
+#else
 		m_asm.sal(_reg, asmjit::Imm(16));
 		m_asm.sar(_reg, asmjit::Imm(16));
+#endif
 	}
 
 	void JitOps::signextend48to56(const JitReg64& _reg) const
 	{
+#ifdef HAVE_ARM64
+		m_asm.sbfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(48));
+		m_asm.ubfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(56));
+#else
 		m_asm.sal(_reg, asmjit::Imm(16));
 		m_asm.sar(_reg, asmjit::Imm(8));	// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shr(_reg, asmjit::Imm(8));
+#endif
 	}
 
 	void JitOps::signextend24to56(const JitReg64& _reg) const
 	{
+#ifdef HAVE_ARM64
+		m_asm.sbfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(24));
+		m_asm.ubfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(56));
+#else
 		m_asm.sal(_reg, asmjit::Imm(40));
 		m_asm.sar(_reg, asmjit::Imm(32));	// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shr(_reg, asmjit::Imm(8));
+#endif
 	}
 
 	void JitOps::signextend24to64(const JitReg64& _reg) const
 	{
+#ifdef HAVE_ARM64
+		m_asm.sbfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(24));
+#else
 		m_asm.sal(_reg, asmjit::Imm(40));
 		m_asm.sar(_reg, asmjit::Imm(40));
+#endif
 	}
 
 	void JitOps::signextend24To32(const JitReg32& _reg) const
 	{
+#ifdef HAVE_ARM64
+		m_asm.sbfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(24));
+#else
 		m_asm.shl(_reg, asmjit::Imm(8));
 		m_asm.sar(_reg, asmjit::Imm(8));
+#endif
 	}
 
 	void JitOps::updateAddressRegister(const JitReg64& _r, const TWord _mmm, const TWord _rrr, bool _writeR/* = true*/, bool _returnPostR/* = false*/)
@@ -335,9 +361,14 @@ namespace dsp56k
 
 	void JitOps::transfer24ToAlu(int _alu, const JitRegGP& _src)
 	{
+#ifdef HAVE_ARM64
+		m_asm.sbfx(r32(_src), r32(_src), asmjit::Imm(0), asmjit::Imm(24));
+		m_asm.lsl(r64(_src), r64(_src), asmjit::Imm(24));
+#else
 		m_asm.shl(r64(_src), asmjit::Imm(40));
 		m_asm.sar(r64(_src), asmjit::Imm(8));
 		m_asm.shr(r64(_src), asmjit::Imm(8));
+#endif
 		m_dspRegs.setALU(_alu, r64(_src), false);
 	}
 
