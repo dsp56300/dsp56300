@@ -16,7 +16,6 @@ namespace dsp56k
 
 		void mov(uint64_t& _dst, const JitRegGP& _src) const;
 		void mov(uint32_t& _dst, const JitRegGP& _src) const;
-		void mov(uint8_t& _dst, const JitRegGP& _src) const;
 
 		void mov(uint32_t& _dst, const JitReg128& _src) const;
 
