@@ -207,7 +207,7 @@ namespace dsp56k
 			{
 				// Inject the next PC into the setter at the start of this block
 				m_asm.setCursor(cursorInsertPc);
-				m_asm.mov(regReturnVal, asmjit::Imm(pcNext));
+				m_asm.mov(r32(regReturnVal), asmjit::Imm(pcNext));
 				m_asm.setCursor(m_asm.lastNode());
 			}
 		}
