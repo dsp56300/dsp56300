@@ -591,7 +591,6 @@ namespace dsp56k
 	void JitDspRegPool::store(const DspReg _dst, const JitReg128& _src) const
 	{
 		auto& r = m_block.dsp().regs();
-		auto& m = m_block.mem();
 
 		switch (_dst)
 		{
@@ -633,7 +632,7 @@ namespace dsp56k
 		case DspM5mod:
 		case DspM6mod:
 		case DspM7mod:
-			m_block.mem().mov(r.mModulo[_dst - DspM0mod], _src);
+			movDspReg(r.mModulo[_dst - DspM0mod], _src);
 			break;
 		case DspM0mask:
 		case DspM1mask:
@@ -643,7 +642,7 @@ namespace dsp56k
 		case DspM5mask:
 		case DspM6mask:
 		case DspM7mask:
-			m_block.mem().mov(r.mMask[_dst - DspM0mask], _src);
+			movDspReg(r.mMask[_dst - DspM0mask], _src);
 			break;
 		case DspA:
 		case DspAwrite:
