@@ -200,7 +200,7 @@ namespace dsp56k
 			}
 		}
 
-		if(!JitStackHelper::isNonVolatile(regDspPtr))
+		if(!JitStackHelper::isNonVolatile(regDspPtr) && !JitStackHelper::isFuncArg(regDspPtr))
 		{
 			m_pushedRegs.push_front(regDspPtr);
 			_block.stack().push(regDspPtr);
