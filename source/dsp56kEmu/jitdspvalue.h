@@ -20,11 +20,11 @@ namespace dsp56k
 			HostRegTemp
 		};
 
-		void set(const JitRegGP& _reg, Type _type);
-		void set(const TWord& _value, Type _type);
-
 		explicit DspValue(JitBlock& _block);
 		explicit DspValue(JitBlock& _block, TWord _value, Type _type = Immediate24);
+
+		void set(const JitRegGP& _reg, Type _type);
+		void set(const TWord& _value, Type _type);
 
 	private:
 		JitReg64 m_reg;
