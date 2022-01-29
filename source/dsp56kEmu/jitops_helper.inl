@@ -70,17 +70,19 @@ namespace dsp56k
 #endif
 	}
 
-	void JitOps::updateAddressRegister(const JitReg64& _r, const TWord _mmm, const TWord _rrr, bool _writeR/* = true*/, bool _returnPostR/* = false*/)
+	void JitOps::updateAddressRegister(const JitReg64& _dst, const TWord _mmm, const TWord _rrr, bool _writeR/* = true*/, bool _returnPostR/* = false*/)
 	{
 		if(_mmm == 6)													/* 110         */
 		{
-			getOpWordB(_r);
+			if(_dst.isValid())
+				getOpWordB(_dst);
 			return;
 		}
 
 		if(_mmm == 4)													/* 100 (Rn)    */
 		{
-			m_block.regs().getR(_r, _rrr);
+			if (_dst.isValid())
+				m_block.regs().getR(_dst, _rrr);
 			return;
 		}
 
@@ -88,71 +90,78 @@ namespace dsp56k
 
 		if(_mmm == 7)													/* 111 -(Rn)   */
 		{
-			m_dspRegs.getR(_r, _rrr);
-			updateAddressRegisterConst(r32(_r),-1, r32(m.get()), _rrr);
+			m_dspRegs.getR(_dst, _rrr);
+			updateAddressRegisterConst(r32(_dst),-1, r32(m.get()), _rrr);
 			if(_writeR)
-				m_block.regs().setR(_rrr, _r);
+				m_block.regs().setR(_rrr, _dst);
 			return;
 		}
 
-		AguRegR r(m_block, _rrr, true);
+		AguRegR rRef(m_block, _rrr, true);
 
 		if(_mmm == 5)													/* 101 (Rn+Nn) */
 		{
+			if (!_dst.isValid())
+				return;
+
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			signextend24To32(r32(n.get()));
-			m_asm.mov(_r, r.get());
-			updateAddressRegister(r32(_r), r32(n.get()), r32(m.get()), _rrr);
+			m_asm.mov(_dst, rRef.get());
+			updateAddressRegister(r32(_dst), r32(n.get()), r32(m.get()), _rrr);
 			return;
 		}
 
 		if(!_returnPostR)
 		{
-			m_asm.mov(_r, r.get());
+			if(_dst.isValid())
+				m_asm.mov(_dst, rRef.get());
 			if(!_writeR)
 				return;
 		}
 
-		JitReg32 r32_;
+		JitReg32 r;
 
 		if(!_writeR)
 		{
-			m_asm.mov(_r, r.get());
-			r32_ = r32(_r);
+			if (!_dst.isValid())
+				return;
+
+			m_asm.mov(_dst, rRef.get());
+			r = r32(_dst);
 		}
 		else
-			r32_ = r32(r);
+			r = r32(rRef);
 
 		if(_mmm == 0)													/* 000 (Rn)-Nn */
 		{
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			m_asm.neg(n);
-			updateAddressRegister(r32_, r32(n.get()), r32(m.get()), _rrr);
+			updateAddressRegister(r, r32(n.get()), r32(m.get()), _rrr);
 		}	
 		if(_mmm == 1)													/* 001 (Rn)+Nn */
 		{
 			const RegGP n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			signextend24To32(r32(n.get()));
-			updateAddressRegister(r32_, r32(n.get()), r32(m.get()), _rrr);
+			updateAddressRegister(r, r32(n.get()), r32(m.get()), _rrr);
 		}
 		if(_mmm == 2)													/* 010 (Rn)-   */
 		{
-			updateAddressRegisterConst(r32_,-1, r32(m.get()), _rrr);
+			updateAddressRegisterConst(r,-1, r32(m.get()), _rrr);
 		}
 		if(_mmm == 3)													/* 011 (Rn)+   */
 		{
-			updateAddressRegisterConst(r32_,1, r32(m.get()), _rrr);
+			updateAddressRegisterConst(r,1, r32(m.get()), _rrr);
 		}
 
 		if(_writeR)
 		{
-			r.write();
+			rRef.write();
 
-			if(_returnPostR)
-				m_asm.mov(_r, r.get());
+			if(_returnPostR && _dst.isValid())
+				m_asm.mov(_dst, rRef.get());
 		}
 	}
 

@@ -31,7 +31,7 @@ namespace dsp56k
 		const auto mm  = getFieldValue<Move_ea, Field_MM>(op);
 		const auto rrr = getFieldValue<Move_ea, Field_RRR>(op);
 
-		const RegGP unused(m_block);
+		const JitReg64 unused;
 		updateAddressRegister(unused, mm, rrr, true, true);
 	}
 
