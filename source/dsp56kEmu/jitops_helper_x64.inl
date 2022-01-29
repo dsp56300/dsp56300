@@ -290,12 +290,10 @@ namespace dsp56k
 		{
 			const ShiftReg s0s1(m_block);
 
-			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S1));
-			m_asm.setc(s0s1.get().r8());
+			sr_getBitValue(s0s1, SRB_S1);
 			m_asm.shl(_dst, s0s1.get().r8());
 
-			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_S0));
-			m_asm.setc(s0s1.get().r8());
+			sr_getBitValue(s0s1, SRB_S0);
 			m_asm.shr(_dst, s0s1.get().r8());
 		}
 
