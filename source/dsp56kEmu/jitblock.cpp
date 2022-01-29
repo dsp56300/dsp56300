@@ -62,7 +62,7 @@ namespace dsp56k
 
 		cursorInsertEncodedInstructionCount = m_asm.cursor();	// inserted later below:	m_mem.mov(temp, getEncodedInstructionCount());
 
-		uint32_t opFlags = 0;
+		uint32_t blockFlags = 0;
 		bool appendLoopCode = false;
 
 		const auto loopBeginAddr = hiword(m_dsp.regs().ss[m_dsp.ssIndex()]).var;
@@ -104,7 +104,7 @@ namespace dsp56k
 			ops.emit(pc);
 			m_asm.nop();
 
-			opFlags |= ops.getResultFlags();
+			blockFlags |= ops.getResultFlags();
 			
 			m_singleOpWord = ops.getOpWordA();
 			
@@ -172,7 +172,10 @@ namespace dsp56k
 				}
 
 				if (oi.flag(OpFlagPopPC))
+				{
+					blockFlags |= JitOps::PopPC;
 					break;
+				}
 
 				if(oi.flag(OpFlagLoop))
 					break;
@@ -197,10 +200,9 @@ namespace dsp56k
 
 		if(cursorInsertPc)
 		{
-			if(m_child != g_invalidAddress && !m_childIsDynamic)
+			if((m_child != g_invalidAddress && !m_childIsDynamic) || (blockFlags & JitOps::PopPC))
 			{
 				// remove the initial PC update completely, we know that we'll definitely branch
-				int foo = 0;
 				m_asm.removeNodes(cursorInsertPc->next(), cursorEndInsertPc);
 			}
 			else
@@ -270,12 +272,12 @@ namespace dsp56k
 			op.updateDirtyCCR();
 		}
 
-		if (opFlags & JitOps::WritePMem)
+		if (blockFlags & JitOps::WritePMem)
 			m_flags |= WritePMem;
 		if (appendLoopCode)
 			m_flags |= LoopEnd;
 
-		const auto canBranch = (opFlags & WritePMem) == 0 && _jit && m_child != g_invalidAddress && _jit->canBeDefaultExecuted(m_child);
+		const auto canBranch = (blockFlags & WritePMem) == 0 && _jit && m_child != g_invalidAddress && _jit->canBeDefaultExecuted(m_child);
 		if(canBranch && m_childIsDynamic)
 			m_dspRegPool.movDspReg(regReturnVal, m_dsp.regs().pc);
 		else if(appendLoopCode && isLoopStart)
@@ -326,7 +328,7 @@ namespace dsp56k
 				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
 			}
 		}
-		else if (!appendLoopCode && !m_possibleBranch && !isFastInterrupt && _jit && _cache[pcNext].block && !opFlags && !m_flags && m_child == g_invalidAddress && _jit->canBeDefaultExecuted(pcNext))
+		else if (!appendLoopCode && !m_possibleBranch && !isFastInterrupt && _jit && _cache[pcNext].block && !blockFlags && !m_flags && m_child == g_invalidAddress && _jit->canBeDefaultExecuted(pcNext))
 		{
 			auto* child = _jit->getChildBlock(this, pcNext, false);
 			if(child)

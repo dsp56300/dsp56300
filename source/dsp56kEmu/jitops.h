@@ -27,7 +27,8 @@ namespace dsp56k
 
 			WritePMem			= 0x01,
 			WriteToLC			= 0x02,
-			WriteToLA			= 0x04
+			WriteToLA			= 0x04,
+			PopPC				= 0x08
 		};
 
 		JitOps(JitBlock& _block, bool _fastInterrupt = false);

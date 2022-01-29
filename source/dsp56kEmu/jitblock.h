@@ -28,7 +28,7 @@ namespace dsp56k
 		{
 			WritePMem			= 0x0002,
 			LoopEnd				= 0x0004,
-			InstructionLimit	= 0x0008,
+			InstructionLimit	= 0x0008
 		};
 
 		JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData);
