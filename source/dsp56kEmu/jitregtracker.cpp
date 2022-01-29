@@ -270,11 +270,11 @@ namespace dsp56k
 		m_acquired = false;
 	}
 
-	RegGP::RegGP(JitBlock& _block) : JitScopedReg(_block, _block.gpPool())
+	RegGP::RegGP(JitBlock& _block, const bool _acquire/* = true*/) : JitScopedReg(_block, _block.gpPool(), _acquire)
 	{
 	}
 
-	RegXMM::RegXMM(JitBlock& _block) : JitScopedReg(_block, _block.xmmPool())
+	RegXMM::RegXMM(JitBlock& _block, const bool _acquire/* = true*/) : JitScopedReg(_block, _block.xmmPool(), _acquire)
 	{
 	}
 

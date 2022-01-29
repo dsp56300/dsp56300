@@ -1,37 +1,35 @@
 #pragma once
 
-#include <cstdint>
-
+#include "jitregtracker.h"
 #include "jitregtypes.h"
-#include "registers.h"
 
 namespace dsp56k
 {
 	class DspValue
 	{
 	public:
-		enum Origin
+		enum Type
 		{
+			Invalid = -1,
 			Memory,
 			DspReg24,
 			DspReg48,
 			DspReg56,
-			Immediate
+			Immediate24,
+			Immediate8,
+			HostRegTemp
 		};
 
-		void set(const JitRegGP& _reg, Origin _origin, uint32_t _bitSize, uint32_t _shiftAmount = 0, bool _isMasked = true);
+		void set(const JitRegGP& _reg, Type _type);
+		void set(const TWord& _value, Type _type);
 
-		bool isValid() const
-		{
-			return m_bitSize > 0;
-		}
+		explicit DspValue(JitBlock& _block);
+		explicit DspValue(JitBlock& _block, TWord _value, Type _type = Immediate24);
 
 	private:
-		Origin m_origin = Memory;
-		EReg m_originReg = Reg_COUNT;
-		uint32_t m_bitSize = 0;			// 24, 48, 56, ...
-		uint32_t m_shiftAmount = 0;		// if the host register has the value stored with a shift being applied
-		bool m_isMasked = false;
 		JitReg64 m_reg;
+		RegGP m_gpTemp;
+		Type m_type = Invalid;
+		TWord m_immediate = 0;
 	};
 }

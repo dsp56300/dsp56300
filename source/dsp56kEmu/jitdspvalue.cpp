@@ -4,12 +4,24 @@
 
 namespace dsp56k
 {
-	void DspValue::set(const JitRegGP& _reg, Origin _origin, uint32_t _bitSize, uint32_t _shiftAmount, bool _isMasked)
+	DspValue::DspValue(JitBlock& _block) : m_gpTemp(_block, false)
 	{
-		m_origin = _origin;
+	}
+
+	DspValue::DspValue(JitBlock& _block, TWord _value, Type _type): DspValue(_block)
+	{
+		set(_value, _type);
+	}
+
+	void DspValue::set(const JitRegGP& _reg, Type _type)
+	{
 		m_reg = r64(_reg);
-		m_bitSize = _bitSize;
-		m_isMasked = _isMasked;
-		m_shiftAmount = _shiftAmount;
-	}	
+		m_type = _type;
+	}
+
+	void DspValue::set(const TWord& _value, Type _type)
+	{
+		m_immediate = _value;
+		m_type = _type;
+	}
 }

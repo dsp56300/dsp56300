@@ -32,19 +32,39 @@ namespace dsp56k
 	public:
 		JitScopedReg() = delete;
 		JitScopedReg(const JitScopedReg&) = delete;
-		JitScopedReg(JitBlock& _block, JitRegpool& _pool) : m_block(_block), m_pool(_pool) { acquire(); }	// TODO: move acquire() to (first) get, will greatly reduce register pressure if the RegGP is passed in as parameter
-		~JitScopedReg() { release(); }
+		JitScopedReg(JitScopedReg&& _other) noexcept : m_reg(_other.m_reg), m_block(_other.m_block), m_pool(_other.m_pool), m_acquired(_other.m_acquired)
+		{
+			_other.m_acquired = false;
+		}
+		JitScopedReg(JitBlock& _block, JitRegpool& _pool, const bool _acquire = true) : m_block(_block), m_pool(_pool)
+		{
+			if(_acquire) 
+				acquire();
+		}
+		~JitScopedReg()
+		{
+			release();
+		}
 
 		JitScopedReg& operator = (const JitScopedReg&) = delete;
+
+		JitScopedReg& operator = (JitScopedReg&& _other) noexcept
+		{
+			m_reg = _other.m_reg;
+			m_acquired = _other.m_acquired;
+			_other.m_acquired = false;
+			return *this;
+		}
 
 		void acquire();
 
 		void release();
 
-		const JitReg& get() const { return m_reg; }
+		bool isValid() const { return m_acquired; }
+
+		const JitReg& get() const { assert(isValid()); return m_reg; }
 	private:
 		JitReg m_reg;
-	private:
 		JitBlock& m_block;
 		JitRegpool& m_pool;
 		bool m_acquired = false;
@@ -53,7 +73,7 @@ namespace dsp56k
 	class RegGP : public JitScopedReg
 	{
 	public:
-		RegGP(JitBlock& _block);
+		RegGP(JitBlock& _block, bool _acquire = true);
 
 		const JitReg64& get() const { return JitScopedReg::get().as<JitReg64>(); }
 		operator const JitReg64& () const { return get(); }
@@ -62,7 +82,7 @@ namespace dsp56k
 	class RegXMM : public JitScopedReg
 	{
 	public:
-		RegXMM(JitBlock& _block);
+		RegXMM(JitBlock& _block, bool _acquire = true);
 
 		const JitReg128& get() const { return JitScopedReg::get().as<JitReg128>(); }
 		operator const JitReg128& () const { return get(); }
