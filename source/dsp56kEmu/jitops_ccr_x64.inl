@@ -134,20 +134,20 @@ namespace dsp56k
 		{
 			// build shift value:
 			// const auto offset = sr_val_noCache(SRB_S0) - sr_val_noCache(SRB_S1);
-			const ShiftReg shift(m_block);
-			m_asm.xor_(shift, shift.get());
+			const ShiftReg shift64(m_block);
+			auto shift = shift64.get().r8();
 			sr_getBitValue(shift, SRB_S0);
 			m_asm.add(shift, asmjit::Imm(14));	// 46 - 32
 			{
 				const RegGP s1(m_block);
 				sr_getBitValue(s1, SRB_S1);
 
-				m_asm.sub(shift.get().r8(), s1.get().r8());
+				m_asm.sub(shift, s1.get().r8());
 			}
 			const RegGP r(m_block);
 			m_asm.mov(r, _alu);
 			m_asm.shr(r, asmjit::Imm(32));	// thx to intel, we are only allowed to shift 32 at max. Therefore, we need to split it
-			m_asm.shr(r, shift.get().r8());
+			m_asm.shr(r, shift);
 			m_asm.and_(r, asmjit::Imm(0x3));
 		}
 		ccr_update_ifParity(CCRB_U);
