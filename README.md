@@ -53,15 +53,13 @@ int main(int argc, char* argv[])
 	}
 }
 ```
-An example project can be used to see how it works: The Chameleon Emulator.
-The [SoundArt Chameleon](https://www.chameleon.synth.net/english/index.shtml) was a 19" rack unit that allowed anyone to develop their own audio algorithms for the Motorola DSP 56303. The SDK is well documented and comes with several examples, including DSP code.
-
-The Chameleon Emulator wraps the SDK, compiles to VST2 and runs the DSP code in this emulator instead of the real device. All knobs of the unit are exposed as VST parameters. [Visit the Chameleon Emulator project](https://github.com/Lyve1981/chameleonEmulator/) if you want to know more.
-It can currently run the dspthru example in polling mode and in interrupt mode.
 
 ### Emulation of Access Virus B & C
 
 One derivative work emulates the Access Virus B & C synthesizers, this emulator project is used to execute the DSP code from the original synthesizer ROMs.
 
 If you want to follow the state of the project, join on Discord: https://discord.gg/WJ9cxySnsM
+
 Or visit the homepage with several audio & video examples, VST and AU plugins and more: [DSP 56300 Emulation Blog](https://dsp56300.wordpress.com/)
+
+The project source code can be found here: [gearmulator](https://github.com/dsp56300/gearmulator/)
