@@ -607,7 +607,7 @@ namespace dsp56k
 			m_asm.mov(test, asmjit::a64::xzr);
 			decode_cccc(test, cccc);
 			m_asm.cmp(test.get(), asmjit::Imm(1));
-			m_asm.cond_not_equal().b(_toFalse);
+			m_asm.b(asmjit::arm::CondCode::kNotEqual, _toFalse);
 #else
 			decode_cccc(test, cccc);
 

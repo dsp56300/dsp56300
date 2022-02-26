@@ -19,18 +19,18 @@ namespace dsp56k
 		m_asm.jz(linear);
 
 		m_asm.tst(_m, asmjit::Imm(0xffff));						// bit reverse
-		m_asm.cond_zero().b(bitreverse);
+		m_asm.jz(bitreverse);
 
 		m_asm.and_(r32(regReturnVal), _m, asmjit::Imm(0xffff));
 		m_asm.cmp(r32(regReturnVal), asmjit::Imm(0x8000));
-		m_asm.cond_ge().b(multipleWrapModulo);
+		m_asm.jge(multipleWrapModulo);
 
 		const auto nAbs = r32(regReturnVal);					// compare abs(n) with m
 		m_asm.test(r32(_n));
 		m_asm.cneg(nAbs, r32(_n), asmjit::arm::CondCode::kLT);
 
 		m_asm.cmp(nAbs, _m);									// modulo or linear
-		m_asm.cond_gt().b(linear);
+		m_asm.b(asmjit::arm::CondCode::kGT, linear);
 
 		// modulo:
 		m_asm.bind(modulo);
@@ -79,11 +79,11 @@ namespace dsp56k
 		m_asm.bind(notLinear);
 
 		m_asm.tst(_m, asmjit::Imm(0xffff));							// bit reverse
-		m_asm.cond_zero().b(end);
+		m_asm.jz(end);
 
 		m_asm.and_(r32(regReturnVal), _m, asmjit::Imm(0xffff));		// multiple-wrap modulo
 		m_asm.cmp(r32(regReturnVal), asmjit::Imm(0x8000));
-		m_asm.cond_ge().b(end);
+		m_asm.jge(end);
 
 		// modulo:
 		m_asm.bind(modulo);
@@ -317,8 +317,8 @@ namespace dsp56k
 		m_asm.bitTest(_value, bit);
 
 		if (_bitValue == BitSet)
-			m_asm.cond_zero().b(_skip);
+			m_asm.jz(_skip);
 		else if (_bitValue == BitClear)
-			m_asm.cond_not_zero().b(_skip);
+			m_asm.jnz(_skip);
 	}
 }

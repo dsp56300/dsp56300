@@ -45,22 +45,17 @@ namespace dsp56k
 
 	void JitEmitter::jz(const asmjit::Label& _label)
 	{
-		cond_zero().b(_label);
+		b(asmjit::arm::CondCode::kZero, _label);
 	}
 
 	void JitEmitter::jnz(const asmjit::Label& _label)
 	{
-		cond_not_zero().b(_label);
+		b(asmjit::arm::CondCode::kNotZero, _label);
 	}
 
 	void JitEmitter::jle(const asmjit::Label& _label)
 	{
-		cond_le().b(_label);
-	}
-
-	void JitEmitter::jnc(const asmjit::Label& _label)
-	{
-		cond_cc().b(_label);
+		b(asmjit::arm::CondCode::kLE, _label);
 	}
 
 	void JitEmitter::movq(const JitRegGP& _dst, const JitReg128& _src)
@@ -140,7 +135,7 @@ namespace dsp56k
 
 	void JitEmitter::jge(const asmjit::Label& _label)
 	{
-		cond_ge().b(_label);
+		b(asmjit::arm::CondCode::kGE, _label);
 	}
 
 	void JitEmitter::shl(const JitRegGP& _dst, const asmjit::Imm& _imm)

@@ -213,7 +213,7 @@ namespace dsp56k
 		const auto exit = m_asm.newLabel();
 
 		m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), CCRB_S);
-		m_asm.cond_not_zero().b(exit);
+		m_asm.jnz(exit);
 
 		{
 			const RegGP bit(m_block);

@@ -12,7 +12,7 @@
 
 namespace asmjit
 {
-	inline namespace _abi_1_8
+	inline namespace _abi_1_9
 	{
 		namespace a64
 		{
@@ -38,7 +38,7 @@ namespace dsp56k
 
 namespace asmjit
 {
-	inline namespace _abi_1_8
+	inline namespace _abi_1_9
 	{
 		namespace x86
 		{

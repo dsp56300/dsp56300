@@ -12,7 +12,7 @@
 
 namespace asmjit
 {
-	inline namespace _abi_1_8
+	inline namespace _abi_1_9
 	{
 		class JitRuntime;
 	}
@@ -81,7 +81,7 @@ namespace dsp56k
 
 		DSP& m_dsp;
 
-		asmjit::_abi_1_8::JitRuntime* m_rt = nullptr;
+		asmjit::_abi_1_9::JitRuntime* m_rt = nullptr;
 		std::vector<JitCacheEntry> m_jitCache;
 		std::vector<TJitFunc> m_jitFuncs;
 		std::set<TWord> m_volatileP;

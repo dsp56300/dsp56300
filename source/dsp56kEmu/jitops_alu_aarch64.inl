@@ -177,7 +177,7 @@ namespace dsp56k
 
 			// if (!sr_test_noCache(SR_RM))
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_SM);
-			m_asm.cond_not_zero().b(skipNoScalingMode);
+			m_asm.jnz(skipNoScalingMode);
 
 			// convergent rounding. If all mask bits are cleared
 
@@ -303,7 +303,7 @@ namespace dsp56k
 
 			m_asm.bitTest(addOrSub, 55);
 
-			m_asm.cond_zero().b(sub);
+			m_asm.jz(sub);
 			m_asm.add(d, s.get());
 			m_asm.jmp(end);
 
@@ -404,7 +404,7 @@ namespace dsp56k
 		m_asm.bind(start);
 		loopIteration(false);
 		m_asm.subs(lc, lc, asmjit::Imm(1));
-		m_asm.cond_not_zero().b(start);
+		m_asm.jnz(start);
 		lc.release();
 
 		// once

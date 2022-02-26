@@ -7,7 +7,7 @@
 
 namespace asmjit
 {
-	inline namespace _abi_1_8
+	inline namespace _abi_1_9
 	{
 		class BaseNode;
 	}
