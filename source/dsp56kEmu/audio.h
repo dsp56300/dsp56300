@@ -66,7 +66,7 @@ namespace dsp56k
 		}
 
 		template<typename T>
-		void processAudioInterleaved(T** _inputs, T** _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
+		void processAudioInterleaved(const T** _inputs, T** _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
 		{
 			if (!_sampleFrames)
 				return;
@@ -120,7 +120,7 @@ namespace dsp56k
 		}
 
 		template<typename T>
-		void processAudioInterleavedTX0(T** _inputs, T** _outputs, size_t _sampleFrames)
+		void processAudioInterleavedTX0(const T** _inputs, T** _outputs, size_t _sampleFrames)
 		{
 			return processAudioInterleaved(_inputs, _outputs, _sampleFrames, 2, 2);
 		}
