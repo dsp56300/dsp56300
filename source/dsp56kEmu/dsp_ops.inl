@@ -5,21 +5,32 @@
 
 namespace dsp56k
 {
+	void dspExecDefaultPreventInterrupt(DSP* _dsp);
+
 	inline void DSP::op_Bchg_ea(const TWord op)
 	{
 		errNotImplemented("BCHG");
 	}
 	inline void DSP::op_Bchg_aa(const TWord op)
 	{
-		errNotImplemented("BCHG");
+		const TWord bit = getBit<Bchg_aa>(op);
+		auto v = readMem<Bchg_aa>(op);
+		sr_toggle(CCR_C, bittestandchange(v, bit));
+		writeMem<Bchg_aa>(op, v);
 	}
 	inline void DSP::op_Bchg_pp(const TWord op)
 	{
-		errNotImplemented("BCHG");
+		const TWord bit = getBit<Bchg_pp>(op);
+		auto v = readMem<Bchg_pp>(op);
+		sr_toggle(CCR_C, bittestandchange(v, bit));
+		writeMem<Bchg_pp>(op, v);
 	}
 	inline void DSP::op_Bchg_qq(const TWord op)
 	{
-		errNotImplemented("BCHG");
+		const TWord bit = getBit<Bchg_qq>(op);
+		auto v = readMem<Bchg_qq>(op);
+		sr_toggle(CCR_C, bittestandchange(v, bit));
+		writeMem<Bchg_qq>(op, v);
 	}
 	inline void DSP::op_Bchg_D(const TWord op)
 	{
@@ -56,7 +67,10 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bclr_aa(const TWord op)
 	{
-		errNotImplemented("BCLR");
+		const TWord bit = getBit<Bclr_aa>(op);
+		auto v = readMem<Bclr_aa>(op);
+		sr_toggle(CCR_C, bittestandclear(v, bit));
+		writeMem<Bclr_aa>(op, v);
 	}
 	inline void DSP::op_Bclr_pp(const TWord op)
 	{
@@ -118,7 +132,10 @@ namespace dsp56k
 	}
 	inline void DSP::op_Bset_aa(const TWord op)
 	{
-		errNotImplemented("BSET");
+		const TWord bit = getBit<Bset_aa>(op);
+		auto v = readMem<Bset_aa>(op);
+		sr_toggle(CCR_C, bittestandset(v, bit));
+		writeMem<Bset_aa>(op, v);
 	}
 	inline void DSP::op_Bset_pp(const TWord op)	// 0000101010pppppp0S1bbbbb
 	{
@@ -195,14 +212,18 @@ namespace dsp56k
 	inline void DSP::op_Debug(const TWord op)
 	{
 		LOG( "Entering DEBUG mode" );
-		errNotImplemented("DEBUG");		
+
+		if(getDebugger())
+			getDebugger()->onDebug();
+		else
+			nativeDebugBreak();
 	}
 	inline void DSP::op_Debugcc(const TWord op)
 	{
 		if( checkCondition<Debugcc>(op) )
 		{
 			LOG( "Entering DEBUG mode because condition is met" );
-			errNotImplemented("DEBUGcc");
+			op_Debug(op);
 		}
 	}
 	inline void DSP::op_Do_ea(const TWord op)
@@ -428,7 +449,7 @@ namespace dsp56k
 	{
 		popPCSR();
 		m_processingMode = DefaultPreventInterrupt;
-		m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+		m_interruptFunc = &dspExecDefaultPreventInterrupt;
 	}
 	inline void DSP::op_Rts(const TWord op)
 	{

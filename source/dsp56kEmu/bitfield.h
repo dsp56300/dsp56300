@@ -29,16 +29,20 @@ namespace dsp56k
 
 		explicit Bitfield(T _value = 0) : m_value(_value) {}
 
+		T testMask(const B _mask) const							{ return m_value & _mask; }
 		T test(const B _bit) const							{ return m_value & mask(_bit); }
 		T test(const B _a, const B _b) const				{ return m_value & mask(_a,_b); }
 		T test(const B _a, const B _b, const B _c) const	{ return m_value & mask(_a, _b, _c); }
 
 		void clear(const B _bit)						{ m_value &= ~mask(_bit); }
 		void clear(const B _a, const B _b)				{ m_value &= ~(mask(_a) | mask(_b)); }
+
 		void set(const B _bit)							{ m_value |= mask(_bit); }
 		void set(const B _a, const B _b)				{ m_value |= mask(_a) | mask(_b); }
 
-		static T mask(const B _bit)
+		void toggle(const B _bit)						{ m_value ^= mask(_bit); }
+
+		static constexpr T mask(const B _bit)
 		{
 			return (1<<_bit);
 		}
@@ -53,7 +57,7 @@ namespace dsp56k
 			return mask(_a) | mask(_b) | mask(_c);
 		}
 
-		operator T () const
+		operator const T& () const
 		{
 			return m_value;
 		}

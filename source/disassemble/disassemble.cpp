@@ -149,6 +149,8 @@ int main(int _argc, char* _argv[])
 			std::cout << "Options:" << std::endl;
 			std::cout << "-in filename     Input file, required. Input may either be a file with ASCII text in form 0055ff aabbcc FF0022 ... or binary content." << std::endl;
 			std::cout << "-out filename    Write output to a text file. May be omitted, in which case output is written to standard output." << std::endl;
+			std::cout << "-s filename      Specify file with additional symbols in format S:abcdef=name, where S = X, Y, L, P or I." << std::endl;
+			std::cout << "-pc aabbcc       Set base address in hex. Defaults to 0 if omitted." << std::endl;
 			std::cout << "le               Specify that the input file is in Little-Endian format. By default, input bytes are treated as being Big-Endian." << std::endl;
 			std::cout << std::endl;
 			std::cout << "Output format:" << std::endl;
@@ -159,6 +161,8 @@ int main(int _argc, char* _argv[])
 		const auto inFile = cmd.get("in");
 
 		const auto outFile = cmd.contains("out") ? cmd.get("out") : std::string();
+
+		const auto symbolFile = cmd.contains("s") ? cmd.get("s") : std::string();
 
 		std::unique_ptr<std::ofstream> outf;
 
@@ -184,13 +188,82 @@ int main(int _argc, char* _argv[])
 			return -1;
 		}
 
+		TWord pc = 0;
+		if(cmd.contains("pc"))
+		{
+			const auto pcStr = cmd.get("pc");
+			pc = strtol(pcStr.c_str(), nullptr, 16);
+		}
+
 		Opcodes opcodes;
 		Disassembler disasm(opcodes);
 		Peripherals56362 p;
 		p.setSymbols(disasm);	
+		Peripherals56367 pY;
+		pY.setSymbols(disasm);	
+
+		if(!symbolFile.empty())
+		{
+			std::ifstream s(symbolFile.c_str(), std::ios::in);
+			if(!s.is_open())
+			{
+				std::cout << "Failed to open symbol file " << symbolFile << std::endl;
+				return -1;
+			}
+
+			std::string line;
+			while(std::getline(s, line))
+			{
+				if(line.empty())
+					continue;
+
+				if(line.find_first_of(" \t/;") == 0)
+					continue;
+
+				const auto splitA = line.find(':');
+				const auto splitB = line.find('=');
+
+				if(splitA == std::string::npos || splitB == std::string::npos)
+				{
+					LOG("Symbol has wrong format, needs to be S:address=name. S = X, Y, L, P or I, address in hex");
+					return -1;
+				}
+
+				const auto areaStr = line.substr(0, splitA);
+				const auto addressStr = line.substr(splitA + 1, splitB - splitA - 1);
+				
+				auto valueStr = line.substr(splitB + 1);
+				
+				const auto splitCommentPos = valueStr.find_first_of(" \t/;");
+				if (splitCommentPos != std::string::npos)
+					valueStr = valueStr.substr(0, splitCommentPos);
+
+				const auto addr = strtol(addressStr.c_str(), nullptr, 16);
+
+				Disassembler::SymbolType type;
+				switch (areaStr[0])
+				{
+				case 'X':
+				case 'x':	type = Disassembler::MemX;	break;
+				case 'Y':
+				case 'y':	type = Disassembler::MemY;	break;
+				case 'P':
+				case 'p':	type = Disassembler::MemP;	break;
+				case 'l':
+				case 'L':	type = Disassembler::MemL;	break;
+				case 'i':
+				case 'I':	type = Disassembler::Immediate;	break;
+				default:
+					LOG("Unknown symbol type " << areaStr << ", needs to be X, Y, P, L or I");
+					return -1;
+				}
+
+				disasm.addSymbol(type, addr, valueStr);
+			}
+		}
 
 		std::string assembly;
-		disasm.disassembleMemoryBlock(assembly, input, 0, true, true, true);
+		disasm.disassembleMemoryBlock(assembly, input, pc, true, true, true);
 
 		out << assembly;
 

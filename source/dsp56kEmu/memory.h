@@ -1,13 +1,10 @@
 #pragma once
 
-#include <array>
 #include <map>
 #include <set>
 #include <vector>
 
 #include "peripherals.h"
-
-#define MEMORY_HEAT_MAP	false
 
 namespace dsp56k
 {
@@ -56,19 +53,15 @@ namespace dsp56k
 		const IMemoryValidator&								m_memoryMap;
 		
 		// number of words of 24-bit data for 3 banks (XYP)
-		const TWord											m_size;
+		std::array<TWord, MemArea_COUNT>					m_size;
 		std::vector<TWord>									m_buffer;
-		StaticArray< TWord*, MemArea_COUNT >				m_mem;
+		std::array<TWord*, MemArea_COUNT>					m_mem;
 
 		TWord*												x;
 		TWord*												y;
 		TWord*												p;
 
 		TWord												m_bridgedMemoryAddress;
-
-#if MEMORY_HEAT_MAP
-		mutable std::array<std::vector<uint32_t>, MemArea_COUNT>	m_heatMap;
-#endif
 		
 		struct STransaction
 		{
@@ -95,7 +88,8 @@ namespace dsp56k
 		// implementation
 		//
 	public:
-		Memory(const IMemoryValidator& _memoryMap, TWord _memSize = 0xc00000, TWord* _externalBuffer = nullptr);
+		explicit Memory(const IMemoryValidator& _memoryMap, TWord _memSize = 0xc00000, TWord* _externalBuffer = nullptr);
+		explicit Memory(const IMemoryValidator& _memoryMap, TWord _memSizeP, TWord _memSizeXY, TWord _brigedMemoryAddress, TWord* _externalBuffer = nullptr);
 		Memory(const Memory&) = delete;
 		Memory& operator = (const Memory&) = delete;
 
@@ -107,25 +101,20 @@ namespace dsp56k
 		TWord				get					( EMemArea _area, TWord _offset ) const;
 		void				getOpcode			( TWord _offset, TWord& _wordA, TWord& _wordB ) const;
 
-		bool				save				( FILE* _file ) const;
-		bool				load				( FILE* _file );
-
 		bool				save				(const char* _file, EMemArea _area) const;
-		bool				saveAssembly		(const char* _file, TWord _offset, const TWord _count, bool _skipNops = true, bool _skipDC = false, IPeripherals* _peripherals = nullptr);
+		bool				saveAssembly		(const char* _file, TWord _offset, const TWord _count, bool _skipNops = true, bool _skipDC = false, IPeripherals* _peripheralsX = nullptr, IPeripherals* _peripheralsY = nullptr) const;
 
-		bool				saveAsText			(const char* _file, EMemArea _area, const TWord _offset, const TWord _count);
+		bool				saveAsText			(const char* _file, EMemArea _area, const TWord _offset, const TWord _count) const;
 
-		bool				saveHeatmap			(const char* _file, bool _writeZeroes);
-		bool				saveHeatmapImage	(const char* _file);
-		void				clearHeatmap		();
-		
 		void				setDSP				( DSP* _dsp )	{ m_dsp = _dsp; }
 
 		void				setSymbol			(char _area, TWord _address, const std::string& _name);
 		const std::string&	getSymbol			(EMemArea _memArea, TWord addr) const;
 		const std::map<char, std::map<TWord, SSymbol>>& getSymbols() const { return m_symbols; }
 
-		TWord				size				() const	{ return m_size; }
+		TWord				size				(EMemArea _area) const	{ return m_size[_area]; }
+		TWord				sizeXY				() const				{ return size(MemArea_X); }
+		TWord				sizeP				() const				{ return size(MemArea_P); }
 
 		void				setExternalMemory	(const TWord _address, bool _isExternalMemoryBridged)
 		{
@@ -133,6 +122,38 @@ namespace dsp56k
 		}
 
 		const TWord&		getBridgedMemoryAddress() const { return m_bridgedMemoryAddress; }
+
+		TWord*				getMemAreaPtr		(EMemArea _area)
+		{
+			switch (_area)
+			{
+			case MemArea_P: return p;
+			case MemArea_X: return x;
+			case MemArea_Y: return y;
+			default:		return nullptr;
+			}
+		}
+
+		// As XY is bridged to P for all addresses >= _brigedMemoryAddress, we need to allocate more for P but less for XY if a bridged address is specified
+		static constexpr TWord calcXYMemSize(TWord _memSizeXY, TWord _bridgedMemoryAddress)
+		{
+			return _bridgedMemoryAddress ? _bridgedMemoryAddress : _memSizeXY;
+		}
+
+		static constexpr TWord calcPMemSize(TWord _memSizeP, TWord _memSizeXY, TWord _bridgedMemoryAddress)
+		{
+			return _bridgedMemoryAddress ? std::max(_memSizeXY, _memSizeP) : _memSizeP;
+		}
+
+		static constexpr TWord calcMemSize(TWord _memSizeP, TWord _memSizeXY, TWord _bridgedMemoryAddress)
+		{
+			return calcPMemSize(_memSizeP, _memSizeXY, _bridgedMemoryAddress) + 2 * calcXYMemSize(_memSizeXY, _bridgedMemoryAddress);
+		}
+		
+		static constexpr TWord calcMemSize(TWord _memSize, TWord _bridgedMemoryAddress)
+		{
+			return calcPMemSize(_memSize, _memSize, _bridgedMemoryAddress) + 2 * calcXYMemSize(_memSize, _bridgedMemoryAddress);
+		}
 
 	private:
 		void				fillWithInitPattern	();

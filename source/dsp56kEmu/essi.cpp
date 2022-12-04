@@ -19,9 +19,10 @@ namespace dsp56k
 
 	void Essi::exec()
 	{
-		if(m_pendingRXInterrupts > 0 && bittest(get(Essi0, ESSI0_CRB), CRB_RIE))
+		assert(false && "needs implementation similar to ESAI");
+
+		if(bittest(get(Essi0, ESSI0_CRB), CRB_RIE))
 		{
-			--m_pendingRXInterrupts;
 			m_periph.getDSP().injectInterrupt(Vba_ESSI0receivedata);			
 		}
 	}
@@ -42,7 +43,8 @@ namespace dsp56k
 		if(!bittest(get(Essi0, ESSI0_CRB), CRB_RE))
 			return 0;
 
-		const auto res = readRXimpl(_index);
+		assert(false && "needs to be implemented similar to ESAI");
+		const auto res = 0;//readRXimpl(_index);
 
 		toggleStatusRegisterBit(Essi0, SSISR_RFS, m_frameSyncDSPRead);
 
@@ -52,10 +54,10 @@ namespace dsp56k
 	TWord Essi::readSR()
 	{
 		// set Receive Register Full flag if there is input
-		toggleStatusRegisterBit(Essi0, SSISR_RDF, m_audioInputs[0].empty() ? 0 : 1);
+		toggleStatusRegisterBit(Essi0, SSISR_RDF, m_audioInputs.empty() ? 0 : 1);
 
 		// set Transmit Register Empty flag if there is space left in the output
-		toggleStatusRegisterBit(Essi0, SSISR_TDE, m_audioOutputs[0].full() ? 0 : 1);
+		toggleStatusRegisterBit(Essi0, SSISR_TDE, m_audioOutputs.full() ? 0 : 1);
 
 		// update frame sync status
 		toggleStatusRegisterBit(Essi0, SSISR_RFS, m_frameSyncDSPStatus);
@@ -69,7 +71,8 @@ namespace dsp56k
 		if(!bittest(get(Essi0, ESSI0_CRB), CRB_TE0 - _txIndex))
 			return;
 
-		writeTXimpl(_txIndex, _val);
+		assert(false && "needs to be implemented similar to ESAI");
+//		writeTXimpl(_txIndex, _val);
 	}
 
 	void Essi::reset(const EssiIndex _index)

@@ -113,4 +113,16 @@ namespace dsp56k
 		// ...
 //		Vba_ReservedFE									= 0xFE,		// Reserved
 	};
+
+	enum InterruptVectorAddress56367
+	{
+		Vba_ESAI_1_Receive_Data							= 0x70,		// ESAI_1 Receive Data
+		Vba_ESAI_1_Receive_Even_Data					= 0x72,		// ESAI_1 Receive Even Data
+		Vba_ESAI_1_Receive_Data_With_Exception_Status	= 0x74,		// ESAI_1 Receive Data With Exception Status
+		Vba_ESAI_1_Receive_Last_Slot					= 0x76,		// ESAI_1 Receive Last Slot
+		Vba_ESAI_1_Transmit_Data						= 0x78,		// ESAI_1 Transmit Data
+		Vba_ESAI_1_Transmit_Even_Data					= 0x7a,		// ESAI_1 Transmit Even Data
+		Vba_ESAI_1_Transmit_Data_with_Exception_Status	= 0x7c,		// ESAI_1 Transmit Data with Exception Status
+		Vba_ESAI_1_Transmit_Last_Slot					= 0x7e,		// ESAI_1 Transmit Last Slot
+	};
 }

@@ -29,8 +29,8 @@ namespace dsp56k
 
 	JitStackHelper::JitStackHelper(JitBlock& _block) : m_block(_block)
 	{
-		m_pushedRegs.reserve(128);
-		m_usedRegs.reserve(128);
+		m_pushedRegs.reserve(32);
+		m_usedRegs.reserve(32);
 
 		if constexpr (!g_dynamicNonVolatilePushes)
 			pushNonVolatiles();
@@ -192,7 +192,7 @@ namespace dsp56k
 
 	void JitStackHelper::movePushesTo(asmjit::BaseNode* _baseNode, size_t _firstIndex)
 	{
-		m_block.asm_().setCursor(_baseNode->next());
+		m_block.asm_().setCursor(_baseNode);
 
 		for(size_t i=_firstIndex; i<m_pushedRegs.size(); ++i)
 		{
@@ -316,5 +316,42 @@ namespace dsp56k
 #else
 		m_block.asm_().sub(g_stackReg, asmjit::Imm(offset));
 #endif
+	}
+
+	PushMover::PushMover(JitBlock& _block, bool _begin): m_block(_block)
+	{
+		if(_begin)
+			begin();
+	}
+
+	PushMover::~PushMover()
+	{
+		end();
+	}
+
+	void PushMover::begin()
+	{
+		if(m_cursorBeforePushes)
+		{
+			assert(m_cursorBeforePushes);
+			end();
+		}
+
+		m_cursorBeforePushes = m_block.asm_().cursor();
+		m_beginPushCount = m_block.stack().pushedRegCount();
+	}
+
+	void PushMover::end()
+	{
+		if(!m_cursorBeforePushes)
+			return;
+
+		const auto endPushCount = m_block.stack().pushedRegCount();
+
+		if(endPushCount > m_beginPushCount)
+			m_block.stack().movePushesTo(m_cursorBeforePushes, m_beginPushCount);
+
+		m_cursorBeforePushes = nullptr;
+		m_beginPushCount = 0;
 	}
 }

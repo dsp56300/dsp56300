@@ -109,10 +109,7 @@ namespace dsp56k
 	{
 		auto res = bittest<T>( _val, _bitNumber );
 
-		if( res )
-			_val &= ~ (T(1)<<_bitNumber);
-		else
-			_val |= (T(1)<<_bitNumber);
+		_val ^= (T(1)<<_bitNumber);
 
 		return res;
 	}
@@ -152,18 +149,13 @@ namespace dsp56k
 			|	(a & 0x01 << 7);
 	}
 
-	static TWord bitreverse24( TWord a )
+	static constexpr TWord bitreverse24( TWord x )
 	{
-		const TWord temp =  (a & 0x808080 >> 7)
-						|	(a & 0x404040 >> 5)
-						|	(a & 0x202020 >> 3)
-						|	(a & 0x101010 >> 1)
-						|	(a & 0x080808 << 1)
-						|	(a & 0x040404 << 3)
-						|	(a & 0x020202 << 5)
-						|	(a & 0x010101 << 7);
+		x = (((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1));
+		x = (((x & 0xcccccccc) >> 2) | ((x & 0x33333333) << 2));
+		x = (((x & 0xf0f0f0f0) >> 4) | ((x & 0x0f0f0f0f) << 4));
 
-		return ((temp & 0xff0000) >> 16) | (temp & 0x00ff00) | ((temp & 0x0000ff) << 16);
+		return ((x & 0xff0000) >> 16) | (x & 0x00ff00) | ((x & 0x0000ff) << 16);
 	}
 
 	static TWord delta(TWord b, TWord a)
@@ -195,4 +187,6 @@ namespace dsp56k
 	{
 		return alignedSize(sizeof(T));
 	}
+
+	void nativeDebugBreak();
 }

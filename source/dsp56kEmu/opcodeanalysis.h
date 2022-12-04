@@ -6,6 +6,7 @@
 #include "opcodetypes.h"
 #include "types.h"
 #include "peripherals.h"
+#include "registers.h"
 
 namespace dsp56k
 {
@@ -25,7 +26,7 @@ namespace dsp56k
 		N0, N1, N2, N3, N4, N5, N6, N7,
 		M0, M1, M2, M3, M4, M5, M6, M7,
 
-		PC, LA, LC, SSH, SSL, SP, SC, EP, VBA, SZ, MR, CCR, EOM, COM,
+		PC, LA, LC, SSH, SSL, SP, SC, EP, VBA, SZ, EMR, MR, CCR, EOM, COM,
 
 		// combinations
 
@@ -123,12 +124,13 @@ namespace dsp56k
 		SC = (1ull << static_cast<uint64_t>(Register::SC)),
 		EP = (1ull << static_cast<uint64_t>(Register::EP)),
 		SZ = (1ull << static_cast<uint64_t>(Register::SZ)),
+		EMR = (1ull << static_cast<uint64_t>(Register::EMR)),
 		MR = (1ull << static_cast<uint64_t>(Register::MR)),
 		CCR = (1ull << static_cast<uint64_t>(Register::CCR)),
 		EOM = (1ull << static_cast<uint64_t>(Register::EOM)),
 		COM = (1ull << static_cast<uint64_t>(Register::COM)),
 
-		SR = MR | CCR,
+		SR = EMR | MR | CCR,
 		OMR = EOM | COM,
 	};
 
@@ -187,6 +189,10 @@ namespace dsp56k
 		case Register::Y0X1:	return RegisterMask::Y0X1;
 		case Register::Y1X0:	return RegisterMask::Y1X0;
 		case Register::Y1X1:	return RegisterMask::Y1X1;
+		case Register::X0X0:	return RegisterMask::X0;
+		case Register::X1X1:	return RegisterMask::X1;
+		case Register::Y0Y0:	return RegisterMask::Y0;
+		case Register::Y1Y1:	return RegisterMask::Y1;
 
 		case Register::SR:		return RegisterMask::SR;
 		case Register::OMR:		return RegisterMask::OMR;
@@ -540,9 +546,9 @@ namespace dsp56k
 			return getRegister_QQQQ(getFieldValue(_inst, _field, _op));
 		case Field_rr: 
 			{
-				const TWord mrX = getFieldValue(_inst, Field_MM, Field_RRR, _op);
+				const TWord rrX = getFieldValue(_inst, Field_RRR, _op);
 				TWord rrY = getFieldValue(_inst, Field_rr, _op);
-				rrY += ((mrX & 0x7) >= 4) ? 0 : 4;
+				rrY += (rrX >= 4) ? 0 : 4;
 				return getRegister_RRR(rrY);
 			}
 		case Field_RRR: 
@@ -626,6 +632,11 @@ namespace dsp56k
 			read(Register::SSH);
 		}
 
+		if (g_opcodes[_inst].flag(OpFlagPopSR))
+		{
+			write(Register::SR);
+		}
+
 		if (g_opcodes[_inst].flags(OpFlagRepImmediate, OpFlagRepDynamic))
 		{
 			write(Register::LC);
@@ -642,11 +653,8 @@ namespace dsp56k
 		if (g_opcodes[_inst].flag(OpFlagCCR))
 			write(Register::CCR);
 
-		if(hasField(_inst, Field_MM) || hasField(_inst, Field_MMM))
+		auto readMMMRRR = [&read, &write](const TWord mmm, const TWord rrr)
 		{
-			const auto mmm = getFieldValue(_inst, hasField(_inst, Field_MM) ? Field_MM : Field_MMM, _op);
-			const auto rrr = getFieldValue(_inst, Field_RRR, _op);
-
 			switch (mmm << 3 | rrr)
 			{
 			case MMMRRR_AbsAddr:
@@ -661,6 +669,26 @@ namespace dsp56k
 				if (mmm != MMM_Rn)
 					read(Register::M0, rrr);
 			}
+		};
+
+		if(hasField(_inst, Field_MM) || hasField(_inst, Field_MMM))
+		{
+			const auto mmm = getFieldValue(_inst, hasField(_inst, Field_MM) ? Field_MM : Field_MMM, _op);
+			const auto rrr = getFieldValue(_inst, Field_RRR, _op);
+
+			readMMMRRR(mmm, rrr);
+		}
+
+		if(hasField(_inst, Field_mm))
+		{
+			const auto rrX = getFieldValue(_inst, Field_RRR, _op);
+
+			const auto mmY = getFieldValue(_inst, Field_mm, _op);
+			const auto rrY = getFieldValue(_inst, Field_rr, _op);
+
+			const TWord regIdxOffset = rrX >= 4 ? 0 : 4;
+			const auto rr = (rrY + regIdxOffset) & 7;
+			readMMMRRR(mmY, rr);
 		}
 
 		switch (_inst)
@@ -772,6 +800,14 @@ namespace dsp56k
 		case Dor_S:
 			readf(Field_DDDDDD);
 			break;
+		case Enddo:
+			write(Register::LA);
+			write(Register::LC);
+			read(Register::SP);
+			write(Register::SP);
+			read(Register::SSH);
+			read(Register::SSL);
+			break;
 		case Extract_S1S2:
 		case Extractu_S1S2:
 		case Extract_CoS2:
@@ -792,11 +828,11 @@ namespace dsp56k
 			break;
 		case Lra_Rn:
 			read(Register::PC);
+			readf(Field_RRR);
 			writef(Field_ddddd);
 			break;
 		case Lra_xxxx: 
 			read(Register::PC);
-			readf(Field_RRR);
 			writef(Field_ddddd);
 			break;
 		case Asl_D:
@@ -817,6 +853,7 @@ namespace dsp56k
 			break;
 		case Lua_Rn:
 			readf(Field_RRR);
+			read(Register::M0, getFieldValue<Lua_Rn, Field_RRR>(_op));
 			writef(Field_dddd);
 			break;
 		case Mac_S1S2:
@@ -871,6 +908,7 @@ namespace dsp56k
 		case Movey_Rnxxxx:
 			{
 				readf(Field_RRR);
+				read(Register::M0, getFieldValue(_inst, Field_RRR, _op));
 				const auto writeReg = getFieldValue(_inst, Field_W, _op);
 				if (writeReg)
 					writef(Field_DDDDDD);
@@ -882,6 +920,7 @@ namespace dsp56k
 		case Movey_Rnxxx:
 			{
 				readf(Field_RRR);
+				read(Register::M0, getFieldValue(_inst, Field_RRR, _op));
 				const auto writeReg = getFieldValue(_inst, Field_W, _op);
 				if (writeReg)
 					writef(Field_DDDD);
@@ -1122,5 +1161,162 @@ namespace dsp56k
 		}
 
 		return false;
+	}
+
+	inline uint32_t getOpcodeLength(const Instruction _inst, const TWord _op)
+	{
+		const auto ext = g_opcodes[_inst].m_extensionWordType;
+
+		switch(ext)
+		{
+		case None:
+			return 1;
+		case AbsoluteAddressExt:
+		case PCRelativeAddressExt:
+			return 2;
+		default:
+			if(hasField(_inst, Field_MMM))
+			{
+				const auto mmm = getFieldValue(_inst, Field_MMM, _op);
+				switch (mmm)
+				{
+				case MMM_ImmediateData:
+//				case MMM_AbsAddr:	// value is identical to immediate data
+					return 2;
+				default:
+					return 1;
+				}
+			}
+			return 2;
+		}
+	}
+
+	inline bool writesToPMemory(const Instruction _inst, const TWord op)
+	{
+		switch (_inst)
+		{
+		case Movem_ea:
+			{
+				const auto write = getFieldValue<Movem_ea, Field_W>(op);
+				return !write;
+			}
+		case Movep_eapp:
+			{
+				const auto write = getFieldValue<Movep_eapp, Field_W>(op);
+				return !write;
+			}
+		default:
+			return false;
+		}
+	}
+
+	inline bool getLoopEndAddr(TWord& _endAddr, const Instruction _inst, const TWord pc, const TWord opB)
+	{
+		switch (_inst)
+		{
+		case Do_ea:
+		case Do_aa:
+		case Do_xxx:
+		case Do_S:
+		case DoForever:
+			_endAddr = opB + 1;
+			return true;
+		case Dor_ea:
+		case Dor_aa:
+		case Dor_xxx:
+		case Dor_S:
+		case DorForever:
+			_endAddr = pc + opB + 1;
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	inline bool getMemoryAddress(TWord& _addr, EMemArea& _area, const Instruction _inst, const TWord opA, const TWord opB)
+	{
+		_addr = g_invalidAddress;
+		_area = MemArea_COUNT;
+
+		if(!hasField(_inst, Field_W))
+			return false;
+
+		if(hasField(_inst, Field_S))
+		{
+			_area = getFieldValue(_inst, Field_S, opA) ? MemArea_Y : MemArea_X;
+		}
+		else
+		{
+			switch (_inst)
+			{
+			case Movex_ea:
+			case Movex_aa:
+			case Movex_Rnxxx:
+			case Movex_Rnxxxx:
+			case Movexr_A:
+			case Movexr_ea:
+				_area = MemArea_X;
+				break;
+			case Movey_ea:
+			case Movey_aa:
+			case Movey_Rnxxx:
+			case Movey_Rnxxxx:
+			case Moveyr_A:
+			case Moveyr_ea:
+				_area = MemArea_Y;
+				break;
+			case Movem_aa:
+			case Movem_ea:
+				_area = MemArea_P;
+				break;
+			}
+		}
+
+		if(hasField(_inst, Field_aaaaaa))
+		{
+			_addr = getFieldValue(_inst, Field_aaaaaa, opA);
+			return true;
+		}
+
+		if(hasField(_inst, Field_MMM) && hasField(_inst, Field_RRR))
+		{
+			const auto mmmrrr = getFieldValue(_inst, Field_MMM, Field_RRR, opA);
+
+			if (mmmrrr == MMMRRR_AbsAddr)
+			{
+				_addr = opB;
+				return true;
+			}
+
+			_addr = g_dynamicAddress;
+		}
+		
+		if(hasField(_inst, Field_s))
+		{
+			const auto periphArea = getFieldValue(_inst, Field_s, opA) ? MemArea_Y : MemArea_X;
+
+			if(hasField(_inst, Field_q) && hasField(_inst, Field_qqqqq))
+			{
+				_area = periphArea;
+				_addr = getFieldValue(_inst, Field_q, Field_qqqqq, opA) + 0xffff80;
+				return true;
+			}
+
+			if(hasField(_inst, Field_qqqqqq))
+			{
+				_area = periphArea;
+				_addr = getFieldValue(_inst, Field_qqqqqq, opA) + 0xffff80;
+				return true;
+			}
+
+			if(hasField(_inst, Field_pppppp))
+			{
+				_area = periphArea;
+				_addr = getFieldValue(_inst, Field_pppppp, opA) + 0xffffc0;
+				return true;
+			}
+		}
+		
+		return _addr != g_invalidAddress;
 	}
 }

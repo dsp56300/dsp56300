@@ -1,22 +1,30 @@
 #pragma once
 
 #include <vector>
+#include <functional>
 
 #include "opcodetypes.h"
+#include "types.h"
+#include "ringbuffer.h"
+#include "utils.h"
+#include "logging.h"
 
 namespace dsp56k
 {
 	class IPeripherals;
+	class Disassembler;
+
 	class HDI08
 	{
 	public:
-		explicit HDI08(IPeripherals& _peripheral) : m_periph(_peripheral), m_pendingRXInterrupts(0), m_pendingTXInterrupts(1) {}
+		explicit HDI08(IPeripherals& _peripheral);
 
 		enum Addresses
 		{
 			HCR		= 0xFFFFC2,					// Host Control Register (HCR)
 			HSR		= 0xFFFFC3,					// Host Status Register (HSR)
 			HPCR	= 0xFFFFC4,					// Host Port Control Register (HPCR)
+			HBAR	= 0xFFFFC5,					// Host Base Address Register (HBAR)
 			HORX	= 0xFFFFC6,					// Host Receive Register (HORX)
 			HOTX	= 0xFFFFC7,					// Host Transmit Register (HOTX)
 			HDDR	= 0xFFFFC8,					// Host Data Direction Register (HDDR)
@@ -32,7 +40,7 @@ namespace dsp56k
 			HSR_HF1,						// Host Flag 1
 			HSR_DMA = 7,					// DMA Status
 		};
-			
+
 		enum HostPortControlRegisterBits
 		{
 			HPCR_HEN = 6,					// HostEnable
@@ -40,17 +48,19 @@ namespace dsp56k
 		
 		enum HostControlRegisterBits
 		{
-			HCR_HRIE = 0,					// Host Receive Interrupt Enable
-			HCR_HTIE = 1,					// Host Transmit Interrupt Enable
+			HCR_HRIE,					// Host Receive Interrupt Enable
+			HCR_HTIE,					// Host Transmit Interrupt Enable
+			HCR_HCIE,					// Host Command Interrupt Enable
+			HCR_HF2,					// HCR Host Flags 2,3 (HF2,HF3) Bits 3-4
+			HCR_HF3,
+			HCR_HDM0,					// HCR Host DMA Mode Control Bits (HDM0, HDM1, HDM2) Bits 5-7
+			HCR_HDM1,
+			HCR_HDM2,
 		};
-		
 
-		TWord readStatusRegister()
-		{
-			// Toggle HDI8 "Receive Data Full" bit
-			dsp56k::bitset<TWord, HSR_HRDF>(m_hsr, m_data.empty() ? 0 : 1);
-			return m_hsr;
-		}
+		using CallbackTx = std::function<void()>;
+
+		TWord readStatusRegister();
 
 		TWord readControlRegister() const
 		{
@@ -66,7 +76,7 @@ namespace dsp56k
 
 		void writeStatusRegister(const TWord _val)
 		{
-			LOG("Write HDI08 HSR " << HEX(_val));
+//			LOG("Write HDI08 HSR " << HEX(_val));
 			m_hsr = _val;
 		}
 
@@ -88,24 +98,70 @@ namespace dsp56k
 		void writeRX(const TWord* _data, size_t _count);
 		void clearRX();
 		
-		bool hasDataToSend() const {return !m_data.empty();}
+		bool hasRXData() const {return !m_dataRX.empty();}
 
-		void setHostFlags(char _flag0, char _flag1);
+		void setPendingHostFlags01(uint32_t _pendingHostFlags);
+		void setHostFlags(uint8_t _flag0, uint8_t _flag1);
+		void setHostFlagsWithWait(uint8_t _flag0, uint8_t _flag1);
+		bool needsToWaitForHostFlags(uint8_t _flag0, uint8_t _flag1) const;
+		void waitUntilBufferEmpty() const;
 
-		void reset() {}
+		void reset();
 
 		bool dataRXFull() const;
 
 		void terminate();
 
+		TWord readHDR() const;
+		void writeHDR(TWord _val);
+
+		TWord readHDDR() const;
+		void writeHDDR(TWord _val);
+
+		void setTransmitDataAlwaysEmpty(bool _alwaysEmpty)
+		{
+			m_transmitDataAlwaysEmpty = _alwaysEmpty;
+		}
+
+		static void setSymbols(Disassembler& _disasm);
+
+		void injectTXInterrupt();
+
+		bool txInterruptEnabled() const
+		{
+			return dsp56k::bittest<TWord, HCR_HTIE>(m_hcr);
+		}
+
+		bool rxInterruptEnabled() const
+		{
+			return dsp56k::bittest<TWord, HCR_HRIE>(m_hcr);
+		}
+
+		void setWriteTxCallback(const CallbackTx& _callback)
+		{
+			m_callbackTx = _callback;
+		}
+
+		void setRXRateLimit(uint32_t _rateLimit)
+		{
+			m_rxRateLimit = _rateLimit;
+		}
+
 	private:
 		TWord m_hsr = 0;
 		TWord m_hcr = 0;
 		TWord m_hpcr = 0;
-		RingBuffer<TWord, 8192, true> m_data;
+		RingBuffer<TWord, 8192, true> m_dataRX;
 		RingBuffer<TWord, 8192, true> m_dataTX;
 		IPeripherals& m_periph;
-		std::atomic<uint32_t> m_pendingRXInterrupts;
 		std::atomic<uint32_t> m_pendingTXInterrupts;
+		uint32_t m_lastRXClock = 0;
+		TWord m_hdr = 0;
+		TWord m_hddr = 0;
+		bool m_transmitDataAlwaysEmpty = true;
+		CallbackTx m_callbackTx;
+		uint32_t m_rxRateLimit;		// minimum number of instructions between two RX interrupts
+		bool m_waitServeRXInterrupt = false;
+		int32_t m_pendingHostFlags01 = -1;
 	};
 }

@@ -69,7 +69,7 @@ namespace dsp56k
 		SRB_DM,					// double-precision multiply mode
 		SRB_LF,					// DO loop flag
 
-	// bits 16-23
+		// bits 16-23
 		SRB_FV,					// DO forever
 		SRB_SA,					// sixteen-bit arithmetic mode
 		__SRB_18,				// not used

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "dma.h"
 #include "esai.h"
+#include "esaiclock.h"
 #include "essi.h"
 #include "hdi08.h"
 #include "hi08.h"
@@ -70,7 +72,7 @@ namespace dsp56k
 		XIO_PCTL,							// PLL Control Register
 
 		XIO_IPRP,							// Interrupt Priority Register Peripheral
-		XIO_IPRC							// Interrupt Priority Register Core
+		XIO_IPRC = XIO_Reserved_High_Last	// Interrupt Priority Register Core
 	};
 
 	class IPeripherals
@@ -89,14 +91,26 @@ namespace dsp56k
 		};
 
 		virtual TWord read(TWord _addr, Instruction _inst) = 0;
+		virtual const TWord* readAsPtr(TWord _addr, Instruction _inst) = 0;
 		virtual void write(TWord _addr, TWord _value) = 0;
 		virtual void exec() = 0;
 		virtual void reset() = 0;
-		virtual void setSymbols(Disassembler& _disasm) = 0;
+		virtual void setSymbols(Disassembler& _disasm) const = 0;
 		virtual void terminate() = 0;
 
 	private:
 		DSP* m_dsp = nullptr;
+	};
+
+	class PeripheralsNop : public IPeripherals
+	{
+		TWord read(TWord _addr, Instruction _inst) override { return 0; }
+		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
+		void write(TWord _addr, TWord _value) override {}
+		void exec() override {}
+		void reset() override {}
+		void setSymbols(Disassembler& _disasm) const override {}
+		void terminate() override {}
 	};
 
 	class Peripherals56303 : public IPeripherals
@@ -113,6 +127,7 @@ namespace dsp56k
 		Peripherals56303();
 		
 		TWord read(TWord _addr, Instruction _inst) override;
+		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
 		void write(TWord _addr, TWord _val) override;
 
 		void exec() override;
@@ -121,7 +136,7 @@ namespace dsp56k
 		Essi& getEssi()	{ return m_essi; }
 		HI08& getHI08()	{ return m_hi08; }
 
-		void setSymbols(Disassembler& _disasm) override {}
+		void setSymbols(Disassembler& _disasm) const override {}
 
 		void terminate() override {};
 
@@ -129,6 +144,8 @@ namespace dsp56k
 		Essi m_essi;
 		HI08 m_hi08;
 	};
+
+	class Peripherals56367;
 
 	class Peripherals56362 : public IPeripherals
 	{
@@ -141,24 +158,58 @@ namespace dsp56k
 		// implementation
 		//
 	public:
-		Peripherals56362();
+		Peripherals56362(Peripherals56367* _peripherals56367 = nullptr);
 		
 		TWord read(TWord _addr, Instruction _inst) override;
+		const TWord* readAsPtr(TWord _addr, Instruction _inst) override;
 		void write(TWord _addr, TWord _val) override;
 
 		void exec() override;
 		void reset() override;
 
+		EsaiClock& getEsaiClock() { return m_esaiClock; }
 		Esai& getEsai()		{ return m_esai; }
 		HDI08& getHDI08()	{ return m_hdi08; }
+		Dma& getDMA()		{ return m_dma; }
 		
-		void setSymbols(Disassembler& _disasm) override;
+		void setSymbols(Disassembler& _disasm) const override;
 
 		void terminate() override;
 
+		void disableTimers(const bool _disable)
+		{
+			m_disableTimers = _disable;
+		}
+
 	private:
+		Dma m_dma;
+		EsaiClock m_esaiClock;
 		Esai m_esai;
 		HDI08 m_hdi08;
 		Timers m_timers;
 		bool m_disableTimers;
-	};}
+	};
+
+	class Peripherals56367 : public IPeripherals
+	{
+	public:
+		Peripherals56367();
+
+		TWord read(TWord _addr, Instruction _inst) override;
+		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
+		void write(TWord _addr, TWord _val) override;
+
+		void exec() override;
+		void reset() override;
+
+		Esai& getEsai() { return m_esai; }
+
+		void setSymbols(Disassembler& _disasm) const override;
+
+		void terminate() override;
+
+	private:
+		std::array<TWord, XIO_Reserved_High_Last - XIO_Reserved_High_First + 1> m_mem;
+		Esai m_esai;
+	};
+}

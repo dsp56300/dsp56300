@@ -177,19 +177,19 @@ namespace dsp56k
 
 		OpcodeInfo(Dmac,			"000000010010010s1SdkQQQQ",	"DMAC (+/-)S1,S2,D", None, OpFlagCCR),
 
-		OpcodeInfo(Do_ea,			"0000011001MMMRRR0S000000",	"DO [X or Y]:ea, expr", AbsoluteAddressExt, OpFlagLoop | OpFlagPushPC),
-		OpcodeInfo(Do_aa,			"0000011000aaaaaa0S000000",	"DO [X or Y]:aa, expr", AbsoluteAddressExt, OpFlagLoop | OpFlagPushPC),
-		OpcodeInfo(Do_xxx,			"00000110iiiiiiii1000hhhh",	"DO #xxx, expr", AbsoluteAddressExt, OpFlagLoop | OpFlagPushPC),
-		OpcodeInfo(Do_S,			"0000011011DDDDDD00000000",	"DO S, expr", AbsoluteAddressExt, OpFlagLoop | OpFlagPushPC),
-		OpcodeInfo(DoForever,		"000000000000001000000011",	"DO FOREVER", AbsoluteAddressExt, OpFlagLoop | OpFlagPushPC),
+		OpcodeInfo(Do_ea,			"0000011001MMMRRR0S000000",	"DO [X or Y]:ea, expr", AbsoluteAddressExt, OpFlagDoLoop | OpFlagPushPC),
+		OpcodeInfo(Do_aa,			"0000011000aaaaaa0S000000",	"DO [X or Y]:aa, expr", AbsoluteAddressExt, OpFlagDoLoop | OpFlagPushPC),
+		OpcodeInfo(Do_xxx,			"00000110iiiiiiii1000hhhh",	"DO #xxx, expr", AbsoluteAddressExt, OpFlagDoLoop | OpFlagPushPC),
+		OpcodeInfo(Do_S,			"0000011011DDDDDD00000000",	"DO S, expr", AbsoluteAddressExt, OpFlagDoLoop | OpFlagPushPC),
+		OpcodeInfo(DoForever,		"000000000000001000000011",	"DO FOREVER", AbsoluteAddressExt, OpFlagDoLoop | OpFlagPushPC),
 
-		OpcodeInfo(Dor_ea,			"0000011001MMMRRR0S010000",	"DOR [X or Y]:ea,label", PCRelativeAddressExt, OpFlagLoop | OpFlagPushPC),
-		OpcodeInfo(Dor_aa,			"0000011000aaaaaa0S010000",	"DOR [X or Y]:aa,label", PCRelativeAddressExt, OpFlagLoop | OpFlagPushPC),
-		OpcodeInfo(Dor_xxx,			"00000110iiiiiiii1001hhhh",	"DOR #xxx, label", PCRelativeAddressExt, OpFlagLoop | OpFlagPushPC),
-		OpcodeInfo(Dor_S,			"0000011011DDDDDD00010000",	"DOR S, label", PCRelativeAddressExt, OpFlagLoop | OpFlagPushPC),
-		OpcodeInfo(DorForever,		"000000000000001000000010",	"DOR FOREVER", PCRelativeAddressExt, OpFlagLoop | OpFlagPushPC),
+		OpcodeInfo(Dor_ea,			"0000011001MMMRRR0S010000",	"DOR [X or Y]:ea,label", PCRelativeAddressExt, OpFlagDoLoop | OpFlagPushPC),
+		OpcodeInfo(Dor_aa,			"0000011000aaaaaa0S010000",	"DOR [X or Y]:aa,label", PCRelativeAddressExt, OpFlagDoLoop | OpFlagPushPC),
+		OpcodeInfo(Dor_xxx,			"00000110iiiiiiii1001hhhh",	"DOR #xxx, label", PCRelativeAddressExt, OpFlagDoLoop | OpFlagPushPC),
+		OpcodeInfo(Dor_S,			"0000011011DDDDDD00010000",	"DOR S, label", PCRelativeAddressExt, OpFlagDoLoop | OpFlagPushPC),
+		OpcodeInfo(DorForever,		"000000000000001000000010",	"DOR FOREVER", PCRelativeAddressExt, OpFlagDoLoop | OpFlagPushPC),
 
-		OpcodeInfo(Enddo,			"00000000000000001o0o1100",	"ENDDO", None, OpFlagPopPC),
+		OpcodeInfo(Enddo,			"00000000000000001o0o1100",	"ENDDO", None),
 
 		OpcodeInfo(Eor_SD,			"????????????????01JJd011",	"EOR S,D", None, OpFlagCCR),
 		OpcodeInfo(Eor_xx,			"0000000101iiiiii10ood011",	"EOR #xx,D", None, OpFlagCCR),
@@ -358,7 +358,7 @@ namespace dsp56k
 		OpcodeInfo(Rnd,				"????????????????0001d001",	"RND D", None, OpFlagCCR),
 		OpcodeInfo(Rol,				"????????????????0011d111",	"ROL D", None, OpFlagCCR),
 		OpcodeInfo(Ror,				"????????????????0010d111",	"ROR D", None, OpFlagCCR),
-		OpcodeInfo(Rti,				"000000000000000000000100",	"RTI", None, OpFlagPopPC),
+		OpcodeInfo(Rti,				"000000000000000000000100",	"RTI", None, OpFlagPopPC | OpFlagPopSR),
 		OpcodeInfo(Rts,				"000000000000000000001100",	"RTS", None, OpFlagPopPC),
 
 		OpcodeInfo(Sbc,				"????????????????001Jd101",	"SBC S,D", None, OpFlagCCR),

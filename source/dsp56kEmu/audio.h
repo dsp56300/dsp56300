@@ -46,46 +46,44 @@ namespace dsp56k
 	class Audio
 	{
 	public:
-		Audio() : m_callback(nullptr), m_pendingRXInterrupts(0) {}
+		Audio() : m_callback(nullptr) {}
 
-		void setCallback(const AudioCallback& _ac, const int _callbackSamples, const int _callbackChannels)
+		void setCallback(const AudioCallback& _ac, const int _callbackSamples)
 		{
 			m_callbackSamples = _callbackSamples;
-			m_callbackChannels = _callbackChannels;
-
 			m_callback = _ac;
 		}
 
-		void writeEmptyAudioIn(size_t len,size_t ins)
+		void writeEmptyAudioIn(size_t len)
 		{
-			for (size_t i = 0; i < len; ++i)
-			{
-				for (size_t c = 0; c < ins; ++c) 
-					m_audioInputs[c>>1].push_back(0);
-			}
+			for (size_t i = 0; i < (len<<1); ++i)
+				m_audioInputs.push_back({});
 		}
 
 		template<typename T>
-		void processAudioInterleaved(const T** _inputs, T** _outputs, size_t _sampleFrames, size_t _numDSPins, size_t _numDSPouts, size_t _latency = 0)
+		void processAudioInterleaved(const T** _inputs, T** _outputs, uint32_t _sampleFrames, const size_t _latency = 0)
+		{
+			processAudioInputInterleaved<T>(_inputs, _sampleFrames, _latency);
+			processAudioOutputInterleaved<T>(_outputs, _sampleFrames);
+		}
+
+		template<typename T>
+		void processAudioInputInterleaved(const T** _inputs, uint32_t _sampleFrames, const size_t _latency = 0)
 		{
 			if (!_sampleFrames)
 				return;
 
-			for (size_t i = 0; i < _sampleFrames; ++i)
+			for (uint32_t i = 0; i < _sampleFrames; ++i)
 			{
 				// INPUT
 
 				if(_latency > m_latency)
 				{
 					// a latency increase on the input means to feed additional zeroes into it
-					for (size_t c = 0; c < _numDSPins; ++c)
-					{
-						const auto in = c >> 1;
-						m_audioInputs[in].waitNotFull();
-						m_audioInputs[in].push_back(0);
-					}
-
-					m_pendingRXInterrupts += 2;
+					m_audioInputs.waitNotFull();
+					m_audioInputs.push_back({});
+					m_audioInputs.waitNotFull();
+					m_audioInputs.push_back({});
 
 					++m_latency;
 				}
@@ -97,45 +95,70 @@ namespace dsp56k
 				}
 				else
 				{
-					for (size_t c = 0; c < _numDSPins; ++c)
+					std::array<uint32_t, 4> inData;
+
+					auto processInput = [&](uint32_t _offset)
 					{
-						const auto in = c >> 1;
-						m_audioInputs[in].waitNotFull();
-						m_audioInputs[in].push_back(sample2dsp<T>(_inputs[c][i]));
-					}
+						for (uint32_t c = 0; c < inData.size(); ++c)
+						{
+							const uint32_t iSrc = (c<<1) + _offset;
+							inData[c] = _inputs[iSrc] ? sample2dsp<T>(_inputs[iSrc][i]) : 0;
+						}
 
-					m_pendingRXInterrupts += 2;
-				}
+						m_audioInputs.waitNotFull();
+						m_audioInputs.push_back(inData);
+					};
 
-				for (size_t c = 0; c < _numDSPouts; ++c)
-				{
-					const auto out = c >> 1;
-
-					m_audioOutputs[out].waitNotEmpty();
-					const auto v = m_audioOutputs[out].pop_front();
-
-					_outputs[c][i] = dsp2sample<T>(v);
+					processInput(0);
+					processInput(1);
 				}
 			}
 		}
 
 		template<typename T>
-		void processAudioInterleavedTX0(const T** _inputs, T** _outputs, size_t _sampleFrames)
+		void processAudioOutputInterleaved(T** _outputs, uint32_t _sampleFrames)
 		{
-			return processAudioInterleaved(_inputs, _outputs, _sampleFrames, 2, 2);
+			if (!_sampleFrames)
+				return;
+
+			for (uint32_t i = 0; i < _sampleFrames; ++i)
+			{
+				// OUTPUT
+
+				auto processOutput = [&](uint32_t _offset)
+				{
+					m_audioOutputs.waitNotEmpty();
+					const auto& outData = m_audioOutputs.pop_front();
+
+					for (uint32_t c = 0; c < outData.size(); ++c)
+					{
+						const uint32_t iDst = (c<<1) + _offset;
+
+						if(_outputs[iDst])
+						{
+							_outputs[iDst][i] = dsp2sample<T>(outData[c]);
+						}
+					}
+				};
+
+				processOutput(0);
+				processOutput(1);
+			}
 		}
 
-		const std::array<RingBuffer<uint32_t, 8192, true>, 1>& getAudioInputs() const { return m_audioInputs; }
-		const std::array<RingBuffer<uint32_t, 8192, true>, 3>& getAudioOutputs() const { return m_audioOutputs; }
+		const auto& getAudioInputs() const { return m_audioInputs; }
+		const auto& getAudioOutputs() const { return m_audioOutputs; }
+
+	public:
+		static constexpr uint32_t RingBufferSize = 8192;
 
 	protected:
-		TWord readRXimpl(size_t _index);
-		void writeTXimpl(size_t _index, TWord _val);
+		void readRXimpl(std::array<TWord, 4>& _values);
+		void writeTXimpl(const std::array<TWord, 6>& _values);
 
 		AudioCallback m_callback;
 
 		size_t m_callbackSamples = 0;
-		size_t m_callbackChannels = 0;
 
 		static void incFrameSync(uint32_t& _frameSync)
 		{
@@ -149,10 +172,8 @@ namespace dsp56k
 			FrameSyncChannelRight = 0
 		};
 
-		std::array<RingBuffer<uint32_t, 8192, true>, 1> m_audioInputs;
-		std::array<RingBuffer<uint32_t, 8192, true>, 3> m_audioOutputs;
-
-		std::atomic<uint32_t> m_pendingRXInterrupts;
+		RingBuffer<std::array<uint32_t, 4>, RingBufferSize, true> m_audioInputs;
+		RingBuffer<std::array<uint32_t, 6>, RingBufferSize, true> m_audioOutputs;
 
 		uint32_t m_frameSyncDSPStatus = FrameSyncChannelLeft;
 		uint32_t m_frameSyncDSPRead = FrameSyncChannelLeft;

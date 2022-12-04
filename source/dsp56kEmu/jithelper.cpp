@@ -10,7 +10,14 @@ namespace dsp56k
 {
 	void AsmJitErrorHandler::handleError(asmjit::Error err, const char* message, asmjit::BaseEmitter* origin)
 	{
-		LOG("Error: " << err << " - " << message);
+		if(m_block)
+		{
+			LOG("Error: " << err << " - " << message << ", block at PC " << HEX(m_block->getPCFirst()) << ", P mem size " << m_block->getPMemSize() << ", disasm = " << m_block->getDisasm());
+		}
+		else
+		{
+			LOG("Error: " << err << " - " << message);
+		}
 		assert(false);
 	}
 
@@ -39,7 +46,7 @@ namespace dsp56k
 		m_asm.bind(m_label);
 	}
 
-	If::If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc, bool _updateDirtyCCR)
+	If::If(JitBlock& _block, const std::function<void(asmjit::Label)>& _jumpIfFalse, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc, bool _updateDirtyCCR, bool _releaseRegPool)
 	{
 		auto& a = _block.asm_();
 
@@ -51,7 +58,7 @@ namespace dsp56k
 			ops.updateDirtyCCR();
 		};
 
-		auto execIf = [&](bool _pushNonVolatiles, bool _releaseRegPool)
+		auto execIf = [&](bool _pushNonVolatiles, PushMover& _pm)
 		{
 			const auto isFalse = a.newLabel();
 			const auto end = a.newLabel();
@@ -59,13 +66,12 @@ namespace dsp56k
 			updateDirtyCCR();
 
 			if(_releaseRegPool)
-				_block.dspRegPool().releaseAll();
+				_block.dspRegPool().releaseNonLocked();
 
 			if(_pushNonVolatiles)
 				_block.stack().pushNonVolatiles();
 
-			const auto oldPushedRegCount = _block.stack().pushedRegCount();
-			auto* cursorBeforeJump = _block.asm_().cursor();
+			_pm.begin();
 
 			_jumpIfFalse(isFalse);
 
@@ -75,7 +81,7 @@ namespace dsp56k
 				updateDirtyCCR();
 
 				if(_releaseRegPool)
-					_block.dspRegPool().releaseAll();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
+					_block.dspRegPool().releaseNonLocked();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
 			}
 
 			if (_hasFalseFunc)
@@ -90,19 +96,34 @@ namespace dsp56k
 				updateDirtyCCR();
 
 				if(_releaseRegPool)
-					_block.dspRegPool().releaseAll();
+					_block.dspRegPool().releaseNonLocked();
 			}
 
 			a.bind(end);
-
-			return std::make_pair(cursorBeforeJump, oldPushedRegCount);
 		};
 
 		// we move all register pushed that happened inside the branches to the outside to make sure they are always executed
+		PushMover pm(_block, false);
+		execIf(false, pm);
+	}
 
-		const auto data = execIf(false, true);
-		const auto newPushedRegCount = _block.stack().pushedRegCount();
-		if (newPushedRegCount > data.second)
-			_block.stack().movePushesTo(data.first, data.second);
+	JitReg64 r64(DspValue& _reg)
+	{
+		return r64(_reg.get());
+	}
+
+	JitReg32 r32(DspValue& _reg)
+	{
+		return r32(_reg.get());
+	}
+
+	JitReg64 r64(const DspValue& _reg)
+	{
+		return r64(_reg.get());
+	}
+
+	JitReg32 r32(const DspValue& _reg)
+	{
+		return r32(_reg.get());
 	}
 }

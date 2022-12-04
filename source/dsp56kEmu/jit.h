@@ -1,13 +1,17 @@
 #pragma once
 
+#include <memory>
+
 #include "jitcacheentry.h"
 #include "types.h"
 
-#include <vector>
 #include <set>
 
+#include "debuggerinterface.h"
+#include "jitblockchain.h"
+#include "jitconfig.h"
+#include "jitdspmode.h"
 #include "jitruntimedata.h"
-
 #include "logging.h"
 
 namespace asmjit
@@ -20,8 +24,10 @@ namespace asmjit
 
 namespace dsp56k
 {
+	struct JitBlockInfo;
 	class DSP;
 	class JitBlock;
+	class JitProfilingSupport;
 
 	class Jit final
 	{
@@ -33,59 +39,74 @@ namespace dsp56k
 
 		void exec(const TWord _pc)
 		{
-//			LOG("Exec @ " << HEX(pc));
-
-			// get JIT code
-			exec(_pc, m_jitFuncs[_pc]);
+//			LOG("Exec @ " << HEX(_pc));
+			m_currentChain->exec(_pc);
 		}
 
-		void notifyProgramMemWrite(const TWord _offset)
-		{
-			destroy(_offset);
-		}
+		void notifyProgramMemWrite(const TWord _offset);
 
 		void run(TWord _pc);
 		void runCheckPMemWrite(TWord _pc);
-		void create(TWord _pc, bool _execute);
-		void recreate(TWord _pc);
+		void runCheckPMemWriteAndModeChange(TWord _pc);
+		void runCheckModeChange(TWord _pc);
 
-		JitBlock* getChildBlock(JitBlock* _parent, TWord _pc, bool _allowCreate = true);
-		bool canBeDefaultExecuted(TWord _pc) const;
-
-		void occupyArea(JitBlock* _block);
-
-	private:
-		void emit(TWord _pc);
-		void destroyParents(JitBlock* _block);
-		void destroy(JitBlock* _block);
-		void destroy(TWord _pc)
-		{
-			const auto block = m_jitCache[_pc].block;
-			if (block)
-				destroy(block);
-		}
-		void release(const JitBlock* _block);
-		bool isBeingGeneratedRecursive(const JitBlock* _block) const;
-		bool isBeingGenerated(const JitBlock* _block) const;
-
-		void exec(TWord _pc, const TJitFunc& _f)
-		{
-			_f(this, _pc);
-		}
+		const JitConfig& getConfig() const { return m_config; }
+		void setConfig(const JitConfig& _config) { m_config = _config; }
+		void resetHW();
+		const std::map<TWord, TWord>& getLoops() const { return m_loops; }
+		const std::set< TWord>& getLoopEnds() const { return m_loopEnds; }
 
 		static TJitFunc updateRunFunc(const JitCacheEntry& e);
 
-		void checkPMemWrite();
+		auto* getRuntime() { return m_rt; }
+		auto& getRuntimeData() { return m_runtimeData; }
+		const auto& getVolatileP()  { return m_volatileP; }
+		auto* getProfilingSupport() const { return m_profiling.get(); }
 
-		JitRuntimeData m_runtimeData;
+		bool isVolatileP(const TWord _pc) const
+		{
+			return m_volatileP.find(_pc) != m_volatileP.end();
+		}
+
+		void create(TWord _pc, bool _execute);
+		void recreate(TWord _pc);
+
+		void addLoop(const JitBlockInfo& _info);
+		void addLoop(TWord _begin, TWord _end);
+		void removeLoop(const JitBlockInfo& _info);
+		void removeLoop(TWord _begin);
+
+		void destroy(TWord _pc);
+
+		void checkModeChange();
+
+		void onDebuggerAttached(DebuggerInterface& _debugger) const;
+
+		void destroyAllBlocks();
+
+	private:
+		void emit(TWord _pc);
+
+		void checkPMemWrite();
 
 		DSP& m_dsp;
 
 		asmjit::_abi_1_9::JitRuntime* m_rt = nullptr;
-		std::vector<JitCacheEntry> m_jitCache;
+
+		std::map<JitDspMode, std::unique_ptr<JitBlockChain>> m_chains;
+		JitBlockChain* m_currentChain = nullptr;
+
 		std::vector<TJitFunc> m_jitFuncs;
 		std::set<TWord> m_volatileP;
-		std::map<TWord, JitBlock*> m_generatingBlocks;
-		size_t m_codeSize = 0;
+		std::map<TWord, TWord> m_loops;
+		std::set<TWord> m_loopEnds;
+
+		std::unique_ptr<JitProfilingSupport> m_profiling;
+
+		JitConfig m_config;
+
+		// the following data is accessed by JIT code at runtime, it NEEDS to be put last into this struct to be
+		// able to use ARM relative addressing, see member ordering in dsp.h
+		JitRuntimeData m_runtimeData;
 	};
 }

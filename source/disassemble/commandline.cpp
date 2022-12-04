@@ -84,4 +84,3 @@ bool CommandLine::contains(const std::string& _key) const
 {
 	return m_args.find(_key) != m_args.end() || m_argsWithValues.find(_key) != m_argsWithValues.end();
 }
-

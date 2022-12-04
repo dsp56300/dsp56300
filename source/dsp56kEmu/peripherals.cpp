@@ -4,6 +4,7 @@
 #include "disasm.h"
 #include "dsp.h"
 #include "hi08.h"
+#include "interrupts.h"
 #include "logging.h"
 
 namespace dsp56k
@@ -24,15 +25,10 @@ namespace dsp56k
 
 		switch (_addr)
 		{
-		case HI08::HSR:
-			return m_hi08.readStatusRegister();
-		case HI08::HRX:
-			return m_hi08.read();
-
-		case Essi::ESSI0_RX:
-			return m_essi.readRX(0);
-		case Essi::ESSI0_SSISR:
-			return m_essi.readSR();
+		case HI08::HSR:			return m_hi08.readStatusRegister();
+		case HI08::HRX:			return m_hi08.read();
+		case Essi::ESSI0_RX:	return m_essi.readRX(0);
+		case Essi::ESSI0_SSISR:	return m_essi.readSR();
 		}
 		return m_mem[_addr - XIO_Reserved_High_First];
 	}
@@ -43,21 +39,12 @@ namespace dsp56k
 
 		switch (_addr)
 		{
-		case HI08::HSR:
-			m_hi08.writeStatusRegister(_val);
-			break;
-		case  Essi::ESSI0_SSISR:
-			m_essi.writeSR(_val);
-			return;
-		case  Essi::ESSI0_TX0:
-			m_essi.writeTX(0, _val);
-			return;
-		case  Essi::ESSI0_TX1:
-			m_essi.writeTX(1, _val);
-			return;
-		case  Essi::ESSI0_TX2:
-			m_essi.writeTX(2, _val);
-			return;
+		case HI08::HSR:				m_hi08.writeStatusRegister(_val);	return;
+
+		case Essi::ESSI0_SSISR:		m_essi.writeSR(_val);				return;
+		case Essi::ESSI0_TX0:		m_essi.writeTX(0, _val);			return;
+		case Essi::ESSI0_TX1:		m_essi.writeTX(1, _val);			return;
+		case Essi::ESSI0_TX2:		m_essi.writeTX(2, _val);			return;
 		default:
 			m_mem[_addr - XIO_Reserved_High_First] = _val;
 		}
@@ -74,8 +61,18 @@ namespace dsp56k
 		m_hi08.reset();
 	}
 
-	Peripherals56362::Peripherals56362() : m_mem(0), m_esai(*this), m_hdi08(*this), m_timers(*this), m_disableTimers(false)
+	Peripherals56362::Peripherals56362(Peripherals56367* _peripherals56367/* = nullptr*/)
+	: m_mem(0)
+	, m_dma(*this)
+	, m_esaiClock(*this)
+	, m_esai(*this, MemArea_X, &m_dma)
+	, m_hdi08(*this)
+	, m_timers(*this)
+	, m_disableTimers(false)
 	{
+		m_esaiClock.setEsaiDivider(&m_esai, 0);
+		if(_peripherals56367)
+			m_esaiClock.setEsaiDivider(&_peripherals56367->getEsai(), 0);
 	}
 
 	TWord Peripherals56362::read(TWord _addr, Instruction _inst)
@@ -90,21 +87,30 @@ namespace dsp56k
 			return m_hdi08.readPortControlRegister();
 		case HDI08::HORX:
 			return m_hdi08.readRX(_inst);
+		case HDI08::HDR:
+			return m_hdi08.readHDR();
+		case HDI08::HDDR:
+			return m_hdi08.readHDDR();
 
-		case Esai::M_RCR:
-			return m_esai.readReceiveControlRegister();
-		case Esai::M_SAISR:
-			return m_esai.readStatusRegister();
-		case Esai::M_TCR:
-			return m_esai.readTransmitControlRegister();
+		case Esai::M_RCR:	return m_esai.readReceiveControlRegister();
+		case Esai::M_RCCR:	return m_esai.readReceiveClockControlRegister();
+		case Esai::M_SAISR:	return m_esai.readStatusRegister();
+		case Esai::M_TCR:	return m_esai.readTransmitControlRegister();
+		case Esai::M_TCCR:	return m_esai.readTransmitClockControlRegister();
 		case Esai::M_RX0:
 		case Esai::M_RX1:
 		case Esai::M_RX2:
-		case Esai::M_RX3:
-			return m_esai.readRX(_addr - Esai::M_RX0);
+		case Esai::M_RX3:	return m_esai.readRX(_addr - Esai::M_RX0);
+		case Esai::M_TSMA:	return m_esai.readTSMA();
+		case Esai::M_TSMB:	return m_esai.readTSMB();
+
+		case Esai::RemainingInstructionsForFrameSyncTrue:			// emulator specific
+			return m_esaiClock.getRemainingInstructionsForFrameSync(1);
+		case Esai::RemainingInstructionsForFrameSyncFalse:			// emulator specific
+			return m_esaiClock.getRemainingInstructionsForFrameSync(0);
+
 		case 0xFFFFBE:	// Port C Direction Register
 			return 0;
-
 			
 		case Timers::M_TCSR0:		return m_timers.readTCSR(0);	// TIMER0 Control/Status Register
 		case Timers::M_TCSR1:		return m_timers.readTCSR(1);	// TIMER1 Control/Status Register
@@ -130,9 +136,9 @@ namespace dsp56k
 //			LOG("Read from " << HEX(_addr));
 			return 0;	//m_mem[_addr - XIO_Reserved_High_First];	// There is nothing connected.
 
-		case 0xFFFFF4:					// DMA status reg
-			return 0x3f;
-		case 0xFFFFF5:					// ID Register
+//		case XIO_DSTR:					// DMA status reg
+//			return 0x3f;
+		case XIO_IDR:					// ID Register
 			return 0x362;
 
 		case M_AAR0:
@@ -140,13 +146,105 @@ namespace dsp56k
 		case M_AAR2:
 		case M_AAR3:
 			return m_mem[_addr - XIO_Reserved_High_First];
+		case XIO_DCR5: return m_dma.getDCR(5);	// DMA 5 Control Register
+		case XIO_DCO5: return m_dma.getDCO(5);	// DMA 5 Counter
+		case XIO_DDR5: return m_dma.getDDR(5);	// DMA 5 Destination Address Register
+		case XIO_DSR5: return m_dma.getDSR(5);	// DMA 5 Source Address Register
+
+		case XIO_DCR4: return m_dma.getDCR(4);	// DMA 4 Control Register
+		case XIO_DCO4: return m_dma.getDCO(4);	// DMA 4 Counter
+		case XIO_DDR4: return m_dma.getDDR(4);	// DMA 4 Destination Address Register
+		case XIO_DSR4: return m_dma.getDSR(4);	// DMA 4 Source Address Register
+
+		case XIO_DCR3: return m_dma.getDCR(3);	// DMA 3 Control Register
+		case XIO_DCO3: return m_dma.getDCO(3);	// DMA 3 Counter
+		case XIO_DDR3: return m_dma.getDDR(3);	// DMA 3 Destination Address Register
+		case XIO_DSR3: return m_dma.getDSR(3);	// DMA 3 Source Address Register
+
+		case XIO_DCR2: return m_dma.getDCR(2);	// DMA 2 Control Register
+		case XIO_DCO2: return m_dma.getDCO(2);	// DMA 2 Counter
+		case XIO_DDR2: return m_dma.getDDR(2);	// DMA 2 Destination Address Register
+		case XIO_DSR2: return m_dma.getDSR(2);	// DMA 2 Source Address Register
+
+		case XIO_DCR1: return m_dma.getDCR(1);	// DMA 1 Control Register
+		case XIO_DCO1: return m_dma.getDCO(1);	// DMA 1 Counter
+		case XIO_DDR1: return m_dma.getDDR(1);	// DMA 1 Destination Address Register
+		case XIO_DSR1: return m_dma.getDSR(1);	// DMA 1 Source Address Register
+
+		case XIO_DCR0: return m_dma.getDCR(0);	// DMA 0 Control Register
+		case XIO_DCO0: return m_dma.getDCO(0);	// DMA 0 Counter
+		case XIO_DDR0: return m_dma.getDDR(0);	// DMA 0 Destination Address Register
+		case XIO_DSR0: return m_dma.getDSR(0);	// DMA 0 Source Address Register
+
+		case XIO_DOR3: return m_dma.getDOR(3);	// DMA Offset Register 3
+		case XIO_DOR2: return m_dma.getDOR(2);	// DMA Offset Register 2 
+		case XIO_DOR1: return m_dma.getDOR(1);	// DMA Offset Register 1
+		case XIO_DOR0: return m_dma.getDOR(0);	// DMA Offset Register 0
+
+		case XIO_DSTR: return m_dma.getDSTR();	// DMA Status Register
 		}
 
-		auto& value = m_mem[_addr - XIO_Reserved_High_First];
+		const auto& value = m_mem[_addr - XIO_Reserved_High_First];
 
 		if (_addr!=0xffffd5) {LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  HEX(value) << ")");}
 
 		return value;
+	}
+
+	const TWord* Peripherals56362::readAsPtr(TWord _addr, Instruction _inst)
+	{
+		switch (_addr)
+		{
+		case Timers::M_TCSR0:		return &m_timers.readTCSR(0);	// TIMER0 Control/Status Register
+		case Timers::M_TCSR1:		return &m_timers.readTCSR(1);	// TIMER1 Control/Status Register
+		case Timers::M_TCSR2:		return &m_timers.readTCSR(2);	// TIMER2 Control/Status Register
+		case Timers::M_TLR0:		return &m_timers.readTLR(0);	// TIMER0 Load Reg
+		case Timers::M_TLR1:		return &m_timers.readTLR(1);	// TIMER1 Load Reg
+		case Timers::M_TLR2:		return &m_timers.readTLR(2);	// TIMER2 Load Reg
+		case Timers::M_TCPR0:		return &m_timers.readTCPR(0);	// TIMER0 Compare Register
+		case Timers::M_TCPR1:		return &m_timers.readTCPR(1);	// TIMER1 Compare Register
+		case Timers::M_TCPR2:		return &m_timers.readTCPR(2);	// TIMER2 Compare Register
+		case Timers::M_TCR0:		return &m_timers.readTCR(0);	// TIMER0 Count Register
+		case Timers::M_TCR1:		return &m_timers.readTCR(1);	// TIMER1 Count Register
+		case Timers::M_TCR2:		return &m_timers.readTCR(2);	// TIMER2 Count Register
+
+		case Timers::M_TPLR:		return &m_timers.readTPLR();	// TIMER Prescaler Load Register
+		case Timers::M_TPCR:		return &m_timers.readTPCR();	// TIMER Prescalar Count Register
+
+		case XIO_DCR5:				return &m_dma.getDCR(5);		// DMA 5 Control Register
+		case XIO_DCO5:				return &m_dma.getDCO(5);		// DMA 5 Counter
+		case XIO_DDR5:				return &m_dma.getDDR(5);		// DMA 5 Destination Address Register
+		case XIO_DSR5:				return &m_dma.getDSR(5);		// DMA 5 Source Address Register
+
+		case XIO_DCR4:				return &m_dma.getDCR(4);		// DMA 4 Control Register
+		case XIO_DCO4:				return &m_dma.getDCO(4);		// DMA 4 Counter
+		case XIO_DDR4:				return &m_dma.getDDR(4);		// DMA 4 Destination Address Register
+		case XIO_DSR4:				return &m_dma.getDSR(4);		// DMA 4 Source Address Register
+
+		case XIO_DCR3:				return &m_dma.getDCR(3);		// DMA 3 Control Register
+		case XIO_DCO3:				return &m_dma.getDCO(3);		// DMA 3 Counter
+		case XIO_DDR3:				return &m_dma.getDDR(3);		// DMA 3 Destination Address Register
+		case XIO_DSR3:				return &m_dma.getDSR(3);		// DMA 3 Source Address Register
+
+		case XIO_DCR2:				return &m_dma.getDCR(2);		// DMA 2 Control Register
+		case XIO_DCO2:				return &m_dma.getDCO(2);		// DMA 2 Counter
+		case XIO_DDR2:				return &m_dma.getDDR(2);		// DMA 2 Destination Address Register
+		case XIO_DSR2:				return &m_dma.getDSR(2);		// DMA 2 Source Address Register
+
+		case XIO_DCR1:				return &m_dma.getDCR(1);		// DMA 1 Control Register
+		case XIO_DCO1:				return &m_dma.getDCO(1);		// DMA 1 Counter
+		case XIO_DDR1:				return &m_dma.getDDR(1);		// DMA 1 Destination Address Register
+		case XIO_DSR1:				return &m_dma.getDSR(1);		// DMA 1 Source Address Register
+
+		case XIO_DCR0:				return &m_dma.getDCR(0);		// DMA 0 Control Register
+		case XIO_DCO0:				return &m_dma.getDCO(0);		// DMA 0 Counter
+		case XIO_DDR0:				return &m_dma.getDDR(0);		// DMA 0 Destination Address Register
+		case XIO_DSR0:				return &m_dma.getDSR(0);		// DMA 0 Source Address Register
+
+		case XIO_DSTR:				return &m_dma.getDSTR();		// DMA Status Register
+		}
+
+		return nullptr;
 	}
 
 	void Peripherals56362::write(const TWord _addr, const TWord _val)
@@ -164,6 +262,12 @@ namespace dsp56k
 			return;
 		case HDI08::HOTX:
 			m_hdi08.writeTX(_val);
+			return;
+		case HDI08::HDR:
+			m_hdi08.writeHDR(_val);
+			return;
+		case HDI08::HDDR:
+			m_hdi08.writeHDDR(_val);
 			return;
 
 		case Timers::M_TCSR0:		m_timers.writeTCSR	(0, _val);	return;		// TIMER0 Control/Status Register
@@ -183,7 +287,12 @@ namespace dsp56k
 		case Timers::M_TPCR:		m_timers.writeTPCR	(_val);		return;		// TIMER Prescalar Count Register
 		
 		case 0xFFFF91:			// SHI__HCSR
-				if (!_val) m_disableTimers=true;		// TODO: HACK to disable timers once we don't need them anymore
+				// TODO: HACK to disable timers once we don't need them anymore
+				if (!_val)
+				{
+					LOG( "Periph write @ SHI HCSR = " << HEX(_val) << ", timers disabled");
+					m_disableTimers = true;
+				}
 				return;
 		case 0xFFFF93:			// SHI__HTX
 		case 0xFFFF94:			// SHI__HRX
@@ -191,80 +300,129 @@ namespace dsp56k
 //			m_mem[_addr - XIO_Reserved_High_First] = _val;	// Do not write!
 			return;
 
-		case Esai::M_SAISR:
-			m_esai.writestatusRegister(_val);
-			return;
-		case Esai::M_SAICR:
-			m_esai.writeControlRegister(_val);
-			return;
-		case Esai::M_RCR:
-			m_esai.writeReceiveControlRegister(_val);
-			return;
-		case Esai::M_RCCR:
-			m_esai.writeReceiveClockControlRegister(_val);
-			return;
-		case Esai::M_TCR:
-			m_esai.writeTransmitControlRegister(_val);
-			return;
-		case Esai::M_TCCR:
-			m_esai.writeTransmitClockControlRegister(_val);
-			return;
+		case Esai::M_SAISR:			m_esai.writestatusRegister(_val);					return;
+		case Esai::M_SAICR:			m_esai.writeControlRegister(_val);					return;
+		case Esai::M_RCR:			m_esai.writeReceiveControlRegister(_val);			return;
+		case Esai::M_RCCR:			m_esai.writeReceiveClockControlRegister(_val);		return;
+		case Esai::M_TCR:			m_esai.writeTransmitControlRegister(_val);			return;
+		case Esai::M_TCCR:			m_esai.writeTransmitClockControlRegister(_val);		return;
 		case Esai::M_TX0:
 		case Esai::M_TX1:
 		case Esai::M_TX2:
 		case Esai::M_TX3:
 		case Esai::M_TX4:
-		case Esai::M_TX5:
-			m_esai.writeTX(_addr - Esai::M_TX0, _val);
+		case Esai::M_TX5:			m_esai.writeTX(_addr - Esai::M_TX0, _val);			return;
+		case Esai::M_TSMA:			m_esai.writeTSMA(_val);								return;
+		case Esai::M_TSMB:			m_esai.writeTSMB(_val);								return;
+
+			case XIO_PCTL:
+			m_esaiClock.setPCTL(_val);
 			return;
-		
-		case 0xFFFFFD:	m_esai.updatePCTL(_val);
+
+		case XIO_DCR5: m_dma.setDCR(5, _val); return;	// DMA 5 Control Register
+		case XIO_DCO5: m_dma.setDCO(5, _val); return;	// DMA 5 Counter
+		case XIO_DDR5: m_dma.setDDR(5, _val); return;	// DMA 5 Destination Address Register
+		case XIO_DSR5: m_dma.setDSR(5, _val); return;	// DMA 5 Source Address Register
+
+		case XIO_DCR4: m_dma.setDCR(4, _val); return;	// DMA 4 Control Register
+		case XIO_DCO4: m_dma.setDCO(4, _val); return;	// DMA 4 Counter
+		case XIO_DDR4: m_dma.setDDR(4, _val); return;	// DMA 4 Destination Address Register
+		case XIO_DSR4: m_dma.setDSR(4, _val); return;	// DMA 4 Source Address Register
+
+		case XIO_DCR3: m_dma.setDCR(3, _val); return;	// DMA 3 Control Register
+		case XIO_DCO3: m_dma.setDCO(3, _val); return;	// DMA 3 Counter
+		case XIO_DDR3: m_dma.setDDR(3, _val); return;	// DMA 3 Destination Address Register
+		case XIO_DSR3: m_dma.setDSR(3, _val); return;	// DMA 3 Source Address Register
+
+		case XIO_DCR2: m_dma.setDCR(2, _val); return;	// DMA 2 Control Register
+		case XIO_DCO2: m_dma.setDCO(2, _val); return;	// DMA 2 Counter
+		case XIO_DDR2: m_dma.setDDR(2, _val); return;	// DMA 2 Destination Address Register
+		case XIO_DSR2: m_dma.setDSR(2, _val); return;	// DMA 2 Source Address Register
+
+		case XIO_DCR1: m_dma.setDCR(1, _val); return;	// DMA 1 Control Register
+		case XIO_DCO1: m_dma.setDCO(1, _val); return;	// DMA 1 Counter
+		case XIO_DDR1: m_dma.setDDR(1, _val); return;	// DMA 1 Destination Address Register
+		case XIO_DSR1: m_dma.setDSR(1, _val); return;	// DMA 1 Source Address Register
+
+		case XIO_DCR0: m_dma.setDCR(0, _val); return;	// DMA 0 Control Register
+		case XIO_DCO0: m_dma.setDCO(0, _val); return;	// DMA 0 Counter
+		case XIO_DDR0: m_dma.setDDR(0, _val); return;	// DMA 0 Destination Address Register
+		case XIO_DSR0: m_dma.setDSR(0, _val); return;	// DMA 0 Source Address Register
+
+		case XIO_DOR3: m_dma.setDOR(3, _val); return;	// DMA Offset Register 3
+		case XIO_DOR2: m_dma.setDOR(2, _val); return;	// DMA Offset Register 2 
+		case XIO_DOR1: m_dma.setDOR(1, _val); return;	// DMA Offset Register 1
+		case XIO_DOR0: m_dma.setDOR(0, _val); return;	// DMA Offset Register 0
+
+//		case XIO_DSTR: m_dma.setDSTR(_val); return;		// DMA Status Register is read only
+
+		case 0xffffd2:	// DAX audio data register A
 			return;
 		default:
 			break;
 		}
-		if (_addr!=0xffffd5) {LOG( "Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));}
+		if (_addr!=0xffffd5)
+		{
+			LOG( "Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));
+		}
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
 	}
 
 	void Peripherals56362::exec()
 	{
-		m_esai.exec();
+		m_esaiClock.exec();
 		m_hdi08.exec();
 		if (!m_disableTimers) m_timers.exec();
+		m_dma.exec();
 	}
 
 	void Peripherals56362::reset()
 	{
+		m_hdi08.reset();
 	}
 
-	void Peripherals56362::setSymbols(Disassembler& _disasm)
+	void Peripherals56362::setSymbols(Disassembler& _disasm) const
 	{
+		auto addIR = [&](TWord _addr, const std::string& _symbol)
+		{
+			_disasm.addSymbol(Disassembler::MemP, _addr, "int_" + _symbol);
+		};
+
+		addIR(Vba_HardwareRESET, "reset");
+		addIR(Vba_Stackerror, "stackerror");
+		addIR(Vba_Illegalinstruction, "illegal");
+		addIR(Vba_DebugRequest, "debug");
+		addIR(Vba_Trap, "trap");
+		addIR(Vba_NMI, "nmi");
+		addIR(Vba_Reserved0C, "reserved0C");
+		addIR(Vba_Reserved0E, "reserved0E");
+
+		addIR(Vba_IRQA, "irqA");
+		addIR(Vba_IRQB, "irqB");
+		addIR(Vba_IRQC, "irqC");
+		addIR(Vba_IRQD, "irqD");
+
+		addIR(Vba_DMAchannel0, "dma0");
+		addIR(Vba_DMAchannel1, "dma1");
+		addIR(Vba_DMAchannel2, "dma2");
+		addIR(Vba_DMAchannel3, "dma3");
+		addIR(Vba_DMAchannel4, "dma4");
+		addIR(Vba_DMAchannel5, "dma5");
+
+		addIR(Vba_Reserved24, "reserved24");
+		addIR(Vba_Reserved26, "reserved26");
+		addIR(Vba_Reserved4C, "reserved4c");
+		addIR(Vba_Reserved4E, "reserved4e");
+		addIR(Vba_Reserved50, "reserved50");
+		addIR(Vba_Reserved52, "reserved52");
+		addIR(Vba_Reserved66, "reserved66");
+
+		Esai::setSymbols(_disasm, MemArea_X);
+
+		HDI08::setSymbols(_disasm);
+
 		constexpr std::pair<int,const char*> symbols[] =
 		{
-			// ESAI
-			{Esai::M_RSMB	,	"M_RSMB"},
-			{Esai::M_RSMA	,	"M_RSMA"},
-			{Esai::M_TSMB	,	"M_TSMB"},
-			{Esai::M_TSMA	,	"M_TSMA"},
-			{Esai::M_RCCR	,	"M_RCCR"},
-			{Esai::M_RCR	,	"M_RCR"},
-			{Esai::M_TCCR	,	"M_TCCR"},
-			{Esai::M_TCR	,	"M_TCR"},
-			{Esai::M_SAICR	,	"M_SAICR"},
-			{Esai::M_SAISR	,	"M_SAISR"},
-			{Esai::M_RX3	,	"M_RX3"},
-			{Esai::M_RX2	,	"M_RX2"},
-			{Esai::M_RX1	,	"M_RX1"},
-			{Esai::M_RX0	,	"M_RX0"},
-			{Esai::M_TSR	,	"M_TSR"},
-			{Esai::M_TX5	,	"M_TX5"},
-			{Esai::M_TX4	,	"M_TX4"},
-			{Esai::M_TX3	,	"M_TX3"},
-			{Esai::M_TX2	,	"M_TX2"},
-			{Esai::M_TX1	,	"M_TX1"},
-			{Esai::M_TX0	,	"M_TX0"},
-
 			// Timers
 			{Timers::M_TCSR0, "M_TCSR0"},
 			{Timers::M_TLR0	, "M_TLR0"},
@@ -280,15 +438,6 @@ namespace dsp56k
 			{Timers::M_TCR2	, "M_TCR2"},
 			{Timers::M_TPLR	, "M_TPLR"},
 			{Timers::M_TPCR	, "M_TPCR"},
-
-			// HDI08
-			{HDI08::HCR	, "M_HCR"},
-			{HDI08::HSR	, "M_HSR"},
-			{HDI08::HPCR, "M_HPCR"},
-			{HDI08::HORX, "M_HORX"},
-			{HDI08::HOTX, "M_HOTX"},
-			{HDI08::HDDR, "M_HDDR"},
-			{HDI08::HDR, "M_HDR"},
 
 			// AAR
 			{M_AAR0, "M_AAR0"},
@@ -340,12 +489,49 @@ namespace dsp56k
 
 			{0xFFFF90, "M_HCKR"},	// SHI Clock Control Register (HCKR)
 			{0xFFFF91, "M_HCSR"},	// SHI Control/Status Register (HCSR)
-			{0xFFFFF5, "M_ID"}
 		};
 
 		for (const auto& symbol : symbols)
+			_disasm.addSymbol(Disassembler::MemX, symbol.first, symbol.second);
+
+		// AAR bits
+		constexpr std::pair<TWord, const char*> aarBitSymbols[] =
 		{
-			_disasm.addSymbol(Disassembler::MemX, symbol.first, symbol.second);	
+			{M_BAT  , "M_BAT"},
+			{1<<M_BAT0 , "M_BAT0"},
+			{1<<M_BAT1 , "M_BAT1"},
+			{1<<M_BAAP , "M_BAAP"},
+			{1<<M_BPEN , "M_BPEN"},
+			{1<<M_BXEN , "M_BXEN"},
+			{1<<M_BYEN , "M_BYEN"},
+			{1<<M_BAM  , "M_BAM"},
+			{1<<M_BPAC , "M_BPAC"},
+			{M_BNC  , "M_BNC"},
+			{1<<M_BNC0 , "M_BNC0"},
+			{1<<M_BNC1 , "M_BNC1"},
+			{1<<M_BNC2 , "M_BNC2"},
+			{1<<M_BNC3 , "M_BNC3"},
+			{M_BAC  , "M_BAC"},
+			{1<<M_BAC0 , "M_BAC0"},
+			{1<<M_BAC1 , "M_BAC1"},
+			{1<<M_BAC2 , "M_BAC2"},
+			{1<<M_BAC3 , "M_BAC3"},
+			{1<<M_BAC4 , "M_BAC4"},
+			{1<<M_BAC5 , "M_BAC5"},
+			{1<<M_BAC6 , "M_BAC6"},
+			{1<<M_BAC7 , "M_BAC7"},
+			{1<<M_BAC8 , "M_BAC8"},
+			{1<<M_BAC9 , "M_BAC9"},
+			{1<<M_BAC10, "M_BAC10"},
+			{1<<M_BAC11, "M_BAC11"}
+		};
+
+		for(TWord a = M_AAR3; a <= M_AAR0; ++a)
+		{
+			for (const auto& aarBitSymbol : aarBitSymbols)
+			{
+				_disasm.addBitMaskSymbol(Disassembler::MemX, a, aarBitSymbol.first, aarBitSymbol.second);
+			}
 		}
 	}
 
@@ -353,6 +539,77 @@ namespace dsp56k
 	{
 		m_hdi08.terminate();
 
+		m_esai.terminate();
+	}
+
+	Peripherals56367::Peripherals56367() : m_mem(), m_esai(*this, MemArea_Y)
+	{
+		m_mem.fill(0);
+	}
+
+	TWord Peripherals56367::read(const TWord _addr, Instruction _inst)
+	{
+		switch (_addr)
+		{
+		case Esai::M_RCR_1:			return m_esai.readReceiveControlRegister();
+		case Esai::M_RCCR_1:		return m_esai.readReceiveClockControlRegister();
+		case Esai::M_SAISR_1:		return m_esai.readStatusRegister();
+		case Esai::M_TCR_1:			return m_esai.readTransmitControlRegister();
+		case Esai::M_TCCR_1:		return m_esai.readTransmitClockControlRegister();
+		case Esai::M_RX0_1:
+		case Esai::M_RX1_1:
+		case Esai::M_RX2_1:
+		case Esai::M_RX3_1:			return m_esai.readRX(_addr - Esai::M_RX0_1);
+		case Esai::M_TSMA_1:		return m_esai.readTSMA();
+		case Esai::M_TSMB_1:		return m_esai.readTSMB();
+		default:
+			return m_mem[_addr - XIO_Reserved_High_First];
+		}
+	}
+
+	void Peripherals56367::write(TWord _addr, TWord _val)
+	{
+		switch (_addr)
+		{
+		case Esai::M_SAISR_1:	m_esai.writestatusRegister(_val);					return;
+		case Esai::M_SAICR_1:	m_esai.writeControlRegister(_val);					return;
+		case Esai::M_RCR_1:		m_esai.writeReceiveControlRegister(_val);			return;
+		case Esai::M_RCCR_1:	m_esai.writeReceiveClockControlRegister(_val);		return;
+		case Esai::M_TCR_1:		m_esai.writeTransmitControlRegister(_val);			return;
+		case Esai::M_TCCR_1:	m_esai.writeTransmitClockControlRegister(_val);		return;
+		case Esai::M_TX0_1:
+		case Esai::M_TX1_1:
+		case Esai::M_TX2_1:
+		case Esai::M_TX3_1:
+		case Esai::M_TX4_1:
+		case Esai::M_TX5_1:		m_esai.writeTX(_addr - Esai::M_TX0_1, _val);		return;
+		case Esai::M_TSMA_1:	m_esai.writeTSMA(_val);								return;
+		case Esai::M_TSMB_1:	m_esai.writeTSMB(_val);								return;
+		default:
+			break;
+		}
+		if (_addr != 0xffffd5)
+		{
+			LOG("Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));
+		}
+		m_mem[_addr - XIO_Reserved_High_First] = _val;
+	}
+
+	void Peripherals56367::exec()
+	{
+	}
+
+	void Peripherals56367::reset()
+	{
+	}
+
+	void Peripherals56367::setSymbols(Disassembler& _disasm) const
+	{
+		Esai::setSymbols(_disasm, MemArea_Y);
+	}
+
+	void Peripherals56367::terminate()
+	{
 		m_esai.terminate();
 	}
 }

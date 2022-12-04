@@ -43,6 +43,22 @@ namespace dsp56k
 	}
 
 	// _____________________________________________________________________________
+	// alu_eor
+	//
+	void DSP::alu_eor( bool ab, TWord _val )
+	{
+		TReg56& d = ab ? reg.b : reg.a;
+
+		d.var ^= (TInt64(_val)<<24);
+
+		// S L E U N Z V C
+		// v - - - * * * -
+		sr_toggle( CCR_N, bittest( d, 47 ) );
+		sr_toggle( CCR_Z, (d.var & 0xffffff000000) == 0 );
+		sr_clear( CCR_V );
+	}
+
+	// _____________________________________________________________________________
 	// alu_add
 	//
 	void DSP::alu_add( bool ab, const TReg56& _val )
@@ -290,10 +306,11 @@ namespace dsp56k
 		auto& d = ab ? reg.b.var : reg.a.var;
 
 		const auto c = bitvalue<uint64_t,47>(d);
-		auto shifted = d << 16;	// cut MSBs
-		shifted >>= 40;			// cut LSBs
+		auto shifted = d;
+		reinterpret_cast<uint64_t&>(shifted) >>= 24;			// cut LSBs
 		shifted <<= 1;
 		shifted |= sr_val(CCRB_C);
+		shifted &= 0xffffff;
 		shifted <<= 24;			// move back
 		
 		d &= 0xff000000ffffff;
@@ -644,7 +661,7 @@ namespace dsp56k
 		const bool abDst = getFieldValue<Asl_S1S2D,Field_D>(op);
 		const bool abSrc = getFieldValue<Asl_S1S2D,Field_S>(op);
 
-		const TWord shiftAmount = decode_sss_read<TWord>( sss );
+		const TWord shiftAmount = decode_sss_read<TWord>( sss ) & 0x3f;
 
 		alu_asl( abDst, abSrc, shiftAmount );
 	}
@@ -668,7 +685,7 @@ namespace dsp56k
 		const bool abDst = getFieldValue<Asr_S1S2D,Field_D>(op);
 		const bool abSrc = getFieldValue<Asr_S1S2D,Field_S>(op);
 
-		const auto shiftAmount = decode_sss_read<TWord>( sss );
+		const auto shiftAmount = decode_sss_read<TWord>( sss ) & 0x3f;
 
 		alu_asr( abDst, abSrc, shiftAmount );			
 	}
@@ -778,13 +795,15 @@ namespace dsp56k
 		TReg24 s1, s2;
 		decode_QQQQ_read( s1, s2, qqqq );
 
-		// TODO: untested
+		// TODO: unit test missing
 		alu_dmac( ab, s1, s2, negate, s1Unsigned, s2Unsigned );
 	}
 	inline void DSP::op_Eor_SD(const TWord op)
 	{
-//		alu_eor(D, decode_JJJ_read_24(JJJ, !D).var);
-		errNotImplemented("EOR");
+		// TODO: unit test missing
+		const auto D = getFieldValue<Or_SD, Field_d>(op);
+		const auto JJ = getFieldValue<Or_SD, Field_JJ>(op);
+		alu_eor(D, decode_JJ_read(JJ).var);
 	}
 	inline void DSP::op_Eor_xx(const TWord op)
 	{
@@ -802,7 +821,8 @@ namespace dsp56k
 	{
 		errNotImplemented("EXTRACT");
 	}
-	void DSP::alu_extractu(bool abDst, bool abSrc, const TWord widthOffset)
+
+	inline void DSP::alu_extractu(bool abDst, bool abSrc, const TWord widthOffset)
 	{
 		const auto width = (widthOffset >> 12) & 0x3f;
 		const auto offset = widthOffset & 0x3f;
@@ -854,14 +874,51 @@ namespace dsp56k
 		sr_toggle( CCR_C, bittest(d,47) != bittest(old,47) );
 		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
+
+	inline void DSP::alu_insert(bool abDst, const TWord src, const TWord widthOffset)
+	{
+		const auto width = (widthOffset >> 12) & 0x3f;
+
+		const uint64_t offset = widthOffset & 0x3f;
+
+		const auto mask = (1<<width) - 1;
+
+		uint64_t s = src & mask;
+		s <<= offset;
+
+		auto& dReg = abDst ? reg.b : reg.a;
+		auto& d = reinterpret_cast<uint64_t&>(dReg.var);
+
+		d &= ~(static_cast<uint64_t>(mask) << offset);
+		d |= s;
+
+		sr_clear(CCR_C);
+		sr_clear(CCR_V);
+		sr_z_update(dReg);
+		setCCRDirty(abDst, dReg, CCR_E | CCR_U | CCR_N);
+	}
+
 	inline void DSP::op_Insert_S1S2(const TWord op)
 	{
-		errNotImplemented("INSERT");
+		const auto D   = getFieldValue<Insert_S1S2, Field_D>(op);
+		const auto qqq = getFieldValue<Insert_S1S2, Field_qqq>(op);
+		const auto sss = getFieldValue<Insert_S1S2, Field_SSS>(op);
+
+		const auto src = decode_qqq_read(qqq);
+		const auto co = decode_sss_read<TWord>(sss);
+
+		alu_insert(D, src.toWord(), co);
 	}
 	inline void DSP::op_Insert_CoS2(const TWord op)
 	{
-		errNotImplemented("INSERT");
+		const auto D   = getFieldValue<Insert_CoS2, Field_D>(op);
+		const auto qqq = getFieldValue<Insert_CoS2, Field_qqq>(op);
+
+		const auto src = decode_qqq_read(qqq);
+
+		alu_insert(D, src.toWord(), fetchOpWordB());
 	}
+
 	inline void DSP::op_Lsl_D(const TWord op)
 	{
 		const auto D = getFieldValue<Lsl_D,Field_D>(op);
@@ -876,7 +933,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Lsl_SD(const TWord op)
 	{
-		errNotImplemented("LSL");
+		const auto sss   = getFieldValue<Lsl_SD,Field_sss>(op);
+		const auto abDst = getFieldValue<Lsl_SD,Field_D>(op);
+
+		const TWord shiftAmount = decode_sss_read<TWord>( sss ) & 0x3f;
+		alu_lsl(abDst, shiftAmount);
 	}
 	inline void DSP::op_Lsr_D(const TWord op)
 	{
@@ -892,7 +953,11 @@ namespace dsp56k
 	}
 	inline void DSP::op_Lsr_SD(const TWord op)
 	{
-		errNotImplemented("LSR");		
+		const auto sss   = getFieldValue<Lsr_SD,Field_sss>(op);
+		const auto abDst = getFieldValue<Lsr_SD,Field_D>(op);
+
+		const TWord shiftAmount = decode_sss_read<TWord>( sss ) & 0x3f;
+		alu_lsr(abDst, shiftAmount);
 	}
 	inline void DSP::op_Mac_S1S2(const TWord op)
 	{
@@ -912,7 +977,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Maci_xxxx(const TWord op)
 	{
-		errNotImplemented("MACI");		
+		errNotImplemented("MACI");
 	}
 	inline void DSP::op_Macsu(const TWord op)
 	{
@@ -949,11 +1014,33 @@ namespace dsp56k
 	}
 	inline void DSP::op_Max(const TWord op)
 	{
-		errNotImplemented("MAX");
+		const auto a = signextend<int64_t, 56>(reg.a.var);
+		const auto b = signextend<int64_t, 56>(reg.b.var);
+
+		if(a >= b)
+		{
+			reg.b = reg.a;
+			sr_clear(CCR_C);
+		}
+		else
+		{
+			sr_set(CCR_C);
+		}
 	}
 	inline void DSP::op_Maxm(const TWord op)
 	{
-		errNotImplemented("MAXM");
+		const auto a = std::abs(signextend<int64_t, 56>(reg.a.var));
+		const auto b = std::abs(signextend<int64_t, 56>(reg.b.var));
+
+		if(a >= b)
+		{
+			reg.b = reg.a;
+			sr_clear(CCR_C);
+		}
+		else
+		{
+			sr_set(CCR_C);
+		}
 	}
 	inline void DSP::op_Merge(const TWord op)
 	{
@@ -1029,11 +1116,17 @@ namespace dsp56k
 	}
 	inline void DSP::op_Or_xx(const TWord op)
 	{
-		errNotImplemented("OR");
+		const auto ab		= getFieldValue<Or_xx,Field_d>(op);
+		const TWord xxxx	= getFieldValue<Or_xx,Field_iiiiii>(op);
+
+		alu_or(ab, xxxx);
 	}
 	inline void DSP::op_Or_xxxx(const TWord op)
 	{
-		errNotImplemented("OR");
+		const auto ab = getFieldValue<Or_xxxx,Field_d>(op);
+		const TWord xxxx = immediateDataExt<Or_xxxx>();
+
+		alu_or( ab, xxxx );
 	}
 	inline void DSP::op_Ori(const TWord op)
 	{

@@ -11,6 +11,8 @@
 
 namespace dsp56k
 {
+	enum class RegisterMask : uint64_t;
+
 	const FieldInfo& getFieldInfo(Instruction _i, Field _f);
 
 	template<Instruction I, Field F>
@@ -159,6 +161,8 @@ namespace dsp56k
 					// There are two variants for JJJ, one does not allow 001, 010 and 011 (56 bit regs), only 24 bit are allowed.
 					if(v > 0 && v < 4)
 						return false;
+					break;
+				default:;
 				}
 			}
 		}
@@ -270,6 +274,13 @@ namespace dsp56k
 
 		static const OpcodeInfo& getOpcodeInfoAt(size_t _index);
 
+		uint32_t getOpcodeLength(TWord _op) const;
+		uint32_t getOpcodeLength(TWord _op, Instruction _instA, Instruction _instB) const;
+		bool writesToPMemory(TWord _op) const;
+		uint32_t getInstructionTypes(TWord _op, Instruction& _a, Instruction& _b) const;
+		bool getRegisters(RegisterMask& _written, RegisterMask& _read, TWord _opA, TWord _opB) const;
+		static uint32_t getFlags(Instruction _instA, Instruction _instB);
+		bool getMemoryAddress(TWord& _addr, EMemArea& _area, TWord opA, TWord opB) const;
 	private:
 		static const OpcodeInfo* findOpcodeInfo(TWord _opcode, const std::vector<const OpcodeInfo*>& _opcodes);
 		

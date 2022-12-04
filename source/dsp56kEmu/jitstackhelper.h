@@ -42,9 +42,12 @@ namespace dsp56k
 		static bool isFuncArg(const JitRegGP& _gp);
 		static bool isNonVolatile(const JitRegGP& _gp);
 		static bool isNonVolatile(const JitReg128& _xm);
+
 		void setUsed(const JitReg& _reg);
 		void setUsed(const JitRegGP& _reg);
 		void setUsed(const JitReg128& _reg);
+
+		const auto& getUsedRegs() const { return m_usedRegs; }
 
 		bool isUsed(const JitReg& _reg) const;
 
@@ -75,5 +78,19 @@ namespace dsp56k
 
 		std::vector<PushedReg> m_pushedRegs;
 		std::vector<JitReg> m_usedRegs;
+	};
+
+	class PushMover
+	{
+	public:
+		explicit PushMover(JitBlock& _block, bool _begin = true);
+		~PushMover();
+
+		void begin();
+		void end();
+	private:
+		JitBlock& m_block;
+		asmjit::BaseNode* m_cursorBeforePushes = nullptr;
+		size_t m_beginPushCount = 0;
 	};
 }

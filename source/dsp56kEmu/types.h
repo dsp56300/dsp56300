@@ -185,4 +185,13 @@ namespace dsp56k
 		BitClear = false,
 		BitSet = true
 	};
+
+	enum class AddressingMode
+	{
+		Unknown = -1,
+		Linear,
+		Modulo,
+		MultiWrapModulo,
+		Bitreverse
+	};
 }

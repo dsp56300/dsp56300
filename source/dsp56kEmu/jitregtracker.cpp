@@ -5,19 +5,22 @@
 
 namespace dsp56k
 {
-	DSPRegTemp::DSPRegTemp(JitBlock& _block): m_block(_block)
+	DSPRegTemp::DSPRegTemp(JitBlock& _block, const bool _acquire) : m_block(_block)
 	{
-		acquire();
+		if(_acquire)
+			acquire();
 	}
 
 	DSPRegTemp::~DSPRegTemp()
 	{
-		if (acquired())
-			release();
+		release();
 	}
 
 	void DSPRegTemp::acquire()
 	{
+		if(acquired())
+			return;
+
 		m_dspReg = m_block.dspRegPool().aquireTemp();
 		m_reg = m_block.dspRegPool().get(m_dspReg, false, false);
 		m_block.dspRegPool().lock(m_dspReg);
@@ -25,9 +28,12 @@ namespace dsp56k
 
 	void DSPRegTemp::release()
 	{
+		if(!acquired())
+			return;
+
 		m_block.dspRegPool().unlock(m_dspReg);
 		m_block.dspRegPool().releaseTemp(m_dspReg);
-		m_dspReg = JitDspRegPool::DspCount;
+		m_dspReg = JitDspRegPool::DspRegInvalid;
 	}
 
 	AluReg::AluReg(JitBlock& _block, const TWord _aluIndex, bool readOnly/* = false*/, bool writeOnly/* = false*/)
@@ -44,10 +50,13 @@ namespace dsp56k
 	AluReg::~AluReg()
 	{
 		if(!m_readOnly)
-			m_block.regs().setALU(m_aluIndex, m_reg);
+		{
+			DspValue v(std::move(m_reg), DspValue::Temp56);
+			m_block.regs().setALU(m_aluIndex, v);
+		}
 	}
 
-	JitReg64 AluReg::get()
+	JitReg64 AluReg::get() const
 	{
 		return m_reg.get();
 	}
@@ -123,10 +132,6 @@ namespace dsp56k
 		return m_reg;
 	}
 
-	AguReg::AguReg(JitBlock& _block, JitDspRegPool::DspReg _regBase, int _aguIndex, bool readOnly, bool writeOnly) : DSPReg(_block, static_cast<JitDspRegPool::DspReg>(_regBase + _aguIndex), !writeOnly, !readOnly)
-	{
-	}
-
 	PushGP::PushGP(JitBlock& _block, const JitReg64& _reg) : m_block(_block), m_reg(_reg), m_pushed(_block.dspRegPool().isInUse(_reg) || _reg == regDspPtr)
 	{
 		if(m_pushed)
@@ -161,15 +166,27 @@ namespace dsp56k
 
 	PushXMMRegs::PushXMMRegs(JitBlock& _block) : m_block(_block)
 	{
-		for (const auto& xm : g_nonVolatileXMMs)
+		for (const auto& xm : g_dspPoolXmms)
 		{
 			if (!xm.isValid())
 				continue;
-			if (m_block.dspRegPool().isInUse(xm))
+			if (!JitStackHelper::isNonVolatile(xm) && m_block.dspRegPool().isInUse(xm))
 			{
 				m_pushedRegs.push_front(xm);
 				m_block.stack().push(xm);
 			}
+		}
+
+		if (!JitStackHelper::isNonVolatile(regXMMTempA) && m_block.xmmPool().isInUse(regXMMTempA))
+		{
+			m_pushedRegs.push_front(regXMMTempA);
+			_block.stack().push(regXMMTempA);
+		}
+
+		if(!JitStackHelper::isNonVolatile(regLastModAlu) && m_block.stack().isUsed(regLastModAlu))
+		{
+			m_pushedRegs.push_front(regLastModAlu);
+			_block.stack().push(regLastModAlu);
 		}
 	}
 
@@ -181,7 +198,7 @@ namespace dsp56k
 
 	PushGPRegs::PushGPRegs(JitBlock& _block) : m_block(_block)
 	{
-		for (auto gp : g_dspPoolGps)
+		for (const auto& gp : g_dspPoolGps)
 		{
 			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp) && m_block.dspRegPool().isInUse(gp))
 			{
@@ -214,7 +231,7 @@ namespace dsp56k
 
 	PushGPRegs::~PushGPRegs()
 	{
-		for (auto gp : m_pushedRegs)
+		for (const auto& gp : m_pushedRegs)
 		{
 			m_block.stack().pop(gp);
 		}
@@ -224,20 +241,71 @@ namespace dsp56k
 	{
 	}
 
-	JitRegpool::JitRegpool(std::initializer_list<JitReg> _availableRegs)
+	RegScratch::RegScratch(JitBlock& _block, const bool _acquire/* = true*/) : m_block(_block)
+	{
+		if(_acquire)
+			acquire();
+	}
+
+	RegScratch::~RegScratch()
+	{
+		release();
+	}
+
+	void RegScratch::acquire()
+	{
+		if(m_acquired)
+			return;
+		m_block.lockScratch();
+		m_acquired = true;
+	}
+
+	void RegScratch::release()
+	{
+		if(!m_acquired)
+			return;
+		m_block.unlockScratch();
+		m_acquired = false;
+	}
+
+	JitRegpool::JitRegpool(std::initializer_list<JitReg> _availableRegs) : m_capacity(std::size(_availableRegs))
 	{
 		for (const auto& r : _availableRegs)
 			m_availableRegs.push_front(r);
 	}
 
-	void JitRegpool::put(const JitReg& _reg)
+	void JitRegpool::put(JitScopedReg* _scopedReg, bool _weak)
 	{
-		m_availableRegs.push_back(_reg);
+		if(_scopedReg->isWeak())
+		{
+			m_availableRegs.push_back(_scopedReg->get());
+			m_weakRegs.remove(_scopedReg);
+		}
+		else
+		{
+			m_availableRegs.push_back(_scopedReg->get());
+		}
 	}
 
-	JitReg JitRegpool::get()
+	JitReg JitRegpool::get(JitScopedReg* _scopedReg, bool _weak)
 	{
-		assert(!m_availableRegs.empty() && "no more temporary registers left");
+		if(_weak)
+		{
+			assert(!m_availableRegs.empty() && "no more temporary registers left");
+
+			const auto reg = m_availableRegs.back();
+			m_availableRegs.pop_back();
+			m_weakRegs.push_back(_scopedReg);
+			return reg;
+		}
+
+		assert((!m_availableRegs.empty() || !m_weakRegs.empty()) && "no more temporary registers left");
+
+		if(m_availableRegs.empty() && !m_weakRegs.empty())
+		{
+			m_weakRegs.front()->release();
+			assert(!m_availableRegs.empty());
+		}
 		const auto ret = m_availableRegs.back();
 		m_availableRegs.pop_back();
 		return ret;
@@ -253,11 +321,24 @@ namespace dsp56k
 		return std::find(m_availableRegs.begin(), m_availableRegs.end(), _gp) == m_availableRegs.end();
 	}
 
+	JitScopedReg& JitScopedReg::operator=(JitScopedReg&& _other) noexcept
+	{
+		release();
+
+		m_reg = _other.m_reg;
+		m_acquired = _other.m_acquired;
+		m_weak = _other.m_weak;
+
+		_other.m_acquired = false;
+
+		return *this;
+	}
+
 	void JitScopedReg::acquire()
 	{
 		if (m_acquired)
 			return;
-		m_reg = m_pool.get();
+		m_reg = m_pool.get(this, m_weak);
 		m_block.stack().setUsed(m_reg);
 		m_acquired = true;
 	}
@@ -266,11 +347,12 @@ namespace dsp56k
 	{
 		if (!m_acquired)
 			return;
-		m_pool.put(m_reg);
+		m_pool.put(this, m_weak);
 		m_acquired = false;
+		m_reg.reset();
 	}
 
-	RegGP::RegGP(JitBlock& _block, const bool _acquire/* = true*/) : JitScopedReg(_block, _block.gpPool(), _acquire)
+	RegGP::RegGP(JitBlock& _block, const bool _acquire/* = true*/, const bool _weak/* = false*/) : JitScopedReg(_block, _block.gpPool(), _acquire, _weak)
 	{
 	}
 
@@ -278,19 +360,91 @@ namespace dsp56k
 	{
 	}
 
-	DSPReg::DSPReg(JitBlock& _block, JitDspRegPool::DspReg _reg, bool _read, bool _write)
-	: m_block(_block), m_dspReg(_reg), m_reg(_block.dspRegPool().get(_reg, _read, _write))
+	DSPReg::DSPReg(JitBlock& _block, const JitDspRegPool::DspReg _reg, const bool _read, const bool _write, const bool _acquire)
+	: m_block(_block)
+	, m_read(_read)
+	, m_write(_write)
+	, m_acquired(false)
+	, m_locked(false)
+	, m_dspReg(_reg)
 	{
-		_block.dspRegPool().lock(_reg);
+		if (_acquire)
+			acquire();
+	}
+
+	DSPReg::DSPReg(DSPReg&& _other) noexcept
+		: m_block(_other.m_block)
+		, m_read(_other.m_read)
+		, m_write(_other.m_write)
+		, m_acquired(_other.m_acquired)
+		, m_locked(_other.m_locked)
+		, m_dspReg(_other.m_dspReg)
+		, m_reg(_other.m_reg)
+	{
+		_other.m_acquired = false;
+		_other.m_locked = false;
 	}
 
 	DSPReg::~DSPReg()
 	{
-		m_block.dspRegPool().unlock(m_dspReg);
+		if(acquired())
+			release();
 	}
 
 	void DSPReg::write()
 	{
-		m_block.dspRegPool().get(m_dspReg, false, true);
+		assert(acquired());
+		m_write = true;
+		m_block.dspRegPool().get(m_dspReg, m_read, m_write);
+	}
+
+	void DSPReg::acquire()
+	{
+		assert(!acquired());
+
+		m_reg = m_block.dspRegPool().get(m_dspReg, m_read, m_write);
+		m_acquired = true;
+
+		if(!m_block.dspRegPool().isLocked(m_dspReg))
+		{
+			m_block.dspRegPool().lock(m_dspReg);
+			m_locked = true;
+		}
+	}
+
+	void DSPReg::release()
+	{
+		if(m_locked)
+		{
+			m_block.dspRegPool().unlock(m_dspReg);
+			m_locked = false;
+		}
+
+		m_reg.reset();
+		m_acquired = false;
+	}
+
+	DSPReg& DSPReg::operator=(DSPReg&& _other) noexcept
+	{
+		if (m_dspReg != JitDspRegPool::DspRegInvalid && m_dspReg != _other.m_dspReg && m_acquired)
+			release();
+
+		m_read = _other.m_read;
+		m_write = _other.m_write;
+		m_acquired = _other.m_acquired;
+
+		if(m_dspReg != JitDspRegPool::DspRegInvalid && m_dspReg == _other.m_dspReg && m_acquired && _other.m_acquired)
+			m_locked |= _other.m_locked;
+		else
+			m_locked = _other.m_locked;
+
+		m_dspReg = _other.m_dspReg;
+		m_reg = _other.m_reg;
+
+		_other.m_reg.reset();
+		_other.m_acquired = false;
+		_other.m_locked = false;
+
+		return *this;
 	}
 }

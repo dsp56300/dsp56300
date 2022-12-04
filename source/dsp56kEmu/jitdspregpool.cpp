@@ -4,14 +4,13 @@
 #include "jitblock.h"
 #include "jitemitter.h"
 
+#include <limits>
+
 #define LOGRP(S)		{}
 //#define LOGRP(S)		LOG(S)
 
 namespace dsp56k
 {
-	static constexpr uint32_t g_gpCount = static_cast<uint32_t>(std::size(g_dspPoolGps));
-	static constexpr uint32_t g_xmmCount = static_cast<uint32_t>(std::size(g_dspPoolXmms));
-
 	constexpr const char* g_dspRegNames[] = 
 	{
 		"r0",	"r1",	"r2",	"r3",	"r4",	"r5",	"r6",	"r7",
@@ -35,8 +34,9 @@ namespace dsp56k
 	};
 
 	static_assert(std::size(g_dspRegNames) == JitDspRegPool::DspCount);
+	static_assert(JitDspRegPool::DspCount < 64);	// our flag sets for used/read/written registers is 64 bits wide
 
-	JitDspRegPool::JitDspRegPool(JitBlock& _block) : m_block(_block), m_lockedGps(0), m_writtenDspRegs(0)
+	JitDspRegPool::JitDspRegPool(JitBlock& _block) : m_block(_block), m_extendedSpillSpace(false)//_block.asm_().hasFeature(asmjit::CpuFeatures::X86::kSSE4_1))
 	{
 		clear();
 	}
@@ -55,7 +55,7 @@ namespace dsp56k
 		assert(m_usedXmmMap.empty());
 */	}
 
-	JitRegGP JitDspRegPool::get(DspReg _reg, bool _read, bool _write)
+	JitRegGP JitDspRegPool::get(const JitRegGP& _dst, const DspReg _reg, bool _read, bool _write)
 	{
 		if(_write)
 		{
@@ -95,6 +95,18 @@ namespace dsp56k
 			return res;
 		}
 
+		if(_dst.isValid() && _read && !_write)
+		{
+			SpillReg xm;
+			if(m_xmList.get(xm, _reg))
+			{
+				LOGRP("DSP reg " << g_dspRegNames[_reg] << " available as xmm but not GP, copying to external GP directly");
+				spillMove(_dst, xm);
+				m_moveToXmmInstruction[_reg] = nullptr;
+				return _dst;
+			}
+		}
+
 		m_dirty = true;
 
 		// No space left? Move some other GP reg to an XMM reg
@@ -113,13 +125,17 @@ namespace dsp56k
 		m_block.stack().setUsed(res);
 
 		// Do we still have it in an XMM reg?
-		JitReg128 xmReg;
+		SpillReg xmReg;
 		if(m_xmList.release(xmReg, _reg, m_repMode))
 		{
 			// yes, remove it and restore the content
 			LOGRP("DSP reg " << g_dspRegNames[_reg] << " previously stored in xmm reg, restoring value");
 			if(_read)
-				m_block.asm_().movq(res, xmReg);
+				spillMove(res, xmReg);
+
+			clearSpilled(_reg);
+
+			m_moveToXmmInstruction[_reg] = nullptr;
 		}
 		else if(_read)
 		{
@@ -135,10 +151,16 @@ namespace dsp56k
 		return res;
 	}
 
+	DspValue JitDspRegPool::read(const DspReg _src) const
+	{
+		return DspValue(m_block, _src, true, false);
+	}
+
 	void JitDspRegPool::read(const JitRegGP& _dst, const DspReg _src)
 	{
-		const auto r = get(_src, true, false);
-		m_block.asm_().mov(r64(_dst), r);
+		const auto r = get(_dst, _src, true, false);
+		if(r != _dst)
+			m_block.asm_().mov(r64(_dst), r);
 	}
 
 	void JitDspRegPool::write(const DspReg _dst, const JitRegGP& _src)
@@ -147,7 +169,20 @@ namespace dsp56k
 		m_block.asm_().mov(r, r64(_src));
 	}
 
-	void JitDspRegPool::lock(DspReg _reg)
+	void JitDspRegPool::write(const DspReg _dst, const DspValue& _src)
+	{
+		if (_src.isDspReg(_dst))
+		{
+			const auto reg = get(_dst, _src.getDspReg().read(), true);
+			assert(r64(reg) == r64(_src));
+		}
+		else
+		{
+			_src.copyTo(get(_dst, false, true), DspValue::getBitCount(_dst));
+		}
+	}
+
+	void JitDspRegPool::lock(const DspReg _reg)
 	{
 		LOGRP("Locking DSP reg " <<g_dspRegNames[_reg]);
 		assert(m_gpList.isUsed(_reg) && "unable to lock reg if not in use");
@@ -155,12 +190,22 @@ namespace dsp56k
 		setLocked(_reg);
 	}
 
-	void JitDspRegPool::unlock(DspReg _reg)
+	void JitDspRegPool::unlock(const DspReg _reg)
 	{
 		LOGRP("Unlocking DSP reg " <<g_dspRegNames[_reg]);
 		assert(m_gpList.isUsed(_reg) && "unable to unlock reg if not in use");
 		assert(isLocked(_reg) && "register is not locked");
 		clearLocked(_reg);
+	}
+
+	void JitDspRegPool::releaseNonLocked()
+	{
+		for (size_t i = 0; i < DspCount; ++i)
+		{
+			const auto r = static_cast<DspReg>(i);
+			if(!isLocked(r))
+				release(r);
+		}
 	}
 
 	void JitDspRegPool::releaseAll()
@@ -170,10 +215,15 @@ namespace dsp56k
 
 		assert(m_gpList.empty());
 		assert(m_xmList.empty());
-		assert(m_writtenDspRegs == 0);
-		assert(m_lockedGps == 0);
-		assert(m_gpList.available() == g_gpCount);
-		assert(m_xmList.available() == g_xmmCount);
+
+		assert(!hasWrittenRegs());
+		assert(m_lockedGps == DspRegFlags::None);
+		assert(m_loadedDspRegs == DspRegFlags::None);
+		assert(m_loadedDspRegs == DspRegFlags::None);
+		assert(m_spilledDspRegs == DspRegFlags::None);
+
+		assert(m_gpList.available() == std::size(g_dspPoolGps));
+		assert(m_xmList.available() == (m_extendedSpillSpace ? std::size(g_dspPoolXmms) * 2 : std::size(g_dspPoolXmms)));
 
 		// We use this to restore ordering of GPs and XMMs as they need to be predictable in native loops
 		clear();
@@ -181,22 +231,51 @@ namespace dsp56k
 
 	void JitDspRegPool::releaseWritten()
 	{
-		if(m_writtenDspRegs == 0)
+		if(!hasWrittenRegs())
 			return;
 
 		LOGRP("Storing ALL written registers into memory");
 
+		releaseByFlags(m_writtenDspRegs);
+	}
+
+	void JitDspRegPool::releaseLoaded()
+	{
+		releaseByFlags(m_loadedDspRegs);
+	}
+
+	void JitDspRegPool::releaseByFlags(const DspRegFlags _flags)
+	{
+		if(_flags == DspRegFlags::None)
+			return;
+
 		for(size_t i=0; i<DspCount; ++i)
 		{
 			const auto r = static_cast<DspReg>(i);
-			if(isWritten(r))
+			if(flagTest(_flags, r))
 				release(r);
+		}
+	}
+
+	void JitDspRegPool::debugStoreAll()
+	{
+		for(auto i=0; i<DspCount; ++i)
+		{
+			const auto r = static_cast<DspReg>(i);
+
+			JitRegGP gp;
+			SpillReg xm;
+
+			if(m_gpList.get(gp, r))
+				store(r, gp);
+			else if(m_xmList.get(xm, r))
+				store(r, xm);
 		}
 	}
 
 	bool JitDspRegPool::isInUse(const JitReg128& _xmm) const
 	{
-		return m_xmList.isUsed(_xmm);
+		return m_xmList.isUsed({_xmm, 0}) || m_xmList.isUsed({_xmm, 1});
 	}
 
 	bool JitDspRegPool::isInUse(const JitRegGP& _gp) const
@@ -226,12 +305,15 @@ namespace dsp56k
 	bool JitDspRegPool::move(const JitRegGP& _dst, const DspReg _src)
 	{
 		JitRegGP gpSrc;
-		JitReg128 xmSrc;
+		SpillReg xmSrc;
 
 		if(m_gpList.get(gpSrc, _src))
 			m_block.asm_().mov(_dst, gpSrc);
 		else if(m_xmList.get(xmSrc, _src))
-			m_block.asm_().movq(_dst, xmSrc);
+		{
+			spillMove(_dst, xmSrc);
+			m_moveToXmmInstruction[_src] = nullptr;
+		}
 		else
 			return false;
 		return true;
@@ -245,19 +327,22 @@ namespace dsp56k
 	bool JitDspRegPool::move(DspReg _dst, DspReg _src)
 	{
 		JitRegGP gpSrc;
-		JitReg128 xmSrc;
+		SpillReg xmSrc;
 
 		if(m_gpList.get(gpSrc, _src))
 		{
 			// src is GP
 
 			JitRegGP gpDst;
-			JitReg128 xmDst;
+			SpillReg xmDst;
 
 			if(m_gpList.get(gpDst, _dst))
 				m_block.asm_().mov(gpDst, gpSrc);
 			else if(m_xmList.get(xmDst, _dst))
-				m_block.asm_().movq(xmDst, gpSrc);
+			{
+				spillMove(xmDst, gpSrc);
+				m_moveToXmmInstruction[_dst] = m_block.asm_().cursor();
+			}
 			else
 				return false;
 			return true;
@@ -268,12 +353,18 @@ namespace dsp56k
 			// src is XMM
 
 			JitRegGP gpDst;
-			JitReg128 xmDst;
+			SpillReg xmDst;
 
 			if(m_gpList.get(gpDst, _dst))
-				m_block.asm_().movq(gpDst, xmSrc);
+			{
+				spillMove(gpDst, xmSrc);
+				m_moveToXmmInstruction[_dst] = nullptr;
+			}
 			else if(m_xmList.get(xmDst, _dst))
-				m_block.asm_().movq(xmDst, xmSrc);
+			{
+				spillMove(xmDst, xmSrc);
+				m_moveToXmmInstruction[_dst] = m_block.asm_().cursor();
+			}
 			else
 				return false;
 			return true;
@@ -287,6 +378,40 @@ namespace dsp56k
 		parallelOpEpilog(DspB, DspBwrite);
 	}
 
+	void JitDspRegPool::movDspReg(const TReg5& _dst, const DspValue& _src) const
+	{
+		m_block.mem().mov(makeDspPtr(_dst), _src);
+	}
+
+	void JitDspRegPool::movDspReg(DspValue& _dst, const TReg5& _src) const
+	{
+		if (!_dst.isRegValid() || _dst.getBitCount() != 8)
+			_dst.temp(DspValue::Temp8);
+		m_block.mem().mov(_dst, makeDspPtr(_src));
+	}
+
+	void JitDspRegPool::movDspReg(const TReg24& _dst, const DspValue& _src) const
+	{
+		m_block.mem().mov(makeDspPtr(_dst), _src);
+	}
+
+	void JitDspRegPool::movDspReg(DspValue& _dst, const TReg24& _src) const
+	{
+		if (!_dst.isRegValid() || _dst.getBitCount() != 24)
+			_dst.temp(DspValue::Temp24);
+		m_block.mem().mov(_dst, makeDspPtr(_src));
+	}
+
+	void JitDspRegPool::movDspReg(const int8_t& _reg, const JitRegGP& _src) const
+	{
+		m_block.mem().mov(makeDspPtr(&_reg, sizeof(_reg)), r32(_src));
+	}
+
+	void JitDspRegPool::movDspReg(const JitRegGP& _dst, const int8_t& _reg) const
+	{
+		m_block.mem().mov(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
+	}
+
 	void JitDspRegPool::parallelOpEpilog(const DspReg _aluReadReg, const DspReg _aluWriteReg)
 	{
 		if(!isLocked(_aluWriteReg))
@@ -296,6 +421,7 @@ namespace dsp56k
 
 		if(!isInUse(_aluReadReg))
 		{
+			// because the write reg is already unlocked here, this will automatically copy the write reg to the read reg
 			get(_aluReadReg, true, true);
 		}
 		else
@@ -360,11 +486,14 @@ namespace dsp56k
 			JitRegGP hostReg;
 			m_gpList.release(hostReg, dspReg, m_repMode);
 
-			JitReg128 xmReg;
+			SpillReg xmReg;
 			m_xmList.acquire(xmReg, dspReg, m_repMode);
-			m_block.stack().setUsed(xmReg);
+			m_block.stack().setUsed(xmReg.reg);
 
-			m_block.asm_().movq(xmReg, hostReg);
+			setSpilled(dspReg);
+
+			spillMove(xmReg, hostReg);
+			m_moveToXmmInstruction[dspReg] = m_block.asm_().cursor();
 
 			return;
 		}
@@ -376,14 +505,22 @@ namespace dsp56k
 		m_gpList.clear();
 		m_xmList.clear();
 
-		m_lockedGps = 0;
-		m_writtenDspRegs = 0;
+		m_lockedGps = DspRegFlags::None;
+		m_writtenDspRegs = DspRegFlags::None;
+		m_spilledDspRegs = DspRegFlags::None;
+		m_loadedDspRegs = DspRegFlags::None;
 
-		for(size_t i=0; i<g_gpCount; ++i)
-			m_gpList.addHostReg(g_dspPoolGps[i]);
+		for (const auto& g_dspPoolGp : g_dspPoolGps)
+			m_gpList.addHostReg(g_dspPoolGp);
 
-		for(size_t i=0; i<g_xmmCount; ++i)
-			m_xmList.addHostReg(g_dspPoolXmms[i]);
+		for (const auto& g_dspPoolXmm : g_dspPoolXmms)
+			m_xmList.addHostReg({g_dspPoolXmm, 0});
+
+		if(m_extendedSpillSpace)
+		{
+			for (const auto& g_dspPoolXmm : g_dspPoolXmms)
+				m_xmList.addHostReg({g_dspPoolXmm, 1});
+		}
 
 		m_availableTemps.clear();
 
@@ -391,10 +528,29 @@ namespace dsp56k
 			m_availableTemps.push_back(static_cast<DspReg>(i));
 	}
 
-	void JitDspRegPool::load(JitRegGP& _dst, const DspReg _src)
+	void JitDspRegPool::load(const JitRegGP& _dst, const DspReg _src)
 	{
+		setLoaded(_src);
+
 		const auto& r = m_block.dsp().regs();
-		auto& m = m_block.mem();
+
+		auto loadAlu = [this, &_dst](const DspReg _aluRead, const DspReg _aluWrite, const TReg56& _alu)
+		{
+			if(!isLocked(_aluWrite) && isInUse(_aluWrite))
+			{
+				move(_dst, _aluWrite);
+				if(!m_isParallelOp)
+				{
+					clearWritten(_aluWrite);
+					release(_aluWrite);
+					setWritten(_aluRead);
+				}
+			}
+			else
+			{
+				movDspReg(_dst, _alu);
+			}
+		};
 
 		switch (_src)
 		{
@@ -449,35 +605,13 @@ namespace dsp56k
 			movDspReg(_dst, r.mMask[_src - DspM0mask]);
 			break;
 		case DspA:
-			if(!isLocked(DspAwrite) && isInUse(DspAwrite))
-			{
-				move(_dst, DspAwrite);
-				if(!m_isParallelOp)
-				{
-					clearWritten(DspAwrite);
-					release(DspAwrite);
-					setWritten(DspA);
-				}
-			}
-			else
-				movDspReg(_dst, r.a);
+			loadAlu(DspA, DspAwrite, r.a);
 			break;
 		case DspAwrite:
 			// write only
 			break;
 		case DspB:
-			if(!isLocked(DspBwrite) && isInUse(DspBwrite))
-			{
-				move(_dst, DspBwrite);
-				if(!m_isParallelOp)
-				{
-					clearWritten(DspBwrite);
-					release(DspBwrite);
-					setWritten(DspB);					
-				}
-			}
-			else
-				movDspReg(_dst, r.b);
+			loadAlu(DspB, DspBwrite, r.b);
 			break;
 		case DspBwrite:
 			// write only
@@ -505,7 +639,7 @@ namespace dsp56k
 
 	void JitDspRegPool::store(const DspReg _dst, const JitRegGP& _src) const
 	{
-		auto& r = m_block.dsp().regs();
+		const auto& r = m_block.dsp().regs();
 
 		switch (_dst)
 		{
@@ -588,7 +722,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitDspRegPool::store(const DspReg _dst, const JitReg128& _src) const
+	void JitDspRegPool::store(const DspReg _dst, const SpillReg& _src) const
 	{
 		auto& r = m_block.dsp().regs();
 
@@ -673,13 +807,15 @@ namespace dsp56k
 		}
 	}
 
-	bool JitDspRegPool::release(DspReg _dst)
+	bool JitDspRegPool::release(const DspReg _dst)
 	{
 		if(isLocked(_dst))
 		{
 			LOGRP("Unable to release DSP reg " << g_dspRegNames[_dst] << " as its locked");
 			return false;
 		}
+
+		clearLoaded(_dst);
 
 		JitRegGP gpReg;
 		if(m_gpList.release(gpReg, _dst, m_repMode))
@@ -693,87 +829,98 @@ namespace dsp56k
 			return true;
 		}
 		
-		JitReg128 xmReg;
+		SpillReg xmReg;
 		if(m_xmList.release(xmReg, _dst, m_repMode))
 		{
+			clearSpilled(_dst);
+
 			if(isWritten(_dst))
 			{
 				LOGRP("Storing modified DSP reg " << g_dspRegNames[_dst] << " from XMM");
 				store(_dst, xmReg);
 				clearWritten(_dst);
-			}						
+			}
+			else if(m_moveToXmmInstruction[_dst])
+			{
+				// if a GP was moved to an XMM but the register was never used, we can remove the mov instruction, too
+				m_block.asm_().removeNode(m_moveToXmmInstruction[_dst]);
+			}
+
+			m_moveToXmmInstruction[_dst] = nullptr;
 		}
 
 		return true;
 	}
-
-	void JitDspRegPool::setWritten(DspReg _reg)
+	
+	bool JitDspRegPool::flagSet(DspRegFlags& _flags, const DspReg _reg)
 	{
-		const auto last = m_writtenDspRegs;
-		m_writtenDspRegs |= (1ull << static_cast<uint64_t>(_reg));
-
-		if (m_writtenDspRegs != last)
-			m_dirty = true;
+		const auto last = _flags;
+		_flags = static_cast<DspRegFlags>(static_cast<uint64_t>(_flags) | (1ull << static_cast<uint64_t>(_reg)));
+		return _flags != last;
 	}
 
-	void JitDspRegPool::clearWritten(DspReg _reg)
+	bool JitDspRegPool::flagClear(DspRegFlags& _flags, const DspReg _reg)
 	{
-		const auto last = m_writtenDspRegs;
-		m_writtenDspRegs &= ~(1ull<<static_cast<uint64_t>(_reg));
-		if (m_writtenDspRegs != last)
-			m_dirty = true;
+		const auto last = _flags;
+		_flags = static_cast<DspRegFlags>(static_cast<uint64_t>(_flags) & ~(1ull << static_cast<uint64_t>(_reg)));
+		return _flags != last;
+	}
+
+	bool JitDspRegPool::flagTest(const DspRegFlags& _flags, const DspReg _reg)
+	{
+		return static_cast<uint64_t>(_flags) & (1ull<<static_cast<uint64_t>(_reg));
 	}
 
 	JitMemPtr JitDspRegPool::makeDspPtr(const void* _ptr, const size_t _size) const
 	{
 		const void* base = &m_block.dsp().regs();
-		const auto offset = static_cast<const uint8_t*>(_ptr) - static_cast<const uint8_t*>(base);
-		assert(offset < 0xffffffff);
-		
+
+		const auto p = Jitmem::makeRelativePtr(_ptr, base, regDspPtr, _size);
+
+		if(!p.hasSize())
+		{
+			m_dspPtr.setSize(0);
+			m_dspPtr.setOffset(0);
+			return m_dspPtr;
+		}
+
 		if(!m_dspPtr.hasBase() || !m_dspPtr.hasSize())
 		{
 			m_block.stack().setUsed(regDspPtr);
 			m_block.asm_().mov(regDspPtr, asmjit::Imm(reinterpret_cast<uint64_t>(base)));
-			m_dspPtr = Jitmem::makePtr(regDspPtr, 0, static_cast<uint32_t>(_size));
+			m_dspPtr = Jitmem::makePtr(regDspPtr, static_cast<uint32_t>(_size));
 		}
 
-		m_dspPtr.setSize(static_cast<uint32_t>(_size));
-		m_dspPtr.setOffset(offset);
+		m_dspPtr.setSize(p.size());
+		m_dspPtr.setOffset(p.offset());
 
 		return m_dspPtr;
 	}
 
 	void JitDspRegPool::mov(const JitMemPtr& _dst, const JitRegGP& _src) const
 	{
-		m_block.asm_().mov(_dst, _src);
+		m_block.mem().mov(_dst, _src);
 	}
 
-	void JitDspRegPool::movd(const JitMemPtr& _dst, const JitReg128& _src) const
+	void JitDspRegPool::movd(const JitMemPtr& _dst, const SpillReg& _src) const
 	{
-		m_block.asm_().movd(_dst, _src);
+//		if(_src.offset == 0)
+			m_block.asm_().movd(_dst, _src.reg);
+//		else
+//			m_block.asm_().pextrd(_dst, _src.reg, asmjit::Imm(_src.offset<<1));
 	}
 
-	void JitDspRegPool::movq(const JitMemPtr& _dst, const JitReg128& _src) const
+	void JitDspRegPool::movq(const JitMemPtr& _dst, const SpillReg& _src) const
 	{
-		m_block.asm_().movq(_dst, _src);
-	}
-
-	void JitDspRegPool::movb(const JitMemPtr& _dst, const JitRegGP& _src) const
-	{
-#ifdef HAVE_ARM64
-		m_block.asm_().strb(r32(_src), _dst);
-#else
-		m_block.asm_().mov(_dst, _src.r8());
-#endif
+//		if(_src.offset == 0)
+			m_block.asm_().movq(_dst, _src.reg);
+//		else
+//			m_block.asm_().pextrq(_dst, _src.reg, asmjit::Imm(_src.offset));
 	}
 
 	void JitDspRegPool::mov(const JitRegGP& _dst, const JitMemPtr& _src) const
 	{
-#ifdef HAVE_ARM64
-		m_block.asm_().ldr(_dst, _src);
-#else
-		m_block.asm_().mov(_dst, _src);
-#endif
+		m_block.mem().mov(_dst, _src);
 	}
 
 	void JitDspRegPool::movd(const JitReg128& _dst, const JitMemPtr& _src) const
@@ -786,12 +933,40 @@ namespace dsp56k
 		m_block.asm_().movq(_dst, _src);
 	}
 
-	void JitDspRegPool::movb(const JitRegGP& _dst, const JitMemPtr& _src) const
+	void JitDspRegPool::spillMove(const JitRegGP& _dst, const SpillReg& _src) const
 	{
-#ifdef HAVE_ARM64
-		m_block.asm_().ldrb(r32(_dst), _src);
-#else
-		m_block.asm_().movzx(r32(_dst), _src);
-#endif
+//		if(_src.offset == 0)
+			m_block.asm_().movq(_dst, _src.reg);
+//		else
+//			m_block.asm_().pextrq(_dst, _src.reg, asmjit::Imm(_src.offset));
+	}
+
+	void JitDspRegPool::spillMove(const SpillReg& _dst, const JitRegGP& _src) const
+	{
+		// if(m_extendedSpillSpace)
+		// 	m_block.asm_().pinsrq(_dst.reg, _src, asmjit::Imm(_dst.offset));
+		// else
+			m_block.asm_().movq(_dst.reg, _src);
+	}
+
+	void JitDspRegPool::spillMove(const SpillReg& _dst, const SpillReg& _src) const
+	{
+		if(m_extendedSpillSpace)
+		{
+			if(_dst.offset == 0 && _src.offset == 0)
+			{
+				m_block.asm_().movq(_dst.reg, _src.reg);
+			}
+			else
+			{
+				const RegScratch s(m_block);
+				spillMove(s, _src);
+				spillMove(_dst, s);
+			}
+		}
+		else
+		{
+			m_block.asm_().movdqa(_dst.reg, _src.reg);
+		}
 	}
 }

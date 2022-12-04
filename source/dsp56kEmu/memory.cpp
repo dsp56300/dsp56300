@@ -4,8 +4,8 @@
 #include <fstream>
 #include <iomanip>
 
-
 #include "disasm.h"
+#include "dsp.h"
 #include "error.h"
 #include "omfloader.h"
 
@@ -19,7 +19,8 @@ namespace dsp56k
 	//
 	Memory::Memory(const IMemoryValidator& _memoryMap, TWord _memSize/* = 0xc00000*/, TWord* _externalBuffer/* = nullptr*/)
 		: m_memoryMap(_memoryMap)
-		, m_size(_memSize)
+		, m_size({_memSize, _memSize, _memSize})
+		, m_mem({nullptr})
 		, m_bridgedMemoryAddress(_memSize)
 		, m_dsp(nullptr)
 	{
@@ -27,12 +28,12 @@ namespace dsp56k
 
 		if(!address)
 		{
-			m_buffer.resize(_memSize * MemArea_COUNT, 0);
+			m_buffer.resize(static_cast<size_t>(_memSize) * MemArea_COUNT, 0);
 			address = &m_buffer[0];
 		}
 
-		p = address;	address += size();
-		x = address;	address += size();
+		p = address;	address += sizeP();
+		x = address;	address += sizeXY();
 		y = address;
 
 		m_mem[MemArea_X] = x;
@@ -48,6 +49,44 @@ namespace dsp56k
 			fillWithInitPattern();
 	}
 
+	Memory::Memory(const IMemoryValidator& _memoryMap, TWord _memSizeP, TWord _memSizeXY, TWord _brigedMemoryAddress/* = 0*/, TWord* _externalBuffer/* = nullptr*/)
+		: m_memoryMap(_memoryMap)
+		, m_size({_memSizeP, _memSizeXY, _memSizeXY})
+		, m_mem({nullptr})
+		, m_bridgedMemoryAddress(_brigedMemoryAddress)
+		, m_dsp(nullptr)
+	{
+		// As XY is bridged to P for all addresses >= _brigedMemoryAddress, we need to allocate more for P but less for XY if a bridged address is specified
+		const auto pSize = calcPMemSize(_memSizeP, _memSizeXY, _brigedMemoryAddress);
+		const auto xySize = calcXYMemSize(_memSizeXY, _brigedMemoryAddress);
+
+		auto* address = _externalBuffer;
+
+		if(!address)
+		{
+			m_buffer.resize(calcMemSize(_memSizeP, _memSizeXY, _brigedMemoryAddress), 0);
+			address = &m_buffer[0];
+		}
+
+		// try to keep internal XY and P addresses as close together as possible
+		if(xySize < pSize)
+		{
+			x = address;	address += xySize;
+			y = address;	address += xySize;
+			p = address;
+		}
+		else
+		{
+			p = address;	address += pSize;
+			x = address;	address += xySize;
+			y = address;
+		}
+
+		m_mem[MemArea_X] = x;
+		m_mem[MemArea_Y] = y;
+		m_mem[MemArea_P] = p;
+	}
+
 	// _____________________________________________________________________________
 	// set
 	//
@@ -57,6 +96,11 @@ namespace dsp56k
 		++m_heatMap[_area][_offset];
 #endif
 
+#if DSP56300_DEBUGGER
+		if(m_dsp->getDebugger())
+			m_dsp->getDebugger()->onMemoryWrite(_area, _offset, _value);
+#endif
+
 		memTranslateAddress(_area, _offset);
 
 #ifdef _DEBUG
@@ -64,7 +108,7 @@ namespace dsp56k
 		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
 			return false;
 
-		if( _offset >= size() )
+		if( _offset >= size(_area) )
 		{
 			LOG_ERR_MEM_WRITE( _offset );
 			return false;
@@ -89,8 +133,8 @@ namespace dsp56k
 			}
 		}
 */
-		if (_offset<0xff0000)	// Fix the amazing "write to wrong address" bug.
-		m_mem[_area][_offset] = _value & 0x00ffffff;
+		if (_offset < size(_area))		// Fix the amazing "write to wrong address" bug
+			m_mem[_area][_offset] = _value & 0x00ffffff;
 
 		return true;
 	}
@@ -104,19 +148,23 @@ namespace dsp56k
 		++m_heatMap[_area][_offset];
 #endif
 
+#if DSP56300_DEBUGGER
+		if(m_dsp->getDebugger())
+			m_dsp->getDebugger()->onMemoryRead(_area, _offset);
+#endif
+
 		memTranslateAddress(_area, _offset);
 
 #ifdef _DEBUG
 		assert(_offset < XIO_Reserved_High_First);
 		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
-			return false;
-
-		if( _offset >= size() )
+			return 0;
+#endif
+		if( _offset >= size(_area) )
 		{
 			LOG_ERR_MEM_READ( _offset );
-			return 0x00badbad;
+			return 0;
 		}
-#endif
 
 		const auto res = m_mem[_area][_offset];
 
@@ -142,7 +190,7 @@ namespace dsp56k
 			return;			
 		}
 
-		if( _offset >= size() )
+		if( _offset >= sizeP() )
 		{
 			LOG_ERR_MEM_READ( _offset );
 			assert( 0 && "invalid memory address" );
@@ -168,133 +216,66 @@ namespace dsp56k
 		OMFLoader loader;
 		return loader.load( _filename, *this );
 	}
-
-	// _____________________________________________________________________________
-	// save
-	//
-	bool Memory::save( FILE* _file ) const
-	{
-		for(size_t a=0; a<m_mem.size(); ++a)
-		{
-			const auto& data = m_mem[a];
-			fwrite( &data[0], sizeof( data[0] ), size(), _file );
-		}
-		return true;
-	}
-
-	// _____________________________________________________________________________
-	// load
-	//
-	bool Memory::load( FILE* _file )
-	{
-		for(size_t a=0; a<m_mem.size(); ++a)
-		{
-			const auto& data = m_mem[a];
-			fread( &data[0], sizeof( data[0] ), size(), _file );
-		}
-		return true;
-	}
-
+	
 	bool Memory::save(const char* _file, EMemArea _area) const
 	{
-		FILE* hFile = fopen(_file, "wb");
-		if(!hFile)
-			return false;
-
-		std::vector<uint8_t> buf;
-		buf.resize(size() * 3);
-
 		std::ofstream out(_file, std::ios::binary | std::ios::trunc);
 
 		if(!out.is_open())
 			return false;
 
+		std::vector<uint8_t> buf;
+		buf.resize(size(_area) * 3);
+
 		size_t index = 0;
 
-		for(uint32_t i=0; i<size(); ++i)
+		for(uint32_t i=0; i<size(_area); ++i)
 		{
 			const auto w = get(_area, i);
 
-			buf[index++] =(w>>16) & 0xff;;
-			buf[index++] =(w>>8) & 0xff;;
-			buf[index++] =(w) & 0xff;;
+			buf[index++] =(w>>16) & 0xff;
+			buf[index++] =(w>>8) & 0xff;
+			buf[index++] =(w) & 0xff;
 		}
 
-		out.write(reinterpret_cast<const char*>(&buf.front()), size() * 3);
+		out.write(reinterpret_cast<const char*>(&buf.front()), size(_area) * 3);
 
 		out.close();
 
 		return true;
 	}
 
-	bool Memory::saveAssembly(const char* _file, TWord _offset, const TWord _count, bool _skipNops, bool _skipDC, IPeripherals* _peripherals)
+	bool Memory::saveAssembly(const char* _file, TWord _offset, const TWord _count, bool _skipNops, bool _skipDC, IPeripherals* _peripheralsX, IPeripherals* _peripheralsY) const
 	{
 		std::ofstream out(_file, std::ios::trunc);
 
 		if(!out.is_open())
 			return false;
 
-		Opcodes opcodes;
+		const Opcodes opcodes;
 		Disassembler disasm(opcodes);
 
 		disasm.addSymbols(*this);
 		
-		if(_peripherals)
-			_peripherals->setSymbols(disasm);
+		if(_peripheralsX)
+			_peripheralsX->setSymbols(disasm);
 
-		const auto& pSymbols = disasm.getSymbols(Disassembler::MemP);
+		if (_peripheralsY)
+			_peripheralsY->setSymbols(disasm);
 
-		for(uint32_t i=_offset; i<_offset+_count;)
-		{
-			TWord opA, opB;
-			getOpcode(i, opA, opB);
+		std::vector<TWord> temp;
+		temp.resize(sizeP());
+		for(TWord i=_offset; i<_offset + _count; ++i)
+			temp[i] = p[i];
 
-			if(!opA && _skipNops)
-			{
-				++i;
-				continue;
-			}
-
-			const auto it = pSymbols.find(i);
-			if(it != pSymbols.end())
-				out << it->second << ':' << std::endl;
-
-			std::string assembly;
-			auto usedOps = disasm.disassemble(assembly, opA, opB, 0, 0, i);
-
-			if(usedOps == 0)
-			{
-				++usedOps;
-
-				if(_skipDC)
-				{
-					++i;
-					continue;
-				}
-			}
-
-			std::stringstream o;
-			o << HEX(i) << ": " << assembly;
-
-			std::string line(o.str());
-
-			while(line.size() < 60)
-				line += ' ';
-
-			out << line << "; ";
-			out << HEX(opA);
-
-			if(usedOps > 1)
-				out << ' ' << HEX(opB);
-
-			out << std::endl;
-
-			i += usedOps;
-		}
+		std::string output;
+		disasm.disassembleMemoryBlock(output, temp, _offset, _skipNops, true, true);
+		out << output;
+		out.close();
 		return true;
 	}
 
-	bool Memory::saveAsText(const char* _file, EMemArea _area, const TWord _offset, const TWord _count)
+	bool Memory::saveAsText(const char* _file, EMemArea _area, const TWord _offset, const TWord _count) const
 	{
 		std::ofstream out(_file, std::ios::trunc);
 		if(!out.is_open())
@@ -302,10 +283,9 @@ namespace dsp56k
 
 		auto putVal = [&](TWord v)
 		{
-			std::stringstream ss;
-			ss << std::setfill('0') << std::hex << std::setw(6) << v;
-			const std::string str(ss.str());
-			return str;
+			char temp[16];
+			sprintf(temp, "%06x", v);
+			return std::string(temp);
 		};
 
 		const auto last = _offset+_count;
@@ -322,84 +302,6 @@ namespace dsp56k
 			out << std::endl;
 		}
 		return true;
-	}
-
-	bool Memory::saveHeatmap(const char* _file, bool _writeZeroes)
-	{
-#if MEMORY_HEAT_MAP
-		std::ofstream out(_file, std::ios::trunc);
-		if(!out.is_open())
-			return false;
-
-//		for(size_t a=0; a<m_heatMap.size(); ++a)
-		const size_t a = MemArea_P;
-		{
-			const auto& hm = m_heatMap[a];
-			for(size_t i=0; i<hm.size(); ++i)
-			{
-				const auto count = hm[i];
-				if(!count && !_writeZeroes)
-					continue;
-				out << g_memAreaNames[a] << ':' << HEX(i) << ": " << std::setfill('0') << std::setw(8) << std::hex << count << std::endl;
-			}
-		}
-
-		return true;
-#else
-		return false;
-#endif
-	}
-	bool Memory::saveHeatmapImage(const char* _file)
-	{
-#if MEMORY_HEAT_MAP
-		std::ofstream out(_file, std::ios::trunc);
-		if(!out.is_open())
-			return false;
-
-		const uint32_t width = 512;
-		const uint32_t height = size() / 512;
-
-		out << "P3" << std::endl;
-		out << width << ' ' << height << std::endl;
-		out << "255" << std::endl;
-
-		const size_t a = MemArea_P;
-
-		const auto& hm = m_heatMap[a];
-		size_t maxVal = 0;
-		for(size_t i=0; i<hm.size(); ++i)
-			maxVal = std::max(maxVal, (size_t)hm[i]);
-
-		for(size_t i=0; i<hm.size(); ++i)
-		{
-			if(hm[i] == 0)
-				out << "255 0 0";
-			else
-			{
-				const int brightness = hm[i] * 255 / maxVal;
-				out << "0 " << brightness << " 0";				
-			}
-
-			if(i % width == (width-1))
-				out << std::endl;
-			else
-				out << ' ';
-		}
-
-		return true;
-#else
-		return false;
-#endif
-	}
-	void Memory::clearHeatmap()
-	{
-#if MEMORY_HEAT_MAP
-		for (size_t a=0; a<MemArea_COUNT; ++a)
-		{
-			m_heatMap[a].clear();
-			m_heatMap[a].resize(size());
-		}
-#endif
 	}
 
 	void Memory::setSymbol(char _area, TWord _address, const std::string& _name)
@@ -460,7 +362,7 @@ namespace dsp56k
 	{
 		for(size_t a=0; a<m_mem.size(); ++a)
 		{
-			for(size_t i=0; i<size(); ++i)
+			for(size_t i=0; i<size(static_cast<EMemArea>(a)); ++i)
 				m_mem[a][i] = g_initPattern;
 		}
 	}

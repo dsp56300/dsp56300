@@ -41,10 +41,12 @@ namespace dsp56k
 		void movq(const JitRegGP& _dst, const JitReg128& _src);
 		void movq(const JitReg128& _dst, const JitRegGP& _src);
 		void movq(const JitReg128& _dst, const JitReg128& _src);
+		void movdqa(const JitReg128& _dst, const JitReg128& _src);
 		void movd(const JitReg128& _dst, const JitRegGP& _src);
 		void movd(const JitRegGP& _dst, const JitReg128& _src);
 
 		void mov(const JitMemPtr& _dst, const JitRegGP& _src);
+		void mov(const JitRegGP& _dst, const JitMemPtr& _src);
 		
 		void movd(const JitReg128& _dst, const JitMemPtr& _src);
 		void movd(const JitMemPtr& _dst, const JitReg128& _src);
@@ -56,10 +58,12 @@ namespace dsp56k
 
 		void or_(const JitRegGP& _gp, const asmjit::Imm& _imm);
 		void or_(const JitRegGP& _gp, const JitRegGP& _src);
+		void xor_(const JitRegGP& _a, const JitRegGP& _b);
 
 		void ret();
 		void jmp(const asmjit::Label& _label);
 		void jge(const asmjit::Label& _label);
+		void jg(const asmjit::Label& _label);
 
 		void shl(const JitRegGP& _dst, const asmjit::Imm& _imm);
 		void shl(const JitRegGP& _dst, const JitRegGP& _shift);
@@ -75,14 +79,25 @@ namespace dsp56k
 
 		void sub(const JitRegGP& _dst, const JitRegGP& _src);
 
-		void bitTest(const JitRegGP& _src, TWord _bitIndex);
-
+#else
+		bool hasFeature(asmjit::CpuFeatures::X86::Id _id) const;
+		bool hasBMI2() const;
+		void copyBitToReg(const JitRegGP& _dst, uint32_t _dstBit, const JitRegGP& _src, uint32_t _srcBit);
+		void copyBitToReg(const JitRegGP& _dst, const JitRegGP& _src, uint32_t _srcBit)
+		{
+			copyBitToReg(_dst, 0, _src, _srcBit);
+		}
 #endif
+
+		void bitTest(const JitRegGP& _src, TWord _bitIndex);
 
 		void move(const JitRegGP& _dst, const JitMemPtr& _src);
 
 		void clr(const JitRegGP& _gp);
 
-		void test(const JitRegGP& _gp);
+		void test_(const JitRegGP& _gp);
+		void test_(const JitRegGP& _gp, const asmjit::Imm& _imm);
+
+		void lea_(const JitReg64& _dst, const JitReg64& _src, int _offset);
 	};
 }

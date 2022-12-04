@@ -82,6 +82,8 @@ namespace dsp56k
 
 	enum Instruction
 	{
+		Invalid = -1,
+
 		Abs,
 		ADC,
 		Add_SD,		Add_xx,		Add_xxxx,
@@ -217,5 +219,9 @@ namespace dsp56k
 		OpFlagRepDynamic	= (1<<6),
 		OpFlagPushPC		= (1<<7),
 		OpFlagCCR			= (1<<8),
+		OpFlagPopSR			= (1<<9),
+		OpFlagDo			= (1<<10),
+
+		OpFlagDoLoop = OpFlagDo | OpFlagLoop
 	};
 }

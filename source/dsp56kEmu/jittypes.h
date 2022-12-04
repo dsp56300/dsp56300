@@ -2,6 +2,7 @@
 
 #include "buildconfig.h"
 
+// set to 1 to compile for ARM even if on an x64 system
 #if 0
 #define HAVE_ARM64
 #undef HAVE_X86_64

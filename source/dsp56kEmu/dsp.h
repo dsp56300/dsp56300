@@ -8,27 +8,30 @@
 #include "opcodes.h"
 #include "logging.h"
 #include "jit.h"
-#include "dsplistener.h"
 
 namespace dsp56k
 {
 	class Memory;
-	class UnitTests;
+	class InterpreterUnitTests;
 	class JitUnittests;
+	class UnitTests;
 	class JitDspRegs;
 	class JitOps;
 	class AotRuntime;
+	class DebuggerInterface;
 	
 	using TInstructionFunc = void (DSP::*)(TWord _op);
 
 	class DSP final
 	{
-		friend class UnitTests;
+		friend class InterpreterUnitTests;
 		friend class JitUnittests;
+		friend class UnitTests;
 		friend class JitDspRegs;
 		friend class JitOps;
 		friend class Jit;
 		friend class AotRuntime;
+		friend class DebuggerInterface;
 
 		// _____________________________________________________________________________
 		// types
@@ -104,7 +107,9 @@ namespace dsp56k
 			StackIndent	= 0x04,
 		};
 
-		using TInterruptFunc = void (DSP::*)();
+		typedef void (*TInterruptFunc)(DSP*);
+
+		static constexpr uint32_t PeripheralsProcessingStepSize = 32;
 
 	private:
 		// _____________________________________________________________________________
@@ -117,16 +122,17 @@ namespace dsp56k
 		TWord							pcCurrentInstruction = 0;
 		TWord							m_opWordB = 0;
 		uint32_t						m_currentOpLen = 0;
-		uint32_t						m_instructions = 0;
 
+		// these members are accessed via JIT asm code, keep them tightly together
 		Jit								m_jit;
-		SRegs							reg;
+		SRegs							reg;							// this is the base pointer that is used to access all surrounding members
+		uint32_t						m_instructions = 0;
+		ProcessingMode					m_processingMode = Default;
+		TInterruptFunc					m_interruptFunc;
+
 		CCRCache						ccrCache;
 
-		ProcessingMode					m_processingMode = Default;
-
-		TInterruptFunc					m_interruptFunc = &DSP::execNoPendingInterrupts;
-
+		std::mutex						m_mutexInsertPendingInterrupt;
 		RingBuffer<TWord, 1024, false>	m_pendingInterrupts;	// TODO: array is way too large
 
 		Opcodes							m_opcodes;
@@ -167,7 +173,7 @@ namespace dsp56k
 		std::string		m_asm;
 		Disassembler	m_disasm;
 
-		DSPListener*	m_listener = nullptr;
+		DebuggerInterface*	m_debugger = nullptr;
 
 		// _____________________________________________________________________________
 		// implementation
@@ -193,6 +199,8 @@ namespace dsp56k
 		void	execDefaultPreventInterrupt		();
 		void	execNoPendingInterrupts			();
 		void	nop								() {}
+
+		uint32_t	getRemainingPeripheralsCycles() const	{ return m_peripheralCounter - m_instructions; }
 
 		bool	readReg							( EReg _reg, TReg8& _res ) const;
 		bool	readReg							( EReg _reg, TReg48& _res ) const;
@@ -222,7 +230,15 @@ namespace dsp56k
 		bool			save							( FILE* _file ) const;
 		bool			load							( FILE* _file );
 
-		void			injectInterrupt					(uint32_t _interruptVectorAddress);
+		bool			injectInterrupt					(uint32_t _interruptVectorAddress);
+
+		bool			hasPendingInterrupts			() const
+		{
+			if(!m_pendingInterrupts.empty())
+				return true;
+
+			return m_processingMode != Default;
+		}
 
 		void			clearOpcodeCache				();
 		void			clearOpcodeCache				(TWord _address);
@@ -232,13 +248,26 @@ namespace dsp56k
 		void			enableTrace						(TraceMode _trace) { m_trace = _trace; }
 
 		Memory&			memory							()											{ return mem; }
+		const Memory&	memory							() const									{ return mem; }
+
+		const SRegs&	regs							() const									{ return reg; }
 		SRegs&			regs							()											{ return reg; }
 
 		const Opcodes&	opcodes							() const									{ return m_opcodes; }
 		Disassembler&	disassembler					()											{ return m_disasm; }
 
 		void			setPeriph						(const size_t _index, IPeripherals* _periph)	{ perif[_index] = _periph; _periph->setDSP(this); }
+		const IPeripherals*	getPeriph					(const size_t _index) const						{ return perif[_index]; }
 		IPeripherals*	getPeriph						(const size_t _index)							{ return perif[_index]; }
+		IPeripherals*	getPeriph						(const EMemArea _area)
+		{
+			switch (_area)
+			{
+			case MemArea_X: return getPeriph(0);
+			case MemArea_Y: return getPeriph(1);
+			default:		return nullptr;
+			}
+		}
 		
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
 
@@ -246,7 +275,9 @@ namespace dsp56k
 
 		void			terminate						();
 
-		void			setListener						(DSPListener* _listener) { m_listener = _listener; }
+		void				setDebugger						(DebuggerInterface* _debugger);
+		DebuggerInterface*	getDebugger						()								{ return m_debugger; }
+
 	private:
 
 		std::string getSSindent() const;
@@ -332,6 +363,7 @@ namespace dsp56k
 		void decode_QQQ_read(TReg24& _s1, TReg24& _s2, TWord _qqq) const;
 		TReg24 decode_QQ_read(TWord _qq) const;
 		TReg24 decode_qq_read(TWord _qq) const;
+		TReg24 decode_qqq_read(TWord _qqq) const;
 
 		template<typename T> T decode_sss_read( TWord _sss ) const;
 		static TWord decode_sssss(TWord _sssss);
@@ -451,6 +483,7 @@ namespace dsp56k
 
 		void setSR(const TReg24& _sr)
 		{
+			ccrCache.dirty = 0;
 			reg.sr = _sr;
 		}
 
@@ -638,6 +671,7 @@ namespace dsp56k
 		// - ALU
 		void	alu_and				( bool ab, TWord   _val );
 		void	alu_or				( bool ab, TWord   _val );
+		void	alu_eor				( bool ab, TWord   _val );
 		void	alu_add				( bool ab, const TReg56& _val );
 		void	alu_cmp				( bool ab, const TReg56& _val, bool _magnitude );
 		void	alu_sub				( bool ab, const TReg56& _val );
@@ -674,16 +708,19 @@ namespace dsp56k
 
 		void	alu_not				(bool ab);
 
+		void	alu_insert			(bool abDst, const TWord src, TWord widthOffset);
 		void	alu_extractu		(bool abDst, bool abSrc, TWord widthOffset);
 
 		// -- memory
 
+	public:
 		bool	memWriteP			( TWord _offset, TWord _value );
 		bool	memWrite			( EMemArea _area, TWord _offset, TWord _value );
 		bool	memWritePeriph		( EMemArea _area, TWord _offset, TWord _value );
 		bool	memWritePeriphFFFF80( EMemArea _area, TWord _offset, TWord _value );
 		bool	memWritePeriphFFFFC0( EMemArea _area, TWord _offset, TWord _value );
 
+	private:
 		void	notifyProgramMemWrite(TWord _offset);
 		
 		TWord	memRead				( EMemArea _area, TWord _offset ) const;

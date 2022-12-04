@@ -15,7 +15,7 @@ namespace dsp56k
 
 		// If the timer runs on internal clock, the frequency is DSP / 2
 		const auto clock = m_peripherals.getDSP().getInstructionCounter();
-		const auto diff = delta(clock, m_lastClock);
+		const auto diff = delta(clock, m_lastClock) >> 1;
 		m_lastClock = clock;
 
 //		m_prescalerClock ^= 1;
@@ -40,23 +40,56 @@ namespace dsp56k
 		_t.m_tcr++;
 		_t.m_tcr &= 0xFFFFFF;
 
-		if (_t.m_tcr == _t.m_tcpr)
-		{
-			if(_t.m_tcsr.test(Timer::M_TCIE))
-				m_peripherals.getDSP().injectInterrupt(Vba_TIMER0_Compare + (_index << 1));
-
-			_t.m_tcsr.set(Timer::M_TCF);
-		}
 		if (!_t.m_tcr)
 		{
 			if(_t.m_tcsr.test(Timer::M_TOIE))
 				m_peripherals.getDSP().injectInterrupt(Vba_TIMER0_Overflow + (_index << 1));
 
 			_t.m_tcsr.set(Timer::M_TOF);
+
+			if(mode(_index) == ModePWM && _t.m_tcsr.test(Timer::M_TRM))
+				_t.m_tcr = _t.m_tlr;
 		}
-		if (!_t.m_tcr)
+
+		if (_t.m_tcr == _t.m_tcpr)
 		{
-			_t.m_tcr = _t.m_tlr;
+			if(_t.m_tcsr.test(Timer::M_TCIE))
+				m_peripherals.getDSP().injectInterrupt(Vba_TIMER0_Compare + (_index << 1));
+
+			_t.m_tcsr.set(Timer::M_TCF);
+
+			if(mode(_index) != ModePWM && _t.m_tcsr.test(Timer::M_TRM))
+				_t.m_tcr = _t.m_tlr;
 		}
+	}
+
+	void Timers::writeTCSR(int _index, TWord _val)
+	{
+//		if(_index != 2)
+//			LOG("Write Timer " << _index << " TCSR: " << HEX(_val));
+
+		auto& t = m_timers[_index];
+
+		auto pc = m_peripherals.getDSP().getPC().var;
+
+		// If the timer gets enabled, reset the counter register with the load register content
+		if (!t.m_tcsr.test(Timer::M_TE) && bittest<TWord, Timer::M_TE>(_val))
+		{
+			t.m_tcr = t.m_tlr;
+
+		}
+		else if (t.m_tcsr.test(Timer::M_TE) && !bittest<TWord, Timer::M_TE>(_val))
+		{
+			// force clear of overflow and compare flags below
+			_val |= (1<<Timer::M_TOF);
+			_val |= (1<<Timer::M_TCF);
+//			const auto dsr0 = static_cast<Peripherals56362&>(m_peripherals).getDMA().getDSR(0);
+//			LOG("Timer " << _index << " disabled, TCR=" << HEX(t.m_tcr) << ", DSR0=" << dsr0 << ", TPCR=" << HEX(t.m_tcpr));
+		}
+
+		timerFlagReset<Timer::M_TOF>(t.m_tcsr, _val);
+		timerFlagReset<Timer::M_TCF>(t.m_tcsr, _val);
+
+		t.m_tcsr = _val;
 	}
 }

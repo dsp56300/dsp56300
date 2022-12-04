@@ -206,7 +206,6 @@ namespace dsp56k
 		}
 		else
 		{
-			const TWord ea = effectiveAddress<Moveyr_ea>(op);
 			writeMem<Moveyr_ea>(op, MemArea_Y, decode_ff_read(ff).toWord());
 		}
 	}
@@ -408,7 +407,16 @@ namespace dsp56k
 	}
 	inline void DSP::op_Movep_eapp(const TWord op)
 	{
-		errNotImplemented("MOVE");
+		// 0000100sW1MMMRRR01pppppp
+		const TWord		pppppp		= getFieldValue<Movep_eapp,Field_pppppp>(op);
+		const EMemArea	periphArea	= getFieldValue<Movep_eapp,Field_s>(op) ? MemArea_Y : MemArea_X;
+		const auto		write		= getFieldValue<Movep_eapp,Field_W>(op);
+		const auto		ea			= effectiveAddress<Movep_ppea>(op);
+
+		if(write)
+			memWritePeriphFFFFC0(periphArea, pppppp, memRead(MemArea_P, ea));
+		else
+			memWriteP(ea, memReadPeriphFFFFC0(periphArea, pppppp, Movep_eapp));
 	}
 	inline void DSP::op_Movep_eaqq(const TWord op)
 	{

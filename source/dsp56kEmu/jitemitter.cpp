@@ -73,6 +73,11 @@ namespace dsp56k
 		fmov(_dst, _src);
 	}
 
+	void JitEmitter::movdqa(const JitReg128& _dst, const JitReg128& _src)
+	{
+		fmov(_dst, _src);
+	}
+
 	void JitEmitter::movd(const JitReg128& _dst, const JitRegGP& _src)
 	{
 		fmov(_dst.s(), r32(_src));
@@ -86,6 +91,11 @@ namespace dsp56k
 	void JitEmitter::mov(const JitMemPtr& _dst, const JitRegGP& _src)
 	{
 		str(_src, _dst);
+	}
+
+	void JitEmitter::mov(const JitRegGP& _dst, const JitMemPtr& _src)
+	{
+		ldr(_dst, _src);
 	}
 
 	void JitEmitter::movd(const JitReg128& _dst, const JitMemPtr& _src)
@@ -123,6 +133,11 @@ namespace dsp56k
 		orr(_gp, _gp, _src);
 	}
 
+	void JitEmitter::xor_(const JitRegGP& _a, const JitRegGP& _b)
+	{
+		eor(_a, _a, _b);
+	}
+
 	void JitEmitter::ret()
 	{
 		JitBuilder::ret(asmjit::a64::regs::x30);
@@ -136,6 +151,11 @@ namespace dsp56k
 	void JitEmitter::jge(const asmjit::Label& _label)
 	{
 		b(asmjit::arm::CondCode::kGE, _label);
+	}
+
+	void JitEmitter::jg(const asmjit::Label& _label)
+	{
+		b(asmjit::arm::CondCode::kGT, _label);
 	}
 
 	void JitEmitter::shl(const JitRegGP& _dst, const asmjit::Imm& _imm)
@@ -191,12 +211,96 @@ namespace dsp56k
 	{
 		sub(_dst, _dst, _src);
 	}
+#else
+
+	bool JitEmitter::hasFeature(asmjit::CpuFeatures::X86::Id _id) const
+	{
+		return asmjit::CpuInfo::host().hasFeature(_id);
+	}
+
+	bool JitEmitter::hasBMI2() const
+	{
+		return hasFeature(asmjit::CpuFeatures::X86::kBMI2);
+	}
+
+	void JitEmitter::copyBitToReg(const JitRegGP& _dst, const uint32_t _dstBit, const JitRegGP& _src, const uint32_t _srcBit)
+	{
+		if(_srcBit == _dstBit && _dstBit < 32)
+		{
+			mov(r32(_dst), r32(_src));														// 0.25
+			and_(r32(_dst), asmjit::Imm(1<<_dstBit));										// 0.25
+			return;
+		}
+
+		if(_dstBit == 0 && _srcBit < 32)
+		{
+			bitTest(_src, _srcBit);															// 0.25
+			setnz(_dst.r8());																// 0.5
+			return;
+		}
+
+		if (hasBMI2() && _srcBit != _dstBit && _dstBit < 32)
+		{
+			if(_srcBit < 32)
+			{
+				if(_dstBit < _srcBit)
+					rorx(r32(_dst), r32(_src), asmjit::Imm(_srcBit - _dstBit));				// 0.5
+				else
+					rorx(r32(_dst), r32(_src), asmjit::Imm(32 - (_dstBit - _srcBit)));		// 0.5
+			}
+			else
+			{
+				if(_dstBit < _srcBit)
+					rorx(r64(_dst), r64(_src), asmjit::Imm(_srcBit - _dstBit));				// 0.5
+				else
+					rorx(r64(_dst), r64(_src), asmjit::Imm(64 - (_dstBit - _srcBit)));		// 0.5
+			}
+
+			and_(r32(_dst), asmjit::Imm(1<<_dstBit));										// 0.25
+			return;
+		}
+
+		if (_dstBit >= 32 && _srcBit > 0 && hasBMI2())
+		{
+			rorx(_dst, r64(_src), asmjit::Imm(_srcBit));									// 0.5
+			and_(r32(_dst), asmjit::Imm(1));												// 0.25
+			shl(r64(_dst), asmjit::Imm(_dstBit));											// 0.5
+			return;
+		}
+
+		if(_dstBit >= 32)
+			xor_(r64(_dst), r64(_dst));														// 0.25
+		else if(_dstBit >= 8)
+			xor_(r32(_dst), r32(_dst));														// 0.25
+
+		if(_srcBit >= 32)
+		{
+			bt(r64(_src), asmjit::Imm(_srcBit));											// 0.5
+			setc(_dst.r8());																// 0.5
+		}
+		else
+		{
+			bitTest(_src, _srcBit);															// 0.25
+			setnz(_dst.r8());																// 0.5
+		}
+
+		if(_dstBit >= 32)
+			shl(r64(_dst), asmjit::Imm(_dstBit));											// 0.5
+		else if(_dstBit > 0)
+			shl(r32(_dst), asmjit::Imm(_dstBit));											// 0.5
+	}
+#endif
 
 	void JitEmitter::bitTest(const JitRegGP& _src, TWord _bitIndex)
 	{
-		tst(_src, asmjit::Imm(1ull << _bitIndex));
-	}
+#ifdef HAVE_X86_64
+		assert(_bitIndex < 32 && "test only works with 32 bit immediates");
 #endif
+		if(_bitIndex < 32)
+			test_(r32(_src), asmjit::Imm(1u << _bitIndex));
+		else
+			test_(r64(_src), asmjit::Imm(1ull << _bitIndex));
+	}
 
 	void JitEmitter::move(const JitRegGP& _dst, const JitMemPtr& _src)
 	{
@@ -215,16 +319,56 @@ namespace dsp56k
 		else
 			JitBuilder::mov(_gp, asmjit::a64::regs::xzr);
 #else
-		JitBuilder::xor_(_gp, _gp);
+		JitBuilder::xor_(r32(_gp), r32(_gp));
 #endif
 	}
 
-	void JitEmitter::test(const JitRegGP& _gp)
+	void JitEmitter::test_(const JitRegGP& _gp)
 	{
 #ifdef HAVE_ARM64
 		JitBuilder::tst(_gp, _gp);
 #else
 		JitBuilder::test(_gp, _gp);
+#endif
+	}
+
+	void JitEmitter::test_(const JitRegGP& _gp, const asmjit::Imm& _imm)
+	{
+#ifdef HAVE_ARM64
+		JitBuilder::tst(_gp, _imm);
+#else
+		JitBuilder::test(_gp, _imm);
+#endif
+	}
+
+	void JitEmitter::lea_(const JitReg64& _dst, const JitReg64& _src, const int _offset)
+	{
+#ifdef HAVE_ARM64
+		// aarch64 add accepts 12 bits as unsigned offset, optionally shifted up by 12 bits
+		auto isValidOffset = [](const int32_t off)
+		{
+			if(off >= 0 && off <= 0xfff)
+				return true;
+			if(off >= 0 && off <= 0xffffff && (off & 0xfff) == 0)
+				return true;
+			return false;
+		};
+
+		if(isValidOffset(_offset))
+		{
+			add(_dst, _src, _offset);
+		}
+		else if(isValidOffset(-_offset))
+		{
+			sub(_dst, _src, -_offset);
+		}
+		else
+		{
+			mov(r32(_dst), asmjit::Imm(_offset));
+			add(_dst, _dst, _src);
+		}
+#else
+		lea(_dst, asmjit::x86::ptr(_src, _offset));
 #endif
 	}
 }

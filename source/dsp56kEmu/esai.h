@@ -8,12 +8,14 @@
 
 namespace dsp56k
 {
+	class Dma;
+	class Disassembler;
 	class IPeripherals;
 
 	class Esai : public Audio
 	{
 	public:
-		enum Addresses
+		enum AddressesX
 		{
 			M_RSMB	= 0xFFFFBC, // ESAI Receive Slot Mask Register B (RSMB)
 			M_RSMA	= 0xFFFFBB, // ESAI Receive Slot Mask Register A (RSMA)
@@ -25,6 +27,11 @@ namespace dsp56k
 			M_TCR	= 0xFFFFB5, // ESAI Transmit Control Register (TCR)
 			M_SAICR	= 0xFFFFB4, // ESAI Control Register (SAICR)
 			M_SAISR	= 0xFFFFB3, // ESAI Status Register (SAISR)
+
+			// These are "reserved" according to the DSP family manual, we use these for emulator specific stuff
+			RemainingInstructionsForFrameSyncTrue = 0xFFFFAD,
+			RemainingInstructionsForFrameSyncFalse = 0xFFFFAC,
+
 			M_RX3	= 0xFFFFAB, // ESAI Receive Data Register 3 (RX3)
 			M_RX2	= 0xFFFFAA, // ESAI Receive Data Register 2 (RX2)
 			M_RX1	= 0xFFFFA9, // ESAI Receive Data Register 1 (RX1)
@@ -36,6 +43,31 @@ namespace dsp56k
 			M_TX2	= 0xFFFFA2, // ESAI Transmit Data Register 2 (TX2)
 			M_TX1	= 0xFFFFA1, // ESAI Transmit Data Register 1 (TX1)
 			M_TX0	= 0xFFFFA0, // ESAI Transmit Data Register 0 (TX0)
+		};
+
+		enum AddressesY
+		{
+			M_RSMB_1  = 0xFFFF9C, // ESAI_1 Receive Slot Mask Register B (RSMB)
+			M_RSMA_1  = 0xFFFF9B, // ESAI_1 Receive Slot Mask Register A (RSMA)
+			M_TSMB_1  = 0xFFFF9A, // ESAI_1 Transmit Slot Mask Register B (TSMB)
+			M_TSMA_1  = 0xFFFF99, // ESAI_1 Transmit Slot Mask Register A (TSMA)
+			M_RCCR_1  = 0xFFFF98, // ESAI_1 Receive Clock Control Register (RCCR)
+			M_RCR_1   = 0xFFFF97, // ESAI_1 Receive Control Register (RCR)
+			M_TCCR_1  = 0xFFFF96, // ESAI_1 Transmit Clock Control Register (TCCR)
+			M_TCR_1   = 0xFFFF95, // ESAI_1 Transmit Control Register (TCR)
+			M_SAICR_1 = 0xFFFF94, // ESAI_1 Control Register (SAICR)
+			M_SAISR_1 = 0xFFFF93, // ESAI_1 Status Register (SAISR)
+			M_RX3_1   = 0xFFFF8B, // ESAI_1 Receive Data Register 3 (RX3)
+			M_RX2_1   = 0xFFFF8A, // ESAI_1 Receive Data Register 2 (RX2)
+			M_RX1_1   = 0xFFFF89, // ESAI_1 Receive Data Register 1 (RX1)
+			M_RX0_1   = 0xFFFF88, // ESAI_1 Receive Data Register 0 (RX0)
+			M_TSR_1   = 0xFFFF86, // ESAI_1 Time Slot Register (TSR)
+			M_TX5_1   = 0xFFFF85, // ESAI_1 Transmit Data Register 5 (TX5)
+			M_TX4_1   = 0xFFFF84, // ESAI_1 Transmit Data Register 4 (TX4)
+			M_TX3_1   = 0xFFFF83, // ESAI_1 Transmit Data Register 3 (TX3)
+			M_TX2_1   = 0xFFFF82, // ESAI_1 Transmit Data Register 2 (TX2)
+			M_TX1_1   = 0xFFFF81, // ESAI_1 Transmit Data Register 1 (TX1)
+			M_TX0_1   = 0xFFFF80, // ESAI_1 Transmit Data Register 0 (TX0)
 		};
 
 		enum RsbmBits
@@ -125,7 +157,7 @@ namespace dsp56k
 			M_RWA = 7,					// Receiver Word Alignment Control
 			M_RSHFD = 6,				// Receiver Shift Direction
 
-			M_RE = 0xF,					// Receive Enable Mask
+			M_REM = 0xF,				// Receive Enable Mask
 			M_RE3 = 3,					// Receive 3 Enable
 			M_RE2 = 2,					// Receive 2 Enable
 			M_RE1 = 1,					// Receive 1 Enable
@@ -230,15 +262,11 @@ namespace dsp56k
 			M_IF0 = 0,					// Serial Input Flag 0
 		};
 
-		explicit Esai(IPeripherals& _periph);
+		explicit Esai(IPeripherals& _periph, EMemArea _area, Dma* _dma = nullptr);
 
 		void exec();
 		
-		TWord readStatusRegister()
-		{
-			m_hasReadStatus = true;
-			return m_sr;
-		}
+		TWord readStatusRegister();
 
 		void writestatusRegister(TWord _val)
 		{
@@ -246,14 +274,24 @@ namespace dsp56k
 			m_sr = _val;
 		}
 
-		TWord readReceiveControlRegister()
+		TWord readReceiveControlRegister() const
 		{
 			return m_rcr;
 		}
 		
-		TWord readTransmitControlRegister()
+		TWord readReceiveClockControlRegister() const
+		{
+			return m_rccr;
+		}
+		
+		TWord readTransmitControlRegister() const
 		{
 			return m_tcr;
+		}
+
+		TWord readTransmitClockControlRegister() const
+		{
+			return m_tccr;
 		}
 
 		void writeReceiveControlRegister(TWord _val)
@@ -287,17 +325,40 @@ namespace dsp56k
 			m_rccr = _val;
 		}
 
-		void updatePCTL(TWord _val);
 		void writeTX(uint32_t _index, TWord _val);
 		TWord readRX(uint32_t _index);
 
 		void terminate();
 
+		TWord readTSMA() const
+		{
+			return m_tsma;
+		}
+
+		TWord readTSMB() const
+		{
+			return m_tsmb;
+		}
+
+		void writeTSMA(const TWord _tsma);
+		void writeTSMB(const TWord _tsmb);
+
+		static void setSymbols(Disassembler& _disasm, EMemArea _area);
+
+		EMemArea getMemArea() const { return m_area; }
+
+		uint32_t getTxFrameCounter() const { return m_txFrameCounter; }
+
 	private:
 		bool inputEnabled(uint32_t _index) const	{ return m_rcr.test(static_cast<RcrBits>(_index)); }
 		bool outputEnabled(uint32_t _index) const	{ return m_tcr.test(static_cast<TcrBits>(_index)); }
 
+		void injectInterrupt(const TWord _interrupt) const;
+
 		IPeripherals& m_periph;
+		const EMemArea m_area;
+		const TWord m_vba;							// base address for interrupts differs between ESAI and ESAI_1 (on DSP 56367)
+		Dma* const m_dma;
 		Bitfield<uint32_t, SrBits, 18> m_sr;		// status register
 		TWord m_cr = 0;								// control register
 
@@ -306,14 +367,17 @@ namespace dsp56k
 
 		TWord m_rccr = 0;							// receive clock control register
 		TWord m_tccr = 0;							// transmit clock control register
-		
+
 		std::array<TWord, 6> m_tx;					// Words written by the DSP 
-		std::array<TWord, 6> m_rx;					// Words for the DSP to read
+		std::array<TWord, 4> m_rx;					// Words for the DSP to read
 		TWord m_hasReadStatus = 0;					// Has the status register been read since TUE was set?
 		
-		uint32_t m_cyclesSinceWrite = 0;
 		uint32_t m_writtenTX = 0;
-		uint32_t m_lastClock = 0;
-		uint32_t m_cyclesPerSample = 2133;			// estimate cycles per sample.
+		uint32_t m_readRX = 0;
+		uint32_t m_txSlotCounter = 0;
+		uint32_t m_txFrameCounter = 0;
+
+		TWord m_tsma = 0xffff;
+		TWord m_tsmb = 0xffff;
 	};
 }

@@ -6,10 +6,14 @@
 
 #include <algorithm>
 
+#include "aar.h"
+#include "interrupts.h"
 #include "logging.h"
 #include "memory.h"
 #include "peripherals.h"
+#include "registers.h"
 #include "utils.h"
+#include "opcodeanalysis.h"
 
 #ifdef USE_MOTOROLA_UNASM
 extern "C"
@@ -22,136 +26,171 @@ namespace dsp56k
 {
 	constexpr const char* g_opNames[] = 
 	{
-		"abs ",
-		"adc ",
-		"add ",		"add ",		"add ",
-		"addl ",	"addr ",
-		"and ",		"and ",		"and ",		"andi ",
-		"asl ",		"asl ",		"asl ",
-		"asr ",		"asr ",		"asr ",
+		"abs",
+		"adc",
+		"add",		"add",		"add",
+		"addl",		"addr",
+		"and",		"and",		"and",		"andi",
+		"asl",		"asl",		"asl",
+		"asr",		"asr",		"asr",
 		"b",		"b",		"b",
-		"bchg ",	"bchg ",	"bchg ",	"bchg ",	"bchg ",
-		"bclr ",	"bclr ",	"bclr ",	"bclr ",	"bclr ",
-		"bra ",		"bra ",		"bra ",
-		"brclr ",	"brclr ",	"brclr ",	"brclr ",	"brclr ",
+		"bchg",		"bchg",		"bchg",		"bchg",		"bchg",
+		"bclr",		"bclr",		"bclr",		"bclr",		"bclr",
+		"bra",		"bra",		"bra",
+		"brclr",	"brclr",	"brclr",	"brclr",	"brclr",
 		"brk",
-		"brset ",	"brset ",	"brset ",	"brset ",	"brset ",
+		"brset",	"brset",	"brset",	"brset",	"brset",
 		"bs",		"bs",		"bs",
-		"bsclr ",	"bsclr ",	"bsclr ",	"bsclr ",	"bsclr ",
-		"bset ",	"bset ",	"bset ",	"bset ",	"bset ",
-		"bsr ",		"bsr ",		"bsr ",
-		"bsset ",	"bsset ",	"bsset ",	"bsset ",	"bsset ",
-		"btst ",	"btst ",	"btst ",	"btst ",	"btst ",
-		"clb ",
-		"clr ",
-		"cmp ",		"cmp ",		"cmp ",
-		"cmpm ",	"cmpu ",
+		"bsclr",	"bsclr",	"bsclr",	"bsclr",	"bsclr",
+		"bset",		"bset",		"bset",		"bset",		"bset",
+		"bsr",		"bsr",		"bsr",
+		"bsset",	"bsset",	"bsset",	"bsset",	"bsset",
+		"btst",		"btst",		"btst",		"btst",		"btst",
+		"clb",
+		"clr",
+		"cmp",		"cmp",		"cmp",
+		"cmpm",		"cmpu",
 		"debug",	"debug",
-		"dec ",
-		"div ",
+		"dec",
+		"div",
 		"dmac",
-		"do ",		"do ",		"do ",		"do ",
+		"do",		"do",		"do",		"do",
 		"do forever,",
-		"dor ",		"dor ",		"dor ",		"dor ",
+		"dor",		"dor",		"dor",		"dor",
 		"dor forever,",
 		"enddo",
-		"eor ",		"eor ",		"eor ",
-		"extract ",	"extract ",
-		"extractu ","extractu ",
+		"eor",		"eor",		"eor",
+		"extract",	"extract",
+		"extractu",	"extractu",
 		"",			"",																						// ifcc
-		"illegal",	"inc ",
-		"insert ",	"insert ",
+		"illegal",	"inc",
+		"insert",	"insert",
 		"j",		"j",
-		"jclr ",	"jclr ",	"jclr ",	"jclr ",	"jclr ",
-		"jmp ",		"jmp ",
+		"jclr",		"jclr",		"jclr",		"jclr",		"jclr",
+		"jmp",		"jmp",
 		"js",		"js",
-		"jsclr ",	"jsclr ",	"jsclr ",	"jsclr ",	"jsclr ",
-		"jset ",	"jset ",	"jset ",	"jset ",	"jset ",
-		"jsr ",		"jsr ",
-		"jsset ",	"jsset ",	"jsset ",	"jsset ",	"jsset ",
-		"lra ",		"lra ",
-		"lsl ",		"lsl ",		"lsl ",
-		"lsr ",		"lsr ",		"lsr ",
-		"lua ",		"lua ",
-		"mac ",		"mac ",
-		"maci ",
+		"jsclr",	"jsclr",	"jsclr",	"jsclr",	"jsclr",
+		"jset",		"jset",		"jset",		"jset",		"jset",
+		"jsr",		"jsr",
+		"jsset",	"jsset",	"jsset",	"jsset",	"jsset",
+		"lra",		"lra",
+		"lsl",		"lsl",		"lsl",
+		"lsr",		"lsr",		"lsr",
+		"lua",		"lua",
+		"mac",		"mac",
+		"maci",
 		"mac",
-		"macr ",	"macr ",
-		"macri ",
-		"max ",
-		"maxm ",
-		"merge ",
-		"move ",	"move ",																				// movenop, move_xx
-		"move ",																							// move_xx
-		"move ",																							// move_ea
-		"move ",	"move ",	"move ",	"move ",														// movex
-		"move ",	"move ",																				// movexr
-		"move ",	"move ",	"move ",	"move ",														// movey
-		"move ",	"move ",																				// moveyr
-		"move ",	"move ",																				// movel
-		"move ",																							// movexy
-		"move ",	"move ",	"move ",	"move ",														// movec
-		"move ",	"move ",																				// movem
-		"movep ",	"movep ",	"movep ",	"movep ",	"movep ",	"movep ",	"movep ",	"movep ",		// movep
-		"mpy ",		"mpy ",		"mpy",
-		"mpyi ",
-		"mpyr ",	"mpyr ",
-		"mpyri ",
-		"neg ",
+		"macr",	"macr",
+		"macri",
+		"max",
+		"maxm",
+		"merge",
+		"move",		"move",																				// movenop, move_xx
+		"move",																							// move_xx
+		"move",																							// move_ea
+		"move",		"move",		"move",		"move",														// movex
+		"move",		"move",																				// movexr
+		"move",		"move",		"move",		"move",														// movey
+		"move",		"move",																				// moveyr
+		"move",		"move",																				// movel
+		"move",																							// movexy
+		"move",		"move",		"move",		"move",														// movec
+		"move",		"move",																				// movem
+		"movep",	"movep",	"movep",	"movep",	"movep",	"movep",	"movep",	"movep",	// movep
+		"mpy",		"mpy",		"mpy",
+		"mpyi",
+		"mpyr",		"mpyr",
+		"mpyri",
+		"neg",
 		"nop",
-		"norm ",
-		"normf ",
-		"not ",
-		"or ",		"or ",		"or ",
-		"ori ",
+		"norm",
+		"normf",
+		"not",
+		"or",		"or",		"or",
+		"ori",
 		"pflush",
 		"pflushun",
 		"pfree",
-		"plock ",
-		"plockr ",
-		"punlock ",
-		"punlockr ",
-		"rep ",		"rep ",		"rep ",		"rep ",
+		"plock",
+		"plockr",
+		"punlock",
+		"punlockr",
+		"rep",		"rep",		"rep",		"rep",
 		"reset",
-		"rnd ",
-		"rol ",
-		"ror ",
+		"rnd",
+		"rol",
+		"ror",
 		"rti",
 		"rts",
-		"sbc ",
+		"sbc",
 		"stop",
-		"sub ",		"sub ",		"sub ",
-		"subl ",
-		"subr ",
+		"sub",		"sub",		"sub",
+		"subl",
+		"subr",
 		"t",		"t",		"t",
-		"tfr ",
+		"tfr",
 		"trap",
 		"trap",
-		"tst ",
-		"vsl ",
+		"tst",
+		"vsl",
 		"wait",
 		"resolvecache",
 		"parallel",
 	};
 
-	static_assert(sizeof(g_opNames) / sizeof(g_opNames[0]) == InstructionCount, "operation names entries missing or too many");
+	static_assert(std::size(g_opNames) == InstructionCount, "operation names entries missing or too many");
 
 	const char* g_conditionCodes[16] =	{"cc", "ge", "ne", "pl", "nn", "ec", "lc", "gt", "cs", "lt", "eq", "mi", "nr", "es", "ls", "le"};
 
 	constexpr auto g_memArea_L = MemArea_COUNT;
+
+	constexpr uint32_t columnOp = 2;
+	constexpr uint32_t columnA = columnOp + 6;
+	constexpr uint32_t columnB = columnA + 16;
+	constexpr uint32_t columnC = columnB + 16;
+	constexpr uint32_t columnComment = 70;
 
 	std::string hex(TWord _data)
 	{
 		std::stringstream ss; ss << '$' << std::hex << _data; return std::string(ss.str());
 	}
 
+	const char* memArea(EMemArea _area)
+	{
+		switch (_area)
+		{
+		case MemArea_X: return "x:";
+		case MemArea_Y: return "y:";
+		case MemArea_P: return "p:";
+		default:		return "?:";
+		}
+	}
+
 	std::string Disassembler::immediate(const char* _prefix, TWord _data) const
 	{
 		std::string sym;
 		if(getSymbol(Immediate, _data, sym))
-			return sym;
+			return std::string(_prefix) + sym;
 
 		return std::string(_prefix) + hex(_data);
+	}
+
+	std::string Disassembler::bit(TWord _bit, EMemArea _area, TWord _referencingAddress) const
+	{
+		if(_area == MemArea_COUNT || _referencingAddress == g_invalidAddress)
+			return immediate(_bit);
+		const auto type = getSymbolType(_area);
+		if(type == SymbolTypeCount)
+			return immediate(_bit);
+		const auto& symbols = m_bitSymbols[type];
+		const auto it = symbols.find(_referencingAddress);
+		if(it == symbols.end())
+			return immediate(_bit);
+		const auto& bs = it->second;
+		const auto itBit = bs.bits.find(1<<_bit);
+		if(itBit == bs.bits.end())
+			return immediate(_bit);
+		return "#" + itBit->second;
 	}
 
 	std::string Disassembler::immediate(TWord _data) const
@@ -190,22 +229,53 @@ namespace dsp56k
 		return relativeAddr(_area, _data, true);
 	}
 
-	std::string Disassembler::absAddr(EMemArea _area, int _data, bool _long) const
+	std::string Disassembler::absAddr(EMemArea _area, int _data, bool _long, bool _withArea) const
 	{
+		std::string res;
+
+		if(_withArea)
+			res = std::string(memArea(_area));
+
+		if(_long)
+			res += '>';
+
 		std::string sym;
 		if(getSymbol(_area, _data, sym))
-			return sym;
+			return res + sym;
+		return res + hex(_data);
+	}
 
-		if(!_long)
-			return hex(_data);
-		return ">" + hex(_data);
+	bool Disassembler::functionName(std::string& _result, const TWord _addr) const
+	{
+		if(getSymbol(MemP, _addr, _result))
+			return true;
+		std::stringstream ss;
+		if(_addr < Vba_End)
+			ss << "int_" << HEX(_addr);
+		else
+			ss << "func_" << HEX(_addr);
+		_result = ss.str();
+		return false;
+	}
+
+	std::string Disassembler::funcAbs(TWord _addr) const
+	{
+		std::string res;
+		functionName(res, _addr);
+		return res;
+	}
+
+	std::string Disassembler::funcRel(TWord _addr) const
+	{
+		const int offset = signextend<int, 24>(static_cast<int>(_addr));
+		return funcAbs(m_pc + offset);
 	}
 
 	std::string Disassembler::absShortAddr(EMemArea _area, int _data) const
 	{
 		std::string sym;
 		if(getSymbol(_area, _data, sym))
-			return sym;
+			return "<" + sym;
 
 		return "<" + hex(_data);
 	}
@@ -215,20 +285,53 @@ namespace dsp56k
 		return ab ? "b" : "a";
 	}
 
-	void disassembleDC(std::stringstream& dst, TWord op)
-	{
-		dst << "dc $" << HEX(op);
-	}
-
 	Disassembler::Disassembler(const Opcodes& _opcodes) : m_opcodes(_opcodes)
 	{
-		m_str.reserve(1024);
 	}
 
-	void Disassembler::disassembleDC(std::string& dst, TWord op)
+	std::string Disassembler::formatLine(const Line& _line, bool _useColumnWidths/* = true*/)
 	{
-		dsp56k::disassembleDC(m_ss, op);
-		dst = m_ss.str();
+		const auto alu = _line.m_alu.str();
+		const auto moveA = _line.m_moveA.str();
+		const auto moveB = _line.m_moveB.str();
+//		const auto comment = _line.m_comment.str();
+
+		std::string res = _line.opName;
+
+		auto makeColumn = [&](uint32_t _column, const std::string& _append)
+		{
+			if(_append.empty())
+				return;
+
+			res += ' ';
+
+			if(_useColumnWidths)
+			{
+				while(res.size() < _column)
+					res += ' ';
+			}
+
+			res += _append;
+		};
+
+		if(_useColumnWidths)
+		{
+			for(size_t i=0; i<columnOp; ++i)
+				res += ' ';
+		}
+
+		makeColumn(columnA, alu);
+		makeColumn(alu.empty() ? columnA : columnB, moveA);
+		makeColumn(alu.empty() ? columnB : columnC, moveB);
+//		makeColumn(columnComment, comment);
+		return res;
+	}
+
+	void Disassembler::disassembleDC(Line& dst, TWord op)
+	{
+		dst.opName = "dc";
+		std::stringstream ss;
+		dst.m_alu << '$' << HEX(op);
 	}
 
 	bool Disassembler::disassembleMemoryBlock(std::string& dst, const std::vector<uint32_t>& _memory, TWord _pc, bool _skipNops, bool _writePC, bool _writeOpcodes)
@@ -237,6 +340,14 @@ namespace dsp56k
 			return false;
 
 		std::stringstream out;
+
+		std::set<TWord> branchTargets;
+		std::map<TWord, std::set<TWord>> branchSources;
+
+		std::vector<Line> lines;
+
+		for(auto i = (_pc & 0xfffffe); i<Vba_End; i += 2)
+			branchTargets.insert(i);
 
 		for (TWord i = 0; i < _memory.size();)
 		{
@@ -249,42 +360,96 @@ namespace dsp56k
 				continue;
 			}
 
-			std::string assem;
-			const auto len = disassemble(assem, a, b, 0, 0, i);
+			Line assem;
+			const auto len = disassemble(assem, a, b, 0, 0, _pc + i);
 
-			if(_writePC)
-				out << '$' << HEX(i + _pc) << " - ";
-
-			if(_writeOpcodes)
+			if(len)
 			{
-				if (len == 2)
-					out << '$' << HEX(a) << ' ' << '$' << HEX(b);
-				else
-					out << '$' << HEX(a) << "        ";
-			}
+				const auto branchTarget = getBranchTarget(assem.instA, a, b, _pc + i);
 
-			out << " = " << assem << std::endl;
+				if(branchTarget != g_invalidAddress && branchTarget != g_dynamicAddress)
+				{
+					if(branchTarget >= Vba_End || ((branchTarget&1) == 0))
+					{
+						branchTargets.insert(branchTarget);
+						branchSources[branchTarget].insert(_pc + i);
+					}
+				}
+			}
 
 			if (!len)
 				++i;
 			else
 				i += len;
+
+			lines.emplace_back(std::move(assem));
 		}
 
-		dst = std::string(out.str());;
-		return true;
-	}
-
-	int Disassembler::disassembleAlu(std::string& _dst, const OpcodeInfo& _oiAlu, TWord op)
-	{
-		const int res = disassembleAlu(_oiAlu.m_instruction, op);
-		if(res)
+		for (const auto & line : lines)
 		{
-			_dst = m_ss.str();
-			return res;
+			std::stringstream lineOut;
+
+			if(_writePC)
+				lineOut << HEX(line.pc) << ": ";
+
+			if(branchTargets.find(line.pc) != branchTargets.end())
+			{
+				out << std::endl;
+				std::stringstream funcName;
+				funcName << funcAbs(line.pc) << ":";
+
+				const auto& callers = branchSources[line.pc];
+
+				if(!callers.empty())
+				{
+					while(funcName.tellp() < columnComment)
+						funcName << ' ';
+					funcName << "; (callers:";
+
+					for (const auto& caller : callers)
+					{
+						std::string f;
+						if(functionName(f, caller))
+							funcName << ' ' << f;
+						else
+							funcName << ' ' << "$" << HEX(caller);
+					}
+					funcName << ')';
+				}
+				out << funcName.str() << std::endl;
+			}
+
+			lineOut << formatLine(line);
+
+			const auto comment = line.m_comment.str();
+
+			if(_writeOpcodes || !comment.empty())
+			{
+				while(lineOut.tellp() < columnComment)
+					lineOut << ' ';
+
+				lineOut << "; ";
+
+				if(!comment.empty())
+					lineOut << comment;
+
+				if(_writeOpcodes)
+				{
+					if(!comment.empty())
+						lineOut << ' ';
+
+					lineOut << HEX(line.opA);
+
+					if(line.len == 2)
+						lineOut << ' ' << HEX(line.opB);
+				}
+			}
+
+			out << std::string(lineOut.str()) << std::endl;			
 		}
-		disassembleDC(_dst, op);
-		return 0;
+
+		dst = std::string(out.str());
+		return true;
 	}
 
 	const char* aluJJJ(TWord JJJ, bool ab)
@@ -299,8 +464,8 @@ namespace dsp56k
 			case 5:		return "y0";
 			case 6:		return "x1";
 			case 7:		return "y1";
+			default:	return "?";
 		}
-		return "?";
 	}
 
 	const char* aluQQQ(TWord QQQ)
@@ -315,8 +480,8 @@ namespace dsp56k
 		case 5:	return "y0,x0";
 		case 6:	return "x1,y0";
 		case 7:	return "y1,x1";
+		default: return nullptr;
 		}
-		return nullptr;
 	}
 
 	EMemArea memArea(TWord _area)
@@ -326,28 +491,13 @@ namespace dsp56k
 		return _area ? MemArea_Y : MemArea_X;
 	}
 
-	const char* memArea(EMemArea _area)
-	{
-		switch (_area)
-		{
-		case MemArea_X: return "x:";
-		case MemArea_Y: return "y:";
-		case MemArea_P: return "p:";
-		default:		return "?:";
-		}
-	}
-
-	std::string memory(TWord S, TWord a)
-	{
-		const auto area = memArea(S);
-		return std::string(memArea(area)) + '<' + hex(a);
-	}
-
 	std::string Disassembler::peripheral(EMemArea area, TWord a, TWord _root) const
 	{
 		std::string sym;
 		if(getSymbol(area, _root + a, sym))
-			return sym;
+			return std::string(memArea(area)) + "<<" + sym;
+
+		assert((_root + a) <= 0xffffff);
 
 		return std::string(memArea(area)) + "<<" + hex(_root + a);
 	}
@@ -361,7 +511,17 @@ namespace dsp56k
 	{
 		return peripheral(S, a, 0xffffc0);
 	}
-	
+
+	TWord Disassembler::peripheralPaddr(const TWord p)
+	{
+		return p + 0xffffc0;
+	}
+
+	TWord Disassembler::peripheralQaddr(const TWord q)
+	{
+		return q + 0xffff80;
+	}
+
 	std::string mmrrr(TWord mmmrrr)
 	{
 		const char* formats[4]
@@ -383,12 +543,12 @@ namespace dsp56k
 		return temp;
 	}
 
-	std::string Disassembler::mmmrrr(TWord _mmmrrr, TWord S, TWord opB, bool _addMemSpace, bool _long)
+	std::string Disassembler::mmmrrr(TWord _mmmrrr, TWord S, TWord opB, bool _addMemSpace, bool _long, bool _isJump)
 	{
-		return mmmrrr(_mmmrrr, memArea(S), opB, _addMemSpace, _long);
+		return mmmrrr(_mmmrrr, memArea(S), opB, _addMemSpace, _long, _isJump);
 	}
 
-	std::string Disassembler::mmmrrr(TWord mmmrrr, EMemArea S, TWord opB, bool _addMemSpace, bool _long)
+	std::string Disassembler::mmmrrr(TWord mmmrrr, EMemArea S, TWord opB, bool _addMemSpace, bool _long, bool _isJump)
 	{
 		const char* formats[8]
 		{
@@ -409,12 +569,14 @@ namespace dsp56k
 	
 		switch (mmmrrr)
 		{
-		case 0x30:	// absolute address
+		case MMMRRR_AbsAddr:
 			++m_extWordUsed;
+			if(S == MemArea_P && _isJump)
+				return funcAbs(opB);
 			if(opB >= XIO_Reserved_High_First && S != g_memArea_L)
-				return peripheral(S, opB, 0xffff80);
-			return area + absAddr(S, opB, _long);
-		case 0x34:	// immediate data
+				return peripheral(S, opB, 0);
+			return absAddr(S, opB, _long, true);
+		case MMMRRR_ImmediateData:
 			++m_extWordUsed;
 			return immediateLong(opB);
 		default:
@@ -423,11 +585,22 @@ namespace dsp56k
 				const auto r = mmmrrr & 7;
 				const auto* format = formats[mmm];
 				if(!format)
-					return std::string();
+					return {};
 				sprintf(temp, format, r, r);
 			}
 			return area + temp;
 		}
+	}
+
+	TWord Disassembler::mmmrrrAddr(TWord mmmrrr, TWord opB)
+	{
+		switch (mmmrrr)
+		{
+		case MMMRRR_AbsAddr:
+		case MMMRRR_ImmediateData:
+			return opB;
+		}
+		return g_invalidAddress;
 	}
 
 	const char* condition(const TWord _cccc)
@@ -443,8 +616,8 @@ namespace dsp56k
 		case 1:	return "ccr";
 		case 2:	return "omr";	// it is "com" but Motorola displays it as omr as it is only used in opcodes that work with 8 bit data
 		case 3:	return "eom";
+		default: return "?";
 		}
-		return "?";
 	}
 
 	
@@ -458,8 +631,8 @@ namespace dsp56k
 		case 5:		return "y0";
 		case 6:		return "x1";
 		case 7:		return "y1";
+		default:	return "?";
 		}
-		return "?";
 	}
 	
 	const char* decode_qqq( TWord _sss )
@@ -472,8 +645,8 @@ namespace dsp56k
 		case 5:		return "y0";
 		case 6:		return "x1";
 		case 7:		return "y1";
+		default:	return "?";
 		}
-		return "?";
 	}
 
 	const char* decode_alu_GGG( TWord _ggg, bool D )
@@ -488,8 +661,8 @@ namespace dsp56k
 		case 5:		return "y0";
 		case 6:		return "x1";
 		case 7:		return "y1";
+		default:	return "?";
 		}
-		return "?";
 	}
 	
 	std::string decode_RRR(TWord _r)
@@ -538,7 +711,7 @@ namespace dsp56k
 		else if( (_ddddd & 0x18) == 0x18 )				// n0-n7
 			temp[0] = 'n';
 		else
-			return std::string();
+			return {};
 
 		temp[1] = '0' + (_ddddd&0x07);
 
@@ -616,8 +789,8 @@ namespace dsp56k
 		case 0x3d:	return "ssl";
 		case 0x3e:	return "la";
 		case 0x3f:	return "lc";
+		default:	return "?";
 		}
-		return "?";
 	}
 
 	std::string decode_ddddd_pcr( TWord _ddddd )
@@ -640,8 +813,8 @@ namespace dsp56k
 		case 0x1d:	return "ssl";
 		case 0x1e:	return "la";
 		case 0x1f:	return "lc";
+		default:	return "?";
 		}
-		return "?";
 	}
 
 	const char* decode_LLL( TWord _lll)
@@ -656,11 +829,11 @@ namespace dsp56k
 		case 5:		return "b";
 		case 6:		return "ab";
 		case 7:		return "ba";
+		default:	return "?,?";
 		}
-		return "?,?";
 	}
 	
-	int Disassembler::disassembleAlu(Instruction inst, dsp56k::TWord op)
+	uint32_t Disassembler::disassembleAlu(std::stringstream& _dst, Instruction inst, dsp56k::TWord op)
 	{
 		const auto D = (op>>3) & 0x1;
 
@@ -687,22 +860,22 @@ namespace dsp56k
 			case Abs:
 			case Ror:
 			case Rol:
-				m_ss << aluD(D);
+				_dst << aluD(D);
 				break;
 			case Max:
 			case Maxm:
-				m_ss << "a,b";
+				_dst << "a,b";
 				break;
 			default:
 				const char* j = aluJJJ(JJJ, D);
 
 				if(!j)
 				{
-					m_ss << aluD(D);
+					_dst << aluD(D);
 				}
 				else
 				{
-					m_ss << j << "," << aluD(D);
+					_dst << j << "," << aluD(D);
 				}
 			}
 
@@ -718,9 +891,9 @@ namespace dsp56k
 		const auto negative = (op>>2) & 0x1;
 
 		if(negative)
-			m_ss << '-';
+			_dst << '-';
 
-		m_ss << q << "," << aluD(D);
+		_dst << q << "," << aluD(D);
 
 		return 1;
 	}
@@ -729,12 +902,13 @@ namespace dsp56k
 	{
 		switch( jj )
 		{
-		case 0: return "x0";
-		case 1: return "y0";
-		case 2: return "x1";
-		case 3: return "y1";
+		case 0:		return "x0";
+		case 1:		return "y0";
+		case 2:		return "x1";
+		case 3:		return "y1";
+		default:	return "?";
 		}
-		return "?";
+		
 	}
 
 	const char* decode_QQQQ( TWord _qqqq )
@@ -757,8 +931,8 @@ namespace dsp56k
 		case 13: return "x0,y0";
 		case 14: return "y0,x1";
 		case 15: return "x1,y1";
+		default: return "?,?";
 		}
-		return "?,?";
 	}
 
 	const char* decode_QQ_read( TWord _qq )
@@ -769,8 +943,8 @@ namespace dsp56k
 		case 1:		return "x0";
 		case 2:		return "y0";
 		case 3:		return "x1";
+		default:	return "?";
 		}
-		return "?";
 	}
 
 	const char* decode_qq_read( TWord _qq )
@@ -781,8 +955,8 @@ namespace dsp56k
 		case 1:		return "y0";
 		case 2:		return "x1";
 		case 3:		return "y1";
+		default:	return "?";
 		}
-		return "?";
 	}
 
 	const char* decode_ee( TWord _ee )
@@ -793,8 +967,8 @@ namespace dsp56k
 		case 1:	return "x1";
 		case 2:	return "a";
 		case 3:	return "b";
+		default: return "?";
 		}
-		return "?";
 	}
 
 	const char* decode_ff( TWord _ff)
@@ -805,19 +979,22 @@ namespace dsp56k
 		case 1:	return "y1";
 		case 2:	return "a";
 		case 3:	return "b";
+		default: return "?";
 		}
-		return "?";
 	}
 
 	std::string decode_TTT(TWord _ttt)
 	{
 		char temp[3] = {'r', 0, 0};
-		temp[1] = '0' + _ttt;
+		temp[1] = '0' + static_cast<char>(_ttt);
 		return temp;
 	}
 
-	int Disassembler::disassemble(const OpcodeInfo& oi, TWord op, TWord opB)
+	uint32_t Disassembler::disassemble(std::stringstream& _dst, const OpcodeInfo& oi, TWord op, TWord opB)
 	{
+		if(m_pc == 0x000d40)
+			int foo=0;
+
 		const auto inst = oi.m_instruction;
 
 		// switch-case of death incoming in 3..2..1...
@@ -829,7 +1006,7 @@ namespace dsp56k
 		case Inc:
 			{
 				const auto d = getFieldValue(inst, Field_d, op);				
-				m_ss << aluD(d);
+				_dst << aluD(d);
 			}
 			return 1;			
 		// immediate operand with destination ALU register
@@ -842,7 +1019,7 @@ namespace dsp56k
 			{
 				const auto d = getFieldValue(inst, Field_d, op);
 				const auto i = getFieldValue(inst, Field_iiiiii, op);
-				m_ss << immediateShort(i) << ',' << aluD(d);
+				_dst << immediateShort(i) << ',' << aluD(d);
 				return 1;
 			}
 		// immediate extension operand with destination ALU register
@@ -854,7 +1031,7 @@ namespace dsp56k
 		case Sub_xxxx:
 			{
 				const auto d = getFieldValue(inst, Field_d, op);
-				m_ss << immediateLong(opB) << ',' << aluD(d);
+				_dst << immediateLong(opB) << ',' << aluD(d);
 				return 2;
 			}
 		// bit manipulation on effective address
@@ -866,7 +1043,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto mr	= getFieldValue(inst, Field_MMM, Field_RRR, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << mmmrrr(mr, S, opB);
+				_dst << bit(b, memArea(S), mmmrrrAddr(mr, opB)) << ',' << mmmrrr(mr, S, opB);
 				return 1 + m_extWordUsed;
 			}
 		case Bchg_aa:
@@ -877,7 +1054,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << memory(S, a);
+				_dst << bit(b, memArea(S), a) << ',' << absAddr(memArea(S), a);
 				return 1;
 			}
 		case Bchg_pp:
@@ -888,7 +1065,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto p	= getFieldValue(inst, Field_pppppp, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralP(memArea(S), p);
+				_dst << bit(b, memArea(S), peripheralPaddr(p)) << ',' << peripheralP(memArea(S), p);
 				return 1;
 			}
 		case Bchg_qq:
@@ -899,7 +1076,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto q	= getFieldValue(inst, Field_qqqqqq, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralQ(memArea(S), q);
+				_dst << bit(b, memArea(S), peripheralQaddr(q)) << ',' << peripheralQ(memArea(S), q);
 				return 1;
 			}
 		case Bchg_D:
@@ -909,7 +1086,7 @@ namespace dsp56k
 			{
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
-				m_ss << immediate(b) << ',' << decode_dddddd(d);
+				_dst << bit(b, MemArea_COUNT, g_invalidAddress) << ',' << decode_dddddd(d);
 				return 1;
 			}
 		// Branch if bit condition is met
@@ -921,7 +1098,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto mr	= getFieldValue(inst, Field_MMM, Field_RRR, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << mmmrrr(mr, S, opB) << ',' << relativeAddr(MemArea_P, opB);
+				_dst << bit(b, memArea(S), mmmrrrAddr(mr, opB)) << ',' << mmmrrr(mr, S, opB) << ',' << funcRel(opB);
 				return 2;
 			}
 		case Brclr_aa:
@@ -932,7 +1109,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << memory(S, a) << ',' << relativeAddr(MemArea_P, opB);
+				_dst << bit(b, memArea(S), a) << ',' << absAddr(memArea(S), a) << ',' << funcRel(opB);
 				return 2;
 			}
 		case Brclr_pp:
@@ -943,7 +1120,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto p	= getFieldValue(inst, Field_pppppp, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralP(memArea(S), p) << ',' << relativeAddr(MemArea_P, opB);
+				_dst << bit(b, memArea(S), peripheralPaddr(p)) << ',' << peripheralP(memArea(S), p) << ',' << funcRel(opB);
 				return 2;
 			}
 		case Brclr_qq:
@@ -954,7 +1131,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto q	= getFieldValue(inst, Field_qqqqqq, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralQ(memArea(S), q) << ',' << relativeAddr(MemArea_P, opB);
+				_dst << bit(b, memArea(S), peripheralQaddr(q)) << ',' << peripheralQ(memArea(S), q) << ',' << funcRel(opB);
 				return 2;
 			}
 		case Brclr_S:
@@ -964,7 +1141,7 @@ namespace dsp56k
 			{
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
-				m_ss << immediate(b) << ',' << decode_dddddd(d) << ',' << relativeAddr(MemArea_P, opB);
+				_dst << bit(b, MemArea_COUNT, g_invalidAddress) << ',' << decode_dddddd(d) << ',' << funcRel(opB);
 				return 2;
 			}
 		case Andi:
@@ -972,7 +1149,7 @@ namespace dsp56k
 			{
 				const auto i = getFieldValue(inst, Field_iiiiiiii, op);
 				const auto ee = getFieldValue(inst, Field_EE, op);
-				m_ss << immediate(i) << ',' << decodeEE(ee);
+				_dst << immediate(i) << ',' << decodeEE(ee);
 			}
 			return 1;
 		case Asl_ii:
@@ -981,7 +1158,7 @@ namespace dsp56k
 				const auto i = getFieldValue(inst, Field_iiiiii, op);
 				const auto s = getFieldValue(inst, Field_S, op);
 				const auto d = getFieldValue(inst, Field_D, op);
-				m_ss << immediate(i) << ',' << aluD(s) << ',' << aluD(d);
+				_dst << immediate(i) << ',' << aluD(s) << ',' << aluD(d);
 			}
 			return 1;
 		case Asl_S1S2D:
@@ -990,14 +1167,15 @@ namespace dsp56k
 				const auto sss = getFieldValue(inst, Field_sss, op);
 				const auto s = getFieldValue(inst, Field_S, op);
 				const auto d = getFieldValue(inst, Field_D, op);
-				m_ss << decode_sss(sss) << ',' << aluD(s) << ',' << aluD(d);
+				_dst << decode_sss(sss) << ',' << aluD(s) << ',' << aluD(d);
 			}
 			return 1;
 		case Bcc_xxxx:
 		case BScc_xxxx:
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
-				m_ss << condition(cccc) << ' ' << relativeAddr(MemArea_P, opB);
+				m_line.opName += condition(cccc);
+				_dst << funcRel(opB);
 			}
 			return 2;
 		case Bcc_xxx: 
@@ -1005,7 +1183,8 @@ namespace dsp56k
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
 				const auto a = signextend<int,9>(getFieldValue(inst, Field_aaaa, Field_aaaaa, op));
-				m_ss << condition(cccc) << ' ' << relativeLongAddr(MemArea_P, a);
+				m_line.opName += condition(cccc);
+				_dst << funcRel(a);
 			}
 			return 1;
 		case Bcc_Rn: 
@@ -1013,53 +1192,54 @@ namespace dsp56k
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
 				const auto r = getFieldValue(inst, Field_RRR, op);
-				m_ss << condition(cccc) << ' ' << decode_RRR(r);
+				m_line.opName += condition(cccc);
+				_dst << decode_RRR(r);
 			}
 			return 1;
 		case Bra_xxxx: 
 		case Bsr_xxxx:
-			m_ss << relativeAddr(MemArea_P, opB);
+			_dst << funcRel(opB);
 			return 2;
 		case Bra_xxx: 
 		case Bsr_xxx:
 			{
 				const auto a = signextend<int,9>(getFieldValue(inst, Field_aaaa, Field_aaaaa, op));
-				m_ss << relativeLongAddr(MemArea_P, a);
+				_dst << funcRel(a);
 			}
 			return 1;
 		case Bra_Rn: 
 		case Bsr_Rn:
 			{
 				const auto r = getFieldValue(inst, Field_RRR, op);
-				m_ss << decode_RRR(r);
+				_dst << decode_RRR(r);
 			}
 			return 1;
 		case BRKcc:
 		case Debugcc:
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
-				m_ss << condition(cccc);
+				m_line.opName += condition(cccc);
 			}
 			return 1;
 		case Clb:
 			{
 				const auto s = getFieldValue(inst, Field_S, op);
 				const auto d = getFieldValue(inst, Field_D, op);
-				m_ss << aluD(s) << ',' << aluD(d);
+				_dst << aluD(s) << ',' << aluD(d);
 			}
 			return 1;
 		case Cmpu_S1S2:
 			{
 				const auto d = getFieldValue(inst, Field_d, op);
 				const auto ggg = getFieldValue(inst, Field_ggg, op);
-				m_ss << decode_alu_GGG(ggg, d) << ',' << aluD(d);
+				_dst << decode_alu_GGG(ggg, d) << ',' << aluD(d);
 			}
 			return 1;
 		case Div:
 			{
 				const auto d = getFieldValue(inst, Field_d, op);
 				const auto jj = getFieldValue(inst, Field_JJ, op);
-				m_ss << decode_JJ_read(jj) << ',' << aluD(d);
+				_dst << decode_JJ_read(jj) << ',' << aluD(d);
 			}
 			return 1;
 		case Dmac:
@@ -1070,74 +1250,74 @@ namespace dsp56k
 
 				const TWord qqqq		= getFieldValue<Dmac,Field_QQQQ>(op);
 
-				m_ss << (ss > 1 ? 'u' : 's');
-				m_ss << (ss > 0 ? 'u' : 's');
-				m_ss << ' ';
+				_dst << (ss > 1 ? 'u' : 's');
+				_dst << (ss > 0 ? 'u' : 's');
+				_dst << ' ';
 				if(negate)
-					m_ss << '-';
-				m_ss << decode_QQQQ(qqqq) << ',' << aluD(ab);
+					_dst << '-';
+				_dst << decode_QQQQ(qqqq) << ',' << aluD(ab);
 			}
 			return 1;
 		case Do_ea: 
 			{
 				const auto mr	= getFieldValue(inst, Field_MMM, Field_RRR, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << mmmrrr(mr, S, opB) << ',' << absAddr(MemArea_P, opB + 1, true);
+				_dst << mmmrrr(mr, S, opB) << ',' << absAddr(MemArea_P, opB + 1, true);
 			}
 			return 2;
 		case Dor_ea:
 			{
 				const auto mr	= getFieldValue(inst, Field_MMM, Field_RRR, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << mmmrrr(mr, S, opB) << ',' << relativeAddr(MemArea_P, opB + 1);
+				_dst << mmmrrr(mr, S, opB) << ',' << relativeAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case Do_aa:
 			{
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << memory(S, a) << ',' << absAddr(MemArea_P, opB + 1, true);
+				_dst << absAddr(memArea(S), a, false, true) << ',' << absAddr(MemArea_P, opB + 1, true, false);
 			}
 			return 2;
 		case Dor_aa:
 			{
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << memory(S, a) << ',' << relativeAddr(MemArea_P, opB + 1);
+				_dst << absAddr(memArea(S), a, false, true) << ',' << relativeAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case Do_xxx: 
 			{
 				const auto a	= getFieldValue(inst, Field_hhhh, Field_iiiiiiii, op);
-				m_ss << immediateShort(a) << ',' << absAddr(MemArea_P, opB + 1, true);
+				_dst << immediateShort(a) << ',' << absAddr(MemArea_P, opB + 1, true, false);
 			}
 			return 2;
 		case Dor_xxx:
 			{
 				const auto a	= getFieldValue(inst, Field_hhhh, Field_iiiiiiii, op);
-				m_ss << immediateShort(a) << ',' << relativeAddr(MemArea_P, opB + 1);
+				_dst << immediateShort(a) << ',' << relativeAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case Do_S: 
 			{
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
-				m_ss << decode_dddddd(d) << ',' << absAddr(MemArea_P, opB + 1, true);
+				_dst << decode_dddddd(d) << ',' << absAddr(MemArea_P, opB + 1, true, false);
 			}
 			return 2;
 		case Dor_S:
 			{
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
-				m_ss << decode_dddddd(d) << ',' << relativeAddr(MemArea_P, opB + 1);
+				_dst << decode_dddddd(d) << ',' << relativeAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case DoForever:
 			{
-				m_ss << absAddr(MemArea_P, opB + 1);
+				_dst << absAddr(MemArea_P, opB + 1, true, false);
 			}
 			return 2;
 		case DorForever:
 			{
-				m_ss << relativeAddr(MemArea_P, opB + 1);
+				_dst << relativeAddr(MemArea_P, opB + 1);
 			}
 			return 2;
 		case Extract_S1S2:
@@ -1146,7 +1326,7 @@ namespace dsp56k
 				const auto sss = getFieldValue(inst, Field_SSS, op);
 				const auto s = getFieldValue(inst, Field_s, op);
 				const auto d = getFieldValue(inst, Field_D, op);
-				m_ss << decode_sss(sss) << ',' << aluD(s) << ',' << aluD(d);
+				_dst << decode_sss(sss) << ',' << aluD(s) << ',' << aluD(d);
 			}
 			return 1;
 		case Extract_CoS2: 
@@ -1154,7 +1334,7 @@ namespace dsp56k
 			{
 				const auto s = getFieldValue(inst, Field_s, op);
 				const auto d = getFieldValue(inst, Field_D, op);
-				m_ss << immediate(opB) << ',' << aluD(s) << ',' << aluD(d);				
+				_dst << immediate(opB) << ',' << aluD(s) << ',' << aluD(d);				
 			}
 			return 2;
 		case Insert_S1S2:
@@ -1162,25 +1342,23 @@ namespace dsp56k
 				const auto sss = getFieldValue(inst, Field_SSS, op);
 				const auto qqq = getFieldValue(inst, Field_qqq, op);
 				const auto d = getFieldValue(inst, Field_D, op);
-				m_ss << decode_sss(sss) << ',' << decode_qqq(qqq) << ',' << aluD(d);
+				_dst << decode_sss(sss) << ',' << decode_qqq(qqq) << ',' << aluD(d);
 			}
 			return 1;
 		case Insert_CoS2:
 			{
 				const auto qq = getFieldValue(inst, Field_qqq, op);
 				const auto d = getFieldValue(inst, Field_D, op);
-				m_ss << immediate(opB) << ',' << decode_qqq(qq) << ',' << aluD(d);
+				_dst << immediate(opB) << ',' << decode_qqq(qq) << ',' << aluD(d);
 			}
 			return 2;
 		case Ifcc:
 		case Ifcc_U:
 			{				
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
-				if(m_ss.str().empty())
-					m_ss << "move ";
-				m_ss << "if" << condition(cccc);
+				_dst << "if" << condition(cccc);
 				if(inst == Ifcc_U)
-					m_ss << ".u";
+					_dst << ".u";
 			}
 			return 1;
 		case Jcc_xxx: 
@@ -1188,7 +1366,8 @@ namespace dsp56k
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
 				const auto a = getFieldValue(inst, Field_aaaaaaaaaaaa, op);
-				m_ss << condition(cccc) << ' ' << absShortAddr(MemArea_P, a);
+				m_line.opName += condition(cccc);
+				_dst << funcAbs(a);
 			}
 			return 1;
 		case Jcc_ea: 
@@ -1196,7 +1375,8 @@ namespace dsp56k
 			{
 				const auto cccc = getFieldValue(inst, Field_CCCC, op);
 				const auto mr = getFieldValue(inst, Field_MMM, Field_RRR, op);
-				m_ss << condition(cccc) << ' ' << mmmrrr(mr, MemArea_P, opB, false);
+				m_line.opName += condition(cccc);
+				_dst << mmmrrr(mr, MemArea_P, opB, false, false, true);
 			}
 			return 1 + m_extWordUsed;
 		case Jclr_ea:
@@ -1207,7 +1387,7 @@ namespace dsp56k
 				const auto b		= getFieldValue(inst, Field_bbbbb, op);
 				const auto mr		= getFieldValue(inst, Field_MMM, Field_RRR, op);
 				const auto S		= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << mmmrrr(mr, S, opB) << ',' << absAddr(MemArea_P, opB);
+				_dst << bit(b, memArea(S), mmmrrrAddr(mr, opB)) << ',' << mmmrrr(mr, S, opB) << ',' << funcAbs(opB);
 			}
 			return 2;
 		case Jclr_aa:
@@ -1218,7 +1398,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << memory(S, a) << ',' << absAddr(MemArea_P, opB);
+				_dst << bit(b, memArea(S), a) << ',' << absAddr(memArea(S), a, false, false) << ',' << funcAbs(opB);
 			}
 			return 2;
 		case Jclr_pp:
@@ -1229,7 +1409,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto p	= getFieldValue(inst, Field_pppppp, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralP(memArea(S), p) << ',' << absAddr(MemArea_P, opB);
+				_dst << bit(b, memArea(S), peripheralPaddr(p)) << ',' << peripheralP(memArea(S), p) << ',' << funcAbs(opB);
 			}
 			return 2;
 		case Jclr_qq:
@@ -1240,7 +1420,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto q	= getFieldValue(inst, Field_qqqqqq, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				m_ss << immediate(b) << ',' << peripheralQ(memArea(S), q) << ',' << absAddr(MemArea_P, opB);
+				_dst << bit(b, memArea(S), peripheralQaddr(q)) << ',' << peripheralQ(memArea(S), q) << ',' << funcAbs(opB);
 			}
 			return 2;
 		case Jclr_S:
@@ -1250,21 +1430,21 @@ namespace dsp56k
 			{
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto d	= getFieldValue(inst, Field_DDDDDD, op);
-				m_ss << immediate(b) << ',' << decode_dddddd(d) << ',' << absAddr(MemArea_P, opB);
+				_dst << bit(b, MemArea_COUNT, g_invalidAddress) << ',' << decode_dddddd(d) << ',' << funcAbs(opB);
 			}
 			return 2;
 		case Jmp_ea: 
 		case Jsr_ea:
 			{
 				const auto mr = getFieldValue(inst, Field_MMM, Field_RRR, op);
-				m_ss << mmmrrr(mr, MemArea_P, opB, false);
+				_dst << mmmrrr(mr, MemArea_P, opB, false, false, true);
 			}
 			return 1 + m_extWordUsed;
 		case Jmp_xxx:
 		case Jsr_xxx:
 			{
 				const auto a = getFieldValue(inst, Field_aaaaaaaaaaaa, op);
-				m_ss << absShortAddr(MemArea_P, a);
+				_dst << funcAbs(a);
 			}
 			return 1;
 
@@ -1272,13 +1452,13 @@ namespace dsp56k
 			{
 				const auto rr = getFieldValue(inst, Field_RRR, op);
 				const auto dd = getFieldValue(inst, Field_ddddd, op);
-				m_ss << decode_RRR(rr) << ',' << decode_DDDDDD(dd);
+				_dst << decode_RRR(rr) << ',' << decode_DDDDDD(dd);
 			}
 			return 1;
 		case Lra_xxxx: 
 			{
 				const auto dd = getFieldValue(inst, Field_ddddd, op);
-				m_ss << relativeAddr(MemArea_P, opB) << ',' << decode_DDDDDD(dd);
+				_dst << relativeAddr(MemArea_P, opB) << ',' << decode_DDDDDD(dd);
 			}
 			return 2;
 		case Lsl_ii: 
@@ -1286,7 +1466,7 @@ namespace dsp56k
 			{
 				const auto i = getFieldValue(inst, Field_iiiii, op);
 				const auto d = getFieldValue(inst, Field_D, op);
-				m_ss << immediate(i) << ',' << aluD(d);
+				_dst << immediate(i) << ',' << aluD(d);
 			}
 			return 1;
 		case Lsl_SD:
@@ -1294,14 +1474,14 @@ namespace dsp56k
 			{
 				const auto ss = getFieldValue(inst, Field_sss, op);
 				const auto d = getFieldValue(inst, Field_D, op);
-				m_ss << decode_sss(ss) << ',' << aluD(d);
+				_dst << decode_sss(ss) << ',' << aluD(d);
 			}
 			return 1;
 		case Lua_ea:
 			{
 				const auto mr = getFieldValue(inst, Field_MM, Field_RRR, op);
 				const auto dd = getFieldValue(inst, Field_ddddd, op);				
-				m_ss << mmmrrr(mr, MemArea_P, opB, false) << ',' << decode_DDDDDD(dd);
+				_dst << mmmrrr(mr, MemArea_P, opB, false) << ',' << decode_DDDDDD(dd);
 			}
 			return 1 + m_extWordUsed;
 		case Lua_Rn: 
@@ -1313,7 +1493,7 @@ namespace dsp56k
 				const auto index = dd & 7;
 				const auto reg = dd < 8 ? 'r' : 'n';
 
-				m_ss << decode_RRR(rr, aa) << ',' << reg << index;
+				_dst << decode_RRR(rr, aa) << ',' << reg << index;
 			}
 			return 1;
 		case Mac_S:
@@ -1327,8 +1507,8 @@ namespace dsp56k
 				const bool negate	= getFieldValue(inst,Field_k,op);
 
 				if(negate)
-					m_ss << '-';
-				m_ss << decode_QQ_read(QQ) << ',' << immediate(sssss) << ',' << aluD(ab);
+					_dst << '-';
+				_dst << decode_QQ_read(QQ) << ',' << immediate(sssss) << ',' << aluD(ab);
 			}
 			return 1;
 		case Maci_xxxx:
@@ -1341,8 +1521,8 @@ namespace dsp56k
 				const bool negate	= getFieldValue(inst,Field_k,op);
 
 				if(negate)
-					m_ss << '-';
-				m_ss << immediateLong(opB) << ',' << decode_qq_read(QQ) << ',' << aluD(ab);
+					_dst << '-';
+				_dst << immediateLong(opB) << ',' << decode_qq_read(QQ) << ',' << aluD(ab);
 			}
 			return 2;
 		case Macsu:
@@ -1353,38 +1533,38 @@ namespace dsp56k
 				const bool uu		= getFieldValue(inst,Field_s,op);
 				const TWord qqqq	= getFieldValue(inst,Field_QQQQ,op);
 
-				m_ss << (uu ? "uu" : "su") << ' ';
+				m_line.opName += (uu ? "uu" : "su");
 				if(negate)
-					m_ss << '-';
+					_dst << '-';
 
-				m_ss << decode_QQQQ(qqqq) << ',' << aluD(ab);
+				_dst << decode_QQQQ(qqqq) << ',' << aluD(ab);
 			}
 			return 1;
 		case Merge:
 			{
 				const auto d		= getFieldValue(inst,Field_D,op);
 				const auto ss		= getFieldValue(inst,Field_SSS,op);
-				m_ss << decode_sss(ss) << ',' << aluD(d);
+				_dst << decode_sss(ss) << ',' << aluD(d);
 			}
 			return 1;
 		case Move_xx:
 			{
 				const auto ii = getFieldValue(inst, Field_iiiiiiii, op);
 				const auto dd = getFieldValue(inst, Field_ddddd, op);
-				m_ss << immediate(ii) << ',' << decode_DDDDDD(dd);
+				_dst << immediate(ii) << ',' << decode_DDDDDD(dd);
 			}
 			return 1;
 		case Mover: 
 			{
 				const auto ee = getFieldValue(inst, Field_eeeee, op);
 				const auto dd = getFieldValue(inst, Field_ddddd, op);
-				m_ss << decode_DDDDDD(ee) << ',' << decode_DDDDDD(dd);
+				_dst << decode_DDDDDD(ee) << ',' << decode_DDDDDD(dd);
 			}
 			return 1;
 		case Move_ea: 
 			{
 				const auto mr = getFieldValue<Move_ea, Field_MM, Field_RRR>(op);
-				m_ss << mmmrrr(mr, MemArea_P, op, false);
+				_dst << mmmrrr(mr, MemArea_P, op, false);
 			}
 			return 1 + m_extWordUsed;
 		case Movex_ea:
@@ -1397,9 +1577,9 @@ namespace dsp56k
 				auto d = decode_dddddd(dd);
 				auto ea = mmmrrr(mr, inst == Movey_ea ? 1 : 0, opB);
 				if(w)
-					m_ss << ea << ',' << d;
+					_dst << ea << ',' << d;
 				else
-					m_ss << d << ',' << ea;
+					_dst << d << ',' << ea;
 			}
 			return 1 + m_extWordUsed;
 		case Movex_aa:
@@ -1408,13 +1588,13 @@ namespace dsp56k
 				const TWord aa	= signextend<int,8>(getFieldValue<Movex_aa,Field_aaaaaa>(op));
 				const TWord dd	= getFieldValue<Movex_aa,Field_dd, Field_ddd>(op);
 				const TWord w	= getFieldValue<Movex_aa,Field_W>(op);
-				const auto s = inst == Movey_aa ? 1 : 0;
+				const auto area = inst == Movey_aa ? MemArea_Y : MemArea_X;
 				
 				auto d = decode_dddddd(dd);
 				if(w)
-					m_ss << memory(s,aa) << ',' << d;
+					_dst << absAddr(area, aa, false, true) << ',' << d;
 				else
-					m_ss << d << ',' << memory(s,aa);
+					_dst << d << ',' << absAddr(area, aa, false, true);
 			}
 			return 1;
 		case Movex_Rnxxxx: 
@@ -1430,9 +1610,9 @@ namespace dsp56k
 				const char* area = memArea(inst == Movey_Rnxxxx ? MemArea_Y : MemArea_X);
 
 				if(w)
-					m_ss << area << r << ',' << d;
+					_dst << area << r << ',' << d;
 				else
-					m_ss << d << ',' << area << r;				
+					_dst << d << ',' << area << r;				
 			}
 			return 2;
 		case Movex_Rnxxx:
@@ -1449,9 +1629,9 @@ namespace dsp56k
 				const char* area = memArea(inst == Movey_Rnxxx ? MemArea_Y : MemArea_X);
 
 				if(w)
-					m_ss << area << r << ',' << decode_DDDDDD(dd);
+					_dst << area << r << ',' << decode_DDDDDD(dd);
 				else
-					m_ss << decode_DDDDDD(dd) << ',' << area << r;				
+					_dst << decode_DDDDDD(dd) << ',' << area << r;				
 			}
 			return 1;
 		case Movexr_ea:
@@ -1469,18 +1649,18 @@ namespace dsp56k
 				// S1/D1 move
 				if( write )
 				{
-					m_ss << ea << ',' << ee;
+					m_line.m_moveA << ea << ',' << ee;
 				}
 				else
 				{
-					m_ss << ee << ',' << ea;
+					m_line.m_moveA << ee << ',' << ea;
 				}
 
 				// S2 D2 move
 				const auto* const ab = aluD(d);
 				const auto* const f  = F ? "y1" : "y0";
 
-				m_ss << ' ' << ab << ',' << f;
+				m_line.m_moveB << ab << ',' << f;
 			}
 			return 1 + m_extWordUsed;
 		case Movexr_A: 
@@ -1492,10 +1672,10 @@ namespace dsp56k
 				const auto* const ab = aluD(d);
 
 				// S1/D1 move
-				m_ss <<  ab << ',' << ea;
+				m_line.m_moveA << ab << ',' << ea;
 
 				// S2 D2 move
-				m_ss << ' ' << "x" << "0," << ab;
+				m_line.m_moveB << "x" << "0," << ab;
 			}
 			return 1 + m_extWordUsed;
 		case Moveyr_A:
@@ -1507,10 +1687,10 @@ namespace dsp56k
 				const auto* const ab = aluD(d);
 
 				// S2 D2 move
-				m_ss << "y" << "0," << ab;
+				m_line.m_moveA << "y" << "0," << ab;
 
 				// S1/D1 move
-				m_ss << ' ' << ab << ',' << ea;
+				m_line.m_moveB << ab << ',' << ea;
 			}
 			return 1 + m_extWordUsed;
 		case Moveyr_ea:
@@ -1529,16 +1709,16 @@ namespace dsp56k
 				const auto* const ab = aluD(d);
 				const auto* const f  = e ? "x1" : "x0";
 
-				m_ss << ab << ',' << f << ' ';
+				m_line.m_moveA << ab << ',' << f;
 				
 				// S1/D1 move
 				if( write )
 				{
-					m_ss << ea << ',' << ee;
+					m_line.m_moveB << ea << ',' << ee;
 				}
 				else
 				{
-					m_ss << ee << ',' << ea;
+					m_line.m_moveB << ee << ',' << ea;
 				}
 			}
 			return 1 + m_extWordUsed;
@@ -1552,9 +1732,9 @@ namespace dsp56k
 				const auto* l = decode_LLL(ll);
 
 				if(w)
-					m_ss << "l:" << ea << ',' << l;
+					_dst << "l:" << ea << ',' << l;
 				else
-					m_ss << l << ',' << "l:" << ea;
+					_dst << l << ',' << "l:" << ea;
 			}
 			return 1 + m_extWordUsed;
 		case Movel_aa:
@@ -1566,9 +1746,9 @@ namespace dsp56k
 				const auto* l = decode_LLL(ll);
 				const auto ea = absShortAddr(g_memArea_L, aa);
 				if(w)
-					m_ss << "l:" << ea << ',' << l;
+					_dst << "l:" << ea << ',' << l;
 				else
-					m_ss << l << ',' << "l:" << ea;
+					_dst << l << ',' << "l:" << ea;
 			}
 			return 1;
 		case Movexy:
@@ -1589,14 +1769,12 @@ namespace dsp56k
 				const auto eaY = mmrrr(mrY);
 
 				// X
-				if( writeX )	m_ss << "x:" << eaX << ',' << decode_ee(ee);
-				else			m_ss << decode_ee(ee) << ',' << "x:" << eaX;
-
-				m_ss << ' ';
+				if( writeX )	m_line.m_moveA << "x:" << eaX << ',' << decode_ee(ee);
+				else			m_line.m_moveA << decode_ee(ee) << ',' << "x:" << eaX;
 
 				// Y
-				if( writeY )	m_ss << "y:" << eaY << ',' << decode_ff(ff);
-				else			m_ss << decode_ff(ff) << ',' << "y:" << eaY;
+				if( writeY )	m_line.m_moveB << "y:" << eaY << ',' << decode_ff(ff);
+				else			m_line.m_moveB << decode_ff(ff) << ',' << "y:" << eaY;
 			}
 			return 1;
 		case Movec_ea:
@@ -1608,8 +1786,8 @@ namespace dsp56k
 
 				const auto ea = mmmrrr(mr, s, opB, true);
 
-				if(w)		m_ss << ea << ',' << decode_ddddd_pcr(dd);
-				else		m_ss << decode_ddddd_pcr(dd) << ',' << ea;
+				if(w)		_dst << ea << ',' << decode_ddddd_pcr(dd);
+				else		_dst << decode_ddddd_pcr(dd) << ',' << ea;
 			}
 			return 1 + m_extWordUsed;
 		case Movec_aa: 
@@ -1619,10 +1797,10 @@ namespace dsp56k
 				const auto w	= getFieldValue<Movec_aa,Field_W>(op);
 				const auto s	= getFieldValue<Movec_aa,Field_S>(op);
 
-				const auto ea = memory(s,aa);
+				const auto ea = absAddr(memArea(s), aa, false, true);
 
-				if(w)		m_ss << ea << ',' << decode_ddddd_pcr(dd);
-				else		m_ss << decode_ddddd_pcr(dd) << ',' << ea;
+				if(w)		_dst << ea << ',' << decode_ddddd_pcr(dd);
+				else		_dst << decode_ddddd_pcr(dd) << ',' << ea;
 			}
 			return 1;
 		case Movec_S1D2: 
@@ -1633,8 +1811,8 @@ namespace dsp56k
 				
 				const auto ea = decode_dddddd(ee);
 
-				if(w)		m_ss << ea << ',' << decode_ddddd_pcr(dd);
-				else		m_ss << decode_ddddd_pcr(dd) << ',' << ea;
+				if(w)		_dst << ea << ',' << decode_ddddd_pcr(dd);
+				else		_dst << decode_ddddd_pcr(dd) << ',' << ea;
 			}
 			return 1;
 		case Movec_xx: 
@@ -1644,7 +1822,7 @@ namespace dsp56k
 
 				const auto ea = decode_DDDDDD(dd);
 
-				m_ss << immediate(ii) << ',' << decode_ddddd_pcr(dd);
+				_dst << immediate(ii) << ',' << decode_ddddd_pcr(dd);
 			}
 			return 1;
 		case Movem_ea: 
@@ -1657,9 +1835,9 @@ namespace dsp56k
 				const auto ea = mmmrrr(mr, MemArea_P, opB);
 
 				if(w)
-					m_ss << ea << ',' << reg;
+					_dst << ea << ',' << reg;
 				else
-					m_ss << reg << ',' << ea;
+					_dst << reg << ',' << ea;
 			}
 			return 1 + m_extWordUsed;
 		case Movem_aa:
@@ -1672,9 +1850,9 @@ namespace dsp56k
 				const auto ea = memArea(MemArea_P) + absShortAddr(MemArea_P, aa);
 
 				if(w)
-					m_ss << ea << ',' << reg;
+					_dst << ea << ',' << reg;
 				else
-					m_ss << reg << ',' << ea;
+					_dst << reg << ',' << ea;
 			}
 			return 1;
 		case Movep_ppea:
@@ -1688,9 +1866,14 @@ namespace dsp56k
 				const auto ea		= mmmrrr(mr, S, opB, true);
 
 				if( write )
-					m_ss << ea << ',' << peripheralP(s, pp);
+				{
+					createBitsComment(mmmrrrAddr(mr, opB), s, peripheralPaddr(pp));
+					_dst << ea << ',' << peripheralP(s, pp);
+				}
 				else
-					m_ss << peripheralP(s, pp) << ',' << ea;
+				{
+					_dst << peripheralP(s, pp) << ',' << ea;
+				}
 			}
 			return 1 + m_extWordUsed;
 		case Movep_Xqqea: 
@@ -1705,9 +1888,12 @@ namespace dsp56k
 				const auto ea		= mmmrrr(mr, S, opB, true);
 
 				if( write )
-					m_ss << ea << ',' << peripheralQ(s, qq);
+				{
+					createBitsComment(mmmrrrAddr(mr, opB), s, peripheralQaddr(qq));
+					_dst << ea << ',' << peripheralQ(s, qq);
+				}
 				else
-					m_ss << peripheralQ(s, qq) << ',' << ea;
+					_dst << peripheralQ(s, qq) << ',' << ea;
 			}
 			return 1 + m_extWordUsed;
 		case Movep_eapp: 
@@ -1720,9 +1906,12 @@ namespace dsp56k
 				const auto ea		= mmmrrr(mr, MemArea_P, opB, true);
 
 				if( write )
-					m_ss << ea << ',' << peripheralP(s, pp);
+				{
+					createBitsComment(mmmrrrAddr(mr, opB), s, peripheralPaddr(pp));
+					_dst << ea << ',' << peripheralP(s, pp);
+				}
 				else
-					m_ss << peripheralP(s, pp) << ',' << ea;
+					_dst << peripheralP(s, pp) << ',' << ea;
 			}
 			return 1 + m_extWordUsed;
 		case Movep_eaqq: 
@@ -1735,9 +1924,9 @@ namespace dsp56k
 				const auto ea		= mmmrrr(mr, MemArea_P, opB, true);
 
 				if( write )
-					m_ss << ea << ',' << peripheralQ(S, qq);
+					_dst << ea << ',' << peripheralQ(S, qq);
 				else
-					m_ss << peripheralQ(S, qq) << ',' << ea;
+					_dst << peripheralQ(S, qq) << ',' << ea;
 			}
 			return 1 + m_extWordUsed;
 		case Movep_Spp: 
@@ -1750,9 +1939,9 @@ namespace dsp56k
 				const auto ea		= decode_dddddd(dd);
 
 				if( write )
-					m_ss << ea << ',' << peripheralP(S, pp);
+					_dst << ea << ',' << peripheralP(S, pp);
 				else
-					m_ss << peripheralP(S, pp) << ',' << ea;
+					_dst << peripheralP(S, pp) << ',' << ea;
 			}
 			return 1;
 		case Movep_SXqq:
@@ -1766,62 +1955,62 @@ namespace dsp56k
 				const auto ea		= decode_dddddd(dd);
 
 				if( write )
-					m_ss << ea << ',' << peripheralQ(S, qq);
+					_dst << ea << ',' << peripheralQ(S, qq);
 				else
-					m_ss << peripheralQ(S, qq) << ',' << ea;
+					_dst << peripheralQ(S, qq) << ',' << ea;
 			}
 			return 1;
 		case Norm:
 			{
 				const auto rr = getFieldValue<Norm,Field_RRR>(op);
 				const auto d = getFieldValue<Norm,Field_d>(op);
-				m_ss << decode_RRR(rr) << ',' << aluD(d);
+				_dst << decode_RRR(rr) << ',' << aluD(d);
 			}
 			return 1;
 		case Normf: 
 			{
 				const auto ss = getFieldValue<Normf,Field_sss>(op);
 				const auto d = getFieldValue<Normf,Field_D>(op);
-				m_ss << decode_sss(ss) << ',' << aluD(d);
+				_dst << decode_sss(ss) << ',' << aluD(d);
 			}
 			return 1;
 		case Plock:
 		case Punlock:
 			{
 				const TWord mr = getFieldValue<Plock, Field_MMM, Field_RRR>(op);
-				m_ss << mmmrrr(mr, MemArea_P, opB, false, false);
+				_dst << mmmrrr(mr, MemArea_P, opB, false, false);
 			}
 			return 1 + m_extWordUsed;
 		case Plockr:
 		case Punlockr:
 			{
-				m_ss << relativeAddr(MemArea_P, opB);
+				_dst << relativeAddr(MemArea_P, opB);
 			}
 			return 2;
 		case Rep_ea:
 			{
 				const TWord mr = getFieldValue<Rep_ea, Field_MMM, Field_RRR>(op);
 				const auto S = getFieldValueMemArea<Rep_ea>(op);
-				m_ss << mmmrrr(mr, S, opB);
+				_dst << mmmrrr(mr, S, opB);
 			}
 			return 1 + m_extWordUsed;
 		case Rep_aa: 
 			{
 				const TWord aa = getFieldValue<Rep_aa, Field_aaaaaa>(op);
 				const auto S = getFieldValueMemArea<Rep_aa>(op);
-				m_ss << memory(S, aa);
+				_dst << absAddr(S, aa, false, false);
 			}
 			return 1;
 		case Rep_xxx: 
 			{
 				const TWord ii = getFieldValue<Rep_xxx, Field_hhhh, Field_iiiiiiii>(op);
-				m_ss << immediateShort(ii);
+				_dst << immediateShort(ii);
 			}
 			return 1;
 		case Rep_S: 
 			{
 				const auto dd = getFieldValue<Rep_S, Field_dddddd>(op);
-				m_ss << decode_dddddd(dd);
+				_dst << decode_dddddd(dd);
 			}
 			return 1;
 		case Tcc_S1D1:
@@ -1832,7 +2021,8 @@ namespace dsp56k
 
 				const auto* j = aluJJJ(jj,d);
 
-				m_ss << condition(cc) << ' ' << j << ',' << aluD(d);
+				m_line.opName += condition(cc);
+				_dst << j << ',' << aluD(d);
 			}
 			break;
 		case Tcc_S1D1S2D2:
@@ -1845,7 +2035,8 @@ namespace dsp56k
 
 				const auto* j = aluJJJ(jj,d);
 
-				m_ss << condition(cc) << ' ' << j << ',' << aluD(d) << ' ' << decode_TTT(tt) << ',' << decode_TTT(TT);
+				m_line.opName += condition(cc);
+				_dst << j << ',' << aluD(d) << ' ' << decode_TTT(tt) << ',' << decode_TTT(TT);
 			}
 			break;
 		case Tcc_S2D2:
@@ -1854,13 +2045,14 @@ namespace dsp56k
 				const auto tt = getFieldValue<Tcc_S2D2, Field_ttt>(op);
 				const auto TT = getFieldValue<Tcc_S2D2, Field_TTT>(op);
 
-				m_ss << condition(cc) << ' ' << decode_TTT(tt) << ',' << decode_TTT(TT);
+				m_line.opName += condition(cc);
+				_dst << decode_TTT(tt) << ',' << decode_TTT(TT);
 			}
 			break;
 		case Trapcc:
 			{
 				const auto cc = getFieldValue<Trapcc, Field_CCCC>(op);
-				m_ss << condition(cc);
+				m_line.opName += condition(cc);
 			}
 			break;
 		case Vsl:
@@ -1870,7 +2062,7 @@ namespace dsp56k
 				const auto i = getFieldValue<Vsl, Field_i>(op);
 
 				const auto ea = mmmrrr(mr, g_memArea_L, opB, false);
-				m_ss << aluD(s) << ',' << i << ",l:" << ea;
+				_dst << aluD(s) << ',' << i << ",l:" << ea;
 			}
 			return 1 + m_extWordUsed;
 
@@ -1899,34 +2091,108 @@ namespace dsp56k
 		return 1;
 	}
 
-	int Disassembler::disassembleParallelMove(const OpcodeInfo& oi, TWord _op, TWord _opB)
+	uint32_t Disassembler::disassembleParallelMove(std::stringstream& _dst, const OpcodeInfo& oi, TWord _op, TWord _opB)
 	{
-		return disassemble(oi, _op, _opB);
+		return disassemble(_dst, oi, _op, _opB);
 	}
 
-	int Disassembler::disassembleNonParallel(const OpcodeInfo& oi, TWord op, TWord opB, const TWord sr, const TWord omr)
+	uint32_t Disassembler::disassembleNonParallel(std::stringstream& _dst, const OpcodeInfo& oi, TWord op, TWord opB, const TWord sr, const TWord omr)
 	{
-		return disassemble(oi, op, opB);
+		return disassemble(_dst, oi, op, opB);
 	}
 
-	int Disassembler::disassemble(std::string& dst, TWord op, TWord opB, const TWord sr, const TWord omr, const TWord pc)
+	void Disassembler::createBitsComment(TWord _bits, EMemArea _area, TWord _addr)
+	{
+		if(!_bits || _bits == g_invalidAddress || _bits == g_dynamicAddress)
+			return;
+
+		const auto& s = m_bitSymbols[getSymbolType(_area)];
+		const auto it = s.find(_addr);
+
+		std::stringstream ss;
+		ss << "(bits:";
+
+		for(int b = 23; b >= 0; --b)
+		{
+			if((_bits & (1<<b)) == 0)
+				continue;
+
+			ss << ' ';
+
+			bool found = false;
+			if(it != s.end())
+			{
+				const auto& bits = it->second.bits;
+				const auto itBit = bits.find(1<<b);
+				if(itBit != bits.end())
+				{
+					ss << itBit->second;
+					found = true;
+				}
+			}
+			if(!found)
+				ss << '$' << std::hex << b;
+		}
+
+		if(it != s.end())
+		{
+			for (const auto & itBit : it->second.bits)
+			{
+				auto bit = itBit.first;
+
+				if((bit & (bit-1)) == 0)
+					continue;
+
+				auto res = bit & _bits;
+
+				while((bit & 1) == 0)
+				{
+					res >>= 1;
+					bit >>= 1;
+				}
+
+				ss << ' ' << itBit.second << "=$" << std::hex << res;
+			}
+		}
+		m_line.m_comment << ss.str() << ")";
+	}
+
+	uint32_t Disassembler::disassemble(std::string& dst, TWord op, TWord opB, const TWord sr, const TWord omr, const TWord pc)
+	{
+		Line line;
+		const auto res = disassemble(line, op, opB, sr, omr, pc);
+		dst = formatLine(line);
+		return res;
+	}
+
+	uint32_t Disassembler::disassemble(Line& dst, TWord op, TWord opB, const TWord sr, const TWord omr, const TWord pc)
 	{
 		m_extWordUsed = 0;
 		m_pc = pc;
 
-		m_ss.str("");
-		m_ss.clear();
+		m_line = Line();
+		m_line.pc = pc;
+		m_line.opA = op;
+		m_line.opB = opB;
 
-		auto finalize = [&](int res)
+		auto finalize = [&](uint32_t res)
 		{
-			dst = m_ss.str();
+			m_line.len = res;
+			std::swap(dst, m_line);
 			return res;
+		};
+
+		auto finalizeDC = [&]()
+		{
+			disassembleDC(m_line, op);
+			return finalize(0);
 		};
 
 		if(!op)
 		{
-			dst = g_opNames[Nop];
-			return 1;
+			m_line.opName = g_opNames[Nop];
+			m_line.instA = Nop;
+			return finalize(1);
 		}
 
 		if(Opcodes::isNonParallelOpcode(op))
@@ -1934,28 +2200,21 @@ namespace dsp56k
 			const auto* oi = m_opcodes.findNonParallelOpcodeInfo(op);
 			if(oi)
 			{
-				m_ss << g_opNames[oi->m_instruction];
-				const auto res = disassembleNonParallel(*oi, op, opB, sr, omr);
+				m_line.opName = g_opNames[oi->m_instruction];
+				m_line.instA = oi->m_instruction;
+				const auto res = disassembleNonParallel(m_line.m_alu, *oi, op, opB, sr, omr);
 				if(!res)
-				{
-					disassembleDC(dst, op);
-					return 0;
-				}
-
+					return finalizeDC();
 				return finalize(res);
 			}
 
-			disassembleDC(dst, op);
-			return 0;
+			return finalizeDC();
 		}
 
 		const auto* oiMove = m_opcodes.findParallelMoveOpcodeInfo(op);
 
 		if(!oiMove)
-		{
-			disassembleDC(dst, op);
-			return 0;
-		}
+			return finalizeDC();
 
 		const OpcodeInfo* oiAlu = nullptr;
 
@@ -1963,39 +2222,40 @@ namespace dsp56k
 		{
 			oiAlu = m_opcodes.findParallelAluOpcodeInfo(op);
 			if(!oiAlu)
-			{
-				disassembleDC(dst, op);
-				return 0;
-			}
+				return finalizeDC();
 		}
 		else if(!oiAlu)
 		{
-			m_ss << g_opNames[oiMove->m_instruction];
-			const int resMove = disassembleParallelMove(*oiMove, op, opB);
+			if(oiMove->getInstruction() == Ifcc || oiMove->getInstruction() == Ifcc_U)
+				return finalizeDC();
+
+			m_line.opName = g_opNames[oiMove->m_instruction];
+			m_line.instA = oiMove->m_instruction;
+			const auto resMove = disassembleParallelMove(m_line.m_moveA, *oiMove, op, opB);
 			if(resMove)
 				return finalize(resMove);
-			disassembleDC(dst, op);
-			return 0;
+			return finalizeDC();
 		}
 
 		switch (oiMove->m_instruction)
 		{
 		case Move_Nop:
 			{
-				m_ss << g_opNames[oiAlu->m_instruction];
-				const auto resAlu = disassembleAlu(oiAlu->m_instruction, op & 0xff);
+				m_line.opName = g_opNames[oiAlu->m_instruction];
+				m_line.instA = oiAlu->m_instruction;
+				const auto resAlu = disassembleAlu(m_line.m_alu, oiAlu->m_instruction, op & 0xff);
 				if(resAlu)
 					return finalize(resAlu);
-				disassembleDC(dst, op);
+				return finalizeDC();
 			}
-			return 0;
 		default:
 			{
-				m_ss << g_opNames[oiAlu->m_instruction];
+				m_line.opName = g_opNames[oiAlu->m_instruction];
+				m_line.instA = oiAlu->m_instruction;
+				m_line.instB = oiMove->m_instruction;
 
-				const auto resAlu = disassembleAlu(oiAlu->m_instruction, op & 0xff);
-				m_ss << ' ';
-				const auto resMove = disassembleParallelMove(*oiMove, op, opB);
+				const auto resAlu = disassembleAlu(m_line.m_alu, oiAlu->m_instruction, op & 0xff);
+				const auto resMove = disassembleParallelMove(m_line.m_moveA, *oiMove, op, opB);
 				return finalize(std::max(resMove, resAlu));
 			}
 		}
@@ -2015,15 +2275,23 @@ namespace dsp56k
 
 	bool Disassembler::getSymbol(EMemArea _area, TWord _key, std::string& _result) const
 	{
+		const auto type = getSymbolType(_area);
+		if(type == SymbolTypeCount)
+			return false;
+
+		return getSymbol(type, _key, _result);
+	}
+
+	Disassembler::SymbolType Disassembler::getSymbolType(EMemArea _area)
+	{
 		switch (_area)
 		{
-		case MemArea_X: return getSymbol(MemX, _key, _result);
-		case MemArea_Y: return getSymbol(MemY, _key, _result);
-		case MemArea_P: return getSymbol(MemP, _key, _result);
-		case g_memArea_L: return getSymbol(MemL, _key, _result);
-		default:
-			return false;
+		case MemArea_X: return MemX;
+		case MemArea_Y: return MemY;
+		case MemArea_P: return MemP;
+		case g_memArea_L: return MemL;
 		}
+		return SymbolTypeCount;
 	}
 
 	bool Disassembler::addSymbol(const SymbolType _type, const TWord _key, const std::string& _value)
@@ -2034,6 +2302,31 @@ namespace dsp56k
 			return false;
 
 		symbols.insert(std::make_pair(_key, _value));
+
+		return true;
+	}
+
+	bool Disassembler::addBitSymbol(SymbolType _type, TWord _address, TWord _bit, const std::string& _symbol)
+	{
+		return addBitMaskSymbol(_type, _address, 1<<_bit, _symbol);
+	}
+
+	bool Disassembler::addBitMaskSymbol(SymbolType _type, TWord _address, TWord _bit, const std::string& _symbol)
+	{
+		auto& symbols = m_bitSymbols[_type];
+
+		const auto it = symbols.find(_address);
+
+		if(it != symbols.end())
+		{
+			BitSymbols& bs = it->second;
+			bs.bits[_bit] = _symbol;
+			return true;
+		}
+
+		BitSymbols bs;
+		bs.bits.insert(std::make_pair(_bit, _symbol));
+		symbols.insert(std::make_pair(_address, bs));
 
 		return true;
 	}
@@ -2069,17 +2362,18 @@ namespace dsp56k
 			case 'n':
 			case 'N':
 				type = Immediate;
+				break;
 			default:
 				break;
 			}
 
 			if(type != SymbolTypeCount)
 			{
-				for (auto it = symbol.second.begin(); it != symbol.second.end(); ++it)
+				for (const auto& it : symbol.second)
 				{
-					const auto& names = it->second.names;
+					const auto& names = it.second.names;
 					if(names.size() == 1)
-						success |= addSymbol(type, it->first, *names.begin());
+						success |= addSymbol(type, it.first, *names.begin());
 				}
 			}
 		}
@@ -2096,5 +2390,95 @@ namespace dsp56k
 #endif
 		_dst[0] = 0;
 		return 0;
+	}
+
+	void testDisassembler()
+	{
+#ifdef USE_MOTOROLA_UNASM
+		LOG("Executing Disassembler Unit Tests");
+
+		Opcodes opcodes;
+		Disassembler disasm(opcodes);
+
+		constexpr TWord opB = 0x234567;
+
+		for (TWord i = 0x000000; i <= 0xffffff; ++i)
+		{
+			const TWord op = i;
+
+			if ((i & 0x03ffff) == 0)
+				LOG("Testing opcodes $" << HEX(i) << "+");
+
+			char assemblyMotorola[128];
+			std::string assembly;
+
+			const auto opcodeCountMotorola = disassembleMotorola(assemblyMotorola, op, opB, 0, 0);
+
+			if (opcodeCountMotorola > 0)
+			{
+				const int opcodeCount = disasm.disassemble(assembly, op, opB, 0, 0, 0);
+
+				if (!opcodeCount)
+					continue;
+
+				std::string asmMot(assemblyMotorola);
+
+				if (asmMot.back() == ' ')	// debugcc has extra space
+					asmMot.pop_back();
+
+				if (assembly != asmMot)
+				{
+					switch (op)
+					{
+					case 0x000006: if (assembly == "trap" && asmMot == "swi")                       continue; break;
+					case 0x202015: if (assembly == "maxm a,b ifcc"   && asmMot == "max b,a ifcc")   continue; break;
+					case 0x202115: if (assembly == "maxm a,b ifge"   && asmMot == "max b,a ifge")   continue; break;
+					case 0x202215: if (assembly == "maxm a,b ifne"   && asmMot == "max b,a ifne")   continue; break;
+					case 0x202315: if (assembly == "maxm a,b ifpl"   && asmMot == "max b,a ifpl")   continue; break;
+					case 0x202415: if (assembly == "maxm a,b ifnn"   && asmMot == "max b,a ifnn")   continue; break;
+					case 0x202515: if (assembly == "maxm a,b ifec"   && asmMot == "max b,a ifec")   continue; break;
+					case 0x202615: if (assembly == "maxm a,b iflc"   && asmMot == "max b,a iflc")   continue; break;
+					case 0x202715: if (assembly == "maxm a,b ifgt"   && asmMot == "max b,a ifgt")   continue; break;
+					case 0x202815: if (assembly == "maxm a,b ifcs"   && asmMot == "max b,a ifcs")   continue; break;
+					case 0x202915: if (assembly == "maxm a,b iflt"   && asmMot == "max b,a iflt")   continue; break;
+					case 0x202a15: if (assembly == "maxm a,b ifeq"   && asmMot == "max b,a ifeq")   continue; break;
+					case 0x202b15: if (assembly == "maxm a,b ifmi"   && asmMot == "max b,a ifmi")   continue; break;
+					case 0x202c15: if (assembly == "maxm a,b ifnr"   && asmMot == "max b,a ifnr")   continue; break;
+					case 0x202d15: if (assembly == "maxm a,b ifes"   && asmMot == "max b,a ifes")   continue; break;
+					case 0x202e15: if (assembly == "maxm a,b ifls"   && asmMot == "max b,a ifls")   continue; break;
+					case 0x202f15: if (assembly == "maxm a,b ifle"   && asmMot == "max b,a ifle")   continue; break;
+					case 0x203015: if (assembly == "maxm a,b ifcc.u" && asmMot == "max b,a ifcc.u") continue; break;
+					case 0x203115: if (assembly == "maxm a,b ifge.u" && asmMot == "max b,a ifge.u") continue; break;
+					case 0x203215: if (assembly == "maxm a,b ifne.u" && asmMot == "max b,a ifne.u") continue; break;
+					case 0x203315: if (assembly == "maxm a,b ifpl.u" && asmMot == "max b,a ifpl.u") continue; break;
+					case 0x203415: if (assembly == "maxm a,b ifnn.u" && asmMot == "max b,a ifnn.u") continue; break;
+					case 0x203515: if (assembly == "maxm a,b ifec.u" && asmMot == "max b,a ifec.u") continue; break;
+					case 0x203615: if (assembly == "maxm a,b iflc.u" && asmMot == "max b,a iflc.u") continue; break;
+					case 0x203715: if (assembly == "maxm a,b ifgt.u" && asmMot == "max b,a ifgt.u") continue; break;
+					case 0x203815: if (assembly == "maxm a,b ifcs.u" && asmMot == "max b,a ifcs.u") continue; break;
+					case 0x203915: if (assembly == "maxm a,b iflt.u" && asmMot == "max b,a iflt.u") continue; break;
+					case 0x203a15: if (assembly == "maxm a,b ifeq.u" && asmMot == "max b,a ifeq.u") continue; break;
+					case 0x203b15: if (assembly == "maxm a,b ifmi.u" && asmMot == "max b,a ifmi.u") continue; break;
+					case 0x203c15: if (assembly == "maxm a,b ifnr.u" && asmMot == "max b,a ifnr.u") continue; break;
+					case 0x203d15: if (assembly == "maxm a,b ifes.u" && asmMot == "max b,a ifes.u") continue; break;
+					case 0x203e15: if (assembly == "maxm a,b ifls.u" && asmMot == "max b,a ifls.u") continue; break;
+					case 0x203f15: if (assembly == "maxm a,b ifle.u" && asmMot == "max b,a ifle.u") continue; break;
+					}
+
+					LOG("Diff for opcode " << HEX(op) << ": " << assembly << " != " << assemblyMotorola);
+					assert(false);
+					disasm.disassemble(assembly, op, opB, 0, 0, 0);	// retry to help debugging
+				}
+
+				if (opcodeCount != opcodeCountMotorola)
+				{
+					LOG("Diff for opcode " << HEX(op) << ": " << assembly << ": instruction length " << opcodeCount << " != " << opcodeCountMotorola);
+					disasm.disassemble(assembly, op, opB, 0, 0, 0);	// retry to help debugging
+				}
+			}
+		}
+
+		LOG("Disassembler Unit Tests completed");
+#endif
 	}
 }

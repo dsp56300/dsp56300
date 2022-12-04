@@ -1,4 +1,5 @@
 #include "opcodes.h"
+#include "opcodeanalysis.h"
 
 namespace dsp56k
 {
@@ -6,8 +7,8 @@ namespace dsp56k
 	{
 		FieldInfo fieldInfos[Field_COUNT];
 
-		constexpr RuntimeFieldInfo() : fieldInfos() {}
-		constexpr RuntimeFieldInfo(const Instruction _i) : fieldInfos()
+		RuntimeFieldInfo() : fieldInfos() {}
+		RuntimeFieldInfo(const Instruction _i) : fieldInfos()
 		{
 			for (auto f = 0; f < Field::Field_COUNT; ++f)
 				fieldInfos[f] = initField(g_opcodes[_i].m_opcode, g_fieldParseConfigs[f].ch, g_fieldParseConfigs[f].count);
@@ -18,7 +19,7 @@ namespace dsp56k
 	{
 		RuntimeFieldInfo fieldInfos[g_opcodeCount];
 
-		constexpr RuntimeFieldInfos() : fieldInfos()
+		RuntimeFieldInfos() : fieldInfos()
 		{
 			for (size_t i = 0; i < g_opcodeCount; ++i)
 				fieldInfos[i] = RuntimeFieldInfo(static_cast<Instruction>(i));
@@ -81,6 +82,128 @@ namespace dsp56k
 	const OpcodeInfo& Opcodes::getOpcodeInfoAt(size_t _index)
 	{
 		return g_opcodes[_index];
+	}
+
+	uint32_t Opcodes::getOpcodeLength(const TWord _op) const
+	{
+		if(!_op)
+			return 1;
+
+		Instruction instA, instB;
+		getInstructionTypes(_op, instA, instB);
+
+		return getOpcodeLength(_op, instA, instB);
+	}
+
+	uint32_t Opcodes::getOpcodeLength(const TWord _op, Instruction _instA, Instruction _instB) const
+	{
+		const auto lenA = _instA != Invalid ? dsp56k::getOpcodeLength(_instA, _op) : 0;
+		const auto lenB = _instB != Invalid ? dsp56k::getOpcodeLength(_instB, _op) : 0;
+		return std::max(lenA, lenB);
+	}
+
+	bool Opcodes::writesToPMemory(const TWord _op) const
+	{
+		if(!_op)
+			return false;
+
+		if(isNonParallelOpcode(_op))
+		{
+			const auto oi = findNonParallelOpcodeInfo(_op);
+			return oi ? dsp56k::writesToPMemory(oi->getInstruction(), _op) : false;
+		}
+
+		const auto* oiMove = findParallelMoveOpcodeInfo(_op);
+
+		return oiMove && dsp56k::writesToPMemory(oiMove->getInstruction(), _op);
+	}
+
+	uint32_t Opcodes::getInstructionTypes(const TWord _op, Instruction& _a, Instruction& _b) const
+	{
+		if(!_op)
+		{
+			_a = Nop;
+			_b = Invalid;
+			return 1;
+		}
+
+		_a = _b = Invalid;
+
+		if(isNonParallelOpcode(_op))
+		{
+			const auto oi = findNonParallelOpcodeInfo(_op);
+
+			if(oi)
+				_a = oi->getInstruction();
+			return 1;
+		}
+
+		const auto* oiAlu = (_op & 0xff) ? findParallelAluOpcodeInfo(_op) : nullptr;
+		const auto* oiMove = findParallelMoveOpcodeInfo(_op);
+
+		uint32_t res = 0;
+
+		if(oiAlu)
+		{
+			_a = oiAlu->getInstruction();
+			++res;
+		}
+
+		if(oiMove)
+		{
+			++res;
+
+			if(oiAlu)
+				_b = oiMove->getInstruction();
+			else
+				_a = oiMove->getInstruction();
+		}
+		return res;
+	}
+
+	bool Opcodes::getRegisters(RegisterMask& _written, RegisterMask& _read, TWord _opA, TWord _opB) const
+	{
+		Instruction instA, instB;
+		getInstructionTypes(_opA, instA, instB);
+
+		_written = _read = RegisterMask::None;
+
+		if(instA != Invalid && instA != Nop)
+		{
+			dsp56k::getRegisters(_written, _read, instA, _opA);
+		}
+
+		if(instB != Invalid && instB != Nop)
+		{
+			auto written = RegisterMask::None;
+			auto read = RegisterMask::None;
+			dsp56k::getRegisters(written, read, instB, _opA);
+			_written |= written;
+			_read |= read;
+		}
+
+		return _written != RegisterMask::None || _read != RegisterMask::None;
+	}
+
+	uint32_t Opcodes::getFlags(Instruction _instA, Instruction _instB)
+	{
+		uint32_t flags = 0;
+		if(_instA != Invalid)
+			flags = g_opcodes[_instA].m_flags;
+		if(_instB != Invalid)
+			flags |= g_opcodes[_instB].m_flags;
+		return flags;
+	}
+
+	bool Opcodes::getMemoryAddress(TWord& _addr, EMemArea& _area, const TWord opA, const TWord opB) const
+	{
+		Instruction instA, instB;
+		getInstructionTypes(opA, instA, instB);
+		if(dsp56k::getMemoryAddress(_addr, _area, instA, opA, opB))
+			return true;
+		if(instB != Invalid)
+			return dsp56k::getMemoryAddress(_addr, _area, instB, opA, opB);
+		return false;
 	}
 
 	const OpcodeInfo* Opcodes::findOpcodeInfo(TWord _opcode, const std::vector<const OpcodeInfo*>& _opcodes)

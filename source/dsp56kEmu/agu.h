@@ -28,13 +28,20 @@ namespace dsp56k
 			// modulo or linear addressing
 			if (moduloMask)
 			{
-				n=signextend<int,24>(n);
-				if( abs(n) >= modulo )	// linear addressing OR modulo with increment exceeding modulo.
+				if (modulo == -1)	// Multiple-wrap-around.
 				{
-					// the doc says it's only valid for N = P x (2 pow k), but assume the assembly is okay
-//						LOG( "r " << std::hex << r << " + n " << std::hex << n << " = " << std::hex << ((r+n)&0x00ffffff) );
+					auto temp = r & moduloMask;
+					r ^= temp;
+					temp += n;
+					temp &= moduloMask;
+					r |= temp;
+					return;
+				}
+				n = signextend<int,24>(n);
+				if(abs(n) > static_cast<int>(moduloMask))			// linear addressing OR modulo with increment exceeding block size with N = P x (2 pow k)
+				{
+//					LOG( "r " << std::hex << r << " + n " << std::hex << n << " = " << std::hex << ((r+n)&0x00ffffff) );
 					r += n;
-					r &= 0x00ffffff;
 				}
 				else
 				{
@@ -48,14 +55,27 @@ namespace dsp56k
 			}
 			else	// bit-reverse mode
 			{
-				assert( 0 && "bitreverse mode is used" );
+//				const auto or = r;
+//				const auto on = n;
+
+				bool add = true;
+				if (n < 0)
+				{
+					n = -n;
+					add = false;
+				}
 
 				r = bitreverse24(r);
 				n = bitreverse24(n);
-				r += n;
-				r &= 0x00ffffff;
+//				LOG("BitReverse r=" << HEX(or) << ", n=" << HEX(on) << ", rr=" << HEX(r) << ", rn=" << HEX(n) << ", resRev=" << HEX(r+n) << ", res=" << HEX(bitreverse24(r+n)));
+				if (add)
+					r += n;
+				else
+					r -= n;
 				r = bitreverse24(r);
 			}
+
+			r &= 0x00ffffff;
 		}
 	};
 };

@@ -10,7 +10,9 @@
 #include "memory.h"
 #include "disasm.h"
 #include "aar.h"
+#include "debuggerinterface.h"
 #include "dspconfig.h"
+#include "interrupts.h"
 
 #include "dsp_decode.inl"
 
@@ -39,6 +41,26 @@ namespace dsp56k
 
 	Jumptable g_jumptable;
 
+	void dspExecNoPendingInterrupts(DSP* _dsp)
+	{
+		_dsp->execNoPendingInterrupts();
+	}
+	void dspExecDefaultPreventInterrupt(DSP* _dsp)
+	{
+		_dsp->execDefaultPreventInterrupt();
+	}
+	void dspExecNop(DSP*)
+	{
+	}
+	void dspExecInterrupts(DSP* _dsp)
+	{
+		_dsp->execInterrupts();
+	}
+	void dspTryExecInterrupts(DSP* _dsp)
+	{
+		_dsp->tryExecInterrupts();
+	}
+
 	// _____________________________________________________________________________
 	// DSP
 	//
@@ -47,8 +69,11 @@ namespace dsp56k
 		, perif({_pX, _pY})
 		, pcCurrentInstruction(0xffffff)
 		, m_jit(*this)
+		, m_interruptFunc(&dspExecNoPendingInterrupts)
 		, m_disasm(m_opcodes)
 	{
+		assert(_pX != _pY && "cannot use the same peripherals twice");
+
 		mem.setDSP(this);
 
 		m_disasm.addSymbols(mem);
@@ -112,6 +137,7 @@ namespace dsp56k
 		reg.omr = TReg24(int(0));
 		
 		m_instructions = 0;
+		m_jit.resetHW();
 	}
 
 	// _____________________________________________________________________________
@@ -124,6 +150,7 @@ namespace dsp56k
 
 		if(g_useJIT)
 		{
+#if 0
 			if(m_processingMode == Default)
 			{
 				if(m_pendingInterrupts.empty())
@@ -135,6 +162,14 @@ namespace dsp56k
 			{
 				m_processingMode = Default;
 			}
+#else
+			m_interruptFunc(this);
+#endif
+
+#if DSP56300_DEBUGGER
+			if(m_debugger)
+				m_debugger->onExec(getPC().var);
+#endif
 
 			m_jit.exec(getPC().var);
 		}
@@ -153,7 +188,12 @@ namespace dsp56k
 				m_processingMode = Default;
 			}
 #else
-			(this->*m_interruptFunc)();
+			m_interruptFunc(this);
+#endif
+
+#if DSP56300_DEBUGGER
+			if(m_debugger)
+				m_debugger->onExec(getPC().var);
 #endif
 
 			pcCurrentInstruction = reg.pc.toWord();
@@ -166,14 +206,15 @@ namespace dsp56k
 
 	void DSP::execPeriph()
 	{
-		const auto diff = m_peripheralCounter - m_instructions;
+		const auto diff = getRemainingPeripheralsCycles();
 
-		if (diff > 0 && diff < 32)
+		if (diff > 0 && diff < PeripheralsProcessingStepSize)
 			return;
 
-		m_peripheralCounter += 32;
+		m_peripheralCounter += PeripheralsProcessingStepSize;
 
 		perif[0]->exec();
+		perif[1]->exec();
 	}
 
 	void DSP::tryExecInterrupts()
@@ -184,16 +225,23 @@ namespace dsp56k
 
 	void DSP::execInterrupts()
 	{
-		// TODO: priority sorting, masking
+		const auto vba = m_pendingInterrupts.front();
+
+		const auto prio = vba < Vba_IRQA ? 3 : 2;
 		const auto minPrio = mr().var & 0x3;
 
-		if(minPrio >= 3)
+		if(prio < minPrio)
 			return;
-
-		const auto vba = m_pendingInterrupts.pop_front();
 
 		pcCurrentInstruction = vba;
 		m_processingMode = FastInterrupt;
+
+		m_pendingInterrupts.pop_front();
+
+#if DSP56300_DEBUGGER
+		if(m_debugger)
+			m_debugger->onExec(vba);
+#endif
 
 		if(g_useJIT)
 		{
@@ -201,11 +249,11 @@ namespace dsp56k
 			if(m_processingMode != LongInterrupt)
 			{
 				m_processingMode = DefaultPreventInterrupt;
-				m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+				m_interruptFunc = &dspExecDefaultPreventInterrupt;
 			}
 			else
 			{
-				int d=0;
+				m_jit.checkModeChange();
 			}
 		}
 		else
@@ -230,7 +278,7 @@ namespace dsp56k
 
 				// fast interrupt done
 				m_processingMode = DefaultPreventInterrupt;
-				m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+				m_interruptFunc = &dspExecDefaultPreventInterrupt;
 			}
 			else if(jumped)
 			{
@@ -249,13 +297,13 @@ namespace dsp56k
 				sr_clear(static_cast<CCRMask>(SR_S1 | SR_S0 | SR_SA | SR_LF));
 
 				m_processingMode = LongInterrupt;
-				m_interruptFunc = &DSP::nop;
+				m_interruptFunc = &dspExecNop;
 			}
 			else
 			{
 				// Default Processing, no interrupt
 				m_processingMode = DefaultPreventInterrupt;
-				m_interruptFunc = &DSP::execDefaultPreventInterrupt;
+				m_interruptFunc = &dspExecDefaultPreventInterrupt;
 			}
 		}
 	}
@@ -264,10 +312,12 @@ namespace dsp56k
 	{
 		m_processingMode = Default;
 
+		std::lock_guard lock(m_mutexInsertPendingInterrupt);
+
 		if(m_pendingInterrupts.empty())
-			m_interruptFunc = &DSP::execNoPendingInterrupts;
+			m_interruptFunc = &dspExecNoPendingInterrupts;
 		else
-			m_interruptFunc = &DSP::execInterrupts;
+			m_interruptFunc = &dspExecInterrupts;
 	}
 
 	void DSP::execNoPendingInterrupts()
@@ -279,6 +329,25 @@ namespace dsp56k
 	{
 		for(size_t i=0; i<perif.size(); ++i)
 			perif[i]->terminate();
+	}
+
+	void DSP::setDebugger(DebuggerInterface* _debugger)
+	{
+		if(m_debugger == _debugger)
+			return;
+
+		if(m_debugger)
+			m_debugger->onDetach();
+
+		m_debugger = _debugger;
+
+		if(m_debugger)
+		{
+			m_debugger->onAttach();
+
+			if constexpr(g_useJIT)
+				m_jit.onDebuggerAttached(*m_debugger);
+		}
 	}
 
 	std::string DSP::getSSindent() const
@@ -545,7 +614,7 @@ namespace dsp56k
 			--reg.lc.var;
 			(this->*func)(op);
 			++m_instructions;
-			traceOp();
+//			traceOp();
 		}
 
 		reg.lc = lcBackup;
@@ -974,7 +1043,7 @@ namespace dsp56k
 		return mem.dspWrite( _area, _offset, _value );
 	}
 
-	inline bool DSP::memWriteP(TWord _offset, TWord _value)
+	bool DSP::memWriteP(TWord _offset, TWord _value)
 	{
 		aarTranslate(MemArea_P, _offset);
 
@@ -1009,8 +1078,10 @@ namespace dsp56k
 	{
 		m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
 
-		if (m_listener)
-			m_listener->onPmemWrite(_offset);
+#if DSP56300_DEBUGGER
+		if(m_debugger)
+			m_debugger->onProgramMemWrite(_offset);
+#endif
 	}
 
 	// _____________________________________________________________________________
@@ -1172,7 +1243,7 @@ namespace dsp56k
 	{
 		reg.m[which].var = val;
 
-		if (val == 0xffffff)
+		if (val == 0xffffff)	// Linear addressing
 		{
 			reg.mModulo[which] = 0;
 			reg.mMask[which] = 0xffffff;
@@ -1181,18 +1252,21 @@ namespace dsp56k
 
 		const TWord moduloTest = (val & 0xffff);
 
-		if (moduloTest == 0)
+		if (moduloTest == 0)				// Bit reverse
 		{
 			reg.mMask[which] = 0;
 		}
-		else if( moduloTest <= 0x007fff )
+		else if( moduloTest <= 0x007fff )	// Modulo mode
 		{
 			reg.mMask[which] = AGU::calcModuloMask(val);
 			reg.mModulo[which] = val + 1;
 		}
-		else
+		else								// Multiple-wrap-around mode
 		{
-			LOG_ERR_NOTIMPLEMENTED( "AGU multiple Wrap-Around Modulo Modifier: m=" << HEX(val) );
+			reg.mMask[which] = moduloTest & 0x3fff;		// convert multiple-wrap-around to regular modulo
+			if (AGU::calcModuloMask(reg.mMask[which]) != reg.mMask[which])
+				LOG("Configured multiple-wrap-around mode with non power-of-two size!" << HEXN(reg.mMask[which], 6));
+			reg.mModulo[which] = -1;
 		}
 	}
 
@@ -1221,19 +1295,23 @@ namespace dsp56k
 		return true;
 	}
 
-	void DSP::injectInterrupt(uint32_t _interruptVectorAddress)
+	bool DSP::injectInterrupt(uint32_t _interruptVectorAddress)
 	{
-//		assert(!m_pendingInterrupts.full());
-		m_pendingInterrupts.push_back(_interruptVectorAddress);
+		{
+			std::lock_guard lock(m_mutexInsertPendingInterrupt);
+			m_pendingInterrupts.push_back(_interruptVectorAddress);
 
-		if(m_interruptFunc == &DSP::execNoPendingInterrupts)
-			m_interruptFunc = &DSP::tryExecInterrupts;
+			if(m_interruptFunc == &dspExecNoPendingInterrupts)
+				m_interruptFunc = &dspTryExecInterrupts;
+		}
+
+		return true;
 	}
 
 	void DSP::clearOpcodeCache()
 	{
 		m_opcodeCache.clear();
-		m_opcodeCache.resize(mem.size(), {&DSP::op_ResolveCache});
+		m_opcodeCache.resize(mem.sizeP(), {&DSP::op_ResolveCache});
 	}
 
 	void DSP::clearOpcodeCache(const TWord _address)
@@ -1373,11 +1451,31 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 			const auto pc = hiword(reg.ss[s]).var;
 			const auto sr = loword(reg.ss[s]).var;
 			_ss << '$' << std::setw(2) << std::setfill('0') << std::hex << s << ": ";
-			_ss << '$' << HEX(pc) << ":$" << HEX(sr) << " - pc:$" << HEX(pc) << " - ";
 
-			memReadOpcode(pc, opA, opB);
-			m_disasm.disassemble(op, opA, opB, 0, 0, pc);
-			_ss << op << std::endl;
+			bool found = false;
+
+			if(pc >= 2)
+			{
+				for(int offset=1; offset<=2; ++offset)
+				{
+					const TWord foundPC = pc - offset;
+					memReadOpcode(foundPC, opA, opB);
+					const auto len = m_disasm.disassemble(op, opA, opB, 0, 0, foundPC);
+					if(len == offset)
+					{
+						_ss << '$' << HEX(pc) << ":$" << HEX(sr) << " - pc:$" << HEX(foundPC) << " - " << op << std::endl;
+						found = true;
+					}
+				}
+			}
+
+			if(!found)
+			{
+				memReadOpcode(pc, opA, opB);
+				m_disasm.disassemble(op, opA, opB, 0, 0, pc);
+				_ss << '$' << HEX(pc) << ":$" << HEX(sr) << " - pc:$" << HEX(pc) << " - " << op << std::endl;
+			}
+
 			--s;
 		}
 		_ss << std::endl;

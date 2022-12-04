@@ -2,6 +2,7 @@
 
 #include <array>
 
+#include "jitdspvalue.h"
 #include "jitregtracker.h"
 #include "jitregtypes.h"
 #include "jittypes.h"
@@ -26,45 +27,48 @@ namespace dsp56k
 		JitDspRegs(JitBlock& _block);
 		~JitDspRegs();
 
-		void getR(const JitRegGP& _dst, int _agu);
-		void getN(const JitRegGP& _dst, int _agu);
-		void getM(const JitRegGP& _dst, int _agu);
+		DspValue getR(TWord _agu) const;
 
-		void setR(int _agu, const JitRegGP& _src);
-		void setN(int _agu, const JitRegGP& _src);
-		void setM(int _agu, const JitRegGP& _src);
-		
-		JitRegGP getSR(AccessType _type);
-		JitRegGP getLA(AccessType _type);
-		JitRegGP getLC(AccessType _type);
+		void getR(DspValue& _dst, TWord _agu) const;
+		void getN(DspValue& _dst, TWord _agu) const;
+		void getM(DspValue& _dst, TWord _agu) const;
 
-		JitRegGP getALU(int _alu, AccessType _access);
-		void getALU(const JitRegGP& _dst, int _alu);
-		void setALU(int _alu, const JitRegGP& _src, bool _needsMasking = true);
-		void clrALU(TWord _alu);
+		void setR(TWord _agu, const DspValue& _src) const;
+		void setN(TWord _agu, const DspValue& _src) const;
+		void setM(TWord _agu, const DspValue& _src) const;
 
-		void getXY(const JitRegGP& _dst, int _xy);
-		JitRegGP getXY(int _xy, AccessType _access);
-		void setXY(uint32_t _xy, const JitRegGP& _src);
+		JitRegGP getSR(AccessType _type) const;
+		JitRegGP getLA(AccessType _type) const;
+		JitRegGP getLC(AccessType _type) const;
 
-		void getEP(const JitReg32& _dst) const;
-		void setEP(const JitReg32& _src) const;
-		void getVBA(const JitReg32& _dst) const;
-		void setVBA(const JitReg32& _src) const;
-		void getSC(const JitReg32& _dst) const;
-		void setSC(const JitReg32& _src) const;
-		void getSZ(const JitReg32& _dst) const;
-		void setSZ(const JitReg32& _src) const;
-		void getSR(const JitReg32& _dst);
-		void setSR(const JitReg32& _src);
-		void getOMR(const JitReg32& _dst) const;
-		void setOMR(const JitReg32& _src) const;
+		void getALU(const JitRegGP& _dst, TWord _alu) const;
+		void setALU(TWord _alu, const DspValue& _src, bool _needsMasking = true) const;
+		void clrALU(TWord _alu) const;
+
+		void getXY(const JitRegGP& _dst, TWord _xy) const;
+		JitRegGP getXY(TWord _xy, AccessType _access) const;
+		void setXY(uint32_t _xy, const JitRegGP& _src) const;
+
+		void getEP(DspValue& _dst) const;
+		void setEP(const DspValue& _src) const;
+		void getVBA(DspValue& _dst) const;
+		void setVBA(const DspValue& _src) const;
+		void getSC(DspValue& _dst) const;
+		void setSC(const DspValue& _src) const;
+		void getSZ(DspValue& _dst) const;
+		void setSZ(const DspValue& _src) const;
+		void getSR(DspValue& _dst) const;
+		void setSR(const JitReg32& _src) const;
+		void setSR(const DspValue& _src) const;
+		void getOMR(DspValue& _dst) const;
+		void setOMR(const DspValue& _src) const;
 		void getSP(const JitReg32& _dst) const;
-		void setSP(const JitReg32& _src) const;
-		void getLA(const JitReg32& _dst);
-		void setLA(const JitReg32& _src);
-		void getLC(const JitReg32& _dst);
-		void setLC(const JitReg32& _src);
+		void getSP(DspValue& _dst) const;
+		void setSP(const DspValue& _src) const;
+		void getLA(DspValue& _dst) const;
+		void setLA(const DspValue& _src) const;
+		void getLC(DspValue& _dst) const;
+		void setLC(const DspValue& _src) const;
 
 		void getSS(const JitReg64& _dst) const;
 		void setSS(const JitReg64& _src) const;
@@ -73,14 +77,16 @@ namespace dsp56k
 		void mask56(const JitRegGP& _alu) const;
 		void mask48(const JitRegGP& _alu) const;
 		
-		void setPC(const JitRegGP& _pc);
+		void setPC(const DspValue& _pc) const;
 		CCRMask& ccrDirtyFlags() { return m_ccrDirtyFlags; }
 
 	private:
 		JitDspRegPool& pool() const;
 
+		void load24(DspValue& _dst, const TReg24& _src) const;
 		void load24(const JitRegGP& _dst, const TReg24& _src) const;
 		void store24(TReg24& _dst, const JitRegGP& _src) const;
+		void store24(TReg24& _dst, const DspValue& _src) const;
 
 		JitBlock& m_block;
 		JitEmitter& m_asm;

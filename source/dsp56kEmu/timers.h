@@ -82,40 +82,68 @@ namespace dsp56k
 			M_PS1 = 22,
 		};
 
+		enum TimerMode
+		{
+			ModeGpio,
+			ModePulse,
+			ModeToggle,
+			ModeEventCounter,
+			ModeMeasureInputWidth,
+			ModeMeasureInputPeriod,
+			ModeMeasurementCapture,
+			ModePWM,
+			ModeReserved8,
+			ModeWatchdogPulse,
+			ModeWatchdogToggle,
+			ModeReserved11,
+			ModeReserved12,
+			ModeReserved13,
+			ModeReserved14,
+			ModeReserved15
+		};
+
 		Timers(IPeripherals& _peripherals) : m_peripherals(_peripherals) {}
 		void exec();
 		void execTimer(Timer& _t, uint32_t _index) const;
 
-		void writeTCSR(int _index, TWord _val)
+		void writeTCSR(int _index, TWord _val);
+
+		void writeTLR(int _index, TWord _val)
 		{
-//			LOG("Write Timer " << _index << " TCSR: " << HEX(_val));
-
-			auto& t = m_timers[_index];
-
-			// If the timer gets enabled, reset the counter register with the load register content
-			if (!t.m_tcsr.test(Timer::M_TE) && bittest<TWord, Timer::M_TE>(_val))
-				t.m_tcr = t.m_tlr;
-
-			timerFlagReset<Timer::M_TOF>(t.m_tcsr, _val);
-			timerFlagReset<Timer::M_TCF>(t.m_tcsr, _val);
-
-			t.m_tcsr = _val;
+			m_timers[_index].m_tlr = _val;
+			LOG("Write Timer " << _index << " TLR: " << HEX(_val));
 		}
-		
-		void writeTLR(int _index, TWord _val)		{ m_timers[_index].m_tlr = _val;	LOG("Write Timer " << _index << " TLR: " << HEX(_val)); }
-		void writeTCPR(int _index, TWord _val)		{ m_timers[_index].m_tcpr = _val;	}//LOG("Write Timer " << _index << " TCPR: " << HEX(_val)); }
-		void writeTCR(int _index, TWord _val)		{ m_timers[_index].m_tcr = _val;	LOG("Write Timer " << _index << " TCR: " << HEX(_val)); }
 
-		void writeTPLR(TWord _val)					{ m_tplr = _val;					LOG("Write Timer TPLR " << ": " << HEX(_val)); }
-		void writeTPCR(TWord _val)					{ m_tpcr = _val;					LOG("Write Timer TPCR " << ": " << HEX(_val)); }
+		void writeTCPR(int _index, TWord _val)
+		{
+			m_timers[_index].m_tcpr = _val;
+			LOG("Write Timer " << _index << " TCPR: " << HEX(_val)); }
 
-		TWord readTCSR(int _index)					{ return m_timers[_index].m_tcsr; }
-		TWord readTLR(int _index)					{ return m_timers[_index].m_tlr; }
-		TWord readTCPR(int _index)					{ return m_timers[_index].m_tcpr; }
-		TWord readTCR(int _index)					{ return m_timers[_index].m_tcr; }
+		void writeTCR(int _index, TWord _val)
+		{
+			m_timers[_index].m_tcr = _val;
+			LOG("Write Timer " << _index << " TCR: " << HEX(_val));
+		}
 
-		TWord readTPLR()							{ return m_tplr; }
-		TWord readTPCR()							{ return m_tpcr; }
+		void writeTPLR(TWord _val)
+		{
+			m_tplr = _val;
+			LOG("Write Timer TPLR " << ": " << HEX(_val));
+		}
+
+		void writeTPCR(TWord _val)
+		{
+			m_tpcr = _val;
+			LOG("Write Timer TPCR " << ": " << HEX(_val));
+		}
+
+		const TWord& readTCSR(int _index) const			{ return m_timers[_index].m_tcsr; }
+		const TWord& readTLR(int _index) const			{ return m_timers[_index].m_tlr; }
+		const TWord& readTCPR(int _index) const			{ return m_timers[_index].m_tcpr; }
+		const TWord& readTCR(int _index) const			{ return m_timers[_index].m_tcr; }
+
+		const TWord& readTPLR() const					{ return m_tplr; }
+		const TWord& readTPCR() const					{ return m_tpcr; }
 
 	private:
 		template<Timer::TcsrBits B> static void timerFlagReset(const Bitfield<unsigned, Timer::TcsrBits, 22>& _tcsr, TWord& _val)
@@ -131,6 +159,12 @@ namespace dsp56k
 				_val &= ~(1<<B);
 			else
 				_val |= (1<<B);
+		}
+
+		TimerMode mode(uint32_t _index) const
+		{
+			const TWord v = m_timers[_index].m_tcsr;
+			return static_cast<TimerMode>((v & Timer::M_TC) >> 4);
 		}
 
 		IPeripherals& m_peripherals;

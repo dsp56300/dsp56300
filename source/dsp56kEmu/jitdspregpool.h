@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <list>
 #include <vector>
 
@@ -9,6 +10,7 @@
 
 namespace dsp56k
 {
+	class DspValue;
 	class JitBlock;
 
 	class JitDspRegPool
@@ -16,6 +18,8 @@ namespace dsp56k
 	public:
 		enum DspReg
 		{
+			DspRegInvalid = -1,
+
 			DspR0,	DspR1,	DspR2,	DspR3,	DspR4,	DspR5,	DspR6,	DspR7,
 			DspN0,	DspN1,	DspN2,	DspN3,	DspN4,	DspN5,	DspN6,	DspN7,
 			DspM0,	DspM1,	DspM2,	DspM3,	DspM4,	DspM5,	DspM6,	DspM7,
@@ -38,23 +42,83 @@ namespace dsp56k
 			DspCount
 		};
 
+		enum class DspRegFlags : uint64_t
+		{
+			None = 0,
+
+			R0 = 1ull<<DspR0,	R1 = 1ull<<DspR1,	R2 = 1ull<<DspR2,	R3 = 1ull<<DspR3,	R4 = 1ull<<DspR4,	R5 = 1ull<<DspR5,	R6 = 1ull<<DspR6,	R7 = 1ull<<DspR7,
+			N0 = 1ull<<DspN0,	N1 = 1ull<<DspN1,	N2 = 1ull<<DspN2,	N3 = 1ull<<DspN3,	N4 = 1ull<<DspN4,	N5 = 1ull<<DspN5,	N6 = 1ull<<DspN6,	N7 = 1ull<<DspN7,
+			M0 = 1ull<<DspM0,	M1 = 1ull<<DspM1,	M2 = 1ull<<DspM2,	M3 = 1ull<<DspM3,	M4 = 1ull<<DspM4,	M5 = 1ull<<DspM5,	M6 = 1ull<<DspM6,	M7 = 1ull<<DspM7,
+
+			A = 1ull<<DspA,			B = 1ull<<DspB,
+			Awrite = 1ull<<DspAwrite,	Bwrite = 1ull<<DspBwrite,
+
+			X = 1ull<<DspX,	Y= 1ull<<DspY,
+
+			PC = 1ull<<DspPC,
+			SR = 1ull<<DspSR,
+			LC = 1ull<<DspLC,
+			LA = 1ull<<DspLA,
+
+			T0 = 1ull<<TempA, T1 = 1ull<<TempB, T2 = 1ull<<TempC, T3 = 1ull<<TempD, T4 = 1ull<<TempE, T5 = 1ull<<TempF, T6 = 1ull<<TempG, T7 = 1ull<<TempH,
+
+			M0mod  = 1ull<<DspM0mod,  M1mod  = 1ull<<DspM1mod,  M2mod  = 1ull<<DspM2mod,  M3mod  = 1ull<<DspM3mod,  M4mod  = 1ull<<DspM4mod,  M5mod  = 1ull<<DspM5mod,  M6mod  = 1ull<<DspM6mod,  M7mod  = 1ull<<DspM7mod,
+			M0mask = 1ull<<DspM0mask, M1mask = 1ull<<DspM1mask, M2mask = 1ull<<DspM2mask, M3mask = 1ull<<DspM3mask, M4mask = 1ull<<DspM4mask, M5mask = 1ull<<DspM5mask, M6mask = 1ull<<DspM6mask, M7mask = 1ull<<DspM7mask,
+		};
+
+		struct SpillReg
+		{
+			JitReg128 reg;
+			uint32_t offset = 0;
+
+			void reset()
+			{
+				reg.reset();
+				offset = 0;
+			}
+			bool isValid() const
+			{
+				return reg.isValid();
+			}
+			bool equals(const SpillReg& _r) const
+			{
+				return offset == _r.offset && reg.equals(_r.reg);
+			}
+		};
+
 		JitDspRegPool(JitBlock& _block);
 		~JitDspRegPool();
 
-		JitRegGP get(DspReg _reg, bool _read, bool _write);
+		JitRegGP get(DspReg _reg, bool _read, bool _write)
+		{
+			return get(JitRegGP(), _reg, _read, _write);
+		}
+		JitRegGP get(const JitRegGP& _dst, DspReg _reg, bool _read, bool _write);
 
+		DspValue read(DspReg _src) const;
 		void read(const JitRegGP& _dst, DspReg _src);
 		void write(DspReg _dst, const JitRegGP& _src);
+		void write(DspReg _dst, const DspValue& _src);
 
 		void lock(DspReg _reg);
 		void unlock(DspReg _reg);
 
+		void releaseNonLocked();
 		void releaseAll();
 		void releaseWritten();
+		void releaseLoaded();
+		void releaseByFlags(DspRegFlags _flags);
 
-		bool hasWrittenRegs() const { return m_writtenDspRegs != 0; }
+		void debugStoreAll();
+
+		bool hasWrittenRegs() const { return m_writtenDspRegs != DspRegFlags::None; }
+
+		DspRegFlags getLoadedRegs() const { return m_loadedDspRegs; }
+		DspRegFlags getWrittenRegs() const { return m_writtenDspRegs; }
+		DspRegFlags getSpilledRegs() const { return m_spilledDspRegs; }
 
 		void setRepMode(bool _repMode) { m_repMode = _repMode; }
+
 		bool isInUse(const JitReg128& _xmm) const;
 		bool isInUse(const JitRegGP& _gp) const;
 		bool isInUse(DspReg _reg) const;
@@ -62,14 +126,8 @@ namespace dsp56k
 		DspReg aquireTemp();
 		void releaseTemp(DspReg _reg);
 
-		bool isWritten(DspReg _reg) const
-		{
-			return m_writtenDspRegs & (1ull<<static_cast<uint64_t>(_reg));
-		}
-		bool isLocked(DspReg _reg) const
-		{
-			return m_lockedGps & (1ull<<static_cast<uint64_t>(_reg));
-		}
+		bool isWritten(DspReg _reg) const		{ return flagTest(m_writtenDspRegs, _reg); }
+		bool isLocked(DspReg _reg) const		{ return flagTest(m_lockedGps, _reg); }
 
 		bool move(DspReg _dst, DspReg _src);
 		bool move(const JitRegGP& _dst, DspReg _src);
@@ -93,21 +151,22 @@ namespace dsp56k
 			return m_dirty;
 		}
 
+		void movDspReg(const TReg5& _dst, const DspValue& _src) const;
+		void movDspReg(DspValue& _dst, const TReg5& _src) const;
+
+		void movDspReg(const TReg24& _dst, const DspValue& _src) const;
+		void movDspReg(DspValue& _dst, const TReg24& _src) const;
 
 		template<typename T, unsigned int B>
 		void movDspReg(const RegType<T, B>& _reg, const JitRegGP& _src) const
 		{
-			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
-				mov(makeDspPtr(_reg), r32(_src));
-			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
-				mov(makeDspPtr(_reg), r64(_src));
-			else if constexpr (sizeof(_reg.var) == sizeof(uint8_t))
-				movb(makeDspPtr(_reg), r64(_src));
 			static_assert(sizeof(_reg.var) == sizeof(uint64_t) || sizeof(_reg.var) == sizeof(uint32_t) || sizeof(_reg.var) == sizeof(uint8_t), "unknown register size");
+
+			mov(makeDspPtr(_reg), _src);
 		}
 
 		template<typename T, unsigned int B>
-		void movDspReg(const RegType<T, B>& _reg, const JitReg128& _src) const
+		void movDspReg(const RegType<T, B>& _reg, const SpillReg& _src) const
 		{
 			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
 				movd(makeDspPtr(_reg), _src);
@@ -116,7 +175,7 @@ namespace dsp56k
 			static_assert(sizeof(_reg.var) == sizeof(uint64_t) || sizeof(_reg.var) == sizeof(uint32_t), "unknown register size");
 		}
 
-		void movDspReg(const TWord& _reg, const JitReg128& _src) const
+		void movDspReg(const TWord& _reg, const SpillReg& _src) const
 		{
 			movd(makeDspPtr(&_reg, sizeof(_reg)), _src);
 		}
@@ -126,21 +185,13 @@ namespace dsp56k
 			mov(makeDspPtr(&_reg, sizeof(_reg)), r32(_src));
 		}
 
-		void movDspReg(const int8_t& _reg, const JitRegGP& _src) const
-		{
-			movb(makeDspPtr(&_reg, sizeof(_reg)), r32(_src));
-		}
+		void movDspReg(const int8_t& _reg, const JitRegGP& _src) const;
 
 		template<typename T, unsigned int B>
 		void movDspReg(const JitRegGP& _dst, const RegType<T, B>& _reg) const
 		{
-			if constexpr (sizeof(_reg.var) == sizeof(uint32_t))
-				mov(r32(_dst), makeDspPtr(_reg));
-			else if constexpr (sizeof(_reg.var) == sizeof(uint64_t))
-				mov(r64(_dst), makeDspPtr(_reg));
-			else if constexpr (sizeof(_reg.var) == sizeof(uint8_t))
-				movb(_dst, makeDspPtr(_reg));
 			static_assert(sizeof(_reg.var) == sizeof(uint64_t) || sizeof(_reg.var) == sizeof(uint32_t) || sizeof(_reg.var) == sizeof(uint8_t), "unknown register size");
+			mov(_dst, makeDspPtr(_reg));
 		}
 
 		void movDspReg(const JitRegGP& _dst, const TWord& _reg) const
@@ -148,10 +199,7 @@ namespace dsp56k
 			mov(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
 		}
 
-		void movDspReg(const JitRegGP& _dst, const int8_t& _reg) const
-		{
-			movb(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
-		}
+		void movDspReg(const JitRegGP& _dst, const int8_t& _reg) const;
 
 		template<typename T, unsigned int B>
 		JitMemPtr makeDspPtr(const RegType<T, B>& _reg) const
@@ -167,9 +215,9 @@ namespace dsp56k
 		void makeSpace(DspReg _wantedReg);
 		void clear();
 
-		void load(JitRegGP& _dst, DspReg _src);
+		void load(const JitRegGP& _dst, DspReg _src);
 		void store(DspReg _dst, const JitRegGP& _src) const;
-		void store(DspReg _dst, const JitReg128& _src) const;
+		void store(DspReg _dst, const SpillReg& _src) const;
 
 		bool release(DspReg _dst);
 
@@ -181,11 +229,21 @@ namespace dsp56k
 				_dst.push_back(_src);
 		}
 
-		void setWritten(DspReg _reg);
-		void clearWritten(DspReg _reg);
+		void setLoaded(DspReg _reg)				{ flagSet(m_loadedDspRegs, _reg); }
+		void clearLoaded(DspReg _reg)			{ flagClear(m_loadedDspRegs, _reg); }
 
-		void setLocked(DspReg _reg)				{ m_lockedGps |= (1ull<<static_cast<uint64_t>(_reg)); }											  
-		void clearLocked(DspReg _reg)			{ m_lockedGps &= ~(1ull<<static_cast<uint64_t>(_reg)); }
+		void setWritten(DspReg _reg)			{ m_dirty |= flagSet(m_writtenDspRegs, _reg); }
+		void clearWritten(DspReg _reg)			{ m_dirty |= flagClear(m_writtenDspRegs, _reg); }
+
+		void setLocked(DspReg _reg)				{ flagSet(m_lockedGps, _reg); }
+		void clearLocked(DspReg _reg)			{ flagClear(m_lockedGps, _reg); }
+
+		void setSpilled(DspReg _reg)			{ flagSet(m_spilledDspRegs, _reg); }
+		void clearSpilled(DspReg _reg)			{ flagClear(m_spilledDspRegs, _reg); }
+
+		static bool flagSet(DspRegFlags& _flags, DspReg _reg);
+		static bool flagClear(DspRegFlags& _flags, DspReg _reg);
+		static bool flagTest(const DspRegFlags& _flags, DspReg _reg);
 
 		template<typename T> class RegisterList
 		{
@@ -295,28 +353,49 @@ namespace dsp56k
 		};
 
 		void mov (const JitMemPtr& _dst, const JitRegGP& _src) const;
-		void movd(const JitMemPtr& _dst, const JitReg128& _src) const;
-		void movq(const JitMemPtr& _dst, const JitReg128& _src) const;
-		void movb(const JitMemPtr& _dst, const JitRegGP& _src) const;
+		void movd(const JitMemPtr& _dst, const SpillReg& _src) const;
+		void movq(const JitMemPtr& _dst, const SpillReg& _src) const;
 
 		void mov (const JitRegGP& _dst , const JitMemPtr& _src) const;
 		void movd(const JitReg128& _dst, const JitMemPtr& _src) const;
 		void movq(const JitReg128& _dst, const JitMemPtr& _src) const;
-		void movb(const JitRegGP& _dst, const JitMemPtr& _src) const;
+
+		void spillMove(const JitRegGP& _dst, const SpillReg& _src) const;
+		void spillMove(const SpillReg& _dst, const JitRegGP& _src) const;
+		void spillMove(const SpillReg& _dst, const SpillReg& _src) const;
 
 		JitBlock& m_block;
 
-		uint64_t m_lockedGps;
-		uint64_t m_writtenDspRegs;
+		DspRegFlags m_lockedGps = DspRegFlags::None;
+		DspRegFlags m_writtenDspRegs = DspRegFlags::None;
+		DspRegFlags m_loadedDspRegs = DspRegFlags::None;
+		DspRegFlags m_spilledDspRegs = DspRegFlags::None;
 
 		RegisterList<JitRegGP> m_gpList;
-		RegisterList<JitReg128> m_xmList;
+		RegisterList<SpillReg> m_xmList;
+		std::array<asmjit::BaseNode*, DspCount> m_moveToXmmInstruction{};
 
 		std::vector<DspReg> m_availableTemps;
 
+		const bool m_extendedSpillSpace;
 		bool m_isParallelOp = false;
 		bool m_repMode = false;
 		mutable JitMemPtr m_dspPtr;
 		bool m_dirty = false;
 	};
+
+	static constexpr JitDspRegPool::DspRegFlags operator | (const JitDspRegPool::DspRegFlags& _a, const JitDspRegPool::DspRegFlags& _b)
+	{
+		return static_cast<JitDspRegPool::DspRegFlags>(static_cast<uint64_t>(_a) | static_cast<uint64_t>(_b));
+	}
+
+	static constexpr JitDspRegPool::DspRegFlags operator & (const JitDspRegPool::DspRegFlags& _a, const JitDspRegPool::DspRegFlags& _b)
+	{
+		return static_cast<JitDspRegPool::DspRegFlags>(static_cast<uint64_t>(_a) & static_cast<uint64_t>(_b));
+	}
+
+	static constexpr JitDspRegPool::DspRegFlags operator ~ (const JitDspRegPool::DspRegFlags& _a)
+	{
+		return static_cast<JitDspRegPool::DspRegFlags>(~static_cast<uint64_t>(_a));
+	}
 }
