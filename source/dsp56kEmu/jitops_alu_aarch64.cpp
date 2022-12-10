@@ -2,6 +2,7 @@
 
 #ifdef HAVE_ARM64
 
+#include "jitblockruntimedata.h"
 #include "jitdspmode.h"
 #include "jitops.h"
 #include "jitops_mem.inl"
@@ -426,7 +427,7 @@ namespace dsp56k
 
 	void JitOps::op_Rep_Div(const TWord _op, const TWord _iterationCount)
 	{
-		m_block.getEncodedInstructionCount() += _iterationCount;
+		m_blockRuntimeData.getEncodedInstructionCount() += _iterationCount;
 
 		const auto ab = getFieldValue<Div, Field_d>(_op);
 		const auto jj = getFieldValue<Div, Field_JJ>(_op);

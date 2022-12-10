@@ -80,6 +80,8 @@ namespace dsp56k
 		void setPC(const DspValue& _pc) const;
 		CCRMask& ccrDirtyFlags() { return m_ccrDirtyFlags; }
 
+		void reset();
+
 	private:
 		JitDspRegPool& pool() const;
 

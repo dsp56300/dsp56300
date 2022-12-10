@@ -7,7 +7,6 @@ namespace dsp56k
 	struct JitConfig
 	{
 		bool aguSupportBitreverse = false;
-		bool aguAssumePositiveN = true;
 		bool aguSupportMultipleWrapModulo = true;
 		bool cacheSingleOpBlocks = true;
 		bool linkJitBlocks = true;

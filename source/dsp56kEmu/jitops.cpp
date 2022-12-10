@@ -2,6 +2,7 @@
 
 #include "dsp.h"
 #include "jitblock.h"
+#include "jitblockruntimedata.h"
 #include "jithelper.h"
 
 #include "jitops_alu.inl"
@@ -253,8 +254,9 @@ namespace dsp56k
 		&JitOps::op_Wait							// Wait 
 	};
 
-	JitOps::JitOps(JitBlock& _block, bool _fastInterrupt/* = false*/)
+	JitOps::JitOps(JitBlock& _block, JitBlockRuntimeData& _brt, bool _fastInterrupt/* = false*/)
 	: m_block(_block)
+	, m_blockRuntimeData(_brt)
 	, m_opcodes(_block.dsp().opcodes())
 	, m_dspRegs(_block.regs())
 	, m_asm(_block.asm_())
@@ -444,7 +446,7 @@ namespace dsp56k
 			return;
 		}
 
-		If(m_block, [&](auto _toFalse)
+		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 			m_asm.test_(_lc.get());
 			m_asm.jz(_toFalse);
@@ -601,7 +603,7 @@ namespace dsp56k
 
 		const DSPReg sr(m_block, JitDspRegPool::DspSR, true, false);
 
-		If(m_block, [&](auto _toFalse)
+		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 #ifdef HAVE_ARM64
 			const RegGP test(m_block);
@@ -794,7 +796,7 @@ namespace dsp56k
 		else if(!opA)
 		{
 			// rep nop => do nothing
-			m_block.getEncodedInstructionCount() += _lc;
+			m_blockRuntimeData.getEncodedInstructionCount() += _lc;
 			m_opSize++;
 			return;
 		}
@@ -822,7 +824,7 @@ namespace dsp56k
 
 		if(hasImmediateOperand)
 		{
-			m_block.getEncodedInstructionCount() += lcImmediateOperand;
+			m_blockRuntimeData.getEncodedInstructionCount() += lcImmediateOperand;
 		}
 		else
 		{

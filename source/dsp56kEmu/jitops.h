@@ -32,7 +32,7 @@ namespace dsp56k
 			PopPC				= 0x08
 		};
 
-		JitOps(JitBlock& _block, bool _fastInterrupt = false);
+		JitOps(JitBlock& _block, JitBlockRuntimeData& _brt, bool _fastInterrupt = false);
 
 		void emit(TWord _pc);
 		void emit(TWord _pc, TWord _op, TWord _opB = 0);
@@ -623,6 +623,7 @@ namespace dsp56k
 		void errNotImplemented(TWord op);
 
 		JitBlock& m_block;
+		JitBlockRuntimeData& m_blockRuntimeData;
 		const Opcodes& m_opcodes;
 		JitDspRegs& m_dspRegs;
 		JitEmitter& m_asm;

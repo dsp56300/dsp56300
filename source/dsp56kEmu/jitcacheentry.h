@@ -6,14 +6,14 @@
 
 namespace dsp56k
 {
-	class JitBlock;
+	class JitBlockRuntimeData;
 	class Jit;
 
 	typedef void (*TJitFunc)(Jit*, TWord);
 
 	struct JitCacheEntry
 	{
-		using SingleOpMap = std::map<uint64_t, JitBlock*>;
+		using SingleOpMap = std::map<uint64_t, JitBlockRuntimeData*>;
 		using SingleOpMapIt = SingleOpMap::iterator;
 
 		~JitCacheEntry()
@@ -41,10 +41,10 @@ namespace dsp56k
 			singleOpCache->erase(_it);
 		}
 
-		void addSingleOp(const uint64_t _key, JitBlock* _block)
+		void addSingleOp(const uint64_t _key, JitBlockRuntimeData* _block)
 		{
 			if(!singleOpCache)
-				singleOpCache = new std::map<uint64_t, JitBlock*>();
+				singleOpCache = new std::map<uint64_t, JitBlockRuntimeData*>();
 			singleOpCache->insert(std::make_pair(_key, _block));
 		}
 
@@ -53,7 +53,7 @@ namespace dsp56k
 			return singleOpCache != nullptr && _it != singleOpCache->end();
 		}
 
-		JitBlock* block = nullptr;
-		std::map<uint64_t, JitBlock*>* singleOpCache = nullptr;
+		JitBlockRuntimeData* block = nullptr;
+		std::map<uint64_t, JitBlockRuntimeData*>* singleOpCache = nullptr;
 	};
 }

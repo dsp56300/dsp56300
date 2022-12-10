@@ -218,6 +218,11 @@ namespace dsp56k
 		return asmjit::CpuInfo::host().hasFeature(_id);
 	}
 
+	bool JitEmitter::hasBMI() const
+	{
+		return hasFeature(asmjit::CpuFeatures::X86::kBMI);
+	}
+
 	bool JitEmitter::hasBMI2() const
 	{
 		return hasFeature(asmjit::CpuFeatures::X86::kBMI2);

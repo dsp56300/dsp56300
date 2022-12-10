@@ -270,8 +270,10 @@ namespace dsp56k
 
 	JitRegpool::JitRegpool(std::initializer_list<JitReg> _availableRegs) : m_capacity(std::size(_availableRegs))
 	{
-		for (const auto& r : _availableRegs)
-			m_availableRegs.push_front(r);
+		m_availableRegs.reserve(_availableRegs.size());
+
+		for (auto it = std::rbegin(_availableRegs); it != std::rend(_availableRegs); ++it)
+			m_availableRegs.push_back(*it);
 	}
 
 	void JitRegpool::put(JitScopedReg* _scopedReg, bool _weak)
@@ -319,6 +321,15 @@ namespace dsp56k
 	bool JitRegpool::isInUse(const JitReg& _gp) const
 	{
 		return std::find(m_availableRegs.begin(), m_availableRegs.end(), _gp) == m_availableRegs.end();
+	}
+
+	void JitRegpool::reset(std::initializer_list<JitReg> _availableRegs)
+	{
+		m_weakRegs.clear();
+		m_availableRegs.clear();
+
+		for (auto it = std::rbegin(_availableRegs); it != std::rend(_availableRegs); ++it)
+			m_availableRegs.push_back(*it);
 	}
 
 	JitScopedReg& JitScopedReg::operator=(JitScopedReg&& _other) noexcept

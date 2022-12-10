@@ -1,6 +1,8 @@
 #include "jitunittests.h"
 
+#include "jitasmjithelpers.h"
 #include "jitblock.h"
+#include "jitblockruntimedata.h"
 #include "jitemitter.h"
 #include "jithelper.h"
 #include "jitops.h"
@@ -105,12 +107,13 @@ namespace dsp56k
 			config.aguSupportBitreverse = true;
 
 			JitBlock b(m_asm, dsp, rtData, config);
-			JitOps o(b);
+			JitBlockRuntimeData rt;
+			JitOps o(b, rt);
 
 			block = &b;
 			ops = &o;
 
-			errorHandler.setBlock(block);
+			errorHandler.setBlock(&rt);
 
 			_build();
 

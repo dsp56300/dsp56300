@@ -5,7 +5,7 @@
 namespace dsp56k
 {
 	class DSPThread;
-	class JitBlock;
+	class JitBlockRuntimeData;
 	class JitDspMode;
 	class DSP;
 
@@ -25,7 +25,7 @@ namespace dsp56k
 
 		bool isAttached() const { return m_attached; }
 
-		virtual void onJitBlockCreated(const JitDspMode& _mode, const JitBlock* _block) {}
+		virtual void onJitBlockCreated(const JitDspMode& _mode, const JitBlockRuntimeData* _block) {}
 		virtual void onJitBlockDestroyed(const JitDspMode& _mode, TWord _pc) {}
 		virtual void onProgramMemWrite(TWord _addr) {}
 		virtual void onExec(TWord _addr) {}

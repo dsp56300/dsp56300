@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include "jitcacheentry.h"
@@ -7,7 +8,10 @@
 
 namespace dsp56k
 {
+	class AsmJitLogger;
+	class AsmJitErrorHandler;
 	class DSP;
+	class JitBlockRuntimeData;
 
 	class JitBlockChain final
 	{
@@ -21,10 +25,10 @@ namespace dsp56k
 		void recreate(TWord _pc);
 		void destroy(TWord _pc);
 
-		JitBlock* getChildBlock(JitBlock* _parent, TWord _pc, bool _allowCreate = true);
-		JitBlock* emit(TWord _pc);
+		JitBlockRuntimeData* getChildBlock(JitBlockRuntimeData* _parent, TWord _pc, bool _allowCreate = true);
+		JitBlockRuntimeData* emit(TWord _pc);
 
-		JitBlock* getBlock(const TWord _pc)
+		JitBlockRuntimeData* getBlock(const TWord _pc)
 		{
 			return m_jitCache[_pc].block;
 		}
@@ -51,15 +55,15 @@ namespace dsp56k
 
 	private:
 
-		void destroyParents(JitBlock* _block);
-		void destroy(JitBlock* _block);
+		void destroyParents(JitBlockRuntimeData* _block);
+		void destroy(JitBlockRuntimeData* _block);
 
-		void release(const JitBlock* _block);
-		void occupyArea(JitBlock* _block);
-		void unoccupyArea(const JitBlock* _block);
+		void release(JitBlockRuntimeData* _block);
+		void occupyArea(JitBlockRuntimeData* _block);
+		void unoccupyArea(const JitBlockRuntimeData* _block);
 
-		bool isBeingGeneratedRecursive(const JitBlock* _block) const;
-		bool isBeingGenerated(const JitBlock* _block) const;
+		bool isBeingGeneratedRecursive(const JitBlockRuntimeData* _block) const;
+		bool isBeingGenerated(const JitBlockRuntimeData* _block) const;
 
 		Jit& m_jit;
 		const JitDspMode m_mode;
@@ -67,7 +71,10 @@ namespace dsp56k
 		std::vector<JitCacheEntry> m_jitCache;
 		std::vector<TJitFunc> m_jitFuncs;
 
-		std::map<TWord, JitBlock*> m_generatingBlocks;
+		std::map<TWord, JitBlockRuntimeData*> m_generatingBlocks;
+
+		std::unique_ptr<AsmJitLogger> m_logger;
+		std::unique_ptr<AsmJitErrorHandler> m_errorHandler;
 
 		size_t m_codeSize = 0;
 	};

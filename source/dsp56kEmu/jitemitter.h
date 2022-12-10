@@ -81,6 +81,7 @@ namespace dsp56k
 
 #else
 		bool hasFeature(asmjit::CpuFeatures::X86::Id _id) const;
+		bool hasBMI() const;
 		bool hasBMI2() const;
 		void copyBitToReg(const JitRegGP& _dst, uint32_t _dstBit, const JitRegGP& _src, uint32_t _srcBit);
 		void copyBitToReg(const JitRegGP& _dst, const JitRegGP& _src, uint32_t _srcBit)

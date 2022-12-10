@@ -25,56 +25,6 @@ namespace dsp56k
 		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
-		const bool mIsConstant=false;
-		if (mIsConstant)
-		{
-			const TWord mval=0;	// fill in value of _m here.
-			if (mval==0xFFFFFF)
-			{
-				if (_addN)	m_asm.add(_r, _n);
-				else		m_asm.sub(_r, _n);
-			}
-			else if (!(mval&0xFFFF))	updateAddressRegisterSubBitreverse(_r, _n, _addN);
-			else if (mval&0x8000)	{}	// multi-wrap modulo mode
-			else
-			{
-				const TWord modmask=AGU::calcModuloMask(mval);
-				const TWord mplusone=mval+1;
-				const ShiftReg shifter(m_block);
-
-				const RegScratch scratch(m_block);
-				const auto p = r32(scratch), temp = r32(shifter.get()), r=r32(_r), n=r32(_n), m=r32(_m);
-
-				m_asm.and_(p, r, asmjit::Imm(modmask));
-				if (_addN)	m_asm.add(r, r, n);
-				else		m_asm.sub(r, r, n);
-
-				if (m_block.getConfig().aguAssumePositiveN)
-				{
-					m_asm.cmp(n, mval);
-				}
-				else
-				{
-					m_asm.test_(n);
-					m_asm.cneg(temp, r32(_n), asmjit::arm::CondCode::kLT);
-					m_asm.cmp(temp, _m);									// modulo or linear
-				}
-				m_asm.b(asmjit::arm::CondCode::kGT, end);
-
-				if (_addN)	m_asm.adds(p, p, n);
-				else		m_asm.subs(p, r, n);
-
-				m_asm.add(temp, r, asmjit::Imm(mplusone));
-				m_asm.csel(r, temp, r, asmjit::arm::CondCode::kLT);
-				m_asm.sub(temp, r, asmjit::Imm(mplusone));
-				m_asm.cmp(p, asmjit::Imm(mval));
-				m_asm.csel(r, temp, r, asmjit::arm::CondCode::kGT);
-				m_asm.bind(end);
-			}
-			m_asm.and_(_r, asmjit::Imm(0xffffff));
-			return;
-		}
-
 		const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
 
 		{
@@ -106,15 +56,6 @@ namespace dsp56k
 			m_asm.cmp(r32(scratch), asmjit::Imm(0x8000));
 		}
 		m_asm.b(asmjit::arm::CondCode::kUnsignedGE, multipleWrapModulo);
-
-		{
-			const RegScratch scratch(m_block);
-			const auto nAbs = r32(scratch);							// compare abs(n) with m
-			m_asm.test_(r32(_n));
-			m_asm.cneg(nAbs, r32(_n), asmjit::arm::CondCode::kLT);
-			m_asm.cmp(nAbs, r32(moduloMask));						// modulo or linear
-			m_asm.b(asmjit::arm::CondCode::kGT, linear);
-		}
 
 		// modulo:
 		m_asm.bind(modulo);
@@ -243,34 +184,42 @@ namespace dsp56k
 
 	void JitOps::updateAddressRegisterSubModulo(const JitReg32& r, const JitReg32& n, const JitReg32& m, const JitReg32& mMask, bool _addN) const
 	{
-		const ShiftReg shifter(m_block);
-		const auto& p64 = shifter;
-		const auto p = r32(p64.get());
-
+		const ShiftReg shift(m_block);
 		const RegScratch scratch(m_block);
-		const auto temp = r32(scratch);
 
-		m_asm.and_(p, r, mMask);
-		m_asm.add(m, m, asmjit::Imm(1));
-		if (_addN)
-		{
-			m_asm.add(r, r, n);
-			m_asm.adds(p, p, n);
-		}
+		const auto lowerBound = r32(shift.get());
+		const auto mod = r32(scratch);
+
+		signextend24To32(n);
+
+		m_asm.mvn(lowerBound, mMask);
+		m_asm.and_(lowerBound, r);
+
+		if(_addN)
+			m_asm.add(r, n);
 		else
-		{
-			m_asm.sub(r, r, n);
-			m_asm.subs(p, p, n);
-		}
-		m_asm.add(temp, r, m);
-		m_asm.csel(r, temp, r, asmjit::arm::CondCode::kMI);
-		m_asm.sub(temp, r, m);
-		m_asm.sub(m, m, asmjit::Imm(1));
-		m_asm.cmp(p,m);
-		m_asm.csel(r, temp, r, asmjit::arm::CondCode::kGT);
+			m_asm.sub(r, n);
+
+		m_asm.add(mod, m, asmjit::Imm(1));
+
+		// if (n & mask) == 0
+		//     mod = 0
+		m_asm.ands(n, n, mMask);
+		m_asm.csel(mod, n, mod, asmjit::arm::CondCode::kZero);
+
+		// if (r < lowerbound)
+		//     r += mod
+		m_asm.add(n, r, mod);
+		m_asm.cmp(r, lowerBound);
+		m_asm.csel(r, n, r, asmjit::arm::CondCode::kLT);
+
+		// if r > upperBound
+		//     r -= mod
+		m_asm.add(lowerBound, m);
+		m_asm.sub(n, r, mod);
+		m_asm.cmp(r, lowerBound);
+		m_asm.csel(r, n, r, asmjit::arm::CondCode::kGT);
 	}
-
-
 
 	void JitOps::getXY0(DspValue& _dst, const uint32_t _aluIndex, bool _signextend) const
 	{

@@ -294,6 +294,13 @@ namespace dsp56k
 #endif
 	}
 
+	void JitStackHelper::reset()
+	{
+		m_usedRegs.clear();
+		m_pushedRegs.clear();
+		m_pushedBytes = 0;
+	}
+
 	void JitStackHelper::stackRegAdd(uint64_t offset) const
 	{
 		if (!offset)

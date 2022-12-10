@@ -897,6 +897,16 @@ namespace dsp56k
 		return m_dspPtr;
 	}
 
+	void JitDspRegPool::reset()
+	{
+		clear();
+		m_moveToXmmInstruction.fill(nullptr);
+		m_isParallelOp = false;
+		m_repMode = false;
+		m_dspPtr.reset();
+		m_dirty = false;
+	}
+
 	void JitDspRegPool::mov(const JitMemPtr& _dst, const JitRegGP& _src) const
 	{
 		m_block.mem().mov(_dst, _src);

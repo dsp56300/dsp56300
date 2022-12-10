@@ -22,7 +22,7 @@ namespace dsp56k
 		DspValue a(m_block, addr, DspValue::Immediate24);
 
 		DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
-		If(m_block, [&](auto _toFalse)
+		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 			bitTestMemory<Inst>(op, BitValue, _toFalse);
 		}, [&]()
@@ -42,7 +42,7 @@ namespace dsp56k
 		decode_dddddd_read(r, dddddd);
 
 		DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
-		If(m_block, [&](auto _toFalse)
+		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 			bitTest<Inst>(op, r, BitValue, _toFalse);
 		}, [&]()
@@ -65,7 +65,7 @@ namespace dsp56k
 			// Use our custom register to read the remaining number of instructions until frame sync flips
 			m_block.mem().readPeriph(count, MemArea_X, BitValue == BitSet ? Esai::RemainingInstructionsForFrameSyncFalse : Esai::RemainingInstructionsForFrameSyncTrue, Inst);
 
-			If(m_block, [&](auto _toFalse)
+			If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 			{
 				// do nothing if the value is zero
 				m_asm.test_(r32(count.get()));
@@ -110,7 +110,7 @@ namespace dsp56k
 		DspValue a(m_block, addr, DspValue::Immediate24);
 
 		DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
-		If(m_block, [&](auto _toFalse)
+		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 			bitTestMemory<Inst>(_op, BitValue, _toFalse);
 		}, [&]()
@@ -127,7 +127,7 @@ namespace dsp56k
 		const auto dddddd = getFieldValue<Inst,Field_DDDDDD>(op);
 
 		DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
-		If(m_block, [&](auto _toFalse)
+		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 			DspValue r(m_block);
 			decode_dddddd_read(r, dddddd);

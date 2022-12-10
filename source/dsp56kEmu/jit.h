@@ -6,11 +6,13 @@
 #include "types.h"
 
 #include <set>
+#include <vector>
 
 #include "debuggerinterface.h"
 #include "jitblockchain.h"
 #include "jitconfig.h"
 #include "jitdspmode.h"
+#include "jitemitter.h"
 #include "jitruntimedata.h"
 #include "logging.h"
 
@@ -19,6 +21,7 @@ namespace asmjit
 	inline namespace _abi_1_9
 	{
 		class JitRuntime;
+		class CodeHolder;
 	}
 }
 
@@ -28,6 +31,7 @@ namespace dsp56k
 	class DSP;
 	class JitBlock;
 	class JitProfilingSupport;
+	struct JitBlockEmitter;
 
 	class Jit final
 	{
@@ -84,6 +88,12 @@ namespace dsp56k
 
 		void destroyAllBlocks();
 
+		JitBlockEmitter* acquireEmitter();
+		void releaseEmitter(JitBlockEmitter* _emitter);
+
+		JitBlockRuntimeData* acquireBlockRuntimeData();
+		void releaseBlockRuntimeData(JitBlockRuntimeData* _b);
+
 	private:
 		void emit(TWord _pc);
 
@@ -102,6 +112,9 @@ namespace dsp56k
 		std::set<TWord> m_loopEnds;
 
 		std::unique_ptr<JitProfilingSupport> m_profiling;
+
+		std::vector<JitBlockEmitter*> m_emitters;
+		std::vector<JitBlockRuntimeData*> m_blockRuntimeDatas;
 
 		JitConfig m_config;
 

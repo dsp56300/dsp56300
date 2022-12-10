@@ -1,6 +1,6 @@
 #pragma once
 
-#include "jitblock.h"
+#include "jitblockruntimedata.h"
 
 namespace dsp56k
 {
@@ -11,13 +11,13 @@ namespace dsp56k
 		~JitProfilingSupport();
 
 		static bool isBeingProfiled();
-		void addJitBlock(JitBlock& _jitBlock);
+		void addJitBlock(JitBlockRuntimeData& _jitBlock);
 
 	private:
 		struct FileInfo
 		{
 			std::string name;
-			std::vector<JitBlock::InstructionProfilingInfo> info;
+			std::vector<JitBlockRuntimeData::InstructionProfilingInfo> info;
 		};
 
 		void threadWriteSources();

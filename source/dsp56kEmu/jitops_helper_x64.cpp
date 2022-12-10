@@ -26,48 +26,6 @@ namespace dsp56k
 		
 		const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
 
-		if (m_block.getConfig().aguAssumePositiveN && !m_block.getConfig().aguSupportMultipleWrapModulo)
-		{
-			if (m_block.getConfig().aguSupportBitreverse)
-			{
-				m_asm.test_(_m.r16());							// bit reverse
-				m_asm.jnz(bitreverse);
-				updateAddressRegisterSubBitreverse(_r, _n, _addN);
-				m_asm.jmp(end);
-				m_asm.bind(bitreverse);
-			}
-
-			const ShiftReg shifter(m_block);
-			const auto& p64 = shifter;
-			const auto p = r32(p64.get()), r=r32(_r), n=r32(_n), m=r32(_m);
-			const RegScratch scratch(m_block);
-			const auto temp = r32(scratch);
-
-			m_asm.mov(p,r);
-			if (_addN) 	m_asm.add(r,n);
-			else		m_asm.sub(r,n);
-
-			m_asm.cmp(m, asmjit::Imm(0xffffff));		// if (m==-1) then linear
-			m_asm.je(end);
-			m_asm.cmp(n, m);							// if n>m then linear.
-			m_asm.jg(end);
-
-			m_asm.and_(p, r32(moduloMask));
-			m_asm.inc(m);
-			if (_addN)	m_asm.add(p,n);
-			else		m_asm.sub(p,n);
-			m_asm.lea(temp, asmjit::x86::ptr(r,m));
-			m_asm.cmovs(r,temp);
-			m_asm.mov(temp,r);
-			m_asm.sub(temp,m);
-			m_asm.dec(m);
-			m_asm.cmp(p,m);
-			m_asm.cmovg(r,temp);
-			m_asm.bind(end);
-			m_asm.and_(_r, asmjit::Imm(0xffffff));
-			return;
-		}
-
 		m_asm.cmp(r32(_m), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.jnz(notLinear);
 
@@ -90,17 +48,6 @@ namespace dsp56k
 
 		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));			// multi-wrap modulo
 		m_asm.ja(multipleWrapModulo);
-
-		{
-			const RegScratch scratch(m_block);
-			const auto nAbs = r32(scratch);					// compare abs(n) with m
-			m_asm.mov(nAbs, _n);
-			m_asm.neg(nAbs);
-			m_asm.cmovl(nAbs, _n);
-
-			m_asm.cmp(nAbs, r32(moduloMask));				// modulo or linear
-			m_asm.jg(linear);
-		}
 
 		// modulo:
 		updateAddressRegisterSubModulo(r32(_r), _n, r32(_m), r32(moduloMask), _addN);
@@ -185,9 +132,9 @@ namespace dsp56k
 
 		if (!_addN)
 		{
-			m_asm.lea(p, asmjit::x86::ptr(_r, static_cast<int>(-1)));
+			m_asm.lea(p, ptr(_r, -1));
 			m_asm.test(_r, _mMask);
-			m_asm.lea(_r, asmjit::x86::ptr(_r, _m));
+			m_asm.lea(_r, ptr(_r, _m));
 			m_asm.cmovne(_r, p);
 		}
 		else
@@ -203,35 +150,52 @@ namespace dsp56k
 
 	void JitOps::updateAddressRegisterSubModulo(const JitReg32& r, const JitReg32& n, const JitReg32& m, const JitReg32& mMask, bool _addN) const
 	{
-		const ShiftReg shifter(m_block);
-		const auto& p64 = shifter;
-		const auto p = r32(p64.get());
-
+		const ShiftReg shift(m_block);
 		const RegScratch scratch(m_block);
-		const auto temp = r32(scratch);
 
-		m_asm.mov(p,r);
-		m_asm.and_(p, mMask);
-		m_asm.inc(m);
-		if (_addN)
+		const auto lowerBound = r32(shift.get());
+		const auto mod = r32(scratch);
+
+		signextend24To32(n);
+
+		if(m_asm.hasBMI())
 		{
-			m_asm.add(r,n);
-			m_asm.add(p,n);
+			m_asm.andn(lowerBound, mMask, r);
 		}
 		else
 		{
-			m_asm.sub(r,n);
-			m_asm.sub(p,n);
+			m_asm.mov(lowerBound, mMask);
+			m_asm.not_(lowerBound);
+			m_asm.and_(lowerBound, r);
 		}
-		m_asm.lea(temp, asmjit::x86::ptr(r,m));
-		m_asm.cmovs(r,temp);
-		m_asm.mov(temp,r);
-		m_asm.sub(temp,m);
-		m_asm.dec(m);
-		m_asm.cmp(p,m);
-		m_asm.cmovg(r,temp);
-	}
 
+		if(_addN)
+			m_asm.add(r, n);
+		else
+			m_asm.sub(r, n);
+
+		m_asm.mov(mod, m);
+		m_asm.inc(mod);
+
+		// if (n & mask) == 0
+		//     mod = 0
+		m_asm.and_(n, mMask);
+		m_asm.cmovz(mod, n);
+
+		// if (r < lowerbound)
+		//     r += mod
+		m_asm.lea(n, ptr(r, mod));
+		m_asm.cmp(r, lowerBound);
+		m_asm.cmovl(r, n);
+
+		// if r > upperBound
+		//     r -= mod
+		m_asm.add(lowerBound, m);
+		m_asm.mov(n, r);
+		m_asm.sub(n, mod);
+		m_asm.cmp(r, lowerBound);
+		m_asm.cmovg(r, n);
+	}
 
 	void JitOps::getXY0(DspValue& _dst, const uint32_t _aluIndex, bool _signextend) const
 	{

@@ -123,6 +123,32 @@ namespace dsp56k
 		{
 			verify(dsp.regs().r[5] == 0x0a0000);
 		});
+
+		runTest([&]()
+		{
+			// undefined behaviour, tested in the simulator. It does modulo where masked and not-modulo outside of the mask
+			dsp.set_m(5, 0x000080);
+			dsp.regs().r[5].var = 0x000000;
+			dsp.regs().n[5].var = 0x000190;
+
+			emit(0x204d00);	// move (r5)+n5
+		}, [&]()
+		{
+			verify(dsp.regs().r[5] == 0x00010f);
+		});
+
+		runTest([&]()
+		{
+			// negative n
+			dsp.set_m(0, 0x003ffd);
+			dsp.regs().r[0].var = 0x0bbc3a;
+			dsp.regs().n[0].var = 0xffe9c7;
+
+			emit(0x204800);	// move (r0)+n0
+		}, [&]()
+		{
+			verify(dsp.regs().r[0] == 0x0ba601);
+		});
 	}
 
 	void UnitTests::aguMultiWrapModulo()

@@ -26,9 +26,11 @@ namespace dsp56k
 
 		size_t capacity() const { return m_capacity; }
 
+		void reset(std::initializer_list<JitReg> _availableRegs);
+
 	private:
 		const size_t m_capacity;
-		std::list<JitReg> m_availableRegs;
+		std::vector<JitReg> m_availableRegs;
 		std::list<JitScopedReg*> m_weakRegs;
 	};
 

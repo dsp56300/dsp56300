@@ -53,12 +53,15 @@ utils.cpp utils.h
 
 set(SOURCES_JIT
 jit.cpp jit.h
+jitasmjithelpers.cpp jitasmjithelpers.h
 jitconfig.h
 jitdspmode.cpp jitdspmode.h
 jitemitter.cpp jitemitter.h
 jitblock.cpp jitblock.h
 jitblockchain.cpp jitblockchain.h
+jitblockemitter.h
 jitblockinfo.cpp jitblockinfo.h
+jitblockruntimedata.cpp jitblockruntimedata.h
 jitcacheentry.h
 jithelper.cpp jithelper.h
 jitdspregs.cpp jitdspregs.h

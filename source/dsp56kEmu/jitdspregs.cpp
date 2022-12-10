@@ -59,6 +59,11 @@ namespace dsp56k
 		m_block.dspRegPool().movDspReg(_dst, _src);
 	}
 
+	void JitDspRegs::reset()
+	{
+		m_ccrDirtyFlags = static_cast<CCRMask>(0);
+	}
+
 	JitDspRegPool& JitDspRegs::pool() const
 	{
 		return m_block.dspRegPool();

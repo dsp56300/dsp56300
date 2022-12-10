@@ -1,10 +1,13 @@
 #include "jitblockchain.h"
 
 #include "dsp.h"
+#include "jitasmjithelpers.h"
+#include "jitblockruntimedata.h"
 #include "jitblock.h"
 #include "jitemitter.h"
 #include "jitprofilingsupport.h"
 #include "asmjit/core/jitruntime.h"
+#include "jitblockemitter.h"
 
 namespace dsp56k
 {
@@ -14,6 +17,9 @@ namespace dsp56k
 
 	JitBlockChain::JitBlockChain(Jit& _jit, const JitDspMode& _mode) : m_jit(_jit), m_mode(_mode)
 	{
+		m_logger.reset(new AsmJitLogger());
+		m_errorHandler.reset(new AsmJitErrorHandler());
+
 		const auto& mem = _jit.dsp().memory();
 		const auto pSize = mem.sizeP();
 		m_jitCache.resize(pSize);
@@ -47,7 +53,7 @@ namespace dsp56k
 		return m_jitFuncs[_pc] == e.block->getFunc() || m_jitFuncs[_pc] == &funcRun;
 	}
 
-	void JitBlockChain::occupyArea(JitBlock* _block)
+	void JitBlockChain::occupyArea(JitBlockRuntimeData* _block)
 	{
 		const auto first = _block->getPCFirst();
 		const auto last = first + _block->getPMemSize();
@@ -65,7 +71,7 @@ namespace dsp56k
 		m_jit.addLoop(_block->getInfo());
 	}
 
-	void JitBlockChain::unoccupyArea(const JitBlock* _block)
+	void JitBlockChain::unoccupyArea(const JitBlockRuntimeData* _block)
 	{
 		const auto first = _block->getPCFirst();
 		const auto last = first + _block->getPMemSize();
@@ -93,7 +99,7 @@ namespace dsp56k
 			m_jit.dsp().memory().getOpcode(_pc, opA, opB);
 
 			// try to find two-word op first
-			auto key = JitBlock::getSingleOpCacheKey(opA, opB);
+			auto key = JitBlockRuntimeData::getSingleOpCacheKey(opA, opB);
 
 			auto it = cacheEntry.findSingleOp(key);
 
@@ -102,7 +108,7 @@ namespace dsp56k
 			// if not found, try one-word op
 			if(!cacheEntry.isValid(it))
 			{
-				key = JitBlock::getSingleOpCacheKey(opA, JitBlock::SingleOpCacheIgnoreWordB);
+				key = JitBlockRuntimeData::getSingleOpCacheKey(opA, JitBlockRuntimeData::SingleOpCacheIgnoreWordB);
 				it = cacheEntry.findSingleOp(key);
 				cacheEntryLen = 1;
 			}
@@ -131,11 +137,11 @@ namespace dsp56k
 			exec(_pc);
 	}
 
-	void JitBlockChain::destroyParents(JitBlock* _block)
+	void JitBlockChain::destroyParents(JitBlockRuntimeData* _block)
 	{
 		for (const auto parent : _block->getParents())
 		{
-			auto& e = m_jitCache[parent];
+			const auto& e = m_jitCache[parent];
 
 			if (e.block)
 				destroy(e.block);
@@ -145,7 +151,7 @@ namespace dsp56k
 			{
 				for(auto it = e.singleOpCache->begin(); it != e.singleOpCache->end();)
 				{
-					const auto* b = it->second;
+					auto* b = it->second;
 					if (b->getChild() == _block->getPCFirst() || b->getNonBranchChild() == _block->getPCFirst())
 					{
 						release(b);
@@ -161,7 +167,7 @@ namespace dsp56k
 		_block->clearParents();
 	}
 
-	void JitBlockChain::destroy(JitBlock* _block)
+	void JitBlockChain::destroy(JitBlockRuntimeData* _block)
 	{
 		destroyParents(_block);
 
@@ -195,7 +201,7 @@ namespace dsp56k
 			destroy(block);
 	}
 
-	void JitBlockChain::release(const JitBlock* _block)
+	void JitBlockChain::release(JitBlockRuntimeData* _block)
 	{
 #if DSP56300_DEBUGGER
 		auto* d = m_jit.dsp().getDebugger();
@@ -205,7 +211,8 @@ namespace dsp56k
 		assert(m_codeSize >= _block->codeSize());
 		m_codeSize -= _block->codeSize();
 		m_jit.getRuntime()->release(_block->getFunc());
-		delete _block;
+
+		m_jit.releaseBlockRuntimeData(_block);
 
 //		LOG("Total code size now " << (m_codeSize >> 10) << "kb");
 	}
@@ -218,7 +225,7 @@ namespace dsp56k
 		create(_pc, true);
 	}
 
-	JitBlock* JitBlockChain::getChildBlock(JitBlock* _parent, TWord _pc, bool _allowCreate/* = true*/)
+	JitBlockRuntimeData* JitBlockChain::getChildBlock(JitBlockRuntimeData* _parent, TWord _pc, bool _allowCreate/* = true*/)
 	{
 		if (!m_jit.getConfig().linkJitBlocks)
 			return nullptr;
@@ -262,55 +269,58 @@ namespace dsp56k
 		return e.block;
 	}
 
-	JitBlock* JitBlockChain::emit(TWord _pc)
+	JitBlockRuntimeData* JitBlockChain::emit(TWord _pc)
 	{
-		AsmJitLogger logger;
-		logger.addFlags(asmjit::FormatFlags::kHexImms | /*asmjit::FormatFlags::kHexOffsets |*/ asmjit::FormatFlags::kMachineCode);
-		AsmJitErrorHandler errorHandler;
-		asmjit::CodeHolder code;
+//		AsmJitLogger m_logger;
+//		m_logger.addFlags(asmjit::FormatFlags::kHexImms | /*asmjit::FormatFlags::kHexOffsets |*/ asmjit::FormatFlags::kMachineCode);
+//		code.setLogger(&m_logger);
 
-		code.setErrorHandler(&errorHandler);
-		code.init(m_jit.getRuntime()->environment());
-
-		JitEmitter m_asm(&code);
-
-//		code.setLogger(&logger);
 //		m_asm.addDiagnosticOptions(DiagnosticOptions::kValidateIntermediate);
 //		m_asm.addDiagnosticOptions(DiagnosticOptions::kValidateAssembler);
-		
-		auto* b = new JitBlock(m_asm, m_jit.dsp(), m_jit.getRuntimeData(), m_jit.getConfig());
 
-		errorHandler.setBlock(b);
+		auto* emitter = m_jit.acquireEmitter();
+
+		emitter->codeHolder.setErrorHandler(m_errorHandler.get());
+		emitter->codeHolder.init(m_jit.getRuntime()->environment());
+		emitter->codeHolder.attach(&emitter->emitter);
+
+		auto* b = m_jit.acquireBlockRuntimeData();
+
+		m_errorHandler->setBlock(b);
 
 		m_generatingBlocks.insert(std::make_pair(_pc, b));
 
-		if(!b->emit(this, _pc, m_jitCache, m_jit.getVolatileP(), m_jit.getLoops(), m_jit.getLoopEnds(), m_jit.getProfilingSupport()))
+		if(!emitter->block.emit(*b, this, _pc, m_jitCache, m_jit.getVolatileP(), m_jit.getLoops(), m_jit.getLoopEnds(), m_jit.getProfilingSupport()))
 		{
 			LOG("FATAL: code generation failed for PC " << HEX(_pc));
-			delete b;
+			m_jit.releaseBlockRuntimeData(b);
 			m_generatingBlocks.erase(_pc);
+			m_jit.releaseEmitter(emitter);
 			return nullptr;
 		}
 
 		m_generatingBlocks.erase(_pc);
 
-		m_asm.ret();
+		emitter->emitter.ret();
 
-		m_asm.finalize();
+		emitter->emitter.finalize();
 
 		TJitFunc func;
 
-		const auto err = m_jit.getRuntime()->add(&func, &code);
+		const auto err = m_jit.getRuntime()->add(&func, &emitter->codeHolder);
 
 		if(err)
 		{
 			const auto* const errString = asmjit::DebugUtils::errorAsString(err);
 			LOG("JIT failed: " << err << " - " << errString);
+			m_jit.releaseEmitter(emitter);
 			return nullptr;
 		}
 
-		b->finalize(func, code);
-		m_codeSize += code.codeSize();
+		b->finalize(func, emitter->codeHolder);
+		m_codeSize += emitter->codeHolder.codeSize();
+
+		m_jit.releaseEmitter(emitter);
 
 //		LOG("Total code size now " << (m_codeSize >> 10) << "kb");
 
@@ -328,7 +338,7 @@ namespace dsp56k
 		return b;
 	}
 
-	bool JitBlockChain::isBeingGeneratedRecursive(const JitBlock* _block) const
+	bool JitBlockChain::isBeingGeneratedRecursive(const JitBlockRuntimeData* _block) const
 	{
 		if (!_block)
 			return false;
@@ -345,12 +355,12 @@ namespace dsp56k
 		return false;
 	}
 
-	bool JitBlockChain::isBeingGenerated(const JitBlock* _block) const
+	bool JitBlockChain::isBeingGenerated(const JitBlockRuntimeData* _block) const
 	{
 		if (_block == nullptr)
 			return false;
 
-		for (const auto it : m_generatingBlocks)
+		for (const auto& it : m_generatingBlocks)
 		{
 			if (it.second == _block)
 				return true;

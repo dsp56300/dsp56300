@@ -4,6 +4,7 @@
 #include "jitblock.h"
 #include "jitdspmode.h"
 #include "jitprofilingsupport.h"
+#include "jitblockemitter.h"
 
 #include "asmjit/core/jitruntime.h"
 
@@ -45,6 +46,9 @@ namespace dsp56k
 
 	Jit::Jit(DSP& _dsp) : m_dsp(_dsp), m_rt(new JitRuntime())
 	{
+		m_emitters.reserve(16);
+		m_blockRuntimeDatas.reserve(0x10000);
+
 		if (JitProfilingSupport::isBeingProfiled())
 			m_profiling.reset(new JitProfilingSupport(m_dsp));
 	}
@@ -52,6 +56,15 @@ namespace dsp56k
 	Jit::~Jit()
 	{
 		m_chains.clear();
+
+		for (const auto& emitter : m_emitters)
+			delete emitter;
+		for(const auto& rt : m_blockRuntimeDatas)
+			delete rt;
+
+		m_emitters.clear();
+		m_blockRuntimeDatas.clear();
+
 		delete m_rt;
 	}
 
@@ -131,7 +144,7 @@ namespace dsp56k
 
 	void Jit::run(const TWord _pc)
 	{
-		const JitBlock* block = m_currentChain->getBlock(_pc);
+		const auto* block = m_currentChain->getBlock(_pc);
 		block->getFunc()(this, _pc);
 
 		if(g_traceOps && m_dsp.m_trace)
@@ -246,7 +259,7 @@ namespace dsp56k
 
 			const auto pSize = m_dsp.memory().sizeP();
 
-			const JitBlock* last = nullptr;
+			const JitBlockRuntimeData* last = nullptr;
 
 			for(TWord pc=0; pc<pSize; ++pc)
 			{
@@ -263,5 +276,39 @@ namespace dsp56k
 		m_chains.clear();
 		m_currentChain = nullptr;
 		checkModeChange();
+	}
+
+	JitBlockEmitter* Jit::acquireEmitter()
+	{
+		if(m_emitters.empty())
+			return new JitBlockEmitter(dsp(), getRuntimeData(), getConfig());
+
+		auto* emitter = m_emitters.back();
+		m_emitters.pop_back();
+
+		emitter->reset();
+
+		return emitter;
+	}
+
+	void Jit::releaseEmitter(JitBlockEmitter* _emitter)
+	{
+		m_emitters.emplace_back(_emitter);
+	}
+
+	JitBlockRuntimeData* Jit::acquireBlockRuntimeData()
+	{
+		if(m_blockRuntimeDatas.empty())
+			return new JitBlockRuntimeData();
+
+		auto* r = m_blockRuntimeDatas.back();
+		m_blockRuntimeDatas.pop_back();
+		r->reset();
+		return r;
+	}
+
+	void Jit::releaseBlockRuntimeData(JitBlockRuntimeData* _b)
+	{
+		m_blockRuntimeDatas.push_back(_b);
 	}
 }

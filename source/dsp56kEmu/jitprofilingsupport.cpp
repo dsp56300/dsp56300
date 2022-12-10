@@ -50,7 +50,7 @@ namespace dsp56k
 #endif
 	}
 
-	void JitProfilingSupport::addJitBlock(JitBlock& b)
+	void JitProfilingSupport::addJitBlock(JitBlockRuntimeData& b)
 	{
 #ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
 		iJIT_Method_Load jmethod = { 0 };
@@ -86,7 +86,7 @@ namespace dsp56k
 		jmethod.method_load_address = static_cast<void*>(b.getFunc());
 		jmethod.method_size = static_cast<unsigned int>(b.getCodeSize());
 
-		std::vector<JitBlock::InstructionProfilingInfo> pis;
+		std::vector<JitBlockRuntimeData::InstructionProfilingInfo> pis;
 		pis.swap(b.getProfilingInfo());
 
 		std::vector<LineNumberInfo> lineNumberInfos;

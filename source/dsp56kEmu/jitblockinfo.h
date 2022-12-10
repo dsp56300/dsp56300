@@ -41,6 +41,22 @@ namespace dsp56k
 			flags |= static_cast<uint32_t>(_flag);
 		}
 
+		void reset()
+		{
+			terminationReason = TerminationReason::None;
+			flags = 0;
+
+			pc = 0;
+			memSize = 0;
+			instructionCount = 0;
+			readRegs = RegisterMask::None;
+			writtenRegs = RegisterMask::None;
+			branchTarget = g_invalidAddress;
+			branchIsConditional = false;
+			loopBegin = g_invalidAddress;
+			loopEnd = g_invalidAddress;
+		}
+
 		TerminationReason terminationReason = TerminationReason::None;
 		uint32_t flags = 0;
 

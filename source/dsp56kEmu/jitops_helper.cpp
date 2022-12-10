@@ -133,32 +133,7 @@ namespace dsp56k
 		case AddressingMode::Modulo:
 			{
 				const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
-
-				const auto linear = m_asm.newLabel();
-				const auto end = m_asm.newLabel();
-
-				{
-					const RegScratch scratch(m_block);
-
-					const auto nAbs = r32(scratch);				// compare abs(n) with m
-#ifdef HAVE_X86_64
-					m_asm.mov(nAbs, _n);
-					m_asm.neg(nAbs);
-					m_asm.cmovl(nAbs, _n);
-#else
-					m_asm.negs(nAbs, _n);
-					m_asm.cneg(nAbs, nAbs, asmjit::arm::CondCode::kNegative);
-#endif
-					m_asm.cmp(nAbs, r32(moduloMask));			// modulo or linear
-					m_asm.jg(linear);
-				}
-
 				updateAddressRegisterSubModulo(r32(_r), _n, r32(_m), r32(moduloMask), _addN);
-				m_asm.jmp(end);
-
-				m_asm.bind(linear);
-				execLinear();
-				m_asm.bind(end);
 			}
 			break;
 		case AddressingMode::MultiWrapModulo:
@@ -248,7 +223,6 @@ namespace dsp56k
 			DspValue n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			n.toTemp();
-			signextend24To32(r32(n.get()));
 
 			DspValue r(m_block);
 			r.temp(DspValue::Temp24);
@@ -285,7 +259,6 @@ namespace dsp56k
 			DspValue n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			n.toTemp();
-			signextend24To32(r32(n.get()));
 			updateAddressRegisterSub(r, r32(n.get()), r32(m.get()), _rrr, false);
 		}
 		if (_mmm == 1)													/* 001 (Rn)+Nn */
@@ -293,7 +266,6 @@ namespace dsp56k
 			DspValue n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			n.toTemp();
-			signextend24To32(r32(n.get()));
 			updateAddressRegisterSub(r, r32(n.get()), r32(m.get()), _rrr, true);
 		}
 		if (_mmm == 2)													/* 010 (Rn)-   */
@@ -322,8 +294,12 @@ namespace dsp56k
 		const RegScratch scratch(m_block);
 		const auto temp = r32(scratch);
 
+#ifdef HAVE_ARM64
+		m_asm.and_(temp, _r, _mask);// int32_t temp = r & moduloMask;
+#else
 		m_asm.mov(temp, _r);		// int32_t temp = r & moduloMask;
 		m_asm.and_(temp, _mask);
+#endif
 		m_asm.xor_(_r, temp);		// r ^= temp;
 		if(_addN)
 			m_asm.add(temp, _n);	// temp += n;

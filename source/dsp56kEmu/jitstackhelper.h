@@ -56,6 +56,8 @@ namespace dsp56k
 		uint32_t pushedSize() const { return m_pushedBytes; }
 		size_t pushedRegCount() const { return m_pushedRegs.size(); }
 
+		void reset();
+
 	private:
 		void stackRegAdd(uint64_t _offset) const;
 		void stackRegSub(uint64_t _offset) const;

@@ -8,6 +8,14 @@
 
 #include "jithelper.h"
 
+namespace asmjit
+{
+	inline namespace _abi_1_9
+	{
+		class BaseNode;
+	}
+}
+
 namespace dsp56k
 {
 	class DspValue;
@@ -208,6 +216,8 @@ namespace dsp56k
 		}
 
 		JitMemPtr makeDspPtr(const void* _ptr, size_t _size) const;
+
+		void reset();
 
 	private:
 		void parallelOpEpilog(DspReg _aluReadReg, DspReg _aluWriteReg);

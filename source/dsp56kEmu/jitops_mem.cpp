@@ -22,7 +22,7 @@ namespace dsp56k
 			}
 			else
 			{
-				If(m_block, [&](const asmjit::Label& _toFalse)
+				If(m_block, m_blockRuntimeData, [&](const asmjit::Label& _toFalse)
 				{
 #ifdef HAVE_ARM64
 					const RegScratch scratch(m_block);
@@ -63,7 +63,7 @@ namespace dsp56k
 			}
 			else
 			{
-				If(m_block, [&](const asmjit::Label& _toFalse)
+				If(m_block, m_blockRuntimeData, [&](const asmjit::Label& _toFalse)
 				{
 #ifdef HAVE_ARM64
 					const RegScratch scratch(m_block);

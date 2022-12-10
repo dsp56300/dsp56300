@@ -98,7 +98,7 @@ namespace dsp56k
 	{
 		DspValue sr(m_block, JitDspRegPool::DspSR, true, false);
 
-		If(m_block, [&](const asmjit::Label& _toFalse)
+		If(m_block, m_blockRuntimeData, [&](const asmjit::Label& _toFalse)
 		{
 #ifdef HAVE_ARM64
 			const RegGP r(m_block);
