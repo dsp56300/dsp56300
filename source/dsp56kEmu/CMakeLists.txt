@@ -68,7 +68,7 @@ jitdspregs.cpp jitdspregs.h
 jitdspregpool.cpp jitdspregpool.h
 jitdspvalue.cpp jitdspvalue.h
 jitmem.cpp jitmem.h
-jitops.cpp jitops.h jitops_alu.cpp jitops_ccr.cpp jitops_decode.cpp jitops_helper.cpp jitops_jmp.cpp jitops_mem.cpp jitops_move.cpp
+jitops.cpp jitops.h jitops_agu.cpp jitops_alu.cpp jitops_ccr.cpp jitops_decode.cpp jitops_helper.cpp jitops_jmp.cpp jitops_mem.cpp jitops_move.cpp
 jitops_alu.inl jitops_helper.inl jitops_jmp.inl jitops_mem.inl jitops_move.inl
 jitprofilingsupport.cpp jitprofilingsupport.h
 jitregtracker.cpp jitregtracker.h
@@ -78,12 +78,14 @@ jitstackhelper.cpp jitstackhelper.h
 jittypes.h
 jitunittests.cpp jitunittests.h
 
+jitops_agu_aarch64.cpp
 jitops_alu_aarch64.cpp
 jitops_ccr_aarch64.cpp
 jitops_decode_aarch64.cpp
 jitops_helper_aarch64.cpp
 jitops_jmp_aarch64.inl
 
+jitops_agu_x64.cpp
 jitops_alu_x64.cpp
 jitops_ccr_x64.cpp
 jitops_decode_x64.cpp

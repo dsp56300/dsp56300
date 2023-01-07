@@ -7,3 +7,5 @@ add_executable(dsp56kTestRunner)
 target_sources(dsp56kTestRunner PRIVATE testRunner.cpp)
 
 target_link_libraries(dsp56kTestRunner PUBLIC dsp56kEmu)
+
+add_test(NAME dsp56300_unitTests COMMAND dsp56kTestRunner)

@@ -148,8 +148,15 @@ namespace dsp56k
 
 	void Esai::terminate()
 	{
-		while(!m_audioInputs.full())
-			m_audioInputs.push_back({});
+		while(true)
+		{
+			if(!m_audioOutputs.empty())
+				m_audioOutputs.pop_front();
+			else if(!m_audioInputs.full())
+				m_audioInputs.push_back({});
+			else
+				break;
+		}
 	}
 
 	void Esai::injectInterrupt(const TWord _interrupt) const
