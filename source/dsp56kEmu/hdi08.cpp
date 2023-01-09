@@ -134,7 +134,7 @@ namespace dsp56k
 		dsp56k::bitset<TWord, HSR_HF0>(m_hsr, _flag0);
 		dsp56k::bitset<TWord, HSR_HF1>(m_hsr, _flag1);
 
-		LOG("Write HostFlags, HSR " << HEX(m_hsr));
+//		LOG("Write HostFlags, HSR " << HEX(m_hsr));
 	}
 
 	void HDI08::setHostFlagsWithWait(const uint8_t _flag0, const uint8_t _flag1)
