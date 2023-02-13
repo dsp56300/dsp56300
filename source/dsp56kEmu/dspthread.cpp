@@ -4,52 +4,14 @@
 
 #include "debuggerinterface.h"
 #include "dsp.h"
-
-#include "../vtuneSdk/include/ittnotify.h"
+#include "threadtools.h"
 
 #if DSP56300_DEBUGGER
 #include "dsp56kDebugger/debugger.h"
 #endif
 
-#ifdef WIN32
-#include <Windows.h>
-#endif
-
 namespace dsp56k
 {
-#ifdef _WIN32
-	constexpr DWORD MS_VC_EXCEPTION = 0x406D1388;
-
-#pragma pack(push,8)
-	typedef struct tagTHREADNAME_INFO
-	{
-		DWORD dwType; // Must be 0x1000.
-		LPCSTR szName; // Pointer to name (in user addr space).
-		DWORD dwThreadID; // Thread ID (-1=caller thread).
-		DWORD dwFlags; // Reserved for future use, must be zero.
-	} THREADNAME_INFO;
-#pragma pack(pop)
-
-	void SetThreadName( DWORD dwThreadID, const char* threadName)
-	{
-		THREADNAME_INFO info;
-		info.dwType = 0x1000;
-		info.szName = threadName;
-		info.dwThreadID = dwThreadID;
-		info.dwFlags = 0;
-
-		__try  // NOLINT(clang-diagnostic-language-extension-token)
-		{
-			RaiseException( MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(ULONG_PTR), reinterpret_cast<ULONG_PTR*>(&info) );
-		}
-		__except(EXCEPTION_EXECUTE_HANDLER)
-		{
-		}
-
-		__itt_thread_set_name(threadName);
-	}
-#endif
-
 	void defaultCallback(uint32_t)
 	{
 	}
@@ -94,13 +56,6 @@ namespace dsp56k
 		m_debugger.reset();
 	}
 
-	void DSPThread::setCurrentThreadName(const std::string& _name)
-	{
-#ifdef _WIN32
-		SetThreadName(-1, _name.c_str());
-#endif
-	}
-
 	void DSPThread::setCallback(const Callback& _callback)
 	{
 		const Callback c = _callback ? _callback : defaultCallback;
@@ -129,14 +84,13 @@ namespace dsp56k
 	void DSPThread::threadFunc()
 	{
 #ifdef _WIN32
-		::SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-		setCurrentThreadName(m_name.empty() ? "DSP" : "DSP " + m_name);
+		ThreadTools::setCurrentThreadPriority(ThreadPriority::Highest);
+		ThreadTools::setCurrentThreadName(m_name.empty() ? "DSP" : "DSP " + m_name);
 #endif
 		uint64_t instructions = 0;
 		uint64_t counter = 0;
 
 		uint64_t totalInstructions = 0;
-		uint64_t totalCounter = 0;
 
 		using Clock = std::chrono::high_resolution_clock;
 

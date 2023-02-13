@@ -8,6 +8,7 @@
 
 namespace dsp56k
 {
+	class EsaiClock;
 	class Dma;
 	class Disassembler;
 	class IPeripherals;
@@ -264,7 +265,9 @@ namespace dsp56k
 
 		explicit Esai(IPeripherals& _periph, EMemArea _area, Dma* _dma = nullptr);
 
-		void exec();
+		void execA();
+		void execB();
+		void execC();
 		
 		TWord readStatusRegister();
 
@@ -307,11 +310,7 @@ namespace dsp56k
 			m_tcr = _val;
 		}
 
-		void writeTransmitClockControlRegister(TWord _val)
-		{
-			LOG("Write ESAI TCCR " << HEX(_val));
-			m_tccr = _val;
-		}
+		void writeTransmitClockControlRegister(TWord _val);
 
 		void writeControlRegister(TWord _val)
 		{
@@ -340,14 +339,24 @@ namespace dsp56k
 			return m_tsmb;
 		}
 
-		void writeTSMA(const TWord _tsma);
-		void writeTSMB(const TWord _tsmb);
+		void writeTSMA(TWord _tsma);
+		void writeTSMB(TWord _tsmb);
+
+		void setClockSource(EsaiClock* _clock)
+		{
+			m_clock = _clock;
+		}
 
 		static void setSymbols(Disassembler& _disasm, EMemArea _area);
 
 		EMemArea getMemArea() const { return m_area; }
 
 		uint32_t getTxFrameCounter() const { return m_txFrameCounter; }
+
+		uint32_t getTxWordCount() const
+		{
+			return (m_tccr & M_TDC) >> M_TDC0;
+		}
 
 	private:
 		bool inputEnabled(uint32_t _index) const	{ return m_rcr.test(static_cast<RcrBits>(_index)); }
@@ -370,6 +379,7 @@ namespace dsp56k
 
 		std::array<TWord, 6> m_tx;					// Words written by the DSP 
 		std::array<TWord, 4> m_rx;					// Words for the DSP to read
+
 		TWord m_hasReadStatus = 0;					// Has the status register been read since TUE was set?
 		
 		uint32_t m_writtenTX = 0;
@@ -379,5 +389,7 @@ namespace dsp56k
 
 		TWord m_tsma = 0xffff;
 		TWord m_tsmb = 0xffff;
+
+		EsaiClock* m_clock = nullptr;
 	};
 }

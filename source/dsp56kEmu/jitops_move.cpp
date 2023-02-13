@@ -230,12 +230,22 @@ namespace dsp56k
 		}
 		else
 		{
-			x.temp(DspValue::Temp24);
-			y.temp(DspValue::Temp24);
+			if((m_repMode == RepLoop || m_repMode == RepLast) && !hasAluOp(op))
+			{
+				m_block.mem().writeDspMemory(ea, m_repTemps[0], m_repTemps[1]);
+			}
+			else
+			{
+				decode_LLL_read(LLL, x, y);
 
-			decode_LLL_read(LLL, x, y);
+				m_block.mem().writeDspMemory(ea, x, y);
 
-			m_block.mem().writeDspMemory(ea, x, y);
+				if(m_repMode == RepFirst && !hasAluOp(op))
+				{
+					m_repTemps.emplace_back(std::move(x));
+					m_repTemps.emplace_back(std::move(y));
+				}
+			}
 		}
 	}
 
@@ -530,6 +540,13 @@ namespace dsp56k
 			writeRef.reinterpretAs(DspValue::DspReg24, 24);
 			_readCallback(writeRef);
 
+			// read callback might return an immediate that we have to write in regular fashion
+			if(writeRef.isImmediate())
+			{
+				assert(writeRef.isImm24());
+				decode_dddddd_write(_dddddd, writeRef);
+				return;
+			}
 			// read callback might return its own direct reference to a DSP register (for example: move r1,a), in this case we need to process it the regular way
 			if(writeRef.getDspReg().dspReg() != myReg)
 			{
@@ -546,6 +563,13 @@ namespace dsp56k
 			const auto myReg = writeRef.getDspReg().dspReg();
 			_readCallback(writeRef);
 
+			// read callback might return an immediate that we have to write in regular fashion
+			if(writeRef.isImmediate())
+			{
+				assert(writeRef.isImm24());
+				decode_dddddd_write(_dddddd, writeRef);
+				return;
+			}
 			// read callback might return its own direct reference to a DSP register (for example: move r1,a), in this case we need to process it the regular way
 			if(writeRef.getDspReg().dspReg() != myReg)
 			{

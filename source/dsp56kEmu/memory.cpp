@@ -60,26 +60,38 @@ namespace dsp56k
 		const auto pSize = calcPMemSize(_memSizeP, _memSizeXY, _brigedMemoryAddress);
 		const auto xySize = calcXYMemSize(_memSizeXY, _brigedMemoryAddress);
 
-		auto* address = _externalBuffer;
+		m_mmuBuffer.reset(new MemoryBuffer(pSize, xySize, _brigedMemoryAddress));
 
-		if(!address)
+		if(m_mmuBuffer->isValid())
 		{
-			m_buffer.resize(calcMemSize(_memSizeP, _memSizeXY, _brigedMemoryAddress), 0);
-			address = &m_buffer[0];
-		}
-
-		// try to keep internal XY and P addresses as close together as possible
-		if(xySize < pSize)
-		{
-			x = address;	address += xySize;
-			y = address;	address += xySize;
-			p = address;
+			x = m_mmuBuffer->ptrX();
+			y = m_mmuBuffer->ptrY();
+			p = m_mmuBuffer->ptrP();
 		}
 		else
 		{
-			p = address;	address += pSize;
-			x = address;	address += xySize;
-			y = address;
+			m_mmuBuffer.reset();
+			auto* address = _externalBuffer;
+
+			if(!address)
+			{
+				m_buffer.resize(calcMemSize(_memSizeP, _memSizeXY, _brigedMemoryAddress), 0);
+				address = &m_buffer[0];
+			}
+
+			// try to keep internal XY and P addresses as close together as possible
+			if(xySize < pSize)
+			{
+				x = address;	address += xySize;
+				y = address;	address += xySize;
+				p = address;
+			}
+			else
+			{
+				p = address;	address += pSize;
+				x = address;	address += xySize;
+				y = address;
+			}
 		}
 
 		m_mem[MemArea_X] = x;

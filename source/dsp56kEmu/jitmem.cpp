@@ -262,7 +262,7 @@ namespace dsp56k
 		if(asmjit::Support::isPowerOf2(m_block.dsp().memory().size(_area)))
 		{
 			// just return garbage in case memory is read from an invalid address
-			m_block.asm_().and_(_offset, asmjit::Imm(asmjit::Imm(m_block.dsp().memory().size(_area)-1)));
+			m_block.asm_().and_(r32(_offset), asmjit::Imm(asmjit::Imm(m_block.dsp().memory().size(_area)-1)));
 		}
 		else
 #endif
@@ -444,14 +444,14 @@ namespace dsp56k
 			}
 			else
 			{
-				if(JitStackHelper::isFuncArg(_offset) && JitStackHelper::isFuncArg(_src.get()))
+				if(m_block.stack().isUsedFuncArg(_offset) && m_block.stack().isUsedFuncArg(_src.get()))
 				{
 					const RegScratch t(m_block);
 					m_block.asm_().mov(r32(t), r32(_src.get()));
 					m_block.asm_().mov(r32(r2), r32(_offset));
 					m_block.asm_().mov(r32(r3), r32(t));
 				}
-				else if(JitStackHelper::isFuncArg(_src.get()))
+				else if(m_block.stack().isUsedFuncArg(_src.get()))
 				{
 					m_block.asm_().mov(r32(r3), r32(_src.get()));
 					m_block.asm_().mov(r32(r2), r32(_offset));
@@ -700,7 +700,7 @@ namespace dsp56k
 		}
 		else
 		{
-			if(JitStackHelper::isFuncArg(_offset.get()))
+			if(JitStackHelper::isFuncArg(_offset.get(), 4))
 			{
 				const RegGP offset(m_block);
 				m_block.asm_().mov(r32(offset), r32(_offset.get()));
@@ -771,7 +771,7 @@ namespace dsp56k
 		}
 		else
 		{
-			if(JitStackHelper::isFuncArg(_offset.get()))
+			if(JitStackHelper::isFuncArg(_offset.get(), 4))
 			{
 				const RegGP temp(m_block);
 				m_block.asm_().mov(r32(temp), r32(_offset.get()));
@@ -870,37 +870,64 @@ namespace dsp56k
 		}
 	}
 
-	JitMemPtr Jitmem::getMemAreaPtr(ScratchPMem& _dst, EMemArea _area, const JitRegGP& _offset, ScratchPMem& _ptrToPmem) const
+	JitMemPtr Jitmem::getMemAreaPtr(ScratchPMem& _dst, const EMemArea _area, const JitRegGP& _offset, ScratchPMem& _ptrToPmem) const
 	{
+		auto makeMemAreaPtr = [this, &_offset, &_dst](const EMemArea _a)
+		{
+#ifdef HAVE_X86_64
+			const auto ptrHost = getMemAreaHostPtr(_a);
+			const auto offset = reinterpret_cast<int64_t>(ptrHost) - reinterpret_cast<int64_t>(&m_block.dsp().regs());
+			if(offset >= std::numeric_limits<int32_t>::min() && offset <= std::numeric_limits<int32_t>::max())
+				return ptr(regDspPtr, _offset, 2, static_cast<int32_t>(offset), sizeof(TWord));
+#endif
+			return ptr(regDspPtr);
+		};
+
 		// as we bridge to P memory there is no need to do anything here if the requested area is P anyway
 		if (_area == MemArea_P)
 		{
 			if(_ptrToPmem.isRegValid())
 				return makePtr(r64(_ptrToPmem), _offset, 2, sizeof(TWord));
 
+			const auto areaPtr = makeMemAreaPtr(_area);
+
+			if(areaPtr.hasSize())
+				return areaPtr;
+
 			_dst.temp(DspValue::Memory);
 			getMemAreaPtr(r64(_dst), _area);
-			return makePtr(r64(_dst), _offset, 2, sizeof(TWord));
 		}
-
-		_dst.temp(DspValue::Memory);
-
-		// P memory is used for all bridged external memory
-		auto& p = _ptrToPmem;
-		if(!p.isRegValid())
+		else if(m_block.dsp().memory().hasMmuSupport())
 		{
-			p.temp(DspValue::Memory);
-			getMemAreaPtr(r64(p), MemArea_P);
+			const auto areaPtr = makeMemAreaPtr(_area);
+
+			if(areaPtr.hasSize())
+				return areaPtr;
+
+			_dst.temp(DspValue::Memory);
+			getMemAreaPtr(r64(_dst), _area);
+		}
+		else
+		{
+			// P memory is used for all bridged external memory
+			auto& p = _ptrToPmem;
+			if(!p.isRegValid())
+			{
+				p.temp(DspValue::Memory);
+				getMemAreaPtr(r64(p), MemArea_P);
+			}
+
+			_dst.temp(DspValue::Memory);
+			getMemAreaPtr(r64(_dst), _area);
+
+			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().getBridgedMemoryAddress()));
+#ifdef HAVE_ARM64
+			m_block.asm_().csel(r64(_dst), r64(p), r64(_dst), asmjit::arm::CondCode::kGE);
+#else
+			m_block.asm_().cmovge(r64(_dst), r64(p));
+#endif
 		}
 
-		getMemAreaPtr(r64(_dst), _area);
-
-		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().getBridgedMemoryAddress()));
-#ifdef HAVE_ARM64
-		m_block.asm_().csel(r64(_dst), r64(p), r64(_dst), asmjit::arm::CondCode::kGE);
-#else
-		m_block.asm_().cmovge(r64(_dst), r64(p));
-#endif
 		return makePtr(r64(_dst), _offset, 2, sizeof(TWord));
 	}
 

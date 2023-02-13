@@ -28,7 +28,7 @@ namespace dsp56k
 			ops.updateDirtyCCR();
 		};
 
-		auto execIf = [&](bool _pushNonVolatiles, PushMover& _pm)
+		auto execIf = [&](bool _pushNonVolatiles)
 		{
 			const auto isFalse = a.newLabel();
 			const auto end = a.newLabel();
@@ -40,8 +40,6 @@ namespace dsp56k
 
 			if(_pushNonVolatiles)
 				_block.stack().pushNonVolatiles();
-
-			_pm.begin();
 
 			_jumpIfFalse(isFalse);
 
@@ -73,8 +71,7 @@ namespace dsp56k
 		};
 
 		// we move all register pushed that happened inside the branches to the outside to make sure they are always executed
-		PushMover pm(_block, false);
-		execIf(false, pm);
+		execIf(false);
 	}
 
 	JitReg64 r64(DspValue& _reg)

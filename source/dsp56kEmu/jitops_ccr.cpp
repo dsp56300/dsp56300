@@ -8,13 +8,17 @@ namespace dsp56k
 
 	void JitOps::ccr_set(CCRMask _mask)
 	{
+		m_ccrWritten |= _mask;
+
 		m_asm.or_(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), asmjit::Imm(_mask));
 		ccr_clearDirty(_mask);
 	}
 
-	void JitOps::ccr_dirty(TWord _aluIndex, const JitReg64& _alu, CCRMask _dirtyBits)
+	void JitOps::ccr_dirty(TWord _aluIndex, const JitReg64& _alu, const CCRMask _dirtyBits)
 	{
-		if(g_useSRCache)
+		m_ccrWritten |= _dirtyBits;
+
+		if constexpr(g_useSRCache)
 		{
 			// if the last dirty call marked bits as dirty that are no longer to be dirtied now, we need to update them
 			const auto lastDirty = m_ccrDirty & ~_dirtyBits;
@@ -47,15 +51,24 @@ namespace dsp56k
 		updateDirtyCCR(m_ccrDirty);
 	}
 
-	void JitOps::updateDirtyCCR(CCRMask _whatToUpdate)
+	void JitOps::updateDirtyCCR(const CCRMask _whatToUpdate)
 	{
 		const auto dirty = m_ccrDirty & _whatToUpdate;
 		if(!dirty)
 			return;
 
 		const RegGP r(m_block);
-		m_asm.movq(r, regLastModAlu);
-		updateDirtyCCR(r, static_cast<CCRMask>(dirty));
+		updateDirtyCCRWithTemp(r, static_cast<CCRMask>(dirty));
+	}
+
+	void JitOps::updateDirtyCCRWithTemp(const JitRegGP& _temp, const CCRMask _whatToUpdate)
+	{
+		const auto dirty = m_ccrDirty & _whatToUpdate;
+		if(!dirty)
+			return;
+
+		m_asm.movq(r64(_temp), regLastModAlu);
+		updateDirtyCCR(r64(_temp), static_cast<CCRMask>(dirty));
 	}
 
 	void JitOps::updateDirtyCCR(const JitReg64& _alu, CCRMask _dirtyBits)
@@ -84,8 +97,7 @@ namespace dsp56k
 	{
 		{
 			const RegScratch signextended(m_block);
-			m_asm.mov(signextended, _nonMaskedResult);
-			signextend56to64(signextended);
+			signextend56to64(signextended, _nonMaskedResult);
 			m_asm.cmp(signextended, _nonMaskedResult);
 		}
 
@@ -101,11 +113,9 @@ namespace dsp56k
 		If(m_block, m_blockRuntimeData, [&](const asmjit::Label& _toFalse)
 		{
 #ifdef HAVE_ARM64
-			const RegGP r(m_block);
-			m_asm.mov(r, asmjit::a64::xzr);
-			decode_cccc(r, _cc);
+			const auto cc = decode_cccc(_cc);
 			m_block.dspRegPool().releaseNonLocked();
-			m_asm.cbz(r.get(), _toFalse);
+			m_asm.b(reverseCC(cc), _toFalse);
 #else
 			const auto cc = decode_cccc(_cc);
 			m_block.dspRegPool().releaseNonLocked();

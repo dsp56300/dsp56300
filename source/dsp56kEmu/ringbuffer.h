@@ -14,17 +14,17 @@ namespace dsp56k
 	template<typename T, size_t C, bool Lock> class RingBuffer
 	{
 	public:
-		RingBuffer() : m_insertPos(0), m_removePos(0), m_usage(0), m_readSem(0), m_writeSem(static_cast<int>(C))
+		RingBuffer() : m_writeCount(0), m_readCount(0), m_readSem(0), m_writeSem(static_cast<int>(C))
 		{
 			static_assert(C>0, "C needs to be greater than 1");
 			static_assert((C&(C-1)) == 0, "C needs to be power of two");
 		}
 
 		size_t capacity() const		{ return C; }
-		bool empty() const			{ return m_usage == 0; }
-		bool full() const			{ return m_usage == C; }
-		size_t size() const			{ return m_usage; }
-		size_t remaining() const	{ return (C - m_usage); }
+		bool empty() const			{ return m_readCount == m_writeCount; }
+		bool full() const			{ return size() >= C; }
+		size_t size() const			{ return m_writeCount - m_readCount; }
+		size_t remaining() const	{ return (C - size()); }
 
 		void push_back( const T& _val )
 		{
@@ -32,11 +32,10 @@ namespace dsp56k
 
 			m_writeSem.wait();
 
-			m_data[m_insertPos] = _val;
-			updateCounter(m_insertPos);
+			m_data[wrapCounter(m_writeCount)] = _val;
 
 			// usage need to be incremented AFTER data has been written, otherwise, reader thread would read incomplete data
-			++m_usage;
+			++m_writeCount;
 
 			m_readSem.notify();
 		}
@@ -46,12 +45,10 @@ namespace dsp56k
 			m_readSem.wait();
 
 			T res = front();
-	//		assert( m_usage > 0 && "ring buffer is already empty!" );
+	//		assert( !empty() && "ring buffer is already empty!" );
 
-			updateCounter(m_removePos);
-
-			--m_usage;
-
+			++m_readCount;
+			
 			m_writeSem.notify();
 
 			return res;
@@ -67,7 +64,7 @@ namespace dsp56k
 
 			convertIdx(i);
 
-			std::swap( m_data[i], m_data[m_removePos] );
+			std::swap( m_data[i], m_data[wrapCounter(m_readCount)] );
 
 			pop_front();
 		}
@@ -84,12 +81,12 @@ namespace dsp56k
 
 		const T& front() const
 		{
-			return m_data[m_removePos];
+			return m_data[wrapCounter(m_readCount)];
 		}
 		
 		T& front()
 		{
-			return m_data[m_removePos];
+			return m_data[wrapCounter(m_readCount)];
 		}
 
 		void clear()
@@ -115,10 +112,9 @@ namespace dsp56k
 		}
 
 	private:
-		static void updateCounter( size_t& _counter )
+		static size_t wrapCounter( const size_t& _counter )
 		{
-			++_counter;
-			_counter &= C-1;
+			return _counter & (C-1);
 		}
 
 		T& get( size_t i )
@@ -130,16 +126,15 @@ namespace dsp56k
 
 		void convertIdx( size_t& _i ) const
 		{
-			_i += m_removePos;
+			_i += m_readCount;
 
 			_i &= C-1;
 		}
 
 		std::array<T,C>		m_data;
 
-		size_t				m_insertPos;
-		size_t				m_removePos;
-		std::atomic<size_t>	m_usage;
+		size_t				m_writeCount;
+		size_t				m_readCount;
 
 		typedef typename std::conditional<Lock, SpscSemaphore, NopSemaphore>::type Sem;
 

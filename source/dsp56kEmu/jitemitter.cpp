@@ -211,8 +211,11 @@ namespace dsp56k
 	{
 		sub(_dst, _dst, _src);
 	}
+	void JitEmitter::cmov(asmjit::arm::CondCode _cc, const JitRegGP& _dst, const JitRegGP& _src)
+	{
+		csel(_dst, _src, _dst, _cc);
+	}
 #else
-
 	bool JitEmitter::hasFeature(asmjit::CpuFeatures::X86::Id _id) const
 	{
 		return asmjit::CpuInfo::host().hasFeature(_id);
@@ -294,6 +297,33 @@ namespace dsp56k
 		else if(_dstBit > 0)
 			shl(r32(_dst), asmjit::Imm(_dstBit));											// 0.5
 	}
+
+	void JitEmitter::ror(const JitRegGP& _dst, const JitRegGP& _src, const uint32_t _bits)
+	{
+		if(hasBMI2())
+		{
+			if(_dst.size() == 8)
+				rorx(_dst, r64(_src), asmjit::Imm(_bits));
+			else
+				rorx(_dst, r32(_src), asmjit::Imm(_bits));
+		}
+		else
+		{
+			if(_src.size() == 4)
+				mov(r32(_dst), r32(_src));
+			else
+				mov(r64(_dst), r64(_src));
+			JitBuilder::ror(_dst, asmjit::Imm(_bits));
+		}
+	}
+
+	void JitEmitter::rol(const JitRegGP& _dst, const JitRegGP& _src, const uint32_t _bits)
+	{
+		if(_dst.size() == 8)
+			ror(_dst, _src, 64 - _bits);
+		else
+			ror(_dst, _src, 32 - _bits);
+	}
 #endif
 
 	void JitEmitter::bitTest(const JitRegGP& _src, TWord _bitIndex)
@@ -344,6 +374,12 @@ namespace dsp56k
 #else
 		JitBuilder::test(_gp, _imm);
 #endif
+	}
+
+	void JitEmitter::lea_(const JitReg64& _dst, const JitReg64& _src, void* _ptr, void* _base)
+	{
+		const auto off = reinterpret_cast<uint64_t>(_ptr) - reinterpret_cast<uint64_t>(_base);
+		lea_(_dst, _src, static_cast<int>(off));
 	}
 
 	void JitEmitter::lea_(const JitReg64& _dst, const JitReg64& _src, const int _offset)

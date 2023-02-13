@@ -478,13 +478,20 @@ namespace dsp56k
 		m_dspRegs.getSS(r64(r));
 
 		const auto lc = m_dspRegs.getLC(JitDspRegs::Write);
-		m_asm.mov(r64(lc), r64(r));
+#ifdef HAVE_ARM64
+		m_asm.ubfx(r64(lc), r64(r), asmjit::Imm(0), asmjit::Imm(24));
+#else
+		m_asm.mov(r32(lc), r32(r));
 		m_asm.and_(r32(lc), asmjit::Imm(0xffffff));
+#endif
 
 		const auto la = m_dspRegs.getLA(JitDspRegs::Write);
-		m_asm.mov(r64(la), r64(r));
-		m_asm.shr(r64(la), asmjit::Imm(24));
+#ifdef HAVE_ARM64
+		m_asm.ubfx(r64(la), r64(r), asmjit::Imm(24), asmjit::Imm(24));
+#else
+		m_asm.ror(r64(la), r64(r), 24);
 		m_asm.and_(r32(la), asmjit::Imm(0xffffff));
+#endif
 
 		decSP();
 
@@ -606,12 +613,9 @@ namespace dsp56k
 		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 #ifdef HAVE_ARM64
-			const RegGP test(m_block);
-			m_asm.mov(test, asmjit::a64::xzr);
-			decode_cccc(test, cccc);
-			m_asm.cmp(test.get(), asmjit::Imm(1));
+			const auto cc = decode_cccc(cccc);
 			m_block.dspRegPool().releaseNonLocked();
-			m_asm.b(asmjit::arm::CondCode::kNotEqual, _toFalse);
+			m_asm.b(reverseCC(cc), _toFalse);
 #else
 			const auto cc = decode_cccc(cccc);
 			m_block.dspRegPool().releaseNonLocked();
@@ -935,9 +939,6 @@ namespace dsp56k
 			m_block.dspRegPool().releaseAll();
 			m_block.dspRegPool().setRepMode(true);
 
-			// if LC is zero, no alu op is ever executed, pushes of any temp vars are skipped, therefore we need to move them out of the branches
-			PushMover pm(m_block);
-
 			m_asm.test_(r32(m_dspRegs.getLC(JitDspRegs::Read)));
 			m_asm.jz(end);
 
@@ -965,6 +966,7 @@ namespace dsp56k
 
 		m_block.dspRegPool().setRepMode(false);
 		m_repMode = RepNone;
+		m_repTemps.clear();
 
 		// restore previous LC
 		m_asm.movd(r32(m_dspRegs.getLC(JitDspRegs::Write)), lcBackup);

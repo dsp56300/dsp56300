@@ -203,6 +203,11 @@ namespace dsp56k
 		pool().read(_dst, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu));
 	}
 
+	DspValue JitDspRegs::getALU(TWord _alu) const
+	{
+		return pool().read(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + _alu));
+	}
+
 	void JitDspRegs::setALU(const TWord _alu, const DspValue& _src, const bool _needsMasking) const
 	{
 		const auto r = static_cast<JitDspRegPool::DspReg>((pool().isParallelOp() ? JitDspRegPool::DspAwrite : JitDspRegPool::DspA) + _alu);
@@ -287,11 +292,6 @@ namespace dsp56k
 		_dst = DspValue(m_block, JitDspRegPool::DspSR, true, false);
 	}
 
-	void JitDspRegs::setSR(const JitReg32& _src) const
-	{
-		m_asm.mov(r32(getSR(Write)), _src);
-	}
-
 	void JitDspRegs::setSR(const DspValue& _src) const
 	{
 		pool().write(JitDspRegPool::DspSR, _src);
@@ -371,70 +371,72 @@ namespace dsp56k
 		const RegScratch ssIndex(m_block);
 		getSP(r32(ssIndex));
 
-#ifdef HAVE_ARM64
-		m_asm.and_(r32(ssIndex), r32(ssIndex), Imm(0xf));
-		m_asm.add(_dst, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
-#else
 		m_asm.and_(r32(ssIndex), Imm(0xf));
-		m_asm.lea(_dst, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
-#endif
-
+#ifdef HAVE_ARM64
+		m_asm.add(_dst, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
 		m_asm.move(_dst, Jitmem::makePtr(_dst, ssIndex, 3, 8));
+#else
+		m_asm.move(_dst, ptr(regDspPtr, ssIndex, 3, offsetof(DSP::SRegs, ss), 8));
+#endif
 	}
 
 	void JitDspRegs::setSS(const JitReg64& _src) const
 	{
 		const RegScratch ssIndex(m_block);
 		getSP(r32(ssIndex));
-
-		const RegGP addr(m_block);
+		m_asm.and_(ssIndex, Imm(0xf));
 
 #ifdef HAVE_ARM64
-		m_asm.and_(ssIndex, ssIndex, Imm(0xf));
+		const RegGP addr(m_block);
 		m_asm.add(addr, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
-#else
-		m_asm.and_(ssIndex, Imm(0xf));
-		m_asm.lea(addr, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
-#endif
 		m_asm.mov(Jitmem::makePtr(addr, ssIndex, 3, 8), _src);
+#else
+		m_asm.mov(ptr(regDspPtr, ssIndex, 3, offsetof(DSP::SRegs, ss), 8), _src);
+#endif
 	}
 
 	void JitDspRegs::modifySS(const std::function<void(const JitReg64&)>& _func, bool _read, bool _write) const
 	{
 		const RegScratch ssIndex(m_block);
 		getSP(r32(ssIndex));
-
-		const RegGP ptrReg(m_block);
-#ifdef HAVE_ARM64
-		m_asm.and_(r32(ssIndex), r32(ssIndex), Imm(0xf));
-		m_asm.add(ptrReg, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
-#else
 		m_asm.and_(r32(ssIndex), Imm(0xf));
-		m_asm.lea(ptrReg, m_block.dspRegPool().makeDspPtr(m_dsp.regs().ss[0]));
-#endif
+
+#ifdef HAVE_ARM64
+		const RegGP ptrReg(m_block);
+
+		m_asm.add(ptrReg, regDspPtr, asmjit::Imm(offsetof(DSP::SRegs, ss)));
+		const auto ptr = Jitmem::makePtr(ptrReg, ssIndex, 3, 8);
+
 		if(_read && !_write)
 		{
-			m_asm.move(ptrReg, Jitmem::makePtr(ptrReg, ssIndex, 3, 8));
+			m_asm.move(ptrReg, ptr);
 			_func(r64(ptrReg.get()));
 		}
 		else
 		{
 			const RegGP ss(m_block);
 			if (_read)
-				m_asm.move(ss, Jitmem::makePtr(ptrReg, ssIndex, 3, 8));
+				m_asm.move(ss, ptr);
 			_func(r64(ss.get()));
 			if(_write)
-				m_asm.mov(Jitmem::makePtr(ptrReg, ssIndex, 3, 8), ss);
+				m_asm.mov(ptr, ss);
 		}
+#else
+			const auto ptr = asmjit::x86::ptr(regDspPtr, ssIndex, 3, offsetof(DSP::SRegs, ss), 8);
+
+			const RegGP ss(m_block);
+			if (_read)
+				m_asm.move(ss, ptr);
+			_func(r64(ss.get()));
+			if(_write)
+				m_asm.mov(ptr, ss);
+#endif
 	}
 
 	void JitDspRegs::mask56(const JitRegGP& _alu) const
 	{
 #ifdef HAVE_ARM64
-		// we need to work around the fact that there is no AND with 64 bit immediate operand and also ubfx cannot work with bits >= 32
-		m_asm.shl(r64(_alu), Imm(8));
-		m_asm.shr(r64(_alu), Imm(8));
-//		m_asm.ubfx(_alu, _alu, Imm(0), Imm(56));
+		m_asm.ubfx(r64(_alu), r64(_alu), Imm(0), Imm(56));
 #else
 		// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shl(_alu, Imm(8));
@@ -445,10 +447,7 @@ namespace dsp56k
 	void JitDspRegs::mask48(const JitRegGP& _alu) const
 	{
 #ifdef HAVE_ARM64
-		// we need to work around the fact that there is no AND with 64 bit immediate operand and also ubfx cannot work with bits >= 32
-		m_asm.shl(r64(_alu), Imm(16));
-		m_asm.shr(r64(_alu), Imm(16));
-//		m_asm.ubfx(_alu, _alu, Imm(0), Imm(48));
+		m_asm.ubfx(r64(_alu), r64(_alu), Imm(0), Imm(48));
 #else
 		// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shl(r64(_alu), Imm(16));	

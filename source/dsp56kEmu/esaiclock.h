@@ -25,6 +25,7 @@ namespace dsp56k
 		void setEsaiDivider(Esai* _esai, TWord _clockDivider);
 
 		TWord getRemainingInstructionsForFrameSync(TWord _expectedBitValue) const;
+		void onTCCRChanged(Esai* _esai);
 
 	private:
 		void updateCyclesPerSample();
@@ -48,5 +49,6 @@ namespace dsp56k
 		};
 
 		std::vector<EsaiEntry> m_esais;
+		std::vector<Esai*> m_esaisPendingProcess;
 	};
 }

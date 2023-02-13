@@ -4,6 +4,7 @@
 #include <set>
 #include <vector>
 
+#include "memorybuffer.h"
 #include "peripherals.h"
 
 namespace dsp56k
@@ -155,8 +156,12 @@ namespace dsp56k
 			return calcPMemSize(_memSize, _memSize, _bridgedMemoryAddress) + 2 * calcXYMemSize(_memSize, _bridgedMemoryAddress);
 		}
 
+		bool hasMmuSupport() const { return m_mmuBuffer != nullptr; }
+
 	private:
 		void				fillWithInitPattern	();
 		void				memTranslateAddress	(EMemArea& _area, TWord& _addr) const;
+
+		std::unique_ptr<MemoryBuffer> m_mmuBuffer;
 	};
 }

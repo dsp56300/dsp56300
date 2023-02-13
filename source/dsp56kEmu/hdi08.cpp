@@ -31,7 +31,7 @@ namespace dsp56k
 		if (!bittest(m_hpcr, HPCR_HEN)) 
 			return;
 
-		if (!m_dataRX.empty() && !m_waitServeRXInterrupt && rxInterruptEnabled())
+		if (!m_waitServeRXInterrupt && rxInterruptEnabled() && !m_dataRX.empty())
 		{
 			const auto clock = m_periph.getDSP().getInstructionCounter();
 
@@ -251,11 +251,6 @@ namespace dsp56k
 	void HDI08::injectTXInterrupt()
 	{
 		++m_pendingTXInterrupts;
-	}
-
-	bool HDI08::hasTX() const
-	{
-		return !m_dataTX.empty();
 	}
 
 	uint32_t HDI08::readTX()

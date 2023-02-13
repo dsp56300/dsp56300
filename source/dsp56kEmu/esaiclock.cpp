@@ -17,21 +17,25 @@ namespace dsp56k
 
 		m_cyclesSinceWrite += diff;
 
-		if(m_cyclesSinceWrite >= m_cyclesPerSample)
+		if(m_cyclesSinceWrite < m_cyclesPerSample)
+			return;
+
+		m_cyclesSinceWrite -= m_cyclesPerSample;
+
+		for (auto& e : m_esais)
 		{
-			m_cyclesSinceWrite -= m_cyclesPerSample;
-
-			for(size_t i=0; i < m_esais.size(); ++i)
+			if(++e.clockCounter > e.clockDivider)
 			{
-				auto& e = m_esais[i];
-
-				if(++e.clockCounter > e.clockDivider)
-				{
-					e.esai->exec();
-					e.clockCounter = 0;
-				}
+				m_esaisPendingProcess.push_back(e.esai);
+				e.clockCounter = 0;
 			}
 		}
+
+		for (auto* e : m_esaisPendingProcess)	e->execA();
+		for (auto* e : m_esaisPendingProcess)	e->execB();
+		for (auto* e : m_esaisPendingProcess)	e->execC();
+
+		m_esaisPendingProcess.clear();
 	}
 
 	void EsaiClock::setPCTL(TWord _val)
@@ -123,7 +127,11 @@ namespace dsp56k
 		}
 
 		if(!found)
+		{
 			m_esais.emplace_back(EsaiEntry{_esai, _clockDivider});
+			m_esaisPendingProcess.reserve(m_esais.size());
+			_esai->setClockSource(this);
+		}
 	}
 
 	TWord EsaiClock::getRemainingInstructionsForFrameSync(const TWord _expectedBitValue) const
@@ -147,5 +155,11 @@ namespace dsp56k
 		const auto diff = m_cyclesPerSample - m_cyclesSinceWrite - offset;
 
 		return std::min(diff, periphCycles - offset);
+	}
+
+	void EsaiClock::onTCCRChanged(Esai*)
+	{
+		for (auto& esai : m_esais)
+			esai.clockCounter = 0;
 	}
 }

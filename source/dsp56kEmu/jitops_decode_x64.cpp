@@ -24,13 +24,16 @@ namespace dsp56k
 	{
 		auto ccrMaskTest = [&](const CCRMask _mask)
 		{
+			m_ccrRead |= _mask;
 			updateDirtyCCR(_mask);
 			m_asm.test(m_dspRegs.getSR(JitDspRegs::Read).r32(), asmjit::Imm(_mask));
 		};
 
 		auto ccrBitTest = [&](const CCRBit _bit)
 		{
-			updateDirtyCCR(static_cast<CCRMask>(1 << _bit));
+			const auto mask = static_cast<CCRMask>(1 << _bit);
+			m_ccrRead |= mask;
+			updateDirtyCCR(mask);
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read).r32(), _bit);
 		};
 

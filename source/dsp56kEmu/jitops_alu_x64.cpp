@@ -40,12 +40,8 @@ namespace dsp56k
 
 		AluRef alu(m_block, ab);
 
-		{
-			const RegGP r(m_block);
-			m_asm.mov(r, alu.get());
-			m_asm.and_(r, r64(_v));
-			ccr_update_ifZero(CCRB_Z);
-		}
+		m_asm.test(alu, r64(_v));
+		ccr_update_ifZero(CCRB_Z);
 
 		{
 			const RegScratch mask(m_block);
@@ -62,47 +58,44 @@ namespace dsp56k
 		ccr_clear(CCR_V);
 	}
 	
-	void JitOps::alu_asl(const TWord _abSrc, const TWord _abDst, const ShiftReg* _v, TWord _immediate/* = 0*/)
+	void JitOps::alu_asl(const TWord _abSrc, const TWord _abDst, const ShiftReg* _v, TWord _bits/* = 0*/)
 	{
 		CcrBatchUpdate bu(*this, CCR_C, CCR_V);
 
-		AluReg alu(m_block, _abDst, false, _abDst != _abSrc);
+		AluRef alu(m_block, _abDst, _abDst == _abSrc, true);
 		if (_abDst != _abSrc)
 			m_dspRegs.getALU(alu.get(), _abSrc);
 
+		// we want to hit the 64 bit boundary to make use of the native carry flag so we pre-shift by 8 bit (56 => 64)
+		m_asm.sal(alu, asmjit::Imm(8));
+
+		const RegGP oldAlu(m_block);
+		m_asm.mov(oldAlu, alu);
+
 		if(_v)
-		{
-			m_asm.sal(alu, asmjit::Imm(8));				// we want to hit the 64 bit boundary to make use of the native carry flag so pre-shift by 8 bit (56 => 64)
-			m_asm.sal(alu, _v->get().r8());				// now do the real shift
-		}
+			m_asm.sal(alu, _v->get().r8());
 		else
-		{
-			m_asm.sal(alu, asmjit::Imm(8 + _immediate));	// we want to hit the 64 bit boundary to make use of the native carry flag so pre-shift by 8 bit (56 => 64)
-		}
+			m_asm.sal(alu, asmjit::Imm(_bits));
 
 		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
 
 		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
-		// The easiest way to check this is to shift back and compare if the initial alu value is identical ot the backshifted one
+		// The easiest way to check this is to shift back and compare if the initial alu value is identical to the backshifted one
 		{
-			AluReg oldAlu(m_block, _abSrc, true);
-			m_asm.sal(oldAlu, asmjit::Imm(8));
+			const RegScratch s(m_block);
+			m_asm.mov(s, alu);
+
 			if(_v)
-				m_asm.sar(alu, _v->get().r8());
+				m_asm.sar(s, _v->get().r8());
 			else
-				m_asm.sar(alu, asmjit::Imm(_immediate));
-			m_asm.cmp(alu, oldAlu.get());
+				m_asm.sar(s, _bits);
+
+			m_asm.cmp(oldAlu, s);
 		}
 
 		ccr_update_ifNotZero(CCRB_V);
-
-		// one more time
-		if(_v)
-			m_asm.sal(alu, _v->get().r8());
-		else
-			m_asm.sal(alu, asmjit::Imm(_immediate));
-
-		m_asm.shr(alu, asmjit::Imm(8));				// correction
+		
+		m_asm.shr(alu, asmjit::Imm(8));				// correction for our pre-shift by 8
 
 		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
@@ -113,24 +106,18 @@ namespace dsp56k
 		if (_abDst != _abSrc)
 			m_dspRegs.getALU(alu, _abSrc);
 
-		m_asm.sal(alu, asmjit::Imm(8));
-
 		CcrBatchUpdate bu(*this, CCR_C, CCR_V);
 
+		m_asm.sal(alu, asmjit::Imm(8));
 		if(_v)
-		{
 			m_asm.sar(alu, _v->get().r8());
-			m_asm.sar(alu, asmjit::Imm(8));
-		}
 		else
-		{
-			m_asm.sar(alu, asmjit::Imm(8 + _immediate));
-		}
+			m_asm.sar(alu, asmjit::Imm(_immediate));
+		m_asm.shr(alu, asmjit::Imm(8));
 
 		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
-		m_dspRegs.mask56(alu);
-
-//		ccr_clear(CCR_V);	// cleared by batch update
+		
+//		ccr_clear(CCR_V);							// cleared by batch update
 
 		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
@@ -200,11 +187,10 @@ namespace dsp56k
 		setALU1(ab, d);
 	}
 
-	void JitOps::alu_rnd(TWord ab, const JitReg64& d)
+	void JitOps::alu_rnd(TWord ab, const JitReg64& d, const bool _needsSignextend/* = true*/)
 	{
-		signextend56to64(d);
-
-		RegGP rounder(m_block);
+		if(_needsSignextend)
+			signextend56to64(d);
 
 		const JitDspMode* mode = m_block.getMode();
 
@@ -214,34 +200,65 @@ namespace dsp56k
 
 		if(mode)
 		{
-			uint32_t r = 0x800000;
+			uint64_t rounder = 0x800000;
 
-			if(mode->testSR(SRB_S1))	r >>= 1;
-			if(mode->testSR(SRB_S0))	r <<= 1;
+			if(mode->testSR(SRB_S1))	rounder >>= 1;
+			if(mode->testSR(SRB_S0))	rounder <<= 1;
 
-			m_asm.mov(rounder, asmjit::Imm(r));
+			m_asm.add(d, asmjit::Imm(rounder));
+			rounder <<= 1;
+
+			// mask = all the bits to the right of, and including the rounding position
+			auto mask = rounder - 1;
+
+			if(!mode->testSR(SRB_SM))
+			{
+				// convergent rounding. If all mask bits are cleared
+
+				// then the bit to the left of the rounding position is cleared in the result
+				// if (!(_alu.var & mask)) 
+				//	_alu.var&=~(rounder<<1);
+				rounder = ~rounder;
+
+				{
+					const RegScratch aluIfAndWithMaskIsZero(m_block);
+					m_asm.mov(aluIfAndWithMaskIsZero, d);
+					m_asm.and_(aluIfAndWithMaskIsZero, asmjit::Imm(rounder));
+					m_asm.test(d, asmjit::Imm(mask));
+					m_asm.cmovz(d, aluIfAndWithMaskIsZero.get());
+				}
+			}
+			
+			// all bits to the right of and including the rounding position are cleared.
+			// _alu.var&=~mask;
+			mask = ~mask;
+			m_asm.and_(d, asmjit::Imm(mask));
 		}
 		else
 		{
-			m_asm.mov(rounder, asmjit::Imm(0x800000));
+			const RegGP rounder(m_block);
+
+			m_asm.mov(r32(rounder), asmjit::Imm(0x800000));
 
 			const ShiftReg shifter(m_block);
 			sr_getBitValue(shifter, SRB_S1);
 			m_asm.shr(rounder, shifter.get().r8());
 			sr_getBitValue(shifter, SRB_S0);
 			m_asm.shl(rounder, shifter.get().r8());
-		}
 
-		m_asm.add(d, rounder.get());
-		m_asm.shl(rounder, asmjit::Imm(1));
+			m_asm.add(d, rounder.get());
+			m_asm.shl(rounder, asmjit::Imm(1));
 
-		{
 			// mask = all the bits to the right of, and including the rounding position
 			const RegGP mask(m_block);
 			m_asm.mov(mask, rounder.get());
 			m_asm.dec(mask);
 
-			auto noSM = [&]()
+			const auto skipNoScalingMode = m_asm.newLabel();
+
+			// if (!sr_test_noCache(SR_RM))
+			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_SM);
+			m_asm.jnz(skipNoScalingMode);
 			{
 				// convergent rounding. If all mask bits are cleared
 
@@ -251,36 +268,14 @@ namespace dsp56k
 				m_asm.not_(rounder);
 
 				{
-					const RegGP aluIfAndWithMaskIsZero(m_block);
+					const RegScratch aluIfAndWithMaskIsZero(m_block);
 					m_asm.mov(aluIfAndWithMaskIsZero, d);
 					m_asm.and_(aluIfAndWithMaskIsZero, rounder.get());
-
-					rounder.release();
-
-					{
-						const RegScratch temp(m_block);
-						m_asm.mov(temp, d);
-						m_asm.and_(temp, mask.get());
-						m_asm.cmovz(d, aluIfAndWithMaskIsZero.get());
-					}
+					m_asm.test(d, mask.get());
+					m_asm.cmovz(d, aluIfAndWithMaskIsZero.get());
 				}
-			};
-
-			if(mode)
-			{
-				if(!mode->testSR(SRB_SM))
-					noSM();
 			}
-			else
-			{
-				const auto skipNoScalingMode = m_asm.newLabel();
-
-				// if (!sr_test_noCache(SR_RM))
-				m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_SM);
-				m_asm.jnz(skipNoScalingMode);
-				noSM();
-				m_asm.bind(skipNoScalingMode);
-			}
+			m_asm.bind(skipNoScalingMode);
 
 			// all bits to the right of and including the rounding position are cleared.
 			// _alu.var&=~mask;
@@ -377,27 +372,23 @@ namespace dsp56k
 		const auto ab = getFieldValue<Div, Field_d>(op);
 		const auto jj = getFieldValue<Div, Field_JJ>(op);
 
+		m_ccrRead |= CCR_C;
 		updateDirtyCCR(CCR_C);
 
 		AluRef d(m_block, ab);
 
-		if (m_repMode == RepNone || m_repMode == RepLast)
+		// V and L updates
+		// V: Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
+		// L: Set if the Overflow bit (V) is set.
+		// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
 		{
-			// V and L updates
-			// V: Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
-			// L: Set if the Overflow bit (V) is set.
-			// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
-			// Nearly identical for L but L is only set, not cleared as it is sticky
 			const RegGP r(m_block);
-			m_asm.mov(r, d.get());
-			m_asm.shr(r, asmjit::Imm(54));
+			m_asm.ror(r, d.get(), 54);
 			m_asm.and_(r, asmjit::Imm(0x3));
-			m_asm.setnp(r.get().r8());
-			ccr_update(r, CCRB_V);
-			m_asm.shl(r, asmjit::Imm(CCRB_L));
-			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), r.get());
-			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~(CCR_L | CCR_V));
 		}
+
+		ccr_update_ifNotParity(CCRB_V);
+		ccr_l_update_by_v();
 
 		{
 			DspValue s(m_block);
@@ -425,14 +416,7 @@ namespace dsp56k
 			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
 			m_asm.adc(d.get().r8(), asmjit::Imm(0));
 
-			const RegScratch dLsWord(m_block);
-			m_asm.mov(r32(dLsWord), r32(d));
-			m_asm.and_(r32(dLsWord), asmjit::Imm(0xffffff));
-
 			m_asm.add(d, r64(s));
-
-			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
-			m_asm.or_(d, dLsWord);
 		}
 
 		// C is set if bit 55 of the result is cleared
@@ -449,6 +433,7 @@ namespace dsp56k
 		const auto ab = getFieldValue<Div, Field_d>(_op);
 		const auto jj = getFieldValue<Div, Field_JJ>(_op);
 
+		m_ccrRead |= CCR_C;
 		updateDirtyCCR(CCR_C);
 
 		AluRef d(m_block, ab);
@@ -457,20 +442,16 @@ namespace dsp56k
 
 		auto ccrUpdateVL = [&]()
 		{
-			// V and L updates
 			// V: Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
 			// L: Set if the Overflow bit (V) is set.
 			// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
-			// Nearly identical for L but L is only set, not cleared as it is sticky
-			const RegGP r(m_block);
-			m_asm.mov(r, alu);
-			m_asm.shr(r, asmjit::Imm(54));
-			m_asm.and_(r, asmjit::Imm(0x3));
-			m_asm.setnp(r.get().r8());
-			ccr_update(r, CCRB_V);
-			m_asm.shl(r32(r), asmjit::Imm(CCRB_L));
-			m_asm.or_(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), r32(r));
-			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~(CCR_L | CCR_V));
+			{
+				const RegGP r(m_block);
+				m_asm.ror(r, alu, 54);
+				m_asm.and_(r, asmjit::Imm(0x3));
+			}
+			ccr_update_ifNotParity(CCRB_V);
+			ccr_l_update_by_v();
 		};
 
 		DspValue s(m_block, UsePooledTemp);
@@ -486,29 +467,14 @@ namespace dsp56k
 			m_asm.mov(addOrSub, r64(s));
 			m_asm.xor_(addOrSub, alu);
 
-			{
-				m_asm.mov(sNeg, r64(s));
-				m_asm.neg(sNeg);
-
-				m_asm.bt(addOrSub, asmjit::Imm(55));
-
-				m_asm.cmovc(sNeg, r64(s));
-			}
+			m_asm.mov(sNeg, r64(s));
+			m_asm.neg(sNeg);
+			m_asm.bt(addOrSub, asmjit::Imm(55));
+			m_asm.cmovc(sNeg, r64(s));
 
 			m_asm.add(alu, alu);
-
 			m_asm.add(alu, carry.get());
-
-			{
-				const RegScratch dLsWord(m_block);
-				m_asm.mov(r32(dLsWord), r32(alu));
-				m_asm.and_(r32(dLsWord), asmjit::Imm(0xffffff));
-
-				m_asm.add(alu, sNeg.get());
-
-				m_asm.and_(alu, asmjit::Imm(0xffffffffff000000));
-				m_asm.or_(alu, dLsWord);
-			}
+			m_asm.add(alu, sNeg.get());
 
 			// C is set if bit 55 of the result is cleared
 			m_asm.bt(alu, asmjit::Imm(55));
@@ -527,14 +493,14 @@ namespace dsp56k
 		// loop
 		{
 			RegGP lc(m_block);
-			m_asm.mov(lc, _iterationCount - 1);
+			m_asm.mov(r32(lc), _iterationCount - 1);
 
 			const auto start = m_asm.newLabel();
 			m_asm.bind(start);
 
 			loopIteration(false);
 
-			m_asm.dec(lc);
+			m_asm.dec(r32(lc));
 			m_asm.jnz(start);
 		}
 
@@ -603,9 +569,7 @@ namespace dsp56k
 		m_asm.shl(d, asmjit::Imm(1));
 
 		RegGP s(m_block);
-		m_dspRegs.getALU(s, ab ? 0 : 1);
-
-		signextend56to64(s);
+		signextend56to64(s, r64(m_dspRegs.getALU(ab ? 0 : 1)));
 
 		m_asm.sub(d, s);
 		s.release();

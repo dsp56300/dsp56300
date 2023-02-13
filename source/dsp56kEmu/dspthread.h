@@ -1,6 +1,11 @@
 #pragma once
 
-#include "dsp.h"
+#include <functional>
+#include <mutex>
+#include <memory>
+#include <thread>
+
+#include "debuggerinterface.h"
 
 namespace dsp56k
 {
@@ -17,8 +22,6 @@ namespace dsp56k
 		void join();
 
 		std::mutex& mutex() { return m_mutex; }
-
-		static void setCurrentThreadName(const std::string& _name);
 
 		void setCallback(const Callback& _callback);
 
@@ -43,7 +46,7 @@ namespace dsp56k
 		std::mutex m_mutex;
 		std::unique_ptr<std::thread> m_thread;
 
-		std::atomic<bool> m_runThread;
+		bool m_runThread;
 
 		Callback m_callback;
 

@@ -266,19 +266,29 @@ namespace dsp56k
 
 		if (!canBeDefaultExecuted(_pc))
 			return nullptr;
+
+		// if the block covers any volatile P, do not return it as a child block. If this block is recreated because
+		// it is overwritten, it will cause recreations of all parent blocks, we don't want that
+		for(TWord i=_pc; i<_pc + e.block->getPMemSize(); ++i)
+		{
+			if(m_jit.isVolatileP(i))
+				return nullptr;
+		}
 		return e.block;
 	}
 
 	JitBlockRuntimeData* JitBlockChain::emit(TWord _pc)
 	{
-//		AsmJitLogger m_logger;
-//		m_logger.addFlags(asmjit::FormatFlags::kHexImms | /*asmjit::FormatFlags::kHexOffsets |*/ asmjit::FormatFlags::kMachineCode);
-//		code.setLogger(&m_logger);
-
-//		m_asm.addDiagnosticOptions(DiagnosticOptions::kValidateIntermediate);
-//		m_asm.addDiagnosticOptions(DiagnosticOptions::kValidateAssembler);
-
 		auto* emitter = m_jit.acquireEmitter();
+
+//		m_logger->addFlags(asmjit::FormatFlags::kHexImms | /*asmjit::FormatFlags::kHexOffsets |*/ asmjit::FormatFlags::kMachineCode);
+//		emitter->codeHolder.setLogger(m_logger.get());
+
+		if(m_jit.getConfig().asmjitDiagnostics)
+		{
+			emitter->emitter.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateIntermediate);
+			emitter->emitter.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateAssembler);
+		}
 
 		emitter->codeHolder.setErrorHandler(m_errorHandler.get());
 		emitter->codeHolder.init(m_jit.getRuntime()->environment());

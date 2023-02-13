@@ -43,16 +43,11 @@ namespace dsp56k
 		{
 			CcrBatchUpdate bu(*this, CCR_C, CCR_V);
 
-			{
-				const RegScratch aluMax(m_block);
-				m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
-				m_asm.cmp(alu, aluMax);
-			}
-
-			ccr_update_ifAbove(CCRB_C);
+			copyBitToCCR(alu, 56, CCRB_C);
 
 //			ccr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 		}
+
 		m_dspRegs.mask56(alu);
 
 		if(!m_disableCCRUpdates)
@@ -76,13 +71,7 @@ namespace dsp56k
 		{
 			CcrBatchUpdate bu(*this, CCR_C, CCR_V);
 
-			{
-				const RegScratch aluMax(m_block);
-				m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
-				m_asm.cmp(alu, aluMax);
-			}
-
-			ccr_update_ifAbove(CCRB_C);
+			copyBitToCCR(alu, 56, CCRB_C);
 
 //			ccr_clear(CCR_V); batch cleared
 		}
@@ -279,7 +268,6 @@ namespace dsp56k
 		const bool abDst = getFieldValue<Asl_ii, Field_D>(op);
 		const bool abSrc = getFieldValue<Asl_ii, Field_S>(op);
 
-		const ShiftReg r(m_block);
 		alu_asl(abSrc, abDst, nullptr, shiftAmount);
 	}
 
@@ -329,32 +317,17 @@ namespace dsp56k
 		alu_asr(abSrc, abDst, &shifter);
 	}
 
-	void JitOps::alu_cmp(TWord ab, const JitReg64& _v, bool _magnitude, bool updateCarry/* = true*/)
+	void JitOps::alu_cmp(TWord ab, const JitReg64& _v, bool _magnitude)
 	{
 		AluReg d(m_block, ab, true);
 
-		if (updateCarry)
-		{
-			m_asm.sal(d.get(), asmjit::Imm(8));
-			m_asm.sal(_v, asmjit::Imm(8));
-		}
+		m_asm.sal(d.get(), asmjit::Imm(8));
+		m_asm.sal(_v, asmjit::Imm(8));
 
 		if (_magnitude)
 		{
-			if (!updateCarry)
-			{
-				signextend56to64(d);
-				signextend56to64(_v);
-			}
-
 			alu_abs(d);
 			alu_abs(_v);
-
-			if (!updateCarry)
-			{
-				m_dspRegs.mask56(d);
-				m_dspRegs.mask56(_v);
-			}
 		}
 
 #ifdef HAVE_ARM64
@@ -362,8 +335,9 @@ namespace dsp56k
 #else
 		m_asm.sub(d, _v);
 #endif
-		if (updateCarry)
 		{
+			// C and V are both cleared. Only C is updated as V is cleared always
+			CcrBatchUpdate u(*this, static_cast<CCRMask>(CCR_C | CCR_V));
 #ifdef HAVE_ARM64
 			ccr_update_ifNotCarry(CCRB_C);		// we, THAT is unexpected: On ARM, carry means unsigned >= while it means unsigned < on 56k and intel
 #else
@@ -371,13 +345,8 @@ namespace dsp56k
 #endif
 		}
 
-		ccr_clear(CCR_V);			// as cmp is identical to sub, the same for the V bit applies (see sub for details)
-
-		if (updateCarry)
-		{
-			m_asm.shr(d, asmjit::Imm(8));
-			m_asm.shr(_v, asmjit::Imm(8));
-		}
+		m_asm.shr(d, asmjit::Imm(8));
+		m_asm.shr(_v, asmjit::Imm(8));
 
 		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
@@ -400,12 +369,11 @@ namespace dsp56k
 		ccr_n_update_by47(r);
 
 		const RegGP t(m_block);
-		m_asm.mov(t.get(), r);
-
-		m_asm.shr(t, asmjit::Imm(24));
 #ifdef HAVE_ARM64
-		m_asm.tst(t, asmjit::Imm(0xffffff));
+		m_asm.ubfx(r64(t), r64(r), asmjit::Imm(24), asmjit::Imm(24));
+		m_asm.test_(t);
 #else
+		m_asm.ror(t.get(), r, 24);
 		m_asm.test(t, asmjit::Imm(0xffffff));
 #endif
 		ccr_update_ifZero(CCRB_Z);
@@ -490,19 +458,19 @@ namespace dsp56k
 			}
 			else
 			{
+				if (_accumulate)
+					signextend56to64(d);
+
 				// fractional multiplication requires one post-shift to be correct
 				m_asm.add(r64(_s1), r64(_s1));	// add r,r is faster than shl r,1 on Haswell, can run on more ports and has a TP of 0.25 vs 0.5
 
-				if (_negate)
-					m_asm.neg(r64(_s1));
-
-				if (_accumulate)
-				{
-					signextend56to64(d);
+				if(_negate && _accumulate)
+					m_asm.sub(d, r64(_s1));
+				else if (_accumulate)
 					m_asm.add(d, r64(_s1));
-				}
 				else
 				{
+					m_asm.neg(r64(_s1));
 					m_asm.mov(d, r64(_s1));
 				}
 			}
@@ -526,7 +494,7 @@ namespace dsp56k
 		}
 		else
 		{
-			alu_rnd(ab, d);
+			alu_rnd(ab, d, !_accumulate);
 		}
 	}
 
@@ -564,10 +532,13 @@ namespace dsp56k
 		ccr_n_update_by47(r);
 
 		const RegGP t(m_block);
-		m_asm.mov(t.get(), r);
-
-		m_asm.shr(t, asmjit::Imm(24));
-		m_asm.and_(t, asmjit::Imm(0xffffff));
+#ifdef HAVE_ARM64
+		m_asm.ubfx(r64(t), r64(r), asmjit::Imm(24), asmjit::Imm(24));
+		m_asm.test_(t);
+#else
+		m_asm.ror(t.get(), r, 24);
+		m_asm.test(t, asmjit::Imm(0xffffff));
+#endif
 		ccr_update_ifZero(CCRB_Z);
 
 		ccr_clear(CCR_V);
@@ -1023,7 +994,6 @@ namespace dsp56k
 
 		AluRef r(m_block, D);
 
-		signextend56to64(r);
 		m_asm.neg(r);
 		m_dspRegs.mask56(r);
 
@@ -1142,12 +1112,14 @@ namespace dsp56k
 	{
 		const auto JJJ = getFieldValue<Tcc_S1D1, Field_JJJ>(op);
 		const bool ab = getFieldValue<Tcc_S1D1, Field_d>(op);
+		const auto cccc = getFieldValue<Tcc_S1D1, Field_CCCC>(op);
 
-		checkCondition<Tcc_S1D1>(op, [&]()
-		{
-			AluRef r(m_block, ab, false, true);
-			decode_JJJ_read_56(r, JJJ, !ab);
-		}, false);
+		AluRef r(m_block, ab, true, true);
+
+		const RegGP temp(m_block);
+		decode_JJJ_read_56(temp, JJJ, !ab);
+
+		m_asm.cmov(decode_cccc(cccc), r64(r), r64(temp));
 	}
 
 	void JitOps::op_Tcc_S1D1S2D2(TWord op)
@@ -1156,26 +1128,28 @@ namespace dsp56k
 		const auto JJJ = getFieldValue<Tcc_S1D1S2D2, Field_JJJ>(op);
 		const auto ttt = getFieldValue<Tcc_S1D1S2D2, Field_ttt>(op);
 		const auto ab = getFieldValue<Tcc_S1D1S2D2, Field_d>(op);
+		const auto cccc = getFieldValue<Tcc_S1D1S2D2, Field_CCCC>(op);
 
-		checkCondition<Tcc_S1D1S2D2>(op, [&]()
-		{
-			{
-				AluRef r(m_block, ab, false, true);
-				decode_JJJ_read_56(r, JJJ, !ab);
-			}
+		AluRef r(m_block, ab, true, true);
+		r.get();	// force load
 
-			if (TTT != ttt)
-			{
-				const DspValue v = makeDspValueRegR(m_block, ttt);
-				m_dspRegs.setR(TTT, v);
-			}
-		}, false);
+		const RegGP temp(m_block);
+		decode_JJJ_read_56(temp, JJJ, !ab);
+
+		const DspValue src = makeDspValueRegR(m_block, ttt);
+		const DspValue dst = makeDspValueRegR(m_block, TTT, true, true);
+
+		const auto cond = decode_cccc(cccc);
+
+		m_asm.cmov(cond, r64(r), r64(temp));
+		m_asm.cmov(cond, r32(dst), r32(src));
 	}
 
 	void JitOps::op_Tcc_S2D2(TWord op)
 	{
-		const auto TTT = getFieldValue<Tcc_S2D2, Field_TTT>(op);
-		const auto ttt = getFieldValue<Tcc_S2D2, Field_ttt>(op);
+		const auto TTT  = getFieldValue<Tcc_S2D2, Field_TTT>(op);
+		const auto ttt  = getFieldValue<Tcc_S2D2, Field_ttt>(op);
+		const auto cccc = getFieldValue<Tcc_S2D2, Field_CCCC>(op);
 
 		if (TTT == ttt)
 			return;
@@ -1183,10 +1157,7 @@ namespace dsp56k
 		const DspValue src = makeDspValueRegR(m_block, ttt, true, false);
 		const DspValue dst = makeDspValueRegR(m_block, TTT, true, true);
 
-		checkCondition<Tcc_S2D2>(op, [&]()
-		{
-			m_asm.mov(r32(dst), r32(src));
-		}, false, false);
+		m_asm.cmov(decode_cccc(cccc), r32(dst), r32(src));
 	}
 
 	void JitOps::op_Tfr(TWord op)
@@ -1201,12 +1172,9 @@ namespace dsp56k
 	void JitOps::op_Tst(TWord op)
 	{
 		const auto D = getFieldValue<Tst, Field_d>(op);
-		const RegGP zero(m_block);
-#ifdef HAVE_ARM64
-		m_asm.mov(zero, asmjit::a64::regs::xzr);
-#else
-		m_asm.xor_(zero, zero.get());
-#endif
-		alu_cmp(D, zero, false, false);
+
+		AluRef d(m_block, D, true, false);
+		ccr_dirty(D, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
+		ccr_clear(CCR_V);
 	}
 }

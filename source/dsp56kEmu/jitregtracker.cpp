@@ -144,6 +144,16 @@ namespace dsp56k
 			m_block.stack().pop(m_reg);
 	}
 
+	FuncArg::FuncArg(JitBlock& _block, const uint32_t& _argIndex) : PushGP(_block, g_funcArgGPs[_argIndex]), m_funcArgIndex(_argIndex)
+	{
+		_block.stack().registerFuncArg(_argIndex);
+	}
+
+	FuncArg::~FuncArg()
+	{
+		m_block.stack().unregisterFuncArg(m_funcArgIndex);
+	}
+
 	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(m_block.dspRegPool().isInUse(JitReg128(_xmmIndex)))
 	{
 		if(!m_isLoaded)
@@ -196,11 +206,11 @@ namespace dsp56k
 			m_block.stack().pop(xm);
 	}
 
-	PushGPRegs::PushGPRegs(JitBlock& _block) : m_block(_block)
+	PushGPRegs::PushGPRegs(JitBlock& _block, bool _isJitCall) : m_block(_block)
 	{
 		for (const auto& gp : g_dspPoolGps)
 		{
-			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp) && m_block.dspRegPool().isInUse(gp))
+			if (!JitStackHelper::isNonVolatile(gp) && !m_block.stack().isUsedFuncArg(gp) && m_block.dspRegPool().isInUse(gp))
 			{
 				m_pushedRegs.push_front(gp);
 				_block.stack().push(r64(gp));
@@ -210,17 +220,21 @@ namespace dsp56k
 		{
 			const auto gp = reg.as<JitRegGP>();
 
-			if (!JitStackHelper::isNonVolatile(gp) && !JitStackHelper::isFuncArg(gp) && m_block.gpPool().isInUse(gp))
+			if (!JitStackHelper::isNonVolatile(gp) && !m_block.stack().isUsedFuncArg(gp) && m_block.gpPool().isInUse(gp))
 			{
 				m_pushedRegs.push_front(gp);
 				_block.stack().push(r64(gp));
 			}
 		}
 
-		if(!JitStackHelper::isNonVolatile(regDspPtr) && !JitStackHelper::isFuncArg(regDspPtr))
+		// there is no need to save the dsp reg as it is rebuilt in the JIT func anyway
+		if(!_isJitCall)
 		{
-			m_pushedRegs.push_front(regDspPtr);
-			_block.stack().push(regDspPtr);
+			if(!JitStackHelper::isNonVolatile(regDspPtr) && !m_block.stack().isUsedFuncArg(regDspPtr))
+			{
+				m_pushedRegs.push_front(regDspPtr);
+				_block.stack().push(regDspPtr);
+			}
 		}
 
 #ifdef HAVE_ARM64
@@ -237,7 +251,7 @@ namespace dsp56k
 		}
 	}
 
-	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block) : m_xmm(_block) , m_gp(_block)
+	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block, bool _isJitCall) : m_xmm(_block) , m_gp(_block, _isJitCall)
 	{
 	}
 

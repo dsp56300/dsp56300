@@ -471,13 +471,10 @@ namespace dsp56k
 
 			const RegGP n(m_block);
 			m_asm.mov(r32(n), asmjit::Imm(std::abs(_shortDisplacement)));
-
-			DspValue m(m_block);
-			m_dspRegs.getM(m, rrr);
-
-			updateAddressRegisterSub(r32(dst), r32(n.get()), r32(m.get()), rrr, _shortDisplacement > 0 ? true : false);
 			
-			return DspValue(std::move(dst));
+			updateAddressRegisterSub(r32(dst), r32(n.get()), rrr, _shortDisplacement > 0 ? true : false);
+
+			return dst;
 		}
 
 		return DspValue(m_block, JitDspRegPool::DspR0, true, false, rrr);
@@ -571,35 +568,59 @@ namespace dsp56k
 
 		switch (_lll)
 		{
-		case 0:
-		case 1:
-		case 4:	// TODO: 48 bit saturation/limiting
-		case 5:	// TODO: 48 bit saturation/limiting
+		case 0:												// A10
+		case 1:												// B10
 			{
-				const auto alu = _lll & 3;
+				const auto alu = _lll;
+#ifdef HAVE_ARM64
+				AluRef a(m_block, alu, true, false);
+				m_asm.ubfx(r64(x), r64(a), asmjit::Imm(24), asmjit::Imm(24));
+				m_asm.ubfx(r64(y), r64(a), asmjit::Imm(0), asmjit::Imm(24));
+#else
 				m_dspRegs.getALU(r64(y), alu);
-				m_asm.mov(r64(x), r64(y));
-				m_asm.shr(r64(x), asmjit::Imm(24));
+				m_asm.ror(r64(x), r64(y), 24);
 				m_asm.and_(r32(x), asmjit::Imm(0xffffff));
 				m_asm.and_(r32(y), asmjit::Imm(0xffffff));
+#endif
 			}
 			break;
-		case 2:
-		case 3:
+		case 4:	// TODO: 48 bit saturation/limiting			// A
+		case 5:	// TODO: 48 bit saturation/limiting			// B
+			{
+				const auto alu = _lll - 4;
+				transferSaturation48(r64(y), r64(m_dspRegs.getALU(alu)));
+//				m_asm.mov(r64(y), r64(m_dspRegs.getALU(alu)));
+#ifdef HAVE_ARM64
+				m_asm.ubfx(r64(x), r64(y), asmjit::Imm(24), asmjit::Imm(24));
+				m_asm.ubfx(r64(y), r64(y), asmjit::Imm(0), asmjit::Imm(24));
+#else
+				m_asm.ror(r64(x), r64(y), 24);
+				m_asm.and_(r32(x), asmjit::Imm(0xffffff));
+				m_asm.and_(r32(y), asmjit::Imm(0xffffff));
+#endif
+			}
+			break;
+		case 2:												// X
+		case 3:												// Y
 			{
 				const auto xy = _lll - 2;
+#ifdef HAVE_ARM64
+				const auto src = m_block.dspRegPool().read(xy ? JitDspRegPool::DspY : JitDspRegPool::DspX);
+				m_asm.ubfx(r64(x), r64(src), asmjit::Imm(24), asmjit::Imm(24));
+				m_asm.ubfx(r64(y), r64(src), asmjit::Imm(0), asmjit::Imm(24));
+#else
 				m_dspRegs.getXY(r64(y), xy);
-				m_asm.mov(r64(x), r64(y));
-				m_asm.shr(r64(x), asmjit::Imm(24));
+				m_asm.ror(r64(x), r64(y), 24);
 				m_asm.and_(r32(x), asmjit::Imm(0xffffff));
 				m_asm.and_(r32(y), asmjit::Imm(0xffffff));
+#endif
 			}
 			break;
-		case 6:
+		case 6:												// AB
 			transferAluTo24(x, 0);
 			transferAluTo24(y, 1);
 			break;
-		case 7:
+		case 7:												// BA
 			transferAluTo24(x, 1);
 			transferAluTo24(y, 0);
 			break;
@@ -613,48 +634,62 @@ namespace dsp56k
 	{
 		switch (_lll)
 		{
-		case 0:
-		case 1:
+		case 0:												// A10
+		case 1:												// B10
 			{
 				const auto alu = _lll & 3;
 				AluRef r(m_block, alu);
+#ifdef HAVE_ARM64
+				m_asm.bfi(r64(r), r64(x), asmjit::Imm(24), asmjit::Imm(24));
+				m_asm.bfi(r64(r), r64(y), asmjit::Imm(0), asmjit::Imm(24));
+#else
 				m_asm.shr(r, asmjit::Imm(48));	// clear 48 LSBs
 				m_asm.shl(r, asmjit::Imm(24));
 				m_asm.or_(r, r64(x.get()));
 				m_asm.shl(r, asmjit::Imm(24));
 				m_asm.or_(r, r64(y.get()));
+#endif
 			}
 			break;
-		case 4:
-		case 5:
+		case 4:												// A
+		case 5:												// B
 			{
 				const auto alu = _lll & 3;
 
 				AluRef r(m_block, alu, false, true);
 
-				m_asm.mov(r32(r), r32(x.get()));
-				m_asm.shl(r64(r), asmjit::Imm(24));
+#ifdef HAVE_ARM64
+				m_asm.sbfiz(r64(r), r64(x), asmjit::Imm(24), asmjit::Imm(24));
+				m_asm.bfi(r64(r), r64(y), asmjit::Imm(0), asmjit::Imm(24));
+				m_dspRegs.mask56(r);
+#else
+				m_asm.rol(r64(r), r32(x), 40);
+				m_asm.sar(r64(r), asmjit::Imm(8));
+				m_asm.shr(r64(r), asmjit::Imm(8));
 				m_asm.or_(r64(r), r64(y.get()));
-
-				signextend48to56(r);
+#endif
 			}
 			break;
-		case 2:
-		case 3:
+		case 2:												// X
+		case 3:												// Y
 			{
 				const auto xy = _lll - 2;
 
 				const auto r = m_dspRegs.getXY(xy, JitDspRegs::Write);
-				m_asm.mov(r32(r), r32(x.get()));
-				m_asm.shl(r64(r), asmjit::Imm(24));
+#ifdef HAVE_ARM64
+				m_asm.bfi(r64(r), r64(x), asmjit::Imm(24), asmjit::Imm(24));
+				m_asm.bfi(r64(r), r64(y), asmjit::Imm(0), asmjit::Imm(24));
+#else
+				m_asm.rol(r64(r), r32(x.get()), 24);
 				m_asm.or_(r64(r), r64(y.get()));
+#endif
 			}
 			break;
-		case 6:
+		case 6:												// AB
 			transfer24ToAlu(0, x);
 			transfer24ToAlu(1, y);
 			break;
-		case 7:
+		case 7:												// BA
 			transfer24ToAlu(1, x);
 			transfer24ToAlu(0, y);
 			break;

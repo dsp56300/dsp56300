@@ -234,15 +234,15 @@ namespace dsp56k
 		pMemSize = 0;
 		dspAsm.clear();
 
-		auto loopBegin = m_asm.newNamedLabel("loopBegin");
-		m_asm.bind(loopBegin);
-
-		asmjit::BaseNode* cursorInsertEncodedInstructionCount = nullptr;
-
 		// needed so that the dsp register is available
 		dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(TWord));
 
-		cursorInsertEncodedInstructionCount = m_asm.cursor();	// inserted later below:	m_mem.mov(temp, getEncodedInstructionCount());
+		PushAllUsed pm(*this);
+
+		auto loopBegin = m_asm.newNamedLabel("loopBegin");
+		m_asm.bind(loopBegin);
+
+		asmjit::BaseNode* cursorInsertIncreaseInstructionCount = m_asm.cursor();	// inserted later
 
 		uint32_t blockFlags = 0;
 
@@ -268,13 +268,15 @@ namespace dsp56k
 
 		uint32_t opPC = 0;
 
+		uint32_t& ccrRead = _rt.m_info.ccrRead;
+		uint32_t& ccrWrite = _rt.m_info.ccrWrite;
+		uint32_t& ccrOverwrite = _rt.m_info.ccrOverwrite;
+
 		while(pMemSize < info.memSize)
 		{
 			opPC = _pc + pMemSize;
 
 			m_dsp.memory().getOpcode(opPC, opA, opB);
-
-			JitOps ops(*this, _rt, isFastInterrupt);
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 			m_dsp.disassembler().disassemble(opDisasm, opA, opB, 0, 0, 0);
@@ -308,11 +310,11 @@ namespace dsp56k
 				profilingInfo.emplace_back(pi);
 			}
 
-			if(m_config.splitOpsByNops)
-				m_asm.nop();
+			JitOps ops(*this, _rt, isFastInterrupt);
+
+			if (m_config.splitOpsByNops)	m_asm.nop();
 			ops.emit(opPC, opA, opB);
-			if (m_config.splitOpsByNops)
-				m_asm.nop();
+			if (m_config.splitOpsByNops)	m_asm.nop();
 
 			if (_profilingSupport)
 			{
@@ -337,65 +339,93 @@ namespace dsp56k
 			++_rt.m_encodedInstructionCount;
 
 			_rt.m_lastOpSize = ops.getOpSize();
+
+			ccrRead |= ops.getCCRRead();
+			const auto ccrW = ops.getCCRWritten();
+			const auto ccrO = ccrW & ~ccrRead;	// overwrites are writes that have no reads beforehand, i.e. any previous state is discarded
+
+			ccrWrite |= ccrW;
+			ccrOverwrite |= ccrO;
 		}
 
-		auto canBranch = info.terminationReason != JitBlockInfo::TerminationReason::WritePMem && !info.hasFlag(JitBlockInfo::Flags::ModeChange);
+		if (info.terminationReason == JitBlockInfo::TerminationReason::PopPC)
+			blockFlags |= JitOps::PopPC;
+
+		const auto isLoopStart = info.hasFlag(JitBlockInfo::Flags::IsLoopBodyBegin);
+		const auto isLoopEnd = info.terminationReason == JitBlockInfo::TerminationReason::LoopEnd;
+		const auto isLoopBody = isLoopStart && isLoopEnd;
 
 		bool childIsConditional = false;
 
-		if(_chain && info.terminationReason == JitBlockInfo::TerminationReason::Branch)
+		JitBlockRuntimeData* child = nullptr;
+		JitBlockRuntimeData* nonBranchChild = nullptr;
+
+		if(_chain)
 		{
-			// if the last instruction of a JIT block is a branch to an address known at compile time, and this branch is fixed, i.e. is not dependant
-			// on a condition: Store that address to be able to call the next JIT block from the current block without having to have a transition to the C++ code
-
-			const auto branchTarget = info.branchTarget;
-
-			if (branchTarget != g_invalidAddress)
+			if(info.terminationReason == JitBlockInfo::TerminationReason::Branch && !info.hasFlag(JitBlockInfo::Flags::ModeChange))
 			{
-				assert(branchTarget == g_dynamicAddress || branchTarget < m_dsp.memory().sizeP());
+				// if the last instruction of a JIT block is a branch to an address known at compile time, and this branch is fixed, i.e. is not dependant
+				// on a condition: Store that address to be able to call the next JIT block from the current block without having to have a transition to the C++ code
 
-				const auto pcLast = pcFirst + pMemSize;
+				const auto branchTarget = info.branchTarget;
 
-				childIsConditional = info.branchIsConditional;
-
-				if (branchTarget == g_dynamicAddress)
+				if (branchTarget != g_invalidAddress)
 				{
-					childAddr = g_dynamicAddress;
-				}
-				// do not branch into ourself
-				else if (branchTarget < pcFirst || branchTarget >= pcLast)
-				{
-					auto* child = _chain->getChildBlock(&_rt, branchTarget);
+					assert(branchTarget == g_dynamicAddress || branchTarget < m_dsp.memory().sizeP());
 
-					if (child)
+					const auto pcLast = pcFirst + pMemSize;
+
+					childIsConditional = info.branchIsConditional;
+
+					if (branchTarget == g_dynamicAddress)
 					{
-						child->addParent(pcFirst);
-						childAddr = branchTarget;
+						childAddr = g_dynamicAddress;
+					}
+					// do not branch into ourself
+					else if (branchTarget < pcFirst || branchTarget >= pcLast)
+					{
+						child = _chain->getChildBlock(&_rt, branchTarget);
 
-						if (childIsConditional)
+						if (child)
 						{
-							auto* nonBranchChild = _chain->getChildBlock(&_rt, pcLast);
-							if (nonBranchChild && _chain->canBeDefaultExecuted(pcLast))
+							assert(child->getFunc());
+
+							child->addParent(pcFirst);
+							childAddr = branchTarget;
+
+							if (childIsConditional)
 							{
-								nonBranchChild->addParent(pcFirst);
-								_rt.m_nonBranchChild = pcLast;
+								nonBranchChild = _chain->getChildBlock(&_rt, pcLast);
+								if (nonBranchChild)
+								{
+									nonBranchChild->addParent(pcFirst);
+									_rt.m_nonBranchChild = pcLast;
+								}
 							}
+						}
+					}
+				}
+			}
+			else if(!isLoopBody)
+			{
+				if ((info.terminationReason == JitBlockInfo::TerminationReason::ExistingCode || info.terminationReason == JitBlockInfo::TerminationReason::VolatileP))
+				{
+					if(!isFastInterrupt && !blockFlags && !isLoopEnd)
+					{
+						nonBranchChild = _chain->getChildBlock(&_rt, pcNext, false);
+						if(nonBranchChild)
+						{
+							childAddr = pcNext;
+							nonBranchChild->addParent(pcFirst);
 						}
 					}
 				}
 			}
 		}
 
-		if (info.terminationReason == JitBlockInfo::TerminationReason::PopPC)
-			blockFlags |= JitOps::PopPC;
-
-		m_asm.setCursor(cursorInsertEncodedInstructionCount);
+		m_asm.setCursor(cursorInsertIncreaseInstructionCount);
 		increaseInstructionCount(asmjit::Imm(_rt.getEncodedInstructionCount()));
 		m_asm.setCursor(m_asm.lastNode());
-
-		const auto isLoopStart = info.hasFlag(JitBlockInfo::Flags::IsLoopBodyBegin);
-		const auto isLoopEnd = info.terminationReason == JitBlockInfo::TerminationReason::LoopEnd;
-		const auto isLoopBody = isLoopStart && isLoopEnd;
 
 		auto jumpIfLoop = [&](const asmjit::Label& _ifTrue, const JitRegGP& _compare)
 		{
@@ -456,7 +486,7 @@ namespace dsp56k
 			m_dspRegPool.lock(JitDspRegPool::DspLA);
 			m_dspRegPool.lock(JitDspRegPool::DspLC);
 
-			DSPReg pc(*this, JitDspRegPool::DspPC, true, false);
+			DSPReg pc(*this, JitDspRegPool::DspPC, true, true);
 
 			// check loop flag
 
@@ -467,14 +497,9 @@ namespace dsp56k
 			m_asm.jle(enddo);
 			m_asm.dec(lc);
 			{
-				const auto& ss = temp;
-				m_dspRegs.getSS(ss);	// note: not calling getSSH as it will dec the SP
-#ifdef HAVE_ARM64
-				m_asm.ubfx(ss, ss, asmjit::Imm(24), asmjit::Imm(24));
-#else
+				const auto ss = r64(pc.get());
+				m_dspRegs.getSS(ss);				// note: not calling getSSH as it will dec the SP
 				m_asm.shr(ss, asmjit::Imm(24));
-#endif
-				setNextPC(ss);
 			}
 			m_asm.jmp(skip);
 
@@ -490,40 +515,75 @@ namespace dsp56k
 			profileEnd(pl);
 		}
 
-		if(m_dspRegs.ccrDirtyFlags())
+		auto ccrDirty = m_dspRegs.ccrDirtyFlags();
+
+		if(ccrDirty)
 		{
-			auto pl = profileBegin("ccrUpdate");
-
-			asmjit::Label skipCCRupdate = m_asm.newLabel();
-
-			// We skip to update dirty CCRs if we are running a loop and the loop has not yet ended.
-			// Be sure to not skip CCR updates if the loop itself reads the SR before it has written to it
-			const auto writesSRbeforeRead = info.hasFlag(JitBlockInfo::Flags::WritesSRbeforeRead);
-			const auto readsSR = (info.readRegs & RegisterMask::SR) != RegisterMask::None;
-			if(isLoopBody && (writesSRbeforeRead || !readsSR))
+			// we can omit CCR updates for all CCR bits that are overwritten by child blocks
+			uint32_t ccrOverwritten = 0;
+			if(child)
 			{
-				m_dspRegPool.read(regReturnVal, JitDspRegPool::DspPC);
-				jumpIfLoop(skipCCRupdate, m_dspRegPool.get(JitDspRegPool::DspPC, true, false));
+				ccrOverwritten = child->getInfo().ccrOverwrite;
+				if(nonBranchChild)
+					ccrOverwritten &= nonBranchChild->getInfo().ccrOverwrite;
+			}
+			else if(nonBranchChild)
+			{
+				ccrOverwritten = nonBranchChild->getInfo().ccrOverwrite;
 			}
 
-			JitOps op(*this, _rt, isFastInterrupt);
+			ccrDirty = static_cast<CCRMask>(ccrDirty & ~ccrOverwritten);
 
-			op.updateDirtyCCR();
+			if(ccrDirty)
+			{
+				auto pl = profileBegin("ccrUpdate");
 
-			m_asm.bind(skipCCRupdate);
+				asmjit::Label skipCCRupdate = m_asm.newLabel();
 
-			profileEnd(pl);
+				// We skip to update dirty CCRs if we are running a loop and the loop has not yet ended.
+				// Be sure to not skip CCR updates if the loop itself reads the SR before it has written to it
+				const auto writesSRbeforeRead = info.hasFlag(JitBlockInfo::Flags::WritesSRbeforeRead);
+				const auto readsSR = (info.readRegs & RegisterMask::SR) != RegisterMask::None;
+				if(isLoopBody && (writesSRbeforeRead || !readsSR))
+				{
+					jumpIfLoop(skipCCRupdate, m_dspRegPool.get(JitDspRegPool::DspPC, true, false));
+				}
+
+				JitOps op(*this, _rt, isFastInterrupt);
+
+				op.updateDirtyCCR(ccrDirty);
+
+				m_asm.bind(skipCCRupdate);
+
+				profileEnd(pl);
+			}
 		}
 
 		auto pl = profileBegin("release");
 
-		canBranch &= _chain && childAddr != g_invalidAddress && childAddr != g_dynamicAddress && _chain->canBeDefaultExecuted(childAddr);
+		JitReg32 regPC;
 
-		if((canBranch && childIsConditional) || isLoopBody)
-			m_dspRegPool.read(regReturnVal, JitDspRegPool::DspPC);
+		if((child && childIsConditional) || isLoopBody)
+		{
+			regPC = r32(m_dspRegPool.get(JitDspRegPool::DspPC, true, false));
+
+			// we can keep our PC reg if its volatile. If its not, it will be destroyed on stack.popAll() below => we need to copy it to a safe place
+			if(JitStackHelper::isNonVolatile(regPC))
+			{
+				asm_().mov(r32(regReturnVal), regPC);
+				regPC = r32(regReturnVal);
+			}
+		}
 
 		m_dspRegPool.releaseAll();
+
+		pm.end();
+
+		jumpIfLoop(loopBegin, regPC);
+
 		m_stack.popAll();
+
+		m_stack.reset();
 
 		if(_rt.empty())
 		{
@@ -531,123 +591,59 @@ namespace dsp56k
 			return false;
 		}
 
-		if (canBranch)
+		if (child)
 		{
-			const auto* child = _chain->getChildBlock(nullptr, childAddr);
-
-			assert(child->getFunc());
-
 			if (childIsConditional)
 			{
 				// we need to check if the PC has been set to the target address
 				asmjit::Label skip = m_asm.newLabel();
-				asmjit::Label end = m_asm.newLabel();
 
-#ifdef HAVE_ARM64
-				m_asm.mov(r32(g_funcArgGPs[1]), asmjit::Imm(childAddr));
-				m_asm.cmp(r32(regReturnVal), r32(g_funcArgGPs[1]));
-#else
-				m_asm.cmp(r32(regReturnVal), asmjit::Imm(childAddr));
-#endif
-
-				m_asm.jnz(skip);
-				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
-
-				JitBlockRuntimeData* nonBranchChild = nullptr;
-
-				if (_rt.m_nonBranchChild != g_invalidAddress && _chain->canBeDefaultExecuted(_rt.m_nonBranchChild))
+				auto doCompare = [&](const asmjit::Label& _skip)
 				{
-					nonBranchChild = _chain->getChildBlock(nullptr, _rt.m_nonBranchChild);
-					if(nonBranchChild)
+	#ifdef HAVE_ARM64
+					auto regTempImm = r32((regPC == r32(g_funcArgGPs[1])) ? g_funcArgGPs[2] : g_funcArgGPs[1]);
+					m_asm.mov(regTempImm, asmjit::Imm(childAddr));
+					m_asm.cmp(regPC, regTempImm);
+	#else
+					m_asm.cmp(regPC, asmjit::Imm(childAddr));
+	#endif
+					m_asm.jnz(_skip);
+				};
+
+				if(nonBranchChild)
+				{
+					stack().call([&]()
+					{
+						const asmjit::Label end = m_asm.newLabel();
+						doCompare(skip);
+						m_asm.call(asmjit::func_as_ptr(child->getFunc()));
 						m_asm.jmp(end);
+						m_asm.bind(skip);
+						m_asm.call(asmjit::func_as_ptr(nonBranchChild->getFunc()));
+						m_asm.bind(end);
+					}, true);
 				}
-
-				m_asm.bind(skip);
-
-				if (nonBranchChild)
-					m_stack.call(asmjit::func_as_ptr(nonBranchChild->getFunc()));
-
-				m_asm.bind(end);
+				else
+				{
+					doCompare(skip);
+					stack().call(asmjit::func_as_ptr(child->getFunc()), true);
+					m_asm.bind(skip);
+				}
 			}
 			else
 			{
-				m_stack.call(asmjit::func_as_ptr(child->getFunc()));
+				m_stack.call(asmjit::func_as_ptr(child->getFunc()), true);
 			}
 		}
-		else if(!jumpIfLoop(loopBegin, regReturnVal))
+		else
 		{
-			if ((info.terminationReason == JitBlockInfo::TerminationReason::ExistingCode || info.terminationReason == JitBlockInfo::TerminationReason::VolatileP))
-			{
-				if(!isFastInterrupt && !blockFlags && !isLoopEnd && _chain && _chain->canBeDefaultExecuted(pcNext))
-				{
-					auto* child = _chain->getChildBlock(&_rt, pcNext, false);
-					if(child)
-					{
-						childAddr = pcNext;
-						child->addParent(pcFirst);
-						m_stack.call(asmjit::func_as_ptr(child->getFunc()));
-					}
-				}
-			}
+			if(nonBranchChild)
+				m_stack.call(asmjit::func_as_ptr(nonBranchChild->getFunc()), true);
 		}
 
 		profileEnd(pl);
 
-		/*
-		bool anyXmm = false;
-
-		auto* node = m_asm.firstNode();
-		while(node)
-		{
-			if(!node->isInst())
-			{
-				node = node->next();
-				continue;
-			}
-
-			const auto inst = node->as<asmjit::InstNode>();
-			asmjit::InstRWInfo rwInfo{};
-			asmjit::InstAPI::queryRWInfo(asmjit::Arch::kX64, inst->baseInst(), inst->_opArray, inst->opCount(), &rwInfo);
-
-			for(size_t i=0; i<rwInfo.opCount(); ++i)
-			{
-				const auto& op = inst->operands()[i];
-
-				if(!op.isReg())
-					continue;
-
-				const auto& reg = op.as<asmjit::x86::Reg>();
-
-				const asmjit::OpRWInfo& opInfo = rwInfo.operand(i);
-
-				bool rw = opInfo.isReadWrite();
-				bool written = opInfo.isWrite() || opInfo.isReadWrite();
-				bool read = opInfo.isRead() || opInfo.isReadWrite();
-
-				if(reg.isXmm())
-				{
-					const auto& x = reg.as<asmjit::x86::Xmm>();
-					if(rw)
-						LOG(i << " rw xmm" << x._baseId)
-					else if(written)
-						LOG(i << " write xmm" << x._baseId)
-					else if(read)
-						LOG(i << " read xmm" << x._baseId)
-					anyXmm = true;
-				}
-			}
-
-			node = node->next();
-		}
-		if(anyXmm)
-			LOG("END");
-		*/
 		return true;
-	}
-
-	void JitBlock::setNextPC(const JitRegGP& _pc)
-	{
-		m_dspRegPool.write(JitDspRegPool::DspPC, _pc);
 	}
 
 	void JitBlock::setNextPC(const DspValue& _pc)

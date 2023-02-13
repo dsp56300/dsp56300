@@ -35,10 +35,7 @@ namespace dsp56k
 			std::string sourceText;
 		};
 
-		JitBlockRuntimeData()
-		{
-		}
-
+		JitBlockRuntimeData() = default;
 		~JitBlockRuntimeData();
 
 		const std::string& getDisasm() const { return m_dspAsm; }

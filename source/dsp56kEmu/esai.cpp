@@ -12,7 +12,7 @@ namespace dsp56k
 		m_rx.fill(0);
 	}
 
-	void Esai::exec()
+	void Esai::execA()
 	{
 		const auto tem  = m_tcr & M_TEM;
 
@@ -49,20 +49,36 @@ namespace dsp56k
 				m_dma->trigger(DmaChannel::RequestSource::EsaiReceiveData);
 		}
 
-		const auto txWordCount = (m_tccr & M_TDC) >> M_TDC0;
-
-		if(m_txSlotCounter == 0)
+		if(0 == m_txSlotCounter)
 			m_sr.set(M_TFS);
 		else
 			m_sr.clear(M_TFS);
+	}
 
-		++m_txSlotCounter;
-		if(m_txSlotCounter > txWordCount)
+	void Esai::execB()
+	{
+		m_hasReadStatus = 0;
+
+		if(m_tcr.test(M_TLIE) && m_txSlotCounter == getTxWordCount())
+			injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
+
+		if (m_sr.test(M_TUE))
 		{
-			m_txSlotCounter = 0;
-			++m_txFrameCounter;
+			if(m_tcr.test(M_TEIE))
+			{
+				injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
+				return;
+			}
+
+			m_sr.clear(M_TUE);
 		}
 
+		if (m_tcr.test(M_TIE))
+			injectInterrupt(Vba_ESAI_Transmit_Data);
+	}
+
+	void Esai::execC()
+	{
 		if (m_sr.test(M_ROE))
 		{
 			if(m_rcr.test(M_REIE))
@@ -74,27 +90,27 @@ namespace dsp56k
 		if (m_rcr.test(M_RIE))
 			injectInterrupt(Vba_ESAI_Receive_Data);
 
-		if (m_sr.test(M_TUE))
+		++m_txSlotCounter;
+		if(m_txSlotCounter > getTxWordCount())
 		{
-			if(m_tcr.test(M_TEIE))
-				injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
-			else
-				m_sr.clear(M_TUE);
+			m_txSlotCounter = 0;
+			++m_txFrameCounter;
 		}
-
-		if (m_txSlotCounter == txWordCount && m_tcr.test(M_TLIE))
-			injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
-
-		if (!m_sr.test(M_TUE) && m_tcr.test(M_TIE))
-			injectInterrupt(Vba_ESAI_Transmit_Data);
-
-		m_hasReadStatus = 0;
 	}
 
 	TWord Esai::readStatusRegister()
 	{
 		m_hasReadStatus = 1;
 		return m_sr;
+	}
+
+	void Esai::writeTransmitClockControlRegister(TWord _val)
+	{
+		LOG("Write ESAI TCCR " << HEX(_val));
+		m_tccr = _val;
+
+		if(m_clock)
+			m_clock->onTCCRChanged(this);
 	}
 
 	void Esai::writeTX(uint32_t _index, TWord _val)
@@ -399,7 +415,7 @@ namespace dsp56k
 				_disasm.addBitMaskSymbol(Disassembler::MemY, M_SAISR_1, bit.first, bit.second);
 		}
 
-		auto addIR = [&](TWord _addr, const std::string _name)
+		auto addIR = [&](TWord _addr, const std::string& _name)
 		{
 			if(_area == MemArea_Y)
 				_addr += (Vba_ESAI_1_Receive_Data - Vba_ESAI_Receive_Data);

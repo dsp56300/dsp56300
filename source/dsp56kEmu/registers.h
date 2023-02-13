@@ -90,6 +90,8 @@ namespace dsp56k
 		CCR_E = (1<<CCRB_E),	// extension
 		CCR_L = (1<<CCRB_L),	// limit
 		CCR_S = (1<<CCRB_S),	// scaling
+		CCR_All = CCR_C | CCR_V | CCR_Z | CCR_N | CCR_U | CCR_E | CCR_L | CCR_S,
+		CCR_None = 0,
 	};
 
 	enum SRMask

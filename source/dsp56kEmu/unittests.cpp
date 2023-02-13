@@ -67,6 +67,7 @@ namespace dsp56k
 		rol();
 		sub();
 		tfr();
+		tcc();
 
 		move();
 		parallel();
@@ -705,6 +706,16 @@ namespace dsp56k
 			verify(!dsp.sr_test(CCR_E));
 			verify(!dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_V));
+		});
+
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0xbada55c0deba5e;
+			emit(0x200013);					// clr a
+		},
+			[&]()
+		{
+			verify(dsp.regs().a == 0);
 		});
 	}
 
@@ -1491,6 +1502,93 @@ namespace dsp56k
 		});
 	}
 
+	void UnitTests::tcc()
+	{
+		// Tcc_S1D1
+
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0xaa112233445566;
+			dsp.regs().b.var = 0;
+			dsp.sr_set(CCR_Z);
+			emit(0x022008);	// tne a,b
+		},
+			[&]()
+		{
+			verify(dsp.regs().b.var == 0);
+		});
+
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0xbb112233445566;
+			dsp.regs().b.var = 0;
+			dsp.sr_clear(CCR_Z);
+			emit(0x022008);	// tne a,b
+		},
+			[&]()
+		{
+			verify(dsp.regs().b.var == 0xbb112233445566);
+		});
+
+		// Tcc_S2D2
+
+		runTest([&]()
+		{
+			dsp.regs().r[0].var = 0xaa1122;
+			dsp.regs().r[1].var = 0x0;
+			dsp.sr_set(CCR_Z);
+			emit(0x022801);	// tne r0,r1
+		},
+			[&]()
+		{
+			verify(dsp.regs().r[1].var == 0);
+		});
+
+		runTest([&]()
+		{
+			dsp.regs().r[0].var = 0xbb1122;
+			dsp.regs().r[1].var = 0x0;
+			dsp.sr_clear(CCR_Z);
+			emit(0x022801);	// tne r0,r1
+		},
+			[&]()
+		{
+			verify(dsp.regs().r[1].var == 0xbb1122);
+		});
+
+		// Tcc_S1D2S2D2
+
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0xaa112233445566;
+			dsp.regs().b.var = 0;
+			dsp.regs().r[0].var = 0xaa1122;
+			dsp.regs().r[1].var = 0x0;
+			dsp.sr_set(CCR_Z);
+			emit(0x032009);	// tne a,b r0,r1
+		},
+			[&]()
+		{
+			verify(dsp.regs().b.var == 0);
+			verify(dsp.regs().r[1].var == 0);
+		});
+
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0xbb112233445566;
+			dsp.regs().b.var = 0;
+			dsp.regs().r[0].var = 0xbb1122;
+			dsp.regs().r[1].var = 0x0;
+			dsp.sr_clear(CCR_Z);
+			emit(0x032009);	// tne a,b r0,r1
+		},
+			[&]()
+		{
+			verify(dsp.regs().b.var == 0xbb112233445566);
+			verify(dsp.regs().r[1].var == 0xbb1122);
+		});
+	}
+
 	void UnitTests::ifcc()
 	{
 		runTest([&]()
@@ -1641,6 +1739,15 @@ namespace dsp56k
 
 		runTest([&]()
 		{
+			emit(0x57f400, 0x03a800);	// move #>$3a800,b
+		},
+			[&]()
+		{
+			verify(dsp.regs().b.var == 0x0003a800000000);
+		});
+
+		runTest([&]()
+		{
 			dsp.regs().r[0].var = 0x11;
 			dsp.memory().set(MemArea_X, 0x19, 0x11abcd);
 			emit(0x02209f);	// move x:(r0+$8),b
@@ -1711,7 +1818,7 @@ namespace dsp56k
 		{
 			dsp.regs().x.var = 0xaabbccddeeff;
 			dsp.regs().y.var = 0x112233445566;
-			dsp.regs().a.var = 0x00abcdef123456;
+			dsp.regs().a.var = 0x00765432123456;
 			dsp.regs().b.var = 0x00654321fedcba;
 			dsp.regs().r[1].var = 0x10;
 			dsp.regs().r[2].var = 0x15;
@@ -1730,7 +1837,7 @@ namespace dsp56k
 		{
 			verify(dsp.memory().get(MemArea_X, 0x10) == 0xaabbcc);	verify(dsp.memory().get(MemArea_Y, 0x10) == 0xddeeff);
 			verify(dsp.memory().get(MemArea_X, 0x15) == 0x112233);	verify(dsp.memory().get(MemArea_Y, 0x15) == 0x445566);
-			verify(dsp.memory().get(MemArea_X, 0x20) == 0xabcdef);	verify(dsp.memory().get(MemArea_Y, 0x20) == 0x123456);
+			verify(dsp.memory().get(MemArea_X, 0x20) == 0x765432);	verify(dsp.memory().get(MemArea_Y, 0x20) == 0x123456);
 			verify(dsp.memory().get(MemArea_X, 0x25) == 0x654321);	verify(dsp.memory().get(MemArea_Y, 0x25) == 0xfedcba);
 		});
 

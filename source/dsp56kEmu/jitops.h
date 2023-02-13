@@ -276,11 +276,18 @@ namespace dsp56k
 		void op_Wait(TWord op);
 
 		// helpers
-		void signextend56to64(const JitReg64& _reg) const;
+		void signextend56to64(const JitReg64& _dst, const JitReg64& _src) const;
+		void signextend56to64(const JitReg64& _reg) const { return signextend56to64(_reg, _reg); }
+
 		void signextend48to64(const JitReg64& _reg) const;
+
 		void signextend48to56(const JitReg64& _reg) const;
+
 		void signextend24to56(const JitReg64& _reg) const;
-		void signextend24to64(const JitReg64& _reg) const;
+
+		void signextend24to64(const JitReg64& _dst, const JitReg64& _src) const;
+		void signextend24to64(const JitReg64& _reg) const { return signextend24to64(_reg, _reg); }
+
 		void signextend24To32(const JitReg32& _reg) const;
 
 		void bitreverse24(const JitReg32& x) const;
@@ -289,12 +296,12 @@ namespace dsp56k
 		DspValue updateAddressRegister(TWord _mmm, TWord _rrr, bool _writeR = true, bool _returnPostR = false);
 
 		// used by decode_RRR_read and op_Lua_Rn, and by updateAddressRegister
-		void updateAddressRegisterSub(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m, uint32_t _rrr, bool _addN);
-		void updateAddressRegisterSub(AddressingMode _mode, const JitReg32& _r, const JitReg32& _n, const JitReg32& _m, uint32_t _rrr, bool _addN);
+		void updateAddressRegisterSub(const JitReg32& _r, const JitReg32& _n, uint32_t _rrr, bool _addN);
+		void updateAddressRegisterSub(AddressingMode _mode, const JitReg32& _r, const JitReg32& _n, uint32_t _rrr, bool _addN);
 
 		// Parts of the AGU process
-		void updateAddressRegisterSubN1(const JitReg32& _r, const JitReg32& _m, uint32_t _rrr, bool _addN);
-		void updateAddressRegisterSubN1(AddressingMode _mode, const JitReg32& _r, const JitReg32& _m, uint32_t _rrr, bool _addN);
+		void updateAddressRegisterSubN1(const JitReg32& _r, uint32_t _rrr, bool _addN);
+		void updateAddressRegisterSubN1(AddressingMode _mode, const JitReg32& _r, uint32_t _rrr, bool _addN);
 		void updateAddressRegisterSubModulo(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m, const JitReg32& _mMask, bool _addN) const;
 		void updateAddressRegisterSubModuloN1(const JitReg32& _r, const JitReg32& _m, const JitReg32& _mMask, bool _addN) const;
 		void updateAddressRegisterSubMultipleWrapModulo(const JitReg32& _r, const JitReg32& _n, const JitReg32& _mask, bool _addN);
@@ -382,6 +389,9 @@ namespace dsp56k
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_bbbbb, Field_S>()>* = nullptr> void bitTestMemory(TWord _op, ExpectedBitValue _bitValue, asmjit::Label _skip);
 		template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_bbbbb>()>* = nullptr> void bitTest(TWord op, DspValue& _value, ExpectedBitValue _bitValue, asmjit::Label _skip) const;
 
+		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_bbbbb, Field_S>()>* = nullptr> JitCondCode bitTestMemory(TWord _op, ExpectedBitValue _bitValue);
+		template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_bbbbb>()>* = nullptr> JitCondCode bitTest(TWord op, DspValue& _value, ExpectedBitValue _bitValue) const;
+
 		// DSP register access
 		void getMR(const JitReg64& _dst) const;
 		void getCCR(RegGP& _dst);
@@ -394,8 +404,6 @@ namespace dsp56k
 		void setEOM(const JitReg64& _src) const;
 
 		void getSR(DspValue& _dst);
-		JitRegGP getSR(JitDspRegs::AccessType _accessType);
-		void setSR(const JitReg32& _src);
 		void setSR(const DspValue& _src);
 
 		void getXY0(DspValue& _dst, uint32_t _aluIndex, bool _signextend) const;
@@ -427,7 +435,8 @@ namespace dsp56k
 
 		void transferAluTo24(DspValue& _dst, TWord _alu);
 		void transfer24ToAlu(TWord _alu, const DspValue& _src) const;
-		void transferSaturation(const JitRegGP& _dst);
+		void transferSaturation24(const JitReg64& _dst, const JitReg64& _src);
+		void transferSaturation48(const JitReg64& _dst, const JitReg64& _src);
 
 		// CCR
 		class CcrBatchUpdate
@@ -460,7 +469,7 @@ namespace dsp56k
 #ifdef HAVE_ARM64
 		void ccr_update(CCRBit _bit, asmjit::arm::CondCode _armConditionCode);
 #else
-		void ccr_update(CCRBit _bit, asmjit::x86::CondCode _cc, bool _valueIsShifted = false);
+		void ccr_update(CCRBit _bit, asmjit::x86::CondCode _cc);
 #endif
 		
 		void ccr_u_update(const JitReg64& _alu);
@@ -478,6 +487,7 @@ namespace dsp56k
 		void ccr_clearDirty(CCRMask _mask);
 		void updateDirtyCCR();
 		void updateDirtyCCR(CCRMask _whatToUpdate);
+		void updateDirtyCCRWithTemp(const JitRegGP& _temp, CCRMask _whatToUpdate);
 		void updateDirtyCCR(const JitReg64& _alu, CCRMask _dirtyBits);
 
 		void ccr_getBitValue(const JitRegGP& _dst, CCRBit _bit);
@@ -492,6 +502,9 @@ namespace dsp56k
 #ifdef HAVE_X86_64
 		asmjit::x86::CondCode decode_cccc(TWord cccc);
 		static asmjit::x86::CondCode reverseCC(asmjit::x86::CondCode cccc);
+#else
+		asmjit::arm::CondCode decode_cccc(TWord cccc);
+		static asmjit::arm::CondCode reverseCC(asmjit::arm::CondCode cccc);
 #endif
 		void decode_dddddd_read(DspValue& _dst, TWord _dddddd);
 		void decode_dddddd_write(TWord _dddddd, const DspValue& _src, bool _sourceIs8Bit = false);
@@ -534,14 +547,14 @@ namespace dsp56k
 
 		void alu_and(TWord ab, DspValue& _v);
 
-		void alu_asl(TWord _abSrc, TWord _abDst, const ShiftReg* _v, TWord _immediate = 0);
+		void alu_asl(TWord _abSrc, TWord _abDst, const ShiftReg* _v, TWord _bits = 0);
 		void alu_asr(TWord _abSrc, TWord _abDst, const ShiftReg* _v, TWord _immediate = 0);
 
 		void alu_bclr(const DspValue& _dst, TWord _bit);
 		void alu_bset(const DspValue& _dst, TWord _bit);
 		void alu_bchg(const DspValue& _dst, TWord _bit);
 
-		void alu_cmp(TWord ab, const JitReg64& _v, bool magnitude, bool updateCarry = true);
+		void alu_cmp(TWord ab, const JitReg64& _v, bool magnitude);
 
 		void alu_lsl(TWord ab, const DspValue& _shiftAmount);
 		void alu_lsr(TWord ab, const DspValue& _shiftAmount);
@@ -550,7 +563,7 @@ namespace dsp56k
 		void alu_multiply(TWord op);
 		void alu_or(TWord ab, DspValue& _v);
 		void alu_rnd(TWord ab);
-		void alu_rnd(TWord ab, const JitReg64& d);
+		void alu_rnd(TWord ab, const JitReg64& d, bool _needsSignextend = true);
 		void alu_insert(TWord ab, const DspValue& _src, DspValue& _widthOffset);
 		
 		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const DspValue&, TWord));
@@ -610,11 +623,16 @@ namespace dsp56k
 		RegisterMask getReadRegs() const { return m_readRegs; }
 
 		JitBlock& getBlock() const { return m_block; }
+
+		uint32_t getCCRRead() const { return m_ccrRead; }
+		uint32_t getCCRWritten() const { return m_ccrWritten; }
+
+		constexpr bool hasAluOp(TWord _op) const { return (_op & 0xff) != 0; }
+
 	private:
 		enum RepMode
 		{
 			RepNone,
-			RepDynamic,
 			RepFirst,
 			RepLoop,
 			RepLast
@@ -631,6 +649,9 @@ namespace dsp56k
 		CCRMask& m_ccrDirty;
 		bool m_ccr_update_clear = true;
 
+		uint32_t m_ccrRead = CCR_None;
+		uint32_t m_ccrWritten = CCR_None;
+
 		TWord m_pcCurrentOp = 0;
 		TWord m_opWordA = 0;
 		TWord m_opWordB = 0;
@@ -640,6 +661,7 @@ namespace dsp56k
 
 		uint32_t m_resultFlags = None;
 		RepMode m_repMode = RepNone;
+		std::vector<DspValue> m_repTemps;
 		RegisterMask m_writtenRegs = RegisterMask::None;
 		RegisterMask m_readRegs = RegisterMask::None;
 		bool m_fastInterrupt = false;

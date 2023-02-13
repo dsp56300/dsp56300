@@ -86,7 +86,10 @@ namespace dsp56k
 			m_hpcr = _val;
 		}
 
-		bool hasTX() const;
+		bool hasTX() const
+		{
+			return !m_dataTX.empty();
+		}
 		TWord readTX();
 		void writeTX(TWord _val);
 

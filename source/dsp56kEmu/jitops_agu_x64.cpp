@@ -7,13 +7,13 @@
 
 namespace dsp56k
 {
-	void JitOps::updateAddressRegisterSub(const JitReg32& _r, const JitReg32& _n, const JitReg32& _m, uint32_t _rrr, bool _addN)
+	void JitOps::updateAddressRegisterSub(const JitReg32& _r, const JitReg32& _n, uint32_t _rrr, bool _addN)
 	{
 		const auto mode = m_block.getAddressingMode(_rrr);
 
 		if(mode != AddressingMode::Unknown)
 		{
-			updateAddressRegisterSub(mode, _r, _n, _m, _rrr, _addN);
+			updateAddressRegisterSub(mode, _r, _n, _rrr, _addN);
 			return;
 		}
 
@@ -22,9 +22,10 @@ namespace dsp56k
 		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 		
+		const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr, true, false);
 		const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
 
-		m_asm.cmp(r32(_m), asmjit::Imm(0xffffff));		// linear shortcut
+		m_asm.cmp(r32(m), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.jnz(notLinear);
 
 		// linear:
@@ -39,15 +40,15 @@ namespace dsp56k
 
 		if (m_block.getConfig().aguSupportBitreverse)
 		{
-			m_asm.test_(_m.r16());							// bit reverse
+			m_asm.test_(m.get().r16());						// bit reverse
 			m_asm.jz(bitreverse);
 		}
 
-		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));			// multi-wrap modulo
+		m_asm.cmp(m.get().r16(), asmjit::Imm(0x7fff));		// multi-wrap modulo
 		m_asm.ja(multipleWrapModulo);
 
 		// modulo:
-		updateAddressRegisterSubModulo(r32(_r), _n, r32(_m), r32(moduloMask), _addN);
+		updateAddressRegisterSubModulo(r32(_r), _n, r32(m), r32(moduloMask), _addN);
 		m_asm.jmp(end);
 
 		// multiple-wrap modulo:
@@ -66,22 +67,24 @@ namespace dsp56k
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
 	}
 
-	void JitOps::updateAddressRegisterSubN1(const JitReg32& _r, const JitReg32& _m, uint32_t _rrr, bool _addN)
+	void JitOps::updateAddressRegisterSubN1(const JitReg32& _r, uint32_t _rrr, bool _addN)
 	{
 		const auto mode = m_block.getAddressingMode(_rrr);
 		if(mode != AddressingMode::Unknown)
 		{
-			updateAddressRegisterSubN1(mode, _r, _m, _rrr, _addN);
+			updateAddressRegisterSubN1(mode, _r, _rrr, _addN);
 			return;
 		}
 
 		const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
+		const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr, true, false);
+
 		const auto notLinear = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 		const auto bitreverse = m_asm.newLabel();
 		const auto multiwrapModulo = m_asm.newLabel();
 
-		m_asm.cmp(r32(_m), asmjit::Imm(0xffffff));		// linear shortcut
+		m_asm.cmp(r32(m), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.jnz(notLinear);
 
 		if (_addN)	m_asm.inc(_r);
@@ -93,15 +96,15 @@ namespace dsp56k
 
 		if (m_block.getConfig().aguSupportBitreverse)
 		{
-			m_asm.test_(_m.r16());							// bit reverse
+			m_asm.test_(m.get().r16());						// bit reverse
 			m_asm.jz(bitreverse);
 		}
 
-		m_asm.cmp(_m.r16(), asmjit::Imm(0x7fff));			// multi-wrap modulo
+		m_asm.cmp(m.get().r16(), asmjit::Imm(0x7fff));		// multi-wrap modulo
 		m_asm.ja(multiwrapModulo);
 
 		// modulo:
-		updateAddressRegisterSubModuloN1(_r, _m, r32(moduloMask), _addN);
+		updateAddressRegisterSubModuloN1(_r, r32(m), r32(moduloMask), _addN);
 		m_asm.jmp(end);
 
 		if (m_block.getConfig().aguSupportBitreverse)
@@ -129,7 +132,8 @@ namespace dsp56k
 
 		if (!_addN)
 		{
-			m_asm.lea(p, ptr(_r, -1));
+			m_asm.mov(p, _r);
+			m_asm.dec(p);
 			m_asm.test(_r, _mMask);
 			m_asm.lea(_r, ptr(_r, _m));
 			m_asm.cmovne(_r, p);

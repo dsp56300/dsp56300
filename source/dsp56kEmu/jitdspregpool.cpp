@@ -946,17 +946,17 @@ namespace dsp56k
 	void JitDspRegPool::spillMove(const JitRegGP& _dst, const SpillReg& _src) const
 	{
 //		if(_src.offset == 0)
-			m_block.asm_().movq(_dst, _src.reg);
+			m_block.asm_().movq(r64(_dst), _src.reg);
 //		else
-//			m_block.asm_().pextrq(_dst, _src.reg, asmjit::Imm(_src.offset));
+//			m_block.asm_().pextrq(r64(_dst), _src.reg, asmjit::Imm(_src.offset));
 	}
 
 	void JitDspRegPool::spillMove(const SpillReg& _dst, const JitRegGP& _src) const
 	{
 		// if(m_extendedSpillSpace)
-		// 	m_block.asm_().pinsrq(_dst.reg, _src, asmjit::Imm(_dst.offset));
+		// 	m_block.asm_().pinsrq(_dst.reg, r64(_src), asmjit::Imm(_dst.offset));
 		// else
-			m_block.asm_().movq(_dst.reg, _src);
+			m_block.asm_().movq(_dst.reg, r64(_src));
 	}
 
 	void JitDspRegPool::spillMove(const SpillReg& _dst, const SpillReg& _src) const

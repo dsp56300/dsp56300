@@ -83,6 +83,7 @@ namespace  dsp56k
 		void rol();
 		void sub();
 		void tfr();
+		void tcc();
 
 		void move();
 		void parallel();

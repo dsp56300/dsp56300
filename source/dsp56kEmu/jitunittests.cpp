@@ -13,6 +13,8 @@ namespace dsp56k
 	: m_checks({})
 	, m_logging(_logging)
 	{
+		x0x1Combinations();
+
 		runTest(&JitUnittests::conversion_build, &JitUnittests::conversion_verify);
 		runTest(&JitUnittests::signextend_build, &JitUnittests::signextend_verify);
 
@@ -26,6 +28,7 @@ namespace dsp56k
 		runTest(&JitUnittests::agu_modulo2_build, &JitUnittests::agu_modulo2_verify);
 
 		runTest(&JitUnittests::transferSaturation_build, &JitUnittests::transferSaturation_verify);
+		transferSaturation48();
 
 		{
 			constexpr auto T=true;
@@ -47,8 +50,6 @@ namespace dsp56k
 
 		div();
 		rep_div();
-
-		runTest(&JitUnittests::clr_build, &JitUnittests::clr_verify);
 	}
 
 	JitUnittests::~JitUnittests()
@@ -113,7 +114,11 @@ namespace dsp56k
 			block = &b;
 			ops = &o;
 
+			m_asm.nop();
+
 			errorHandler.setBlock(&rt);
+
+			PushAllUsed pusher(b);
 
 			_build();
 
@@ -121,14 +126,15 @@ namespace dsp56k
 			ops = nullptr;
 
 			o.updateDirtyCCR();
+
+			pusher.end();
 		}
 
 		m_asm.ret();
 
 		m_asm.finalize();
 
-		typedef void (*Func)();
-		Func func;
+		TJitFunc func;
 		const auto err = m_rt.add(&func, &code);
 		if(err)
 		{
@@ -145,7 +151,7 @@ namespace dsp56k
 			if(m_logging)
 				LOG("Running test code");
 
-			func();
+			func(nullptr, 0xbadbc);
 
 			if(m_logging)
 				LOG("Verifying test code");
@@ -171,22 +177,22 @@ namespace dsp56k
 		block->asm_().bind(block->asm_().newNamedLabel("test_conv"));
 
 		dsp.regs().x.var = 0xffeedd112233;
-		dsp.regs().y.var = 0x112233445566;
+		dsp.regs().y.var = 0x445566fedcba;
 
-		const RegGP r0(*block);
-		const RegGP r1(*block);
+		const RegGP r(*block);
 
-		ops->XY0to56(r0, 0);
-		ops->XY1to56(r1, 0);
-
-		block->mem().mov(m_checks[0], r0);
-		block->mem().mov(m_checks[1], r1);
+		ops->XY0to56(r, 0);		block->mem().mov(m_checks[0], r);
+		ops->XY1to56(r, 0);		block->mem().mov(m_checks[1], r);
+		ops->XY0to56(r, 1);		block->mem().mov(m_checks[2], r);
+		ops->XY1to56(r, 1);		block->mem().mov(m_checks[3], r);
 	}
 
 	void JitUnittests::conversion_verify()
 	{
 		verify(m_checks[0] == 0x0000112233000000);
 		verify(m_checks[1] == 0x00ffffeedd000000);
+		verify(m_checks[2] == 0x00fffedcba000000);
+		verify(m_checks[3] == 0x0000445566000000);
 	}
 
 	void JitUnittests::signextend_build()
@@ -485,15 +491,15 @@ namespace dsp56k
 		const RegGP temp(*block);
 
 		block->asm_().mov(temp, asmjit::Imm(0x00ff700000555555));
-		ops->transferSaturation(temp);
+		ops->transferSaturation24(temp, temp);
 		block->mem().mov(m_checks[0], temp);
 
 		block->asm_().mov(temp, asmjit::Imm(0x00008abbcc555555));
-		ops->transferSaturation(temp);
+		ops->transferSaturation24(temp, temp);
 		block->mem().mov(m_checks[1], temp);
 
 		block->asm_().mov(temp, asmjit::Imm(0x0000334455667788));
-		ops->transferSaturation(temp);
+		ops->transferSaturation24(temp, temp);
 		block->mem().mov(m_checks[2], temp);
 	}
 
@@ -502,6 +508,32 @@ namespace dsp56k
 		verify(m_checks[0] == 0x800000);
 		verify(m_checks[1] == 0x7fffff);
 		verify(m_checks[2] == 0x334455);
+	}
+
+	void JitUnittests::transferSaturation48()
+	{
+		runTest([&]()
+		{
+			const RegGP temp(*block);
+
+			block->asm_().mov(temp, asmjit::Imm(0x00ff700000555555));
+			ops->transferSaturation48(temp, temp);
+			block->mem().mov(m_checks[0], temp);
+
+			block->asm_().mov(temp, asmjit::Imm(0x00008abbcc555555));
+			ops->transferSaturation48(temp, temp);
+			block->mem().mov(m_checks[1], temp);
+
+			block->asm_().mov(temp, asmjit::Imm(0x0000334455667788));
+			ops->transferSaturation48(temp, temp);
+			block->mem().mov(m_checks[2], temp);
+		}, [&]()
+		{
+			verify(m_checks[0] == 0x800000000000);
+			verify(m_checks[1] == 0x7fffffffffff);
+			verify(m_checks[2] == 0x334455667788);
+		}
+		);
 	}
 
 	void JitUnittests::testCCCC(const int64_t _value, const int64_t _compareValue, const bool _lt, bool _le, bool _eq, bool _ge, bool _gt, bool _neq)
@@ -1017,22 +1049,26 @@ namespace dsp56k
 		});
 	}
 
-	void JitUnittests::clr_build()
+	void JitUnittests::x0x1Combinations()
 	{
-		dsp.regs().a.var = 0xbada55c0deba5e;
+		dsp.x0(0xaabbcc);
+		dsp.x1(0xddeeff);
 
-		// ensure that ALU is loaded, otherwise it is not written back to DSP registers
-		// TODO this should NOT be needed anymore!
+		dsp.y0(0xabcdef);
+		dsp.y1(0x123456);
+
+		runTest([&]()
 		{
-			const RegGP dummy(*block);
-			block->regs().getALU(dummy, 0);			
-		}
-		emit(0x200013);
-	}
+			m_checks.fill(0);
 
-	void JitUnittests::clr_verify()
-	{
-		verify(dsp.regs().a.var == 0);
+			dsp.x0(0xaabbcc);
+			dsp.x1(0xddeeff);
+
+			emit(0x44f400, 0xbabecc);	// move #$babecc,x0
+		}, [&]()
+		{
+			verify(dsp.regs().x.var == 0xddeeffbabecc);
+		});
 	}
 
 	void JitUnittests::emit(const TWord _opA, TWord _opB, TWord _pc)

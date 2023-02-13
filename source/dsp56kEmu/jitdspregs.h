@@ -1,10 +1,7 @@
 #pragma once
 
-#include <array>
-
 #include "jitdspvalue.h"
 #include "jitregtracker.h"
-#include "jitregtypes.h"
 #include "jittypes.h"
 #include "registers.h"
 #include "types.h"
@@ -42,6 +39,7 @@ namespace dsp56k
 		JitRegGP getLC(AccessType _type) const;
 
 		void getALU(const JitRegGP& _dst, TWord _alu) const;
+		DspValue getALU(TWord _alu) const;
 		void setALU(TWord _alu, const DspValue& _src, bool _needsMasking = true) const;
 		void clrALU(TWord _alu) const;
 
@@ -58,7 +56,6 @@ namespace dsp56k
 		void getSZ(DspValue& _dst) const;
 		void setSZ(const DspValue& _src) const;
 		void getSR(DspValue& _dst) const;
-		void setSR(const JitReg32& _src) const;
 		void setSR(const DspValue& _src) const;
 		void getOMR(DspValue& _dst) const;
 		void setOMR(const DspValue& _src) const;

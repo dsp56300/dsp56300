@@ -69,5 +69,8 @@ namespace dsp56k
 		bool branchIsConditional = false;
 		TWord loopBegin = g_invalidAddress;
 		TWord loopEnd = g_invalidAddress;
+		uint32_t ccrRead = 0;
+		uint32_t ccrWrite = 0;
+		uint32_t ccrOverwrite = 0;				// overwrite = written before read, i.e. the previous state is not important
 	};
 }

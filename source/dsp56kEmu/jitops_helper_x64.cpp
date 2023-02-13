@@ -15,24 +15,16 @@ namespace dsp56k
 		else
 			assert(_dst.getBitCount() == 24);
 
+		const auto xyRef = m_dspRegs.getXY(_aluIndex, JitDspRegs::Read);
+
 		if(_signextend)
 		{
-			if(m_asm.hasBMI2())
-			{
-				const DSPReg xyRef(m_block, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _aluIndex), true, false, true);
-				m_asm.rorx(r64(_dst.get()), xyRef.r64(), asmjit::Imm(64-40));
-				m_asm.sar(r64(_dst.get()), asmjit::Imm(40));
-			}
-			else
-			{
-				m_dspRegs.getXY(_dst.get(), _aluIndex);
-				signextend24to64(r64(_dst.get()));
-			}
+			signextend24to64(r64(_dst.get()), r64(xyRef));
 		}
 		else
 		{
-			m_dspRegs.getXY(_dst.get(), _aluIndex);
-			m_asm.and_(_dst.get(), asmjit::Imm(0xffffff));
+			m_asm.mov(r32(_dst), r32(xyRef));
+			m_asm.and_(r32(_dst.get()), asmjit::Imm(0xffffff));
 		}
 	}
 
@@ -125,8 +117,7 @@ namespace dsp56k
 		else
 			assert(_dst.getBitCount() == 24);
 
-		m_dspRegs.getALU(r64(_dst.get()), _aluIndex);
-		m_asm.shr(r64(_dst.get()), asmjit::Imm(24));
+		m_asm.ror(r64(_dst), r64(m_dspRegs.getALU(_aluIndex)), 24);
 		m_asm.and_(r32(_dst.get()), asmjit::Imm(0xffffff));
 	}
 
@@ -226,8 +217,7 @@ namespace dsp56k
 				}
 				else
 				{
-					m_asm.mov(r32(_ss), r32(_ssh));
-					m_asm.shl(r64(_ss), asmjit::Imm(24));
+					m_asm.rol(r64(_ss), r32(_ssh), 24);
 				}
 				m_asm.or_(r64(_ss), r64(_ssl));
 			}
@@ -268,7 +258,7 @@ namespace dsp56k
 		m_asm.inc(m_block.dspRegPool().makeDspPtr(m_block.dsp().regs().sc));
 	}
 
-	void JitOps::transferSaturation(const JitRegGP& _dst)
+	void JitOps::transferSaturation24(const JitReg64& _dst, const JitReg64& _src)
 	{
 		// scaling
 
@@ -305,17 +295,18 @@ namespace dsp56k
 			m_asm.bind(l);
 		}
 */
+		if(_dst != _src)
+			m_asm.mov(r64(_dst), r64(_src));
+
 		if(mode)
 		{
-			int shift = 0;
+			int shift = 24;
 			if(mode->testSR(SRB_S1))
-				++shift;
-			if(mode->testSR(SRB_S0))
 				--shift;
-			if(shift > 0)
-				m_asm.add(_dst, _dst);
-			else if(shift < 0)
-				m_asm.shr(_dst, asmjit::Imm(1));
+			if(mode->testSR(SRB_S0))
+				++shift;
+			// non-limited default
+			m_asm.sar(_dst, asmjit::Imm(shift));
 		}
 		else
 		{
@@ -325,35 +316,109 @@ namespace dsp56k
 			m_asm.shl(_dst, s0s1.get().r8());
 
 			sr_getBitValue(s0s1, SRB_S0);
-			m_asm.shr(_dst, s0s1.get().r8());
+			m_asm.sar(_dst, s0s1.get().r8());
+
+			// non-limited default
+			m_asm.sar(_dst, asmjit::Imm(24));
 		}
 
 		{
-			// non-limited default
-			m_asm.shr(_dst, asmjit::Imm(24));
-
 			const RegGP tester(m_block);
 			m_asm.mov(r32(tester), r32(_dst));
 
-			// lower limit
-			m_asm.cmp(r32(tester), asmjit::Imm(0xff800000));
 			{
 				const RegScratch minmax(m_block);
-				m_asm.mov(r32(minmax), 0x800000);
-				m_asm.cmovl(r32(_dst), r32(minmax));
-			}
 
-			// upper limit
-			m_asm.cmp(r32(tester), asmjit::Imm(0x007fffff));
-			{
-				const RegScratch minmax(m_block);
+				// lower limit
+				m_asm.mov(r32(minmax), 0xff800000);
+				m_asm.cmp(r32(tester), r32(minmax));
+				m_asm.cmovl(r32(_dst), r32(minmax));
+
+				// upper limit
 				m_asm.mov(r32(minmax), 0x007fffff);
+				m_asm.cmp(r32(tester), r32(minmax));
 				m_asm.cmovg(r32(_dst), r32(minmax));
 			}
 
 			m_asm.cmp(r32(tester), r32(_dst));
 			ccr_update_ifNotZero(CCRB_L);
 			m_asm.and_(r32(_dst), asmjit::Imm(0x00ffffff));
+		}
+	}
+	void JitOps::transferSaturation48(const JitReg64& _dst, const JitReg64& _src)
+	{
+		// scaling
+
+		/*
+		if( sr_test_noCache(SR_S1) )
+			_scale.var <<= 1;
+		else if( sr_test_noCache(SR_S0) )
+			_scale.var >>= 1;
+		*/
+
+		const auto* mode = m_block.getMode();
+
+		if(mode)
+		{
+			int shift = 0;
+			if(mode->testSR(SRB_S1))
+				++shift;
+			if(mode->testSR(SRB_S0))
+				--shift;
+
+			if(shift > 0)
+			{
+				if(_dst != _src)
+					m_asm.lea(_dst, ptr(_src, _src));
+				else
+					m_asm.add(_dst, _src);
+			}
+			else
+			{
+				if(_dst != _src)
+					m_asm.mov(r64(_dst), r64(_src));
+
+				if(shift < 0)
+					m_asm.sar(_dst, asmjit::Imm(1));
+			}
+		}
+		else
+		{
+			if(_dst != _src)
+				m_asm.mov(r64(_dst), r64(_src));
+
+			const ShiftReg s0s1(m_block);
+
+			sr_getBitValue(s0s1, SRB_S1);
+			m_asm.shl(_dst, s0s1.get().r8());
+
+			sr_getBitValue(s0s1, SRB_S0);
+			m_asm.sar(_dst, s0s1.get().r8());
+		}
+
+		{
+			signextend56to64(_dst);
+
+			const RegGP tester(m_block);
+			m_asm.mov(r64(tester), r64(_dst));
+
+			{
+				const RegScratch minmax(m_block);
+
+				// lower limit
+				m_asm.mov(minmax, 0xffff800000000000);
+				m_asm.cmp(tester, minmax);
+				m_asm.cmovl(_dst, minmax);
+
+				// upper limit
+				m_asm.mov(minmax, 0x00007fffffffffff);
+				m_asm.cmp(tester, minmax);
+				m_asm.cmovg(_dst, minmax);
+			}
+
+			m_asm.cmp(r64(tester), r64(_dst));
+			ccr_update_ifNotZero(CCRB_L);
+			m_dspRegs.mask48(r64(_dst));
 		}
 	}
 }

@@ -14,5 +14,7 @@ namespace dsp56k
 		bool dynamicPeripheralAddressing = false;
 		uint32_t maxInstructionsPerBlock = 0;
 		bool memoryWritesCallCpp = false;
+
+		bool asmjitDiagnostics = false;
 	};
 }

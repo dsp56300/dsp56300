@@ -15,7 +15,7 @@ namespace dsp56k
 
 	// Furthermore, we have so many GPs, we do not use the ones that are callee-save. We use vector registers instead to prevent that we have to push/pop when calling C functions
 
-	static constexpr JitReg64 g_funcArgGPs[] = {JitReg64(0), JitReg64(1), JitReg64(2), JitReg64(3)};
+	static constexpr JitReg64 g_funcArgGPs[] = {JitReg64(0), JitReg64(1), JitReg64(2), JitReg64(3), JitReg64(4), JitReg64(5), JitReg64(6), JitReg64(7)};
 
 	static constexpr JitReg64 g_nonVolatileGPs[] = {JitReg64(18), JitReg64(19), JitReg64(20), JitReg64(21), JitReg64(22), JitReg64(23), JitReg64(24), JitReg64(25), JitReg64(26), JitReg64(27), JitReg64(28), JitReg64(29)/*, JitReg64(30)*/ };
 
@@ -51,11 +51,11 @@ namespace dsp56k
 
 	static constexpr auto regDspPtr = asmjit::x86::r8;
 #else
-	static constexpr JitReg64 g_funcArgGPs[] = { asmjit::x86::rdi, asmjit::x86::rsi, asmjit::x86::rdx, asmjit::x86::rcx };
+	static constexpr JitReg64 g_funcArgGPs[] = { asmjit::x86::rdi, asmjit::x86::rsi, asmjit::x86::rdx, asmjit::x86::rcx, asmjit::x86::r8, asmjit::x86::r9 };
 
 	// Note: rcx is not used in any pools because it is needed as shift register
 
-	static constexpr JitReg64 g_nonVolatileGPs[] = { asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::rsi, asmjit::x86::rsp
+	static constexpr JitReg64 g_nonVolatileGPs[] = { asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::rsp
 	                                               , asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::r14, asmjit::x86::r15};
 	
 	static constexpr JitReg128 g_nonVolatileXMMs[] = { asmjit::x86::xmm6, asmjit::x86::xmm7, asmjit::x86::xmm8, asmjit::x86::xmm9, asmjit::x86::xmm10, asmjit::x86::xmm11, asmjit::x86::xmm12, asmjit::x86::xmm13, asmjit::x86::xmm14, asmjit::x86::xmm15 };

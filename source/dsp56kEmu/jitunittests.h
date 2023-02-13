@@ -53,6 +53,8 @@ namespace dsp56k
 		void transferSaturation_build();
 		void transferSaturation_verify();
 
+		void transferSaturation48();
+
 		void testCCCC(const int64_t _value, const int64_t _compareValue, const bool _lt, bool _le, bool _eq, bool _ge, bool _gt, bool _neq);
 
 		void decode_dddddd_write();
@@ -70,8 +72,7 @@ namespace dsp56k
 		void div();
 		void rep_div();
 
-		void clr_build();
-		void clr_verify();
+		void x0x1Combinations();
 
 		void emit(TWord _opA, TWord _opB = 0, TWord _pc = 0) override;
 

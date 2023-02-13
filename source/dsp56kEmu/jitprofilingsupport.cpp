@@ -4,7 +4,7 @@
 
 #include "disasm.h"
 #include "dsp.h"
-#include "dspthread.h"
+#include "threadtools.h"
 
 #ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
 #include "../vtuneSdk/include/jitprofiling.h"
@@ -26,7 +26,7 @@ namespace dsp56k
 #endif
 		m_fileWriter.reset(new std::thread([this]()
 		{
-			dsp56k::DSPThread::setCurrentThreadName("jitSourceWriter");
+			dsp56k::ThreadTools::setCurrentThreadName("jitSourceWriter");
 			threadWriteSources();
 		}));
 	}

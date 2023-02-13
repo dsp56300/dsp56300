@@ -9,138 +9,146 @@
 
 namespace dsp56k
 {
-	void JitOps::decode_cccc(const JitRegGP& _dst, const TWord cccc)
+	asmjit::arm::CondCode JitOps::reverseCC(asmjit::arm::CondCode _cc)
 	{
+		if (_cc == asmjit::arm::CondCode::kZero)		return asmjit::arm::CondCode::kNotZero;
+		if (_cc == asmjit::arm::CondCode::kNotZero)		return asmjit::arm::CondCode::kZero;
+
+		assert(false && "invalid CC");
+		return _cc;
+	}
+
+	asmjit::arm::CondCode JitOps::decode_cccc(const TWord cccc)
+	{
+		auto ccrBitTest = [&](const CCRBit _bit)
+		{
+			const auto mask = static_cast<CCRMask>(1 << _bit);
+			m_ccrRead |= mask;
+			updateDirtyCCR(mask);
+			m_asm.bitTest(r32(m_dspRegs.getSR(JitDspRegs::Read)), _bit);
+		};
+
 		switch (cccc)
 		{
 		case CCCC_CarrySet:									// CC(LO)		Carry Set	(lower)
-			ccr_getBitValue(_dst, CCRB_C);
-			break;
+			ccrBitTest(CCRB_C);
+			return asmjit::arm::CondCode::kNotZero;
 		case CCCC_CarryClear:								// CC(HS)		Carry Clear (higher or same)	
-			ccr_getBitValue(_dst, CCRB_C);
-			m_asm.eor(_dst, _dst, asmjit::Imm(1));
-			break;
+			ccrBitTest(CCRB_C);
+			return asmjit::arm::CondCode::kZero;
 		case CCCC_ExtensionSet:								// ES			Extension set	
-			ccr_getBitValue(_dst, CCRB_E);
-			break;
+			ccrBitTest(CCRB_E);
+			return asmjit::arm::CondCode::kNotZero;
 		case CCCC_ExtensionClear:							// EC			Extension clear	
-			ccr_getBitValue(_dst, CCRB_E);
-			m_asm.eor(_dst, _dst, asmjit::Imm(1));
-			break;
+			ccrBitTest(CCRB_E);
+			return asmjit::arm::CondCode::kZero;
 		case CCCC_Equal:									// EQ			Equal	
-			ccr_getBitValue(_dst, CCRB_Z);
-			break;
+			ccrBitTest(CCRB_Z);
+			return asmjit::arm::CondCode::kNotZero;
 		case CCCC_NotEqual:									// NE			Not Equal
-			ccr_getBitValue(_dst, CCRB_Z);
-			m_asm.eor(_dst, _dst, asmjit::Imm(1));
-			break;
+			ccrBitTest(CCRB_Z);
+			return asmjit::arm::CondCode::kZero;
 		case CCCC_LimitSet:									// LS			Limit set
-			ccr_getBitValue(_dst, CCRB_L);
-			break;
+			ccrBitTest(CCRB_L);
+			return asmjit::arm::CondCode::kNotZero;
 		case CCCC_LimitClear:								// LC			Limit clear
-			ccr_getBitValue(_dst, CCRB_L);
-			m_asm.eor(_dst, _dst, asmjit::Imm(1));
-			break;
+			ccrBitTest(CCRB_L);
+			return asmjit::arm::CondCode::kZero;
 		case CCCC_Minus:									// MI			Minus
-			ccr_getBitValue(_dst, CCRB_N);
-			break;
+			ccrBitTest(CCRB_N);
+			return asmjit::arm::CondCode::kNotZero;
 		case CCCC_Plus:										// PL			Plus
-			ccr_getBitValue(_dst, CCRB_N);
-			m_asm.eor(_dst, _dst, asmjit::Imm(1));
-			break;
+			ccrBitTest(CCRB_N);
+			return asmjit::arm::CondCode::kZero;
 		case CCCC_GreaterEqual:								// GE			Greater than or equal
-		{
-			// SRB_N == SRB_V
-			const RegGP r(m_block);
-			m_asm.mov(_dst, asmjit::a64::xzr);
-			m_asm.mov(r, asmjit::a64::xzr);
-			ccr_getBitValue(_dst, CCRB_N);
-			ccr_getBitValue(r, CCRB_V);
-			m_asm.cmp(_dst, r.get());
-			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
-		}
-		break;
+			{
+				// SRB_N == SRB_V
+				const RegGP r(m_block);
+				const RegGP dst(m_block);
+				ccr_getBitValue(dst, CCRB_N);
+				ccr_getBitValue(r, CCRB_V);
+				m_asm.cmp(dst, r.get());
+				return asmjit::arm::CondCode::kZero;
+			}
 		case CCCC_LessThan:									// LT			Less than
-		{
-			// SRB_N != SRB_V
-			const RegGP r(m_block);
-			m_asm.mov(_dst, asmjit::a64::xzr);
-			m_asm.mov(r, asmjit::a64::xzr);
-			ccr_getBitValue(_dst, CCRB_N);
-			ccr_getBitValue(r, CCRB_V);
-			m_asm.eor(_dst, _dst, r.get());
-		}
-		break;
+			{
+				// SRB_N != SRB_V
+				const RegGP r(m_block);
+				const RegGP dst(m_block);
+				ccr_getBitValue(dst, CCRB_N);
+				ccr_getBitValue(r, CCRB_V);
+				m_asm.cmp(dst, r);
+				return asmjit::arm::CondCode::kNotZero;
+			}
 		case CCCC_Normalized:								// NR			Normalized
-		{
-			// (SRB_Z + ((!SRB_U) | (!SRB_E))) == 1
-			const RegGP r(m_block);
-			m_asm.mov(_dst, asmjit::a64::xzr);
-			m_asm.mov(r, asmjit::a64::xzr);
-			ccr_getBitValue(_dst, CCRB_U);
-			m_asm.eor(_dst, _dst, asmjit::Imm(1));
-			ccr_getBitValue(r, CCRB_E);
-			m_asm.eor(r, r, asmjit::Imm(1));
-			m_asm.and_(_dst, r.get());
-			ccr_getBitValue(r, CCRB_Z);
-			m_asm.add(_dst, r.get());
-			m_asm.cmp(_dst, _dst, asmjit::Imm(1));
-			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
-		}
-		break;
+			{
+				// (SRB_Z + ((!SRB_U) | (!SRB_E))) == 1
+				const RegGP dst(m_block);
+				const RegGP r(m_block);
+				ccr_getBitValue(dst, CCRB_U);
+				m_asm.eor(dst, dst, asmjit::Imm(1));
+				ccr_getBitValue(r, CCRB_E);
+				m_asm.eor(r, r, asmjit::Imm(1));
+				m_asm.and_(dst, r.get());
+				ccr_getBitValue(r, CCRB_Z);
+				m_asm.add(dst, r.get());
+				m_asm.cmp(dst, dst, asmjit::Imm(1));
+				return asmjit::arm::CondCode::kZero;
+			}
 		case CCCC_NotNormalized:							// NN			Not normalized
-		{
-			// (SRB_Z + ((!SRB_U) | !SRB_E)) == 0
-			const RegGP r(m_block);
-			m_asm.mov(_dst, asmjit::a64::xzr);
-			m_asm.mov(r, asmjit::a64::xzr);
-			ccr_getBitValue(_dst, CCRB_U);
-			m_asm.eor(_dst, _dst, asmjit::Imm(1));
-			ccr_getBitValue(r, CCRB_E);
-			m_asm.eor(r, r, asmjit::Imm(1));
-			m_asm.and_(_dst, r.get());
-			ccr_getBitValue(r, CCRB_Z);
-			m_asm.add(_dst, r.get());
-			m_asm.test_(_dst);
-			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
-		}
-		break;
+			{
+				// (SRB_Z + ((!SRB_U) | !SRB_E)) == 0
+				const RegGP dst(m_block);
+				const RegGP r(m_block);
+				ccr_getBitValue(dst, CCRB_U);
+				m_asm.eor(dst, dst, asmjit::Imm(1));
+				ccr_getBitValue(r, CCRB_E);
+				m_asm.eor(r, r, asmjit::Imm(1));
+				m_asm.and_(dst, r.get());
+				ccr_getBitValue(r, CCRB_Z);
+				m_asm.add(dst, r.get());
+				m_asm.test_(dst);
+				return asmjit::arm::CondCode::kZero;
+			}
 		case CCCC_GreaterThan:								// GT			Greater than
-		{
-			// (SRB_Z + (SRB_N != SRB_V)) == 0
-			const RegGP r(m_block);
-			m_asm.mov(_dst, asmjit::a64::xzr);
-			m_asm.mov(r, asmjit::a64::xzr);
+			{
+				// (SRB_Z + (SRB_N != SRB_V)) == 0
+				const RegGP r(m_block);
+				const RegGP dst(m_block);
 
-			ccr_getBitValue(_dst, CCRB_N);
-			ccr_getBitValue(r, CCRB_V);
+				ccr_getBitValue(dst, CCRB_N);
+				ccr_getBitValue(r, CCRB_V);
 
-			m_asm.eor(_dst, _dst, r.get());
-			ccr_getBitValue(r, CCRB_Z);
-			m_asm.adds(_dst, _dst, r.get());
-			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
-		}
-		break;
+				m_asm.eor(dst, dst, r.get());
+				ccr_getBitValue(r, CCRB_Z);
+				m_asm.adds(dst, dst, r.get());
+				return asmjit::arm::CondCode::kZero;
+			}
 		case CCCC_LessEqual:								// LE			Less than or equal
-		{
-			// (SRB_Z + (SRB_N != SRB_V)) == 1
-			const RegGP r(m_block);
-			m_asm.mov(_dst, asmjit::a64::xzr);
-			m_asm.mov(r, asmjit::a64::xzr);
+			{
+				// (SRB_Z + (SRB_N != SRB_V)) == 1
+				const RegGP r(m_block);
+				const RegGP dst(m_block);
 
-			ccr_getBitValue(_dst, CCRB_N);
-			ccr_getBitValue(r, CCRB_V);
+				ccr_getBitValue(dst, CCRB_N);
+				ccr_getBitValue(r, CCRB_V);
 
-			m_asm.eor(_dst, _dst, r.get());
-			ccr_getBitValue(r, CCRB_Z);
-			m_asm.add(_dst, _dst, r.get());
-			m_asm.cmp(_dst, asmjit::Imm(1));
-			m_asm.cset(_dst, asmjit::arm::CondCode::kZero);
-		}
-		break;
+				m_asm.eor(dst, dst, r.get());
+				ccr_getBitValue(r, CCRB_Z);
+				m_asm.add(dst, dst, r.get());
+				m_asm.cmp(dst, asmjit::Imm(1));
+				return asmjit::arm::CondCode::kZero;
+			}
 		default:
 			assert(0 && "invalid CCCC value");
+			return asmjit::arm::CondCode::kMaxValue;
 		}
+	}
+
+	void JitOps::decode_cccc(const JitRegGP& _dst, const TWord cccc)
+	{
+		const auto cc = decode_cccc(cccc);
+		m_asm.cset(_dst, cc);
 	}
 }
 

@@ -80,12 +80,31 @@ namespace dsp56k
 
 	template<Instruction Inst, BraMode Bmode> void JitOps::braIfCC(const TWord op, DspValue& offset)
 	{
-		DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
+		const DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
 
-		checkCondition<Inst>(op, [&]()
+		if constexpr (Bmode == Bra)
 		{
-			braOrBsr<Bmode>(offset);
-		}, Bmode == Bsr);
+			const auto cccc = getFieldValue<Inst,Field_CCCC>(op);
+
+			if(offset.isImmediate())
+			{
+				const RegGP newPC(m_block);
+				m_asm.mov(r32(newPC), asmjit::Imm(m_pcCurrentOp + offset.imm24()));
+				m_asm.cmov(decode_cccc(cccc), r32(pc), r32(newPC));
+			}
+			else
+			{
+				m_asm.add(r32(offset), m_pcCurrentOp);
+				m_asm.cmov(decode_cccc(cccc), r32(pc), r32(offset));
+			}
+		}
+		else
+		{
+			checkCondition<Inst>(op, [&]()
+			{
+				braOrBsr<Bmode>(offset);
+			}, Bmode == Bsr);
+		}
 	}
 
 	// ________________________________________________
@@ -96,12 +115,30 @@ namespace dsp56k
 
 	template<Instruction Inst, JumpMode Bmode> void JitOps::jumpIfCC(const TWord op, DspValue& offset)
 	{
-		DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
+		const DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
 
-		checkCondition<Inst>(op, [&]()
+		if constexpr(Bmode == Jump)
 		{
-			jumpOrJSR<Bmode>(offset);
-		}, Bmode == JSR);
+			const auto cccc = getFieldValue<Inst,Field_CCCC>(op);
+
+			if(offset.isImmediate())
+			{
+				const RegGP newPC(m_block);
+				m_asm.mov(r32(newPC), asmjit::Imm(offset.imm24()));
+				m_asm.cmov(decode_cccc(cccc), r32(pc), r32(newPC));
+			}
+			else
+			{
+				m_asm.cmov(decode_cccc(cccc), r32(pc), r32(offset));
+			}
+		}
+		else
+		{
+			checkCondition<Inst>(op, [&]()
+			{
+				jumpOrJSR<Bmode>(offset);
+			}, Bmode == JSR);
+		}
 	}
 
 	template<Instruction Inst, JumpMode Bmode, ExpectedBitValue BitValue> void JitOps::jumpIfBitTestMem(const TWord _op)

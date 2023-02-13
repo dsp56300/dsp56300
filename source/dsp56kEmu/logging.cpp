@@ -13,7 +13,7 @@
 #include <ctime>
 #define output_string(s) ::OutputDebugStringA(s)
 #else
-#define output_string(s) fputs(s, stderr);
+#define output_string(s) fputs(s, stdout);
 #endif
 
 namespace Logging

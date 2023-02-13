@@ -223,8 +223,9 @@ namespace dsp56k
 		const JitReg64& get() const { return m_reg; }
 		operator const JitReg64& () const { return m_reg; }
 
-	private:
+	protected:
 		JitBlock& m_block;
+	private:
 		const JitReg64 m_reg;
 		const bool m_pushed;
 	};
@@ -232,7 +233,11 @@ namespace dsp56k
 	class FuncArg : public PushGP
 	{
 	public:
-		FuncArg(JitBlock& _block, const uint32_t& _argIndex) : PushGP(_block, g_funcArgGPs[_argIndex]) {}
+		FuncArg(JitBlock& _block, const uint32_t& _argIndex);
+		~FuncArg();
+
+	private:
+		const uint32_t m_funcArgIndex;
 	};
 
 #ifdef HAVE_X86_64
@@ -272,7 +277,7 @@ namespace dsp56k
 	class PushGPRegs
 	{
 	public:
-		PushGPRegs(JitBlock& _block);
+		PushGPRegs(JitBlock& _block, bool _isJitCall);
 		~PushGPRegs();
 	private:
 		JitBlock& m_block;
@@ -282,7 +287,7 @@ namespace dsp56k
 	class PushBeforeFunctionCall
 	{
 	public:
-		PushBeforeFunctionCall(JitBlock& _block);
+		PushBeforeFunctionCall(JitBlock& _block, bool _isJitCall);
 
 		PushXMMRegs m_xmm;
 		PushGPRegs m_gp;
@@ -292,7 +297,7 @@ namespace dsp56k
 	{
 	public:
 		explicit RegScratch(JitBlock& _block, bool _acquire = true);
-		explicit RegScratch(RegScratch&& _other) noexcept : m_block(_other.m_block)
+		RegScratch(RegScratch&& _other) noexcept : m_block(_other.m_block)
 		{
 			if(_other.isValid())
 			{

@@ -33,6 +33,7 @@ namespace dsp56k
 	using JitReg32 = asmjit::arm::GpW;
 	using JitReg64 = asmjit::arm::GpX;
 	using JitReg128 = asmjit::arm::VecV;
+	using JitCondCode = asmjit::arm::CondCode;
 }
 #else
 #include "asmjit/x86/x86operand.h"
@@ -59,5 +60,6 @@ namespace dsp56k
 	using JitReg32 = asmjit::x86::Gpd;
 	using JitReg64 = asmjit::x86::Gpq;
 	using JitReg128 = asmjit::x86::Xmm;
+	using JitCondCode = asmjit::x86::CondCode;
 }
 #endif

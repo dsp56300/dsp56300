@@ -7,13 +7,24 @@ namespace dsp56k
 	void dspExecDefaultPreventInterrupt(DSP*);
 	void dspExecNop(DSP*);
 
-	void JitOps::signextend56to64(const JitReg64& _reg) const
+	void JitOps::signextend56to64(const JitReg64& _dst, const JitReg64& _src) const
 	{
 #ifdef HAVE_ARM64
-		m_asm.sbfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(56));
+		m_asm.sbfx(_dst, _src, asmjit::Imm(0), asmjit::Imm(56));
 #else
-		m_asm.sal(_reg, asmjit::Imm(8));
-		m_asm.sar(_reg, asmjit::Imm(8));
+		if(_dst != _src)
+		{
+			if(m_asm.hasBMI2())
+			{
+				m_asm.rorx(_dst, _src, asmjit::Imm(64-8));
+				m_asm.sar(_dst, asmjit::Imm(8));
+				return;
+			}
+
+			m_asm.mov(_dst, _src);
+		}
+		m_asm.sal(_dst, asmjit::Imm(8));
+		m_asm.sar(_dst, asmjit::Imm(8));
 #endif
 	}
 
@@ -51,13 +62,23 @@ namespace dsp56k
 #endif
 	}
 
-	void JitOps::signextend24to64(const JitReg64& _reg) const
+	void JitOps::signextend24to64(const JitReg64& _dst, const JitReg64& _src) const
 	{
 #ifdef HAVE_ARM64
-		m_asm.sbfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(24));
+		m_asm.sbfx(_dst, _src, asmjit::Imm(0), asmjit::Imm(24));
 #else
-		m_asm.sal(_reg, asmjit::Imm(40));
-		m_asm.sar(_reg, asmjit::Imm(40));
+		if(_dst != _src)
+		{
+			if(m_asm.hasBMI2())
+			{
+				m_asm.rorx(_dst, _src, asmjit::Imm(64-40));
+				m_asm.sar(_dst, asmjit::Imm(40));
+				return;
+			}
+			m_asm.mov(r32(_dst), r32(_src));
+		}
+		m_asm.sal(_dst, asmjit::Imm(40));
+		m_asm.sar(_dst, asmjit::Imm(40));
 #endif
 	}
 
@@ -115,9 +136,14 @@ namespace dsp56k
 
 	void JitOps::signed24To56(const JitReg64& _r) const
 	{
+#ifdef HAVE_ARM64
+		m_asm.sbfx(r32(_r), r32(_r), asmjit::Imm(0), asmjit::Imm(24));
+		m_asm.lsl(r32(_r), r32(_r), asmjit::Imm(24));
+#else
 		m_asm.shl(_r, asmjit::Imm(40));
 		m_asm.sar(_r, asmjit::Imm(8));		// we need to work around the fact that there is no AND with 64 bit immediate operand
 		m_asm.shr(_r, asmjit::Imm(8));
+#endif
 	}
 
 	void JitOps::pushPCSR()
@@ -187,15 +213,7 @@ namespace dsp56k
 
 	void JitOps::getOpWordB(DspValue& _dst)
 	{
-		if(_dst.isRegValid())
-		{
-			assert(_dst.getBitCount() == 24);
-			m_asm.mov(_dst.get(), asmjit::Imm(getOpWordB()));
-		}
-		else
-		{
-			_dst.set(getOpWordB(), DspValue::Immediate24);
-		}
+		_dst.set(getOpWordB(), DspValue::Immediate24);
 	}
 
 	void JitOps::getMR(const JitReg64& _dst) const
@@ -210,13 +228,15 @@ namespace dsp56k
 
 	void JitOps::getCCR(RegGP& _dst)
 	{
+		m_ccrRead |= CCR_All;
+
 		_dst.release();
 		updateDirtyCCR();
 		_dst.acquire();
 #ifdef HAVE_ARM64
 		m_asm.ubfx(r32(_dst), r32(m_dspRegs.getSR(JitDspRegs::Read)), asmjit::Imm(0), asmjit::Imm(8));
 #else
-		m_asm.movzx(r64(_dst), m_dspRegs.getSR(JitDspRegs::Read).r8());
+		m_asm.movzx(r32(_dst), m_dspRegs.getSR(JitDspRegs::Read).r8());
 #endif
 	}
 
@@ -229,8 +249,12 @@ namespace dsp56k
 	void JitOps::getEOM(const JitReg64& _dst) const
 	{
 		m_block.dspRegPool().movDspReg(_dst, m_block.dsp().regs().omr);
+#ifdef HAVE_ARM64
+		m_asm.ubfx(_dst, _dst, asmjit::Imm(8), asmjit::Imm(8));
+#else
 		m_asm.shr(_dst, asmjit::Imm(8));
 		m_asm.and_(_dst, asmjit::Imm(0xff));
+#endif
 	}
 
 	void JitOps::setCCR(const JitReg64& _src) const
@@ -247,31 +271,25 @@ namespace dsp56k
 	{
 		const RegGP r(m_block);
 		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().omr);
-		m_asm.and_(r, asmjit::Imm(0xffff00));
-		m_asm.or_(r, _src);
+#ifdef HAVE_ARM64
+		m_asm.bfi(r32(r), r32(_src), asmjit::Imm(0), asmjit::Imm(8));
+#else
+		m_asm.and_(r32(r), asmjit::Imm(0xffff00));
+		m_asm.or_(r32(r), r32(_src));
+#endif
 		m_block.dspRegPool().movDspReg(m_block.dsp().regs().omr, r);
 	}
 
 	void JitOps::getSR(DspValue& _dst)
 	{
+		m_ccrRead |= CCR_All;
 		updateDirtyCCR();
 		m_dspRegs.getSR(_dst);
 	}
 
-	JitRegGP JitOps::getSR(JitDspRegs::AccessType _accessType)
-	{
-		updateDirtyCCR();
-		return m_dspRegs.getSR(_accessType);
-	}
-
-	void JitOps::setSR(const JitReg32& _src)
-	{
-		m_ccrDirty = static_cast<CCRMask>(0);
-		m_dspRegs.setSR(_src);
-	}
-
 	void JitOps::setSR(const DspValue& _src)
 	{
+		m_ccrWritten |= CCR_All;
 		m_ccrDirty = static_cast<CCRMask>(0);
 		m_dspRegs.setSR(_src);
 	}
@@ -283,12 +301,18 @@ namespace dsp56k
 		else
 			assert(_dst.getBitCount() == 24);
 
+#ifdef HAVE_ARM64
+		AluRef alu(m_block, _aluIndex, true, false);
+		m_asm.sbfx(r64(_dst), r64(alu), asmjit::Imm(48), asmjit::Imm(8));
+		m_asm.ubfx(r32(_dst), r32(_dst), asmjit::Imm(0), asmjit::Imm(24));
+#else
 		const auto temp = r64(_dst.get());
 
-		m_dspRegs.getALU(temp, _aluIndex);
-		m_asm.sal(temp, asmjit::Imm(8));
+		AluRef alu(m_block, _aluIndex, true, false);
+		m_asm.rol(temp, alu, 8);
 		m_asm.sar(temp, asmjit::Imm(56));
 		m_asm.and_(temp, asmjit::Imm(0xffffff));
+#endif
 	}
 
 	void JitOps::getSSH(DspValue& _dst) const
@@ -307,12 +331,11 @@ namespace dsp56k
 		m_asm.and_(r64(_dst.get()), 0x00ffffff);
 	}
 
-	void JitOps::transferAluTo24(DspValue& _dst, TWord _alu)
+	void JitOps::transferAluTo24(DspValue& _dst, const TWord _alu)
 	{
 		if (!_dst.isRegValid())
 			_dst.temp(DspValue::Temp24);
-		m_dspRegs.getALU(r64(_dst.get()), _alu);
-		transferSaturation(r64(_dst.get()));
+		transferSaturation24(r64(_dst.get()), r64(m_dspRegs.getALU(_alu)));
 	}
 
 	void JitOps::transfer24ToAlu(TWord _alu, const DspValue& _src) const
@@ -323,27 +346,21 @@ namespace dsp56k
 
 	void JitOps::callDSPFunc(void(*_func)(DSP*, TWord)) const
 	{
-		FuncArg r0(m_block, 0);
+		const FuncArg r0(m_block, 0);
 		m_block.asm_().mov(r0, asmjit::Imm(&m_block.dsp()));
 		m_block.stack().call(asmjit::func_as_ptr(_func));
 	}
 
-	void JitOps::callDSPFunc(void(*_func)(DSP*, TWord), TWord _arg) const
+	void JitOps::callDSPFunc(void(*_func)(DSP*, TWord), const TWord _arg) const
 	{
-		FuncArg r1(m_block, 1);
-		FuncArg r2(m_block, 2);
-		FuncArg r3(m_block, 3);
-
-		m_block.asm_().mov(r1, asmjit::Imm(_arg));
+		const FuncArg r1(m_block, 1);
+		m_block.asm_().mov(r32(r1), asmjit::Imm(_arg));
 		callDSPFunc(_func);
 	}
 
 	void JitOps::callDSPFunc(void(*_func)(DSP*, TWord), const JitRegGP& _arg) const
 	{
-		FuncArg r1(m_block, 1);
-		FuncArg r2(m_block, 2);
-		FuncArg r3(m_block, 3);
-
+		const FuncArg r1(m_block, 1);
 		m_block.asm_().mov(r1, _arg);
 		callDSPFunc(_func);
 	}

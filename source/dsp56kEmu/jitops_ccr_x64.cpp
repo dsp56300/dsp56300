@@ -12,13 +12,16 @@ namespace dsp56k
 {
 	void JitOps::ccr_clear(CCRMask _mask)
 	{
+		m_ccrWritten |= _mask;
 		m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite).r32(), asmjit::Imm(~static_cast<uint32_t>(_mask)));
 		ccr_clearDirty(_mask);
 	}
 
 	void JitOps::ccr_getBitValue(const JitRegGP& _dst, CCRBit _bit)
 	{
-		updateDirtyCCR(static_cast<CCRMask>(1 << _bit));
+		const auto mask = static_cast<CCRMask>(1 << _bit);
+		m_ccrRead |= mask;
+		updateDirtyCCR(mask);
 		m_asm.copyBitToReg(_dst, m_dspRegs.getSR(JitDspRegs::Read), _bit);
 	}
 
@@ -104,16 +107,17 @@ namespace dsp56k
 		ccr_update(_bit, asmjit::x86::CondCode::kB);
 	}
 
-	void JitOps::ccr_update(CCRBit _bit, asmjit::x86::CondCode _cc, bool _valueIsShifted/* = false*/)
+	void JitOps::ccr_update(CCRBit _bit, asmjit::x86::CondCode _cc)
 	{
 		const RegScratch r(m_block);
 		m_asm.set(_cc, r.r8());
-		ccr_update(r, _bit, _valueIsShifted);
+		ccr_update(r, _bit);
 	}
 
 	void JitOps::ccr_update(const JitRegGP& ra, CCRBit _bit, bool _valueIsShifted/* = false*/)
 	{
 		const auto mask = static_cast<CCRMask>(1 << _bit);
+		m_ccrWritten |= mask;
 
 		if (m_ccr_update_clear && _bit != CCRB_L && _bit != CCRB_S)
 			ccr_clear(mask);												// clear out old status register value
@@ -138,16 +142,8 @@ namespace dsp56k
 		{
 			const uint32_t shift = 46 + (mode->testSR(SRB_S0) ? 1 : 0) - (mode->testSR(SRB_S1) ? 1 : 0);
 			const RegScratch r(m_block);
-			if(m_asm.hasBMI2())
-			{
-				m_asm.rorx(r, _alu, asmjit::Imm(shift));
-			}
-			else
-			{
-				m_asm.mov(r, _alu);
-				m_asm.shr(r, asmjit::Imm(shift));
-			}
-			m_asm.and_(r32(r), asmjit::Imm(0x3));
+			m_asm.ror(r, _alu, static_cast<int>(shift));
+			m_asm.test(r32(r), asmjit::Imm(0x3));
 		}
 		else
 		{
@@ -166,7 +162,7 @@ namespace dsp56k
 			const RegScratch r(m_block);
 			m_asm.mov(r, _alu);
 			m_asm.shr(r, shift);
-			m_asm.and_(r32(r), asmjit::Imm(0x3));
+			m_asm.test(r32(r), asmjit::Imm(0x3));
 		}
 		ccr_update_ifParity(CCRB_U);
 
@@ -183,6 +179,7 @@ namespace dsp56k
 	void JitOps::ccr_e_update(const JitReg64& _alu)
 	{
 		/*
+		Family Manual P 5-15
 		Extension
 		Indicates when the accumulator extension register is in use. This bit is
 		cleared if all the bits of the integer portion of the 56-bit result are all
@@ -195,71 +192,60 @@ namespace dsp56k
 		0	0	No Scaling	Bits 55,54..............48,47
 		0	1	Scale Down	Bits 55,54..............49,48
 		1	0	Scale Up	Bits 55,54..............47,46
+
+		The emu approach:
+		We sign-extend the alu first and then right-shift all bits in question. This will result
+		In a temp reg that is either all ones or all zeroes if the extension is clear
+		We increment by 1 to have either 0 or 1 and do an unsigned compare if the result is <= 1
 		*/
 
+		auto aluScratch = [this, &_alu]()
 		{
-			const RegGP mask(m_block);
+			RegScratch alu(m_block);
+			m_asm.rol(alu, _alu, 8);
+			return alu;
+		};
 
-			const auto* mode = m_block.getMode();
+		auto compare = [this](const RegScratch& _aluScratch)
+		{
+			m_asm.inc(r32(_aluScratch));
+			m_asm.cmp(r32(_aluScratch), asmjit::Imm(1));
+		};
 
-			uint32_t m = 0x3fe;
+		const auto* mode = m_block.getMode();
 
-			if(mode)
-			{
-				if(mode->testSR(SRB_S0))	m <<= 1;
-				if(mode->testSR(SRB_S1))	m >>= 1;
-				m &= 0x3ff;
-			}
-			else
-			{
-				m_asm.mov(r32(mask), asmjit::Imm(0x3fe));
+		if(mode)
+		{
+			uint32_t shift = 47;
+			if(mode->testSR(SRB_S0))	++shift;
+			if(mode->testSR(SRB_S1))	--shift;
 
-				{
-					const ShiftReg s0s1(m_block);
+			const auto alu = aluScratch();
 
-					sr_getBitValue(s0s1, SRB_S0);
-					m_asm.shl(r32(mask), s0s1.get().r8());
-					sr_getBitValue(s0s1, SRB_S1);
-					m_asm.shr(r32(mask), s0s1.get().r8());
-				}
+			m_asm.sar(alu, asmjit::Imm(shift + 8));
 
-				m_asm.and_(r32(mask), asmjit::Imm(0x3ff));
-			}
-
-			{
-				const RegScratch alu(m_block);
-
-				if(m_asm.hasBMI2())
-				{
-					m_asm.rorx(alu, _alu, asmjit::Imm(46));
-				}
-				else
-				{
-					m_asm.mov(alu, _alu);
-					m_asm.shr(alu, asmjit::Imm(46));
-				}
-
-				if(mode)
-					m_asm.and_(r32(alu), asmjit::Imm(m));
-				else
-					m_asm.and_(r32(alu), r32(mask));
-
-				// res = alu != mask && alu != 0
-
-				// Don't be distracted by the names, we abuse alu & mask here to store comparison results
-				if(mode)
-					m_asm.cmp(r32(alu), asmjit::Imm(m));
-				else
-					m_asm.cmp(r32(alu), r32(mask));
-				m_asm.setnz(mask.get().r8());
-				m_asm.test_(r32(alu));
-				m_asm.setnz(alu.r8());
-
-				m_asm.and_(mask.get().r8(), alu.r8());
-			}
-
-			ccr_update(mask, CCRB_E);
+			compare(alu);
 		}
+		else
+		{
+			const ShiftReg shift(m_block);
+			m_asm.mov(r32(shift), asmjit::Imm(47 + 8));
+			{
+				const RegScratch bitVal(m_block);
+				sr_getBitValue(bitVal, SRB_S0);
+				m_asm.add(shift.get().r8(), bitVal.get().r8());
+				sr_getBitValue(bitVal, SRB_S1);
+				m_asm.sub(shift.get().r8(), bitVal.get().r8());
+			}
+
+			const auto alu = aluScratch();
+
+			m_asm.sar(alu, shift.get().r8());
+
+			compare(alu);
+		}
+
+		ccr_update(CCRB_E, asmjit::x86::CondCode::kUnsignedGT);
 	}
 
 	void JitOps::ccr_n_update_by55(const JitReg64& _alu)
@@ -338,27 +324,19 @@ namespace dsp56k
 
 	void JitOps::ccr_l_update_by_v()
 	{
+		assert((m_ccrDirty & CCR_V) == 0);
 		updateDirtyCCR(CCR_V);
+		m_ccrWritten |= CCR_L;
 
 		static_assert(CCRB_L > CCRB_V);
 		constexpr auto shift = CCRB_L - CCRB_V;
 
-		const auto sr = m_block.regs().getSR(JitDspRegs::ReadWrite).r8();
+		const auto sr = r32(m_block.regs().getSR(JitDspRegs::ReadWrite));
 
 		const RegScratch temp(m_block);
-
-		if(m_asm.hasBMI2())
-		{
-			m_asm.rorx(temp, r64(sr), asmjit::Imm(64 - shift));
-		}
-		else
-		{
-			m_asm.mov(temp.r8(), sr);
-			m_asm.shl(temp.r8(), asmjit::Imm(shift));
-		}
-		m_asm.and_(temp.r8(), asmjit::Imm(CCR_L));
-
-		m_asm.or_(sr, temp.r8());
+		m_asm.rol(r32(temp), sr, shift);
+		m_asm.and_(r32(temp), asmjit::Imm(CCR_L));
+		m_asm.or_(sr, r32(temp));
 
 		ccr_clearDirty(CCR_L);
 	}

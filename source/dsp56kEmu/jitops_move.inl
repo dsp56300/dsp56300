@@ -21,9 +21,21 @@ namespace dsp56k
 		}
 		else
 		{
-			DspValue r(m_block, UsePooledTemp);
-			decode_dddddd_read(r, ddddd);
-			writeMem<Inst>(_op, _area, r);
+			if((m_repMode == RepLoop || m_repMode == RepLast) && !hasAluOp(_op))
+			{
+				writeMem<Inst>(_op, _area, m_repTemps.front());
+			}
+			else
+			{
+				DspValue r(m_block, UsePooledTemp);
+
+				decode_dddddd_read(r, ddddd);
+
+				writeMem<Inst>(_op, _area, r);
+
+				if(m_repMode == RepFirst && !hasAluOp(_op))
+					m_repTemps.emplace_back(std::move(r));
+			}
 		}
 	}
 	template<Instruction Inst> void JitOps::move_ddddd_absAddr(TWord _op, const EMemArea _area)
@@ -40,9 +52,20 @@ namespace dsp56k
 		}
 		else
 		{
-			DspValue r(m_block);
-			decode_dddddd_read(r, ddddd);
-			writeMem<Inst>(_op, _area, r);
+			if((m_repMode == RepLoop || m_repMode == RepLast) && !hasAluOp(_op))
+			{
+				writeMem<Inst>(_op, _area, m_repTemps.front());
+			}
+			else
+			{
+				DspValue r(m_block);
+
+				decode_dddddd_read(r, ddddd);
+				writeMem<Inst>(_op, _area, r);
+
+				if(m_repMode == RepFirst && !hasAluOp(_op))
+					m_repTemps.emplace_back(std::move(r));
+			}
 		}
 	}
 
@@ -137,31 +160,47 @@ namespace dsp56k
 		}
 		else
 		{
-			decode_LLL_read(LLL, x, y);
-
-			switch (eaType)
+			auto writeXY = [this, eaType, op](DspValue& _x, DspValue& _y)
 			{
-			case Immediate:
-				assert(false && "unable to write to immediate");
-				getOpWordB();
-				break;
-			case Peripherals:
-				m_block.mem().writePeriph(MemArea_X, getOpWordB(), x);
-				m_block.mem().writePeriph(MemArea_Y, m_opWordB, y);
-				break;
-			case Memory:
-				m_block.mem().writeDspMemory(getOpWordB(), x, y);
-				break;
-			case Dynamic:
+				switch (eaType)
 				{
-					const auto ea = effectiveAddress<Inst>(op);
-					m_block.mem().writeDspMemory(ea, x, y);
-//					writeMemOrPeriph(MemArea_X, ea, x);
-//					writeMemOrPeriph(MemArea_Y, ea, y);
+				case Immediate:
+					assert(false && "unable to write to immediate");
+					getOpWordB();
+					break;
+				case Peripherals:
+					m_block.mem().writePeriph(MemArea_X, getOpWordB(), _x);
+					m_block.mem().writePeriph(MemArea_Y, m_opWordB, _y);
+					break;
+				case Memory:
+					m_block.mem().writeDspMemory(getOpWordB(), _x, _y);
+					break;
+				case Dynamic:
+					{
+						const auto ea = effectiveAddress<Inst>(op);
+						m_block.mem().writeDspMemory(ea, _x, _y);
+	//					writeMemOrPeriph(MemArea_X, ea, _x);
+	//					writeMemOrPeriph(MemArea_Y, ea, _y);
+					}
+					break;
 				}
-				break;
-			}
+			};
 
+			if((m_repMode == RepLoop || m_repMode == RepLast) && !hasAluOp(op))
+			{
+				writeXY(m_repTemps[0], m_repTemps[1]);
+			}
+			else
+			{
+				decode_LLL_read(LLL, x, y);
+				writeXY(x,y);
+
+				if(m_repMode == RepFirst && !hasAluOp(op))
+				{
+					m_repTemps.emplace_back(std::move(x));
+					m_repTemps.emplace_back(std::move(y));
+				}
+			}
 		}
 	}
 

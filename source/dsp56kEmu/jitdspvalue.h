@@ -45,7 +45,7 @@ namespace dsp56k
 		explicit DspValue(DSPReg&& _dspReg);
 		DspValue(const DspValue&) = delete;
 
-		explicit DspValue(DspValue&& other) noexcept;
+		DspValue(DspValue&& other) noexcept;
 
 		explicit DspValue(RegGP&& _existingTemp, Type _type);
 

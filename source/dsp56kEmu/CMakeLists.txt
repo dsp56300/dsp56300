@@ -34,6 +34,7 @@ interpreterunittests.cpp interpreterunittests.h
 interrupts.h
 logging.cpp logging.h
 memory.cpp memory.h
+memorybuffer.cpp memorybuffer.h
 omfloader.cpp omfloader.h
 opcodes.cpp opcodes.h
 opcodeanalysis.h
@@ -45,6 +46,7 @@ registers.cpp registers.h
 ringbuffer.h
 semaphore.h
 staticArray.h
+threadtools.cpp threadtools.h
 timers.cpp timers.h
 types.cpp types.h
 unittests.cpp unittests.h
@@ -70,6 +72,7 @@ jitdspvalue.cpp jitdspvalue.h
 jitmem.cpp jitmem.h
 jitops.cpp jitops.h jitops_agu.cpp jitops_alu.cpp jitops_ccr.cpp jitops_decode.cpp jitops_helper.cpp jitops_jmp.cpp jitops_mem.cpp jitops_move.cpp
 jitops_alu.inl jitops_helper.inl jitops_jmp.inl jitops_mem.inl jitops_move.inl
+jitoptimizer.cpp jitoptimizer.h
 jitprofilingsupport.cpp jitprofilingsupport.h
 jitregtracker.cpp jitregtracker.h
 jitregtypes.h

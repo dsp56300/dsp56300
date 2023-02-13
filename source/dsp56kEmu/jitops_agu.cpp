@@ -5,27 +5,21 @@
 namespace dsp56k
 {
 
-	void JitOps::updateAddressRegisterSub(const AddressingMode _mode, const JitReg32& _r, const JitReg32& _n, const JitReg32& _m, uint32_t _rrr, bool _addN)
+	void JitOps::updateAddressRegisterSub(const AddressingMode _mode, const JitReg32& _r, const JitReg32& _n, uint32_t _rrr, bool _addN)
 	{
 //		assert(JitDspMode::calcAddressingMode(m_block.dsp().regs().m[_rrr]) == _mode);
-
-		const auto execLinear = [&]()
-		{
-			if (_addN)
-				m_asm.add(_r, _n);
-			else
-				m_asm.sub(_r, _n);
-		};
 
 		switch (_mode)
 		{
 		case AddressingMode::Linear:
-			execLinear();
+			if (_addN)	m_asm.add(_r, _n);
+			else		m_asm.sub(_r, _n);
 			break;
 		case AddressingMode::Modulo:
 			{
 				const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
-				updateAddressRegisterSubModulo(r32(_r), _n, r32(_m), r32(moduloMask), _addN);
+				const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr, true, false);
+				updateAddressRegisterSubModulo(r32(_r), _n, r32(m), r32(moduloMask), _addN);
 			}
 			break;
 		case AddressingMode::MultiWrapModulo:
@@ -44,7 +38,7 @@ namespace dsp56k
 		m_asm.and_(_r, asmjit::Imm(0xffffff));
 	}
 
-	void JitOps::updateAddressRegisterSubN1(const AddressingMode _mode, const JitReg32& _r, const JitReg32& _m, uint32_t _rrr, bool _addN)
+	void JitOps::updateAddressRegisterSubN1(const AddressingMode _mode, const JitReg32& _r, uint32_t _rrr, bool _addN)
 	{
 //		assert(JitDspMode::calcAddressingMode(m_block.dsp().regs().m[_rrr]) == _mode);
 
@@ -57,7 +51,8 @@ namespace dsp56k
 		case AddressingMode::Modulo:
 			{
 				const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
-				updateAddressRegisterSubModuloN1(_r, _m, r32(moduloMask), _addN);
+				const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr, true, false);
+				updateAddressRegisterSubModuloN1(_r, r32(m), r32(moduloMask), _addN);
 			}
 			break;
 		case AddressingMode::MultiWrapModulo:
@@ -88,24 +83,21 @@ namespace dsp56k
 			return DspValue(m_block, JitDspRegPool::DspR0, true, false, _rrr);
 		}
 
-		DspValue m(m_block);
-		m_dspRegs.getM(m, _rrr);
-
 		if (_mmm == 7)													/* 111 -(Rn)   */
 		{
 			if (_writeR)
 			{
 				{
 					DspValue r = makeDspValueRegR(m_block, _rrr, true, true);
-					updateAddressRegisterSubN1(r32(r.get()), r32(m.get()), _rrr, false);
+					updateAddressRegisterSubN1(r32(r.get()), _rrr, false);
 				}
 				return DspValue(m_block, JitDspRegPool::DspR0, true, false, _rrr);
 			}
 
 			DspValue r = m_dspRegs.getR(_rrr);
 			r.toTemp();
-			updateAddressRegisterSubN1(r32(r.get()), r32(m.get()), _rrr, false);
-			return DspValue(std::move(r));
+			updateAddressRegisterSubN1(r32(r.get()), _rrr, false);
+			return r;
 		}
 
 		DspValue rRef = makeDspValueRegR(m_block, _rrr);
@@ -120,8 +112,8 @@ namespace dsp56k
 			r.temp(DspValue::Temp24);
 
 			m_asm.mov(r32(r.get()), r32(rRef.get()));
-			updateAddressRegisterSub(r32(r.get()), r32(n.get()), r32(m.get()), _rrr, true);
-			return DspValue(std::move(r));
+			updateAddressRegisterSub(r32(r.get()), r32(n.get()), _rrr, true);
+			return r;
 		}
 
 		DspValue dst(m_block);
@@ -151,22 +143,22 @@ namespace dsp56k
 			DspValue n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			n.toTemp();
-			updateAddressRegisterSub(r, r32(n.get()), r32(m.get()), _rrr, false);
+			updateAddressRegisterSub(r, r32(n.get()), _rrr, false);
 		}
 		if (_mmm == 1)													/* 001 (Rn)+Nn */
 		{
 			DspValue n(m_block);
 			m_dspRegs.getN(n, _rrr);
 			n.toTemp();
-			updateAddressRegisterSub(r, r32(n.get()), r32(m.get()), _rrr, true);
+			updateAddressRegisterSub(r, r32(n.get()), _rrr, true);
 		}
 		if (_mmm == 2)													/* 010 (Rn)-   */
 		{
-			updateAddressRegisterSubN1(r, r32(m.get()), _rrr, false);
+			updateAddressRegisterSubN1(r, _rrr, false);
 		}
 		if (_mmm == 3)													/* 011 (Rn)+   */
 		{
-			updateAddressRegisterSubN1(r, r32(m.get()), _rrr, true);
+			updateAddressRegisterSubN1(r, _rrr, true);
 		}
 
 		if (_writeR)
@@ -178,7 +170,7 @@ namespace dsp56k
 				return DspValue(m_block, JitDspRegPool::DspR0, true, true, _rrr);
 		}
 
-		return DspValue(std::move(dst));
+		return dst;
 	}
 
 	void JitOps::updateAddressRegisterSubMultipleWrapModulo(const JitReg32& _r, const JitReg32& _n, const JitReg32& _mask, const bool _addN)
@@ -237,15 +229,15 @@ namespace dsp56k
 			return;
 
 		bitreverse24(_r);
-		const auto n = dsp56k::bitreverse24(static_cast<TWord>(1));
+		constexpr auto n = dsp56k::bitreverse24(static_cast<TWord>(1));
 #ifdef HAVE_ARM64
 		{
-			const RegScratch scratch(m_block);
-			m_asm.mov(r32(scratch), asmjit::Imm(n));
+			static_assert((n & 0xfff) == 0, "invalid immediate");
+			static_assert(n <= 0xfff000, "invalid immediate");
 			if (_addN)
-				m_asm.add(_r, r32(scratch));
+				m_asm.add(_r, r32(_r), asmjit::Imm(n));
 			else
-				m_asm.sub(_r, r32(scratch));
+				m_asm.sub(_r, r32(_r), asmjit::Imm(n));
 		}
 #else
 		if (_addN)

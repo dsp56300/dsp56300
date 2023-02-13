@@ -126,7 +126,7 @@ namespace dsp56k
 	{
 		// we push stack-relative if there is at least one used vector register as we can save a bunch of instructions this way
 		bool haveVectors = false;
-		for (auto r : m_pushedRegs)
+		for (const auto& r : m_pushedRegs)
 		{
 			if(r.reg.isVec())
 			{
@@ -140,12 +140,10 @@ namespace dsp56k
 			// sort in order of memory address
 			std::sort(m_pushedRegs.begin(), m_pushedRegs.end());
 
-			stackRegAdd(m_pushedBytes);
-
 			for(size_t i=0; i<m_pushedRegs.size(); ++i)
 			{
 				const auto& r = m_pushedRegs[i];
-				const int offset = -static_cast<int>(m_pushedRegs[i].stackOffset);
+				const int offset = m_pushedBytes - static_cast<int>(m_pushedRegs[i].stackOffset);
 
 				const auto memPtr = ptr(g_stackReg, offset);
 
@@ -163,6 +161,7 @@ namespace dsp56k
 				}
 			}
 
+			stackRegAdd(m_pushedBytes);
 			m_pushedBytes = 0;
 
 			m_pushedRegs.clear();
@@ -174,9 +173,17 @@ namespace dsp56k
 		}
 	}
 
-	void JitStackHelper::call(const void* _funcAsPtr) const
+	void JitStackHelper::call(const void* _funcAsPtr, bool _isJitCall)
 	{
-		PushBeforeFunctionCall backup(m_block);
+		call([&]()
+		{
+			m_block.asm_().call(_funcAsPtr);
+		}, _isJitCall);
+	}
+
+	void JitStackHelper::call(const std::function<void()>& _execCall, bool _isJitCall/* = false*/)
+	{
+		PushBeforeFunctionCall backup(m_block, _isJitCall);
 
 		const auto usedSize = m_pushedBytes + g_functionCallSize;
 		const auto alignedStack = (usedSize + g_stackAlignmentBytes-1) & ~(g_stackAlignmentBytes-1);
@@ -185,41 +192,68 @@ namespace dsp56k
 
 		stackRegSub(offset);
 
-		m_block.asm_().call(_funcAsPtr);
+		_execCall();
 
 		stackRegAdd(offset);
+
+		++m_callCount;
 	}
 
-	void JitStackHelper::movePushesTo(asmjit::BaseNode* _baseNode, size_t _firstIndex)
+	void JitStackHelper::pushAllUsed(asmjit::BaseNode* _baseNode)
 	{
 		m_block.asm_().setCursor(_baseNode);
 
-		for(size_t i=_firstIndex; i<m_pushedRegs.size(); ++i)
-		{
-			auto* c = m_pushedRegs[i].cursorFirst;
+		const auto oldPushedSize = m_pushedBytes;
 
-			if (m_pushedRegs[i].reg.isVec())
-				int foo = 0;
-			while(true)
-			{
-				auto* next = c->next();
-				auto* node = m_block.asm_().removeNode(c);
-				m_block.asm_().addNode(node);
-				if (c == m_pushedRegs[i].cursorLast)
-					break;
-				c = next;
-			}
+		JitReg lastReg;
+
+		for (const auto& reg : m_usedRegs)
+		{
+			if(!isNonVolatile(reg))
+				continue;
+
+			if(reg.isVec())
+				push(reg.as<JitReg128>());
+			else
+				push(reg.as<JitReg64>());
+			lastReg = reg;
 		}
+
+		const auto newPushedSize = m_pushedBytes;
+		const auto pushedBytes = newPushedSize - oldPushedSize;
+
+		// push the last one again to fix alignment. Only needed if we have function calls inbetween as the stack needs to be aligned for this purpose only
+		if(m_callCount && (pushedBytes & (g_stackAlignmentBytes-1)))
+		{
+			if(lastReg.isVec())
+				push(lastReg.as<JitReg128>());
+			else
+				push(lastReg.as<JitReg64>());
+		}
+
 		m_block.asm_().setCursor(m_block.asm_().lastNode());
 	}
 
-	bool JitStackHelper::isFuncArg(const JitRegGP& _gp)
+	bool JitStackHelper::isFuncArg(const JitRegGP& _gp, uint32_t _maxIndex/* = 255*/)
 	{
-		for (const auto& gp : g_funcArgGPs)
+		_maxIndex = std::min(static_cast<uint32_t>(std::size(g_funcArgGPs)), _maxIndex);
+
+		for(uint32_t i=0; i<_maxIndex; ++i)
 		{
+			const auto& gp = g_funcArgGPs[i];
+
 			if (gp.equals(r64(_gp)))
 				return true;
 		}
+		return false;
+	}
+
+	bool JitStackHelper::isNonVolatile(const JitReg& _gp)
+	{
+		if(_gp.isGp())
+			return isNonVolatile(_gp.as<JitRegGP>());
+		if(_gp.isVec())
+			return isNonVolatile(_gp.as<JitReg128>());
 		return false;
 	}
 
@@ -258,9 +292,6 @@ namespace dsp56k
 		if(isUsed(_reg))
 			return;
 
-		if(isNonVolatile(_reg))
-			push(r64(_reg));
-
 		m_usedRegs.push_back(_reg);
 	}
 
@@ -268,9 +299,6 @@ namespace dsp56k
 	{
 		if(isUsed(_reg))
 			return;
-
-		if(isNonVolatile(_reg))
-			push(_reg);
 
 		m_usedRegs.push_back(_reg);
 	}
@@ -299,6 +327,34 @@ namespace dsp56k
 		m_usedRegs.clear();
 		m_pushedRegs.clear();
 		m_pushedBytes = 0;
+		m_callCount = 0;
+	}
+
+	void JitStackHelper::registerFuncArg(const uint32_t _argIndex)
+	{
+		assert(m_usedFuncArgs.find(_argIndex) == m_usedFuncArgs.end());
+		m_usedFuncArgs.insert(_argIndex);
+	}
+
+	void JitStackHelper::unregisterFuncArg(const uint32_t _argIndex)
+	{
+		assert(m_usedFuncArgs.find(_argIndex) != m_usedFuncArgs.end());
+		m_usedFuncArgs.erase(_argIndex);
+	}
+
+	bool JitStackHelper::isUsedFuncArg(const JitRegGP& _reg) const
+	{
+		if(!isFuncArg(_reg))
+			return false;
+
+		const auto r = r64(_reg);
+
+		for (const auto idx : m_usedFuncArgs)
+		{
+			if(g_funcArgGPs[idx].equals(r))
+				return true;
+		}
+		return false;
 	}
 
 	void JitStackHelper::stackRegAdd(uint64_t offset) const
@@ -325,40 +381,27 @@ namespace dsp56k
 #endif
 	}
 
-	PushMover::PushMover(JitBlock& _block, bool _begin): m_block(_block)
+	PushAllUsed::PushAllUsed(JitBlock& _block, bool _begin) : m_block(_block)
 	{
 		if(_begin)
 			begin();
 	}
 
-	PushMover::~PushMover()
+	PushAllUsed::~PushAllUsed()
 	{
 		end();
 	}
 
-	void PushMover::begin()
+	void PushAllUsed::begin()
 	{
-		if(m_cursorBeforePushes)
-		{
-			assert(m_cursorBeforePushes);
-			end();
-		}
-
 		m_cursorBeforePushes = m_block.asm_().cursor();
-		m_beginPushCount = m_block.stack().pushedRegCount();
 	}
 
-	void PushMover::end()
+	void PushAllUsed::end()
 	{
 		if(!m_cursorBeforePushes)
 			return;
-
-		const auto endPushCount = m_block.stack().pushedRegCount();
-
-		if(endPushCount > m_beginPushCount)
-			m_block.stack().movePushesTo(m_cursorBeforePushes, m_beginPushCount);
-
+		m_block.stack().pushAllUsed(m_cursorBeforePushes);
 		m_cursorBeforePushes = nullptr;
-		m_beginPushCount = 0;
 	}
 }

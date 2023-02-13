@@ -86,6 +86,7 @@ namespace dsp56k
 
 	void DspValue::set(const int64_t& _value, const Type _type)
 	{
+		release();
 		m_immediate = _value;
 		m_type = _type;
 		m_bitSize = getBitCount(_type);
@@ -93,6 +94,7 @@ namespace dsp56k
 
 	void DspValue::set(const int32_t& _value, const Type _type)
 	{
+		release();
 		m_immediate = _value;
 		m_type = _type;
 		m_bitSize = getBitCount(_type);
@@ -227,7 +229,7 @@ namespace dsp56k
 			}
 			else
 			{
-				m_block.asm_().mov(_dst, m_reg);
+				m_block.asm_().mov(_dst, r64(m_reg));
 			}
 			return;
 		}
@@ -259,8 +261,13 @@ namespace dsp56k
 		m_block.asm_().lsl(r64(_dst), r64(_dst), asmjit::Imm(24));
 #else
 		if(r32(_dst) != r32(_src))
-			m_block.asm_().mov(r32(_dst), r32(_src));
-		m_block.asm_().shl(r64(_dst), asmjit::Imm(40));
+		{
+			m_block.asm_().rol(r64(_dst), r32(_src), 40);
+		}
+		else
+		{
+			m_block.asm_().shl(r64(_dst), asmjit::Imm(40));
+		}
 		m_block.asm_().sar(r64(_dst), asmjit::Imm(8));
 		m_block.asm_().shr(r64(_dst), asmjit::Imm(8));
 #endif
