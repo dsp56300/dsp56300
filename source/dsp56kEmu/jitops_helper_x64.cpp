@@ -335,7 +335,7 @@ namespace dsp56k
 				m_asm.cmovl(r32(_dst), r32(minmax));
 
 				// upper limit
-				m_asm.mov(r32(minmax), 0x007fffff);
+				m_asm.not_(r32(minmax)); // = 0x007fffff
 				m_asm.cmp(r32(tester), r32(minmax));
 				m_asm.cmovg(r32(_dst), r32(minmax));
 			}
@@ -411,7 +411,7 @@ namespace dsp56k
 				m_asm.cmovl(_dst, minmax);
 
 				// upper limit
-				m_asm.mov(minmax, 0x00007fffffffffff);
+				m_asm.not_(minmax); // = 0x00007fffffffffff
 				m_asm.cmp(tester, minmax);
 				m_asm.cmovg(_dst, minmax);
 			}

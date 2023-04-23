@@ -86,13 +86,11 @@ namespace dsp56k
 				const RegGP dst(m_block);
 				const RegGP r(m_block);
 				ccr_getBitValue(dst, CCRB_U);
-				m_asm.eor(dst, dst, asmjit::Imm(1));
 				ccr_getBitValue(r, CCRB_E);
-				m_asm.eor(r, r, asmjit::Imm(1));
-				m_asm.and_(dst, r.get());
+				m_asm.orr(dst, dst, r);
 				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(dst, r.get());
-				m_asm.cmp(dst, dst, asmjit::Imm(1));
+				m_asm.orr(dst, dst, r);
+				m_asm.tst(dst, dst);
 				return asmjit::arm::CondCode::kZero;
 			}
 		case CCCC_NotNormalized:							// NN			Not normalized
@@ -101,14 +99,12 @@ namespace dsp56k
 				const RegGP dst(m_block);
 				const RegGP r(m_block);
 				ccr_getBitValue(dst, CCRB_U);
-				m_asm.eor(dst, dst, asmjit::Imm(1));
 				ccr_getBitValue(r, CCRB_E);
-				m_asm.eor(r, r, asmjit::Imm(1));
-				m_asm.and_(dst, r.get());
+				m_asm.orr(dst, dst, r);
 				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(dst, r.get());
-				m_asm.test_(dst);
-				return asmjit::arm::CondCode::kZero;
+				m_asm.orr(dst, dst, r);
+				m_asm.tst(dst, dst);
+				return asmjit::arm::CondCode::kNotZero;
 			}
 		case CCCC_GreaterThan:								// GT			Greater than
 			{

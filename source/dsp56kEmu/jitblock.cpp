@@ -678,12 +678,18 @@ namespace dsp56k
 
 	AddressingMode JitBlock::getAddressingMode(const uint32_t _aguIndex) const
 	{
-		return m_chain ? m_chain->getMode().getAddressingMode(_aguIndex) : AddressingMode::Unknown;
+		const auto* mode = getMode();
+		return mode ? mode->getAddressingMode(_aguIndex) : AddressingMode::Unknown;
 	}
 
 	const JitDspMode* JitBlock::getMode() const
 	{
-		return m_chain ? &m_chain->getMode() : nullptr;
+		return m_chain ? &m_chain->getMode() : m_mode;
+	}
+
+	void JitBlock::setMode(JitDspMode* _mode)
+	{
+		m_mode = _mode;
 	}
 
 	void JitBlock::reset()

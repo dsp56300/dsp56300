@@ -265,9 +265,9 @@ namespace dsp56k
 
 		explicit Esai(IPeripherals& _periph, EMemArea _area, Dma* _dma = nullptr);
 
-		void execA();
-		void execB();
-		void execC();
+		void execWriteTX();
+		bool execInjectTransmitInterrupts();
+		void execInjectReceiveInterrupts(bool hasInjectedTXInterrupts);
 		
 		TWord readStatusRegister();
 
@@ -297,18 +297,9 @@ namespace dsp56k
 			return m_tccr;
 		}
 
-		void writeReceiveControlRegister(TWord _val)
-		{
-			LOG("Write ESAI RCR " << HEX(_val));
-			m_rcr = _val;
-		}
+		void writeReceiveControlRegister(TWord _val);
 
-		void writeTransmitControlRegister(TWord _val)
-		{
-			m_sr.clear(M_TUE);
-			LOG("Write ESAI TCR " << HEX(_val));
-			m_tcr = _val;
-		}
+		void writeTransmitControlRegister(TWord _val);
 
 		void writeTransmitClockControlRegister(TWord _val);
 
@@ -363,6 +354,8 @@ namespace dsp56k
 		bool outputEnabled(uint32_t _index) const	{ return m_tcr.test(static_cast<TcrBits>(_index)); }
 
 		void injectInterrupt(const TWord _interrupt) const;
+		void readAudioInput();
+		void writeAudioOutput();
 
 		IPeripherals& m_periph;
 		const EMemArea m_area;

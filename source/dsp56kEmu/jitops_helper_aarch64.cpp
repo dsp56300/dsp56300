@@ -88,8 +88,7 @@ namespace dsp56k
 		else
 			assert(_dst.getBitCount() == 24);
 
-		AluRef src(m_block, _aluIndex, true, false);
-		m_asm.ubfx(r64(_dst), r64(src), asmjit::Imm(0), asmjit::Imm(24));
+		m_asm.ubfx(r64(_dst), r64(m_dspRegs.getALU(_aluIndex)), asmjit::Imm(0), asmjit::Imm(24));
 	}
 
 	void JitOps::getALU1(DspValue& _dst, uint32_t _aluIndex) const
@@ -99,8 +98,7 @@ namespace dsp56k
 		else
 			assert(_dst.getBitCount() == 24);
 
-		AluRef src(m_block, _aluIndex, true, false);
-		m_asm.ubfx(r64(_dst), r64(src), asmjit::Imm(24), asmjit::Imm(24));
+		m_asm.ubfx(r64(_dst), r64(m_dspRegs.getALU(_aluIndex)), asmjit::Imm(24), asmjit::Imm(24));
 	}
 
 	void JitOps::setALU0(const uint32_t _aluIndex, const DspValue& _src) const
@@ -284,7 +282,7 @@ namespace dsp56k
 			// upper limit
 			{
 				const RegScratch limit(m_block);
-				m_asm.mov(r32(limit), asmjit::Imm(0x007fffff));
+				m_asm.mvn(r32(limit), r32(limit)); // = 0x007fffff
 				m_asm.cmp(r32(tester), r32(limit));
 				m_asm.csel(r32(_dst), r32(limit), r32(_dst), asmjit::arm::CondCode::kGT);
 			}
@@ -346,7 +344,7 @@ namespace dsp56k
 				m_asm.csel(r64(_dst), r64(limit), r64(_dst), asmjit::arm::CondCode::kLT);
 
 				// upper limit
-				m_asm.mov(r64(limit), asmjit::Imm(0x00007fffffffffff));
+				m_asm.mvn(r64(limit), r64(limit)); // = 0x00007fffffffffff
 				m_asm.cmp(r64(tester), r64(limit));
 				m_asm.csel(r64(_dst), r64(limit), r64(_dst), asmjit::arm::CondCode::kGT);
 			}

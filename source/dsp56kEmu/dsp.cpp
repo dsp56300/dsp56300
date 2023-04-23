@@ -225,18 +225,46 @@ namespace dsp56k
 
 	void DSP::execInterrupts()
 	{
-		const auto vba = m_pendingInterrupts.front();
+		// note: holding a ref and accessing the item after removal works because we operate on a ring buffer
+		const auto& interrupt = m_pendingInterrupts.front();
 
-		const auto prio = vba < Vba_IRQA ? 3 : 2;
-		const auto minPrio = mr().var & 0x3;
+		const auto vba = interrupt.vba;
 
-		if(prio < minPrio)
+		if(isInterruptMasked(vba))
 			return;
 
+		if(interrupt.vba >= Vba_End)
+		{
+			interrupt.func();
+
+			{
+				std::lock_guard lock(m_mutexInsertPendingInterrupt);
+				m_processingMode = Default;
+				m_pendingInterrupts.pop_front();
+
+				if (m_pendingInterrupts.empty())
+					m_interruptFunc = &dspExecNoPendingInterrupts;
+				else
+					m_interruptFunc = &dspExecInterrupts;
+			}
+
+			return;
+		}
+
+		// it is important that the processing mode is switched first before popping the vector to prevent a possible race condition in hasPendingInterrupt()
+		{
+			std::lock_guard lock(m_mutexInsertPendingInterrupt);
+			m_processingMode = FastInterrupt;
+			m_pendingInterrupts.pop_front();
+		}
+
+		execInterrupt(vba);
+	}
+
+	void DSP::execInterrupt(const TWord vba)
+	{
 		pcCurrentInstruction = vba;
 		m_processingMode = FastInterrupt;
-
-		m_pendingInterrupts.pop_front();
 
 #if DSP56300_DEBUGGER
 		if(m_debugger)
@@ -1297,15 +1325,45 @@ namespace dsp56k
 
 	bool DSP::injectInterrupt(uint32_t _interruptVectorAddress)
 	{
-		{
-			std::lock_guard lock(m_mutexInsertPendingInterrupt);
-			m_pendingInterrupts.push_back(_interruptVectorAddress);
+		std::lock_guard lock(m_mutexInsertPendingInterrupt);
 
-			if(m_interruptFunc == &dspExecNoPendingInterrupts)
-				m_interruptFunc = &dspTryExecInterrupts;
-		}
+		m_pendingInterrupts.push_back({_interruptVectorAddress, nullptr});
+
+		if(m_interruptFunc == &dspExecNoPendingInterrupts)
+			m_interruptFunc = &dspTryExecInterrupts;
 
 		return true;
+	}
+
+	bool DSP::injectInterrupt(std::function<void()>&& func)
+	{
+		std::lock_guard lock(m_mutexInsertPendingInterrupt);
+		m_pendingInterrupts.push_back({Vba_End, std::move(func)});
+
+		if(m_interruptFunc == &dspExecNoPendingInterrupts)
+			m_interruptFunc = &dspTryExecInterrupts;
+		return true;
+	}
+
+	bool DSP::injectInterruptImmediate(const uint32_t _interruptVectorAddress)
+	{
+		if(isInterruptMasked(_interruptVectorAddress))
+			return false;
+
+		execInterrupt(_interruptVectorAddress);
+
+		while(m_processingMode != Default)
+			exec();
+
+		return true;
+	}
+
+	bool DSP::isInterruptMasked(const TWord _vba) const
+	{
+		const auto prio = _vba < Vba_IRQA ? 3 : 2;
+		const auto minPrio = mr().var & 0x3;
+
+		return prio < minPrio;
 	}
 
 	void DSP::clearOpcodeCache()

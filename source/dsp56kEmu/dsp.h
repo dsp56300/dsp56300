@@ -133,8 +133,20 @@ namespace dsp56k
 		CCRCache						ccrCache;
 
 		std::mutex						m_mutexInsertPendingInterrupt;
-		RingBuffer<TWord, 1024, false>	m_pendingInterrupts;	// TODO: array is way too large
 
+		struct PendingInterrupt
+		{
+			TWord vba = 0xffffffff;
+			std::function<void()> func;
+		};
+
+#ifdef HAVE_ARM64
+        // Our lock free ring buffer does not work properly on aarch4 :-O
+        // https://www.arangodb.com/2021/02/cpp-memory-model-migrating-from-x86-to-arm/
+		RingBuffer<PendingInterrupt, 1024, true>	m_pendingInterrupts;	// TODO: array is way too large
+#else
+        RingBuffer<PendingInterrupt, 1024, false>   m_pendingInterrupts;    // TODO: array is way too large
+#endif
 		Opcodes							m_opcodes;
 
 		struct OpcodeCacheEntry
@@ -196,6 +208,7 @@ namespace dsp56k
 		void	execPeriph						();
 		void	tryExecInterrupts				();
 		void	execInterrupts					();
+		void	execInterrupt					(uint32_t _interruptVectorAddress);
 		void	execDefaultPreventInterrupt		();
 		void	execNoPendingInterrupts			();
 		void	nop								() {}
@@ -231,6 +244,9 @@ namespace dsp56k
 		bool			load							( FILE* _file );
 
 		bool			injectInterrupt					(uint32_t _interruptVectorAddress);
+		bool			injectInterrupt					(std::function<void()>&& func);
+		bool			injectInterruptImmediate		(uint32_t _interruptVectorAddress);
+		bool			isInterruptMasked				(const TWord _vba) const;
 
 		bool			hasPendingInterrupts			() const
 		{

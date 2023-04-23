@@ -337,8 +337,14 @@ namespace dsp56k
 		{
 			const auto off = reinterpret_cast<uint64_t>(mem.y) - reinterpret_cast<uint64_t>(mem.x);
 
-			if(pxmem.isRegValid())
+#ifdef HAVE_ARM64
+			if (pxmem.isRegValid() && off < 0x1000000) // ARM can only deal with 24 bit immediates in an add()
+#else
+			if (pxmem.isRegValid())
+#endif
+			{
 				m_block.asm_().add(r64(pxmem), off);
+			}
 			else
 				p = getMemAreaPtr(pxmem, MemArea_Y, _offset);
 		}
@@ -538,8 +544,14 @@ namespace dsp56k
 		{
 			const auto off = reinterpret_cast<uint64_t>(mem.y) - reinterpret_cast<uint64_t>(mem.x);
 
-			if(pxmem.isRegValid())
+#ifdef HAVE_ARM64
+			if (pxmem.isRegValid() && off < 0x1000000) // ARM can only deal with 24 bit immediates in an add()
+#else
+			if (pxmem.isRegValid())
+#endif
+			{
 				m_block.asm_().add(r64(pxmem), off);
+			}
 			else
 				p = getMemAreaPtr(pxmem, MemArea_Y, _offset);
 		}

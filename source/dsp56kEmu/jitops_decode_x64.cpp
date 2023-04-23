@@ -80,28 +80,14 @@ namespace dsp56k
 		case CCCC_Normalized:										// NR			Normalized
 			{
 				// Z + (!U & !E) == 1
-				const RegGP t(m_block);
-				const auto tmp = t.get().r8();
-				ccrMaskTest(static_cast<CCRMask>(CCR_U | CCR_E));
-				m_asm.set(asmjit::x86::CondCode::kNotZero, tmp);
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(tmp, r.get().r8());
-				m_asm.test_(tmp, asmjit::Imm(1));
-				return asmjit::x86::CondCode::kNotZero;
+				ccrMaskTest(static_cast<CCRMask>(CCR_Z | CCR_U | CCR_E));
+				return asmjit::x86::CondCode::kZero;
 			}
 		case CCCC_NotNormalized:									// NN			Not normalized
 			{
 				// Z + (!U & !E) == 0
-				const RegGP t(m_block);
-				const auto tmp = t.get().r8();
-				ccrMaskTest(static_cast<CCRMask>(CCR_U | CCR_E));
-				m_asm.set(asmjit::x86::CondCode::kNotZero, tmp);
-				const RegGP r(m_block);
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(tmp, r.get().r8());
-				m_asm.test_(tmp, asmjit::Imm(1));
-				return asmjit::x86::CondCode::kZero;
+				ccrMaskTest(static_cast<CCRMask>(CCR_Z | CCR_U | CCR_E));
+				return asmjit::x86::CondCode::kNotZero;
 			}
 		case CCCC_GreaterThan:										// GT			Greater than
 			{

@@ -69,10 +69,8 @@ namespace dsp56k
 
 		// opcode tests
 
-		void div();
+		void jitDiv();
 		void rep_div();
-
-		void x0x1Combinations();
 
 		void emit(TWord _opA, TWord _opB = 0, TWord _pc = 0) override;
 

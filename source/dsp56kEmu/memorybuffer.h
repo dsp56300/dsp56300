@@ -6,6 +6,20 @@
 
 namespace dsp56k
 {
+#ifdef __ANDROID__
+	class MemoryBuffer
+	{
+	public:
+		MemoryBuffer(TWord _pSize, TWord _xySize, TWord _externalMemAddress) {}
+		~MemoryBuffer() {}
+
+		bool isValid() const { return false; }
+
+		TWord* ptrX() const { return nullptr; }
+		TWord* ptrY() const { return nullptr; }
+		TWord* ptrP() const { return nullptr; }
+	};
+#else
 	class MemoryBuffer
 	{
 	public:
@@ -52,4 +66,7 @@ namespace dsp56k
 
 		std::map<TWord*, TWord> m_mappedSizes;	// ptr => size
 	};
+#endif
 }
+
+

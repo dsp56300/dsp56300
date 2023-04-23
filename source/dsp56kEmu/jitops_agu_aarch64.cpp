@@ -22,7 +22,7 @@ namespace dsp56k
 		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
-		const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr);
+		const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr, true, false);
 		const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
 
 		{
@@ -83,8 +83,8 @@ namespace dsp56k
 			return;
 		}
 
-		const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr);
 		const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
+		const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr, true, false);
 
 		const auto notLinear = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
@@ -98,10 +98,8 @@ namespace dsp56k
 			m_asm.jnz(notLinear);
 		}
 
-		if (_addN)
-			m_asm.inc(_r);
-		else
-			m_asm.dec(_r);
+		if (_addN)	m_asm.inc(_r);
+		else		m_asm.dec(_r);
 
 		m_asm.jmp(end);
 
@@ -124,11 +122,12 @@ namespace dsp56k
 		updateAddressRegisterSubModuloN1(_r, r32(m), r32(moduloMask), _addN);
 		m_asm.jmp(end);
 
-		// bitreverse
 		if (m_block.getConfig().aguSupportBitreverse)
 		{
+			// bitreverse
 			m_asm.bind(bitreverse);
 			updateAddressRegisterSubBitreverseN1(_r, _addN);
+
 			if(m_block.getConfig().aguSupportMultipleWrapModulo)
 				m_asm.jmp(end);
 		}

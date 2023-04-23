@@ -9,7 +9,7 @@ namespace dsp56k
 
 #define LOG_ERR_BASE(A,ERR)					\
 {											\
-	std::stringstream ss;	ss << __FUNCTION__ << "@" << __LINE__ << ": " << "DSP 56300 ERROR: " << ERR;		\
+	std::stringstream ss;	ss << __func__ << "@" << __LINE__ << ": " << "DSP 56300 ERROR: " << ERR;		\
 	LOGTOCONSOLE( ss );						\
 	assertf( A, ss.str().c_str() );			\
 }

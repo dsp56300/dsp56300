@@ -68,6 +68,7 @@ namespace dsp56k
 
 		AddressingMode getAddressingMode(uint32_t _aguIndex) const;
 		const JitDspMode* getMode() const;
+		void setMode(JitDspMode* _mode);
 
 		void lockScratch()
 		{
@@ -108,5 +109,7 @@ namespace dsp56k
 		JitBlockChain* m_chain = nullptr;
 
 		bool m_scratchLocked = false;
+
+		JitDspMode* m_mode = nullptr;
 	};
 }

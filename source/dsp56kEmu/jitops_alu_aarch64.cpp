@@ -504,7 +504,6 @@ namespace dsp56k
 			m_asm.and_(d.get(), asmjit::Imm(0xffffff));
 			setALU1(ab, d);
 
-			m_asm.bitTest(r32(d), 23);
 			copyBitToCCR(r32(d), 23, CCRB_N);			// Set if bit 47 of the result is set
 
 			m_asm.test_(d.get());
@@ -540,7 +539,6 @@ namespace dsp56k
 
 	void JitOps::op_Subl(TWord op)
 	{
-		// TODO: unit test missing
 		const auto ab = getFieldValue<Subl, Field_d>(op);
 
 		AluRef d(m_block, ab ? 1 : 0, true, true);
@@ -558,7 +556,7 @@ namespace dsp56k
 		m_asm.sub(d, s);
 		s.release();
 
-		ccr_dirty(ab ? 1 : 0, d, static_cast<CCRMask>(CCR_E | CCR_U | CCR_N));
+		ccr_dirty(ab ? 1 : 0, d, static_cast<CCRMask>(CCR_E | CCR_U | CCR_N | CCR_Z));
 
 		const RegGP newBit55(m_block);
 		m_asm.bitTest(d, 55);
@@ -567,10 +565,10 @@ namespace dsp56k
 		m_asm.eor(r32(oldBit55), r32(oldBit55), r32(newBit55));
 		copyBitToCCR(r32(oldBit55), 0, CCRB_V);
 
-		m_dspRegs.mask56(d);
-		ccr_update_ifNotZero(CCRB_Z);
-
 		// Carry bit note: "The Carry bit (C) is set correctly if the source operand does not overflow as a result of the left shift operation.", we do not care at the moment
+		copyBitToCCR(r32(oldBit55), 0, CCRB_C);
+
+		m_dspRegs.mask56(d);
 	}
 }
 

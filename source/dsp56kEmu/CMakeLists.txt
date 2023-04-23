@@ -26,6 +26,7 @@ esai.cpp esai.h
 esaiclock.cpp esaiclock.h
 essi.cpp essi.h
 fastmath.h
+gpio.cpp gpio.h
 hdi08.cpp hdi08.h
 hdi08queue.cpp hdi08queue.h
 hi08.h

@@ -330,17 +330,15 @@ namespace dsp56k
 			alu_abs(_v);
 		}
 
-#ifdef HAVE_ARM64
-		m_asm.subs(d, d, _v);
-#else
-		m_asm.sub(d, _v);
-#endif
+		// C and V are both cleared. Only C is updated as V is cleared always
 		{
-			// C and V are both cleared. Only C is updated as V is cleared always
 			CcrBatchUpdate u(*this, static_cast<CCRMask>(CCR_C | CCR_V));
+
 #ifdef HAVE_ARM64
+			m_asm.subs(d, d, _v);
 			ccr_update_ifNotCarry(CCRB_C);		// we, THAT is unexpected: On ARM, carry means unsigned >= while it means unsigned < on 56k and intel
 #else
+			m_asm.sub(d, _v);
 			ccr_update_ifCarry(CCRB_C);
 #endif
 		}
@@ -702,7 +700,6 @@ namespace dsp56k
 
 	void JitOps::op_Eor_SD(TWord op)
 	{
-		// TODO: unit test missing
 		const auto D = getFieldValue<Or_SD, Field_d>(op);
 		const auto JJ = getFieldValue<Or_SD, Field_JJ>(op);
 		DspValue v(m_block);

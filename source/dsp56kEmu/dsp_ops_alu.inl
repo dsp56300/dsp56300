@@ -800,7 +800,6 @@ namespace dsp56k
 	}
 	inline void DSP::op_Eor_SD(const TWord op)
 	{
-		// TODO: unit test missing
 		const auto D = getFieldValue<Or_SD, Field_d>(op);
 		const auto JJ = getFieldValue<Or_SD, Field_JJ>(op);
 		alu_eor(D, decode_JJ_read(JJ).var);

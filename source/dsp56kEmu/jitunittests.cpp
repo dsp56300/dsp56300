@@ -9,12 +9,12 @@
 
 namespace dsp56k
 {
+	static constexpr bool g_useDspMode = true;
+
 	JitUnittests::JitUnittests(bool _logging/* = true*/)
 	: m_checks({})
 	, m_logging(_logging)
 	{
-		x0x1Combinations();
-
 		runTest(&JitUnittests::conversion_build, &JitUnittests::conversion_verify);
 		runTest(&JitUnittests::signextend_build, &JitUnittests::signextend_verify);
 
@@ -48,7 +48,7 @@ namespace dsp56k
 
 		runAllTests();
 
-		div();
+		jitDiv();
 		rep_div();
 	}
 
@@ -527,11 +527,16 @@ namespace dsp56k
 			block->asm_().mov(temp, asmjit::Imm(0x0000334455667788));
 			ops->transferSaturation48(temp, temp);
 			block->mem().mov(m_checks[2], temp);
+
+			block->asm_().mov(temp, asmjit::Imm(0x00fffefefefefefe));
+			ops->transferSaturation48(temp, temp);
+			block->mem().mov(m_checks[3], temp);
 		}, [&]()
 		{
 			verify(m_checks[0] == 0x800000000000);
 			verify(m_checks[1] == 0x7fffffffffff);
 			verify(m_checks[2] == 0x334455667788);
+			verify(m_checks[3] == 0xfefefefefefe);
 		}
 		);
 	}
@@ -914,7 +919,7 @@ namespace dsp56k
 		verify(r.y.var == 0x0000122334455660);
 	}
 
-	void JitUnittests::div()
+	void JitUnittests::jitDiv()
 	{
 		constexpr uint64_t expectedValues[24] =
 		{
@@ -965,19 +970,6 @@ namespace dsp56k
 				verify(m_checks[i] == expectedValues[i]);
 			}
 		});
-
-		runTest([&]()
-		{
-			dsp.y0(0x218dec);
-			dsp.regs().a.var = 0x00008000000000;
-			dsp.setSR(0x0800d4);
-			emit(0x018050);		// div y0,a
-		},
-		[&]()
-		{
-			verify(dsp.regs().a.var == 0xffdf7214000000);
-			verify(dsp.getSR().var == 0x0800d4);		
-		});
 	}
 
 	void JitUnittests::rep_div()
@@ -1026,7 +1018,7 @@ namespace dsp56k
 				},
 					[&]()
 				{
-					verify(dsp.regs().a.var == expectedValues[i]);
+					verify(dsp.regs().a.var == static_cast<int64_t>(expectedValues[i]));
 				});
 			}
 		}
@@ -1049,30 +1041,21 @@ namespace dsp56k
 		});
 	}
 
-	void JitUnittests::x0x1Combinations()
-	{
-		dsp.x0(0xaabbcc);
-		dsp.x1(0xddeeff);
-
-		dsp.y0(0xabcdef);
-		dsp.y1(0x123456);
-
-		runTest([&]()
-		{
-			m_checks.fill(0);
-
-			dsp.x0(0xaabbcc);
-			dsp.x1(0xddeeff);
-
-			emit(0x44f400, 0xbabecc);	// move #$babecc,x0
-		}, [&]()
-		{
-			verify(dsp.regs().x.var == 0xddeeffbabecc);
-		});
-	}
-
 	void JitUnittests::emit(const TWord _opA, TWord _opB, TWord _pc)
 	{
+		JitDspMode mode;
+
+		if constexpr(g_useDspMode)
+		{
+			mode.initialize(dsp);
+			block->setMode(&mode);
+		}
+
+		block->asm_().nop();
 		ops->emit(_pc, _opA, _opB);
+		block->asm_().nop();
+
+		if constexpr(g_useDspMode)
+			block->setMode(nullptr);
 	}
 }

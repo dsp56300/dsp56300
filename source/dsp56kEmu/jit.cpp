@@ -12,6 +12,41 @@ using namespace asmjit;
 
 namespace dsp56k
 {
+#ifndef __ANDROID__
+	// TODO: a.equals(b) is not a constant expression, android toolchain says. Maybe it needs an update?
+	namespace
+	{
+		template<typename A, typename B> constexpr bool checkOverlap(const A& _a, const B& _b)
+		{
+			for (const auto& a : _a)
+			{
+				for (const auto& b : _b)
+				{
+					if (a.equals(b))
+						return true;
+				}
+			}
+			return false;
+		}
+
+		template<typename A, typename B> constexpr bool contains(const A& _a, const B& _b)
+		{
+			for (const auto& a : _a)
+			{
+				if (a.equals(_b))
+					return true;
+			}
+			return false;
+		}
+
+		static_assert(!checkOverlap(g_dspPoolGps, g_regGPTemps), "GP temp registers must not overlap with GP pool registers");
+		static_assert(!contains(g_dspPoolXmms, regXMMTempA), "XMM temp registers must not overlap with XMM pool registers");
+		static_assert(!contains(g_dspPoolXmms, regLastModAlu), "XMM temp registers must not contain XMM that holds the last modified ALU reg");
+		static_assert(!contains(g_dspPoolGps, regDspPtr), "GP pool registers must not contain GP that holds the dsp register pointer");
+		static_assert(!checkOverlap(g_funcArgGPs, g_regGPTemps), "GP temp registers must not overlap with function argument GPs");
+		static_assert(!checkOverlap(g_funcArgGPs, g_nonVolatileGPs), "function argument registers cannot be non-volatile");
+	}
+#endif
 	constexpr bool g_traceOps = false;
 
 	void funcCreate(Jit* _jit, const TWord _pc)

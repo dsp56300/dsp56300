@@ -21,7 +21,7 @@ namespace dsp56kDebugger
 		~Debugger() override;
 
 		// called by DSP thread
-		void onJitBlockCreated(const dsp56k::JitDspMode& _mode, const dsp56k::JitBlock* _block) override;
+		void onJitBlockCreated(const dsp56k::JitDspMode& _mode, const dsp56k::JitBlockRuntimeData* _block) override;
 		void onJitBlockDestroyed(const dsp56k::JitDspMode& _mode, dsp56k::TWord _pc) override;
 		void onExec(dsp56k::TWord _addr) override;
 		void onMemoryWrite(dsp56k::EMemArea _area, dsp56k::TWord _addr, dsp56k::TWord _value) override;

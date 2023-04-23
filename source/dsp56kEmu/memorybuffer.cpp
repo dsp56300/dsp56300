@@ -1,5 +1,7 @@
 #include "memorybuffer.h"
 
+#ifndef __ANDROID__
+
 #include <algorithm>
 
 #include "types.h"
@@ -250,9 +252,11 @@ namespace dsp56k
 	{
 		if(m_basePtr == nullptr)
 			return;
+		/* as we remapped the whole block, we do not need to free the block as a whole again as we already did by unmapping our chunks
 		errno = 0;
 		if(munmap(m_basePtr, m_basePtrSize))
 			LOG("Failed to unmap base ptr, err=" << errno);
+		*/
 		m_basePtr = nullptr;
 		m_basePtrSize = 0;
 	}
@@ -291,3 +295,5 @@ namespace dsp56k
 	}
 #endif
 }
+
+#endif

@@ -193,7 +193,7 @@ namespace dsp56k
 		void setActiveChannel(TWord _channel);
 		void clearActiveChannel();
 
-		void trigger(DmaChannel::RequestSource _source);
+		bool trigger(DmaChannel::RequestSource _source);
 		void addTriggerTarget(DmaChannel* _channel);
 		void removeTriggerTarget(DmaChannel* _channel);
 

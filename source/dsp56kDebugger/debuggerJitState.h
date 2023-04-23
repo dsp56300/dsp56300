@@ -17,7 +17,7 @@ namespace dsp56kDebugger
 	class JitState
 	{
 	public:
-		void onJitBlockCreated(const dsp56k::JitDspMode& _mode, const dsp56k::JitBlock* _block);
+		void onJitBlockCreated(const dsp56k::JitDspMode& _mode, const dsp56k::JitBlockRuntimeData* _block);
 		void onJitBlockDestroyed(const dsp56k::JitDspMode& _mode, uint32_t _pc);
 
 		void processChanges();

@@ -15,7 +15,7 @@ namespace Logging
 
 #define LOG(S)																												\
 {																															\
-	std::stringstream __ss__logging_h;	__ss__logging_h << __FUNCTION__ << "@" << __LINE__ << ": " << S;					\
+	std::stringstream __ss__logging_h;	__ss__logging_h << __func__ << "@" << __LINE__ << ": " << S;						\
 																															\
 	LOGTOCONSOLE(__ss__logging_h)																							\
 }

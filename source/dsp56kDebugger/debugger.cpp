@@ -22,6 +22,13 @@ public:
 		return res;
 	}
 
+	int OnExit() override
+	{
+		m_win->Close();
+		return wxApp::OnExit();
+	}
+
+private:
 	dsp56kDebugger::Debugger& m_debugger;
 	dsp56kDebugger::MainWindow* m_win = nullptr;
 };
@@ -48,10 +55,13 @@ namespace dsp56kDebugger
 
 	Debugger::~Debugger()
 	{
+		auto* instance = wxApp::GetInstance();
+		instance->Exit();
+		m_windowRunner->join();
 		m_windowRunner.reset();
 	}
 
-	void Debugger::onJitBlockCreated(const dsp56k::JitDspMode& _mode, const dsp56k::JitBlock* _block)
+	void Debugger::onJitBlockCreated(const dsp56k::JitDspMode& _mode, const dsp56k::JitBlockRuntimeData* _block)
 	{
 		DebuggerInterface::onJitBlockCreated(_mode, _block);
 		m_jitState.onJitBlockCreated(_mode, _block);

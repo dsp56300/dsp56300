@@ -31,9 +31,11 @@ namespace dsp56k
 			}
 		}
 
-		for (auto* e : m_esaisPendingProcess)	e->execA();
-		for (auto* e : m_esaisPendingProcess)	e->execB();
-		for (auto* e : m_esaisPendingProcess)	e->execC();
+		bool hasTXinterrupts = false;
+
+		for (auto* e : m_esaisPendingProcess)	e->execWriteTX();
+		for (auto* e : m_esaisPendingProcess)	hasTXinterrupts |= e->execInjectTransmitInterrupts();
+		for (auto* e : m_esaisPendingProcess)	e->execInjectReceiveInterrupts(hasTXinterrupts);
 
 		m_esaisPendingProcess.clear();
 	}
@@ -159,7 +161,7 @@ namespace dsp56k
 
 	void EsaiClock::onTCCRChanged(Esai*)
 	{
-		for (auto& esai : m_esais)
-			esai.clockCounter = 0;
+//		for (auto& esai : m_esais)
+//			esai.clockCounter = 0;
 	}
 }

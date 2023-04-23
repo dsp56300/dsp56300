@@ -12,73 +12,65 @@ namespace dsp56k
 		m_rx.fill(0);
 	}
 
-	void Esai::execA()
+	void Esai::execWriteTX()
 	{
-		const auto tem  = m_tcr & M_TEM;
-
-		if(tem)
-		{
-			writeTXimpl(m_tx);
-//			m_tx.fill(0);
-
-			if(m_writtenTX != tem)
-			{
-				LOG("ESAI transmit underrun");
-				m_sr.set(M_TUE);
-			}
-
-			m_sr.set(M_TDE);
-			m_writtenTX = 0;
-
-			if(m_dma)
-				m_dma->trigger(DmaChannel::RequestSource::EsaiTransmitData);
-		}
-
-		const auto rem = m_rcr & M_REM;
-
-		if(rem)
-		{
-			if(m_readRX)
-				m_sr.set(M_ROE);
-
-			readRXimpl(m_rx);
-			m_readRX = rem;
-			m_sr.set(M_RDF);
-
-			if(m_dma)
-				m_dma->trigger(DmaChannel::RequestSource::EsaiReceiveData);
-		}
+//		LOG(HEX(&m_periph.getDSP()) << " exec ESAI " << g_memAreaNames[m_area]  <<  " ictr " << m_periph.getDSP().getInstructionCounter());
 
 		if(0 == m_txSlotCounter)
 			m_sr.set(M_TFS);
 		else
 			m_sr.clear(M_TFS);
+
+		readAudioInput();
 	}
 
-	void Esai::execB()
+	bool Esai::execInjectTransmitInterrupts()
 	{
 		m_hasReadStatus = 0;
 
-		if(m_tcr.test(M_TLIE) && m_txSlotCounter == getTxWordCount())
+		bool res = false;
+/*
+		if (m_tcr.test(M_TLIE) && m_txSlotCounter == getTxWordCount())
+		{
 			injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
-
+			res = true;
+		}
+*/
 		if (m_sr.test(M_TUE))
 		{
 			if(m_tcr.test(M_TEIE))
 			{
 				injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
-				return;
+				return true;
 			}
 
 			m_sr.clear(M_TUE);
 		}
 
 		if (m_tcr.test(M_TIE))
+		{
 			injectInterrupt(Vba_ESAI_Transmit_Data);
+			res = true;
+		}
+
+		return res;
 	}
 
-	void Esai::execC()
+	void Esai::execInjectReceiveInterrupts(const bool hasInjectedTXInterrupts)
 	{
+		if(hasInjectedTXInterrupts)
+		{
+			// we must not update the RX registers before the TX interrupts have been executed
+			m_periph.getDSP().injectInterrupt([this]
+			{
+				writeAudioOutput();
+			});
+		}
+		else
+		{
+			writeAudioOutput();
+		}
+
 		if (m_sr.test(M_ROE))
 		{
 			if(m_rcr.test(M_REIE))
@@ -93,6 +85,9 @@ namespace dsp56k
 		++m_txSlotCounter;
 		if(m_txSlotCounter > getTxWordCount())
 		{
+			if (m_tcr.test(M_TLIE))
+				injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
+
 			m_txSlotCounter = 0;
 			++m_txFrameCounter;
 		}
@@ -103,6 +98,29 @@ namespace dsp56k
 		m_hasReadStatus = 1;
 		return m_sr;
 	}
+
+	void Esai::writeReceiveControlRegister(TWord _val)
+	{
+		LOG("Write ESAI RCR " << HEX(_val));
+		m_rcr = _val;
+	}
+
+	void Esai::writeTransmitControlRegister(TWord _val)
+	{
+//		const auto temOld  = getTxWordCount();
+
+		m_sr.clear(M_TUE);
+		LOG("Write ESAI TCR " << HEX(_val));
+		m_tcr = _val;
+/*
+		const auto tem  = getTxWordCount();
+
+		if(tem != temOld && temOld)
+		{
+			if(m_txSlotCounter != 0)
+				__debugbreak();
+		}
+*/	}
 
 	void Esai::writeTransmitClockControlRegister(TWord _val)
 	{
@@ -118,8 +136,10 @@ namespace dsp56k
 		if(!outputEnabled(_index))
 			return;
 		m_tx[_index] = _val;
+//		LOG(HEX(&m_periph.getDSP()) << " ESAI " << g_memAreaNames[m_area] << " write TX " << _index);
+
 		if((m_writtenTX & (1<<_index)))
-			LOG("TX " << _index << " written twice");
+			LOG(HEX(&m_periph.getDSP()) << " ESAI " << g_memAreaNames[m_area] << " TX " << _index << " written twice");
 		m_writtenTX |= (1<<_index);
 		if(m_writtenTX == (m_tcr & M_TEM))
 		{
@@ -178,6 +198,48 @@ namespace dsp56k
 	void Esai::injectInterrupt(const TWord _interrupt) const
 	{
 		m_periph.getDSP().injectInterrupt(_interrupt + m_vba);
+	}
+
+	void Esai::readAudioInput()
+	{
+		const auto rem = m_rcr & M_REM;
+
+		if(!rem)
+			return;
+
+		if(m_readRX)
+			m_sr.set(M_ROE);
+
+		readRXimpl(m_rx);
+		m_readRX = rem;
+		m_sr.set(M_RDF);
+
+		if(m_dma)
+			m_dma->trigger(DmaChannel::RequestSource::EsaiReceiveData);
+	}
+
+	void Esai::writeAudioOutput()
+	{
+		const auto tem  = m_tcr & M_TEM;
+
+		if(!tem)
+			return;
+
+		writeTXimpl(m_tx);
+
+//		m_tx.fill(0);
+
+		if(m_writtenTX != tem)
+		{
+			LOG("ESAI transmit underrun, written is " << HEX(m_writtenTX) << ", enabled is " << HEX(tem));
+			m_sr.set(M_TUE);
+		}
+
+		m_sr.set(M_TDE);
+		m_writtenTX = 0;
+
+		if(m_dma)
+			m_dma->trigger(DmaChannel::RequestSource::EsaiTransmitData);
 	}
 
 	void Esai::writeTSMA(const TWord _tsma)

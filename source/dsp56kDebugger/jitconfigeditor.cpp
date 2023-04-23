@@ -40,7 +40,6 @@ namespace dsp56kDebugger
 		m_grid->Clear();
 
 		m_propsBool.emplace_back(m_grid, "AGU Support Reverse Carry (bitreverse) addressing", m_config.aguSupportBitreverse);
-		m_propsBool.emplace_back(m_grid, "AGU Assume N is positive", m_config.aguAssumePositiveN);
 		m_propsBool.emplace_back(m_grid, "AGU Support Multiple-Wrap Modulo", m_config.aguSupportMultipleWrapModulo);
 		m_propsBool.emplace_back(m_grid, "Cache Single-Op Blocks", m_config.cacheSingleOpBlocks);
 		m_propsBool.emplace_back(m_grid, "Link Blocks", m_config.linkJitBlocks);
@@ -48,6 +47,7 @@ namespace dsp56kDebugger
 		m_propsBool.emplace_back(m_grid, "Support dynamic peripheral addressing", m_config.dynamicPeripheralAddressing);
 		m_propsUInt.emplace_back(m_grid, "Max Instructions per Block", m_config.maxInstructionsPerBlock);
 		m_propsBool.emplace_back(m_grid, "Do memory writes via C++", m_config.memoryWritesCallCpp);
+		m_propsBool.emplace_back(m_grid, "Enable Asmjit Diagnostics", m_config.asmjitDiagnostics);
 
 		for (auto& prop : m_propsBool)
 			prop.prop()->SetAttribute(wxPG_BOOL_USE_CHECKBOX, true);

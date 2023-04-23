@@ -548,12 +548,17 @@ namespace dsp56k
 		m_dstr &= ~(1 << Dact);
 	}
 
-	void Dma::trigger(DmaChannel::RequestSource _source)
+	bool Dma::trigger(DmaChannel::RequestSource _source)
 	{
 		const auto& channels = m_requestTargets[static_cast<uint32_t>(_source)];
 
+		if (channels.empty())
+			return false;
+
 		for (auto& channel : channels)
 			channel->triggerByRequest();
+
+		return true;
 	}
 
 	void Dma::addTriggerTarget(DmaChannel* _channel)

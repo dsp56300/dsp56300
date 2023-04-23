@@ -1,6 +1,7 @@
 #include "debuggerJitState.h"
 
 #include "dsp56kEmu/jitdspmode.h"
+#include "dsp56kEmu/jitblockruntimedata.h"
 
 namespace dsp56kDebugger
 {
@@ -18,7 +19,7 @@ namespace dsp56kDebugger
 		return r;
 	}
 
-	void JitState::onJitBlockCreated(const dsp56k::JitDspMode& _mode, const dsp56k::JitBlock* _block)
+	void JitState::onJitBlockCreated(const dsp56k::JitDspMode& _mode, const dsp56k::JitBlockRuntimeData* _block)
 	{
 		const auto& info = _block->getInfo();
 		const auto k = makeKey(_mode, info.pc);
