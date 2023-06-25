@@ -10,70 +10,77 @@ namespace dsp56k
 	{
 		m_tx.fill(0);
 		m_rx.fill(0);
+		m_txSlot.resize(32);
+		m_rxSlot.resize(32);
 	}
 
-	void Esai::execWriteTX()
+	bool Esai::execTX()
 	{
 //		LOG(HEX(&m_periph.getDSP()) << " exec ESAI " << g_memAreaNames[m_area]  <<  " ictr " << m_periph.getDSP().getInstructionCounter());
 
-		if(0 == m_txSlotCounter)
-			m_sr.set(M_TFS);
-		else
-			m_sr.clear(M_TFS);
+		const auto tem = m_tcr & M_TEM;
 
-		readAudioInput();
-	}
-
-	bool Esai::execInjectTransmitInterrupts()
-	{
-		m_hasReadStatus = 0;
-
-		bool res = false;
-/*
-		if (m_tcr.test(M_TLIE) && m_txSlotCounter == getTxWordCount())
+		if(tem)
 		{
-			injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
-			res = true;
-		}
-*/
-		if (m_sr.test(M_TUE))
-		{
-			if(m_tcr.test(M_TEIE))
-			{
-				injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
-				return true;
-			}
-
-			m_sr.clear(M_TUE);
-		}
-
-		if (m_tcr.test(M_TIE))
-		{
-			injectInterrupt(Vba_ESAI_Transmit_Data);
-			res = true;
-		}
-
-		return res;
-	}
-
-	void Esai::execInjectReceiveInterrupts(const bool hasInjectedTXInterrupts)
-	{
-		if(hasInjectedTXInterrupts)
-		{
-			// we must not update the RX registers before the TX interrupts have been executed
-			m_periph.getDSP().injectInterrupt([this]
-			{
-				writeAudioOutput();
-			});
-		}
-		else
-		{
+			// note that this transfers the data in TX that has been written to it before
 			writeAudioOutput();
+
+			if (0 == m_txSlotCounter)
+				m_sr.set(M_TFS);
+			else
+				m_sr.clear(M_TFS);
+
+			++m_txSlotCounter;
+
+			if (m_txSlotCounter > getTxWordCount())
+			{
+				for (size_t i = 0; i < m_txSlotCounter; ++i)
+					writeTXimpl(m_txSlot[i]);
+
+				m_txSlotCounter = 0;
+				++m_txFrameCounter;
+
+				if (m_tcr.test(M_TLIE))
+					injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
+			}
 		}
+
+		if(tem)
+		{
+			if (m_sr.test(M_TUE))
+			{
+				if (m_tcr.test(M_TEIE))
+					injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
+
+				m_sr.clear(M_TUE);
+			}
+			else if (m_tcr.test(M_TIE))
+			{
+				injectInterrupt(Vba_ESAI_Transmit_Data);
+			}
+		}
+
+		return false;
+	}
+
+	void Esai::execRX()
+	{
+		m_periph.getDSP().injectInterrupt([this]
+		{
+			readAudioInput();
+
+			++m_rxSlotCounter;
+
+			if(m_rxSlotCounter > getRxWordCount())
+			{
+				m_rxSlotCounter = 0;
+				++m_rxFrameCounter;
+			}
+		});
 
 		if (m_sr.test(M_ROE))
 		{
-			if(m_rcr.test(M_REIE))
+			if (m_rcr.test(M_REIE))
 				injectInterrupt(Vba_ESAI_Receive_Data_With_Exception_Status);
 			else
 				m_sr.clear(M_ROE);
@@ -81,21 +88,10 @@ namespace dsp56k
 
 		if (m_rcr.test(M_RIE))
 			injectInterrupt(Vba_ESAI_Receive_Data);
-
-		++m_txSlotCounter;
-		if(m_txSlotCounter > getTxWordCount())
-		{
-			if (m_tcr.test(M_TLIE))
-				injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
-
-			m_txSlotCounter = 0;
-			++m_txFrameCounter;
-		}
 	}
 
-	TWord Esai::readStatusRegister()
+	const TWord& Esai::readStatusRegister() const
 	{
-		m_hasReadStatus = 1;
 		return m_sr;
 	}
 
@@ -125,7 +121,20 @@ namespace dsp56k
 	void Esai::writeTransmitClockControlRegister(TWord _val)
 	{
 		LOG("Write ESAI TCCR " << HEX(_val));
+
+		const auto oldTxWC = getTxWordCount();
+		const auto oldRxWC = getRxWordCount();
+
 		m_tccr = _val;
+
+		const auto newTxWC = getTxWordCount();
+		const auto newRxWC = getRxWordCount();
+
+		if(oldTxWC != newTxWC)
+			m_txSlotCounter = 0;
+
+		if (oldRxWC != newRxWC)
+			m_rxSlotCounter = 0;
 
 		if(m_clock)
 			m_clock->onTCCRChanged(this);
@@ -133,23 +142,25 @@ namespace dsp56k
 
 	void Esai::writeTX(uint32_t _index, TWord _val)
 	{
-		if(!outputEnabled(_index))
-			return;
 		m_tx[_index] = _val;
 //		LOG(HEX(&m_periph.getDSP()) << " ESAI " << g_memAreaNames[m_area] << " write TX " << _index);
 
-		if((m_writtenTX & (1<<_index)))
-			LOG(HEX(&m_periph.getDSP()) << " ESAI " << g_memAreaNames[m_area] << " TX " << _index << " written twice");
+//		const auto enabled = outputEnabled(_index);
+
+//		if(enabled && (m_writtenTX & (1<<_index)))
+//			LOG(HEX(&m_periph.getDSP()) << " ESAI " << g_memAreaNames[m_area] << " TX " << _index << " written twice");
+
 		m_writtenTX |= (1<<_index);
+
 		if(m_writtenTX == (m_tcr & M_TEM))
 		{
-			if (m_hasReadStatus)
+//			if (m_hasReadStatus)
 				m_sr.clear(M_TUE);
 			m_sr.clear(M_TDE);
 		}
 	}
 
-	TWord Esai::readRX(uint32_t _index)
+	TWord Esai::readRX(const uint32_t _index)
 	{
 		if(!inputEnabled(_index))
 			return 0;
@@ -195,6 +206,75 @@ namespace dsp56k
 		}
 	}
 
+	std::string Esai::getTccrAsString() const
+	{
+		std::stringstream ss;
+		ss << "M_THCKD=" << bittest(m_tccr, M_THCKD) << ' ';
+		ss << "M_TFSD=" << bittest(m_tccr, M_TFSD) << ' ';
+		ss << "M_TCKD=" << bittest(m_tccr, M_TCKD) << ' ';
+		ss << "M_THCKP=" << bittest(m_tccr, M_THCKP) << ' ';
+		ss << "M_TFSP=" << bittest(m_tccr, M_TFSP) << ' ';
+		ss << "M_TCKP=" << bittest(m_tccr, M_TCKP) << ' ';
+		ss << "M_TFP=" << getTxClockDivider() << ' ';
+		ss << "M_TDC=" << getTxWordCount() << ' ';
+		ss << "M_TPSR=" << bittest(m_tccr, M_TPSR) << ' ';
+		ss << "M_TPM=" << getTxClockPrescale();
+		return ss.str();
+	}
+
+	std::string Esai::getRccrAsString() const
+	{
+		std::stringstream ss;
+		ss << "M_RHCKD=" << bittest(m_rccr, M_RHCKD) << ' ';
+		ss << "M_RFSD=" << bittest(m_rccr, M_RFSD) << ' ';
+		ss << "M_RCKD=" << bittest(m_rccr, M_RCKD) << ' ';
+		ss << "M_RHCKP=" << bittest(m_rccr, M_RHCKP) << ' ';
+		ss << "M_RFSP=" << bittest(m_rccr, M_RFSP) << ' ';
+		ss << "M_RCKP=" << bittest(m_rccr, M_RCKP) << ' ';
+		ss << "M_RFP=" << getRxClockDivider() << ' ';
+		ss << "M_RDC=" << getRxWordCount() << ' ';
+		ss << "M_RPSR=" << (getRxClockPrescalerRange() ? 8 : 1) << ' ';
+		ss << "M_RPM=" << getRxClockPrescale();
+		return ss.str();
+	}
+
+	std::string Esai::getTcrAsString() const
+	{
+		std::stringstream ss;
+		ss << "M_TLIE=" << (m_tcr.test(M_TLIE) ? 1 : 0) << ' ';
+		ss << "M_TIE=" << (m_tcr.test(M_TIE) ? 1 : 0) << ' ';
+		ss << "M_TEDIE=" << (m_tcr.test(M_TEDIE) ? 1 : 0) << ' ';
+		ss << "M_TEIE=" << (m_tcr.test(M_TEIE) ? 1 : 0) << ' ';
+		ss << "M_TPR=" << (m_tcr.test(M_TPR) ? 1 : 0) << ' ';
+		ss << "M_PADC=" << (m_tcr.test(M_PADC) ? 1 : 0) << ' ';
+		ss << "M_TFSR=" << (m_tcr.test(M_TFSR) ? 1 : 0) << ' ';
+		ss << "M_TFSL=" << (m_tcr.test(M_TFSL) ? 1 : 0) << ' ';
+		ss << "M_TSWS=" << ((m_tcr & M_TSWS) >> M_TSWS0) << ' ';
+		ss << "M_TMOD=" << ((m_tcr & M_TMOD) >> M_TMOD0) << ' ';
+		ss << "M_TWA=" << (m_tcr.test(M_TWA) ? 1 : 0) << ' ';
+		ss << "M_TSHFD=" << (m_tcr.test(M_TSHFD) ? 1 : 0) << ' ';
+		ss << "M_TEM=" << ((m_tcr & M_TEM) >> M_TE0);
+		return ss.str();
+	}
+
+	std::string Esai::getRcrAsString() const
+	{
+		std::stringstream ss;
+		ss << "M_RLIE=" << (m_rcr.test(M_RLIE) ? 1 : 0) << ' ';
+		ss << "M_RIE=" << (m_rcr.test(M_RIE) ? 1 : 0) << ' ';
+		ss << "M_REDIE=" << (m_rcr.test(M_REDIE) ? 1 : 0) << ' ';
+		ss << "M_REIE=" << (m_rcr.test(M_REIE) ? 1 : 0) << ' ';
+		ss << "M_RPR=" << (m_rcr.test(M_RPR) ? 1 : 0) << ' ';
+		ss << "M_RFSR=" << (m_rcr.test(M_RFSR) ? 1 : 0) << ' ';
+		ss << "M_RFSL=" << (m_rcr.test(M_RFSL) ? 1 : 0) << ' ';
+		ss << "M_RSWS=" << ((m_rcr & M_RSWS) >> M_RSWS0) << ' ';
+		ss << "M_RMOD=" << ((m_rcr & M_RMOD) >> M_RMOD0) << ' ';
+		ss << "M_RWA=" << (m_rcr.test(M_RWA) ? 1 : 0) << ' ';
+		ss << "M_RSHFD=" << (m_rcr.test(M_RSHFD) ? 1 : 0) << ' ';
+		ss << "M_REM=" << ((m_rcr & M_REM) >> M_RE0);
+		return ss.str();
+	}
+
 	void Esai::injectInterrupt(const TWord _interrupt) const
 	{
 		m_periph.getDSP().injectInterrupt(_interrupt + m_vba);
@@ -210,7 +290,18 @@ namespace dsp56k
 		if(m_readRX)
 			m_sr.set(M_ROE);
 
-		readRXimpl(m_rx);
+		if (m_rxSlotCounter == 0)
+		{
+			readRXimpl(m_rx);
+
+			for (uint32_t i = 1; i <= getRxWordCount(); ++i)
+				readRXimpl(m_rxSlot[i]);
+		}
+		else
+		{
+			m_rx = m_rxSlot[m_rxSlotCounter];
+		}
+
 		m_readRX = rem;
 		m_sr.set(M_RDF);
 
@@ -220,16 +311,16 @@ namespace dsp56k
 
 	void Esai::writeAudioOutput()
 	{
-		const auto tem  = m_tcr & M_TEM;
+		const auto tem = m_tcr & M_TEM;
 
 		if(!tem)
 			return;
 
-		writeTXimpl(m_tx);
+		m_txSlot[m_txSlotCounter] = m_tx;
 
 //		m_tx.fill(0);
 
-		if(m_writtenTX != tem)
+		if((m_writtenTX & tem) != tem)
 		{
 			LOG("ESAI transmit underrun, written is " << HEX(m_writtenTX) << ", enabled is " << HEX(tem));
 			m_sr.set(M_TUE);
@@ -257,6 +348,9 @@ namespace dsp56k
 		constexpr std::pair<int,const char*> symbolsX[] =
 		{
 			// ESAI
+			{M_PCRC	, "M_PCRC"},
+			{M_PRRC	, "M_PRRC"},
+			{M_PDRC	, "M_PDRC"},
 			{M_RSMB	, "M_RSMB"},
 			{M_RSMA	, "M_RSMA"},
 			{M_TSMB	, "M_TSMB"},

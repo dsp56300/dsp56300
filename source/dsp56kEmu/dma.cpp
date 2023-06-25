@@ -66,8 +66,8 @@ namespace dsp56k
 
 			if constexpr(!g_delayedDmaTransfer)
 			{
-				execTransfer();
-				finishTransfer();
+				if(execTransfer())
+					finishTransfer();
 			}
 			else
 			{
@@ -138,25 +138,22 @@ namespace dsp56k
 
 		if(m_pendingTransfer <= 0)
 		{
-			m_pendingTransfer = 0;
-			execTransfer();
-
-//			m_pendingInterrupt = 1;
-			finishTransfer();
-		}
-/*		else if(m_pendingInterrupt)
-		{
-			if(--m_pendingInterrupt == 0)
+			if(execTransfer())
 			{
+				m_pendingTransfer = 0;
 				finishTransfer();
 			}
+			else
+			{
+				m_pendingTransfer = 1;
+			}
 		}
-*/	}
+	}
 
 	void DmaChannel::triggerByRequest()
 	{
-		execTransfer();
-		finishTransfer();
+		if(execTransfer())
+			finishTransfer();
 	}
 
 	DmaChannel::TransferMode DmaChannel::getTransferMode() const
@@ -397,13 +394,13 @@ namespace dsp56k
 		return basePtr + _addr;
 	}
 
-	void DmaChannel::execTransfer()
+	bool DmaChannel::execTransfer()
 	{
 		const auto areaS = getSourceSpace();
 		const auto areaD = getDestinationSpace();
 
 		if (areaS == MemArea_COUNT || areaD == MemArea_COUNT)
-			return;
+			return true;
 
 		if(bitvalue(m_dcr, D3d))
 		{
@@ -415,6 +412,8 @@ namespace dsp56k
 
 			const auto offsetA = signextend<int, 24>(static_cast<int>(m_dma.getDOR(addrModeSelect << 1)));
 			const auto offsetB = signextend<int, 24>(static_cast<int>(m_dma.getDOR((addrModeSelect << 1) + 1)));
+
+			auto blockFinished = false;
 
 			auto increment = [&](TWord& _target)
 			{
@@ -429,9 +428,14 @@ namespace dsp56k
 						m_dcom = m_dcomInit;
 
 						if(m_dcoh == 0)
+						{
 							m_dcoh = m_dcohInit;
+							blockFinished = true;
+						}
 						else
+						{
 							--m_dcoh;
+						}
 
 						_target += offsetB;
 					}
@@ -444,7 +448,7 @@ namespace dsp56k
 				else
 				{
 					_target++;
-					--m_dcom;
+					--m_dcol;
 				}
 
 //				LOG("DMA" << m_index << " address change " << HEX(prev) << " => " << HEX(_target));
@@ -456,10 +460,12 @@ namespace dsp56k
 					increment(m_dsr);
 				else					// the other way around
 					increment(m_ddr);
-				return;
+				return blockFinished;
 			}
 
 			assert(false && "three-dimensional DMA modes are not supported yet");
+
+			return blockFinished;
 		}
 		else
 		{
@@ -472,6 +478,8 @@ namespace dsp56k
 				memFill(areaD, m_ddr, areaS, m_dsr, m_dco + 1);
 			else
 				assert(false && "counter modes not supported yet");
+
+			return true;
 		}
 	}
 

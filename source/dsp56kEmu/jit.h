@@ -43,7 +43,8 @@ namespace dsp56k
 
 		void exec(const TWord _pc)
 		{
-//			LOG("Exec @ " << HEX(_pc));
+//			if(_pc < 0x1500 && (_pc < 0x740 || _pc >= 0x750))
+//				LOG(HEX(reinterpret_cast<uint64_t>(this)) << " exec @ " << HEX(_pc));
 			m_currentChain->exec(_pc);
 		}
 

@@ -6,6 +6,12 @@
 //#include "buildconfig.h"
 //#include <intrin.h>
 
+#ifdef _MSC_VER
+#	define DSP56K_DEOPTIMIZE __pragma(optimize("", off))
+#else
+#	define DSP56K_DEOPTIMIZE
+#endif
+
 namespace dsp56k
 {
 	// TODO: optimize for x86 win32, use intrin.h that has those functions in it

@@ -75,7 +75,7 @@ namespace dsp56k
 			m_esaiClock.setEsaiDivider(&_peripherals56367->getEsai(), 0);
 	}
 
-	TWord Peripherals56362::read(TWord _addr, Instruction _inst)
+	TWord Peripherals56362::read(const TWord _addr, const Instruction _inst)
 	{
 		switch (_addr)
 		{
@@ -103,15 +103,15 @@ namespace dsp56k
 		case Esai::M_RX3:	return m_esai.readRX(_addr - Esai::M_RX0);
 		case Esai::M_TSMA:	return m_esai.readTSMA();
 		case Esai::M_TSMB:	return m_esai.readTSMB();
+		case Esai::M_PCRC:	return m_portC.getControl();
+		case Esai::M_PDRC:	return m_portC.dspRead();
+		case Esai::M_PRRC:	return m_portC.getDirection();
 
 		case Esai::RemainingInstructionsForFrameSyncTrue:			// emulator specific
 			return m_esaiClock.getRemainingInstructionsForFrameSync(1);
 		case Esai::RemainingInstructionsForFrameSyncFalse:			// emulator specific
 			return m_esaiClock.getRemainingInstructionsForFrameSync(0);
 
-		case 0xFFFFBE:	// Port C Direction Register
-			return 0;
-			
 		case Timers::M_TCSR0:		return m_timers.readTCSR(0);	// TIMER0 Control/Status Register
 		case Timers::M_TCSR1:		return m_timers.readTCSR(1);	// TIMER1 Control/Status Register
 		case Timers::M_TCSR2:		return m_timers.readTCSR(2);	// TIMER2 Control/Status Register
@@ -191,10 +191,14 @@ namespace dsp56k
 		return value;
 	}
 
-	const TWord* Peripherals56362::readAsPtr(TWord _addr, Instruction _inst)
+	const TWord* Peripherals56362::readAsPtr(const TWord _addr, Instruction _inst)
 	{
 		switch (_addr)
 		{
+		case Esai::M_PCRC:			return &m_portC.getControl();
+		case Esai::M_PRRC:			return &m_portC.getDirection();
+		case Esai::M_SAISR:			return &m_esai.readStatusRegister();
+
 		case Timers::M_TCSR0:		return &m_timers.readTCSR(0);	// TIMER0 Control/Status Register
 		case Timers::M_TCSR1:		return &m_timers.readTCSR(1);	// TIMER1 Control/Status Register
 		case Timers::M_TCSR2:		return &m_timers.readTCSR(2);	// TIMER2 Control/Status Register
@@ -314,6 +318,9 @@ namespace dsp56k
 		case Esai::M_TX5:			m_esai.writeTX(_addr - Esai::M_TX0, _val);			return;
 		case Esai::M_TSMA:			m_esai.writeTSMA(_val);								return;
 		case Esai::M_TSMB:			m_esai.writeTSMB(_val);								return;
+		case Esai::M_PCRC:			m_portC.setControl(_val);							return;
+		case Esai::M_PDRC:			m_portC.dspWrite(_val);								return;
+		case Esai::M_PRRC:			m_portC.setDirection(_val);							return;
 
 			case XIO_PCTL:
 			m_esaiClock.setPCTL(_val);

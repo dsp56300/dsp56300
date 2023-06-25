@@ -16,8 +16,16 @@ namespace dsp56k
 	class Esai : public Audio
 	{
 	public:
+		using TxFrame = std::array<TWord, 6>;
+		using RxFrame = std::array<TWord, 4>;
+		using TxSlot = std::vector<TxFrame>;
+		using RxSlot = std::vector<RxFrame>;
+
 		enum AddressesX
 		{
+			M_PCRC	= 0xFFFFBF, // Port C GPIO Control Register
+			M_PRRC	= 0xFFFFBE, // Port C Direction Register
+			M_PDRC	= 0xFFFFBD, // Port C GPIO Data Register
 			M_RSMB	= 0xFFFFBC, // ESAI Receive Slot Mask Register B (RSMB)
 			M_RSMA	= 0xFFFFBB, // ESAI Receive Slot Mask Register A (RSMA)
 			M_TSMB	= 0xFFFFBA, // ESAI Transmit Slot Mask Register B (TSMB)
@@ -265,11 +273,10 @@ namespace dsp56k
 
 		explicit Esai(IPeripherals& _periph, EMemArea _area, Dma* _dma = nullptr);
 
-		void execWriteTX();
-		bool execInjectTransmitInterrupts();
-		void execInjectReceiveInterrupts(bool hasInjectedTXInterrupts);
-		
-		TWord readStatusRegister();
+		bool execTX();
+		void execRX();
+
+		const TWord& readStatusRegister() const;
 
 		void writestatusRegister(TWord _val)
 		{
@@ -349,6 +356,49 @@ namespace dsp56k
 			return (m_tccr & M_TDC) >> M_TDC0;
 		}
 
+		uint32_t getRxWordCount() const
+		{
+			return (m_rccr & M_RDC) >> M_RDC0;
+		}
+
+		uint32_t getTxClockDivider() const
+		{
+			return (m_tccr & M_TFP) >> M_TFP0;
+		}
+
+		uint32_t getRxClockDivider() const
+		{
+			return (m_rccr & M_RFP) >> M_RFP0;
+		}
+
+		uint32_t getTxClockPrescale() const
+		{
+			return (m_tccr & M_TPM) >> M_TPM0;
+		}
+
+		uint32_t getRxClockPrescale() const
+		{
+			return (m_rccr & M_RPM) >> M_RPM0;
+		}
+
+		// divide by 1 (false) or 8 (true)
+		bool getTxClockPrescalerRange() const
+		{
+			return (m_tccr & M_TPSR) != 0;
+		}
+
+		// divide by 1 (false) or 8 (true)
+		bool getRxClockPrescalerRange() const
+		{
+			return (m_rccr & M_RPSR) != 0;
+		}
+
+		std::string getTccrAsString() const;
+		std::string getRccrAsString() const;
+
+		std::string getTcrAsString() const;
+		std::string getRcrAsString() const;
+
 	private:
 		bool inputEnabled(uint32_t _index) const	{ return m_rcr.test(static_cast<RcrBits>(_index)); }
 		bool outputEnabled(uint32_t _index) const	{ return m_tcr.test(static_cast<TcrBits>(_index)); }
@@ -370,15 +420,18 @@ namespace dsp56k
 		TWord m_rccr = 0;							// receive clock control register
 		TWord m_tccr = 0;							// transmit clock control register
 
-		std::array<TWord, 6> m_tx;					// Words written by the DSP 
-		std::array<TWord, 4> m_rx;					// Words for the DSP to read
+		TxFrame m_tx;								// Words written by the DSP 
+		RxFrame m_rx;								// Words for the DSP to read
 
-		TWord m_hasReadStatus = 0;					// Has the status register been read since TUE was set?
+		TxSlot m_txSlot;
+		RxSlot m_rxSlot;
 		
 		uint32_t m_writtenTX = 0;
 		uint32_t m_readRX = 0;
 		uint32_t m_txSlotCounter = 0;
 		uint32_t m_txFrameCounter = 0;
+		uint32_t m_rxSlotCounter = 0;
+		uint32_t m_rxFrameCounter = 0;
 
 		TWord m_tsma = 0xffff;
 		TWord m_tsmb = 0xffff;

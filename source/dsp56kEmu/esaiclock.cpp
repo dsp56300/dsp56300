@@ -22,25 +22,41 @@ namespace dsp56k
 
 		m_cyclesSinceWrite -= m_cyclesPerSample;
 
+		auto advanceClock = [](Clock& _c)
+		{
+			if (++_c.counter > _c.divider)
+			{
+				_c.counter = 0;
+				return true;
+			}
+			return false;
+		};
+
 		for (auto& e : m_esais)
 		{
-			if(++e.clockCounter > e.clockDivider)
-			{
-				m_esaisPendingProcess.push_back(e.esai);
-				e.clockCounter = 0;
-			}
+			if(advanceClock(e.tx))
+				m_esaisProcessTX.push_back(e.esai);
+
+			if (advanceClock(e.rx))
+				m_esaisProcessRX.push_back(e.esai);
 		}
-
-		bool hasTXinterrupts = false;
-
-		for (auto* e : m_esaisPendingProcess)	e->execWriteTX();
-		for (auto* e : m_esaisPendingProcess)	hasTXinterrupts |= e->execInjectTransmitInterrupts();
-		for (auto* e : m_esaisPendingProcess)	e->execInjectReceiveInterrupts(hasTXinterrupts);
-
-		m_esaisPendingProcess.clear();
+#if 0
+		for(size_t i=0; i<std::max(m_esaisProcessRX.size(), m_esaisProcessTX.size()); ++i)
+		{
+			if(i < m_esaisProcessTX.size())
+				m_esaisProcessTX[i]->execTX();
+			if (i < m_esaisProcessRX.size())
+				m_esaisProcessRX[i]->execRX();
+		}
+#else
+		for (auto* e : m_esaisProcessTX)	e->execTX();
+		for (auto* e : m_esaisProcessRX)	e->execRX();
+#endif
+		m_esaisProcessTX.clear();
+		m_esaisProcessRX.clear();
 	}
 
-	void EsaiClock::setPCTL(TWord _val)
+	void EsaiClock::setPCTL(const TWord _val)
 	{
 		if(m_pctl == _val)
 			return;
@@ -50,7 +66,7 @@ namespace dsp56k
 		updateCyclesPerSample();
 	}
 
-	void EsaiClock::setSamplerate(uint32_t _samplerate)
+	void EsaiClock::setSamplerate(const uint32_t _samplerate)
 	{
 		if (m_samplerate == _samplerate)
 			return;
@@ -60,7 +76,7 @@ namespace dsp56k
 		updateCyclesPerSample();
 	}
 
-	void EsaiClock::setCyclesPerSample(uint32_t _cyclesPerSample)
+	void EsaiClock::setCyclesPerSample(const uint32_t _cyclesPerSample)
 	{
 		if(m_fixedCyclesPerSample == _cyclesPerSample)
 			return;
@@ -70,7 +86,7 @@ namespace dsp56k
 		updateCyclesPerSample();
 	}
 
-	void EsaiClock::setExternalClockFrequency(uint32_t _freq)
+	void EsaiClock::setExternalClockFrequency(const uint32_t _freq)
 	{
 		if(_freq == m_externalClockFrequency)
 			return;
@@ -111,7 +127,7 @@ namespace dsp56k
 		m_cyclesSinceWrite = 0;
 	}
 
-	void EsaiClock::setEsaiDivider(Esai* _esai, TWord _clockDivider)
+	void EsaiClock::setEsaiDivider(Esai* _esai, const TWord _dividerTX, const TWord _dividerRX)
 	{
 		bool found = false;
 
@@ -119,10 +135,11 @@ namespace dsp56k
 		{
 			if(entry.esai == _esai)
 			{
-				if(entry.clockDivider == _clockDivider)
+				if(entry.tx.divider == _dividerTX && entry.rx.divider == _dividerRX)
 					return;
 
-				entry.clockDivider = _clockDivider;
+				entry.tx.divider = _dividerTX;
+				entry.rx.divider = _dividerRX;
 				found = true;
 				break;
 			}
@@ -130,10 +147,25 @@ namespace dsp56k
 
 		if(!found)
 		{
-			m_esais.emplace_back(EsaiEntry{_esai, _clockDivider});
-			m_esaisPendingProcess.reserve(m_esais.size());
+			m_esais.emplace_back(EsaiEntry{ _esai, {_dividerTX}, {_dividerRX} });
+			m_esaisProcessRX.reserve(m_esais.size());
+			m_esaisProcessTX.reserve(m_esais.size());
 			_esai->setClockSource(this);
 		}
+	}
+
+	bool EsaiClock::setEsaiCounter(const Esai* _esai, const TWord _counterTX, const TWord _counterRX)
+	{
+		for (auto& esai : m_esais)
+		{
+			if(esai.esai == _esai)
+			{
+				esai.tx.counter = _counterTX;
+				esai.rx.counter = _counterRX;
+				return true;
+			}
+		}
+		return false;
 	}
 
 	TWord EsaiClock::getRemainingInstructionsForFrameSync(const TWord _expectedBitValue) const

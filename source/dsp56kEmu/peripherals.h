@@ -4,6 +4,7 @@
 #include "esai.h"
 #include "esaiclock.h"
 #include "essi.h"
+#include "gpio.h"
 #include "hdi08.h"
 #include "hi08.h"
 #include "opcodetypes.h"
@@ -167,11 +168,12 @@ namespace dsp56k
 		void exec() override;
 		void reset() override;
 
-		EsaiClock& getEsaiClock() { return m_esaiClock; }
-		Esai& getEsai()		{ return m_esai; }
-		HDI08& getHDI08()	{ return m_hdi08; }
-		Dma& getDMA()		{ return m_dma; }
-		
+		EsaiClock& getEsaiClock()	{ return m_esaiClock; }
+		Esai& getEsai()				{ return m_esai; }
+		HDI08& getHDI08()			{ return m_hdi08; }
+		Dma& getDMA()				{ return m_dma; }
+		EsaiPortC& getPortC()		{ return m_portC; }
+
 		void setSymbols(Disassembler& _disasm) const override;
 
 		void terminate() override;
@@ -187,6 +189,7 @@ namespace dsp56k
 		Esai m_esai;
 		HDI08 m_hdi08;
 		Timers m_timers;
+		EsaiPortC m_portC;
 		bool m_disableTimers;
 	};
 

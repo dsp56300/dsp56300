@@ -149,6 +149,9 @@ namespace dsp56k
 		const auto& getAudioInputs() const { return m_audioInputs; }
 		const auto& getAudioOutputs() const { return m_audioOutputs; }
 
+		auto& getAudioInputs() { return m_audioInputs; }
+		auto& getAudioOutputs() { return m_audioOutputs; }
+
 	public:
 		static constexpr uint32_t RingBufferSize = 8192;
 

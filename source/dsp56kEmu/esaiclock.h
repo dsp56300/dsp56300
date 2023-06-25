@@ -22,7 +22,16 @@ namespace dsp56k
 		void setCyclesPerSample(uint32_t _cyclesPerSample);
 		void setExternalClockFrequency(uint32_t _freq);
 
-		void setEsaiDivider(Esai* _esai, TWord _clockDivider);
+		void setEsaiDivider(Esai* _esai, TWord _divider)
+		{
+			setEsaiDivider(_esai, _divider, _divider);
+		}
+		void setEsaiDivider(Esai* _esai, TWord _dividerTX, TWord _dividerRX);
+		bool setEsaiCounter(const Esai* _esai, TWord _counter)
+		{
+			return setEsaiCounter(_esai, _counter, _counter);
+		}
+		bool setEsaiCounter(const Esai* _esai, TWord _counterTX, TWord _counterRX);
 
 		TWord getRemainingInstructionsForFrameSync(TWord _expectedBitValue) const;
 		void onTCCRChanged(Esai* _esai);
@@ -33,22 +42,29 @@ namespace dsp56k
 		IPeripherals& m_periph;
 
 		uint32_t m_lastClock = 0;
-		uint32_t m_cyclesPerSample = 2133;			// estimated cycles per sample before calculated
+		uint32_t m_cyclesPerSample = 2133;				// estimated cycles per sample before calculated
 		uint32_t m_fixedCyclesPerSample = 0;
 		uint32_t m_samplerate = 0;
 		TWord m_pctl = 0;
 		TWord m_cyclesSinceWrite = 0;
 		uint32_t m_externalClockFrequency = 12000000;	// Hz
 
+		struct Clock
+		{
+			uint32_t divider = 0;
+			uint32_t counter = 0;
+		};
+
 		struct EsaiEntry
 		{
 			Esai* esai = nullptr;
 
-			uint32_t clockDivider = 0;
-			uint32_t clockCounter = 0;
+			Clock tx;
+			Clock rx;
 		};
 
 		std::vector<EsaiEntry> m_esais;
-		std::vector<Esai*> m_esaisPendingProcess;
+		std::vector<Esai*> m_esaisProcessTX;
+		std::vector<Esai*> m_esaisProcessRX;
 	};
 }

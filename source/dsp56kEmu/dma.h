@@ -131,7 +131,7 @@ namespace dsp56k
 
 		TWord* getMemPtr(EMemArea _area, TWord _addr) const;
 
-		void execTransfer();
+		bool execTransfer();
 		void finishTransfer();
 
 		const TWord m_index;
