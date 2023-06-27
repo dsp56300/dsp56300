@@ -6,6 +6,9 @@
 #include "logging.h"
 #include "bitfield.h"
 
+#include <array>
+#include <vector>
+
 namespace dsp56k
 {
 	class EsaiClock;
