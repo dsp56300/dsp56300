@@ -13,8 +13,10 @@ if(MSVC)
 	# /Oy omit frame pointers
 	# /GT enable fiber-safe optimizations
 	# /GL Whole Program Optimization
+	# /permissive- Standards Conformance
 
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /GS- /fp:fast /Oy /GT /GL")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
 
 	if(NOT ${CMAKE_VS_PLATFORM_NAME} STREQUAL "x64")
 		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /arch:SSE2")
