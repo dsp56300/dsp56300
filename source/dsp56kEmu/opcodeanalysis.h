@@ -812,10 +812,13 @@ namespace dsp56k
 		case Extractu_S1S2:
 		case Extract_CoS2:
 		case Extractu_CoS2:
+			writef(Field_D);
+			readf(Field_s);
+			break;
 		case Insert_S1S2:
 		case Insert_CoS2:
 			writef(Field_D);
-			readf(Field_S);
+			readf(Field_qqq);
 			break;
 		case Inc:
 			readwritef(Field_d);
@@ -837,6 +840,8 @@ namespace dsp56k
 			break;
 		case Asl_D:
 		case Asr_D:
+			readwritef(Field_d);
+			break;
 		case Lsl_D:
 		case Lsr_D:
 		case Lsl_ii:

@@ -66,7 +66,7 @@ namespace dsp56k
 
 		const JitReg& get() const { assert(isValid()); return m_reg; }
 
-		JitBlock& block() { return m_block; }
+		JitBlock& block() const { return m_block; }
 
 	private:
 		JitReg m_reg;
@@ -94,7 +94,7 @@ namespace dsp56k
 	class RegXMM : public JitScopedReg
 	{
 	public:
-		RegXMM(JitBlock& _block, bool _acquire = true);
+		RegXMM(JitBlock& _block, bool _acquire = true, bool _weak = false);
 
 		const JitReg128& get() const { return JitScopedReg::get().as<JitReg128>(); }
 		operator const JitReg128& () const { return get(); }
@@ -103,7 +103,7 @@ namespace dsp56k
 	class DSPReg
 	{
 	public:
-		DSPReg(JitBlock& _block, JitDspRegPool::DspReg _reg, bool _read = true, bool _write = true, bool _acquire = true);
+		DSPReg(JitBlock& _block, PoolReg _reg, bool _read = true, bool _write = true, bool _acquire = true);
 		DSPReg(DSPReg&& _other) noexcept;
 		~DSPReg();
 
@@ -124,7 +124,7 @@ namespace dsp56k
 		bool read() const { return m_read; }
 		bool write() const { return m_write; }
 
-		JitDspRegPool::DspReg dspReg() const { return m_dspReg; }
+		PoolReg dspReg() const { return m_dspReg; }
 
 		JitBlock& block() { return m_block; }
 
@@ -137,7 +137,7 @@ namespace dsp56k
 		bool m_write;
 		bool m_acquired;
 		bool m_locked;
-		JitDspRegPool::DspReg m_dspReg;
+		PoolReg m_dspReg;
 		JitRegGP m_reg;
 	};
 
@@ -160,7 +160,9 @@ namespace dsp56k
 		void acquire();
 		void release();
 
-		bool acquired() const { return m_dspReg != JitDspRegPool::DspRegInvalid; }
+		bool acquired() const { return m_dspReg != PoolReg::DspRegInvalid; }
+
+		JitBlock& block() const { return m_block; }
 
 		DSPRegTemp& operator = (const DSPRegTemp& _other) = delete;
 		DSPRegTemp& operator = (DSPRegTemp&& _other) noexcept
@@ -169,14 +171,14 @@ namespace dsp56k
 			m_dspReg = _other.m_dspReg;
 
 			_other.m_reg.reset();
-			_other.m_dspReg = JitDspRegPool::DspRegInvalid;
+			_other.m_dspReg = PoolReg::DspRegInvalid;
 
 			return *this;
 		}
 
 	private:
 		JitBlock& m_block;
-		JitDspRegPool::DspReg m_dspReg = JitDspRegPool::DspRegInvalid;
+		PoolReg m_dspReg = PoolReg::DspRegInvalid;
 		JitRegGP m_reg;
 	};
 
@@ -212,6 +214,7 @@ namespace dsp56k
 		const bool m_read;
 		const bool m_write;
 		const TWord m_aluIndex;
+		bool m_lockedByUs = false;
 	};
 
 	class PushGP
@@ -311,7 +314,9 @@ namespace dsp56k
 
 		void acquire();
 		void release();
-		
+
+		JitBlock& block() const { return m_block; }
+
 		RegScratch& operator = (RegScratch&& _other) noexcept
 		{
 			if(_other.isValid())

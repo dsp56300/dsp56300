@@ -22,8 +22,8 @@ namespace dsp56k
 		const auto multipleWrapModulo = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 		
-		const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr, true, false);
-		const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
+		const DspValue m = makeDspValueAguReg(m_block, PoolReg::DspM0, _rrr, true, false);
+		const DspValue moduloMask = makeDspValueAguReg(m_block, PoolReg::DspM0mask, _rrr);
 
 		m_asm.cmp(r32(m), asmjit::Imm(0xffffff));		// linear shortcut
 		m_asm.jnz(notLinear);
@@ -76,8 +76,8 @@ namespace dsp56k
 			return;
 		}
 
-		const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
-		const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr, true, false);
+		const DspValue moduloMask = makeDspValueAguReg(m_block, PoolReg::DspM0mask, _rrr);
+		const DspValue m = makeDspValueAguReg(m_block, PoolReg::DspM0, _rrr, true, false);
 
 		const auto notLinear = m_asm.newLabel();
 		const auto end = m_asm.newLabel();

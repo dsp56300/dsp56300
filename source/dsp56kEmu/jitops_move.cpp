@@ -226,7 +226,7 @@ namespace dsp56k
 		{
 			m_block.mem().readDspMemory(x, y, ea);
 
-			decode_LLL_write(LLL, x, y);
+			decode_LLL_write(LLL, std::move(x), std::move(y));
 		}
 		else
 		{
@@ -573,14 +573,14 @@ namespace dsp56k
 			// read callback might return its own direct reference to a DSP register (for example: move r1,a), in this case we need to process it the regular way
 			if(writeRef.getDspReg().dspReg() != myReg)
 			{
-				assert(writeRef.getDspReg().dspReg() != JitDspRegPool::DspRegInvalid);
+				assert(writeRef.getDspReg().dspReg() != PoolReg::DspRegInvalid);
 				decode_dddddd_write(_dddddd, writeRef);
 			}
 
 			const auto targetReg = writeRef.getDspReg().dspReg();
 
-			if(targetReg >= JitDspRegPool::DspM0 && targetReg <= JitDspRegPool::DspM7)
-				m_block.regs().setM(targetReg - JitDspRegPool::DspM0, writeRef);
+			if(targetReg >= PoolReg::DspM0 && targetReg <= PoolReg::DspM7)
+				m_block.regs().setM(targetReg - PoolReg::DspM0, writeRef);
 		}
 		else
 		{

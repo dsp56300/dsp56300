@@ -156,7 +156,7 @@ namespace dsp56k
 				break;
 			}
 
-			decode_LLL_write(LLL, x, y);
+			decode_LLL_write(LLL, std::move(x), std::move(y));
 		}
 		else
 		{

@@ -14,17 +14,22 @@ namespace Logging
 #define LOGTOFILE(ss)		{ Logging::g_logToFile( (ss).str() ); }
 
 #define LOG(S)																												\
+do																															\
 {																															\
 	std::stringstream __ss__logging_h;	__ss__logging_h << __func__ << "@" << __LINE__ << ": " << S;						\
 																															\
 	LOGTOCONSOLE(__ss__logging_h)																							\
-}
+}																															\
+while(false)
+
 #define LOGF(S)																												\
+do																															\
 {																															\
 	std::stringstream __ss__logging_h;	__ss__logging_h << S;																\
 																															\
 	LOGTOFILE(__ss__logging_h)																								\
-}
+}																															\
+while (false)
 
 #define LOGFMT(fmt, ...)	LOG(Logging::string_format(fmt,  ##__VA_ARGS__))
 

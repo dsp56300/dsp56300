@@ -359,21 +359,73 @@ namespace dsp56k
 
 	void UnitTests::x0x1Combinations()
 	{
-		dsp.x0(0xaabbcc);
-		dsp.x1(0xddeeff);
-
-		dsp.y0(0xabcdef);
-		dsp.y1(0x123456);
-
 		runTest([&]()
 		{
 			dsp.x0(0xaabbcc);
 			dsp.x1(0xddeeff);
 
+			dsp.y0(0xabcdef);
+			dsp.y1(0x123456);
+
 			emit(0x44f400, 0xbabecc);	// move #$babecc,x0
 		}, [&]()
 		{
 			verify(dsp.regs().x.var == 0xddeeffbabecc);
+			verify(dsp.regs().y.var == 0x123456abcdef);
+		});
+
+		auto init = [&]()
+		{
+			dsp.x0(0x111111);
+			dsp.x1(0x222222);
+
+			dsp.y0(0x333333);
+			dsp.y1(0x444444);
+		};
+
+		// write to partial registers and check if common register is intact
+		runTest([&]()
+		{
+			init();
+			emit(0x44f400, 0xaaaaaa);	// move #$aaaaaa,x0
+//			emit(0x45f400, 0xbbbbbb);	// move #$bbbbbb,x1
+//			emit(0x46f400, 0xcccccc);	// move #$cccccc,y0
+			emit(0x47f400, 0xdddddd);	// move #$dddddd,y1
+//			emit(0x20c700);				// move y0, y1
+		}, [&]()
+		{
+			verify(dsp.regs().x.var == 0x222222aaaaaa);
+			verify(dsp.regs().y.var == 0xdddddd333333);
+		});
+
+		// write to two partial registers of the same common reg
+		runTest([&]()
+		{
+			init();
+
+			emit(0x44f400, 0xaaaaaa);	// move #$aaaaaa,x0
+			emit(0x45f400, 0xbbbbbb);	// move #$bbbbbb,x1
+		}, [&]()
+		{
+			verify(dsp.regs().x.var == 0xbbbbbbaaaaaa);
+			verify(dsp.regs().y.var == 0x444444333333);
+		});
+
+		// write one half, then use the common reg for an add
+		runTest([&]()
+		{
+			init();
+			dsp.regs().a.var = 0;
+			dsp.regs().b.var = 0;
+
+			emit(0x44f400, 0xaaaaaa);	// move #$aaaaaa,x0
+			emit(0x47f400, 0xdddddd);	// move #$dddddd,y1
+			emit(0x200020);				// add x,a
+			emit(0x200038);				// add y,b
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x00222222aaaaaa);
+			verify(dsp.regs().b.var == 0xffdddddd333333);
 		});
 	}
 
@@ -1052,7 +1104,7 @@ namespace dsp56k
 		{
 			dsp.setSR(dsp.getSR().var & 0xfe);
 
-			constexpr uint64_t expectedValues[24] =
+			static constexpr uint64_t expectedValues[24] =
 			{
 				0xffef590e000000,
 				0xffef790e000000,
@@ -1101,7 +1153,7 @@ namespace dsp56k
 			dsp.reg.a.var = 0x00008000000000;
 			dsp.setSR(0x0800d4);
 
-			constexpr uint64_t expectedValues[24] =
+			static constexpr uint64_t expectedValues[24] =
 			{
 				0xffdf7214000000,
 				0xffe07214000000,

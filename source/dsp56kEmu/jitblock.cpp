@@ -255,7 +255,7 @@ namespace dsp56k
 			if(info.branchTarget == g_invalidAddress || info.branchIsConditional)
 			{
 				DspValue pc(*this, pcNext, DspValue::Immediate24);
-				m_dspRegPool.write(JitDspRegPool::DspPC, pc);
+				m_dspRegPool.write(PoolReg::DspPC, pc);
 			}
 		}
 
@@ -478,15 +478,15 @@ namespace dsp56k
 			// It is important that this code does not allocate any temp registers inside of the branches. thefore, we prewarm everything
 			RegGP temp(*this);
 
-			const auto& sr = r32(m_dspRegPool.get(JitDspRegPool::DspSR, true, true));
-			                 r32(m_dspRegPool.get(JitDspRegPool::DspLA, true, true));	// we don't use it here but do_end does
-			const auto& lc = r32(m_dspRegPool.get(JitDspRegPool::DspLC, true, true));
+			const auto& sr = r32(m_dspRegPool.get(PoolReg::DspSR, true, true));
+			                 r32(m_dspRegPool.get(PoolReg::DspLA, true, true));	// we don't use it here but do_end does
+			const auto& lc = r32(m_dspRegPool.get(PoolReg::DspLC, true, true));
 
-			m_dspRegPool.lock(JitDspRegPool::DspSR);
-			m_dspRegPool.lock(JitDspRegPool::DspLA);
-			m_dspRegPool.lock(JitDspRegPool::DspLC);
+			m_dspRegPool.lock(PoolReg::DspSR);
+			m_dspRegPool.lock(PoolReg::DspLA);
+			m_dspRegPool.lock(PoolReg::DspLC);
 
-			DSPReg pc(*this, JitDspRegPool::DspPC, true, true);
+			DSPReg pc(*this, PoolReg::DspPC, true, true);
 
 			// check loop flag
 
@@ -508,9 +508,9 @@ namespace dsp56k
 
 			m_asm.bind(skip);
 
-			m_dspRegPool.unlock(JitDspRegPool::DspSR);
-			m_dspRegPool.unlock(JitDspRegPool::DspLA);
-			m_dspRegPool.unlock(JitDspRegPool::DspLC);
+			m_dspRegPool.unlock(PoolReg::DspSR);
+			m_dspRegPool.unlock(PoolReg::DspLA);
+			m_dspRegPool.unlock(PoolReg::DspLC);
 
 			profileEnd(pl);
 		}
@@ -546,7 +546,7 @@ namespace dsp56k
 				const auto readsSR = (info.readRegs & RegisterMask::SR) != RegisterMask::None;
 				if(isLoopBody && (writesSRbeforeRead || !readsSR))
 				{
-					jumpIfLoop(skipCCRupdate, m_dspRegPool.get(JitDspRegPool::DspPC, true, false));
+					jumpIfLoop(skipCCRupdate, m_dspRegPool.get(PoolReg::DspPC, true, false));
 				}
 
 				JitOps op(*this, _rt, isFastInterrupt);
@@ -561,17 +561,20 @@ namespace dsp56k
 
 		auto pl = profileBegin("release");
 
+		RegScratch scratch(*this, false);
+
 		JitReg32 regPC;
 
 		if((child && childIsConditional) || isLoopBody)
 		{
-			regPC = r32(m_dspRegPool.get(JitDspRegPool::DspPC, true, false));
+			regPC = r32(m_dspRegPool.get(PoolReg::DspPC, true, false));
 
 			// we can keep our PC reg if its volatile. If its not, it will be destroyed on stack.popAll() below => we need to copy it to a safe place
 			if(JitStackHelper::isNonVolatile(regPC))
 			{
-				asm_().mov(r32(regReturnVal), regPC);
-				regPC = r32(regReturnVal);
+				scratch.acquire();
+				asm_().mov(r32(scratch), regPC);
+				regPC = r32(scratch);
 			}
 		}
 
@@ -648,7 +651,7 @@ namespace dsp56k
 
 	void JitBlock::setNextPC(const DspValue& _pc)
 	{
-		m_dspRegPool.write(JitDspRegPool::DspPC, _pc);
+		m_dspRegPool.write(PoolReg::DspPC, _pc);
 	}
 
 	void JitBlock::increaseInstructionCount(const asmjit::Operand& _count)

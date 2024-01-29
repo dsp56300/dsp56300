@@ -181,10 +181,10 @@ namespace dsp56k
 
 		const RegGP r(*block);
 
-		ops->XY0to56(r, 0);		block->mem().mov(m_checks[0], r);
-		ops->XY1to56(r, 0);		block->mem().mov(m_checks[1], r);
-		ops->XY0to56(r, 1);		block->mem().mov(m_checks[2], r);
-		ops->XY1to56(r, 1);		block->mem().mov(m_checks[3], r);
+		ops->XY0to56(r, 0, false);		block->mem().mov(m_checks[0], r);
+		ops->XY1to56(r, 0, false);		block->mem().mov(m_checks[1], r);
+		ops->XY0to56(r, 1, false);		block->mem().mov(m_checks[2], r);
+		ops->XY1to56(r, 1, false);		block->mem().mov(m_checks[3], r);
 	}
 
 	void JitUnittests::conversion_verify()
@@ -204,10 +204,10 @@ namespace dsp56k
 		m_checks[4] = 0xab123456abcdef;
 		m_checks[5] = 0x12123456abcdef;
 
-		const DSPReg regLA(*block, JitDspRegPool::DspLA, true, false);
-		const DSPReg regLC(*block, JitDspRegPool::DspLC, true, false);
-		const DSPReg regSR(*block, JitDspRegPool::DspSR, true, false);
-		const DSPReg regA(*block, JitDspRegPool::DspA, true, false);
+		const DSPReg regLA(*block, PoolReg::DspLA, true, false);
+		const DSPReg regLC(*block, PoolReg::DspLC, true, false);
+		const DSPReg regSR(*block, PoolReg::DspSR, true, false);
+		const DSPReg regA(*block, PoolReg::DspA, true, false);
 		const RegGP ra(*block);
 		const RegGP rb(*block);
 
@@ -921,7 +921,7 @@ namespace dsp56k
 
 	void JitUnittests::jitDiv()
 	{
-		constexpr uint64_t expectedValues[24] =
+		static constexpr uint64_t expectedValues[24] =
 		{
 			0xffef590e000000,
 			0xffef790e000000,
@@ -981,7 +981,7 @@ namespace dsp56k
 			dsp.regs().a.var = 0x00008000000000;
 			dsp.setSR(0x0800d4);
 
-			constexpr uint64_t expectedValues[24] =
+			static constexpr uint64_t expectedValues[24] =
 			{
 				0xffdf7214000000,
 				0xffe07214000000,

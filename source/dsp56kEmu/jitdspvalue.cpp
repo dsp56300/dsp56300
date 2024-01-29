@@ -13,7 +13,7 @@ namespace dsp56k
 		, m_gpTemp(_block, false)
 		, m_pooledTemp(_block, false)
 		, m_scratch(_block, false)
-		, m_dspReg(_block, JitDspRegPool::DspRegInvalid, false, false, false)
+		, m_dspReg(_block, PoolReg::DspRegInvalid, false, false, false)
 		, m_bitSize(0)
 	{
 	}
@@ -28,7 +28,7 @@ namespace dsp56k
 		set(_value, _type);
 	}
 
-	DspValue::DspValue(JitBlock& _block, JitDspRegPool::DspReg _reg, bool _read, bool _write)
+	DspValue::DspValue(JitBlock& _block, PoolReg _reg, bool _read, bool _write)
 		: m_block(_block)
 		, m_gpTemp(_block, false)
 		, m_pooledTemp(_block, false)
@@ -52,15 +52,18 @@ namespace dsp56k
 	{
 	}
 
-	DspValue::DspValue(DspValue&& other) noexcept
-		: m_block(other.m_block)
-		, m_gpTemp(other.m_block, false)
-		, m_pooledTemp(other.m_block, false)
-		, m_scratch(other.m_block, false)
-		, m_dspReg(other.m_block, JitDspRegPool::DspRegInvalid, false, false, false)
-		, m_bitSize(0)
+	DspValue::DspValue(DSPRegTemp&& _dspReg, const Type _type)
+		: m_block(_dspReg.block())
+		, m_usePooledTemp(true)
+		, m_useScratchTemp(false)
+		, m_gpTemp(_dspReg.block(), false)
+		, m_pooledTemp(std::move(_dspReg))
+		, m_scratch(_dspReg.block(), false)
+		, m_dspReg(_dspReg.block(), PoolReg::DspRegInvalid, false, false, false)
+		, m_reg(getBitCount(_type) <= 32 ? static_cast<JitRegGP>(r32(temp())) : static_cast<JitRegGP>(r64(temp())))
+		, m_bitSize(getBitCount(_type))
+		, m_type(_type)
 	{
-		*this = std::move(other);
 	}
 
 	DspValue::DspValue(RegGP&& _existingTemp, const Type _type)
@@ -70,11 +73,36 @@ namespace dsp56k
 		, m_gpTemp(std::move(_existingTemp))
 		, m_pooledTemp(_existingTemp.block(), false)
 		, m_scratch(_existingTemp.block(), false)
-		, m_dspReg(_existingTemp.block(), JitDspRegPool::DspRegInvalid, false, false, false)
+		, m_dspReg(_existingTemp.block(), PoolReg::DspRegInvalid, false, false, false)
 		, m_reg(getBitCount(_type) <= 32 ? static_cast<JitRegGP>(r32(temp())) : static_cast<JitRegGP>(r64(temp())))
 		, m_bitSize(getBitCount(_type))
 		, m_type(_type)
 	{
+	}
+
+	DspValue::DspValue(RegScratch&& _existingTemp, const Type _type)
+		: m_block(_existingTemp.block())
+		, m_usePooledTemp(false)
+		, m_useScratchTemp(true)
+		, m_gpTemp(_existingTemp.block(), false)
+		, m_pooledTemp(_existingTemp.block(), false)
+		, m_scratch(std::move(_existingTemp))
+		, m_dspReg(_existingTemp.block(), PoolReg::DspRegInvalid, false, false, false)
+		, m_reg(getBitCount(_type) <= 32 ? static_cast<JitRegGP>(r32(temp())) : static_cast<JitRegGP>(r64(temp())))
+		, m_bitSize(getBitCount(_type))
+		, m_type(_type)
+	{
+	}
+
+	DspValue::DspValue(DspValue&& _other) noexcept
+		: m_block(_other.m_block)
+		, m_gpTemp(_other.m_block, false)
+		, m_pooledTemp(_other.m_block, false)
+		, m_scratch(_other.m_block, false)
+		, m_dspReg(_other.m_block, PoolReg::DspRegInvalid, false, false, false)
+		, m_bitSize(0)
+	{
+		*this = std::move(_other);
 	}
 
 	void DspValue::set(const JitRegGP& _reg, const Type _type)
@@ -191,10 +219,17 @@ namespace dsp56k
 		}
 		else
 		{
-			if(getBitCount() <= 32)
-				m_block.asm_().mov(r32(_dst), r32(get()));
+			if (r32(_dst) != r32(get()))
+			{
+				if (getBitCount() <= 32)
+					m_block.asm_().mov(r32(_dst), r32(get()));
+				else
+					m_block.asm_().mov(r64(_dst), r64(get()));
+			}
 			else
-				m_block.asm_().mov(r64(_dst), r64(get()));
+			{
+				assert(false);
+			}
 		}
 	}
 
@@ -203,7 +238,7 @@ namespace dsp56k
 		copyTo(_dst.get(), _dst.getBitCount());
 	}
 
-	bool DspValue::isDspReg(const JitDspRegPool::DspReg _reg) const
+	bool DspValue::isDspReg(const PoolReg _reg) const
 	{
 		if (m_dspReg.dspReg() != _reg)
 			return false;
@@ -375,17 +410,17 @@ namespace dsp56k
 		m_reg.reset();
 	}
 
-	TWord DspValue::getBitCount(const JitDspRegPool::DspReg _reg)
+	TWord DspValue::getBitCount(const PoolReg _reg)
 	{
 		switch (_reg)
 		{
-		case JitDspRegPool::DspA:
-		case JitDspRegPool::DspB:
-		case JitDspRegPool::DspAwrite:
-		case JitDspRegPool::DspBwrite:
+		case PoolReg::DspA:
+		case PoolReg::DspB:
+		case PoolReg::DspAwrite:
+		case PoolReg::DspBwrite:
 			return 56;
-		case JitDspRegPool::DspX:
-		case JitDspRegPool::DspY:
+		case PoolReg::DspX:
+		case PoolReg::DspY:
 			return 48;
 		default:
 			return 24;

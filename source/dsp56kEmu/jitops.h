@@ -285,6 +285,7 @@ namespace dsp56k
 
 		void signextend24to56(const JitReg64& _reg) const;
 
+		static void signextend24to64(JitEmitter& _a, const JitReg64& _dst, const JitReg64& _src);
 		void signextend24to64(const JitReg64& _dst, const JitReg64& _src) const;
 		void signextend24to64(const JitReg64& _reg) const { return signextend24to64(_reg, _reg); }
 
@@ -312,10 +313,14 @@ namespace dsp56k
 		template<Instruction Inst, ExpectedBitValue BitValue>
 		void esaiFrameSyncSpinloop(TWord op);
 
-		void signed24To56(const JitReg64& _r) const;
-		constexpr static uint64_t signed24To56(const TWord _src)
+#ifdef HAVE_X86_64
+		void signed24To56(const JitReg64& _r, bool _signExtendTo64) const;
+#endif
+		constexpr static uint64_t signed24To56(const TWord _src, const bool _signExtendTo64)
 		{
-			return static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 8ull) >> 8ull;
+			return _signExtendTo64 ?
+				static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 16ull):
+				static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 8ull) >> 8ull;
 		}
 
 		void callDSPFunc(void(* _func)(DSP*, TWord)) const;
@@ -493,9 +498,9 @@ namespace dsp56k
 		void ccr_getBitValue(const JitRegGP& _dst, CCRBit _bit);
 		void sr_getBitValue(const JitRegGP& _dst, SRBit _bit) const;
 		void copyBitToCCR(const JitRegGP& _src, uint32_t _bitIndex, CCRBit _dstBit);
-		void XYto56(const JitReg64& _dst, int _xy) const;
-		void XY0to56(const JitReg64& _dst, int _xy) const;
-		void XY1to56(const JitReg64& _dst, int _xy) const;
+		void XYto56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const;
+		void XY0to56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const;
+		void XY1to56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const;
 
 		// decode
 		void decode_cccc(const JitRegGP& _dst, TWord cccc);
@@ -527,7 +532,7 @@ namespace dsp56k
 		void decode_qqq_read(DspValue& _dst, TWord _qqq) const;
 		void decode_sss_read(DspValue& _dst, TWord _sss) const;
 		void decode_LLL_read(TWord _lll, DspValue& x, DspValue& y);
-		void decode_LLL_write(TWord _lll, const DspValue& x, const DspValue& y);
+		void decode_LLL_write(TWord _lll, DspValue&& x, DspValue&& y);
 		DspValue decode_XMove_MMRRR(TWord _mm, TWord _rrr);
 
 		TWord getOpWordA() const { return m_opWordA; }

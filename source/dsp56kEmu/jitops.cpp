@@ -604,29 +604,42 @@ namespace dsp56k
 		do_end();
 	}
 
-	template<bool BackupCCR> void JitOps::op_Ifcc(TWord op)
+	template<bool BackupCCR> void JitOps::op_Ifcc(const TWord op)
 	{
+		// preload all registers that the alu op needs to ensure nothing is loaded/unloaded within the if block
+		const auto* oiAlu = m_opcodes.findParallelAluOpcodeInfo(op);
+
+		RegisterMask regsWritten;
+		RegisterMask regsRead;
+
+		getRegisters(regsWritten, regsRead, oiAlu->getInstruction(), op);
+
+		// remove SR because we lock it anyway below
+		reinterpret_cast<uint64_t&>(regsWritten) &= ~static_cast<uint64_t>(RegisterMask::SR);
+		reinterpret_cast<uint64_t&>(regsRead) &= ~static_cast<uint64_t>(RegisterMask::SR);
+
+		// we need to read registers that are write-only beause the write is conditional. Otherwise this would discard the current register values if the write is not happening and writes back crap to memory
+		regsRead |= regsWritten;
+
 		const TWord cccc = getFieldValue<Ifcc,Field_CCCC>(op);
 
-		const DSPReg sr(m_block, JitDspRegPool::DspSR, true, false);
+		const DSPReg sr(m_block, PoolReg::DspSR, true, false);
+
+		const auto lockedRegs = getBlock().dspRegPool().lock(regsRead, regsWritten);
 
 		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
-#ifdef HAVE_ARM64
 			const auto cc = decode_cccc(cccc);
-			m_block.dspRegPool().releaseNonLocked();
+#ifdef HAVE_ARM64
 			m_asm.b(reverseCC(cc), _toFalse);
 #else
-			const auto cc = decode_cccc(cccc);
-			m_block.dspRegPool().releaseNonLocked();
 			m_asm.j(reverseCC(cc), _toFalse);
 #endif
 		}, [&]()
 		{
-			auto emitAluOp = [&](const TWord _op)
+			auto emitAluOp = [&]
 			{
-				const auto* oiAlu = m_opcodes.findParallelAluOpcodeInfo(_op);
-				emit(oiAlu->getInstruction(), _op);
+				emit(oiAlu->getInstruction(), op);
 			};
 
 			if constexpr(BackupCCR)
@@ -640,12 +653,12 @@ namespace dsp56k
 				const auto dirtyBackup = dirty;
 
 				m_disableCCRUpdates = true;
-				emitAluOp(op);
+				emitAluOp();
 				m_disableCCRUpdates = false;
 
 				dirty = dirtyBackup;
 
-				if(m_block.dspRegPool().isWritten(JitDspRegPool::DspSR))
+				if(m_block.dspRegPool().isWritten(PoolReg::DspSR))
 				{
 					const RegGP r(m_block);
 					m_asm.movd(r32(r.get()), ccrBackup);
@@ -658,9 +671,11 @@ namespace dsp56k
 			}
 			else
 			{
-				emitAluOp(op);
+				emitAluOp();
 			}
-		}, !BackupCCR);
+		}, [] {}, false, !BackupCCR, false);
+
+		getBlock().dspRegPool().unlock(lockedRegs);
 	}
 
 	void JitOps::op_Lua_ea(const TWord _op)
@@ -881,8 +896,8 @@ namespace dsp56k
 				const auto loadedAndWritten = loadedDuringCycle & written;
 				const auto spilledAndWritten = spilledDuringCycle & written;
 
-				assert(loadedAndWritten == JitDspRegPool::DspRegFlags::None);
-				assert(spilledAndWritten == JitDspRegPool::DspRegFlags::None);
+				assert(loadedAndWritten == DspRegFlags::None);
+				assert(spilledAndWritten == DspRegFlags::None);
 
 				m_block.dspRegPool().releaseByFlags(loadedAndWritten);
 				m_block.dspRegPool().releaseByFlags(spilledAndWritten);

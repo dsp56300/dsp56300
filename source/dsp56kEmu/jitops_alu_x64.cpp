@@ -10,19 +10,16 @@
 
 namespace dsp56k
 {
-	void JitOps::XY0to56(const JitReg64& _dst, int _xy) const
+	void JitOps::XY0to56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const
 	{
 		m_dspRegs.getXY(_dst, _xy);
-		m_asm.shl(_dst, asmjit::Imm(40));
-		m_asm.sar(_dst, asmjit::Imm(8));
-		m_asm.shr(_dst, asmjit::Imm(8));
+		signed24To56(_dst, _signExtendTo64);
 	}
-
-	void JitOps::XY1to56(const JitReg64& _dst, int _xy) const
+	void JitOps::XY1to56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const
 	{
 		m_dspRegs.getXY(_dst, _xy);
 		m_asm.shr(_dst, asmjit::Imm(24));	// remove LSWord
-		signed24To56(_dst);
+		signed24To56(_dst, _signExtendTo64);
 	}
 
 	void JitOps::alu_abs(const JitRegGP& _r)

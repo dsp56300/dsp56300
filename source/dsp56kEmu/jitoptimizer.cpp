@@ -61,11 +61,11 @@ namespace dsp56k
 				const auto prefix = reg.isVec() ? "vec" : "gp";
 
 				if(rw)
-					LOG(idx << " rw " << prefix << reg._baseId)
+					LOG(idx << " rw " << prefix << reg._baseId);
 				else if(written)
-					LOG(idx << " write " << prefix << reg._baseId)
+					LOG(idx << " write " << prefix << reg._baseId);
 				else if(read)
-					LOG(idx << " read " << prefix << reg._baseId)
+					LOG(idx << " read " << prefix << reg._baseId);
 			}
 
 			_node = _node->next();

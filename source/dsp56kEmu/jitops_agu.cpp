@@ -17,14 +17,14 @@ namespace dsp56k
 			break;
 		case AddressingMode::Modulo:
 			{
-				const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
-				const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr, true, false);
+				const DspValue moduloMask = makeDspValueAguReg(m_block, PoolReg::DspM0mask, _rrr);
+				const DspValue m = makeDspValueAguReg(m_block, PoolReg::DspM0, _rrr, true, false);
 				updateAddressRegisterSubModulo(r32(_r), _n, r32(m), r32(moduloMask), _addN);
 			}
 			break;
 		case AddressingMode::MultiWrapModulo:
 			{
-				const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
+				const DspValue moduloMask = makeDspValueAguReg(m_block, PoolReg::DspM0mask, _rrr);
 				updateAddressRegisterSubMultipleWrapModulo(_r, _n, r32(moduloMask), _addN);
 			}
 			break;
@@ -50,14 +50,14 @@ namespace dsp56k
 			break;
 		case AddressingMode::Modulo:
 			{
-				const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
-				const DspValue m = makeDspValueAguReg(m_block, JitDspRegPool::DspM0, _rrr, true, false);
+				const DspValue moduloMask = makeDspValueAguReg(m_block, PoolReg::DspM0mask, _rrr);
+				const DspValue m = makeDspValueAguReg(m_block, PoolReg::DspM0, _rrr, true, false);
 				updateAddressRegisterSubModuloN1(_r, r32(m), r32(moduloMask), _addN);
 			}
 			break;
 		case AddressingMode::MultiWrapModulo:
 			{
-				const DspValue moduloMask = makeDspValueAguReg(m_block, JitDspRegPool::DspM0mask, _rrr);
+				const DspValue moduloMask = makeDspValueAguReg(m_block, PoolReg::DspM0mask, _rrr);
 				updateAddressRegisterSubMultipleWrapModuloN1(_r, _addN, r32(moduloMask));
 			}
 			break;
@@ -80,7 +80,7 @@ namespace dsp56k
 
 		if (_mmm == 4)													/* 100 (Rn)    */
 		{
-			return DspValue(m_block, JitDspRegPool::DspR0, true, false, _rrr);
+			return DspValue(m_block, PoolReg::DspR0, true, false, _rrr);
 		}
 
 		if (_mmm == 7)													/* 111 -(Rn)   */
@@ -91,7 +91,7 @@ namespace dsp56k
 					DspValue r = makeDspValueRegR(m_block, _rrr, true, true);
 					updateAddressRegisterSubN1(r32(r.get()), _rrr, false);
 				}
-				return DspValue(m_block, JitDspRegPool::DspR0, true, false, _rrr);
+				return DspValue(m_block, PoolReg::DspR0, true, false, _rrr);
 			}
 
 			DspValue r = m_dspRegs.getR(_rrr);
@@ -121,7 +121,7 @@ namespace dsp56k
 		if (!_returnPostR)
 		{
 			if (!_writeR)
-				return DspValue(m_block, JitDspRegPool::DspR0, true, false, _rrr);
+				return DspValue(m_block, PoolReg::DspR0, true, false, _rrr);
 
 			dst.temp(DspValue::Temp24);
 			m_asm.mov(dst.get(), r32(rRef.get()));
@@ -167,7 +167,7 @@ namespace dsp56k
 			rRef.release();
 
 			if (_returnPostR)
-				return DspValue(m_block, JitDspRegPool::DspR0, true, true, _rrr);
+				return DspValue(m_block, PoolReg::DspR0, true, true, _rrr);
 		}
 
 		return dst;

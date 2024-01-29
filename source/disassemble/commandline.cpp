@@ -55,7 +55,7 @@ std::string CommandLine::get(const std::string& _key) const
 	if (it == m_argsWithValues.end())
 	{
 		const std::string msg = "ERROR: command line argument " + _key + " has no value";
-		LOG(msg)
+		LOG(msg);
 		throw std::runtime_error(msg.c_str());
 	}
 	return it->second;
@@ -68,7 +68,7 @@ float CommandLine::getFloat(const std::string& _key) const
 	if (std::isinf(result) || std::isnan(result))
 	{
 		const std::string msg = "ERROR: invalid value " + stringResult + " for argument " + _key;
-		LOG(msg)
+		LOG(msg);
 		throw std::runtime_error(msg.c_str());
 	}
 	return static_cast<float>(result);

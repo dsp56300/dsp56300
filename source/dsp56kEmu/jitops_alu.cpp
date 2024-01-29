@@ -10,10 +10,17 @@ namespace dsp56k
 	constexpr int64_t g_alu_min_56 = -0x80000000000000;
 	constexpr uint64_t g_alu_max_56_u = 0xffffffffffffff;
 
-	void JitOps::XYto56(const JitReg64& _dst, int _xy) const
+	void JitOps::XYto56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const
 	{
 		m_dspRegs.getXY(_dst, _xy);
-		signextend48to56(_dst);
+		if(_signExtendTo64)
+		{
+			signextend48to64(_dst);
+		}
+		else
+		{
+			signextend48to56(_dst);
+		}
 	}
 
 	void JitOps::op_Abs(TWord op)
@@ -115,7 +122,7 @@ namespace dsp56k
 	{
 		const auto ab = getFieldValue<Add_xxxx, Field_d>(op);
 
-		const auto opB = signed24To56(getOpWordB());
+		const auto opB = signed24To56(getOpWordB(), false);
 
 		RegGP r(m_block);
 		m_asm.mov(r64(r), asmjit::Imm(opB));
@@ -1095,7 +1102,7 @@ namespace dsp56k
 		const auto ab = getFieldValue<Sub_xxxx, Field_d>(op);
 
 		RegGP r(m_block);
-		const auto opB = signed24To56(getOpWordB());
+		const auto opB = signed24To56(getOpWordB(), false);
 		m_asm.mov(r64(r), asmjit::Imm(opB));
 		alu_sub(ab, r);		// TODO use immediate data
 	}
@@ -1113,8 +1120,7 @@ namespace dsp56k
 
 		AluRef r(m_block, ab, true, true);
 
-		const RegGP temp(m_block);
-		decode_JJJ_read_56(temp, JJJ, !ab);
+		const DspValue temp = decode_JJJ_read_56(JJJ, !ab);
 
 		m_asm.cmov(decode_cccc(cccc), r64(r), r64(temp));
 	}
@@ -1130,8 +1136,7 @@ namespace dsp56k
 		AluRef r(m_block, ab, true, true);
 		r.get();	// force load
 
-		const RegGP temp(m_block);
-		decode_JJJ_read_56(temp, JJJ, !ab);
+		const auto temp = decode_JJJ_read_56(JJJ, !ab);
 
 		const DspValue src = makeDspValueRegR(m_block, ttt);
 		const DspValue dst = makeDspValueRegR(m_block, TTT, true, true);

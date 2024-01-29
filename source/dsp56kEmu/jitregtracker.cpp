@@ -33,7 +33,7 @@ namespace dsp56k
 
 		m_block.dspRegPool().unlock(m_dspReg);
 		m_block.dspRegPool().releaseTemp(m_dspReg);
-		m_dspReg = JitDspRegPool::DspRegInvalid;
+		m_dspReg = PoolReg::DspRegInvalid;
 	}
 
 	AluReg::AluReg(JitBlock& _block, const TWord _aluIndex, bool readOnly/* = false*/, bool writeOnly/* = false*/)
@@ -85,8 +85,11 @@ namespace dsp56k
 		}
 		else
 		{
-			const auto dspReg = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA + m_aluIndex);
-			p.unlock(dspReg);
+			const auto dspReg = static_cast<PoolReg>(PoolReg::DspA + m_aluIndex);
+			if (m_lockedByUs)
+				p.unlock(dspReg);
+			else
+				assert(p.isLocked(dspReg) && "Register has been unlocked by someone else too early");
 		}
 	}
 
@@ -99,8 +102,19 @@ namespace dsp56k
 
 		JitRegGP r;
 
-		const auto dspRegR = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspA      + m_aluIndex);
-		const auto dspRegW = static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspAwrite + m_aluIndex);
+		const auto dspRegR = static_cast<PoolReg>(PoolReg::DspA      + m_aluIndex);
+		const auto dspRegW = static_cast<PoolReg>(PoolReg::DspAwrite + m_aluIndex);
+
+		auto lock = [this](const PoolReg _reg)
+		{
+			auto& pool = m_block.dspRegPool();
+
+			if(!pool.isLocked(_reg))
+			{
+				pool.lock(_reg);
+				m_lockedByUs = true;
+			}
+		};
 
 		if(p.isParallelOp() && m_write)
 		{
@@ -109,7 +123,7 @@ namespace dsp56k
 			if(m_read)
 			{
 				rRead = p.get(dspRegR, true, false);
-				p.lock(dspRegR);
+				lock(dspRegR);
 			}
 
 			r = p.get(dspRegW, false, true);
@@ -120,13 +134,18 @@ namespace dsp56k
 			if(m_read)
 			{
 				m_block.asm_().mov(r, rRead);
-				p.unlock(dspRegR);
+
+				if(m_lockedByUs)
+				{
+					m_lockedByUs = false;
+					p.unlock(dspRegR);
+				}
 			}
 		}
 		else
 		{
 			r = p.get(dspRegR, m_read, m_write);
-			p.lock(dspRegR);
+			lock(dspRegR);
 		}
 		m_reg = r.as<JitReg64>();
 		return m_reg;
@@ -381,11 +400,11 @@ namespace dsp56k
 	{
 	}
 
-	RegXMM::RegXMM(JitBlock& _block, const bool _acquire/* = true*/) : JitScopedReg(_block, _block.xmmPool(), _acquire)
+	RegXMM::RegXMM(JitBlock& _block, const bool _acquire/* = true*/, const bool _weak/* = false*/) : JitScopedReg(_block, _block.xmmPool(), _acquire, _weak)
 	{
 	}
 
-	DSPReg::DSPReg(JitBlock& _block, const JitDspRegPool::DspReg _reg, const bool _read, const bool _write, const bool _acquire)
+	DSPReg::DSPReg(JitBlock& _block, const PoolReg _reg, const bool _read, const bool _write, const bool _acquire)
 	: m_block(_block)
 	, m_read(_read)
 	, m_write(_write)
@@ -451,14 +470,14 @@ namespace dsp56k
 
 	DSPReg& DSPReg::operator=(DSPReg&& _other) noexcept
 	{
-		if (m_dspReg != JitDspRegPool::DspRegInvalid && m_dspReg != _other.m_dspReg && m_acquired)
+		if (m_dspReg != PoolReg::DspRegInvalid && m_dspReg != _other.m_dspReg && m_acquired)
 			release();
 
 		m_read = _other.m_read;
 		m_write = _other.m_write;
 		m_acquired = _other.m_acquired;
 
-		if(m_dspReg != JitDspRegPool::DspRegInvalid && m_dspReg == _other.m_dspReg && m_acquired && _other.m_acquired)
+		if(m_dspReg != PoolReg::DspRegInvalid && m_dspReg == _other.m_dspReg && m_acquired && _other.m_acquired)
 			m_locked |= _other.m_locked;
 		else
 			m_locked = _other.m_locked;

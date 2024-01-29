@@ -114,7 +114,7 @@ namespace dsp56k
 			{
 				// things such as move r5,x:(r5)+ will have r5 in src while trying to update r5 in effectiveAddress<> before we write it. In this case, we need to copy r5 before it gets modified
 				const auto rIndex = getFieldValue<Inst, Field_RRR>(_op);
-				if (_src.isDspReg(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspR0 + rIndex)))
+				if (_src.isDspReg(static_cast<PoolReg>(PoolReg::DspR0 + rIndex)))
 					_src.toTemp();
 				const auto ea = effectiveAddress<Inst>(_op);
 				writeMemOrPeriph(_area, ea, _src);				

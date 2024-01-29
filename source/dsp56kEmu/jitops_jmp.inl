@@ -21,7 +21,7 @@ namespace dsp56k
 
 		DspValue a(m_block, addr, DspValue::Immediate24);
 
-		DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
+		DSPReg pc(m_block, PoolReg::DspPC, true, true);
 		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 			bitTestMemory<Inst>(op, BitValue, _toFalse);
@@ -41,7 +41,7 @@ namespace dsp56k
 		DspValue r(m_block);
 		decode_dddddd_read(r, dddddd);
 
-		DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
+		DSPReg pc(m_block, PoolReg::DspPC, true, true);
 		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 			bitTest<Inst>(op, r, BitValue, _toFalse);
@@ -80,7 +80,7 @@ namespace dsp56k
 
 	template<Instruction Inst, BraMode Bmode> void JitOps::braIfCC(const TWord op, DspValue& offset)
 	{
-		const DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
+		const DSPReg pc(m_block, PoolReg::DspPC, true, true);
 
 		if constexpr (Bmode == Bra)
 		{
@@ -115,7 +115,7 @@ namespace dsp56k
 
 	template<Instruction Inst, JumpMode Bmode> void JitOps::jumpIfCC(const TWord op, DspValue& offset)
 	{
-		const DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
+		const DSPReg pc(m_block, PoolReg::DspPC, true, true);
 
 		if constexpr(Bmode == Jump)
 		{
@@ -146,7 +146,7 @@ namespace dsp56k
 		const auto addr = absAddressExt<Inst>();
 		DspValue a(m_block, addr, DspValue::Immediate24);
 
-		DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
+		DSPReg pc(m_block, PoolReg::DspPC, true, true);
 		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 			bitTestMemory<Inst>(_op, BitValue, _toFalse);
@@ -163,7 +163,7 @@ namespace dsp56k
 
 		const auto dddddd = getFieldValue<Inst,Field_DDDDDD>(op);
 
-		DSPReg pc(m_block, JitDspRegPool::DspPC, true, true);
+		DSPReg pc(m_block, PoolReg::DspPC, true, true);
 		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
 		{
 			DspValue r(m_block);

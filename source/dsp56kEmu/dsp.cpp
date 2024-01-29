@@ -27,6 +27,12 @@
 #include "jit.h"
 
 #if 0
+#	define LOGJITPC(PC)		LOG(HEX(reinterpret_cast<uint64_t>(this)) << " exec @ " << HEX(PC))
+#else
+#	define LOGJITPC(PC)		{}
+#endif
+
+#if 0
 #	define LOGSC(F)	logSC(F)
 #else
 #	define LOGSC(F)	{}
@@ -170,8 +176,8 @@ namespace dsp56k
 			if(m_debugger)
 				m_debugger->onExec(getPC().var);
 #endif
-
-			m_jit.exec(getPC().var);
+			LOGJITPC(getPC().toWord());
+			m_jit.exec(getPC().toWord());
 		}
 		else
 		{
@@ -273,6 +279,7 @@ namespace dsp56k
 
 		if(g_useJIT)
 		{
+			LOGJITPC(vba);
 			m_jit.exec(vba);
 			if(m_processingMode != LongInterrupt)
 			{

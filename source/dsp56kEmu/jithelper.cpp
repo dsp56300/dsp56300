@@ -28,50 +28,43 @@ namespace dsp56k
 			ops.updateDirtyCCR();
 		};
 
-		auto execIf = [&](bool _pushNonVolatiles)
+		const auto isFalse = a.newLabel();
+		const auto end = a.newLabel();
+
+		updateDirtyCCR();
+
+		if(_releaseRegPool)
+			_block.dspRegPool().releaseNonLocked();
+
+		_jumpIfFalse(isFalse);
+
+		// --------- the true case
+
+		_true();
+
+		updateDirtyCCR();
+
+		if(_releaseRegPool)
+			_block.dspRegPool().releaseNonLocked();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
+
+		if (_hasFalseFunc)
+			a.jmp(end);
+
+		// --------- the false case
+
+		a.bind(isFalse);
+
+		if (_hasFalseFunc)
 		{
-			const auto isFalse = a.newLabel();
-			const auto end = a.newLabel();
+			_false();
 
 			updateDirtyCCR();
 
 			if(_releaseRegPool)
 				_block.dspRegPool().releaseNonLocked();
+		}
 
-			if(_pushNonVolatiles)
-				_block.stack().pushNonVolatiles();
-
-			_jumpIfFalse(isFalse);
-
-			{
-				_true();
-
-				updateDirtyCCR();
-
-				if(_releaseRegPool)
-					_block.dspRegPool().releaseNonLocked();	// only executed if true at runtime, but always executed at compile time, reg pool now empty
-			}
-
-			if (_hasFalseFunc)
-				a.jmp(end);
-
-			a.bind(isFalse);
-
-			if (_hasFalseFunc)
-			{
-				_false();
-
-				updateDirtyCCR();
-
-				if(_releaseRegPool)
-					_block.dspRegPool().releaseNonLocked();
-			}
-
-			a.bind(end);
-		};
-
-		// we move all register pushed that happened inside the branches to the outside to make sure they are always executed
-		execIf(false);
+		a.bind(end);
 	}
 
 	JitReg64 r64(DspValue& _reg)

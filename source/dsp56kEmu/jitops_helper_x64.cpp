@@ -8,6 +8,20 @@
 
 namespace dsp56k
 {
+	void JitOps::signed24To56(const JitReg64& _r, const bool _signExtendTo64) const
+	{
+		m_asm.shl(_r, asmjit::Imm(40));
+		if (_signExtendTo64)
+		{
+			m_asm.sar(_r, asmjit::Imm(16));
+		}
+		else
+		{
+			m_asm.sar(_r, asmjit::Imm(8));
+			m_asm.shr(_r, asmjit::Imm(8));
+		}
+	}
+
 	void JitOps::getXY0(DspValue& _dst, const uint32_t _aluIndex, bool _signextend) const
 	{
 		if(!_dst.isRegValid())
@@ -43,7 +57,7 @@ namespace dsp56k
 		{
 			if(m_asm.hasBMI2())
 			{
-				const DSPReg xyRef(m_block, static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _aluIndex), true, false, true);
+				const DSPReg xyRef(m_block, static_cast<PoolReg>(PoolReg::DspX + _aluIndex), true, false, true);
 				m_asm.rorx(r64(_dst.get()), xyRef.r64(), asmjit::Imm(64-16));
 			}
 			else
@@ -63,7 +77,7 @@ namespace dsp56k
 
 	void JitOps::setXY0(const uint32_t _xy, const DspValue& _src)
 	{
-		const auto temp = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);
+		const auto temp = m_block.dspRegPool().get(static_cast<PoolReg>(PoolReg::DspX + _xy), true, true);
 		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
 
 		if(_src.isImmediate())
@@ -94,7 +108,7 @@ namespace dsp56k
 			m_asm.shl(shifted, asmjit::Imm(24));
 		}
 
-		const auto temp = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);
+		const auto temp = m_block.dspRegPool().get(static_cast<PoolReg>(PoolReg::DspX + _xy), true, true);
 		m_asm.and_(r32(temp), asmjit::Imm(0xffffff));
 		m_asm.or_(temp, shifted.get());
 	}

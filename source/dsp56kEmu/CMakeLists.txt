@@ -69,6 +69,8 @@ jitcacheentry.h
 jithelper.cpp jithelper.h
 jitdspregs.cpp jitdspregs.h
 jitdspregpool.cpp jitdspregpool.h
+jitdspregpoolregpair.cpp jitdspregpoolregpair.h
+jitdspregpooltypes.h
 jitdspvalue.cpp jitdspvalue.h
 jitmem.cpp jitmem.h
 jitops.cpp jitops.h jitops_agu.cpp jitops_alu.cpp jitops_ccr.cpp jitops_decode.cpp jitops_helper.cpp jitops_jmp.cpp jitops_mem.cpp jitops_move.cpp

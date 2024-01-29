@@ -108,7 +108,7 @@ namespace dsp56k
 
 	void JitOps::checkCondition(const TWord _cc, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc, bool _updateDirtyCCR, bool _releaseRegPool)
 	{
-		DspValue sr(m_block, JitDspRegPool::DspSR, true, false);
+		DspValue sr(m_block, PoolReg::DspSR, true, false);
 
 		If(m_block, m_blockRuntimeData, [&](const asmjit::Label& _toFalse)
 		{

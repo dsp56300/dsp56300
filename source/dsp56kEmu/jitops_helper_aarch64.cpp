@@ -15,7 +15,7 @@ namespace dsp56k
 		else
 			assert(_dst.getBitCount() == 24);
 
-		const auto& src = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _aluIndex), true, false);
+		const auto& src = m_block.dspRegPool().get(static_cast<PoolReg>(PoolReg::DspX + _aluIndex), true, false);
 		if(_signextend)
 			m_asm.sbfx(r64(_dst), r64(src), asmjit::Imm(0), asmjit::Imm(24));
 		else
@@ -29,7 +29,7 @@ namespace dsp56k
 		else
 			assert(_dst.getBitCount() == 24);
 
-		const auto& src = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _aluIndex), true, false);
+		const auto& src = m_block.dspRegPool().get(static_cast<PoolReg>(PoolReg::DspX + _aluIndex), true, false);
 		if(_signextend)
 			m_asm.sbfx(r64(_dst), r64(src), asmjit::Imm(24), asmjit::Imm(24));
 		else
@@ -38,7 +38,7 @@ namespace dsp56k
 
 	void JitOps::setXY0(const uint32_t _xy, const DspValue& _src)
 	{
-		const auto temp = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);
+		const auto temp = m_block.dspRegPool().get(static_cast<PoolReg>(PoolReg::DspX + _xy), true, true);
 
 		if(_src.isImmediate())
 		{
@@ -61,7 +61,7 @@ namespace dsp56k
 
 	void JitOps::setXY1(const uint32_t _xy, const DspValue& _src)
 	{
-		const auto temp = m_block.dspRegPool().get(static_cast<JitDspRegPool::DspReg>(JitDspRegPool::DspX + _xy), true, true);
+		const auto temp = m_block.dspRegPool().get(static_cast<PoolReg>(PoolReg::DspX + _xy), true, true);
 		if (_src.isImmediate())
 		{
 			if (_src.imm())
@@ -205,7 +205,7 @@ namespace dsp56k
 
 	void JitOps::setMR(const JitReg64& _src) const
 	{
-		const auto& r = m_block.dspRegPool().get(JitDspRegPool::DspSR, true, true);
+		const auto& r = m_block.dspRegPool().get(PoolReg::DspSR, true, true);
 		m_asm.bfi(r, _src, asmjit::Imm(8), asmjit::Imm(8));
 	}
 
