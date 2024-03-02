@@ -497,9 +497,9 @@ namespace dsp56k
 		void ccr_getBitValue(const JitRegGP& _dst, CCRBit _bit);
 		void sr_getBitValue(const JitRegGP& _dst, SRBit _bit) const;
 		void copyBitToCCR(const JitRegGP& _src, uint32_t _bitIndex, CCRBit _dstBit);
-		void XYto56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const;
-		void XY0to56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const;
-		void XY1to56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const;
+		void XYto56(const JitReg64& _dst, int _xy) const;
+		void XY0to56(const JitReg64& _dst, int _xy) const;
+		void XY1to56(const JitReg64& _dst, int _xy) const;
 
 		// decode
 		void decode_cccc(const JitRegGP& _dst, TWord cccc);

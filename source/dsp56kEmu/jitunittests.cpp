@@ -184,10 +184,10 @@ namespace dsp56k
 
 		const RegGP r(*block);
 
-		ops->XY0to56(r, 0, false);		block->mem().mov(m_checks[0], r);
-		ops->XY1to56(r, 0, false);		block->mem().mov(m_checks[1], r);
-		ops->XY0to56(r, 1, false);		block->mem().mov(m_checks[2], r);
-		ops->XY1to56(r, 1, false);		block->mem().mov(m_checks[3], r);
+		ops->XY0to56(r, 0);		block->mem().mov(m_checks[0], r);
+		ops->XY1to56(r, 0);		block->mem().mov(m_checks[1], r);
+		ops->XY0to56(r, 1);		block->mem().mov(m_checks[2], r);
+		ops->XY1to56(r, 1);		block->mem().mov(m_checks[3], r);
 	}
 
 	void JitUnittests::conversion_verify()
