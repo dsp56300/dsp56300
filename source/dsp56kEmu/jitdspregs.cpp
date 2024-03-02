@@ -233,18 +233,7 @@ namespace dsp56k
 
 	void JitDspRegs::getXY(const JitRegGP& _dst, TWord _xy) const
 	{
-		pool().read(_dst, static_cast<PoolReg>(PoolReg::DspX + _xy));
-	}
-
-	JitRegGP JitDspRegs::getXY(TWord _xy, AccessType _access) const
-	{
-		return pool().get(static_cast<PoolReg>(PoolReg::DspX + _xy), _access & Read, _access & Write);
-	}
-
-	void JitDspRegs::setXY(const uint32_t _xy, const JitRegGP& _src) const
-	{
-		mask48(_src);
-		pool().write(static_cast<PoolReg>(PoolReg::DspX + _xy), _src);
+		pool().getXY(r64(_dst), _xy);
 	}
 
 	void JitDspRegs::getEP(DspValue& _dst) const

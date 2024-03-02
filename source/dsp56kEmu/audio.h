@@ -3,16 +3,16 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <array>
 
 #include "fastmath.h"
-#include "logging.h"
 #include "ringbuffer.h"
 #include "utils.h"
 
 namespace dsp56k
 {	
 	constexpr float g_float2dspScale	= 8388608.0f;
-	constexpr float g_dsp2FloatScale	= 0.00000011920928955078125f;
+	constexpr float g_dsp2FloatScale	= 1.0f / g_float2dspScale;
 	constexpr float g_dspFloatMax		= 8388607.0f;
 	constexpr float g_dspFloatMin		= -8388608.0f;
 
@@ -36,7 +36,7 @@ namespace dsp56k
 
 	template<> inline float dsp2sample(const TWord d)
 	{
-		return static_cast<float>(signextend<int32_t,24>(d)) * g_dsp2FloatScale;
+		return static_cast<float>(signextend<int32_t,24>(static_cast<int32_t>(d))) * g_dsp2FloatScale;
 	}
 
 	class Audio;
@@ -46,34 +46,96 @@ namespace dsp56k
 	class Audio
 	{
 	public:
-		Audio() : m_callback(nullptr) {}
+		static constexpr uint32_t MaxSlotsPerFrame = 32;
+		static constexpr uint32_t TxRegisterCount = 6;
+		static constexpr uint32_t RxRegisterCount = 4;
+
+		using TxSlot = std::array<TWord, TxRegisterCount>;
+		using RxSlot = std::array<TWord, RxRegisterCount>;
+
+		template<typename TSlot>
+		class Frame
+		{
+		public:
+			using Slot = TSlot;
+			using Data = std::array<Slot, MaxSlotsPerFrame>;
+
+			Frame() = default;
+			~Frame() = default;
+
+			Frame(const Frame&& _source) noexcept : m_slotCount(_source.m_slotCount)
+			{
+				_source.copyTo(*this);
+			}
+
+			Frame(const Frame& _source) : m_slotCount(_source.m_slotCount)
+			{
+				_source.copyTo(*this);
+			}
+
+			Frame& operator = (const Frame& _source)
+			{
+				_source.copyTo(*this);
+				return *this;
+			}
+
+			Frame& operator = (Frame&& _source) noexcept
+			{
+				_source.copyTo(*this);
+				return *this;
+			}
+
+			const Slot& operator[](size_t _index) const			{ return m_data[_index]; }
+			Slot& operator[](size_t _index)						{ return m_data[_index]; }
+
+			[[nodiscard]] uint32_t size() const					{ return m_slotCount; }
+			bool empty() const									{ return 0 == size(); }
+			void clear()										{ m_slotCount = 0; }
+			void resize(const uint32_t _size)					{ m_slotCount = _size; }
+
+			void copyTo(Frame& _target) const
+			{
+				_target.m_slotCount = m_slotCount;
+
+				for(size_t i=0; i<m_slotCount; ++i)
+					_target.m_data[i] = m_data[i];
+			}
+
+		private:
+			Data m_data;
+			uint32_t m_slotCount = 0;
+		};
+
+		using TxFrame = Frame<TxSlot>;
+		using RxFrame = Frame<RxSlot>;
+
+		Audio() : m_callback([](Audio*) {}) {}
+
+		void terminate();
 
 		void setCallback(const AudioCallback& _ac, const int _callbackSamples)
 		{
 			m_callbackSamples = _callbackSamples;
-			m_callback = _ac;
+			m_callback = _ac ? _ac : [](Audio*) {};
 		}
 
-		void writeEmptyAudioIn(size_t len)
+		void writeEmptyAudioIn(const size_t _len)
 		{
-			for (size_t i = 0; i < (len<<1); ++i)
+			for (size_t i = 0; i < _len; ++i)
 				m_audioInputs.push_back({});
 		}
 
 		template<typename T>
-		void processAudioInterleaved(const T** _inputs, T** _outputs, uint32_t _sampleFrames, const size_t _latency = 0)
+		void processAudioInterleaved(const T** _inputs, T** _outputs, const uint32_t _sampleFrames, const size_t _latency = 0)
 		{
 			processAudioInputInterleaved<T>(_inputs, _sampleFrames, _latency);
 			processAudioOutputInterleaved<T>(_outputs, _sampleFrames);
 		}
-
+		
 		template<typename T>
-		void processAudioInputInterleaved(const T** _inputs, uint32_t _sampleFrames, const size_t _latency = 0)
+		void processAudioInput(const uint32_t _frames, const size_t _latency, const std::function<void(size_t, RxFrame&)>& _createRxFrame)
 		{
-			if (!_sampleFrames)
-				return;
-
-			for (uint32_t i = 0; i < _sampleFrames; ++i)
+			for (uint32_t s = 0; s < _frames; ++s)
 			{
 				// INPUT
 
@@ -82,12 +144,9 @@ namespace dsp56k
 					// a latency increase on the input means to feed additional zeroes into it
 					m_audioInputs.waitNotFull();
 					m_audioInputs.push_back({});
-					m_audioInputs.waitNotFull();
-					m_audioInputs.push_back({});
 
 					++m_latency;
 				}
-				
 				if(_latency < m_latency)
 				{
 					// a latency decrease on the input means to skip writing data
@@ -95,55 +154,95 @@ namespace dsp56k
 				}
 				else
 				{
-					std::array<uint32_t, 4> inData;
-
-					auto processInput = [&](uint32_t _offset)
+					m_audioInputs.emplace_back([&](RxFrame& _frame)
 					{
-						for (uint32_t c = 0; c < inData.size(); ++c)
-						{
-							const uint32_t iSrc = (c<<1) + _offset;
-							inData[c] = _inputs[iSrc] ? sample2dsp<T>(_inputs[iSrc][i]) : 0;
-						}
-
-						m_audioInputs.waitNotFull();
-						m_audioInputs.push_back(inData);
-					};
-
-					processInput(0);
-					processInput(1);
+						_createRxFrame(s, _frame);
+					});
 				}
 			}
 		}
 
 		template<typename T>
-		void processAudioOutputInterleaved(T** _outputs, uint32_t _sampleFrames)
+		void processAudioInputInterleaved(const T** _ins, const uint32_t _frames, const size_t _latency = 0)
 		{
-			if (!_sampleFrames)
-				return;
-
-			for (uint32_t i = 0; i < _sampleFrames; ++i)
+			return processAudioInput<T>(_frames, _latency, [&](size_t _s, RxFrame& _f)
 			{
-				// OUTPUT
+				_f.resize(2);
+				_f[0] = RxSlot{_ins[0] ? sample2dsp<T>(_ins[0][_s]) : 0, _ins[2] ? sample2dsp<T>(_ins[2][_s]) : 0, _ins[4] ? sample2dsp<T>(_ins[4][_s]) : 0, _ins[6] ? sample2dsp<T>(_ins[6][_s]) : 0};
+				_f[1] = RxSlot{_ins[1] ? sample2dsp<T>(_ins[1][_s]) : 0, _ins[3] ? sample2dsp<T>(_ins[3][_s]) : 0, _ins[5] ? sample2dsp<T>(_ins[5][_s]) : 0, _ins[7] ? sample2dsp<T>(_ins[7][_s]) : 0};
+			});
+		}
 
-				auto processOutput = [&](uint32_t _offset)
+		template<typename T>
+		void processAudioInput(const T* _input, const uint32_t _frames, const uint32_t _slotsPerFrame, const size_t _latency = 0)
+		{
+			uint32_t readPos = 0;
+
+			return processAudioInput<T>(_frames, _latency, [&](size_t _s, RxFrame& _f)
+			{
+				_f.resize(_slotsPerFrame);
+
+				for(uint32_t s=0; s<_slotsPerFrame; ++s)
 				{
-					m_audioOutputs.waitNotEmpty();
-					const auto& outData = m_audioOutputs.pop_front();
+					for(uint32_t i=0; i<_f[s].size(); ++i)
+						_f[s][i] = sample2dsp<T>(_input[readPos++]);
+				}
+			});
+		}
 
-					for (uint32_t c = 0; c < outData.size(); ++c)
-					{
-						const uint32_t iDst = (c<<1) + _offset;
-
-						if(_outputs[iDst])
-						{
-							_outputs[iDst][i] = dsp2sample<T>(outData[c]);
-						}
-					}
-				};
-
-				processOutput(0);
-				processOutput(1);
+		template<typename T>
+		void processAudioOutput(const uint32_t _frames, const std::function<void(size_t, TxFrame&)>& _readOutputCbk)
+		{
+			for (uint32_t i = 0; i < _frames; ++i)
+			{
+				m_audioOutputs.waitNotEmpty();
+				m_audioOutputs.pop_front([&](TxFrame& _frame)
+				{
+					_readOutputCbk(i, _frame);
+				});
 			}
+		}
+
+		template<typename T>
+		void processAudioOutputInterleaved(T** _outputs, const uint32_t _sampleFrames)
+		{
+			processAudioOutput<T>(_sampleFrames, [&](size_t _frame, TxFrame& _tx)
+			{
+				if(_tx.empty())
+					return;
+
+				if(_outputs[ 0])	_outputs[0 ][_frame] = dsp2sample<T>(_tx[0][0]);
+				if(_outputs[ 2])	_outputs[2 ][_frame] = dsp2sample<T>(_tx[0][1]);
+				if(_outputs[ 4])	_outputs[4 ][_frame] = dsp2sample<T>(_tx[0][2]);
+				if(_outputs[ 6])	_outputs[6 ][_frame] = dsp2sample<T>(_tx[0][3]);
+				if(_outputs[ 8])	_outputs[8 ][_frame] = dsp2sample<T>(_tx[0][4]);
+				if(_outputs[10])	_outputs[10][_frame] = dsp2sample<T>(_tx[0][5]);
+
+				if(_tx.size() < 2)
+					return;
+
+				if(_outputs[ 1])	_outputs[ 1][_frame] = dsp2sample<T>(_tx[1][0]);
+				if(_outputs[ 3])	_outputs[ 3][_frame] = dsp2sample<T>(_tx[1][1]);
+				if(_outputs[ 5])	_outputs[ 5][_frame] = dsp2sample<T>(_tx[1][2]);
+				if(_outputs[ 7])	_outputs[ 7][_frame] = dsp2sample<T>(_tx[1][3]);
+				if(_outputs[ 9])	_outputs[ 9][_frame] = dsp2sample<T>(_tx[1][4]);
+				if(_outputs[11])	_outputs[11][_frame] = dsp2sample<T>(_tx[1][5]);
+			});
+		}
+
+		template<typename T>
+		void processAudioOutput(T* _outputs, const uint32_t _sampleFrames)
+		{
+			size_t writePos = 0;
+			processAudioOutput<T>(_sampleFrames, [&](size_t _frame, TxFrame& _tx)
+			{
+				for(size_t s=0; s<_tx.size(); ++s)
+				{
+					const auto& slot = _tx[s];
+					for (const auto v : slot)
+						_outputs[writePos++] = dsp2sample<T>(v);
+				}
+			});
 		}
 
 		const auto& getAudioInputs() const { return m_audioInputs; }
@@ -153,11 +252,11 @@ namespace dsp56k
 		auto& getAudioOutputs() { return m_audioOutputs; }
 
 	public:
-		static constexpr uint32_t RingBufferSize = 8192;
+		static constexpr uint32_t RingBufferSize = 8192 * 16;
 
 	protected:
-		void readRXimpl(std::array<TWord, 4>& _values);
-		void writeTXimpl(const std::array<TWord, 6>& _values);
+		void readRXimpl(RxFrame& _values);
+		void writeTXimpl(const TxFrame& _values);
 
 		AudioCallback m_callback;
 
@@ -175,13 +274,8 @@ namespace dsp56k
 			FrameSyncChannelRight = 0
 		};
 
-		RingBuffer<std::array<uint32_t, 4>, RingBufferSize, true> m_audioInputs;
-		RingBuffer<std::array<uint32_t, 6>, RingBufferSize, true> m_audioOutputs;
-
-		uint32_t m_frameSyncDSPStatus = FrameSyncChannelLeft;
-		uint32_t m_frameSyncDSPRead = FrameSyncChannelLeft;
-		uint32_t m_frameSyncDSPWrite = FrameSyncChannelLeft;
-		uint32_t m_frameSyncAudio = FrameSyncChannelLeft;
+		RingBuffer<RxFrame, RingBufferSize, true, false> m_audioInputs;
+		RingBuffer<TxFrame, RingBufferSize, true, false> m_audioOutputs;
 		size_t m_latency = 0;
 	};
 }

@@ -142,14 +142,13 @@ namespace dsp56k
 
 		DspValue compare(m_block, UsePooledTemp);
 
-		Jitmem::ScratchPMem pmem(m_block, false, true);
-		m_block.mem().readDspMemory(compare, MemArea_P, ea, pmem);
+		auto memRef = m_block.mem().readDspMemory(compare, MemArea_P, ea);
 
 		const auto skip = m_asm.newLabel();
 		m_asm.cmp(r32(compare), r32(_src));
 		m_asm.jz(skip);
 
-		m_block.mem().writeDspMemory(MemArea_P, ea, _src, pmem);
+		m_block.mem().writeDspMemory(MemArea_P, ea, _src, std::move(memRef));
 
 		m_block.mem().mov(m_block.pMemWriteAddress(), ea);
 		m_block.mem().mov(m_block.pMemWriteValue(), _src);

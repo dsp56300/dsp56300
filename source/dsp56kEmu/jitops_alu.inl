@@ -57,11 +57,9 @@ namespace dsp56k
 		const auto area = getFieldValueMemArea<Inst>(op);
 		DspValue regMem(m_block);
 		regMem.temp(DspValue::Memory);
-		Jitmem::ScratchPMem scratch(m_block);
-		const auto p = m_block.mem().getMemAreaPtr(scratch, area, addr);
-		m_block.mem().readDspMemory(regMem, p);
+		auto mr = m_block.mem().readDspMemory(regMem, area, addr);
 		(this->*_bitmodFunc)(regMem, getBit<Inst>(op));
-		m_block.mem().writeDspMemory(p, regMem);
+		m_block.mem().writeDspMemory(area, addr, regMem, std::move(mr));
 	}
 
 	template<Instruction Inst> void JitOps::bitmod_ppqq(TWord op, void( JitOps::*_bitmodFunc)(const DspValue&, TWord))
@@ -77,10 +75,12 @@ namespace dsp56k
 		const auto bit		= getBit<Inst>(op);
 		const auto dddddd	= getFieldValue<Inst,Field_DDDDDD>(op);
 
-		DspValue d(m_block);
-		decode_dddddd_read(d, dddddd);
+		auto d = decode_dddddd_ref(dddddd, true, true);
+		if(!d.isRegValid())
+			decode_dddddd_read(d, dddddd);
 		(this->*_bitmodFunc)(d, getBit<Inst>(op));
-		decode_dddddd_write(dddddd, d);
+		if(!d.isType(DspValue::DspReg24))
+			decode_dddddd_write(dddddd, d);
 	}
 
 	template<Instruction Inst, bool Accumulate, bool Round> void JitOps::op_Mac_S(TWord op)

@@ -8,109 +8,15 @@
 
 namespace dsp56k
 {
-	void JitOps::signed24To56(const JitReg64& _r, const bool _signExtendTo64) const
+	void JitOps::signed24To56(const JitReg64& _dst, const JitReg64& _src) const
 	{
-		m_asm.shl(_r, asmjit::Imm(40));
-		if (_signExtendTo64)
-		{
-			m_asm.sar(_r, asmjit::Imm(16));
-		}
+		if(_dst == _src)
+			m_asm.shl(_dst, asmjit::Imm(40));
 		else
-		{
-			m_asm.sar(_r, asmjit::Imm(8));
-			m_asm.shr(_r, asmjit::Imm(8));
-		}
-	}
+			m_asm.rol(_dst, _src, 40);
 
-	void JitOps::getXY0(DspValue& _dst, const uint32_t _aluIndex, bool _signextend) const
-	{
-		if(!_dst.isRegValid())
-			_dst.temp(DspValue::Temp24);
-		else
-			assert(_dst.getBitCount() == 24);
-
-		const auto xyRef = m_dspRegs.getXY(_aluIndex, JitDspRegs::Read);
-
-		if(_signextend)
-		{
-			signextend24to64(r64(_dst.get()), r64(xyRef));
-		}
-		else
-		{
-			m_asm.mov(r32(_dst), r32(xyRef));
-			m_asm.and_(r32(_dst.get()), asmjit::Imm(0xffffff));
-		}
-	}
-
-	void JitOps::getXY1(DspValue& _dst, const uint32_t _aluIndex, bool _signextend) const
-	{
-		if(!_dst.isRegValid())
-		{
-			_dst.temp(DspValue::Temp24);
-		}
-		else
-		{
-			assert(_dst.getBitCount() == 24);
-		}
-
-		if(_signextend)
-		{
-			if(m_asm.hasBMI2())
-			{
-				const DSPReg xyRef(m_block, static_cast<PoolReg>(PoolReg::DspX + _aluIndex), true, false, true);
-				m_asm.rorx(r64(_dst.get()), xyRef.r64(), asmjit::Imm(64-16));
-			}
-			else
-			{
-				m_dspRegs.getXY(r64(_dst.get()), _aluIndex);
-				m_asm.shl(r64(_dst.get()), asmjit::Imm(16));
-			}
-
-			m_asm.sar(r64(_dst.get()), asmjit::Imm(40));
-		}
-		else
-		{
-			m_dspRegs.getXY(r64(_dst.get()), _aluIndex);
-			m_asm.shr(r64(_dst.get()), asmjit::Imm(24));
-		}
-	}
-
-	void JitOps::setXY0(const uint32_t _xy, const DspValue& _src)
-	{
-		const auto temp = m_block.dspRegPool().get(static_cast<PoolReg>(PoolReg::DspX + _xy), true, true);
-		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
-
-		if(_src.isImmediate())
-		{
-			if (_src.imm())
-			{
-				assert(_src.imm() <= 0xffffff);
-				m_asm.or_(temp, asmjit::Imm(_src.imm()));
-			}
-		}
-		else
-		{
-			m_asm.or_(temp, r64(_src.get()));
-		}
-	}
-
-	void JitOps::setXY1(const uint32_t _xy, const DspValue& _src)
-	{
-		const RegGP shifted(m_block);
-
-		if(_src.isImmediate())
-		{
-			m_asm.mov(shifted, asmjit::Imm(static_cast<uint64_t>(_src.imm24()) << 24ull));
-		}
-		else
-		{
-			_src.copyTo(shifted, 24);
-			m_asm.shl(shifted, asmjit::Imm(24));
-		}
-
-		const auto temp = m_block.dspRegPool().get(static_cast<PoolReg>(PoolReg::DspX + _xy), true, true);
-		m_asm.and_(r32(temp), asmjit::Imm(0xffffff));
-		m_asm.or_(temp, shifted.get());
+		m_asm.sar(_dst, asmjit::Imm(8));
+		m_asm.shr(_dst, asmjit::Imm(8));
 	}
 
 	void JitOps::getALU0(DspValue& _dst, uint32_t _aluIndex) const

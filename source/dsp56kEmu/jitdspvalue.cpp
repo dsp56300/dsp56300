@@ -212,7 +212,9 @@ namespace dsp56k
 
 		if (isImmediate())
 		{
-			if(getBitCount() <= 32)
+			if(m_immediate == 0)
+				m_block.asm_().clr(_dst);
+			else if(getBitCount() <= 32)
 				m_block.asm_().mov(r32(_dst), asmjit::Imm(static_cast<TWord>(m_immediate)));
 			else
 				m_block.asm_().mov(r64(_dst), asmjit::Imm(m_immediate));

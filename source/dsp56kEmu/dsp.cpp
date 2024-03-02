@@ -47,10 +47,6 @@ namespace dsp56k
 
 	Jumptable g_jumptable;
 
-	void dspExecNoPendingInterrupts(DSP* _dsp)
-	{
-		_dsp->execNoPendingInterrupts();
-	}
 	void dspExecDefaultPreventInterrupt(DSP* _dsp)
 	{
 		_dsp->execDefaultPreventInterrupt();
@@ -67,6 +63,28 @@ namespace dsp56k
 		_dsp->tryExecInterrupts();
 	}
 
+	template <typename Ta, typename Tb> void dspExecPeripherals(DSP* _dsp)
+	{
+		_dsp->execPeriph<Ta, Tb>();
+	}
+
+	template <typename Ta, typename Tb> DSP::TInterruptFunc findExecPeripheralsFuncT(IPeripherals* _pX, IPeripherals* _pY)
+	{
+		if(dynamic_cast<Ta*>(_pX) && dynamic_cast<Tb*>(_pY))
+			return &dspExecPeripherals<Ta, Tb>;
+		return nullptr;
+	}
+
+	DSP::TInterruptFunc findExecPeripheralsFunc(IPeripherals* _pX, IPeripherals* _pY)
+	{
+		if(const auto func = findExecPeripheralsFuncT<Peripherals56362, PeripheralsNop>(_pX, _pY))		return func;
+		if(const auto func = findExecPeripheralsFuncT<Peripherals56362, Peripherals56367>(_pX, _pY))	return func;
+		if(const auto func = findExecPeripheralsFuncT<Peripherals56303, PeripheralsNop>(_pX, _pY))		return func;
+		if(const auto func = findExecPeripheralsFuncT<PeripheralsNop, PeripheralsNop>(_pX, _pY))		return func;
+		assert(false && "Peripherals configuration is not supported");
+		return nullptr;
+	}
+
 	// _____________________________________________________________________________
 	// DSP
 	//
@@ -74,8 +92,9 @@ namespace dsp56k
 		: mem(_memory)
 		, perif({_pX, _pY})
 		, pcCurrentInstruction(0xffffff)
+		, m_execPeripheralsFunc(findExecPeripheralsFunc(_pX, _pY))
 		, m_jit(*this)
-		, m_interruptFunc(&dspExecNoPendingInterrupts)
+		, m_interruptFunc(m_execPeripheralsFunc)
 		, m_disasm(m_opcodes)
 	{
 		assert(_pX != _pY && "cannot use the same peripherals twice");
@@ -177,7 +196,8 @@ namespace dsp56k
 				m_debugger->onExec(getPC().var);
 #endif
 			LOGJITPC(getPC().toWord());
-			m_jit.exec(getPC().toWord());
+			m_jitEntries[getPC().toWord()](&m_jit, getPC().toWord());
+//			m_jit.exec(getPC().toWord());
 		}
 		else
 		{
@@ -210,19 +230,6 @@ namespace dsp56k
 		}
 	}
 
-	void DSP::execPeriph()
-	{
-		const auto diff = getRemainingPeripheralsCycles();
-
-		if (diff > 0 && diff < PeripheralsProcessingStepSize)
-			return;
-
-		m_peripheralCounter += PeripheralsProcessingStepSize;
-
-		perif[0]->exec();
-		perif[1]->exec();
-	}
-
 	void DSP::tryExecInterrupts()
 	{
 		if (!m_pendingInterrupts.empty())
@@ -249,7 +256,7 @@ namespace dsp56k
 				m_pendingInterrupts.pop_front();
 
 				if (m_pendingInterrupts.empty())
-					m_interruptFunc = &dspExecNoPendingInterrupts;
+					m_interruptFunc = m_execPeripheralsFunc;
 				else
 					m_interruptFunc = &dspExecInterrupts;
 			}
@@ -280,7 +287,8 @@ namespace dsp56k
 		if(g_useJIT)
 		{
 			LOGJITPC(vba);
-			m_jit.exec(vba);
+			m_jitEntries[vba](&m_jit, vba);
+//			m_jit.exec(vba);
 			if(m_processingMode != LongInterrupt)
 			{
 				m_processingMode = DefaultPreventInterrupt;
@@ -350,14 +358,17 @@ namespace dsp56k
 		std::lock_guard lock(m_mutexInsertPendingInterrupt);
 
 		if(m_pendingInterrupts.empty())
-			m_interruptFunc = &dspExecNoPendingInterrupts;
+			m_interruptFunc = m_execPeripheralsFunc;
 		else
 			m_interruptFunc = &dspExecInterrupts;
 	}
 
-	void DSP::execNoPendingInterrupts()
+	void DSP::setPeriph(const size_t _index, IPeripherals* _periph)
 	{
-		execPeriph();
+		perif[_index] = _periph;
+		_periph->setDSP(this);
+
+		m_execPeripheralsFunc = findExecPeripheralsFunc(perif[0], perif[1]);
 	}
 
 	void DSP::terminate()
@@ -1336,7 +1347,7 @@ namespace dsp56k
 
 		m_pendingInterrupts.push_back({_interruptVectorAddress, nullptr});
 
-		if(m_interruptFunc == &dspExecNoPendingInterrupts)
+		if(m_interruptFunc == m_execPeripheralsFunc)
 			m_interruptFunc = &dspTryExecInterrupts;
 
 		return true;
@@ -1345,9 +1356,10 @@ namespace dsp56k
 	bool DSP::injectInterrupt(std::function<void()>&& func)
 	{
 		std::lock_guard lock(m_mutexInsertPendingInterrupt);
-		m_pendingInterrupts.push_back({Vba_End, std::move(func)});
+		PendingInterrupt pi{Vba_End, std::move(func)};
+		m_pendingInterrupts.push_back(std::move(pi));
 
-		if(m_interruptFunc == &dspExecNoPendingInterrupts)
+		if(m_interruptFunc == m_execPeripheralsFunc)
 			m_interruptFunc = &dspTryExecInterrupts;
 		return true;
 	}

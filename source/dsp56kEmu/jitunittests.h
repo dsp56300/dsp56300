@@ -72,6 +72,9 @@ namespace dsp56k
 		void jitDiv();
 		void rep_div();
 
+		// host register pressure test
+		void parallelMoveXY();
+
 		void emit(TWord _opA, TWord _opB = 0, TWord _pc = 0) override;
 
 		asmjit::JitRuntime m_rt;

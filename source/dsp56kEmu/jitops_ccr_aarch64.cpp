@@ -12,11 +12,9 @@ namespace dsp56k
 {
 	void JitOps::ccr_clear(CCRMask _mask)
 	{
-		m_ccrWritten |= _mask;
-
+		ccr_clearDirty(_mask);
 		// TODO: by using BIC, we should be able to encode any kind of SR bits, this version fails on ARMv8 with "invalid immediate" if we specify more than one bit. But BIC with "Gp, Gp, Imm" is not available (yet?)
 		m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~_mask));
-		ccr_clearDirty(_mask);
 	}
 
 	void JitOps::ccr_getBitValue(const JitRegGP& _dst, CCRBit _bit)

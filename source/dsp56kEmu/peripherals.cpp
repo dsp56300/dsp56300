@@ -107,6 +107,9 @@ namespace dsp56k
 		case Esai::M_PDRC:	return m_portC.dspRead();
 		case Esai::M_PRRC:	return m_portC.getDirection();
 
+		case XIO_PCTL:
+			return m_esaiClock.getPCTL();
+
 		case Esai::RemainingInstructionsForFrameSyncTrue:			// emulator specific
 			return m_esaiClock.getRemainingInstructionsForFrameSync(1);
 		case Esai::RemainingInstructionsForFrameSyncFalse:			// emulator specific
@@ -322,7 +325,7 @@ namespace dsp56k
 		case Esai::M_PDRC:			m_portC.dspWrite(_val);								return;
 		case Esai::M_PRRC:			m_portC.setDirection(_val);							return;
 
-			case XIO_PCTL:
+		case XIO_PCTL:
 			m_esaiClock.setPCTL(_val);
 			return;
 
@@ -547,6 +550,13 @@ namespace dsp56k
 		m_hdi08.terminate();
 
 		m_esai.terminate();
+	}
+
+	void Peripherals56362::setDSP(DSP* _dsp)
+	{
+		IPeripherals::setDSP(_dsp);
+
+		m_esaiClock.setDSP(_dsp);
 	}
 
 	Peripherals56367::Peripherals56367() : m_mem(), m_esai(*this, MemArea_Y)

@@ -12,9 +12,7 @@
 #include "jitblockchain.h"
 #include "jitconfig.h"
 #include "jitdspmode.h"
-#include "jitemitter.h"
 #include "jitruntimedata.h"
-#include "logging.h"
 
 namespace asmjit
 {
@@ -93,9 +91,9 @@ namespace dsp56k
 		JitBlockRuntimeData* acquireBlockRuntimeData();
 		void releaseBlockRuntimeData(JitBlockRuntimeData* _b);
 
-	private:
-		void emit(TWord _pc);
+		void onFuncsResized(const JitBlockChain& _chain) const;
 
+	private:
 		void checkPMemWrite();
 
 		DSP& m_dsp;
@@ -116,6 +114,8 @@ namespace dsp56k
 		std::vector<JitBlockRuntimeData*> m_blockRuntimeDatas;
 
 		JitConfig m_config;
+
+		size_t m_maxUsedPAddress = 0;
 
 		// the following data is accessed by JIT code at runtime, it NEEDS to be put last into this struct to be
 		// able to use ARM relative addressing, see member ordering in dsp.h

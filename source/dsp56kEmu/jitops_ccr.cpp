@@ -8,10 +8,8 @@ namespace dsp56k
 
 	void JitOps::ccr_set(CCRMask _mask)
 	{
-		m_ccrWritten |= _mask;
-
-		m_asm.or_(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), asmjit::Imm(_mask));
 		ccr_clearDirty(_mask);
+		m_asm.or_(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), asmjit::Imm(_mask));
 	}
 
 	void JitOps::ccr_dirty(TWord _aluIndex, const JitReg64& _alu, const CCRMask _dirtyBits)
@@ -40,6 +38,7 @@ namespace dsp56k
 
 	void JitOps::ccr_clearDirty(const CCRMask _mask)
 	{
+		m_ccrWritten |= _mask;
 		m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~_mask);
 	}
 

@@ -28,13 +28,20 @@ namespace dsp56k
 		JitRegPoolRegPair& operator = (JitRegPoolRegPair&&) = delete;
 
 		void get(const JitReg64& _dst) const;
+
 		void get0(const JitReg32& _dst) const;
 		void get1(const JitReg32& _dst) const;
+
+		DspValue get0(bool _read, bool _write) const;
+		DspValue get1(bool _read, bool _write) const;
+
 		void set(const JitReg64& _src) const;
 		void set0(const DspValue& _src) const;
 		void set1(const DspValue& _src) const;
+
 		void store0(const JitReg32& _src) const;
 		void store1(const JitReg32& _src) const;
+
 		void load0(const JitReg32& _dst) const;
 		void load1(const JitReg32& _dst) const;
 

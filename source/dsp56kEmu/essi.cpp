@@ -54,10 +54,10 @@ namespace dsp56k
 	TWord Essi::readSR()
 	{
 		// set Receive Register Full flag if there is input
-		toggleStatusRegisterBit(Essi0, SSISR_RDF, m_audioInputs.empty() ? 0 : 1);
+		toggleStatusRegisterBit(Essi0, SSISR_RDF, getAudioInputs().empty() ? 0 : 1);
 
 		// set Transmit Register Empty flag if there is space left in the output
-		toggleStatusRegisterBit(Essi0, SSISR_TDE, m_audioOutputs.full() ? 0 : 1);
+		toggleStatusRegisterBit(Essi0, SSISR_TDE, getAudioOutputs().full() ? 0 : 1);
 
 		// update frame sync status
 		toggleStatusRegisterBit(Essi0, SSISR_RFS, m_frameSyncDSPStatus);

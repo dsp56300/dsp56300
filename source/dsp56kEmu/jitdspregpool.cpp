@@ -212,12 +212,20 @@ namespace dsp56k
 			const auto maskWritten = toRegisterMask(dspReg, true);
 			const auto maskRead = toRegisterMask(dspReg, false);
 
-			const auto isRead = (_read & maskRead) != RegisterMask::None;
-			const auto isWritten = (_write & maskWritten) != RegisterMask::None;
+			auto isRead = (_read & maskRead);
+			auto isWritten = (_write & maskWritten);
 
-			if(isRead || isWritten)
+			if(dspReg == PoolReg::DspX || dspReg == PoolReg::DspY)
 			{
-				get(dspReg, isRead, isWritten);
+				if(isRead != RegisterMask::None && isRead != maskRead)
+					isRead = RegisterMask::None;
+				if (isWritten != RegisterMask::None && isWritten != maskWritten)
+					isWritten = RegisterMask::None;
+			}
+
+			if(isRead != RegisterMask::None || isWritten != RegisterMask::None)
+			{
+				get(dspReg, isRead != RegisterMask::None, isWritten != RegisterMask::None);
 
 				if(!isLocked(dspReg))
 				{
@@ -568,7 +576,13 @@ namespace dsp56k
 
 		for (const auto& g_dspPoolXmm : g_dspPoolXmms)
 			m_xmList.addHostReg({g_dspPoolXmm, 0});
-
+		/* NOTE: If we want to use these registers, we need to replace every movq/d by vmovq/d because xmm16-31 cannot be accessed via movq/d
+		if(JitEmitter::hasFeature(asmjit::CpuFeatures::X86::kAVX512_F))
+		{
+			for (const auto& xm : g_dspPoolXmmsB)
+				m_xmList.addHostReg({xm, 0});
+		}
+		*/
 		if(m_extendedSpillSpace)
 		{
 			for (const auto& g_dspPoolXmm : g_dspPoolXmms)
@@ -766,10 +780,24 @@ namespace dsp56k
 			movDspReg(r.b, _src);
 			break;
 		case DspX:
-			movDspReg(r.x, _src);
+			assert(false);
+//			movDspReg(r.x, _src);
+			break;
+		case DspX0:
+			m_pairX.store0(r32(_src));
+			break;
+		case DspX1:
+			m_pairX.store1(r32(_src));
 			break;
 		case DspY:
-			movDspReg(r.y, _src);
+			assert(false);
+//			movDspReg(r.y, _src);
+			break;
+		case DspY0:
+			m_pairY.store0(r32(_src));
+			break;
+		case DspY1:
+			m_pairY.store1(r32(_src));
 			break;
 		case DspPC:
 			movDspReg(r.pc, _src);
@@ -959,7 +987,7 @@ namespace dsp56k
 		if(!m_dspPtr.hasBase() || !m_dspPtr.hasSize())
 		{
 			m_block.stack().setUsed(regDspPtr);
-			m_block.asm_().mov(regDspPtr, asmjit::Imm(reinterpret_cast<uint64_t>(base)));
+//			m_block.asm_().mov(regDspPtr, asmjit::Imm(reinterpret_cast<uint64_t>(base)));
 			m_dspPtr = Jitmem::makePtr(regDspPtr, static_cast<uint32_t>(_size));
 		}
 
@@ -1065,11 +1093,6 @@ namespace dsp56k
 	void JitDspRegPool::getXY1(const JitReg32& _dst, const uint32_t _xy)
 	{
 		getPair(_xy > 0).get1(_dst);
-	}
-
-	void JitDspRegPool::setXY(uint32_t _xy, const JitReg64& _src)
-	{
-		getPair(_xy > 0).set(_src);
 	}
 
 	void JitDspRegPool::setXY0(uint32_t _xy, const DspValue& _src)

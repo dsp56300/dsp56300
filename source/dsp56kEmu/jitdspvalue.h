@@ -2,7 +2,6 @@
 
 #include "jitdspregpool.h"
 #include "jitregtracker.h"
-#include "jitregtypes.h"
 
 namespace dsp56k
 {

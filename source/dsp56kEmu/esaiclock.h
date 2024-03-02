@@ -8,11 +8,14 @@ namespace dsp56k
 {
 	class Esai;
 	class IPeripherals;
+	class DSP;
 
 	class EsaiClock
 	{
 	public:
-		EsaiClock(IPeripherals& _peripherals) : m_periph(_peripherals) {}
+		static constexpr uint32_t MaxEsais = 2;
+
+		EsaiClock(IPeripherals& _peripherals);
 		void exec();
 
 		void setPCTL(TWord _val);
@@ -36,18 +39,30 @@ namespace dsp56k
 		TWord getRemainingInstructionsForFrameSync(TWord _expectedBitValue) const;
 		void onTCCRChanged(Esai* _esai);
 
+		bool setSpeedPercent(uint32_t _percent = 100);
+
+		auto getSpeedInHz() const			{ return m_speedHz; }
+		auto getSpeedPercent() const		{ return m_speedPercent; }
+
+		void setDSP(const DSP* _dsp);
+
 	private:
 		void updateCyclesPerSample();
 
+		const uint32_t* m_dspInstructionCounter = nullptr;
+		uint32_t m_lastClock = 0;
+		uint32_t m_cyclesSinceWrite = 0;
+		uint32_t m_cyclesPerSample = 2133;				// estimated cycles per sample before calculated
+
 		IPeripherals& m_periph;
 
-		uint32_t m_lastClock = 0;
-		uint32_t m_cyclesPerSample = 2133;				// estimated cycles per sample before calculated
 		uint32_t m_fixedCyclesPerSample = 0;
 		uint32_t m_samplerate = 0;
 		TWord m_pctl = 0;
-		TWord m_cyclesSinceWrite = 0;
 		uint32_t m_externalClockFrequency = 12000000;	// Hz
+
+		uint64_t m_speedHz = 0;							// DSP clock speed in Hertz
+		uint32_t m_speedPercent = 100;					// 100% = regular operation, overclock/underclock otherwise
 
 		struct Clock
 		{
@@ -64,7 +79,5 @@ namespace dsp56k
 		};
 
 		std::vector<EsaiEntry> m_esais;
-		std::vector<Esai*> m_esaisProcessTX;
-		std::vector<Esai*> m_esaisProcessRX;
 	};
 }

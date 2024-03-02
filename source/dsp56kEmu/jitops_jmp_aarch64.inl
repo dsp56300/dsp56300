@@ -12,9 +12,11 @@ namespace dsp56k
 		}
 		else
 		{
-			const RegScratch temp(m_block);
-			m_asm.mov(r32(temp), asmjit::Imm(m_pcCurrentOp));
-			m_asm.add(_offset.get(), r32(temp));
+			{
+				const RegScratch temp(m_block);
+				m_asm.mov(r32(temp), asmjit::Imm(m_pcCurrentOp));
+				m_asm.add(_offset.get(), r32(temp));
+			}
 			jmp(_offset);
 		}
 	}
@@ -26,9 +28,11 @@ namespace dsp56k
 		}
 		else
 		{
-			const RegScratch temp(m_block);
-			m_asm.mov(r32(temp), asmjit::Imm(m_pcCurrentOp));
-			m_asm.add(_offset.get(), r32(temp));
+			{
+				const RegScratch temp(m_block);
+				m_asm.mov(r32(temp), asmjit::Imm(m_pcCurrentOp));
+				m_asm.add(_offset.get(), r32(temp));
+			}
 			jsr(_offset);
 		}
 	}

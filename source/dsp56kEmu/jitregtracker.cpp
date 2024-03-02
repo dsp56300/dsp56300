@@ -173,26 +173,6 @@ namespace dsp56k
 		m_block.stack().unregisterFuncArg(m_funcArgIndex);
 	}
 
-	PushXMM::PushXMM(JitBlock& _block, uint32_t _xmmIndex) : m_block(_block), m_xmmIndex(_xmmIndex), m_isLoaded(m_block.dspRegPool().isInUse(JitReg128(_xmmIndex)))
-	{
-		if(!m_isLoaded)
-			return;
-
-		const auto xm = JitReg128(_xmmIndex);
-
-		_block.stack().push(xm);
-	}
-
-	PushXMM::~PushXMM()
-	{
-		if(!m_isLoaded)
-			return;
-
-		const auto xm = JitReg128(m_xmmIndex);
-
-		m_block.stack().pop(xm);
-	}
-
 	PushXMMRegs::PushXMMRegs(JitBlock& _block) : m_block(_block)
 	{
 		for (const auto& xm : g_dspPoolXmms)
@@ -225,7 +205,7 @@ namespace dsp56k
 			m_block.stack().pop(xm);
 	}
 
-	PushGPRegs::PushGPRegs(JitBlock& _block, bool _isJitCall) : m_block(_block)
+	PushGPRegs::PushGPRegs(JitBlock& _block) : m_block(_block)
 	{
 		for (const auto& gp : g_dspPoolGps)
 		{
@@ -246,14 +226,10 @@ namespace dsp56k
 			}
 		}
 
-		// there is no need to save the dsp reg as it is rebuilt in the JIT func anyway
-		if(!_isJitCall)
+		if(!JitStackHelper::isNonVolatile(regDspPtr) && !m_block.stack().isUsedFuncArg(regDspPtr))
 		{
-			if(!JitStackHelper::isNonVolatile(regDspPtr) && !m_block.stack().isUsedFuncArg(regDspPtr))
-			{
-				m_pushedRegs.push_front(regDspPtr);
-				_block.stack().push(regDspPtr);
-			}
+			m_pushedRegs.push_front(regDspPtr);
+			_block.stack().push(regDspPtr);
 		}
 
 #ifdef HAVE_ARM64
@@ -270,7 +246,7 @@ namespace dsp56k
 		}
 	}
 
-	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block, bool _isJitCall) : m_xmm(_block) , m_gp(_block, _isJitCall)
+	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block) : m_xmm(_block) , m_gp(_block)
 	{
 	}
 

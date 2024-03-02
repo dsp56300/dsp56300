@@ -10,16 +10,15 @@
 
 namespace dsp56k
 {
-	void JitOps::XY0to56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const
+	void JitOps::XY0to56(const JitReg64& _dst, int _xy) const
 	{
-		m_dspRegs.getXY(_dst, _xy);
-		signed24To56(_dst, _signExtendTo64);
+		const auto src = m_block.dspRegPool().get(_xy ? PoolReg::DspY0 : PoolReg::DspX0, true, false);
+		signed24To56(_dst, r64(src));
 	}
-	void JitOps::XY1to56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const
+	void JitOps::XY1to56(const JitReg64& _dst, int _xy) const
 	{
-		m_dspRegs.getXY(_dst, _xy);
-		m_asm.shr(_dst, asmjit::Imm(24));	// remove LSWord
-		signed24To56(_dst, _signExtendTo64);
+		const auto src = m_block.dspRegPool().get(_xy ? PoolReg::DspY1 : PoolReg::DspX1, true, false);
+		signed24To56(_dst, r64(src));
 	}
 
 	void JitOps::alu_abs(const JitRegGP& _r)
@@ -208,7 +207,7 @@ namespace dsp56k
 			// mask = all the bits to the right of, and including the rounding position
 			auto mask = rounder - 1;
 
-			if(!mode->testSR(SRB_SM))
+			if(!mode->testSR(SRB_RM))
 			{
 				// convergent rounding. If all mask bits are cleared
 
@@ -254,7 +253,7 @@ namespace dsp56k
 			const auto skipNoScalingMode = m_asm.newLabel();
 
 			// if (!sr_test_noCache(SR_RM))
-			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_SM);
+			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_RM);
 			m_asm.jnz(skipNoScalingMode);
 			{
 				// convergent rounding. If all mask bits are cleared
@@ -469,8 +468,9 @@ namespace dsp56k
 			m_asm.bt(addOrSub, asmjit::Imm(55));
 			m_asm.cmovc(sNeg, r64(s));
 
-			m_asm.add(alu, alu);
-			m_asm.add(alu, carry.get());
+//			m_asm.add(alu, alu);
+//			m_asm.add(alu, carry.get());
+			m_asm.lea(alu, asmjit::x86::ptr(carry, alu, 1));
 			m_asm.add(alu, sNeg.get());
 
 			// C is set if bit 55 of the result is cleared

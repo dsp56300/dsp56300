@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <functional>
+#include <atomic>
 
 #include "opcodetypes.h"
 #include "types.h"

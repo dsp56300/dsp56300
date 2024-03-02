@@ -81,20 +81,19 @@ namespace dsp56k
 	public:
 		virtual ~IPeripherals() = default;
 
-		void setDSP(DSP* _dsp)
+		virtual void setDSP(DSP* _dsp)
 		{
 			m_dsp = _dsp;
 		}
 
-		DSP& getDSP()
+		DSP& getDSP() const
 		{
 			return *m_dsp;
-		};
+		}
 
 		virtual TWord read(TWord _addr, Instruction _inst) = 0;
 		virtual const TWord* readAsPtr(TWord _addr, Instruction _inst) = 0;
 		virtual void write(TWord _addr, TWord _value) = 0;
-		virtual void exec() = 0;
 		virtual void reset() = 0;
 		virtual void setSymbols(Disassembler& _disasm) const = 0;
 		virtual void terminate() = 0;
@@ -103,18 +102,20 @@ namespace dsp56k
 		DSP* m_dsp = nullptr;
 	};
 
-	class PeripheralsNop : public IPeripherals
+	class PeripheralsNop final : public IPeripherals
 	{
+	public:
+		void exec() {}
+	private:
 		TWord read(TWord _addr, Instruction _inst) override { return 0; }
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
 		void write(TWord _addr, TWord _value) override {}
-		void exec() override {}
 		void reset() override {}
 		void setSymbols(Disassembler& _disasm) const override {}
 		void terminate() override {}
 	};
 
-	class Peripherals56303 : public IPeripherals
+	class Peripherals56303 final : public IPeripherals
 	{
 		// _____________________________________________________________________________
 		// members
@@ -131,7 +132,7 @@ namespace dsp56k
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
 		void write(TWord _addr, TWord _val) override;
 
-		void exec() override;
+		void exec();
 		void reset() override;
 
 		Essi& getEssi()	{ return m_essi; }
@@ -139,7 +140,7 @@ namespace dsp56k
 
 		void setSymbols(Disassembler& _disasm) const override {}
 
-		void terminate() override {};
+		void terminate() override {}
 
 	private:
 		Essi m_essi;
@@ -148,7 +149,7 @@ namespace dsp56k
 
 	class Peripherals56367;
 
-	class Peripherals56362 : public IPeripherals
+	class Peripherals56362 final : public IPeripherals
 	{
 		// _____________________________________________________________________________
 		// members
@@ -165,7 +166,7 @@ namespace dsp56k
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override;
 		void write(TWord _addr, TWord _val) override;
 
-		void exec() override;
+		void exec();
 		void reset() override;
 
 		EsaiClock& getEsaiClock()	{ return m_esaiClock; }
@@ -183,6 +184,8 @@ namespace dsp56k
 			m_disableTimers = _disable;
 		}
 
+		void setDSP(DSP* _dsp) override;
+
 	private:
 		Dma m_dma;
 		EsaiClock m_esaiClock;
@@ -193,7 +196,7 @@ namespace dsp56k
 		bool m_disableTimers;
 	};
 
-	class Peripherals56367 : public IPeripherals
+	class Peripherals56367 final : public IPeripherals
 	{
 	public:
 		Peripherals56367();
@@ -202,7 +205,7 @@ namespace dsp56k
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
 		void write(TWord _addr, TWord _val) override;
 
-		void exec() override;
+		void exec();
 		void reset() override;
 
 		Esai& getEsai() { return m_esai; }

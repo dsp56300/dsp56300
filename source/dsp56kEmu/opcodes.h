@@ -275,10 +275,11 @@ namespace dsp56k
 		static const OpcodeInfo& getOpcodeInfoAt(size_t _index);
 
 		uint32_t getOpcodeLength(TWord _op) const;
-		uint32_t getOpcodeLength(TWord _op, Instruction _instA, Instruction _instB) const;
+		static uint32_t getOpcodeLength(TWord _op, Instruction _instA, Instruction _instB);
 		bool writesToPMemory(TWord _op) const;
 		uint32_t getInstructionTypes(TWord _op, Instruction& _a, Instruction& _b) const;
-		bool getRegisters(RegisterMask& _written, RegisterMask& _read, TWord _opA, TWord _opB) const;
+		bool getRegisters(RegisterMask& _written, RegisterMask& _read, TWord _opA) const;
+		static bool getRegisters(RegisterMask& _written, RegisterMask& _read, TWord _opA, Instruction _instA, Instruction _instB);
 		static uint32_t getFlags(Instruction _instA, Instruction _instB);
 		bool getMemoryAddress(TWord& _addr, EMemArea& _area, TWord opA, TWord opB) const;
 	private:

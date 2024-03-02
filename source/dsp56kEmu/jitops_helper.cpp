@@ -38,15 +38,22 @@ namespace dsp56k
 #endif
 	}
 
-	void JitOps::signextend48to56(const JitReg64& _reg) const
+	void JitOps::signextend48to56(const JitReg64& _dst, const JitReg64& _src) const
 	{
 #ifdef HAVE_ARM64
-		m_asm.sbfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(48));
-		m_asm.ubfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(56));
+		m_asm.sbfx(_dst, _src, asmjit::Imm(0), asmjit::Imm(48));
+		m_asm.ubfx(_dst, _dst, asmjit::Imm(0), asmjit::Imm(56));
 #else
-		m_asm.sal(_reg, asmjit::Imm(16));
-		m_asm.sar(_reg, asmjit::Imm(8));	// we need to work around the fact that there is no AND with 64 bit immediate operand
-		m_asm.shr(_reg, asmjit::Imm(8));
+		if(_dst == _src)
+		{
+			m_asm.sal(_dst, asmjit::Imm(16));
+		}
+		else
+		{
+			m_asm.rol(_dst, _src, 16);
+		}
+		m_asm.sar(_dst, asmjit::Imm(8));	// we need to work around the fact that there is no AND with 64 bit immediate operand
+		m_asm.shr(_dst, asmjit::Imm(8));
 #endif
 	}
 
@@ -153,17 +160,16 @@ namespace dsp56k
 	void JitOps::popPCSR()
 	{
 		{
-			DspValue sr(m_block);
+			DspValue sr(m_block, DspSR, false, true);
 			getSSL(sr);
-			setSR(sr);
+			setSR(sr);	// still needed to call this to mark CCR bits as non-dirty
 		}
 		popPC();
 	}
 	void JitOps::popPC()
 	{
-		DspValue pc(m_block);
+		DspValue pc(m_block, PoolReg::DspPC, false, true);
 		getSSH(pc);
-		m_dspRegs.setPC(pc);
 	}
 
 	void JitOps::setDspProcessingMode(uint32_t _mode)
@@ -201,6 +207,46 @@ namespace dsp56k
 	void JitOps::getOpWordB(DspValue& _dst)
 	{
 		_dst.set(getOpWordB(), DspValue::Immediate24);
+	}
+
+	void JitOps::getXY0(DspValue& _dst, const uint32_t _aluIndex, bool _signextend) const
+	{
+		if (!_dst.isRegValid())
+			_dst.temp(DspValue::Temp24);
+		else
+			assert(_dst.getBitCount() == 24);
+
+		const auto src = m_block.dspRegPool().get(_aluIndex ? PoolReg::DspY0 : PoolReg::DspX0, true, false);
+
+		if (_signextend)
+			signextend24to64(r64(_dst), r64(src));
+		else
+			m_asm.mov(r32(_dst), r32(src));
+	}
+
+	void JitOps::getXY1(DspValue& _dst, const uint32_t _aluIndex, bool _signextend) const
+	{
+		if (!_dst.isRegValid())
+			_dst.temp(DspValue::Temp24);
+		else
+			assert(_dst.getBitCount() == 24);
+
+		const auto src = m_block.dspRegPool().get(_aluIndex ? PoolReg::DspY1 : PoolReg::DspX1, true, false);
+
+		if (_signextend)
+			signextend24to64(r64(_dst), r64(src));
+		else
+			m_asm.mov(r32(_dst), r32(src));
+	}
+
+	void JitOps::setXY0(const uint32_t _xy, const DspValue& _src)
+	{
+		m_block.dspRegPool().setXY0(_xy, _src);
+	}
+
+	void JitOps::setXY1(const uint32_t _xy, const DspValue& _src)
+	{
+		m_block.dspRegPool().setXY1(_xy, _src);
 	}
 
 	void JitOps::getMR(const JitReg64& _dst) const
@@ -304,7 +350,8 @@ namespace dsp56k
 
 	void JitOps::getSSH(DspValue& _dst) const
 	{
-		_dst.temp(DspValue::Temp24);
+		if(!_dst.isRegValid())
+			_dst.temp(DspValue::Temp24);
 		m_dspRegs.getSS(r64(_dst.get()));
 		m_asm.shr(r64(_dst.get()), asmjit::Imm(24));
 //		m_asm.and_(r32(_dst.get()), asmjit::Imm(0x00ffffff));
@@ -313,7 +360,8 @@ namespace dsp56k
 
 	void JitOps::getSSL(DspValue& _dst) const
 	{
-		_dst.temp(DspValue::Temp24);
+		if(!_dst.isRegValid())
+			_dst.temp(DspValue::Temp24);
 		m_dspRegs.getSS(r64(_dst.get()));
 		m_asm.and_(r64(_dst.get()), 0x00ffffff);
 	}
@@ -334,7 +382,7 @@ namespace dsp56k
 	void JitOps::callDSPFunc(void(*_func)(DSP*, TWord)) const
 	{
 		const FuncArg r0(m_block, 0);
-		m_block.asm_().mov(r0, asmjit::Imm(&m_block.dsp()));
+		m_block.mem().makeDspPtr(r0);
 		m_block.stack().call(asmjit::func_as_ptr(_func));
 	}
 

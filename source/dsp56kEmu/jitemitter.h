@@ -72,6 +72,8 @@ namespace dsp56k
 		void sal(const JitRegGP& _dst, const asmjit::Imm& _imm);
 		void sar(const JitRegGP& _dst, const asmjit::Imm& _imm);
 
+		void sub(const JitRegGP& _dst, const asmjit::Imm& _imm);
+
 		void push(const JitRegGP& _reg);
 		void pop(const JitRegGP& _reg);
 
@@ -80,9 +82,9 @@ namespace dsp56k
 		void sub(const JitRegGP& _dst, const JitRegGP& _src);
 		void cmov(asmjit::arm::CondCode _cc, const JitRegGP& _dst, const JitRegGP& _src);
 #else
-		bool hasFeature(asmjit::CpuFeatures::X86::Id _id) const;
-		bool hasBMI() const;
-		bool hasBMI2() const;
+		static bool hasFeature(asmjit::CpuFeatures::X86::Id _id);
+		static bool hasBMI();
+		static bool hasBMI2();
 		void copyBitToReg(const JitRegGP& _dst, uint32_t _dstBit, const JitRegGP& _src, uint32_t _srcBit);
 		void copyBitToReg(const JitRegGP& _dst, const JitRegGP& _src, uint32_t _srcBit)
 		{
@@ -94,7 +96,6 @@ namespace dsp56k
 
 		void ror(const JitRegGP& _dst, const JitRegGP& _src, uint32_t _bits);
 		void rol(const JitRegGP& _dst, const JitRegGP& _src, uint32_t _bits);
-
 #endif
 
 		void bitTest(const JitRegGP& _src, TWord _bitIndex);
@@ -106,7 +107,7 @@ namespace dsp56k
 		void test_(const JitRegGP& _gp);
 		void test_(const JitRegGP& _gp, const asmjit::Imm& _imm);
 
-		void lea_(const JitReg64& _dst, const JitReg64& _src, void* _ptr, void* _base);
-		void lea_(const JitReg64& _dst, const JitReg64& _src, int _offset);
+		void lea_(const JitReg64& _dst, const JitReg64& _src, const void* _ptr, const void* _base);
+		bool lea_(const JitReg64& _dst, const JitReg64& _src, int _offset);
 	};
 }

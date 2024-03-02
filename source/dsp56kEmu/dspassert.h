@@ -14,9 +14,9 @@ namespace dsp56k
 #endif
 
 #ifdef _DEBUG
-#define assert( expr )			{ if( !(expr) ) dsp56k::Assert::show( #expr, __func__, __LINE__ ); }
-#define assertf( expr, msg )	{ if( !(expr) ) dsp56k::Assert::show( msg, __func__, __LINE__ ); }
+#define assert( expr )			do { if( !(expr) ) dsp56k::Assert::show( #expr, __func__, __LINE__ ); } while(0)
+#define assertf( expr, msg )	do { if( !(expr) ) dsp56k::Assert::show( msg, __func__, __LINE__ ); } while(0)
 #else
-#define assert( expr )			{}
-#define assertf( expr, msg )	{}
+#define assert( expr )			do {} while(0)
+#define assertf( expr, msg )	do {} while(0)
 #endif

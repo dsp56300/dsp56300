@@ -2,8 +2,9 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
+#include <vector>
 #include <thread>
+#include <functional>
 
 #include "dspassert.h"
 
@@ -11,13 +12,14 @@
 
 namespace dsp56k
 {
-	template<typename T, size_t C, bool Lock> class RingBuffer
+	template<typename T, size_t C, bool Lock, bool StackAlloc = true> class RingBuffer
 	{
 	public:
 		RingBuffer() : m_writeCount(0), m_readCount(0), m_readSem(0), m_writeSem(static_cast<int>(C))
 		{
 			static_assert(C>0, "C needs to be greater than 1");
 			static_assert((C&(C-1)) == 0, "C needs to be power of two");
+			initBuffer(m_data);
 		}
 
 		size_t capacity() const		{ return C; }
@@ -39,19 +41,49 @@ namespace dsp56k
 
 			m_readSem.notify();
 		}
+		
+		void push_back( T&& _val )
+		{
+			emplace_back([&](T& _e)
+			{
+				_e = std::move(_val);
+			});
+		}
 
-		T pop_front()
+		void emplace_back(const std::function<void(T&)>& _fillEntry)
+		{
+	//		assert( m_usage < C && "ring buffer is already full!" );
+
+			m_writeSem.wait();
+
+			_fillEntry(m_data[wrapCounter(m_writeCount)]);
+
+			// usage need to be incremented AFTER data has been written, otherwise, reader thread would read incomplete data
+			++m_writeCount;
+
+			m_readSem.notify();
+		}
+
+		void pop_front(const std::function<void(T&)>& _readCallback)
 		{
 			m_readSem.wait();
 
-			T res = front();
+			_readCallback(front());
 	//		assert( !empty() && "ring buffer is already empty!" );
 
 			++m_readCount;
-			
-			m_writeSem.notify();
 
-			return res;
+			m_writeSem.notify();
+		}
+
+		T pop_front()
+		{
+			T t;
+			pop_front([&](T& _t)
+			{
+				t = std::move(_t);
+			});
+			return t;
 		}
 
 		void removeAt( size_t i )
@@ -131,12 +163,23 @@ namespace dsp56k
 			_i &= C-1;
 		}
 
-		std::array<T,C>		m_data;
+		static void initBuffer(std::array<T, C>& _buffer)
+		{
+		}
+
+		static void initBuffer(std::vector<T>& _buffer)
+		{
+			_buffer.resize(C);
+		}
+
+		using MemoryBuffer = std::conditional_t<StackAlloc, std::array<T, C>, std::vector<T>>;
+
+		MemoryBuffer		m_data;
 
 		size_t				m_writeCount;
 		size_t				m_readCount;
 
-		typedef typename std::conditional<Lock, SpscSemaphore, NopSemaphore>::type Sem;
+		typedef std::conditional_t<Lock, SpscSemaphore, NopSemaphore> Sem;
 
 		Sem					m_readSem;
 		Sem					m_writeSem;

@@ -1,60 +1,8 @@
-/* <copyright>
-  This file is provided under a dual BSD/GPLv2 license.  When using or
-  redistributing this file, you may do so under either license.
+/*
+  Copyright (C) 2005-2019 Intel Corporation
 
-  GPL LICENSE SUMMARY
-
-  Copyright (c) 2005-2017 Intel Corporation. All rights reserved.
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of version 2 of the GNU General Public License as
-  published by the Free Software Foundation.
-
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-  The full GNU General Public License is included in this distribution
-  in the file called LICENSE.GPL.
-
-  Contact Information:
-  http://software.intel.com/en-us/articles/intel-vtune-amplifier-xe/
-
-  BSD LICENSE
-
-  Copyright (c) 2005-2017 Intel Corporation. All rights reserved.
-  All rights reserved.
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in
-      the documentation and/or other materials provided with the
-      distribution.
-    * Neither the name of Intel Corporation nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-</copyright> */
+  SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+*/
 
 #include "ittnotify_config.h"
 
@@ -108,6 +56,8 @@ ITT_STUB(ITTAPI, __itt_counter, counter_create_typed,  (const char    *name, con
 
 ITT_STUBV(ITTAPI, void, pause,  (void), (ITT_NO_PARAMS), pause,  __itt_group_control | __itt_group_legacy, "no args")
 ITT_STUBV(ITTAPI, void, resume, (void), (ITT_NO_PARAMS), resume, __itt_group_control | __itt_group_legacy, "no args")
+ITT_STUBV(ITTAPI, void, pause_scoped,  (__itt_collection_scope scope), (ITT_FORMAT scope), pause_scoped,  __itt_group_control, "%d")
+ITT_STUBV(ITTAPI, void, resume_scoped, (__itt_collection_scope scope), (ITT_FORMAT scope), resume_scoped, __itt_group_control, "%d")
 
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
 ITT_STUBV(ITTAPI, void, thread_set_nameA, (const char    *name), (ITT_FORMAT name), thread_set_nameA, __itt_group_thread, "\"%s\"")
@@ -124,6 +74,23 @@ ITT_STUB(LIBITTAPI, int,  thr_name_setW, (const wchar_t *name, int namelen), (IT
 ITT_STUB(LIBITTAPI, int,  thr_name_set,  (const char    *name, int namelen), (ITT_FORMAT name, namelen), thr_name_set,  __itt_group_thread | __itt_group_legacy, "\"%s\", %d")
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 ITT_STUBV(LIBITTAPI, void, thr_ignore,   (void),                             (ITT_NO_PARAMS),            thr_ignore,    __itt_group_thread | __itt_group_legacy, "no args")
+
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+ITT_STUB(ITTAPI, __itt_histogram*, histogram_createA, (const __itt_domain* domain, const char* name, __itt_metadata_type x_type, __itt_metadata_type y_type), (ITT_FORMAT domain, name, x_type, y_type), histogram_createA, __itt_group_structure, "%p, \"%s\", %d, %d")
+ITT_STUB(ITTAPI, __itt_histogram*, histogram_createW, (const __itt_domain* domain, const wchar_t* name, __itt_metadata_type x_type, __itt_metadata_type y_type), (ITT_FORMAT domain, name, x_type, y_type), histogram_createW, __itt_group_structure, "%p, \"%s\", %d, %d")
+#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+ITT_STUB(ITTAPI, __itt_histogram*, histogram_create, (const __itt_domain* domain, const char* name, __itt_metadata_type x_type, __itt_metadata_type y_type), (ITT_FORMAT domain, name, x_type, y_type), histogram_create, __itt_group_structure, "%p, \"%s\", %d, %d")
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+ITT_STUB(ITTAPI, __itt_counter, counter_createA_v3, (const __itt_domain* domain, const char    *name, __itt_metadata_type type), (ITT_FORMAT domain, name, type), counter_createA_v3, __itt_group_counter, "%p, \"%s\", %d")
+ITT_STUB(ITTAPI, __itt_counter, counter_createW_v3, (const __itt_domain* domain, const wchar_t *name, __itt_metadata_type type), (ITT_FORMAT domain, name, type), counter_createW_v3, __itt_group_counter, "%p, \"%s\", %d")
+#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+ITT_STUB(ITTAPI, __itt_counter, counter_create_v3,  (const __itt_domain* domain, const char    *name, __itt_metadata_type type), (ITT_FORMAT domain, name, type), counter_create_v3,  __itt_group_counter, "%p, \"%s\", %d")
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+ITT_STUBV(ITTAPI, void, bind_context_metadata_to_counter, (__itt_counter counter, size_t length, __itt_context_metadata* metadata), (ITT_FORMAT counter, length, metadata), bind_context_metadata_to_counter, __itt_group_structure, "%p, %lu, %p")
+
 #endif /* __ITT_INTERNAL_BODY */
 
 ITT_STUBV(ITTAPI, void, enable_attach, (void), (ITT_NO_PARAMS), enable_attach, __itt_group_all, "no args")
@@ -394,5 +361,8 @@ ITT_STUBV(ITTAPI, void, module_load, (void *start_addr, void *end_addr, const ch
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 ITT_STUBV(ITTAPI, void, module_unload, (void *start_addr), (ITT_FORMAT start_addr), module_unload, __itt_group_module, "%p")
 
+ITT_STUBV(ITTAPI, void, histogram_submit, (__itt_histogram* hist, size_t length, void* x_data, void* y_data), (ITT_FORMAT hist, length, x_data, y_data), histogram_submit, __itt_group_structure, "%p, %lu, %p, %p")
+
+ITT_STUBV(ITTAPI, void, counter_set_value_v3, (__itt_counter counter, void *value_ptr), (ITT_FORMAT counter, value_ptr), counter_set_value_v3, __itt_group_counter, "%p, %p")
 
 #endif /* __ITT_INTERNAL_INIT */

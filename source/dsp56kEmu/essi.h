@@ -2,8 +2,7 @@
 
 #pragma once
 
-#include "audio.h"
-#include "ringbuffer.h"
+#include "esxi.h"
 #include "types.h"
 
 namespace dsp56k
@@ -12,7 +11,7 @@ namespace dsp56k
 	class Memory;
 	class IPeripherals;
 
-	class Essi : public Audio
+	class Essi : public Esxi
 	{
 	public:
 		// ESSI Control Register A (CRA)
@@ -183,5 +182,8 @@ namespace dsp56k
 		IPeripherals& m_periph;
 
 		TWord m_statusReg;
+
+		uint32_t m_frameSyncDSPStatus = FrameSyncChannelLeft;
+		uint32_t m_frameSyncDSPRead = FrameSyncChannelLeft;
 	};
 }

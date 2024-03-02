@@ -475,23 +475,21 @@ namespace dsp56k
 		// decrement SP twice, restoring old loop settings
 		decSP();
 
-		m_dspRegs.getSS(r64(r));
+		{
+			DspValue lc(m_block, PoolReg::DspLC, false, true);
+			DspValue la(m_block, PoolReg::DspLA, false, true);
 
-		const auto lc = m_dspRegs.getLC(JitDspRegs::Write);
-#ifdef HAVE_ARM64
-		m_asm.ubfx(r64(lc), r64(r), asmjit::Imm(0), asmjit::Imm(24));
-#else
-		m_asm.mov(r32(lc), r32(r));
-		m_asm.and_(r32(lc), asmjit::Imm(0xffffff));
-#endif
+			m_dspRegs.getSS(r64(lc));
 
-		const auto la = m_dspRegs.getLA(JitDspRegs::Write);
 #ifdef HAVE_ARM64
-		m_asm.ubfx(r64(la), r64(r), asmjit::Imm(24), asmjit::Imm(24));
+			m_asm.ubfx(r64(la), r64(lc), asmjit::Imm(24), asmjit::Imm(24));
+			m_asm.ubfx(r64(lc), r64(lc), asmjit::Imm(0), asmjit::Imm(24));
 #else
-		m_asm.ror(r64(la), r64(r), 24);
-		m_asm.and_(r32(la), asmjit::Imm(0xffffff));
+			m_asm.ror(r64(la), r64(lc), 24);
+			m_asm.and_(r32(la), asmjit::Imm(0xffffff));
+			m_asm.and_(r32(lc), asmjit::Imm(0xffffff));
 #endif
+		}
 
 		decSP();
 

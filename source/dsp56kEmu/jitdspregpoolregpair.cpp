@@ -13,7 +13,7 @@ namespace dsp56k
 		const auto w1 = m_pool.isWritten(m_reg1);
 		if (w0 || w1)
 		{
-			const DSPReg regBase(getBlock(), m_regBase, !w0 || !w1, true);
+			const DSPReg regBase(getBlock(), m_regBase, !w0 || !w1, false);
 
 			if(w0 && w1)
 			{
@@ -60,30 +60,22 @@ namespace dsp56k
 
 	void JitRegPoolRegPair::get0(const JitReg32& _dst) const
 	{
-		// if the register is already is loaded, we can return it directly
-		if(m_pool.isInUse(m_reg0))
-		{
-			mov(_dst, m_reg0);
-			return;
-		}
-
-		const auto& r = m_pool.get(m_reg0, false, false);
-		load0(r32(r));
-		asm_().mov(r32(_dst), r32(r));
+		mov(_dst, m_reg0);
 	}
 
 	void JitRegPoolRegPair::get1(const JitReg32& _dst) const
 	{
-		// if the register is already in use, we can return it directly
-		if (m_pool.isInUse(m_reg1))
-		{
-			mov(_dst, m_reg1);
-			return;
-		}
+		mov(_dst, m_reg1);
+	}
 
-		const auto& r = m_pool.get(m_reg1, false, false);
-		load1(r32(r));
-		asm_().mov(r32(_dst), r32(r));
+	DspValue JitRegPoolRegPair::get0(bool _read, bool _write) const
+	{
+		return DspValue(getBlock(), m_reg0, _read, _write);
+	}
+
+	DspValue JitRegPoolRegPair::get1(bool _read, bool _write) const
+	{
+		return DspValue(getBlock(), m_reg1, _read, _write);
 	}
 
 	void JitRegPoolRegPair::set(const JitReg64& _src) const
@@ -97,64 +89,12 @@ namespace dsp56k
 
 	void JitRegPoolRegPair::set0(const DspValue& _src) const
 	{
-		// clear written flag on common register if both partial registers are written
-		if(m_pool.isWritten(m_reg1))
-		{
-			m_pool.clearWritten(m_regBase);
-			m_pool.write(m_reg0, _src);
-		}
-		// if the common reg is not in use or has not been written to we are fine too
-		else if (!m_pool.isInUse(m_regBase) || !m_pool.isWritten(m_regBase))
-		{
-			m_pool.write(m_reg0, _src);
-		}
-		// the common register has been written already before. Write into the common register and do NOT flag the partial reg as written
-		else
-		{
-			const DSPReg regBase(getBlock(), m_regBase, true, true);
-			const DSPReg reg0(getBlock(), m_reg0, false, false);
-
-			if (_src.isImmediate())
-				asm_().mov(r32(reg0), asmjit::Imm(_src.imm24()));
-			else
-				asm_().mov(r32(reg0), r32(_src));
-			replaceLow(r64(regBase), r32(reg0));
-
-			m_pool.clearWritten(m_reg0);
-		}
+		m_pool.write(m_reg0, _src);
 	}
 
 	void JitRegPoolRegPair::set1(const DspValue& _src) const
 	{
-		// clear written flag on common register if both partial registers are written
-		if (m_pool.isWritten(m_reg0))
-		{
-			m_pool.clearWritten(m_regBase);
-			m_pool.write(m_reg1, _src);
-		}
-		// if the common reg is not in use or has not been written to we are fine too
-		else if(!m_pool.isInUse(m_regBase) || !m_pool.isWritten(m_regBase))
-		{
-			m_pool.write(m_reg1, _src);
-		}
-		// the common register has been written already before. Write into the common register and do NOT flag the partial reg as written
-		else
-		{
-			const DSPReg regBase(getBlock(), m_regBase, true, true);
-			const DSPReg reg1(getBlock(), m_reg1, false, false);
-
-			if (_src.isImmediate())
-				asm_().mov(r32(reg1), asmjit::Imm(_src.imm()));
-			else
-				asm_().mov(r32(reg1), r32(_src));
-
-			{
-				const RegGP temp(getBlock());
-				replaceHigh(temp, r64(regBase), r32(reg1));
-			}
-
-			m_pool.clearWritten(m_reg1);
-		}
+		m_pool.write(m_reg1, _src);
 	}
 
 	void JitRegPoolRegPair::store0(const JitReg32& _src) const
@@ -265,8 +205,7 @@ namespace dsp56k
 #else
 	void JitRegPoolRegPair::merge(const JitReg64& _dst, const JitReg32& _reg1, const JitReg32& _reg0) const
 	{
-		asm_().mov(r32(_dst), r32(_reg1));
-		asm_().shl(r64(_dst), asmjit::Imm(24));
+		asm_().rol(r64(_dst), r64(_reg1), 24);
 		asm_().or_(r64(_dst), r64(_reg0));
 	}
 

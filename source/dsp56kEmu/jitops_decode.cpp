@@ -198,15 +198,15 @@ namespace dsp56k
 		switch( i )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-		case 0x00:
-		case 0x01:
-		case 0x02:
-		case 0x03:
+		case 0x00:	return makeRef(PoolReg::DspX0);
+		case 0x01:	return makeRef(PoolReg::DspX1);
+		case 0x02:	return makeRef(PoolReg::DspY0);
+		case 0x03:	return makeRef(PoolReg::DspY1);
 		// 0001DD - 4 registers in data ALU
-		case 0x04:
-		case 0x05:
-		case 0x06:
-		case 0x07:
+		case 0x04:	return makeRef(PoolReg::DspX0);
+		case 0x05:	return makeRef(PoolReg::DspX1);
+		case 0x06:	return makeRef(PoolReg::DspY0);
+		case 0x07:	return makeRef(PoolReg::DspY1);
 
 		// 001DDD - 8 accumulators in data ALU
 		case 0x08:
@@ -345,6 +345,16 @@ namespace dsp56k
 		assert(0 && "invalid ee value");
 	}
 
+	DspValue JitOps::decode_ee_ref(const TWord _ee, bool _read, bool _write)
+	{
+		switch (_ee)
+		{
+		case 0: return DspValue(getBlock(), PoolReg::DspX0, _read, _write);
+		case 1: return DspValue(getBlock(), PoolReg::DspX1, _read, _write);
+		}
+		return DspValue(getBlock());
+	}
+
 	void JitOps::decode_ff_read(DspValue& _dst, TWord _ff)
 	{
 		switch (_ff)
@@ -369,6 +379,16 @@ namespace dsp56k
 		case 3: transfer24ToAlu(1, _value); break;
 		default: assert(false && "invalid ff value"); break;
 		}
+	}
+
+	DspValue JitOps::decode_ff_ref(const TWord _ff, bool _read, bool _write)
+	{
+		switch (_ff)
+		{
+		case 0: return DspValue(getBlock(), PoolReg::DspY0, _read, _write);
+		case 1: return DspValue(getBlock(), PoolReg::DspY1, _read, _write);
+		}
+		return DspValue(getBlock());
 	}
 
 	void JitOps::decode_EE_read(RegGP& dst, TWord _ee)
@@ -404,13 +424,13 @@ namespace dsp56k
 		switch (_jjj)
 		{
 		case 0:
-		case 1:			m_dspRegs.getALU(_dst, _b ? 1 : 0);			break;
-		case 2:			XYto56(_dst, 0, false);						break;
-		case 3: 		XYto56(_dst, 1, false);						break;
-		case 4:			XY0to56(_dst, 0, false);					break;
-		case 5: 		XY0to56(_dst, 1, false);					break;
-		case 6:			XY1to56(_dst, 0, false);					break;
-		case 7: 		XY1to56(_dst, 1, false);					break;
+		case 1:			m_dspRegs.getALU(_dst, _b ? 1 : 0);	break;
+		case 2:			XYto56(_dst, 0);					break;
+		case 3: 		XYto56(_dst, 1);					break;
+		case 4:			XY0to56(_dst, 0);					break;
+		case 5: 		XY0to56(_dst, 1);					break;
+		case 6:			XY1to56(_dst, 0);					break;
+		case 7: 		XY1to56(_dst, 1);					break;
 		default:
 			assert(0 && "unreachable, invalid JJJ value");
 		}
@@ -591,16 +611,9 @@ namespace dsp56k
 		case 3:												// Y
 			{
 				const auto xy = _lll - 2;
-#ifdef HAVE_ARM64
-				const auto src = m_block.dspRegPool().read(xy ? PoolReg::DspY : PoolReg::DspX);
-				m_asm.ubfx(r64(x), r64(src), asmjit::Imm(24), asmjit::Imm(24));
-				m_asm.ubfx(r64(y), r64(src), asmjit::Imm(0), asmjit::Imm(24));
-#else
-				m_dspRegs.getXY(r64(y), xy);
-				m_asm.ror(r64(x), r64(y), 24);
-				m_asm.and_(r32(x), asmjit::Imm(0xffffff));
-				m_asm.and_(r32(y), asmjit::Imm(0xffffff));
-#endif
+
+				m_block.dspRegPool().getXY0(r32(y), xy);
+				m_block.dspRegPool().getXY1(r32(x), xy);
 			}
 			break;
 		case 6:												// AB
@@ -662,14 +675,8 @@ namespace dsp56k
 			{
 				const auto xy = _lll - 2;
 
-				const auto r = m_dspRegs.getXY(xy, JitDspRegs::Write);
-#ifdef HAVE_ARM64
-				m_asm.bfi(r64(r), r64(x), asmjit::Imm(24), asmjit::Imm(24));
-				m_asm.bfi(r64(r), r64(y), asmjit::Imm(0), asmjit::Imm(24));
-#else
-				m_asm.rol(r64(r), r32(x.get()), 24);
-				m_asm.or_(r64(r), r64(y.get()));
-#endif
+				m_block.dspRegPool().setXY0(xy, y);
+				m_block.dspRegPool().setXY1(xy, x);
 			}
 			break;
 		case 6:												// AB

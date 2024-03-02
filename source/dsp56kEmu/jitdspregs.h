@@ -44,8 +44,6 @@ namespace dsp56k
 		void clrALU(TWord _alu) const;
 
 		void getXY(const JitRegGP& _dst, TWord _xy) const;
-		JitRegGP getXY(TWord _xy, AccessType _access) const;
-		void setXY(uint32_t _xy, const JitRegGP& _src) const;
 
 		void getEP(DspValue& _dst) const;
 		void setEP(const DspValue& _src) const;

@@ -6,6 +6,11 @@ add_subdirectory(asmjit)
 add_subdirectory(dsp56kEmu)
 add_subdirectory(dsp56kTestRunner)
 add_subdirectory(disassemble)
+
+if(WIN32 OR (UNIX AND NOT APPLE))
+	add_subdirectory(vtuneSdk)
+endif()
+
 if(WIN32)
 	add_subdirectory(HxDplugin)
 endif()

@@ -1,12 +1,19 @@
 #pragma once
 
 #include "buildconfig.h"
+#include "types.h"
 
 // set to 1 to compile for ARM even if on an x64 system
 #if 0
 #define HAVE_ARM64
 #undef HAVE_X86_64
 #endif
+
+namespace dsp56k
+{
+	class Jit;
+	typedef void (*TJitFunc)(Jit*, TWord);
+}
 
 #if defined(HAVE_ARM64)
 #include "asmjit/arm/a64operand.h"

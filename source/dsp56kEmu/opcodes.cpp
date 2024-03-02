@@ -95,7 +95,7 @@ namespace dsp56k
 		return getOpcodeLength(_op, instA, instB);
 	}
 
-	uint32_t Opcodes::getOpcodeLength(const TWord _op, Instruction _instA, Instruction _instB) const
+	uint32_t Opcodes::getOpcodeLength(const TWord _op, Instruction _instA, Instruction _instB)
 	{
 		const auto lenA = _instA != Invalid ? dsp56k::getOpcodeLength(_instA, _op) : 0;
 		const auto lenB = _instB != Invalid ? dsp56k::getOpcodeLength(_instB, _op) : 0;
@@ -161,23 +161,27 @@ namespace dsp56k
 		return res;
 	}
 
-	bool Opcodes::getRegisters(RegisterMask& _written, RegisterMask& _read, TWord _opA, TWord _opB) const
+	bool Opcodes::getRegisters(RegisterMask& _written, RegisterMask& _read, const TWord _opA) const
 	{
 		Instruction instA, instB;
 		getInstructionTypes(_opA, instA, instB);
+		return getRegisters(_written, _read, _opA, instA, instB);
+	}
 
+	bool Opcodes::getRegisters(RegisterMask& _written, RegisterMask& _read, const TWord _opA, const Instruction _instA, const Instruction _instB)
+	{
 		_written = _read = RegisterMask::None;
 
-		if(instA != Invalid && instA != Nop)
+		if(_instA != Invalid && _instA != Nop)
 		{
-			dsp56k::getRegisters(_written, _read, instA, _opA);
+			dsp56k::getRegisters(_written, _read, _instA, _opA);
 		}
 
-		if(instB != Invalid && instB != Nop)
+		if(_instB != Invalid && _instB != Nop)
 		{
 			auto written = RegisterMask::None;
 			auto read = RegisterMask::None;
-			dsp56k::getRegisters(written, read, instB, _opA);
+			dsp56k::getRegisters(written, read, _instB, _opA);
 			_written |= written;
 			_read |= read;
 		}

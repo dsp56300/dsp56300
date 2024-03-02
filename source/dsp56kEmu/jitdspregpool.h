@@ -186,7 +186,6 @@ namespace dsp56k
 		void getXY0(const JitReg32& _dst, uint32_t _xy);
 		void getXY1(const JitReg32& _dst, uint32_t _xy);
 
-		void setXY(uint32_t _xy, const JitReg64& _src);
 		void setXY0(uint32_t _xy, const DspValue& _src);
 		void setXY1(uint32_t _xy, const DspValue& _src);
 

@@ -12,9 +12,8 @@ namespace dsp56k
 {
 	void JitOps::ccr_clear(CCRMask _mask)
 	{
-		m_ccrWritten |= _mask;
-		m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite).r32(), asmjit::Imm(~static_cast<uint32_t>(_mask)));
 		ccr_clearDirty(_mask);
+		m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite).r32(), asmjit::Imm(~static_cast<uint32_t>(_mask)));
 	}
 
 	void JitOps::ccr_getBitValue(const JitRegGP& _dst, CCRBit _bit)
@@ -107,8 +106,15 @@ namespace dsp56k
 		ccr_update(_bit, asmjit::x86::CondCode::kB);
 	}
 
-	void JitOps::ccr_update(CCRBit _bit, asmjit::x86::CondCode _cc)
+	void JitOps::ccr_update(const CCRBit _bit, const asmjit::x86::CondCode _cc)
 	{
+		if(_cc == asmjit::x86::CondCode::kC && _bit == CCRB_C && !m_ccr_update_clear)
+		{
+			ccr_clearDirty(CCR_C);
+			m_asm.adc(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(0));
+			return;
+		}
+
 		const RegScratch r(m_block);
 		m_asm.set(_cc, r.r8());
 		ccr_update(r, _bit);
@@ -117,7 +123,6 @@ namespace dsp56k
 	void JitOps::ccr_update(const JitRegGP& ra, CCRBit _bit, bool _valueIsShifted/* = false*/)
 	{
 		const auto mask = static_cast<CCRMask>(1 << _bit);
-		m_ccrWritten |= mask;
 
 		if (m_ccr_update_clear && _bit != CCRB_L && _bit != CCRB_S)
 			ccr_clear(mask);												// clear out old status register value
@@ -326,7 +331,6 @@ namespace dsp56k
 	{
 		assert((m_ccrDirty & CCR_V) == 0);
 		updateDirtyCCR(CCR_V);
-		m_ccrWritten |= CCR_L;
 
 		static_assert(CCRB_L > CCRB_V);
 		constexpr auto shift = CCRB_L - CCRB_V;

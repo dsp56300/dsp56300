@@ -94,6 +94,8 @@ namespace dsp56k
 			JitBlockRuntimeData& m_block;
 		};
 
+		void jumpToChild(const JitBlockRuntimeData* _child, JitCondCode _cc = JitCondCode::kMaxValue) const;
+
 		JitRuntimeData& m_runtimeData;
 
 		JitEmitter& m_asm;

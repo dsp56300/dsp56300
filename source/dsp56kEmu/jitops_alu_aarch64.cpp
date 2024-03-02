@@ -10,35 +10,20 @@
 
 namespace dsp56k
 {
-	void JitOps::XY0to56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const
+	void JitOps::XY0to56(const JitReg64& _dst, int _xy) const
 	{
-		const auto src = m_dspRegs.getXY(_xy, JitDspRegs::Read);
+		getBlock().dspRegPool().getXY0(r32(_dst), _xy);
 
-		if(_signExtendTo64)
-		{
-			m_asm.sbfiz(_dst, src, asmjit::Imm(24), asmjit::Imm(24));
-		}
-		else
-		{
-			m_asm.sbfiz(_dst, src, asmjit::Imm(32), asmjit::Imm(24));
-			m_asm.lsr(_dst, _dst, asmjit::Imm(8));
-		}
+		m_asm.sbfiz(_dst, _dst, asmjit::Imm(32), asmjit::Imm(24));
+		m_asm.lsr(_dst, _dst, asmjit::Imm(8));
 	}
 
-	void JitOps::XY1to56(const JitReg64& _dst, int _xy, bool _signExtendTo64) const
+	void JitOps::XY1to56(const JitReg64& _dst, int _xy) const
 	{
-		const auto src = m_dspRegs.getXY(_xy, JitDspRegs::Read);
-		if(_signExtendTo64)
-		{
-			m_asm.sbfx(_dst, src, asmjit::Imm(24), asmjit::Imm(24));
-			m_asm.lsl(_dst, _dst, asmjit::Imm(24));
-		}
-		else
-		{
-			m_asm.sbfx(_dst, src, asmjit::Imm(24), asmjit::Imm(24));
-			m_asm.lsl(_dst, _dst, asmjit::Imm(32));
-			m_asm.lsr(_dst, _dst, asmjit::Imm(8));
-		}
+		getBlock().dspRegPool().getXY1(r32(_dst), _xy);
+
+		m_asm.sbfiz(_dst, _dst, asmjit::Imm(32), asmjit::Imm(24));
+		m_asm.lsr(_dst, _dst, asmjit::Imm(8));
 	}
 
 	void JitOps::alu_abs(const JitRegGP& _r)

@@ -10,8 +10,6 @@ namespace dsp56k
 	{
 		m_tx.fill(0);
 		m_rx.fill(0);
-		m_txSlot.resize(32);
-		m_rxSlot.resize(32);
 	}
 
 	bool Esai::execTX()
@@ -20,44 +18,41 @@ namespace dsp56k
 
 		const auto tem = m_tcr & M_TEM;
 
-		if(tem)
+		if(!tem)
+			return false;
+
+		// note that this transfers the data in TX that has been written to it before
+		writeSlotToFrame();
+
+		if (0 == m_txSlotCounter)
+			m_sr.set(M_TFS);
+		else
+			m_sr.clear(M_TFS);
+
+		++m_txSlotCounter;
+
+		if (m_txSlotCounter > getTxWordCount())
 		{
-			// note that this transfers the data in TX that has been written to it before
-			writeAudioOutput();
+			m_txFrame.resize(getTxWordCount() + 1);
+			writeTXimpl(m_txFrame);
+			m_txFrame.clear();
 
-			if (0 == m_txSlotCounter)
-				m_sr.set(M_TFS);
-			else
-				m_sr.clear(M_TFS);
+			m_txSlotCounter = 0;
+			++m_txFrameCounter;
 
-			++m_txSlotCounter;
-
-			if (m_txSlotCounter > getTxWordCount())
-			{
-				for (size_t i = 0; i < m_txSlotCounter; ++i)
-					writeTXimpl(m_txSlot[i]);
-
-				m_txSlotCounter = 0;
-				++m_txFrameCounter;
-
-				if (m_tcr.test(M_TLIE))
-					injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
-			}
+			if (m_tcr.test(M_TLIE))
+				injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
 		}
 
-		if(tem)
+		if (m_sr.test(M_TUE) && m_tcr.test(M_TEIE))
 		{
-			if (m_sr.test(M_TUE))
-			{
-				if (m_tcr.test(M_TEIE))
-					injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
+			injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
 
-				m_sr.clear(M_TUE);
-			}
-			else if (m_tcr.test(M_TIE))
-			{
-				injectInterrupt(Vba_ESAI_Transmit_Data);
-			}
+			m_sr.clear(M_TUE);
+		}
+		else if (m_tcr.test(M_TIE))
+		{
+			injectInterrupt(Vba_ESAI_Transmit_Data);
 		}
 
 		return false;
@@ -65,9 +60,14 @@ namespace dsp56k
 
 	void Esai::execRX()
 	{
+		const auto rem = m_rcr & M_REM;
+
+		if(!rem)
+			return;
+
 		m_periph.getDSP().injectInterrupt([this]
 		{
-			readAudioInput();
+			readSlotFromFrame();
 
 			++m_rxSlotCounter;
 
@@ -78,16 +78,15 @@ namespace dsp56k
 			}
 		});
 
-		if (m_sr.test(M_ROE))
+		if (m_sr.test(M_ROE) && m_rcr.test(M_REIE))
 		{
-			if (m_rcr.test(M_REIE))
-				injectInterrupt(Vba_ESAI_Receive_Data_With_Exception_Status);
-			else
-				m_sr.clear(M_ROE);
+			injectInterrupt(Vba_ESAI_Receive_Data_With_Exception_Status);
+			m_sr.clear(M_ROE);
 		}
-
-		if (m_rcr.test(M_RIE))
+		else if (m_rcr.test(M_RIE))
+		{
 			injectInterrupt(Vba_ESAI_Receive_Data);
+		}
 	}
 
 	const TWord& Esai::readStatusRegister() const
@@ -123,21 +122,30 @@ namespace dsp56k
 		LOG("Write ESAI TCCR " << HEX(_val));
 
 		const auto oldTxWC = getTxWordCount();
-		const auto oldRxWC = getRxWordCount();
 
 		m_tccr = _val;
 
 		const auto newTxWC = getTxWordCount();
-		const auto newRxWC = getRxWordCount();
 
 		if(oldTxWC != newTxWC)
 			m_txSlotCounter = 0;
 
-		if (oldRxWC != newRxWC)
-			m_rxSlotCounter = 0;
-
 		if(m_clock)
 			m_clock->onTCCRChanged(this);
+	}
+
+	void Esai::writeReceiveClockControlRegister(TWord _val)
+	{
+		LOG("Write ESAI RCCR " << HEX(_val));
+
+		const auto oldRxWC = getRxWordCount();
+
+		m_rccr = _val;
+
+		const auto newRxWC = getRxWordCount();
+
+		if (oldRxWC != newRxWC)
+			m_rxSlotCounter = 0;
 	}
 
 	void Esai::writeTX(uint32_t _index, TWord _val)
@@ -191,19 +199,6 @@ namespace dsp56k
 		}
 		*/
 		return m_rx[_index];
-	}
-
-	void Esai::terminate()
-	{
-		while(true)
-		{
-			if(!m_audioOutputs.empty())
-				m_audioOutputs.pop_front();
-			else if(!m_audioInputs.full())
-				m_audioInputs.push_back({});
-			else
-				break;
-		}
 	}
 
 	std::string Esai::getTccrAsString() const
@@ -280,7 +275,7 @@ namespace dsp56k
 		m_periph.getDSP().injectInterrupt(_interrupt + m_vba);
 	}
 
-	void Esai::readAudioInput()
+	void Esai::readSlotFromFrame()
 	{
 		const auto rem = m_rcr & M_REM;
 
@@ -291,16 +286,10 @@ namespace dsp56k
 			m_sr.set(M_ROE);
 
 		if (m_rxSlotCounter == 0)
-		{
-			readRXimpl(m_rx);
+			readRXimpl(m_rxFrame);
 
-			for (uint32_t i = 1; i <= getRxWordCount(); ++i)
-				readRXimpl(m_rxSlot[i]);
-		}
-		else
-		{
-			m_rx = m_rxSlot[m_rxSlotCounter];
-		}
+		if(m_rxSlotCounter < m_rxFrame.size())
+			m_rx = m_rxFrame[m_rxSlotCounter];
 
 		m_readRX = rem;
 		m_sr.set(M_RDF);
@@ -309,14 +298,14 @@ namespace dsp56k
 			m_dma->trigger(DmaChannel::RequestSource::EsaiReceiveData);
 	}
 
-	void Esai::writeAudioOutput()
+	void Esai::writeSlotToFrame()
 	{
 		const auto tem = m_tcr & M_TEM;
 
 		if(!tem)
 			return;
 
-		m_txSlot[m_txSlotCounter] = m_tx;
+		m_txFrame[m_txSlotCounter] = m_tx;
 
 //		m_tx.fill(0);
 

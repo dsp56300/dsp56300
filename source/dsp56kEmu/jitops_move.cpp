@@ -263,29 +263,41 @@ namespace dsp56k
 		const TWord regIdxOffset = RRR >= 4 ? 0 : 4;
 		rr = (rr + regIdxOffset) & 7;
 
+		// WARNING this is the worst function regarding register pressure, especially if it's a parallel move because an
+		// additional register is blocked due to the delayed ALU update which is held in a GP reg
+		// TODO: create a unit test with the worst case
+
 		if (!writeX && !writeY)
 		{
-			// we need to read the values first to prevent running out of temps
-			DspValue rx(m_block, UsePooledTemp);
-			DspValue ry(m_block, UsePooledTemp);
+			// these use more temps so update address registers first
+			const auto eaX = decode_XMove_MMRRR(MM, RRR);
+			const auto eaY = decode_XMove_MMRRR(mm, rr);
 
 			if(ee == ff && ee >= 2)
 			{
 				// the same source alu is moved to two locations, read & convert it only once
-				decode_ee_read(rx, ee);
+				DspValue rx(m_block, UsePooledTemp);
 
-				const auto eaX = decode_XMove_MMRRR(MM, RRR);
-				const auto eaY = decode_XMove_MMRRR(mm, rr);
+				decode_ee_read(rx, ee);
 
 				m_block.mem().writeDspMemory(eaX, eaY, rx, rx);
 			}
 			else
 			{
-				decode_ee_read(rx, ee);
-				decode_ff_read(ry, ff);
+				auto rx = decode_ee_ref(ee, true, false);
+				auto ry = decode_ff_ref(ff, true, false);
 
-				const auto eaX = decode_XMove_MMRRR(MM, RRR);
-				const auto eaY = decode_XMove_MMRRR(mm, rr);
+				if(!rx.isRegValid())
+				{
+					rx = DspValue(m_block, UsePooledTemp);
+					decode_ee_read(rx, ee);
+				}
+
+				if(!ry.isRegValid())
+				{
+					ry = DspValue(m_block, UsePooledTemp);
+					decode_ff_read(ry, ff);
+				}
 
 				m_block.mem().writeDspMemory(eaX, eaY, rx, ry);
 			}
@@ -294,8 +306,13 @@ namespace dsp56k
 
 		if (writeX && writeY)
 		{
-			DspValue rx(m_block, UsePooledTemp);
-			DspValue ry(m_block, UsePooledTemp);
+			DspValue rx = decode_ee_ref(ee, false, true);
+			DspValue ry = decode_ff_ref(ff, false, true);
+
+			if(!rx.isRegValid())
+				rx = DspValue(m_block, UsePooledTemp);
+			if (!ry.isRegValid())
+				ry = DspValue(m_block, UsePooledTemp);
 
 			{
 				const auto eaX = decode_XMove_MMRRR(MM, RRR);
@@ -304,33 +321,35 @@ namespace dsp56k
 				m_block.mem().readDspMemory(rx, ry, eaX, eaY);
 			}
 
-			decode_ee_write(ee, rx);
-			decode_ff_write(ff, ry);
+			if (!rx.isType(DspValue::DspReg24))
+				decode_ee_write(ee, rx);
+			if (!ry.isType(DspValue::DspReg24))
+				decode_ff_write(ff, ry);
 			return;
 		}
 
-		Jitmem::ScratchPMem basePtr(m_block);
+		Jitmem::MemoryRef mr(m_block);
 
 		if (!writeX)
 		{
 			DspValue r(m_block, UsePooledTemp);
 			decode_ee_read(r, ee);
 			const auto eaX = decode_XMove_MMRRR(MM, RRR);
-			m_block.mem().writeDspMemory(MemArea_X, eaX, r, basePtr);
+			mr = m_block.mem().writeDspMemory(MemArea_X, eaX, r, std::move(mr));
 		}
 		if (!writeY)
 		{
 			DspValue r(m_block, UsePooledTemp);
 			decode_ff_read(r, ff);
 			const auto eaY = decode_XMove_MMRRR(mm, rr);
-			m_block.mem().writeDspMemory(MemArea_Y, eaY, r, basePtr);
+			mr = m_block.mem().writeDspMemory(MemArea_Y, eaY, r, std::move(mr));
 		}
 
 		if (writeX)
 		{
 			DspValue r(m_block, UsePooledTemp);
 			const auto eaX = decode_XMove_MMRRR(MM, RRR);
-			m_block.mem().readDspMemory(r, MemArea_X, eaX, basePtr);
+			mr = m_block.mem().readDspMemory(r, MemArea_X, eaX, std::move(mr));
 			decode_ee_write(ee, r);
 		}
 
@@ -338,7 +357,7 @@ namespace dsp56k
 		{
 			DspValue r(m_block, UsePooledTemp);
 			const auto eaY = decode_XMove_MMRRR(mm, rr);
-			m_block.mem().readDspMemory(r, MemArea_Y, eaY, basePtr);
+			m_block.mem().readDspMemory(r, MemArea_Y, eaY, std::move(mr));
 			decode_ff_write(ff, r);
 		}
 	}

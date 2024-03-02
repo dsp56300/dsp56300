@@ -2,12 +2,15 @@
 
 #include "jitblock.h"
 #include "jitemitter.h"
+#include "jitblockruntimedata.h"
 
 #include "dspassert.h"
 
 #include "asmjit/core/builder.h"
 
 #include <algorithm>	// std::sort
+
+#include "dsp.h"
 
 namespace dsp56k
 {
@@ -173,17 +176,17 @@ namespace dsp56k
 		}
 	}
 
-	void JitStackHelper::call(const void* _funcAsPtr, bool _isJitCall)
+	void JitStackHelper::call(const void* _funcAsPtr)
 	{
 		call([&]()
 		{
 			m_block.asm_().call(_funcAsPtr);
-		}, _isJitCall);
+		});
 	}
 
-	void JitStackHelper::call(const std::function<void()>& _execCall, bool _isJitCall/* = false*/)
+	void JitStackHelper::call(const std::function<void()>& _execCall)
 	{
-		PushBeforeFunctionCall backup(m_block, _isJitCall);
+		PushBeforeFunctionCall backup(m_block);
 
 		const auto usedSize = m_pushedBytes + g_functionCallSize;
 		const auto alignedStack = (usedSize + g_stackAlignmentBytes-1) & ~(g_stackAlignmentBytes-1);

@@ -17,6 +17,7 @@ namespace asmjit
 
 namespace dsp56k
 {
+	class JitBlockRuntimeData;
 	class JitBlock;
 
 	class JitStackHelper
@@ -37,8 +38,8 @@ namespace dsp56k
 
 		void pushNonVolatiles();
 		
-		void call(const void* _funcAsPtr, bool _isJitCall = false);
-		void call(const std::function<void()>& _execCall, bool _isJitCall = false);
+		void call(const std::function<void()>& _execCall);
+		void call(const void* _funcAsPtr);
 
 		void pushAllUsed(asmjit::BaseNode* _baseNode);
 

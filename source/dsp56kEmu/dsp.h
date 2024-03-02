@@ -6,8 +6,8 @@
 #include "utils.h"
 #include "instructioncache.h"
 #include "opcodes.h"
-#include "logging.h"
 #include "jit.h"
+#include "jittypes.h"
 
 namespace dsp56k
 {
@@ -19,8 +19,11 @@ namespace dsp56k
 	class JitOps;
 	class AotRuntime;
 	class DebuggerInterface;
+	class DSP;
 	
 	using TInstructionFunc = void (DSP::*)(TWord _op);
+	
+	template<typename Ta, typename Tb> void dspExecPeripherals(DSP* _dsp);
 
 	class DSP final
 	{
@@ -123,6 +126,10 @@ namespace dsp56k
 		TWord							m_opWordB = 0;
 		uint32_t						m_currentOpLen = 0;
 
+		const TJitFunc*					m_jitEntries = nullptr;
+
+		TInterruptFunc					m_execPeripheralsFunc;
+
 		// these members are accessed via JIT asm code, keep them tightly together
 		Jit								m_jit;
 		SRegs							reg;							// this is the base pointer that is used to access all surrounding members
@@ -205,12 +212,25 @@ namespace dsp56k
 		TReg24	getPC							() const									{ return reg.pc; }
 
 		void 	exec							();
-		void	execPeriph						();
+
+		template<typename Ta, typename Tb>
+		void	execPeriph						()
+		{
+			const auto diff = getRemainingPeripheralsCycles();
+
+			if (diff > 0 && diff < PeripheralsProcessingStepSize)
+				return;
+
+			m_peripheralCounter += PeripheralsProcessingStepSize;
+
+			static_cast<Ta*>(perif[0])->exec();
+			static_cast<Tb*>(perif[1])->exec();
+		}
+
 		void	tryExecInterrupts				();
 		void	execInterrupts					();
 		void	execInterrupt					(uint32_t _interruptVectorAddress);
 		void	execDefaultPreventInterrupt		();
-		void	execNoPendingInterrupts			();
 		void	nop								() {}
 
 		uint32_t	getRemainingPeripheralsCycles() const	{ return m_peripheralCounter - m_instructions; }
@@ -272,7 +292,7 @@ namespace dsp56k
 		const Opcodes&	opcodes							() const									{ return m_opcodes; }
 		Disassembler&	disassembler					()											{ return m_disasm; }
 
-		void			setPeriph						(const size_t _index, IPeripherals* _periph)	{ perif[_index] = _periph; _periph->setDSP(this); }
+		void			setPeriph						(const size_t _index, IPeripherals* _periph);
 		const IPeripherals*	getPeriph					(const size_t _index) const						{ return perif[_index]; }
 		IPeripherals*	getPeriph						(const size_t _index)							{ return perif[_index]; }
 		IPeripherals*	getPeriph						(const EMemArea _area)
@@ -288,6 +308,7 @@ namespace dsp56k
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
 
 		Jit&			getJit							() { return m_jit; }
+		void			setJitEntries					(const TJitFunc* _funcs)			{ m_jitEntries = _funcs; }
 
 		void			terminate						();
 

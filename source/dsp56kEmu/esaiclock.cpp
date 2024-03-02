@@ -9,9 +9,14 @@
 
 namespace dsp56k
 {
+	EsaiClock::EsaiClock(IPeripherals& _peripherals)
+		: m_periph(_peripherals)
+	{
+	}
+
 	void EsaiClock::exec()
 	{
-		const auto clock = m_periph.getDSP().getInstructionCounter();
+		const auto clock = *m_dspInstructionCounter;
 		const auto diff = delta(clock, m_lastClock);
 		m_lastClock = clock;
 
@@ -32,13 +37,18 @@ namespace dsp56k
 			return false;
 		};
 
+		std::array<Esai*, MaxEsais> processTx;
+		uint32_t txCount = 0;
+		std::array<Esai*, MaxEsais> processRx;
+		uint32_t rxCount = 0;
+
 		for (auto& e : m_esais)
 		{
 			if(advanceClock(e.tx))
-				m_esaisProcessTX.push_back(e.esai);
+				processTx[txCount++] = e.esai;
 
 			if (advanceClock(e.rx))
-				m_esaisProcessRX.push_back(e.esai);
+				processRx[rxCount++] = e.esai;
 		}
 #if 0
 		for(size_t i=0; i<std::max(m_esaisProcessRX.size(), m_esaisProcessTX.size()); ++i)
@@ -49,11 +59,9 @@ namespace dsp56k
 				m_esaisProcessRX[i]->execRX();
 		}
 #else
-		for (auto* e : m_esaisProcessTX)	e->execTX();
-		for (auto* e : m_esaisProcessRX)	e->execRX();
+		for(size_t i=0; i<txCount; ++i) processTx[i]->execTX();
+		for(size_t i=0; i<rxCount; ++i) processRx[i]->execRX();
 #endif
-		m_esaisProcessTX.clear();
-		m_esaisProcessRX.clear();
 	}
 
 	void EsaiClock::setPCTL(const TWord _val)
@@ -95,13 +103,16 @@ namespace dsp56k
 		updateCyclesPerSample();
 	}
 
+	void EsaiClock::setDSP(const DSP* _dsp)
+	{
+		m_dspInstructionCounter = &_dsp->getInstructionCounter();
+	}
+
 	void EsaiClock::updateCyclesPerSample()
 	{
-		if(m_fixedCyclesPerSample)
-		{
-			m_cyclesPerSample = m_fixedCyclesPerSample;
-		}
-		else
+		uint32_t cyclesPerSample = m_fixedCyclesPerSample;
+
+		if(!cyclesPerSample)
 		{
 			if(!m_pctl)
 				return;
@@ -110,20 +121,29 @@ namespace dsp56k
 			const auto df = 1 << ((m_pctl >> 12) & 3);
 			const auto mf = (m_pctl & 0xfff) + 1;
 
-			const auto speedHz = static_cast<uint64_t>(m_externalClockFrequency) * static_cast<uint64_t>(mf) / (static_cast<uint64_t>(pd) * static_cast<uint64_t>(df));
+			m_speedHz = static_cast<uint64_t>(m_externalClockFrequency) * static_cast<uint64_t>(mf) / (static_cast<uint64_t>(pd) * static_cast<uint64_t>(df));
 
 			if (m_samplerate)
-				m_cyclesPerSample = static_cast<uint32_t>((speedHz / m_samplerate) >> 1);	// 2 samples = 1 frame (stereo)
+				cyclesPerSample = static_cast<uint32_t>((m_speedHz / m_samplerate) >> 1);	// 2 samples = 1 frame (stereo)
 			else
-				m_cyclesPerSample = mf * 128 / pd;			// The ratio between external clock and sample period simplifies to this.
+				cyclesPerSample = mf * 128 / pd;			// The ratio between external clock and sample period simplifies to this.
+
+			cyclesPerSample *= m_speedPercent;
+			cyclesPerSample /= 100;
 
 			// A more full expression would be m_cyclesPerSample = dsp_frequency / samplerate, where
 			// dsp_frequency = m_extClock * mf / pd and samplerate = m_extClock/256
 
-			const auto speedMhz = static_cast<double>(speedHz) / 1000000.0f;
-			LOG("Clock speed changed to: " << speedMhz << " Mhz, EXTAL=" << m_externalClockFrequency << " Hz, PCTL=" << HEX(m_pctl) << ", mf=" << HEX(mf) << ", pd=" << HEX(pd) << ", df=" << HEX(df) << " => cycles per sample=" << std::dec << m_cyclesPerSample << ", predefined samplerate=" << m_samplerate);
+			const auto speedMhz = static_cast<double>(m_speedHz) / 1000000.0f * m_speedPercent / 100.0f;
+			LOG("Clock speed changed to: " << speedMhz << " Mhz, EXTAL=" << m_externalClockFrequency << " Hz, PCTL=" << HEX(m_pctl) << ", mf=" << HEX(mf) << ", pd=" << HEX(pd) << ", df=" << HEX(df) << " => cycles per sample=" << std::dec << cyclesPerSample << ", predefined samplerate=" << m_samplerate);
+		}
+		else
+		{
+			cyclesPerSample *= m_speedPercent;
+			cyclesPerSample /= 100;
 		}
 
+		m_cyclesPerSample = cyclesPerSample;
 		m_cyclesSinceWrite = 0;
 	}
 
@@ -148,8 +168,6 @@ namespace dsp56k
 		if(!found)
 		{
 			m_esais.emplace_back(EsaiEntry{ _esai, {_dividerTX}, {_dividerRX} });
-			m_esaisProcessRX.reserve(m_esais.size());
-			m_esaisProcessTX.reserve(m_esais.size());
 			_esai->setClockSource(this);
 		}
 	}
@@ -195,5 +213,18 @@ namespace dsp56k
 	{
 //		for (auto& esai : m_esais)
 //			esai.clockCounter = 0;
+	}
+
+	bool EsaiClock::setSpeedPercent(const uint32_t _percent)
+	{
+		if(m_speedPercent == _percent)
+			return true;
+
+		if(_percent == 0)
+			return false;
+
+		m_speedPercent = _percent;
+		updateCyclesPerSample();
+		return true;
 	}
 }

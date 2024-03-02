@@ -466,17 +466,24 @@ namespace dsp56k
 				if (_accumulate)
 					signextend56to64(d);
 
-				// fractional multiplication requires one post-shift to be correct
-				m_asm.add(r64(_s1), r64(_s1));	// add r,r is faster than shl r,1 on Haswell, can run on more ports and has a TP of 0.25 vs 0.5
-
-				if(_negate && _accumulate)
-					m_asm.sub(d, r64(_s1));
-				else if (_accumulate)
-					m_asm.add(d, r64(_s1));
+				if(_accumulate && !_negate)
+				{
+					m_asm.lea(d, asmjit::x86::ptr(d, r64(_s1), 1));
+				}
 				else
 				{
-					m_asm.neg(r64(_s1));
-					m_asm.mov(d, r64(_s1));
+					// fractional multiplication requires one post-shift to be correct
+					m_asm.add(r64(_s1), r64(_s1));	// add r,r is faster than shl r,1 on Haswell, can run on more ports and has a TP of 0.25 vs 0.5
+
+					if(_accumulate && _negate)
+					{
+						m_asm.sub(d, r64(_s1));
+					}
+					else/* if(_negate)*/
+					{
+						m_asm.neg(r64(_s1));
+						m_asm.mov(d, r64(_s1));
+					}
 				}
 			}
 		}

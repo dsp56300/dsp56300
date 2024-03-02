@@ -253,19 +253,6 @@ namespace dsp56k
 	using ShiftReg = RegGP;
 #endif
 
-	class PushXMM
-	{
-	public:
-		PushXMM(JitBlock& _block, uint32_t _xmmIndex);
-		~PushXMM();
-		bool isPushed() const { return m_isLoaded; }
-
-	private:
-		JitBlock& m_block;
-		uint32_t m_xmmIndex;
-		bool m_isLoaded;
-	};
-
 	class PushXMMRegs
 	{
 	public:
@@ -280,7 +267,7 @@ namespace dsp56k
 	class PushGPRegs
 	{
 	public:
-		PushGPRegs(JitBlock& _block, bool _isJitCall);
+		PushGPRegs(JitBlock& _block);
 		~PushGPRegs();
 	private:
 		JitBlock& m_block;
@@ -290,7 +277,7 @@ namespace dsp56k
 	class PushBeforeFunctionCall
 	{
 	public:
-		PushBeforeFunctionCall(JitBlock& _block, bool _isJitCall);
+		PushBeforeFunctionCall(JitBlock& _block);
 
 		PushXMMRegs m_xmm;
 		PushGPRegs m_gp;

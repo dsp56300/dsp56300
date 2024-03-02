@@ -1274,6 +1274,8 @@ namespace dsp56k
 			case Movem_ea:
 				_area = MemArea_P;
 				break;
+			default:
+				_area = MemArea_COUNT;
 			}
 		}
 

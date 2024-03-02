@@ -73,7 +73,7 @@ namespace dsp56k
 			}
 
 			// never overwrite code that already exists
-			if(_cache[pc].block)
+			if(pc < _cache.size() && _cache[pc].block)
 			{
 				terminationReason = JitBlockInfo::TerminationReason::ExistingCode;
 				break;
@@ -90,7 +90,7 @@ namespace dsp56k
 			auto written = RegisterMask::None;
 			auto read = RegisterMask::None;
 
-			opcodes.getRegisters(written, read, opA, opB);
+			Opcodes::getRegisters(written, read, opA, instA, instB);
 
 			const auto writtenM = (written & RegisterMask::M);
 			const auto readM = read & RegisterMask::M;
@@ -131,7 +131,7 @@ namespace dsp56k
 
 			// for a volatile P address, if you have some code, break now. if not, generate this one op, and then return.
 			if (_volatileP.find(pc) != _volatileP.end() || 
-				(_volatileP.find(pc+1) != _volatileP.end() && opcodes.getOpcodeLength(opA, instA, instB) == 2))
+				(_volatileP.find(pc+1) != _volatileP.end() && Opcodes::getOpcodeLength(opA, instA, instB) == 2))
 			{
 				terminationReason = JitBlockInfo::TerminationReason::VolatileP;
 				if (numInstructions)
@@ -153,7 +153,7 @@ namespace dsp56k
 			if (writesSR && !readsSR)
 				_info.addFlag(JitBlockInfo::Flags::WritesSRbeforeRead);
 
-			numWords += opcodes.getOpcodeLength(opA);
+			numWords += Opcodes::getOpcodeLength(opA, instA, instB);
 			++numInstructions;
 
 			if(getLoopEndAddr(_info.loopEnd, instA, pc, opB))
@@ -194,7 +194,7 @@ namespace dsp56k
 				break;
 			}
 
-			if(opcodes.writesToPMemory(opA))
+			if(writesToPMemory(instA, opA) || writesToPMemory(instB, opA))
 			{
 				terminationReason = JitBlockInfo::TerminationReason::WritePMem;
 				break;
@@ -235,7 +235,21 @@ namespace dsp56k
 		dspAsm.clear();
 
 		// needed so that the dsp register is available
+		m_asm.lea_(regDspPtr, g_funcArgGPs[0], Jitmem::pointerOffset(&m_dsp.regs(), &m_dsp.getJit()));
 		dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(TWord));
+
+#ifdef HAVE_X86_64
+		if constexpr (false)
+		{
+			const auto skip = m_asm.newLabel();
+			RegScratch s(*this);
+			m_asm.mov(s, asmjit::Imm(&m_dsp.regs()));
+			m_asm.cmp(regDspPtr, s);
+			m_asm.jz(skip);
+			m_asm.int3();
+			m_asm.bind(skip);
+		}
+#endif
 
 		PushAllUsed pm(*this);
 
@@ -569,8 +583,9 @@ namespace dsp56k
 		{
 			regPC = r32(m_dspRegPool.get(PoolReg::DspPC, true, false));
 
-			// we can keep our PC reg if its volatile. If its not, it will be destroyed on stack.popAll() below => we need to copy it to a safe place
-			if(JitStackHelper::isNonVolatile(regPC))
+			// we can keep our PC reg if its volatile. If It's not, it will be destroyed on stack.popAll() below => we need to copy it to a safe place
+			// Also, we need to make sure that our PC reg is not the first function argument because we replace it with the Jit*
+			if(JitStackHelper::isNonVolatile(regPC) || r64(regPC) == g_funcArgGPs[0])
 			{
 				scratch.acquire();
 				asm_().mov(r32(scratch), regPC);
@@ -588,10 +603,18 @@ namespace dsp56k
 
 		m_stack.reset();
 
+		profileEnd(pl);
+
 		if(_rt.empty())
-		{
-			profileEnd(pl);
 			return false;
+
+		asmjit::Label lj;
+
+		if(child || nonBranchChild)
+		{
+			lj = profileBegin("jump");
+			// first func arg needs to point to Jit*
+			asm_().lea_(g_funcArgGPs[0], regDspPtr, Jitmem::pointerOffset(&dsp().getJit(), &dsp().regs()));
 		}
 
 		if (child)
@@ -599,52 +622,30 @@ namespace dsp56k
 			if (childIsConditional)
 			{
 				// we need to check if the PC has been set to the target address
-				asmjit::Label skip = m_asm.newLabel();
+#ifdef HAVE_ARM64
+				auto regTempImm = r32((regPC == r32(g_funcArgGPs[1])) ? g_funcArgGPs[2] : g_funcArgGPs[1]);
+				m_asm.mov(regTempImm, asmjit::Imm(childAddr));
+				m_asm.cmp(regPC, regTempImm);
+#else
+				m_asm.cmp(regPC, asmjit::Imm(childAddr));
+#endif
 
-				auto doCompare = [&](const asmjit::Label& _skip)
-				{
-	#ifdef HAVE_ARM64
-					auto regTempImm = r32((regPC == r32(g_funcArgGPs[1])) ? g_funcArgGPs[2] : g_funcArgGPs[1]);
-					m_asm.mov(regTempImm, asmjit::Imm(childAddr));
-					m_asm.cmp(regPC, regTempImm);
-	#else
-					m_asm.cmp(regPC, asmjit::Imm(childAddr));
-	#endif
-					m_asm.jnz(_skip);
-				};
+				jumpToChild(child, JitCondCode::kZero);
 
 				if(nonBranchChild)
-				{
-					stack().call([&]()
-					{
-						const asmjit::Label end = m_asm.newLabel();
-						doCompare(skip);
-						m_asm.call(asmjit::func_as_ptr(child->getFunc()));
-						m_asm.jmp(end);
-						m_asm.bind(skip);
-						m_asm.call(asmjit::func_as_ptr(nonBranchChild->getFunc()));
-						m_asm.bind(end);
-					}, true);
-				}
-				else
-				{
-					doCompare(skip);
-					stack().call(asmjit::func_as_ptr(child->getFunc()), true);
-					m_asm.bind(skip);
-				}
+					jumpToChild(nonBranchChild);
 			}
 			else
 			{
-				m_stack.call(asmjit::func_as_ptr(child->getFunc()), true);
+				jumpToChild(child);
 			}
 		}
-		else
+		else if(nonBranchChild)
 		{
-			if(nonBranchChild)
-				m_stack.call(asmjit::func_as_ptr(nonBranchChild->getFunc()), true);
+			jumpToChild(nonBranchChild);
 		}
 
-		profileEnd(pl);
+		profileEnd(lj);
 
 		return true;
 	}
@@ -715,4 +716,37 @@ namespace dsp56k
 		m_block.setGenerating(false);
 	}
 
+	void JitBlock::jumpToChild(const JitBlockRuntimeData* _child, const JitCondCode _cc/* = JitCondCode::kMaxValue*/) const
+	{
+		auto* p = asmjit::func_as_ptr(_child->getFunc());
+		auto addr = reinterpret_cast<uint64_t>(p);
+
+#ifdef HAVE_X86_64
+		if(_cc == JitCondCode::kMaxValue)
+			m_asm.jmp(addr);
+		else
+			m_asm.j(_cc, addr);
+#else
+		auto tempReg = r64(g_funcArgGPs[1]);
+
+		const auto offset = Jitmem::pointerOffset(p, &m_dsp.regs());
+		if(offset)
+			m_asm.lea_(tempReg, regDspPtr, offset);
+		else
+			m_asm.mov(tempReg, asmjit::Imm(addr));
+
+		if(_cc == JitCondCode::kMaxValue)
+		{
+			m_asm.br(tempReg);
+		}
+		else
+		{
+			const auto l = m_asm.newLabel();
+			const auto cc = JitOps::reverseCC(_cc);
+			m_asm.b(cc, l);
+			m_asm.br(tempReg);
+			m_asm.bind(l);
+		}
+#endif
+	}
 }

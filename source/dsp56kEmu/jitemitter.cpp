@@ -1,6 +1,7 @@
 #include "jitemitter.h"
 
 #include "jithelper.h"
+#include "jitmem.h"
 #include "jitregtypes.h"
 
 namespace dsp56k
@@ -188,6 +189,11 @@ namespace dsp56k
 		asr(_dst, _dst, _imm);
 	}
 
+	void JitEmitter::sub(const JitRegGP& _dst, const asmjit::Imm& _imm)
+	{
+		JitBuilder::sub(_dst, _dst, _imm);
+	}
+
 	void JitEmitter::push(const JitRegGP& _reg)
 	{
 		// For now, we use the "Use 16-byte stack slots" quick-n-dirty approach. We do not need a lot of stack space anyway
@@ -216,17 +222,17 @@ namespace dsp56k
 		csel(_dst, _src, _dst, _cc);
 	}
 #else
-	bool JitEmitter::hasFeature(asmjit::CpuFeatures::X86::Id _id) const
+	bool JitEmitter::hasFeature(asmjit::CpuFeatures::X86::Id _id)
 	{
 		return asmjit::CpuInfo::host().hasFeature(_id);
 	}
 
-	bool JitEmitter::hasBMI() const
+	bool JitEmitter::hasBMI()
 	{
 		return hasFeature(asmjit::CpuFeatures::X86::kBMI);
 	}
 
-	bool JitEmitter::hasBMI2() const
+	bool JitEmitter::hasBMI2()
 	{
 		return hasFeature(asmjit::CpuFeatures::X86::kBMI2);
 	}
@@ -376,13 +382,14 @@ namespace dsp56k
 #endif
 	}
 
-	void JitEmitter::lea_(const JitReg64& _dst, const JitReg64& _src, void* _ptr, void* _base)
+	void JitEmitter::lea_(const JitReg64& _dst, const JitReg64& _src, const void* _ptr, const void* _base)
 	{
-		const auto off = reinterpret_cast<uint64_t>(_ptr) - reinterpret_cast<uint64_t>(_base);
-		lea_(_dst, _src, static_cast<int>(off));
+		const auto off = Jitmem::pointerOffset(_ptr, _base);
+		assert(off);
+		lea_(_dst, _src, off);
 	}
 
-	void JitEmitter::lea_(const JitReg64& _dst, const JitReg64& _src, const int _offset)
+	bool JitEmitter::lea_(const JitReg64& _dst, const JitReg64& _src, const int _offset)
 	{
 #ifdef HAVE_ARM64
 		// aarch64 add accepts 12 bits as unsigned offset, optionally shifted up by 12 bits
@@ -405,11 +412,15 @@ namespace dsp56k
 		}
 		else
 		{
-			mov(r32(_dst), asmjit::Imm(_offset));
+			assert(_dst != _src);
+			if(_dst == _src)
+				return false;
+			mov(r64(_dst), asmjit::Imm((int64_t)_offset));
 			add(_dst, _dst, _src);
 		}
 #else
 		lea(_dst, asmjit::x86::ptr(_src, _offset));
 #endif
+		return true;
 	}
 }

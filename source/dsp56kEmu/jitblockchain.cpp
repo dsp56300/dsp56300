@@ -15,15 +15,19 @@ namespace dsp56k
 	void funcCreate(Jit* _jit, TWord _pc);
 	void funcRecreate(Jit* _jit, TWord _pc);
 
-	JitBlockChain::JitBlockChain(Jit& _jit, const JitDspMode& _mode) : m_jit(_jit), m_mode(_mode)
+	JitBlockChain::JitBlockChain(Jit& _jit, const JitDspMode& _mode, const size_t _usedFuncSize) : m_jit(_jit), m_mode(_mode)
 	{
 		m_logger.reset(new AsmJitLogger());
 		m_errorHandler.reset(new AsmJitErrorHandler());
 
-		const auto& mem = _jit.dsp().memory();
-		const auto pSize = mem.sizeP();
-		m_jitCache.resize(pSize);
-		m_jitFuncs.resize(pSize, &funcCreate);
+		if(_usedFuncSize)
+			ensureFuncSize(_usedFuncSize);
+
+//		const auto& mem = _jit.dsp().memory();
+//		const auto pSize = mem.sizeP();
+
+//		m_jitFuncs.resize(pSize, &funcCreate);
+//		m_jitCache.resize(pSize);
 	}
 
 	JitBlockChain::~JitBlockChain()
@@ -47,6 +51,9 @@ namespace dsp56k
 
 	bool JitBlockChain::canBeDefaultExecuted(TWord _pc) const
 	{
+		if(_pc >= m_jitCache.size())
+			return false;
+
 		const auto& e = m_jitCache[_pc];
 		if (!e.block)
 			return false;
@@ -57,6 +64,8 @@ namespace dsp56k
 	{
 		const auto first = _block->getPCFirst();
 		const auto last = first + _block->getPMemSize();
+
+		ensureSize(last - 1);
 
 		for (auto i = first; i < last; ++i)
 		{
@@ -76,6 +85,8 @@ namespace dsp56k
 		const auto first = _block->getPCFirst();
 		const auto last = first + _block->getPMemSize();
 
+		ensureSize(last - 1);
+
 		for(auto i=first; i<last; ++i)
 		{
 			m_jitCache[i].block = nullptr;
@@ -89,6 +100,8 @@ namespace dsp56k
 	void JitBlockChain::create(const TWord _pc, bool _execute)
 	{
 //		LOG("Create @ " << HEX(_pc));// << std::endl << cacheEntry.block->getDisasm());
+
+		ensureCacheSize(_pc+1);
 
 		auto& cacheEntry = m_jitCache[_pc];
 
@@ -137,16 +150,26 @@ namespace dsp56k
 			exec(_pc);
 	}
 
+	void JitBlockChain::notifyPMemWrite(const TWord _addr, const bool _isCurrentChain)
+	{
+		destroy(_addr);
+		if(_isCurrentChain)
+			ensureFuncSize(_addr);
+	}
+
 	void JitBlockChain::destroyParents(JitBlockRuntimeData* _block)
 	{
 		for (const auto parent : _block->getParents())
 		{
+			if(parent >= m_jitCache.size())
+				continue;
+
 			const auto& e = m_jitCache[parent];
 
 			if (e.block)
 				destroy(e.block);
 
-			// single op cached entries that are calling the child block need to go, too. They have been created at a time where _block was not a volatile P block yet
+			// single op cached entries that are calling the child block need to go, too. They have been created at a time when _block was not a volatile P block yet
 			if(e.singleOpCache)
 			{
 				for(auto it = e.singleOpCache->begin(); it != e.singleOpCache->end();)
@@ -196,6 +219,9 @@ namespace dsp56k
 
 	void JitBlockChain::destroy(const TWord _pc)
 	{
+		if(_pc >= m_jitCache.size())
+			return;
+
 		const auto block = m_jitCache[_pc].block;
 		if (block)
 			destroy(block);
@@ -236,31 +262,38 @@ namespace dsp56k
 		if (m_jit.isVolatileP(_pc))
 			return nullptr;
 
-		const auto& e = m_jitCache[_pc];
+		if(!_allowCreate && _pc >= m_jitCache.size())
+			return nullptr;
 
-		if (e.block && e.block->getPCFirst() == _pc)
+		ensureSize(_pc);
+
 		{
-			// block is still being generated (circular reference)
-			if (m_jitFuncs[_pc] == nullptr)
+			const auto& e = m_jitCache[_pc];
+
+			if (e.block && e.block->getPCFirst() == _pc)
+			{
+				// block is still being generated (circular reference)
+				if (m_jitFuncs[_pc] == nullptr)
+					return nullptr;
+
+				if (!canBeDefaultExecuted(_pc))
+					return nullptr;
+
+				return e.block;
+			}
+
+			if (!_allowCreate)
 				return nullptr;
 
-			if (!canBeDefaultExecuted(_pc))
+			// If we jump into the middle of an existing block, this block needs to be regenerated.
+			// However, we can only destroy blocks that are not part of the recursive generation that is running at the moment
+			if (isBeingGeneratedRecursive(e.block))
 				return nullptr;
 
-			return e.block;
+			// regenerate otherwise
+			if (e.block)
+				destroy(e.block);
 		}
-
-		if (!_allowCreate)
-			return nullptr;
-
-		// If we jump into the middle of an existing block, this block needs to be regenerated.
-		// However, we can only destroy blocks that are not part of the recursive generation that is running at the moment
-		if (isBeingGeneratedRecursive(e.block))
-			return nullptr;
-
-		// regenerate otherwise
-		if (e.block)
-			destroy(e.block);
 
 		create(_pc, false);
 
@@ -269,6 +302,7 @@ namespace dsp56k
 
 		// if the block covers any volatile P, do not return it as a child block. If this block is recreated because
 		// it is overwritten, it will cause recreations of all parent blocks, we don't want that
+		const auto& e = m_jitCache[_pc];
 		for(TWord i=_pc; i<_pc + e.block->getPMemSize(); ++i)
 		{
 			if(m_jit.isVolatileP(i))
@@ -358,6 +392,9 @@ namespace dsp56k
 
 		for (const auto parent : _block->getParents())
 		{
+			if(parent >= m_jitCache.size())
+				continue;
+
 			const auto& e = m_jitCache[parent];
 			if (isBeingGeneratedRecursive(e.block))
 				return true;
@@ -376,5 +413,67 @@ namespace dsp56k
 				return true;
 		}
 		return false;
+	}
+
+	bool ensureSizeCbk(const size_t _address, const std::function<void(size_t)>& _funcResize)
+	{
+		// use increments of size 0x10000
+		constexpr size_t blockSizeShift = 16;
+		constexpr size_t blockSize = 1 << blockSizeShift;
+
+		const auto neededBlocks = (_address + blockSize) >> blockSizeShift;
+		const auto neededSize = neededBlocks << blockSizeShift;
+//		assert(_address < neededSize);
+
+		_funcResize(neededSize);
+
+		return true;
+	}
+	
+	bool JitBlockChain::ensureSize(const size_t _address)
+	{
+		if(_address < m_jitCache.size() && _address < m_jitFuncs.size())
+			return false;
+
+		return ensureSizeCbk(_address, [this](const size_t _size)
+		{
+			if(m_jitCache.size() < _size)
+			{
+				m_jitCache.resize(_size);
+			}
+			if(m_jitFuncs.size() < _size)
+			{
+				m_jitFuncs.resize(_size, &funcCreate);
+				onFuncsResized();
+			}
+		});
+	}
+
+	void JitBlockChain::onFuncsResized() const
+	{
+		m_jit.onFuncsResized(*this);
+	}
+
+	bool JitBlockChain::ensureCacheSize(const size_t _address)
+	{
+		if(_address < m_jitCache.size())
+			return false;
+
+		return ensureSizeCbk(_address, [this](const size_t _size)
+		{
+			m_jitCache.resize(_size);
+		});
+	}
+
+	bool JitBlockChain::ensureFuncSize(const size_t _address)
+	{
+		if(_address < m_jitFuncs.size())
+			return false;
+
+		return ensureSizeCbk(_address, [this](const size_t _size)
+		{
+			m_jitFuncs.resize(_size, &funcCreate);
+			onFuncsResized();
+		});
 	}
 }

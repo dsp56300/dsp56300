@@ -5,6 +5,7 @@
 
 #include "jitcacheentry.h"
 #include "jitdspmode.h"
+#include "jittypes.h"
 
 namespace dsp56k
 {
@@ -16,7 +17,7 @@ namespace dsp56k
 	class JitBlockChain final
 	{
 	public:
-		JitBlockChain(Jit& _jit, const JitDspMode& _mode);
+		JitBlockChain(Jit& _jit, const JitDspMode& _mode, size_t _usedFuncSize);
 		~JitBlockChain();
 
 		bool canBeDefaultExecuted(TWord _pc) const;
@@ -30,7 +31,15 @@ namespace dsp56k
 
 		JitBlockRuntimeData* getBlock(const TWord _pc)
 		{
+			if(_pc >= m_jitCache.size())
+				return nullptr;
+
 			return m_jitCache[_pc].block;
+		}
+
+		const auto& getFuncs() const
+		{
+			return m_jitFuncs;
 		}
 
 		const TJitFunc& getFunc(const TWord _pc) const
@@ -53,6 +62,23 @@ namespace dsp56k
 			return m_mode;
 		}
 
+		void notifyPMemWrite(TWord _addr, bool _isCurrentChain);
+
+		size_t getFuncSize() const
+		{
+			return m_jitFuncs.size();
+		}
+
+		void setMaxUsedPAddress(const size_t _maxUsedPAddress)
+		{
+			ensureFuncSize(_maxUsedPAddress);
+		}
+
+		Jit& getJit() const
+		{
+			return m_jit;
+		}
+
 	private:
 
 		void destroyParents(JitBlockRuntimeData* _block);
@@ -64,6 +90,12 @@ namespace dsp56k
 
 		bool isBeingGeneratedRecursive(const JitBlockRuntimeData* _block) const;
 		bool isBeingGenerated(const JitBlockRuntimeData* _block) const;
+
+		bool ensureCacheSize(size_t _address);
+		bool ensureFuncSize(size_t _address);
+		bool ensureSize(size_t _address);
+
+		void onFuncsResized() const;
 
 		Jit& m_jit;
 		const JitDspMode m_mode;

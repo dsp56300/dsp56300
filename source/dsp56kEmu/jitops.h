@@ -281,7 +281,8 @@ namespace dsp56k
 
 		void signextend48to64(const JitReg64& _reg) const;
 
-		void signextend48to56(const JitReg64& _reg) const;
+		void signextend48to56(const JitReg64& _reg) const { signextend48to56(_reg, _reg); }
+		void signextend48to56(const JitReg64& _dst, const JitReg64& _src) const;
 
 		void signextend24to56(const JitReg64& _reg) const;
 
@@ -314,13 +315,11 @@ namespace dsp56k
 		void esaiFrameSyncSpinloop(TWord op);
 
 #ifdef HAVE_X86_64
-		void signed24To56(const JitReg64& _r, bool _signExtendTo64) const;
+		void signed24To56(const JitReg64& _dst, const JitReg64& _src) const;
 #endif
-		constexpr static uint64_t signed24To56(const TWord _src, const bool _signExtendTo64)
+		constexpr static uint64_t signed24To56(const TWord _src)
 		{
-			return _signExtendTo64 ?
-				static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 16ull):
-				static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 8ull) >> 8ull;
+			return static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 8ull) >> 8ull;
 		}
 
 		void callDSPFunc(void(* _func)(DSP*, TWord)) const;
@@ -518,10 +517,12 @@ namespace dsp56k
 		void decode_ddddd_pcr_write(TWord _ddddd, const DspValue& _src);
 		void decode_ee_read(DspValue& _dst, TWord _ee);
 		void decode_ee_write(TWord _ee, const DspValue& _value);
+		DspValue decode_ee_ref(TWord _ee, bool _read, bool _write);
 		void decode_EE_read(RegGP& dst, TWord _ee);
 		void decode_EE_write(const JitReg64& _src, TWord _ee);
 		void decode_ff_read(DspValue& _dst, TWord _ff);
 		void decode_ff_write(TWord _ff, const DspValue& _value);
+		DspValue decode_ff_ref(TWord _ff, bool _read, bool _write);
 		void decode_JJJ_read_56(const JitReg64& _dst, const TWord _jjj, const bool _b) const;
 		DspValue decode_JJJ_read_56(TWord _jjj, bool _b) const;
 		void decode_JJ_read(DspValue& _dst, TWord jj) const;

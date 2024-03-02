@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "audio.h"
+#include "esxi.h"
 #include "logging.h"
 #include "bitfield.h"
 
@@ -16,14 +16,9 @@ namespace dsp56k
 	class Disassembler;
 	class IPeripherals;
 
-	class Esai : public Audio
+	class Esai : public Esxi
 	{
 	public:
-		using TxFrame = std::array<TWord, 6>;
-		using RxFrame = std::array<TWord, 4>;
-		using TxSlot = std::vector<TxFrame>;
-		using RxSlot = std::vector<RxFrame>;
-
 		enum AddressesX
 		{
 			M_PCRC	= 0xFFFFBF, // Port C GPIO Control Register
@@ -319,16 +314,10 @@ namespace dsp56k
 			m_cr = _val;
 		}
 
-		void writeReceiveClockControlRegister(TWord _val)
-		{
-			LOG("Write ESAI RCCR " << HEX(_val));
-			m_rccr = _val;
-		}
+		void writeReceiveClockControlRegister(TWord _val);
 
 		void writeTX(uint32_t _index, TWord _val);
 		TWord readRX(uint32_t _index);
-
-		void terminate();
 
 		TWord readTSMA() const
 		{
@@ -384,13 +373,13 @@ namespace dsp56k
 			return (m_rccr & M_RPM) >> M_RPM0;
 		}
 
-		// divide by 1 (false) or 8 (true)
+		// divide by 1 (true) or 8 (false)
 		bool getTxClockPrescalerRange() const
 		{
 			return (m_tccr & M_TPSR) != 0;
 		}
 
-		// divide by 1 (false) or 8 (true)
+		// divide by 1 (true) or 8 (false)
 		bool getRxClockPrescalerRange() const
 		{
 			return (m_rccr & M_RPSR) != 0;
@@ -406,9 +395,9 @@ namespace dsp56k
 		bool inputEnabled(uint32_t _index) const	{ return m_rcr.test(static_cast<RcrBits>(_index)); }
 		bool outputEnabled(uint32_t _index) const	{ return m_tcr.test(static_cast<TcrBits>(_index)); }
 
-		void injectInterrupt(const TWord _interrupt) const;
-		void readAudioInput();
-		void writeAudioOutput();
+		void injectInterrupt(TWord _interrupt) const;
+		void readSlotFromFrame();
+		void writeSlotToFrame();
 
 		IPeripherals& m_periph;
 		const EMemArea m_area;
@@ -423,11 +412,11 @@ namespace dsp56k
 		TWord m_rccr = 0;							// receive clock control register
 		TWord m_tccr = 0;							// transmit clock control register
 
-		TxFrame m_tx;								// Words written by the DSP 
-		RxFrame m_rx;								// Words for the DSP to read
+		TxSlot m_tx;								// Words written by the DSP 
+		RxSlot m_rx;								// Words for the DSP to read
 
-		TxSlot m_txSlot;
-		RxSlot m_rxSlot;
+		TxFrame m_txFrame;
+		RxFrame m_rxFrame;
 		
 		uint32_t m_writtenTX = 0;
 		uint32_t m_readRX = 0;

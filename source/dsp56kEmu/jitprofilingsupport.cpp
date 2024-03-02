@@ -10,7 +10,12 @@
 #include "../vtuneSdk/include/jitprofiling.h"
 #endif
 
-#ifdef _WIN32
+#ifdef DSP56K_USE_PERF_JIT_PROFILING
+#include <unistd.h>		// getpid()
+#include <sys/stat.h>	// mkdir
+#endif
+
+#if defined(_WIN32)
 #include <filesystem>
 #endif
 
@@ -23,39 +28,55 @@ namespace dsp56k
 		dir = dir.append("profiling_src");
 		std::filesystem::create_directory(dir);
 		m_rootPath = dir.string();
+#elif defined(DSP56K_USE_PERF_JIT_PROFILING)
+		m_rootPath = "/tmp/dsp56300_profiling_src";
+		mkdir("/tmp", 0777);
+		mkdir(m_rootPath.c_str(), 0777);
 #endif
+
 		m_fileWriter.reset(new std::thread([this]()
 		{
 			dsp56k::ThreadTools::setCurrentThreadName("jitSourceWriter");
 			threadWriteSources();
 		}));
+
+#ifdef DSP56K_USE_PERF_JIT_PROFILING
+		m_symbolWriter.reset(new std::thread([this]() {
+			dsp56k::ThreadTools::setCurrentThreadName("perfSymbolWriter");
+			threadWritePerfSymbols();
+		}));
+#endif
 	}
 
 	JitProfilingSupport::~JitProfilingSupport()
 	{
 		// write empty file info to terminate thread
-		FileInfo fi{};
+		const FileInfo fi{};
 		m_outQueue.push_back(fi);
 
 		m_fileWriter->join();
 		m_fileWriter.reset();
+
+#ifdef DSP56K_USE_PERF_JIT_PROFILING
+		PerfSymbolInfo si{};
+		m_symbolQueue.push_back(si);
+
+		m_symbolWriter->join();
+		m_symbolWriter.reset();
+#endif
 	}
 
 	bool JitProfilingSupport::isBeingProfiled()
 	{
 #ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
-		return iJIT_IsProfilingActive() == iJIT_SAMPLING_ON;
-#else
-		return false;
+		if(iJIT_IsProfilingActive() != iJIT_NOTHING_RUNNING)
+			return true;
 #endif
+		return false;	// FIXME: Can we determine if we are being profiled with perf? Set to true manually for now if needed
 	}
 
 	void JitProfilingSupport::addJitBlock(JitBlockRuntimeData& b)
 	{
-#ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
-		iJIT_Method_Load jmethod = { 0 };
-		jmethod.method_id = iJIT_GetNewMethodID();
-
 		const auto itMethod = m_methodCountsPerPC.find(b.getPCFirst());
 
 		uint32_t uid;
@@ -71,23 +92,26 @@ namespace dsp56k
 		}
 
 		char methodName[64];
-		sprintf(methodName, "$%06x-$%06x_%x", b.getPCFirst(), b.getPCFirst() + b.getPMemSize() - 1, uid);
+		sprintf(methodName, "%06x-%06x_%x", b.getPCFirst(), b.getPCFirst() + b.getPMemSize() - 1, uid);
 
 		if (b.getInfo().terminationReason == JitBlockInfo::TerminationReason::LoopEnd)
-			strcat(methodName, " L");
+			strcat(methodName, "_L");
 		if (b.getInfo().terminationReason == JitBlockInfo::TerminationReason::WritePMem)
-			strcat(methodName, " P");
+			strcat(methodName, "_P");
 
 		const std::string filename = m_rootPath + '/' + methodName + ".asm";
 
+		std::vector<JitBlockRuntimeData::InstructionProfilingInfo> pis;
+		pis.swap(b.getProfilingInfo());
+
+#ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
+		iJIT_Method_Load jmethod = {};
+		jmethod.method_id = iJIT_GetNewMethodID();
 		jmethod.method_name = methodName;
 		jmethod.class_file_name = const_cast<char*>("dsp56k::Jit");
 		jmethod.source_file_name = const_cast<char*>(filename.c_str());
-		jmethod.method_load_address = static_cast<void*>(b.getFunc());
+		jmethod.method_load_address = reinterpret_cast<void*>(b.getFunc());
 		jmethod.method_size = static_cast<unsigned int>(b.getCodeSize());
-
-		std::vector<JitBlockRuntimeData::InstructionProfilingInfo> pis;
-		pis.swap(b.getProfilingInfo());
 
 		std::vector<LineNumberInfo> lineNumberInfos;
 		lineNumberInfos.reserve(pis.size() + 2);
@@ -107,12 +131,23 @@ namespace dsp56k
 		jmethod.line_number_table = &lineNumberInfos.front();
 
 		iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &jmethod);
+#endif
+
+#ifdef DSP56K_USE_PERF_JIT_PROFILING
+		PerfSymbolInfo si;
+		si.pid = getpid();
+		si.startAdr = reinterpret_cast<uint64_t>(b.getFunc());
+		si.codeSize = b.getCodeSize();
+		si.symbolName = methodName;
+		si.sourceFile = filename;
+
+		m_symbolQueue.push_back(si);
+#endif
 
 		FileInfo fi{};
 		fi.info.swap(pis);
 		fi.name = filename;
 		m_outQueue.push_back(fi);
-#endif
 	}
 
 	void JitProfilingSupport::threadWriteSources()
@@ -167,4 +202,47 @@ namespace dsp56k
 			of.close();
 		}
 	}
+
+#ifdef DSP56K_USE_PERF_JIT_PROFILING
+	void JitProfilingSupport::threadWritePerfSymbols()
+	{
+		FILE *fp = nullptr;
+
+		while (true)
+		{
+			const auto si = m_symbolQueue.pop_front();
+
+			if(si.symbolName.empty())
+			{
+				if (fp)
+				{
+					fclose(fp);
+					fp = nullptr;
+				}
+				break;
+			}
+
+			if (!fp)
+			{
+				char symbolFileName[64];
+				snprintf(symbolFileName, sizeof(symbolFileName), "/tmp/perf-%d.map", si.pid);
+				fp = fopen(symbolFileName, "a+");
+
+				if (!fp)
+				{
+					fprintf(stderr, "can't open %s\n", symbolFileName);
+					continue;
+				}
+			}
+
+			fprintf(fp, "%lx %lx %s\n", si.startAdr, si.codeSize, si.symbolName.c_str());
+//			fprintf(fp, "%lx %lx %s %s:1\n", si.startAdr, si.codeSize, si.symbolName.c_str(), si.sourceFile.c_str());
+			if (m_symbolQueue.empty())
+			{
+				fclose(fp);
+				fp = nullptr;
+			}
+		}
+	}
+#endif
 }
