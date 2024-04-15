@@ -59,6 +59,7 @@ namespace  dsp56k
 		void bset_aa();
 		void btst_aa();
 
+		void clb();
 		void clr();
 		void cmp();
 		void cmpm();
@@ -86,6 +87,7 @@ namespace  dsp56k
 		void mpyr();
 		void mpy_SD();
 		void neg();
+		void normf();
 		void not_();
 		void or_();
 		void ori();

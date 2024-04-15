@@ -64,7 +64,7 @@ namespace dsp56k
 
 		bool addSymbol(SymbolType _type, TWord _key, const std::string& _value);
 		bool addBitSymbol(SymbolType _type, TWord _address, TWord _bit, const std::string& _symbol);
-		bool addBitMaskSymbol(SymbolType _type, TWord _address, TWord _bit, const std::string& _symbol);
+		bool addBitMaskSymbol(SymbolType _type, TWord _address, TWord _bitMask, const std::string& _symbol);
 
 		bool addSymbols(const Memory& _mem);
 		const std::map<TWord,std::string>& getSymbols(const SymbolType _type) const { return m_symbols[_type]; }

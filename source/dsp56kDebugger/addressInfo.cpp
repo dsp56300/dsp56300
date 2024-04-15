@@ -169,7 +169,7 @@ namespace dsp56kDebugger
 
 		dsp56k::RegisterMask regsWritten = dsp56k::RegisterMask::None, regsRead = dsp56k::RegisterMask::None;
 
-		debugger().dsp().opcodes().getRegisters(regsWritten, regsRead, opA, opB);
+		debugger().dsp().opcodes().getRegisters(regsWritten, regsRead, opA);
 
 		add("Regs read", toString(regsRead));
 		add("Regs written", toString(regsWritten));

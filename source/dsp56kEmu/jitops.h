@@ -42,6 +42,8 @@ namespace dsp56k
 		void emitOpProlog();
 		void emitOpEpilog();
 
+		uint32_t calcCycles(TWord _pc) const;
+
 		void op_Abs(TWord op);
 		void op_ADC(TWord op)			{ errNotImplemented(op); }
 		void op_Add_SD(TWord op);
@@ -112,7 +114,7 @@ namespace dsp56k
 		void op_Btst_pp(TWord op);
 		void op_Btst_qq(TWord op);
 		void op_Btst_D(TWord op);
-		void op_Clb(TWord op)				{ errNotImplemented(op); }
+		void op_Clb(TWord op);
 		void op_Clr(TWord op);
 		void op_Cmp_S1S2(TWord op);
 		void op_Cmp_xxS2(TWord op);
@@ -235,7 +237,7 @@ namespace dsp56k
 		void op_Neg(TWord op);
 		void op_Nop(TWord op);
 		void op_Norm(TWord op)					{ errNotImplemented(op); }
-		void op_Normf(TWord op)					{ errNotImplemented(op); }
+		void op_Normf(TWord op);
 		void op_Not(TWord op);
 		void op_Or_SD(TWord op);
 		void op_Or_xx(TWord op);
@@ -312,7 +314,7 @@ namespace dsp56k
 		void updateAddressRegisterSubBitreverseN1(const JitReg32& _r, bool _addN);
 
 		template<Instruction Inst, ExpectedBitValue BitValue>
-		void esaiFrameSyncSpinloop(TWord op);
+		void esaiFrameSyncSpinloop(TWord op) const;
 
 #ifdef HAVE_X86_64
 		void signed24To56(const JitReg64& _dst, const JitReg64& _src) const;
@@ -322,6 +324,7 @@ namespace dsp56k
 			return static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 8ull) >> 8ull;
 		}
 
+		void callDSPFunc(TWord(* _func)(DSP*, TWord)) const;
 		void callDSPFunc(void(* _func)(DSP*, TWord)) const;
 		void callDSPFunc(void(* _func)(DSP*, TWord), TWord _arg) const;
 		void callDSPFunc(void(* _func)(DSP*, TWord), const JitRegGP& _arg) const;
@@ -448,6 +451,7 @@ namespace dsp56k
 		public:
 			CcrBatchUpdate(JitOps& _ops, CCRMask _mask);
 			CcrBatchUpdate(JitOps& _ops, CCRMask _maskA, CCRMask _maskB);
+			CcrBatchUpdate(JitOps& _ops, CCRMask _maskA, CCRMask _maskB, CCRMask _maskC);
 			~CcrBatchUpdate();
 		private:
 			void initialize(CCRMask _mask) const;

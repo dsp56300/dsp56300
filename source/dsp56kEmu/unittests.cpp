@@ -45,6 +45,7 @@ namespace dsp56k
 		bset_aa();
 		btst_aa();
 
+		clb();
 		clr();
 		cmp();
 		cmpm();
@@ -71,6 +72,7 @@ namespace dsp56k
 		mpyr();
 		mpy_SD();
 		neg();
+		normf();
 		not_();
 		or_();
 		ori();
@@ -924,6 +926,17 @@ namespace dsp56k
 			verify(!dsp.sr_test(CCR_C));
 			verify(dsp.regs().omr.var == 0xddee7f);
 		});
+
+		// test undocumented feature of bclr #xx,[a,b], it works even though the documentation states otherwise
+		runTest([&]()
+		{
+			dsp.regs().b.var = 0xff'ffffff'ffffff;
+			emit(0x0acf56);	// bclr #$16,b
+		}, [&]()
+		{
+			verify(dsp.sr_test(CCR_C));
+			verify(dsp.regs().b.var == 0xffbfffff000000);
+		});
 	}
 
 	void UnitTests::bset_aa()
@@ -963,6 +976,30 @@ namespace dsp56k
 		{
 			verify(!dsp.sr_test(CCR_C));
 		});
+	}
+
+	void UnitTests::clb()
+	{
+		auto testClb = [&](const uint64_t _a, const uint64_t _b)
+		{
+			runTest([&]()
+			{
+				dsp.regs().a.var = _a;
+				dsp.regs().b.var = 0;
+
+				emit(0xc1e01);		// clb a,b
+			},
+				[&]()
+			{
+				LOG("Expected " << HEX(_b) << ", got "<< HEX(dsp.regs().b.var));
+				verify(dsp.regs().b == _b);
+			});
+		};
+
+		testClb(0x00'ff'ffffff'ffffff, 0xffffffd1000000);
+		testClb(0x00'00'ffffff'000000, 0x00000001000000);
+		testClb(0x00'00'000000'000001, 0xffffffd2000000);
+		testClb(0, 0);	// special case
 	}
 
 	void UnitTests::clr()
@@ -1328,6 +1365,31 @@ namespace dsp56k
 			verify(dsp.reg.a.var == 0xf4);
 			verify(dsp.getSR().var == 0x0800d0);
 		});
+
+		runTest([&]()
+		{
+			dsp.reg.a.var = 0;
+			dsp.reg.b.var = 0xef123456abcdef;
+
+			// extractu #$020000,b,a
+			emit(0x0c1890, 0x020000);
+		}, [&]()
+		{
+			verify(dsp.reg.a.var == 0x56abcdef);
+		});
+
+		runTest([&]()
+		{
+			dsp.reg.b.var = 0;
+			dsp.b1(TReg24(0xAABBCC));
+			dsp.b0(TReg24(0xDDEEFF));
+
+			// extractu #$020000,b,a
+			emit(0x0c1890, 0x020000);
+		}, [&]()
+		{
+			verify(dsp.reg.a.var == 0x0000CCDDEEFF);
+		});
 	}
 
 	void UnitTests::extractu_co()
@@ -1392,6 +1454,20 @@ namespace dsp56k
 			[&]()
 		{
 			verify(dsp.regs().a.var == 0xcdef3456123456);
+		});
+
+		runTest([&]()
+		{
+			dsp.reg.a.var = 0;
+			dsp.reg.b.var = 0;
+			dsp.a0(TReg24(0xDDEEFF));
+			dsp.b0(TReg24(0xAABBCC));
+			dsp.x1(0x8000);
+			emit(0xc1b3c);							// insert x1,b0,a
+		},
+			[&]()
+		{
+			verify(dsp.a0().var == 0xDDEECC);
 		});
 	}
 
@@ -1857,6 +1933,26 @@ namespace dsp56k
 			verify(dsp.regs().a.var == 2);
 			verify(!dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_Z));
+		});
+	}
+
+	void UnitTests::normf()
+	{
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00123456789abc;
+			dsp.regs().b.var = 0x00123456789abc;
+
+			dsp.x0(4);
+			dsp.y0(-4);
+
+			emit(0x0c1e28);				// normf x0,a
+			emit(0x0c1e2b);				// normf y0,b
+		},
+			[&]()
+		{
+			verify(dsp.regs().a.var == 0x000123456789ab);
+			verify(dsp.regs().b.var == 0x0123456789abc0);
 		});
 	}
 

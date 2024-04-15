@@ -503,10 +503,6 @@ namespace dsp56k
 		if(checkCondition<Trapcc>(op))
 			errNotImplemented("TRAPcc");
 	}
-	inline void DSP::op_Wait(const TWord op)
-	{
-		errNotImplemented("WAIT");		
-	}
 	inline void DSP::op_ResolveCache(const TWord op)
 	{
 		auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];

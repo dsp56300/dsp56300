@@ -12,14 +12,30 @@ namespace dsp56k
 		m_rx.fill(0);
 	}
 
-	bool Esai::execTX()
+	void Esai::setDSP(DSP* _dsp)
+	{
+		m_vbaRead = _dsp->registerInterruptFunc([this]
+		{
+			readSlotFromFrame();
+
+			++m_rxSlotCounter;
+
+			if(m_rxSlotCounter > getRxWordCount())
+			{
+				m_rxSlotCounter = 0;
+				++m_rxFrameCounter;
+			}
+		});
+	}
+
+	void Esai::execTX()
 	{
 //		LOG(HEX(&m_periph.getDSP()) << " exec ESAI " << g_memAreaNames[m_area]  <<  " ictr " << m_periph.getDSP().getInstructionCounter());
 
 		const auto tem = m_tcr & M_TEM;
 
 		if(!tem)
-			return false;
+			return;
 
 		// note that this transfers the data in TX that has been written to it before
 		writeSlotToFrame();
@@ -54,8 +70,6 @@ namespace dsp56k
 		{
 			injectInterrupt(Vba_ESAI_Transmit_Data);
 		}
-
-		return false;
 	}
 
 	void Esai::execRX()
@@ -65,18 +79,7 @@ namespace dsp56k
 		if(!rem)
 			return;
 
-		m_periph.getDSP().injectInterrupt([this]
-		{
-			readSlotFromFrame();
-
-			++m_rxSlotCounter;
-
-			if(m_rxSlotCounter > getRxWordCount())
-			{
-				m_rxSlotCounter = 0;
-				++m_rxFrameCounter;
-			}
-		});
+		m_periph.getDSP().injectInterrupt(m_vbaRead);
 
 		if (m_sr.test(M_ROE) && m_rcr.test(M_REIE))
 		{
@@ -129,9 +132,6 @@ namespace dsp56k
 
 		if(oldTxWC != newTxWC)
 			m_txSlotCounter = 0;
-
-		if(m_clock)
-			m_clock->onTCCRChanged(this);
 	}
 
 	void Esai::writeReceiveClockControlRegister(TWord _val)

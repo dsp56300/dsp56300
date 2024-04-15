@@ -198,17 +198,15 @@ namespace dsp56k
 			const RegGP tester(m_block);
 			m_asm.mov(r32(tester), r32(_dst));
 
-			// lower limit
 			{
+				// lower limit
 				const RegScratch limit(m_block);
+
 				m_asm.mov(r32(limit), asmjit::Imm(0xff800000));
 				m_asm.cmp(r32(tester), r32(limit));
 				m_asm.csel(r32(_dst), r32(limit), r32(_dst), asmjit::arm::CondCode::kLT);
-			}
 
-			// upper limit
-			{
-				const RegScratch limit(m_block);
+				// upper limit
 				m_asm.mvn(r32(limit), r32(limit)); // = 0x007fffff
 				m_asm.cmp(r32(tester), r32(limit));
 				m_asm.csel(r32(_dst), r32(limit), r32(_dst), asmjit::arm::CondCode::kGT);

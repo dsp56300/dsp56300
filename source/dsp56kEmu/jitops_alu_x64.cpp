@@ -2,6 +2,8 @@
 
 #ifdef HAVE_X86_64
 
+#include "opcodecycles.h"
+#include "dsp.h"
 #include "jitblockruntimedata.h"
 #include "jitdspmode.h"
 #include "jitops.h"
@@ -363,6 +365,45 @@ namespace dsp56k
 		copyBitToCCR(r.get(), getBit<Btst_D>(op), CCRB_C);
 	}
 
+	void JitOps::op_Clb(TWord op)
+	{
+		const auto S = getFieldValue(Clb, Field_S, op);
+		const auto D = getFieldValue(Clb, Field_D, op);
+
+		AluRef s(m_block, S, true, D == S);
+		AluRef d(m_block, D, S == D, true);
+
+		const RegGP t(m_block);
+		const RegGP shifted(m_block);
+		m_asm.mov(shifted, s);
+		m_asm.sal(shifted, 8);
+
+		// this instruction counts the number of equal bits starting at the MSB
+		// We can only count leading zeroes, so we invert the source if the MSB is a 1
+		m_asm.mov(t, shifted);
+		m_asm.not_(t);
+		m_asm.cmov(asmjit::x86::CondCode::kNotSign, t, shifted);
+
+		// we want to prevent to have a completely empty register as the BSR result will be UB.
+		// This OR will ensure that an empty ALU results in a valid result
+		m_asm.or_(r64(t), asmjit::Imm(0xff));
+
+		m_asm.bsr(r64(t), r64(t));					// this does not give us the number of leading zeroes but the bit index of the first one
+		m_asm.sub(r32(t), asmjit::Imm(64 - 9 - 1));	// range of DSP result is -47 ... +8
+
+		// special case: if the source alu is 0, the result is 0
+		m_asm.test_(s);
+		m_asm.cmovz(t,s);
+
+		CcrBatchUpdate ccrBatch(*this, CCR_N, CCR_Z, CCR_V);
+		copyBitToCCR(d, 23, CCRB_N);
+
+		m_asm.shl(r64(t), asmjit::Imm(24));
+		ccr_update_ifZero(CCRB_Z);
+
+		m_asm.mov(r64(d), r64(t));
+	}
+
 	void JitOps::op_Div(TWord op)
 	{
 		const auto ab = getFieldValue<Div, Field_d>(op);
@@ -425,6 +466,7 @@ namespace dsp56k
 	void JitOps::op_Rep_Div(const TWord _op, const TWord _iterationCount)
 	{
 		m_blockRuntimeData.getEncodedInstructionCount() += _iterationCount;
+		m_blockRuntimeData.getEncodedCycleCount() += (_iterationCount - 1) * dsp56k::calcCycles(Div, m_pcCurrentOp + 1, _op, m_block.dsp().memory().getBridgedMemoryAddress(), 1);
 
 		const auto ab = getFieldValue<Div, Field_d>(_op);
 		const auto jj = getFieldValue<Div, Field_JJ>(_op);
@@ -450,45 +492,47 @@ namespace dsp56k
 			ccr_l_update_by_v();
 		};
 
-		DspValue s(m_block, UsePooledTemp);
+		DspValue sPos(m_block, UsePooledTemp);
 
-		decode_JJ_read(s, jj);
+		decode_JJ_read(sPos, jj);
 
 		RegGP addOrSub(m_block);
 		RegGP carry(m_block);
-		ShiftReg sNeg(m_block);
+		ShiftReg s(m_block);
 
-		const auto loopIteration = [&](bool last)
-		{
-			m_asm.mov(addOrSub, r64(s));
-			m_asm.xor_(addOrSub, alu);
-
-			m_asm.mov(sNeg, r64(s));
-			m_asm.neg(sNeg);
-			m_asm.bt(addOrSub, asmjit::Imm(55));
-			m_asm.cmovc(sNeg, r64(s));
-
-//			m_asm.add(alu, alu);
-//			m_asm.add(alu, carry.get());
-			m_asm.lea(alu, asmjit::x86::ptr(carry, alu, 1));
-			m_asm.add(alu, sNeg.get());
-
-			// C is set if bit 55 of the result is cleared
-			m_asm.bt(alu, asmjit::Imm(55));
-			if (last)
-				ccr_update_ifNotCarry(CCRB_C);
-			else
-				m_asm.setnc(carry.get().r8());
-		};
+		DspValue sNeg(m_block, true);
+		sNeg.temp(DspValue::Temp56);
 
 		// once
-		m_asm.shl(r64(s), asmjit::Imm(40));
-		m_asm.sar(r64(s), asmjit::Imm(16));
+		m_asm.shl(r64(sPos), asmjit::Imm(40));
+		m_asm.sar(r64(sPos), asmjit::Imm(16));
+
+		m_asm.mov(r64(sNeg), r64(sPos));
+		m_asm.neg(r64(sNeg));
 
 		m_asm.copyBitToReg(carry, m_dspRegs.getSR(JitDspRegs::Read), CCRB_C);
 
+		const auto loopIteration = [&](const bool _last)
+		{
+			m_asm.mov(addOrSub, r64(sPos));
+			m_asm.xor_(addOrSub, alu);
+
+			m_asm.mov(s, r64(sNeg));
+			m_asm.cmovs(s, r64(sPos));
+
+			m_asm.lea(alu, asmjit::x86::ptr(carry, alu, 1));
+			m_asm.add(alu, s.get());
+
+			// C is set if bit 55 of the result is cleared
+			if (_last)
+				ccr_update(CCRB_C, asmjit::x86::CondCode::kNotSign);
+			else
+				m_asm.setns(carry.get().r8());
+		};
+
 		// loop
 		{
+#if 1
 			RegGP lc(m_block);
 			m_asm.mov(r32(lc), _iterationCount - 1);
 
@@ -499,6 +543,10 @@ namespace dsp56k
 
 			m_asm.dec(r32(lc));
 			m_asm.jnz(start);
+#else
+			for(TWord i=0; i<_iterationCount-1; ++i)
+				loopIteration(false);
+#endif
 		}
 
 		// once

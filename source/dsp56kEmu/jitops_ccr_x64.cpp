@@ -111,7 +111,7 @@ namespace dsp56k
 		if(_cc == asmjit::x86::CondCode::kC && _bit == CCRB_C && !m_ccr_update_clear)
 		{
 			ccr_clearDirty(CCR_C);
-			m_asm.adc(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(0));
+			m_asm.adc(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), asmjit::Imm(0));
 			return;
 		}
 
@@ -120,7 +120,7 @@ namespace dsp56k
 		ccr_update(r, _bit);
 	}
 
-	void JitOps::ccr_update(const JitRegGP& ra, CCRBit _bit, bool _valueIsShifted/* = false*/)
+	void JitOps::ccr_update(const JitRegGP& _ra, const CCRBit _bit, const bool _valueIsShifted/* = false*/)
 	{
 		const auto mask = static_cast<CCRMask>(1 << _bit);
 
@@ -130,8 +130,8 @@ namespace dsp56k
 			ccr_clearDirty(mask);
 
 		if (_bit && !_valueIsShifted)
-			m_asm.shl(ra.r8(), _bit);										// shift left to become our new SR bit
-		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite).r8(), ra.r8());	// or in our new SR bit
+			m_asm.shl(_ra.r8(), _bit);										// shift left to become our new SR bit
+		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite).r8(), _ra.r8());	// or in our new SR bit
 	}
 
 	void JitOps::ccr_u_update(const JitReg64& _alu)

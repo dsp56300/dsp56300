@@ -7,9 +7,10 @@
 
 namespace dsp56k
 {
+	class Peripherals56303;
+	class Disassembler;
 	class DSP;
 	class Memory;
-	class IPeripherals;
 
 	class Essi : public Esxi
 	{
@@ -40,7 +41,11 @@ namespace dsp56k
 			CRA_WL1,
 			CRA_WL2,
 			CRA_SSC1,				// Select SC1
-			CRA_Reserved_23			// Reserved. Write to 0 for future compatibility.
+			CRA_Reserved_23,		// Reserved. Write to 0 for future compatibility.
+
+			CRA_PM = 0xff,
+			CRA_DC = 0x1f000,
+			CRA_WL = 0x380000,
 		};
 
 		// ESSI Control Register B (CRB)
@@ -70,6 +75,11 @@ namespace dsp56k
 			CRB_RLIE,				// Receive Last Slot Interrupt Enable
 			CRB_TEIE,				// Transmit Exception Interrupt Enable
 			CRB_REIE,				// Receive Exception Interrupt Enable
+
+			CRB_OF = 0x3,
+			CRB_SCD = 0x1c,
+			CRB_FSL = 0x180,
+			CRB_TE = 0x1c000,
 		};
 
 		enum RegSSISRbits
@@ -98,6 +108,8 @@ namespace dsp56k
 			SSISR_Reserved_21,
 			SSISR_Reserved_22,
 			SSISR_Reserved_23,
+
+			SSISR_IF = 0x3
 		};
 
 		enum EssiRegX
@@ -141,49 +153,79 @@ namespace dsp56k
 			ESSI_PCRC	= 0xffffbf,		// Port C Control Register
 		};
 
-		enum EssiIndex
-		{
-			Essi0 = 0x10,
-			Essi1 = 0x00
-		};
+
+		static constexpr uint32_t EssiAddressOffset = ESSI0_RSMB - ESSI1_RSMB;
 
 		// _____________________________________________________________________________
 		// implementation
 		//
-		explicit Essi(IPeripherals& _peripheral) : m_periph(_peripheral), m_statusReg(0)		{}
+		explicit Essi(Peripherals56303& _peripheral, uint32_t _essiIndex);
 
 		void reset();
-		void exec();
 
-		void setControlRegisters(EssiIndex _essi, TWord cra, TWord crb);
+		void execTX() override;
+		void execRX() override;
 
-		void toggleStatusRegisterBit(EssiIndex _essi, uint32_t _bit, uint32_t _zeroOrOne);
-		TWord readRX(size_t _index);
+		void setDSP(DSP* _dsp);
 
+		void setSymbols(Disassembler& _disasm) const;
+
+		TWord readTX(uint32_t _index);
+		TWord readTSR();
+		TWord readRX();
 		TWord readSR();
-		void writeSR(TWord _sr) { m_statusReg = _sr; }
+		TWord readCRA();
+		TWord readCRB();
+		TWord readTSMA();
+		TWord readTSMB();
+		TWord readRSMA();
+		TWord readRSMB();
 
-		void writeTX(uint32_t _txIndex, TWord _val);
-		
+		void writeTX(uint32_t _index, TWord _val);
+		void writeTSR(TWord _val);
+		void writeRX(TWord _val);
+		void writeSR(TWord _val);
+		void writeCRA(TWord _val);
+		void writeCRB(TWord _val);
+		void writeTSMA(TWord _val);
+		void writeTSMB(TWord _val);
+		void writeRSMA(TWord _val);
+		void writeRSMB(TWord _val);
+
 	private:
-		void reset(EssiIndex _index);
+		TWord getRxWordCount() const;
+		TWord getTxWordCount() const;
 
-		static TWord address(EssiIndex _type, EssiRegX addr)
-		{
-			return (addr & (~Essi0)) | _type;
-		}
+		void injectInterrupt(TWord _interrupt) const;
+		void readSlotFromFrame();
+		void writeSlotToFrame();
 
-		void set(EssiIndex _index, EssiRegX _reg, TWord _value);
-		TWord get(EssiIndex _index, EssiRegX _reg) const;
+		void dmaTrigger(uint32_t _trigger) const;
 
-		// _____________________________________________________________________________
-		// members
-		//
-		IPeripherals& m_periph;
+		Peripherals56303& m_periph;
+		const uint32_t m_index;
 
-		TWord m_statusReg;
+		TxSlot m_tx;
+		TWord m_tsr = 0;
+		RxSlot m_rx;
+		Bitfield<uint32_t, RegSSISRbits, 8> m_sr;
+		Bitfield<uint32_t, RegCRAbits, 24> m_cra;
+		Bitfield<uint32_t, RegCRBbits, 24> m_crb;
+		TWord m_tsma = 0;
+		TWord m_tsmb = 0;
+		TWord m_rsma = 0;
+		TWord m_rsmb = 0;
 
-		uint32_t m_frameSyncDSPStatus = FrameSyncChannelLeft;
-		uint32_t m_frameSyncDSPRead = FrameSyncChannelLeft;
+		TWord m_vbaRead = 0;
+
+		TWord m_rxSlotCounter = 0;
+		TWord m_rxFrameCounter = 0;
+		TWord m_txSlotCounter = 0;
+		TWord m_txFrameCounter = 0;
+		TWord m_readRX = 0;
+		TWord m_writtenTX = 0;
+
+		TxFrame m_txFrame;
+		RxFrame m_rxFrame;
 	};
 }

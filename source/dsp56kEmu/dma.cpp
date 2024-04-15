@@ -95,6 +95,14 @@ namespace dsp56k
 			{
 				m_dma.addTriggerTarget(this);
 			}
+			else if(tm == TransferMode::WordTriggerRequest && reqSrc == RequestSource::Essi0TransmitData)
+			{
+				m_dma.addTriggerTarget(this);
+			}
+			else if(tm == TransferMode::WordTriggerRequest && reqSrc == RequestSource::Essi0ReceiveData)
+			{
+				m_dma.addTriggerTarget(this);
+			}
 			else
 			{
 				assert(false && "TODO");

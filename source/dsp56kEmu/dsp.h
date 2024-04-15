@@ -134,26 +134,24 @@ namespace dsp56k
 		Jit								m_jit;
 		SRegs							reg;							// this is the base pointer that is used to access all surrounding members
 		uint32_t						m_instructions = 0;
+		uint32_t						m_cycles = 0;
 		ProcessingMode					m_processingMode = Default;
 		TInterruptFunc					m_interruptFunc;
 
 		CCRCache						ccrCache;
 
-		std::mutex						m_mutexInsertPendingInterrupt;
-
-		struct PendingInterrupt
-		{
-			TWord vba = 0xffffffff;
-			std::function<void()> func;
-		};
-
 #ifdef HAVE_ARM64
         // Our lock free ring buffer does not work properly on aarch4 :-O
         // https://www.arangodb.com/2021/02/cpp-memory-model-migrating-from-x86-to-arm/
-		RingBuffer<PendingInterrupt, 1024, true>	m_pendingInterrupts;	// TODO: array is way too large
+		RingBuffer<TWord, 1024, true>				m_pendingInterrupts;	// TODO: array is way too large
+		RingBuffer<TWord, 32, true>					m_pendingExternalInterrupts;
 #else
-        RingBuffer<PendingInterrupt, 1024, false>   m_pendingInterrupts;    // TODO: array is way too large
+        RingBuffer<TWord, 1024, false>				m_pendingInterrupts;    // TODO: array is way too large
+		RingBuffer<TWord, 32, false>				m_pendingExternalInterrupts;
 #endif
+
+		std::vector<std::function<void()>>			m_customInterrupts;
+
 		Opcodes							m_opcodes;
 
 		struct OpcodeCacheEntry
@@ -225,11 +223,13 @@ namespace dsp56k
 
 			static_cast<Ta*>(perif[0])->exec();
 			static_cast<Tb*>(perif[1])->exec();
+
+			processExternalInterrupts();
 		}
 
 		void	tryExecInterrupts				();
 		void	execInterrupts					();
-		void	execInterrupt					(uint32_t _interruptVectorAddress);
+		void	execInterrupt					(uint32_t vba);
 		void	execDefaultPreventInterrupt		();
 		void	nop								() {}
 
@@ -248,6 +248,7 @@ namespace dsp56k
 		bool	readRegToInt					( EReg _reg, int64_t& _dst ) const;
 
 		const uint32_t&	getInstructionCounter		() const									{ return m_instructions; }
+		const uint32_t&	getCycles					() const									{ return m_cycles; }
 
 		const char*			getASM						(TWord wordA, TWord wordB);
 		const std::string&	getASM						() const							{ return m_asm; }
@@ -260,16 +261,19 @@ namespace dsp56k
 
 		void			logSC							( const char* _func ) const;
 
-		bool			save							( FILE* _file ) const;
-		bool			load							( FILE* _file );
-
+		TWord			registerInterruptFunc			(std::function<void()>&& _func);
 		bool			injectInterrupt					(uint32_t _interruptVectorAddress);
-		bool			injectInterrupt					(std::function<void()>&& func);
 		bool			injectInterruptImmediate		(uint32_t _interruptVectorAddress);
 		bool			isInterruptMasked				(const TWord _vba) const;
 
+		void			injectExternalInterrupt			(const TWord _vba);
+		void			processExternalInterrupts		();
+
 		bool			hasPendingInterrupts			() const
 		{
+			if(!m_pendingExternalInterrupts.empty())
+				return true;
+
 			if(!m_pendingInterrupts.empty())
 				return true;
 
@@ -1011,7 +1015,7 @@ namespace dsp56k
 		void op_Trapcc(TWord op);
 		void op_Tst(TWord op);
 		void op_Vsl(TWord op);
-		void op_Wait(TWord op);
+		void op_Wait(TWord _op);
 		void op_ResolveCache(TWord op);
 		void op_Parallel(TWord op);
 

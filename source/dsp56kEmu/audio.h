@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <functional>
 #include <array>
+#include <cstring> // memcpy
 
 #include "fastmath.h"
 #include "ringbuffer.h"
@@ -97,8 +98,7 @@ namespace dsp56k
 			{
 				_target.m_slotCount = m_slotCount;
 
-				for(size_t i=0; i<m_slotCount; ++i)
-					_target.m_data[i] = m_data[i];
+				::memcpy(_target.m_data.data(), m_data.data(), sizeof(m_data[0]) * m_slotCount);
 			}
 
 		private:
@@ -132,8 +132,8 @@ namespace dsp56k
 			processAudioOutputInterleaved<T>(_outputs, _sampleFrames);
 		}
 		
-		template<typename T>
-		void processAudioInput(const uint32_t _frames, const size_t _latency, const std::function<void(size_t, RxFrame&)>& _createRxFrame)
+		template<typename T, typename TFunc>
+		void processAudioInput(const uint32_t _frames, const size_t _latency, const TFunc& _createRxFrame)
 		{
 			for (uint32_t s = 0; s < _frames; ++s)
 			{
@@ -168,8 +168,8 @@ namespace dsp56k
 			return processAudioInput<T>(_frames, _latency, [&](size_t _s, RxFrame& _f)
 			{
 				_f.resize(2);
-				_f[0] = RxSlot{_ins[0] ? sample2dsp<T>(_ins[0][_s]) : 0, _ins[2] ? sample2dsp<T>(_ins[2][_s]) : 0, _ins[4] ? sample2dsp<T>(_ins[4][_s]) : 0, _ins[6] ? sample2dsp<T>(_ins[6][_s]) : 0};
-				_f[1] = RxSlot{_ins[1] ? sample2dsp<T>(_ins[1][_s]) : 0, _ins[3] ? sample2dsp<T>(_ins[3][_s]) : 0, _ins[5] ? sample2dsp<T>(_ins[5][_s]) : 0, _ins[7] ? sample2dsp<T>(_ins[7][_s]) : 0};
+				_f[0] = RxSlot{sample2dsp<T>(_ins[0][_s]), sample2dsp<T>(_ins[2][_s]), sample2dsp<T>(_ins[4][_s]), sample2dsp<T>(_ins[6][_s])};
+				_f[1] = RxSlot{sample2dsp<T>(_ins[1][_s]), sample2dsp<T>(_ins[3][_s]), sample2dsp<T>(_ins[5][_s]), sample2dsp<T>(_ins[7][_s])};
 			});
 		}
 
@@ -190,8 +190,8 @@ namespace dsp56k
 			});
 		}
 
-		template<typename T>
-		void processAudioOutput(const uint32_t _frames, const std::function<void(size_t, TxFrame&)>& _readOutputCbk)
+		template<typename T, typename TFunc>
+		void processAudioOutput(const uint32_t _frames, const TFunc& _readOutputCbk)
 		{
 			for (uint32_t i = 0; i < _frames; ++i)
 			{
@@ -211,22 +211,22 @@ namespace dsp56k
 				if(_tx.empty())
 					return;
 
-				if(_outputs[ 0])	_outputs[0 ][_frame] = dsp2sample<T>(_tx[0][0]);
-				if(_outputs[ 2])	_outputs[2 ][_frame] = dsp2sample<T>(_tx[0][1]);
-				if(_outputs[ 4])	_outputs[4 ][_frame] = dsp2sample<T>(_tx[0][2]);
-				if(_outputs[ 6])	_outputs[6 ][_frame] = dsp2sample<T>(_tx[0][3]);
-				if(_outputs[ 8])	_outputs[8 ][_frame] = dsp2sample<T>(_tx[0][4]);
-				if(_outputs[10])	_outputs[10][_frame] = dsp2sample<T>(_tx[0][5]);
+				_outputs[0 ][_frame] = dsp2sample<T>(_tx[0][0]);
+				_outputs[2 ][_frame] = dsp2sample<T>(_tx[0][1]);
+				_outputs[4 ][_frame] = dsp2sample<T>(_tx[0][2]);
+				_outputs[6 ][_frame] = dsp2sample<T>(_tx[0][3]);
+				_outputs[8 ][_frame] = dsp2sample<T>(_tx[0][4]);
+				_outputs[10][_frame] = dsp2sample<T>(_tx[0][5]);
 
 				if(_tx.size() < 2)
 					return;
 
-				if(_outputs[ 1])	_outputs[ 1][_frame] = dsp2sample<T>(_tx[1][0]);
-				if(_outputs[ 3])	_outputs[ 3][_frame] = dsp2sample<T>(_tx[1][1]);
-				if(_outputs[ 5])	_outputs[ 5][_frame] = dsp2sample<T>(_tx[1][2]);
-				if(_outputs[ 7])	_outputs[ 7][_frame] = dsp2sample<T>(_tx[1][3]);
-				if(_outputs[ 9])	_outputs[ 9][_frame] = dsp2sample<T>(_tx[1][4]);
-				if(_outputs[11])	_outputs[11][_frame] = dsp2sample<T>(_tx[1][5]);
+				_outputs[ 1][_frame] = dsp2sample<T>(_tx[1][0]);
+				_outputs[ 3][_frame] = dsp2sample<T>(_tx[1][1]);
+				_outputs[ 5][_frame] = dsp2sample<T>(_tx[1][2]);
+				_outputs[ 7][_frame] = dsp2sample<T>(_tx[1][3]);
+				_outputs[ 9][_frame] = dsp2sample<T>(_tx[1][4]);
+				_outputs[11][_frame] = dsp2sample<T>(_tx[1][5]);
 			});
 		}
 

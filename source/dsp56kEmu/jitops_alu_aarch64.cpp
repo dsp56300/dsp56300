@@ -2,6 +2,8 @@
 
 #ifdef HAVE_ARM64
 
+#include "opcodecycles.h"
+#include "dsp.h"
 #include "jitblockruntimedata.h"
 #include "jitdspmode.h"
 #include "jitops.h"
@@ -336,6 +338,41 @@ namespace dsp56k
 		copyBitToCCR(r.get(), bit, CCRB_C);
 	}
 
+	void JitOps::op_Clb(TWord op)
+	{
+		const auto S = getFieldValue(Clb, Field_S, op);
+		const auto D = getFieldValue(Clb, Field_D, op);
+
+		AluRef s(m_block, S, true, D == S);
+		AluRef d(m_block, D, S == D, true);
+
+		const RegGP t(m_block);
+		const RegGP shifted(m_block);
+		m_asm.lsl(r64(shifted), r64(s), asmjit::Imm(8));
+
+		// this instruction counts the number of equal bits starting at the MSB
+		// We only count leading zeroes, so we invert the source if the MSB is a 1
+		m_asm.bitTest(r64(shifted), 63);
+		m_asm.cinv(r64(t), r64(shifted), asmjit::arm::CondCode::kNotZero);
+
+		// prevent that we get a result that is > 56
+		m_asm.or_(r64(t), asmjit::Imm(0xff));
+
+		m_asm.clz(r64(t), r64(t));
+		m_asm.neg(r32(t));
+		m_asm.add(r32(t), asmjit::Imm(9));	// range of DSP result is -47 ... +8
+
+		// special case: if the source alu is 0, the result is 0
+		m_asm.test_(s);
+		m_asm.csel(r32(t), r32(t), asmjit::a64::regs::wzr, asmjit::arm::CondCode::kNotZero);
+
+		CcrBatchUpdate ccrBatch(*this, CCR_N, CCR_Z, CCR_V);
+		copyBitToCCR(d, 23, CCRB_N);
+
+		m_asm.lsl(r64(d), r64(t), asmjit::Imm(24));
+		ccr_update_ifZero(CCRB_Z);
+	}
+
 	void JitOps::op_Div(TWord op)
 	{
 		const auto ab = getFieldValue<Div, Field_d>(op);
@@ -410,6 +447,7 @@ namespace dsp56k
 	void JitOps::op_Rep_Div(const TWord _op, const TWord _iterationCount)
 	{
 		m_blockRuntimeData.getEncodedInstructionCount() += _iterationCount;
+		m_blockRuntimeData.getEncodedCycleCount() += (_iterationCount - 1) * dsp56k::calcCycles(Div, m_pcCurrentOp + 1, _op, m_block.dsp().memory().getBridgedMemoryAddress(), 1);
 
 		const auto ab = getFieldValue<Div, Field_d>(_op);
 		const auto jj = getFieldValue<Div, Field_JJ>(_op);
@@ -447,6 +485,12 @@ namespace dsp56k
 		RegGP carry(m_block);
 		const RegGP sNeg(m_block);
 
+		// once
+		m_asm.shl(r64(s), asmjit::Imm(40));
+		m_asm.sar(r64(s), asmjit::Imm(16));
+
+		m_asm.ubfx(carry, m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C), 1);
+
 		const auto loopIteration = [&](bool last)
 		{
 			m_asm.eor(addOrSub, r64(s), alu);
@@ -468,12 +512,6 @@ namespace dsp56k
 				m_asm.eor(carry, carry, asmjit::Imm(1));
 			}
 		};
-
-		// once
-		m_asm.shl(r64(s), asmjit::Imm(40));
-		m_asm.sar(r64(s), asmjit::Imm(16));
-
-		m_asm.ubfx(carry, m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C), 1);
 
 		// loop
 		{

@@ -2,6 +2,7 @@
 
 #include <set>
 
+#include "interrupts.h"
 #include "jitblock.h"
 #include "types.h"
 
@@ -15,13 +16,6 @@ namespace dsp56k
 		friend class JitBlock;
 
 		static constexpr TWord SingleOpCacheIgnoreWordB = 0xffffffff;
-
-		enum JitBlockFlags
-		{
-			WritePMem			= 0x0002,
-			LoopEnd				= 0x0004,
-			ModeChange			= 0x0008
-		};
 
 		struct InstructionProfilingInfo
 		{
@@ -61,15 +55,18 @@ namespace dsp56k
 		const std::set<TWord>& getParents() const { return m_parents; }
 		void clearParents() { m_parents.clear(); }
 
-		bool empty() const { return m_pMemSize == 0; }
-		TWord getPCFirst() const { return m_pcFirst; }
-		TWord getPMemSize() const { return m_pMemSize; }
+		TWord getPCFirst() const { return m_info.pc; }
+		TWord getPMemSize() const { return m_info.memSize; }
+		TWord getPCNext() const { return getPCFirst() + getPMemSize(); }
+
+		bool isFastInterrupt() const { return getPCFirst() < Vba_End; }
 
 		void finalize(const TJitFunc& _func, const asmjit::CodeHolder& _codeHolder);
 
 		const TJitFunc& getFunc() const { return m_func; }
 
 		TWord& getEncodedInstructionCount() { return m_encodedInstructionCount; }
+		TWord& getEncodedCycleCount() { return m_encodedCycles; }
 
 		std::vector<InstructionProfilingInfo>& getProfilingInfo() { return m_profilingInfo; }
 		size_t getCodeSize() const { return m_codeSize; }
@@ -83,12 +80,11 @@ namespace dsp56k
 
 		TJitFunc m_func = nullptr;
 
-		TWord m_pcFirst = 0;
-		TWord m_pMemSize = 0;
 		TWord m_lastOpSize = 0;
 		TWord m_singleOpWordA = 0;
 		TWord m_singleOpWordB = 0;
 		TWord m_encodedInstructionCount = 0;
+		TWord m_encodedCycles = 0;
 
 		std::string m_dspAsm;
 		bool m_possibleBranch = false;

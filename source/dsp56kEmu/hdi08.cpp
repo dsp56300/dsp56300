@@ -246,6 +246,10 @@ namespace dsp56k
 		_disasm.addBitSymbol(Disassembler::MemX, HCR, HCR_HDM0, "HCR_HDM0");
 		_disasm.addBitSymbol(Disassembler::MemX, HCR, HCR_HDM1, "HCR_HDM1");
 		_disasm.addBitSymbol(Disassembler::MemX, HCR, HCR_HDM2, "HCR_HDM2");
+
+		_disasm.addSymbol(Disassembler::MemP, Vba_Host_Receive_Data_Full, "int_hdi08_receiveDataFull");
+		_disasm.addSymbol(Disassembler::MemP, Vba_Host_Command, "int_hdi08_hostCommand");
+		_disasm.addSymbol(Disassembler::MemP, Vba_Host_Transmit_Data_Empty, "int_hdi08_transmitDataEmpty");
 	}
 
 	void HDI08::injectTXInterrupt()

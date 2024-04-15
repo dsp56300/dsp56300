@@ -275,19 +275,22 @@ namespace dsp56k
 			_dst.temp(DspValue::Memory);
 
 		auto p = getMemAreaPtr(_dst, _area, _offset, std::move(_ref));
-#ifdef HAVE_X86_64
-		if(asmjit::Support::isPowerOf2(m_block.dsp().memory().size(_area)))
-		{
-			// just return garbage in case memory is read from an invalid address
-			m_block.asm_().and_(r32(_offset), asmjit::Imm(asmjit::Imm(m_block.dsp().memory().size(_area)-1)));
-		}
-		else
-#endif
-		{
-			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size(_area)));
-			m_block.asm_().jge(skip.get());
-		}
 
+		if(!hasMmuSupport())
+		{
+#ifdef HAVE_X86_64
+			if(asmjit::Support::isPowerOf2(m_block.dsp().memory().size(_area)))
+			{
+				// just return garbage in case memory is read from an invalid address
+				m_block.asm_().and_(r32(_offset), asmjit::Imm(asmjit::Imm(m_block.dsp().memory().size(_area)-1)));
+			}
+			else
+#endif
+			{
+				m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size(_area)));
+				m_block.asm_().jge(skip.get());
+			}
+		}
 		readDspMemory(_dst, p);
 
 		return p;
@@ -308,17 +311,20 @@ namespace dsp56k
 
 		const SkipLabel skip(m_block.asm_());
 
+		if(!hasMmuSupport())
+		{
 #ifdef HAVE_X86_64
-		if (asmjit::Support::isPowerOf2(m_block.dsp().memory().sizeXY()))
-		{
-			// just return garbage in case memory is read from an invalid address
-			m_block.asm_().and_(_offset, asmjit::Imm(asmjit::Imm(m_block.dsp().memory().sizeXY() - 1)));
-		}
-		else
+			if (asmjit::Support::isPowerOf2(m_block.dsp().memory().sizeXY()))
+			{
+				// just return garbage in case memory is read from an invalid address
+				m_block.asm_().and_(r32(_offset), asmjit::Imm(asmjit::Imm(m_block.dsp().memory().sizeXY() - 1)));
+			}
+			else
 #endif
-		{
-			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().sizeXY()));
-			m_block.asm_().jge(skip.get());
+			{
+				m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().sizeXY()));
+				m_block.asm_().jge(skip.get());
+			}
 		}
 
 		auto px = getMemAreaPtr(_dstX, MemArea_X, _offset, noRef());
@@ -469,8 +475,11 @@ namespace dsp56k
 
 			const SkipLabel skip(m_block.asm_());
 
-			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size(_area)));
-			m_block.asm_().jge(skip.get());
+			if(!hasMmuSupport())
+			{
+				m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().size(_area)));
+				m_block.asm_().jge(skip.get());
+			}
 
 			writeDspMemory(p, _src);
 
@@ -494,8 +503,11 @@ namespace dsp56k
 	{
 		const SkipLabel skip(m_block.asm_());
 
-		m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().sizeXY()));
-		m_block.asm_().jge(skip.get());
+		if(!hasMmuSupport())
+		{
+			m_block.asm_().cmp(r32(_offset), asmjit::Imm(m_block.dsp().memory().sizeXY()));
+			m_block.asm_().jge(skip.get());
+		}
 
 		DspValue tempXY(m_block);
 		auto px = getMemAreaPtr(tempXY, MemArea_X, _offset, noRef());
@@ -768,6 +780,11 @@ namespace dsp56k
 		return MemoryRef(m_block);
 	}
 
+	bool Jitmem::hasMmuSupport() const
+	{
+		return m_block.dsp().memory().hasMmuSupport();
+	}
+
 	Jitmem::MemoryRef Jitmem::getMemAreaPtr(const EMemArea _area, const TWord _offset, MemoryRef&& _ref, bool _supportIndexedAddressing) const
 	{
 		auto* hostPtr = getMemAreaHostPtr(_area) + _offset;
@@ -810,7 +827,7 @@ namespace dsp56k
 
 	Jitmem::MemoryRef Jitmem::getMemAreaPtr(DspValue& _tempXY, EMemArea _area, const JitRegGP& _offset,	MemoryRef&& _ref) const
 	{
-		if(_area == MemArea_P || m_block.dsp().memory().hasMmuSupport())
+		if(_area == MemArea_P || hasMmuSupport())
 		{
 			auto m = getMemAreaPtr(_area, 0, std::move(_ref), true);
 			m.ptr.setIndex(_offset, 2);

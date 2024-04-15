@@ -9,6 +9,7 @@
 #endif
 
 #include "jitops_helper.inl"
+#include "opcodecycles.h"
 
 namespace dsp56k
 {
@@ -49,33 +50,6 @@ namespace dsp56k
 		{
 			braOrBsr<BMode>(a);
 		}, BMode == Bsr);
-	}
-
-	template<Instruction Inst, ExpectedBitValue BitValue> void JitOps::esaiFrameSyncSpinloop(TWord op)
-	{
-		// If the DSP is spinlooping while waiting for the ESAI frame sync to flip, we fast-forward the DSP instructions to make it happen ASAP
-		const auto bit = getBit<Inst>(op);
-		const auto addr = getFieldValue<Inst, Field_qqqqqq>(op) + 0xffff80;
-
-		if (m_opWordB == 0 && addr == Esai::M_SAISR && bit == Esai::M_TFS)
-		{
-			// op word B = jump to self, addr = ESAI status register, bit test for bit Transmit Frame Sync
-			DspValue count(m_block);
-
-			// Use our custom register to read the remaining number of instructions until frame sync flips
-			m_block.mem().readPeriph(count, MemArea_X, BitValue == BitSet ? Esai::RemainingInstructionsForFrameSyncFalse : Esai::RemainingInstructionsForFrameSyncTrue, Inst);
-
-			If(m_block, m_blockRuntimeData, [&](auto _toFalse)
-			{
-				// do nothing if the value is zero
-				m_asm.test_(r32(count.get()));
-				m_asm.jz(_toFalse);
-			}, [&]()
-			{
-				// If the value is positive, increase the number of executed instructions to make ESAI do the frame sync
-				m_block.increaseInstructionCount(r32(count.get()));
-			}, false);
-		}
 	}
 
 	template<Instruction Inst, BraMode Bmode> void JitOps::braIfCC(const TWord op, DspValue& offset)

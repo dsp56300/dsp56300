@@ -1,9 +1,65 @@
 #include "jitops.h"
 
 #include "jitops_jmp.inl"
+#include "dsp.h"
 
 namespace dsp56k
 {
+	TWord callDspRemainingInstructionsForFrameSyncFalse(DSP* _dsp, TWord)
+	{
+		auto* p = static_cast<Peripherals56362*>(_dsp->getPeriph(0));  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+		return p->getEsaiClock().getRemainingInstructionsForFrameSync<false>();
+	}
+
+	TWord callDspRemainingInstructionsForFrameSyncTrue(DSP* _dsp, TWord)
+	{
+		auto* p = static_cast<Peripherals56362*>(_dsp->getPeriph(0));  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+		return p->getEsaiClock().getRemainingInstructionsForFrameSync<true>();
+	}
+
+	template<Instruction Inst, ExpectedBitValue BitValue> void JitOps::esaiFrameSyncSpinloop(const TWord op) const
+	{
+		if(!dynamic_cast<Peripherals56362*>(getBlock().dsp().getPeriph(0)))
+			return;
+
+		// If the DSP is spinlooping while waiting for the ESAI frame sync to flip, we fast-forward the DSP instructions to make it happen ASAP
+		const auto bit = getBit<Inst>(op);
+		const auto addr = getFieldValue<Inst, Field_qqqqqq>(op) + 0xffff80;
+
+		if (m_opWordB == 0 && addr == Esai::M_SAISR && bit == Esai::M_TFS)
+		{
+			// op word B = jump to self, addr = ESAI status register, bit test for bit Transmit Frame Sync
+			auto count = r32(regReturnVal);
+
+			{
+				const FuncArg r1(m_block, 1);
+				m_asm.mov(r32(r1), asmjit::Imm(0));
+				callDSPFunc(BitValue == BitSet ? &callDspRemainingInstructionsForFrameSyncFalse : &callDspRemainingInstructionsForFrameSyncTrue);
+			}
+
+			const SkipLabel skip(m_block);
+			// do nothing if the value is zero
+			m_asm.test_(count);
+			m_asm.jz(skip);
+
+			// If the value is positive, increase the number of executed instructions to make ESAI do the frame sync
+
+#ifdef HAVE_ARM64
+			// increaseInstructionCount uses the scratch reg on ARM, which is identical to the return value reg. We need to move our count elsewhere
+			const RegGP temp(m_block);
+			m_asm.mov(r32(temp), r32(count));
+			count = r32(temp);
+#endif
+
+			m_block.increaseInstructionCount(r32(count));
+
+			// TODO: we should increase by the cycle count here, but as the custom peripheral func still works on instructions, we need to use 1 for now
+//			const auto cycles = dsp56k::calcCycles(Inst, m_pcCurrentOp, op, m_block.dsp().memory().getBridgedMemoryAddress(), 1);
+//			m_asm.imul(r32(count), asmjit::Imm(cycles));
+			m_block.increaseCycleCount(r32(count));
+		}
+	}
+
 	// Brclr
 	void JitOps::op_Brclr_ea(const TWord op) { braIfBitTestMem<Brclr_ea, Bra, BitClear>(op); }
 	void JitOps::op_Brclr_aa(const TWord op) { braIfBitTestMem<Brclr_aa, Bra, BitClear>(op); }

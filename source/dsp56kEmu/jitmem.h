@@ -148,6 +148,8 @@ namespace dsp56k
 
 		MemoryRef noRef() const;
 
+		bool hasMmuSupport() const;
+
 		JitBlock& m_block;
 	};
 }

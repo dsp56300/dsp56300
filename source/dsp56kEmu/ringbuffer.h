@@ -4,7 +4,6 @@
 #include <array>
 #include <vector>
 #include <thread>
-#include <functional>
 
 #include "dspassert.h"
 
@@ -44,13 +43,20 @@ namespace dsp56k
 		
 		void push_back( T&& _val )
 		{
-			emplace_back([&](T& _e)
-			{
-				_e = std::move(_val);
-			});
+	//		assert( m_usage < C && "ring buffer is already full!" );
+
+			m_writeSem.wait();
+
+			m_data[wrapCounter(m_writeCount)] = std::move(_val);
+
+			// usage need to be incremented AFTER data has been written, otherwise, reader thread would read incomplete data
+			++m_writeCount;
+
+			m_readSem.notify();
 		}
 
-		void emplace_back(const std::function<void(T&)>& _fillEntry)
+		template<typename TFunc>
+		void emplace_back(const TFunc& _fillEntry)
 		{
 	//		assert( m_usage < C && "ring buffer is already full!" );
 
@@ -64,7 +70,8 @@ namespace dsp56k
 			m_readSem.notify();
 		}
 
-		void pop_front(const std::function<void(T&)>& _readCallback)
+		template<typename TFunc>
+		void pop_front(const TFunc& _readCallback)
 		{
 			m_readSem.wait();
 
@@ -78,12 +85,16 @@ namespace dsp56k
 
 		T pop_front()
 		{
-			T t;
-			pop_front([&](T& _t)
-			{
-				t = std::move(_t);
-			});
-			return t;
+			m_readSem.wait();
+
+			T res = std::move(front());
+	//		assert( !empty() && "ring buffer is already empty!" );
+
+			++m_readCount;
+
+			m_writeSem.notify();
+
+			return res;
 		}
 
 		void removeAt( size_t i )

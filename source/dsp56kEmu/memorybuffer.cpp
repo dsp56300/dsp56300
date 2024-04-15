@@ -22,25 +22,26 @@
 
 /*
 
-What we try in this class is to use the host MMU to create a memory map to match the DSP layout
+If supported, we use the host MMU to create a memory map to match the DSP layout
 
 The DSP has three different areas of memory, named X, Y and P that are separated from each other.
 However, if an external SRAM is used, the three areas are bridged, any value that you write to
 X memory will also appear in Y and P memory, and vice versa.
 
-DSP Memory Layout:
+DSP Memory Layout $000000 - $ffffff:
 
-          +---------------------------+-----------------------------------+
-          | X Memory                  |                                   |
-          +---------------------------+                                   |
-          | Y Memory                  |        X/Y/P bridged              |
-          +---------------------------+                                   |
-          | P Memory                  |                                   |
-          +---------------------------+-----------------------------------+
-		                             /
-		                            /
-		                           /
-               SRAM address (arbitrary address, varies per device)
+          +--------------------+-------------------------+--------------------------+--+
+          | X Memory           |                         |                          |  |
+          +--------------------+                         |                          |  |
+          | Y Memory           |      X/Y/P bridged      | invalid DSP memory range |  |
+          +--------------------+                         |                          |  |
+          | P Memory           |                         |                          |  |
+          +--------------------+-------------------------+--------------------------+--+
+         /                    /                         /                          /  /
+        /                    /                         /                          /  /
+       $000000              /                         /                          /   $ffffff Maximum addressable value
+                       SRAM start                SRAM end                       /
+                       (arbitrary addresses, vary per device)                   $ffff80 Peripherals start
 
 Due to this complex layout, the emulator needs to check for every memory access
 if the address is within bridged SRAM or in DSP onchip RAM and decide which
@@ -50,29 +51,52 @@ We use the host MMU to create a memory mapping so that this step is no longer re
 three different address ranges that are mapped to the same physical memory address for any address
 that is >= SRAM start
 
+Another thing that we do is to map even more memory to cover the whole DSP address range
+of $000000 - $ffffff. We use this to eliminate the need to check if memory accesses are out of
+bounds due to bad DSP code.
+
+For this, we append a block of memory behind the regular memory in each area.
+
+The memory layout that the emulator uses looks like this:
+
+    +---------------------------+---------------------------+---------------------------+
+    | P Memory         | ###### | X Memory         | ###### | Y Memory         | ###### |
+    +---------------------------+---------------------------+---------------------------+
+
+##### is the DSP address range up to $ffffff that is above the valid DSP memory. Any out of
+bounds access will use this scratch area, not harmful if written to or read from but not
+affecting the regular, valid DSP memory.
+
 */
 
 namespace dsp56k
 {
 	MemoryBuffer::MemoryBuffer(TWord _pSize, TWord _xySize, TWord _externalMemAddress)
 	{
-		const auto maxAreaSize = std::max(_pSize, _xySize);
+		const auto usedAreaSize = std::max(_pSize, _xySize);
 
-		if(_externalMemAddress == 0 || _externalMemAddress >= maxAreaSize)
+		if(_externalMemAddress == 0 || _externalMemAddress >= usedAreaSize)
 			return;
 
-		const auto areaByteSize = maxAreaSize * static_cast<TWord>(sizeof(TWord));
-		const auto totalByteSize = 3 * areaByteSize;
-		const auto sharedSize = maxAreaSize - _externalMemAddress;
+		constexpr TWord totalDspAreaSize = 0x1000000;
+		constexpr TWord totalDspAreaByteSize = sizeof(TWord) * totalDspAreaSize;
+		constexpr TWord invalidDspMemoryBlockSize = 0x100000;
+
+//		const auto maxAreaByteSize = maxAreaSize * static_cast<TWord>(sizeof(TWord));
+		const auto externalAreaSize = usedAreaSize - _externalMemAddress;
+
+		// to prevent that the DSP code has to check for valid memory addresses, we map the entire DSP address range to memory
+		// we add a block above the external memory that every invalid DSP address will point into
+		constexpr auto totalAddressRange = 3 * totalDspAreaByteSize;
 
 		// The Windows way: Allocate a buffer via VirtualAlloc, release it before mapping any buffer but keep the base ptr. Use that base ptr to map views and pray that they re still free to use
 		// The Linux way: Allocate a buffer via mmap, keep that buffer and use subsequent mmaps to grab a portion of the existing buffer
-		auto* basePtr = createBasePtr(totalByteSize);
+		auto* basePtr = createBasePtr(totalAddressRange * sizeof(TWord));
 
 		if(!basePtr)
 			return;
 
-		const auto neededSize = Memory::calcMemSize(_pSize, _xySize, _externalMemAddress);
+		const auto neededSize = Memory::calcMemSize(_pSize, _xySize, _externalMemAddress) + invalidDspMemoryBlockSize;
 		const auto neededByteSize = neededSize * static_cast<TWord>(sizeof(TWord));
 
 		m_hFileMapping = createFileMapping(neededByteSize);
@@ -83,29 +107,59 @@ namespace dsp56k
 		freeBasePtr();
 #endif
 
-		auto* ptrX = basePtr;
-		auto* ptrY = basePtr + maxAreaSize;
-		auto* ptrP = basePtr + (maxAreaSize<<1);
+		// define host pointers for all three memory regions
+		auto* hostPtrX = basePtr;
+		auto* hostPtrY = basePtr + totalDspAreaSize;
+		auto* hostPtrP = basePtr + (totalDspAreaSize<<1);
 
-		TWord offset = 0;
+		TWord hostWordOffset = 0;
 
-		m_x = mapMem(offset, _externalMemAddress, ptrX);	offset += _externalMemAddress;
-		m_y = mapMem(offset, _externalMemAddress, ptrY);	offset += _externalMemAddress;
-		m_p = mapMem(offset, _externalMemAddress, ptrP);	offset += _externalMemAddress;
+		// map memory for internal X, Y and P memory. They point to unique memory and are separated
+		m_x = mapMem(hostWordOffset, _externalMemAddress, hostPtrX);	hostWordOffset += _externalMemAddress;
+		m_y = mapMem(hostWordOffset, _externalMemAddress, hostPtrY);	hostWordOffset += _externalMemAddress;
+		m_p = mapMem(hostWordOffset, _externalMemAddress, hostPtrP);	hostWordOffset += _externalMemAddress;
 
 		if(!m_x || !m_y || !m_p)
 			return;
 
-		auto* ptrXshared = ptrX + _externalMemAddress;
-		auto* ptrYshared = ptrY + _externalMemAddress;
-		auto* ptrPshared = ptrP + _externalMemAddress;
+		hostPtrX += _externalMemAddress;
+		hostPtrY += _externalMemAddress;
+		hostPtrP += _externalMemAddress;
 
-		m_xShared = mapMem(offset, sharedSize, ptrXshared);
-		m_yShared = mapMem(offset, sharedSize, ptrYshared);
-		m_pShared = mapMem(offset, sharedSize, ptrPshared);
+		// now map memory pointers for X, Y and P that are in external SRAM and are shared
+		// The host sees them as separate memory addresses that are next to the next to internal XYP pointers
+		// but in reality they point to the same portion of physical memory
+		auto xShared = mapMem(hostWordOffset, externalAreaSize, hostPtrX);
+		auto yShared = mapMem(hostWordOffset, externalAreaSize, hostPtrY);
+		auto pShared = mapMem(hostWordOffset, externalAreaSize, hostPtrP);
 
-		if(!m_xShared || !m_yShared || !m_pShared)
+		if(!xShared || !yShared || !pShared)
 			return;
+
+		hostPtrX += externalAreaSize;
+		hostPtrY += externalAreaSize;
+		hostPtrP += externalAreaSize;
+
+		hostWordOffset += externalAreaSize;
+
+		auto actualDspAddress = _externalMemAddress + externalAreaSize;
+		while(actualDspAddress < totalDspAreaSize)
+		{
+			auto size = std::min(totalDspAreaSize - actualDspAddress, invalidDspMemoryBlockSize);
+
+			const auto px = mapMem(hostWordOffset, size, hostPtrX);
+			const auto py = mapMem(hostWordOffset, size, hostPtrY);
+			const auto pp = mapMem(hostWordOffset, size, hostPtrP);
+
+			if(!px || !py || !pp)
+				return;
+
+			hostPtrX += invalidDspMemoryBlockSize;
+			hostPtrY += invalidDspMemoryBlockSize;
+			hostPtrP += invalidDspMemoryBlockSize;
+
+			actualDspAddress += invalidDspMemoryBlockSize;
+		}
 
 		// test if its working
 
@@ -138,18 +192,38 @@ namespace dsp56k
 		}
 		else
 		{
-			LOG("MMU based DSP memory setup FAILED");
+			LOG("MMU based DSP memory setup FAILED, test has failed:");
+
+			LOG("m_x[_externalMemAddress-1] == 0x111111 ? = " << HEX(m_x[_externalMemAddress-1]));
+			LOG("m_y[_externalMemAddress-1] == 0x222222 ? = " << HEX(m_y[_externalMemAddress-1]));
+			LOG("m_p[_externalMemAddress-1] == 0x333333 ? = " << HEX(m_p[_externalMemAddress-1]));
+
+			LOG("m_x[_externalMemAddress+0] == 0x444444 ? = " << HEX(m_x[_externalMemAddress+0]));
+			LOG("m_y[_externalMemAddress+0] == 0x444444 ? = " << HEX(m_y[_externalMemAddress+0]));
+			LOG("m_p[_externalMemAddress+0] == 0x444444 ? = " << HEX(m_p[_externalMemAddress+0]));
+			LOG("m_x[_externalMemAddress+1] == 0x555555 ? = " << HEX(m_x[_externalMemAddress+1]));
+			LOG("m_y[_externalMemAddress+1] == 0x555555 ? = " << HEX(m_y[_externalMemAddress+1]));
+			LOG("m_p[_externalMemAddress+1] == 0x555555 ? = " << HEX(m_p[_externalMemAddress+1]));
+			LOG("m_x[_externalMemAddress+2] == 0x666666 ? = " << HEX(m_x[_externalMemAddress+2]));
+			LOG("m_y[_externalMemAddress+2] == 0x666666 ? = " << HEX(m_y[_externalMemAddress+2]));
+			LOG("m_p[_externalMemAddress+2] == 0x666666 ? = " << HEX(m_p[_externalMemAddress+2]));
+
+			TWord* last = nullptr;
+			for (const auto& mappedSize : m_mappedSizes)
+			{
+				LOG("Mapped: at " << HEX(mappedSize.first) << ", size " << HEX(mappedSize.second) << ", ptrDiff " << HEX(mappedSize.first - last));
+				last = mappedSize.first;
+			}
 		}
 	}
 
 	MemoryBuffer::~MemoryBuffer()
 	{
-		unmapMem(m_pShared);
-		unmapMem(m_yShared);
-		unmapMem(m_xShared);
-		unmapMem(m_p);
-		unmapMem(m_y);
-		unmapMem(m_x);
+		while(!m_mappedSizes.empty())
+		{
+			auto addr = m_mappedSizes.begin()->first;
+			unmapMem(addr);
+		}
 
 		freeBasePtr();
 
@@ -242,7 +316,10 @@ namespace dsp56k
 	{
 		auto* ptr = mmap(nullptr, _totalByteSize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, InvalidHandle, 0);
 		if(!ptr)
+		{
+			LOG("mmap failed, failed to create base ptr");
 			return nullptr;
+		}
 		m_basePtr = reinterpret_cast<uint8_t*>(ptr);
 		m_basePtrSize = _totalByteSize;
 		return reinterpret_cast<TWord*>(ptr);

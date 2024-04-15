@@ -6,13 +6,15 @@
 
 namespace dsp56k
 {
-	DspValue::DspValue(JitBlock& _block, bool _usePooledTemp/* = false*/, bool _useScratchTemp/* = false*/)
+	DspValue::DspValue(JitBlock& _block, bool _usePooledTemp/* = false*/, bool _useScratchTemp/* = false*/, bool _useShiftTemp/* = false*/)
 		: m_block(_block)
 		, m_usePooledTemp(_usePooledTemp)
 		, m_useScratchTemp(_useScratchTemp)
+		, m_useShiftTemp(_useShiftTemp)
 		, m_gpTemp(_block, false)
 		, m_pooledTemp(_block, false)
 		, m_scratch(_block, false)
+		, m_shift(_block, false)
 		, m_dspReg(_block, PoolReg::DspRegInvalid, false, false, false)
 		, m_bitSize(0)
 	{
@@ -33,6 +35,7 @@ namespace dsp56k
 		, m_gpTemp(_block, false)
 		, m_pooledTemp(_block, false)
 		, m_scratch(_block, false)
+		, m_shift(_block, false)
 		, m_dspReg(_block, _reg, _read, _write)
 		, m_reg(getBitCount(_reg) <= 32 ? static_cast<JitRegGP>(m_dspReg.r32()) : static_cast<JitRegGP>(m_dspReg.r64()))
 		, m_bitSize(getBitCount(_reg))
@@ -45,6 +48,7 @@ namespace dsp56k
 		, m_gpTemp(_dspReg.block(), false)
 		, m_pooledTemp(_dspReg.block(), false)
 		, m_scratch(_dspReg.block(), false)
+		, m_shift(_dspReg.block(), false)
 		, m_dspReg(std::move(_dspReg))
 		, m_reg(getBitCount(m_dspReg.dspReg()) <= 32 ? static_cast<JitRegGP>(m_dspReg.r32()) : static_cast<JitRegGP>(m_dspReg.r64()))
 		, m_bitSize(getBitCount(m_dspReg.dspReg()))
@@ -56,9 +60,11 @@ namespace dsp56k
 		: m_block(_dspReg.block())
 		, m_usePooledTemp(true)
 		, m_useScratchTemp(false)
+		, m_useShiftTemp(false)
 		, m_gpTemp(_dspReg.block(), false)
 		, m_pooledTemp(std::move(_dspReg))
 		, m_scratch(_dspReg.block(), false)
+		, m_shift(_dspReg.block(), false)
 		, m_dspReg(_dspReg.block(), PoolReg::DspRegInvalid, false, false, false)
 		, m_reg(getBitCount(_type) <= 32 ? static_cast<JitRegGP>(r32(temp())) : static_cast<JitRegGP>(r64(temp())))
 		, m_bitSize(getBitCount(_type))
@@ -70,9 +76,11 @@ namespace dsp56k
 		: m_block(_existingTemp.block())
 		, m_usePooledTemp(false)
 		, m_useScratchTemp(false)
+		, m_useShiftTemp(false)
 		, m_gpTemp(std::move(_existingTemp))
 		, m_pooledTemp(_existingTemp.block(), false)
 		, m_scratch(_existingTemp.block(), false)
+		, m_shift(_existingTemp.block(), false)
 		, m_dspReg(_existingTemp.block(), PoolReg::DspRegInvalid, false, false, false)
 		, m_reg(getBitCount(_type) <= 32 ? static_cast<JitRegGP>(r32(temp())) : static_cast<JitRegGP>(r64(temp())))
 		, m_bitSize(getBitCount(_type))
@@ -84,9 +92,11 @@ namespace dsp56k
 		: m_block(_existingTemp.block())
 		, m_usePooledTemp(false)
 		, m_useScratchTemp(true)
+		, m_useShiftTemp(false)
 		, m_gpTemp(_existingTemp.block(), false)
 		, m_pooledTemp(_existingTemp.block(), false)
 		, m_scratch(std::move(_existingTemp))
+		, m_shift(_existingTemp.block(), false)
 		, m_dspReg(_existingTemp.block(), PoolReg::DspRegInvalid, false, false, false)
 		, m_reg(getBitCount(_type) <= 32 ? static_cast<JitRegGP>(r32(temp())) : static_cast<JitRegGP>(r64(temp())))
 		, m_bitSize(getBitCount(_type))
@@ -99,6 +109,7 @@ namespace dsp56k
 		, m_gpTemp(_other.m_block, false)
 		, m_pooledTemp(_other.m_block, false)
 		, m_scratch(_other.m_block, false)
+		, m_shift(_other.m_block, false)
 		, m_dspReg(_other.m_block, PoolReg::DspRegInvalid, false, false, false)
 		, m_bitSize(0)
 	{
@@ -477,6 +488,7 @@ namespace dsp56k
 		m_gpTemp = std::move(_other.m_gpTemp);
 		m_pooledTemp = std::move(_other.m_pooledTemp);
 		m_scratch = std::move(_other.m_scratch);
+		m_shift = std::move(_other.m_shift);
 		m_dspReg = std::move(_other.m_dspReg);
 
 		m_reg = _other.m_reg;
@@ -485,6 +497,7 @@ namespace dsp56k
 		m_immediate = _other.m_immediate;
 		m_usePooledTemp = _other.m_usePooledTemp;
 		m_useScratchTemp = _other.m_useScratchTemp;
+		m_useShiftTemp = _other.m_useShiftTemp;
 
 		_other.m_reg.reset();
 		_other.m_bitSize = 0;
@@ -523,12 +536,20 @@ namespace dsp56k
 		m_useScratchTemp = _scratch;
 	}
 
+	void DspValue::setUseShiftTemp(const bool _shift)
+	{
+		assert(!isTempAcquired());
+		m_useShiftTemp = _shift;
+	}
+
 	void DspValue::acquireTemp()
 	{
 		if(m_useScratchTemp)
 			m_scratch.acquire();
 		else if(m_usePooledTemp)
 			m_pooledTemp.acquire();
+		else if(m_useShiftTemp)
+			m_shift.acquire();
 		else
 			m_gpTemp.acquire();
 	}
@@ -537,20 +558,26 @@ namespace dsp56k
 	{
 		if (m_gpTemp.isValid())
 		{
-			assert(!m_usePooledTemp && !m_useScratchTemp);
+			assert(!m_usePooledTemp && !m_useScratchTemp && !m_useShiftTemp);
 			m_gpTemp.release();
 		}
 
 		if(m_pooledTemp.acquired())
 		{
-			assert(m_usePooledTemp && !m_useScratchTemp);
+			assert(m_usePooledTemp && !m_useScratchTemp && !m_useShiftTemp);
 			m_pooledTemp.release();
 		}
 
 		if(m_scratch.isValid())
 		{
-			assert(!m_usePooledTemp && m_useScratchTemp);
+			assert(!m_usePooledTemp && m_useScratchTemp && !m_useShiftTemp);
 			m_scratch.release();
+		}
+
+		if(m_shift.isValid())
+		{
+			assert(!m_usePooledTemp && !m_useScratchTemp && m_useShiftTemp);
+			m_shift.release();
 		}
 	}
 }

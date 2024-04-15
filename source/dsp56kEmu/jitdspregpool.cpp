@@ -6,7 +6,9 @@
 
 #include <limits>
 
-#define LOGRP(S)		{}
+#include "jitblockruntimedata.h"
+
+#define LOGRP(S)		do{}while(0)
 //#define LOGRP(S)		LOG(S)
 
 namespace dsp56k
@@ -162,12 +164,6 @@ namespace dsp56k
 		const auto r = get(_dst, _src, true, false);
 		if(r != _dst)
 			m_block.asm_().mov(r64(_dst), r);
-	}
-
-	void JitDspRegPool::write(const PoolReg _dst, const JitRegGP& _src)
-	{
-		const auto r = get(_dst, false, true);
-		m_block.asm_().mov(r, r64(_src));
 	}
 
 	void JitDspRegPool::write(const PoolReg _dst, const DspValue& _src)
@@ -463,6 +459,37 @@ namespace dsp56k
 		m_block.mem().mov(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
 	}
 
+	bool JitDspRegPool::canMakeSpace(const PoolReg _reg, const PoolReg _excludeReg) const
+	{
+		if(_reg == _excludeReg)
+			return false;
+
+		if(isLocked(_reg))
+			return false;
+
+		// we cannot spill the partial X and Y regs to XMM regs as we need them to reside in GPs once they are written as they need to be combined with full regs if stored
+		switch (_reg)
+		{
+		case DspX0:
+		case DspX1:
+		case DspY0:
+		case DspY1:
+			if (isWritten(_reg))
+				return false;
+		}
+		return true;
+	}
+
+	bool JitDspRegPool::canMakeSpace(const PoolReg _excludeReg) const
+	{
+		for (const auto gp : m_gpList.used())
+		{
+			if(canMakeSpace(gp, _excludeReg))
+				return true;
+		}
+		return false;
+	}
+
 	void JitDspRegPool::parallelOpEpilog(const PoolReg _aluReadReg, const PoolReg _aluWriteReg)
 	{
 		if(!isLocked(_aluWriteReg))
@@ -525,22 +552,8 @@ namespace dsp56k
 		{
 			const PoolReg dspReg = *it;
 
-			if(isLocked(dspReg))
+			if(!canMakeSpace(dspReg, _wantedReg))
 				continue;
-
-			if(dspReg == _wantedReg)
-				continue;
-
-			// we cannot spill the partial X and Y regs to XMM regs as we need them to reside in GPs once they are written as they need to be combined with full regs if stored
-			switch (dspReg)
-			{
-			case DspX0:
-			case DspX1:
-			case DspY0:
-			case DspY1:
-				if (isWritten(dspReg))
-					continue;
-			}
 
 			LOGRP("Moving DSP reg " <<g_dspRegNames[dspReg] << " to XMM");
 

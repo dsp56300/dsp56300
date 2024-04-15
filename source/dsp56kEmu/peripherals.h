@@ -6,7 +6,6 @@
 #include "essi.h"
 #include "gpio.h"
 #include "hdi08.h"
-#include "hi08.h"
 #include "opcodetypes.h"
 #include "timers.h"
 #include "types.h"
@@ -135,16 +134,34 @@ namespace dsp56k
 		void exec();
 		void reset() override;
 
-		Essi& getEssi()	{ return m_essi; }
-		HI08& getHI08()	{ return m_hi08; }
+		void setDSP(DSP* _dsp) override
+		{
+			IPeripherals::setDSP(_dsp);
 
-		void setSymbols(Disassembler& _disasm) const override {}
+			m_timers.setDSP(_dsp);
+			m_essiClock.setDSP(_dsp);
+			m_essi0.setDSP(_dsp);
+			m_essi1.setDSP(_dsp);
+		}
 
-		void terminate() override {}
+		Dma& getDMA()					{ return m_dma; }
+		EsxiClock& getEssiClock()		{ return m_essiClock; }
+		Essi& getEssi0()				{ return m_essi0; }
+		Essi& getEssi1()				{ return m_essi1; }
+		HDI08& getHI08()				{ return m_hi08; }
+		const Timers& getTimers() const	{ return m_timers; }
+
+		void setSymbols(Disassembler& _disasm) const override;
+
+		void terminate() override;
 
 	private:
-		Essi m_essi;
-		HI08 m_hi08;
+		Dma m_dma;
+		EsxiClock m_essiClock;
+		Essi m_essi0;
+		Essi m_essi1;
+		HDI08 m_hi08;
+		Timers m_timers;
 	};
 
 	class Peripherals56367;
@@ -169,11 +186,12 @@ namespace dsp56k
 		void exec();
 		void reset() override;
 
-		EsaiClock& getEsaiClock()	{ return m_esaiClock; }
-		Esai& getEsai()				{ return m_esai; }
-		HDI08& getHDI08()			{ return m_hdi08; }
-		Dma& getDMA()				{ return m_dma; }
-		EsaiPortC& getPortC()		{ return m_portC; }
+		EsaiClock& getEsaiClock()		{ return m_esaiClock; }
+		Esai& getEsai()					{ return m_esai; }
+		HDI08& getHDI08()				{ return m_hdi08; }
+		Dma& getDMA()					{ return m_dma; }
+		EsaiPortC& getPortC()			{ return m_portC; }
+		const Timers& getTimers() const	{ return m_timers; }
 
 		void setSymbols(Disassembler& _disasm) const override;
 
@@ -213,6 +231,12 @@ namespace dsp56k
 		void setSymbols(Disassembler& _disasm) const override;
 
 		void terminate() override;
+
+		void setDSP(DSP* _dsp) override
+		{
+			IPeripherals::setDSP(_dsp);
+			m_esai.setDSP(_dsp);
+		}
 
 	private:
 		std::array<TWord, XIO_Reserved_High_Last - XIO_Reserved_High_First + 1> m_mem;

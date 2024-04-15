@@ -59,7 +59,6 @@ namespace dsp56k
 
 		DspValue read(PoolReg _src) const;
 		void read(const JitRegGP& _dst, PoolReg _src);
-		void write(PoolReg _dst, const JitRegGP& _src);
 		void write(PoolReg _dst, const DspValue& _src);
 
 		void lock(PoolReg _reg);
@@ -188,6 +187,12 @@ namespace dsp56k
 
 		void setXY0(uint32_t _xy, const DspValue& _src);
 		void setXY1(uint32_t _xy, const DspValue& _src);
+
+		const auto& gpList() const { return m_gpList; }
+		const auto& xmmList() const { return m_xmList; }
+
+		bool canMakeSpace(PoolReg _reg, PoolReg _excludeReg) const;
+		bool canMakeSpace(PoolReg _excludeReg = PoolReg::DspCount) const;
 
 	private:
 		JitRegPoolRegPair& getPair(const bool _y)

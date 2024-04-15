@@ -1149,6 +1149,9 @@ namespace dsp56k
 
 	inline bool accessesPeripherals(const Instruction _inst, const TWord _op, const TWord _opB)
 	{
+		if(_inst == Invalid)
+			return false;
+
 		const auto& oi = dsp56k::g_opcodes[_inst];
 
 		if (hasField(oi, Field_qqqqqq) || hasField(oi, Field_qqqqq) || hasField(oi, Field_q) || hasField(oi, Field_pppppp))

@@ -78,6 +78,7 @@ namespace dsp56k
 		void removeLoop(TWord _begin);
 
 		void destroy(TWord _pc);
+		void destroyToRecreate(TWord _pc);
 
 		void checkModeChange();
 

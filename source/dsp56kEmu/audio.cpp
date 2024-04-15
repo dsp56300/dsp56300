@@ -18,10 +18,7 @@ namespace dsp56k
 	void Audio::readRXimpl(RxFrame& _values)
 	{
 		m_audioInputs.waitNotEmpty();
-		m_audioInputs.pop_front([&](const RxFrame& _frame)
-		{
-			_values = _frame;
-		});
+		_values = m_audioInputs.pop_front();
 	}
 
 	void Audio::writeTXimpl(const TxFrame& _values)

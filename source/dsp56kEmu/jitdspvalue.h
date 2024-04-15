@@ -33,7 +33,7 @@ namespace dsp56k
 			Temp8
 		};
 
-		explicit DspValue(JitBlock& _block, bool _usePooledTemp = false, bool _useScratchTemp = false);
+		explicit DspValue(JitBlock& _block, bool _usePooledTemp = false, bool _useScratchTemp = false, bool _useShiftTemp = false);
 		explicit DspValue(JitBlock& _block, int64_t _value, Type _type = Immediate56);
 		explicit DspValue(JitBlock& _block, int _value, Type _type = Immediate24);
 		explicit DspValue(JitBlock& _block, TWord _value, Type _type = Immediate24) : DspValue(_block, static_cast<int>(_value), _type) {}
@@ -138,6 +138,7 @@ namespace dsp56k
 
 		void setUsePooledTemp(bool _pooled);
 		void setUseScratchTemp(bool _scratch);
+		void setUseShiftTemp(bool _shift);
 
 		void reinterpretAs(const Type _type, const TWord _bitCount)
 		{
@@ -148,7 +149,13 @@ namespace dsp56k
 	private:
 		JitReg64 temp() const
 		{
-			return m_usePooledTemp ? m_pooledTemp.get() : (m_useScratchTemp ? m_scratch.get() : m_gpTemp.get());
+			if(m_usePooledTemp)
+				return m_pooledTemp.get();
+			if(m_useScratchTemp)
+				return m_scratch.get();
+			if(m_useShiftTemp)
+				return m_shift.get();
+			return m_gpTemp.get();
 		}
 
 		void acquireTemp();
@@ -160,6 +167,8 @@ namespace dsp56k
 				return m_pooledTemp.acquired();
 			if(m_useScratchTemp)
 				return m_scratch.isValid();
+			if(m_useShiftTemp)
+				return m_shift.isValid();
 			return m_gpTemp.isValid();
 		}
 
@@ -167,10 +176,12 @@ namespace dsp56k
 
 		bool m_usePooledTemp = false;
 		bool m_useScratchTemp = false;
+		bool m_useShiftTemp = false;
 
 		RegGP m_gpTemp;
 		DSPRegTemp m_pooledTemp;
 		RegScratch m_scratch;
+		ShiftTemp m_shift;
 		DSPReg m_dspReg;
 		JitRegGP m_reg;
 

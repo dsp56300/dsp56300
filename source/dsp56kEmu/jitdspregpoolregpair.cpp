@@ -78,15 +78,6 @@ namespace dsp56k
 		return DspValue(getBlock(), m_reg1, _read, _write);
 	}
 
-	void JitRegPoolRegPair::set(const JitReg64& _src) const
-	{
-		// we can discard all partial registers as soon as the common register is written
-		m_pool.discard(m_reg0);
-		m_pool.discard(m_reg1);
-
-		m_pool.write(m_regBase, _src);
-	}
-
 	void JitRegPoolRegPair::set0(const DspValue& _src) const
 	{
 		m_pool.write(m_reg0, _src);

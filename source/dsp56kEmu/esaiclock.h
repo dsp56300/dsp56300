@@ -6,16 +6,23 @@
 
 namespace dsp56k
 {
-	class Esai;
+	class Peripherals56362;
+	class Esxi;
 	class IPeripherals;
 	class DSP;
 
-	class EsaiClock
+	class EsxiClock
 	{
 	public:
+		enum class ClockSource
+		{
+			Instructions,
+			Cycles
+		};
+
 		static constexpr uint32_t MaxEsais = 2;
 
-		EsaiClock(IPeripherals& _peripherals);
+		EsxiClock(IPeripherals& _peripherals);
 		void exec();
 
 		void setPCTL(TWord _val);
@@ -25,19 +32,16 @@ namespace dsp56k
 		void setCyclesPerSample(uint32_t _cyclesPerSample);
 		void setExternalClockFrequency(uint32_t _freq);
 
-		void setEsaiDivider(Esai* _esai, TWord _divider)
+		void setEsaiDivider(Esxi* _esai, TWord _divider)
 		{
 			setEsaiDivider(_esai, _divider, _divider);
 		}
-		void setEsaiDivider(Esai* _esai, TWord _dividerTX, TWord _dividerRX);
-		bool setEsaiCounter(const Esai* _esai, TWord _counter)
+		void setEsaiDivider(Esxi* _esai, TWord _dividerTX, TWord _dividerRX);
+		bool setEsaiCounter(const Esxi* _esai, TWord _counter)
 		{
 			return setEsaiCounter(_esai, _counter, _counter);
 		}
-		bool setEsaiCounter(const Esai* _esai, TWord _counterTX, TWord _counterRX);
-
-		TWord getRemainingInstructionsForFrameSync(TWord _expectedBitValue) const;
-		void onTCCRChanged(Esai* _esai);
+		bool setEsaiCounter(const Esxi* _esai, TWord _counterTX, TWord _counterRX);
 
 		bool setSpeedPercent(uint32_t _percent = 100);
 
@@ -45,13 +49,22 @@ namespace dsp56k
 		auto getSpeedPercent() const		{ return m_speedPercent; }
 
 		void setDSP(const DSP* _dsp);
+		void setClockSource(ClockSource _clockSource);
+
+	protected:
+		auto getDspInstructionCounter() const { return *m_dspInstructionCounter; }
+		auto getLastClock() const { return m_lastClock; }
+		auto getCyclesPerSample() const { return m_cyclesPerSample; }
+		const auto& getEsais() const { return m_esais; }
+		const auto& getPeripherals() const { return m_periph; }
 
 	private:
+		void setClockSource(const DSP* _dsp, ClockSource _clockSource);
+
 		void updateCyclesPerSample();
 
 		const uint32_t* m_dspInstructionCounter = nullptr;
 		uint32_t m_lastClock = 0;
-		uint32_t m_cyclesSinceWrite = 0;
 		uint32_t m_cyclesPerSample = 2133;				// estimated cycles per sample before calculated
 
 		IPeripherals& m_periph;
@@ -72,12 +85,19 @@ namespace dsp56k
 
 		struct EsaiEntry
 		{
-			Esai* esai = nullptr;
+			Esxi* esai = nullptr;
 
 			Clock tx;
 			Clock rx;
 		};
 
 		std::vector<EsaiEntry> m_esais;
+	};
+
+	class EsaiClock : public EsxiClock
+	{
+	public:
+		EsaiClock(Peripherals56362& _peripherals);
+		template<bool ExpectedResult> TWord getRemainingInstructionsForFrameSync() const;
 	};
 }

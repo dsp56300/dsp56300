@@ -40,6 +40,7 @@ memorybuffer.cpp memorybuffer.h
 omfloader.cpp omfloader.h
 opcodes.cpp opcodes.h
 opcodeanalysis.h
+opcodecycles.cpp opcodecycles.h
 opcodefields.h
 opcodeinfo.h
 opcodetypes.h

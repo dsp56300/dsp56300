@@ -129,6 +129,7 @@ namespace dsp56k
 	}
 
 	JitOps::CcrBatchUpdate::CcrBatchUpdate(JitOps& _ops, CCRMask _maskA, CCRMask _maskB) : CcrBatchUpdate(_ops,  static_cast<CCRMask>(_maskA | _maskB)) {}
+	JitOps::CcrBatchUpdate::CcrBatchUpdate(JitOps& _ops, CCRMask _maskA, CCRMask _maskB, CCRMask _maskC) : CcrBatchUpdate(_ops,  static_cast<CCRMask>(_maskA | _maskB | _maskC)) {}
 
 	JitOps::CcrBatchUpdate::~CcrBatchUpdate()
 	{

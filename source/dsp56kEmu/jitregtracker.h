@@ -22,6 +22,7 @@ namespace dsp56k
 		void put(JitScopedReg* _scopedReg, bool _weak);
 		JitReg get(JitScopedReg* _scopedReg, bool _weak);
 		bool empty() const;
+		size_t available() const;
 		bool isInUse(const JitReg& _gp) const;
 
 		size_t capacity() const { return m_capacity; }
@@ -247,11 +248,52 @@ namespace dsp56k
 	class ShiftReg : public PushGP
 	{
 	public:
-		ShiftReg(JitBlock& _block) : PushGP(_block, asmjit::x86::rcx) {}
+		explicit ShiftReg(JitBlock& _block);
+		~ShiftReg();
 	};
 #else
 	using ShiftReg = RegGP;
 #endif
+
+	class ShiftTemp
+	{
+	public:
+		ShiftTemp(JitBlock& _block, bool _acquire) : m_block(_block)
+		{
+			if(_acquire)
+				acquire();
+		}
+
+		~ShiftTemp()
+		{
+			release();
+		}
+
+		ShiftTemp(const ShiftTemp&) = delete;
+		ShiftTemp(ShiftTemp&& _source) noexcept : m_block(_source.m_block), m_reg(std::move(_source.m_reg))
+		{
+		}
+
+		ShiftTemp& operator = (const ShiftTemp&) = delete;
+		ShiftTemp& operator = (ShiftTemp&& _source) noexcept
+		{
+			m_reg = std::move(_source.m_reg);
+			return *this;
+		}
+
+		void acquire();
+		void release();
+		bool isValid() const { return m_reg != nullptr; }
+
+		JitReg64 get() const
+		{
+			return isValid() ? m_reg->get() : JitReg64();
+		}
+
+	private:
+		JitBlock& m_block;
+		std::unique_ptr<ShiftReg> m_reg;
+	};
 
 	class PushXMMRegs
 	{

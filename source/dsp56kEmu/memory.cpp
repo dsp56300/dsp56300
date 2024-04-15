@@ -276,12 +276,12 @@ namespace dsp56k
 			_peripheralsY->setSymbols(disasm);
 
 		std::vector<TWord> temp;
-		temp.resize(sizeP());
+		temp.resize(_offset + _count);
 		for(TWord i=_offset; i<_offset + _count; ++i)
 			temp[i] = p[i];
 
 		std::string output;
-		disasm.disassembleMemoryBlock(output, temp, _offset, _skipNops, true, true);
+		disasm.disassembleMemoryBlock(output, temp, 0, _skipNops, true, true);
 		out << output;
 		out.close();
 		return true;
@@ -379,8 +379,11 @@ namespace dsp56k
 		}
 	}
 
-	void Memory::memTranslateAddress(EMemArea& _area, TWord& _addr) const
+	void Memory::memTranslateAddress(EMemArea& _area, const TWord& _addr) const
 	{
+		if(m_mmuBuffer->isValid())
+			return;
+
 //		if(_addr >= m_bridgedMemoryAddress)
 //			_area = MemArea_P;
 

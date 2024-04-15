@@ -1010,6 +1010,45 @@ namespace dsp56k
 	{
 	}
 
+	void JitOps::op_Normf(TWord op)
+	{
+		// if S[23] == 0
+		//     ASR S,D
+		// else
+		//     ASL -S,D
+
+		const auto sss = getFieldValue(Normf, Field_sss, op);
+		const auto D = getFieldValue(Normf, Field_D, op);
+
+		AluRef alu(m_block, D, true, true);
+		alu.get();	// force to lock already now
+
+		DspValue src(m_block);
+		decode_sss_read(src, sss);
+
+		const ShiftReg shifter(m_block);
+		m_asm.mov(r32(shifter), r32(src));
+
+		const auto asl = m_asm.newLabel();
+		const auto end = m_asm.newLabel();
+
+		m_asm.bitTest(shifter, 23);
+		m_asm.jnz(asl);
+
+		// ASR
+		alu_asr(D, D, &shifter);
+		m_asm.jmp(end);
+
+		// ASL
+		m_asm.bind(asl);
+		m_asm.shl(r32(shifter), asmjit::Imm(8));
+		m_asm.neg(shifter);
+		m_asm.shr(r32(shifter), asmjit::Imm(8));
+		alu_asl(D,D, &shifter);
+
+		m_asm.bind(end);
+	}
+
 	void JitOps::op_Or_SD(TWord op)
 	{
 		const auto D = getFieldValue<Or_SD, Field_d>(op);

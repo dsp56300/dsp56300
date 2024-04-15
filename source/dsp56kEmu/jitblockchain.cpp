@@ -227,6 +227,17 @@ namespace dsp56k
 			destroy(block);
 	}
 
+	void JitBlockChain::destroyToRecreate(const TWord _pc)
+	{
+		if(_pc >= m_jitCache.size())
+			return;
+
+		const auto block = m_jitCache[_pc].block;
+
+		if (block && block->getPCFirst() != _pc)
+			destroy(block);
+	}
+
 	void JitBlockChain::release(JitBlockRuntimeData* _block)
 	{
 #if DSP56300_DEBUGGER
@@ -247,7 +258,7 @@ namespace dsp56k
 	{
 		// there is code, but the JIT block does not start at the PC position that we want to run. We need to throw the block away and regenerate
 //		LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
-		m_jit.destroy(_pc);
+		m_jit.destroyToRecreate(_pc);
 		create(_pc, true);
 	}
 
@@ -356,7 +367,7 @@ namespace dsp56k
 		if(err)
 		{
 			const auto* const errString = asmjit::DebugUtils::errorAsString(err);
-			LOG("JIT failed: " << err << " - " << errString);
+			LOG("JIT failed: " << err << " - " << errString << "PC " << HEX(_pc));
 			m_jit.releaseEmitter(emitter);
 			return nullptr;
 		}

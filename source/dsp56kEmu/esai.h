@@ -8,10 +8,11 @@
 
 namespace dsp56k
 {
-	class EsaiClock;
+	class EsxiClock;
 	class Dma;
 	class Disassembler;
 	class IPeripherals;
+	class DSP;
 
 	class Esai : public Esxi
 	{
@@ -31,10 +32,6 @@ namespace dsp56k
 			M_TCR	= 0xFFFFB5, // ESAI Transmit Control Register (TCR)
 			M_SAICR	= 0xFFFFB4, // ESAI Control Register (SAICR)
 			M_SAISR	= 0xFFFFB3, // ESAI Status Register (SAISR)
-
-			// These are "reserved" according to the DSP family manual, we use these for emulator specific stuff
-			RemainingInstructionsForFrameSyncTrue = 0xFFFFAD,
-			RemainingInstructionsForFrameSyncFalse = 0xFFFFAC,
 
 			M_RX3	= 0xFFFFAB, // ESAI Receive Data Register 3 (RX3)
 			M_RX2	= 0xFFFFAA, // ESAI Receive Data Register 2 (RX2)
@@ -268,8 +265,15 @@ namespace dsp56k
 
 		explicit Esai(IPeripherals& _periph, EMemArea _area, Dma* _dma = nullptr);
 
-		bool execTX();
-		void execRX();
+		void setDSP(DSP* _dsp);
+
+		void execTX() override;
+		void execRX() override;
+
+		uint32_t getFrameSync() const
+		{
+			return bittest<TWord, M_TFS>(readStatusRegister());
+		}
 
 		const TWord& readStatusRegister() const;
 
@@ -328,11 +332,6 @@ namespace dsp56k
 
 		void writeTSMA(TWord _tsma);
 		void writeTSMB(TWord _tsmb);
-
-		void setClockSource(EsaiClock* _clock)
-		{
-			m_clock = _clock;
-		}
 
 		static void setSymbols(Disassembler& _disasm, EMemArea _area);
 
@@ -425,6 +424,6 @@ namespace dsp56k
 		TWord m_tsma = 0xffff;
 		TWord m_tsmb = 0xffff;
 
-		EsaiClock* m_clock = nullptr;
+		TWord m_vbaRead = 0;
 	};
 }

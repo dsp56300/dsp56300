@@ -173,6 +173,29 @@ namespace dsp56k
 		m_block.stack().unregisterFuncArg(m_funcArgIndex);
 	}
 
+#ifdef HAVE_X86_64
+	ShiftReg::ShiftReg(JitBlock& _block): PushGP(_block, asmjit::x86::rcx)
+	{
+		_block.lockShift();
+	}
+
+	ShiftReg::~ShiftReg()
+	{
+		m_block.unlockShift();
+	}
+#endif
+	void ShiftTemp::acquire()
+	{
+		if(isValid())
+			return;
+		m_reg.reset(new ShiftReg(m_block));
+	}
+
+	void ShiftTemp::release()
+	{
+		m_reg.reset();
+	}
+
 	PushXMMRegs::PushXMMRegs(JitBlock& _block) : m_block(_block)
 	{
 		for (const auto& xm : g_dspPoolXmms)
@@ -325,6 +348,11 @@ namespace dsp56k
 	bool JitRegpool::empty() const
 	{
 		return m_availableRegs.empty();
+	}
+
+	size_t JitRegpool::available() const
+	{
+		return m_availableRegs.size();
 	}
 
 	bool JitRegpool::isInUse(const JitReg& _gp) const

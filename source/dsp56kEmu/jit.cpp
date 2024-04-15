@@ -48,6 +48,11 @@ namespace dsp56k
 		static_assert(!contains(g_dspPoolGps, regReturnVal), "GP pool registers must not contain GP that is used as scratch register");
 		static_assert(!checkOverlap(g_funcArgGPs, g_regGPTemps), "GP temp registers must not overlap with function argument GPs");
 		static_assert(!checkOverlap(g_funcArgGPs, g_nonVolatileGPs), "function argument registers cannot be non-volatile");
+
+		// these are important as we do not have to push anything on the stack for simple functions if we can use volatiles only
+		static_assert(!contains(g_nonVolatileGPs, *g_regGPTemps.begin()), "first temp must be volatile");
+		static_assert(!contains(g_nonVolatileGPs, regDspPtr), "register for DSP pointer must be volatile");
+		static_assert(!contains(g_nonVolatileGPs, g_dspPoolGps[0]), "first pool reg must be volatile");
 	}
 #endif
 	constexpr bool g_traceOps = false;
@@ -101,7 +106,15 @@ namespace dsp56k
 		if (JitProfilingSupport::isBeingProfiled())
 		{
 			LOG("Detected profiler, generating additional data for it");
-			m_profiling.reset(new JitProfilingSupport(m_dsp));
+			try
+			{
+				m_profiling.reset(new JitProfilingSupport(m_dsp));
+			}
+			catch (const std::exception& e)
+			{
+				LOG("Failed to create profiler: " << e.what());
+				m_profiling.reset();
+			}
 		}
 		else
 		{
@@ -182,6 +195,12 @@ namespace dsp56k
 	{
 		for (auto& it : m_chains)
 			it.second->destroy(_pc);
+	}
+
+	void Jit::destroyToRecreate(TWord _pc)
+	{
+		for (auto& it : m_chains)
+			it.second->destroyToRecreate(_pc);
 	}
 
 	void Jit::notifyProgramMemWrite(const TWord _offset)

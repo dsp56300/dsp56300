@@ -25,6 +25,7 @@ namespace dsp56k
 		void create(TWord _pc, bool _execute);
 		void recreate(TWord _pc);
 		void destroy(TWord _pc);
+		void destroyToRecreate(TWord _pc);
 
 		JitBlockRuntimeData* getChildBlock(JitBlockRuntimeData* _parent, TWord _pc, bool _allowCreate = true);
 		JitBlockRuntimeData* emit(TWord _pc);

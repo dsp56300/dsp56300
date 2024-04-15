@@ -53,16 +53,19 @@ namespace dsp56k
 		JitDspRegs& regs() { return m_dspRegs; }
 		JitDspRegPool& dspRegPool() { return m_dspRegPool; }
 		Jitmem& mem() { return m_mem; }
+		const JitBlockRuntimeData* currentJitBlockRuntimeData() const { return m_currentJitBlockRuntimeData; }
 
 		operator JitEmitter& ()		{ return m_asm;	}
 
 		// JIT code writes these
-		TWord& nextPC() { return m_runtimeData.m_nextPC; }
 		uint32_t& pMemWriteAddress() { return m_runtimeData.m_pMemWriteAddress; }
 		uint32_t& pMemWriteValue() { return m_runtimeData.m_pMemWriteValue; }
+
 		void setNextPC(const DspValue& _pc);
 
 		void increaseInstructionCount(const asmjit::Operand& _count);
+		void increaseCycleCount(const asmjit::Operand& _count);
+		void increaseUint32(const asmjit::Operand& _count, const uint32_t& _target);
 
 		const JitConfig& getConfig() const { return m_config; }
 
@@ -80,6 +83,18 @@ namespace dsp56k
 		{
 			assert(m_scratchLocked && "scratch reg is not locked");
 			m_scratchLocked = false;
+		}
+
+		void lockShift()
+		{
+			assert(!m_shiftLocked && "shift reg is already locked");
+			m_shiftLocked = true;
+		}
+
+		void unlockShift()
+		{
+			assert(m_shiftLocked && "shift reg is not locked");
+			m_shiftLocked = false;
 		}
 
 		void reset();
@@ -111,7 +126,9 @@ namespace dsp56k
 		JitBlockChain* m_chain = nullptr;
 
 		bool m_scratchLocked = false;
+		bool m_shiftLocked = false;
 
 		JitDspMode* m_mode = nullptr;
+		JitBlockRuntimeData* m_currentJitBlockRuntimeData = nullptr;
 	};
 }

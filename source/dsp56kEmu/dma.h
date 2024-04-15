@@ -47,7 +47,6 @@ namespace dsp56k
 			CounterE
 		};
 
-		// Note: This is for DSP56362
 		enum class RequestSource
 		{
 			ExternalIRQA       = 0b00000, // External (IRQA pin)
@@ -60,6 +59,8 @@ namespace dsp56k
 			DMAChannel3        = 0b00111, // Transfer done from DMA channel 3
 			DMAChannel4        = 0b01000, // Transfer done from DMA channel 4
 			DMAChannel5        = 0b01001, // Transfer done from DMA channel 5
+
+			// DSP56362
 			DaxTransmitData    = 0b01010, // DAX transmit data
 			EsaiReceiveData    = 0b01011, // ESAI receive data (RDF=1)
 			EsaiTransmitData   = 0b01100, // ESAI transmit data (TDE=1)
@@ -72,7 +73,13 @@ namespace dsp56k
 			Timer1             = 0b10011, // TIMER1 (TCF=1)
 			Timer2             = 0b10100, // TIMER2 (TCF=1)
 
-			Count
+			Count,
+
+			// DSP56303
+			Essi0ReceiveData   = 0b01010, // ESSI0 receive data (RDF0 = 1)
+			Essi0TransmitData  = 0b01011, // ESSI0 transmit data (TDE0 = 1))
+			Essi1ReceiveData   = 0b01100, // ESSI1 receive data (RDF1 = 1)
+			Essi1TransmitData  = 0b01101, // ESSI1 transmit data (TDE1 = 1))
 		};
 
 		enum class TransferMode

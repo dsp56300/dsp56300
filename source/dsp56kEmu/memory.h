@@ -160,7 +160,7 @@ namespace dsp56k
 
 	private:
 		void				fillWithInitPattern	();
-		void				memTranslateAddress	(EMemArea& _area, TWord& _addr) const;
+		void				memTranslateAddress	(EMemArea& _area, const TWord& _addr) const;
 
 		std::unique_ptr<MemoryBuffer> m_mmuBuffer;
 	};

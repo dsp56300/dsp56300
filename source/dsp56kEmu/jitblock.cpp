@@ -7,6 +7,7 @@
 #include "jitblockruntimedata.h"
 #include "jitops.h"
 #include "memory.h"
+#include "opcodecycles.h"
 
 namespace dsp56k
 {
@@ -44,6 +45,7 @@ namespace dsp56k
 
 		auto& numWords = _info.memSize;
 		auto& numInstructions = _info.instructionCount;
+		auto& numCycles = _info.cycleCount;
 
 		auto& terminationReason = _info.terminationReason;
 
@@ -155,6 +157,7 @@ namespace dsp56k
 
 			numWords += Opcodes::getOpcodeLength(opA, instA, instB);
 			++numInstructions;
+			numCycles += calcCycles(instA, instB, pc, opA, _dsp.memory().getBridgedMemoryAddress(), 1);
 
 			if(getLoopEndAddr(_info.loopEnd, instA, pc, opB))
 				_info.loopBegin = pc;
@@ -184,6 +187,12 @@ namespace dsp56k
 					terminationReason = JitBlockInfo::TerminationReason::LoopBegin;
 					break;
 				}
+
+				if(instA == Wait)
+				{
+					terminationReason = JitBlockInfo::TerminationReason::WaitInstruction;
+					break;
+				}
 			}
 
 			// always terminate block if loop end has reached
@@ -206,7 +215,7 @@ namespace dsp56k
 				break;
 			}
 
-			// we can NOT prematurely interrupt the creation of a fast interrupt block
+			// we must NOT prematurely abort the creation of a fast interrupt block
 			if(!isRep && !isFastInterrupt && _config.maxInstructionsPerBlock > 0 && numInstructions >= _config.maxInstructionsPerBlock)
 			{
 				terminationReason = JitBlockInfo::TerminationReason::InstructionLimit;
@@ -218,9 +227,8 @@ namespace dsp56k
 	bool JitBlock::emit(JitBlockRuntimeData& _rt, JitBlockChain* _chain, const TWord _pc, const std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds, bool _profilingSupport)
 	{
 		JitBlockGenerating generating(_rt);
+		m_currentJitBlockRuntimeData = &_rt;
 
-		auto& pcFirst = _rt.m_pcFirst;
-		auto& pMemSize = _rt.m_pMemSize;
 		auto& dspAsm = _rt.m_dspAsm;
 		auto& info = _rt.m_info;
 		auto& profilingInfo = _rt.m_profilingInfo;
@@ -230,8 +238,6 @@ namespace dsp56k
 
 		const bool isFastInterrupt = _pc < Vba_End;
 
-		pcFirst = _pc;
-		pMemSize = 0;
 		dspAsm.clear();
 
 		// needed so that the dsp register is available
@@ -276,15 +282,19 @@ namespace dsp56k
 		TWord opA = 0;
 		TWord opB = 0;
 
-#if defined(_MSC_VER) && defined(_DEBUG)
+#if defined(_DEBUG)
 		std::string opDisasm;
 #endif
 
 		uint32_t opPC = 0;
 
-		uint32_t& ccrRead = _rt.m_info.ccrRead;
-		uint32_t& ccrWrite = _rt.m_info.ccrWrite;
-		uint32_t& ccrOverwrite = _rt.m_info.ccrOverwrite;
+		uint32_t& ccrRead = info.ccrRead;
+		uint32_t& ccrWrite = info.ccrWrite;
+		uint32_t& ccrOverwrite = info.ccrOverwrite;
+
+		_rt.m_encodedCycles = info.cycleCount;
+
+		TWord pMemSize = 0;
 
 		while(pMemSize < info.memSize)
 		{
@@ -292,7 +302,7 @@ namespace dsp56k
 
 			m_dsp.memory().getOpcode(opPC, opA, opB);
 
-#if defined(_MSC_VER) && defined(_DEBUG)
+#if defined(_DEBUG)
 			m_dsp.disassembler().disassemble(opDisasm, opA, opB, 0, 0, 0);
 //			LOG(HEX(pc) << ": " << opDisasm);
 
@@ -362,6 +372,8 @@ namespace dsp56k
 			ccrOverwrite |= ccrO;
 		}
 
+		assert(_rt.getEncodedCycleCount() >= _rt.getEncodedInstructionCount());
+
 		if (info.terminationReason == JitBlockInfo::TerminationReason::PopPC)
 			blockFlags |= JitOps::PopPC;
 
@@ -374,11 +386,13 @@ namespace dsp56k
 		JitBlockRuntimeData* child = nullptr;
 		JitBlockRuntimeData* nonBranchChild = nullptr;
 
+		const auto pcFirst = _rt.getInfo().pc;
+
 		if(_chain)
 		{
 			if(info.terminationReason == JitBlockInfo::TerminationReason::Branch && !info.hasFlag(JitBlockInfo::Flags::ModeChange))
 			{
-				// if the last instruction of a JIT block is a branch to an address known at compile time, and this branch is fixed, i.e. is not dependant
+				// if the last instruction of a JIT block is a branch to an address known at compile time, and this branch is fixed, i.e. is not dependent
 				// on a condition: Store that address to be able to call the next JIT block from the current block without having to have a transition to the C++ code
 
 				const auto branchTarget = info.branchTarget;
@@ -395,7 +409,7 @@ namespace dsp56k
 					{
 						childAddr = g_dynamicAddress;
 					}
-					// do not branch into ourself
+					// do not branch into ourselves
 					else if (branchTarget < pcFirst || branchTarget >= pcLast)
 					{
 						child = _chain->getChildBlock(&_rt, branchTarget);
@@ -439,23 +453,42 @@ namespace dsp56k
 
 		m_asm.setCursor(cursorInsertIncreaseInstructionCount);
 		increaseInstructionCount(asmjit::Imm(_rt.getEncodedInstructionCount()));
+		increaseCycleCount(asmjit::Imm(_rt.getEncodedCycleCount()));
 		m_asm.setCursor(m_asm.lastNode());
 
-		auto jumpIfLoop = [&](const asmjit::Label& _ifTrue, const JitRegGP& _compare)
+		auto jumpIfLoop = [&](const asmjit::Label& _ifTrue, const JitReg32& _regPC, const JitReg32& _regLC, const JitReg32& _temp)
 		{
-			if (isLoopBody)
+			if (!isLoopBody)
+				return false;
+
+			const SkipLabel skip(m_asm);
+
+			if(m_config.maxDoIterations)
 			{
-#ifdef HAVE_ARM64
-				RegGP temp(*this);
-				m_asm.mov(r32(temp), asmjit::Imm(pcFirst));
-				m_asm.cmp(r32(_compare), r32(temp));
-#else
-				m_asm.cmp(r32(_compare), asmjit::Imm(pcFirst));
-#endif
-				m_asm.jz(_ifTrue);
-				return true;
+				assert(asmjit::Support::isPowerOf2(m_config.maxDoIterations));
+				m_asm.test_(_regLC, asmjit::Imm(m_config.maxDoIterations-1));
+				m_asm.jz(skip);
 			}
-			return false;
+
+#ifdef HAVE_ARM64
+			RegGP temp(*this, false);
+			JitReg32 t;
+			if(_temp.isValid())
+			{
+				t = _temp;
+			}
+			else
+			{
+				temp.acquire();
+				t = r32(temp);
+			}
+			m_asm.mov(t, asmjit::Imm(pcFirst));
+			m_asm.cmp(_regPC, t);
+#else
+			m_asm.cmp(_regPC, asmjit::Imm(pcFirst));
+#endif
+			m_asm.jz(_ifTrue);
+			return true;
 		};
 
 		auto profileBegin = [&](const std::string& _name)
@@ -489,7 +522,7 @@ namespace dsp56k
 
 			JitOps ops(*this, _rt, isFastInterrupt);
 
-			// It is important that this code does not allocate any temp registers inside of the branches. thefore, we prewarm everything
+			// It is important that this code does not allocate any temp registers inside the branches. thefore, we prewarm everything
 			RegGP temp(*this);
 
 			const auto& sr = r32(m_dspRegPool.get(PoolReg::DspSR, true, true));
@@ -510,8 +543,14 @@ namespace dsp56k
 			m_asm.cmp(lc, asmjit::Imm(1));
 			m_asm.jle(enddo);
 			m_asm.dec(lc);
+
+			if(isLoopBody)
 			{
-				const auto ss = r64(pc.get());
+				m_asm.mov(r32(pc), asmjit::Imm(pcFirst));
+			}
+			else
+			{
+				const auto ss = r64(pc);
 				m_dspRegs.getSS(ss);				// note: not calling getSSH as it will dec the SP
 				m_asm.shr(ss, asmjit::Imm(24));
 			}
@@ -560,7 +599,11 @@ namespace dsp56k
 				const auto readsSR = (info.readRegs & RegisterMask::SR) != RegisterMask::None;
 				if(isLoopBody && (writesSRbeforeRead || !readsSR))
 				{
-					jumpIfLoop(skipCCRupdate, m_dspRegPool.get(PoolReg::DspPC, true, false));
+					jumpIfLoop(skipCCRupdate, 
+						r32(m_dspRegPool.get(PoolReg::DspPC, true, false)), 
+						r32(m_dspRegPool.get(PoolReg::DspLC, true, false)), 
+						JitReg32()
+						);
 				}
 
 				JitOps op(*this, _rt, isFastInterrupt);
@@ -593,20 +636,36 @@ namespace dsp56k
 			}
 		}
 
+		JitReg32 regLC;
+
+		if(isLoopBody && m_config.maxDoIterations)
+		{
+			regLC = r32(m_dspRegPool.get(PoolReg::DspLC, true, false));
+
+			// Basically the same rules that we use for the PC reg above apply to LC too:
+			// we can keep our LC reg if its volatile. If It's not, it will be destroyed on stack.popAll() below => we need to copy it to a safe place
+			// Also, we need to make sure that our LC reg is not the first function argument because we replace it with the Jit*
+			if(JitStackHelper::isNonVolatile(regLC) || r64(regLC) == g_funcArgGPs[0])
+			{
+				JitReg32 regTempLC = r32(g_regGPTemps.begin()->as<JitRegGP>());
+				assert(!m_gpPool.isInUse(r64(regTempLC)));
+				asm_().mov(r32(regTempLC), regLC);
+				regLC = r32(regTempLC);
+				assert(!JitStackHelper::isNonVolatile(regTempLC));
+			}
+		}
+
 		m_dspRegPool.releaseAll();
 
 		pm.end();
 
-		jumpIfLoop(loopBegin, regPC);
+		jumpIfLoop(loopBegin, regPC, regLC, regLC);
 
 		m_stack.popAll();
 
 		m_stack.reset();
 
 		profileEnd(pl);
-
-		if(_rt.empty())
-			return false;
 
 		asmjit::Label lj;
 
@@ -647,6 +706,7 @@ namespace dsp56k
 
 		profileEnd(lj);
 
+		m_currentJitBlockRuntimeData = nullptr;
 		return true;
 	}
 
@@ -657,16 +717,41 @@ namespace dsp56k
 
 	void JitBlock::increaseInstructionCount(const asmjit::Operand& _count)
 	{
-		const auto ptr = dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(TWord));
+		increaseUint32(_count, m_dsp.getInstructionCounter());
+	}
+
+	void JitBlock::increaseCycleCount(const asmjit::Operand& _count)
+	{
+		increaseUint32(_count, m_dsp.getCycles());
+	}
+
+	void JitBlock::increaseUint32(const asmjit::Operand& _count, const uint32_t& _target)
+	{
+		const auto ptr = dspRegPool().makeDspPtr(&_target, sizeof(TWord));
 
 #ifdef HAVE_ARM64
 		const RegScratch scratch(*this);
 		const auto r = r32(scratch);
 		m_asm.ldr(r, ptr);
 		if (_count.isImm())
-			m_asm.add(r, r, _count.as<asmjit::Imm>());
+		{
+			// for rep loops, it is possible that the immediate exceeds 12 bits
+			const auto& imm = _count.as<asmjit::Imm>();
+			if(imm.value() > 0xfff)
+			{
+				assert(imm.value() <= 0xffffff);
+				m_asm.add(r, r, asmjit::Imm(imm.value() & 0x000fff));
+				m_asm.add(r, r, asmjit::Imm(imm.value() & 0xfff000));
+			}
+			else
+			{
+				m_asm.add(r, r, imm);
+			}
+		}
 		else
+		{
 			m_asm.add(r, r, _count.as<JitRegGP>());
+		}
 		m_asm.str(r, ptr);
 #else
 		if(_count.isImm())
@@ -704,6 +789,7 @@ namespace dsp56k
 		m_dspRegs.reset();
 		m_dspRegPool.reset();
 		m_scratchLocked = false;
+		m_shiftLocked = false;
 	}
 
 	JitBlock::JitBlockGenerating::JitBlockGenerating(JitBlockRuntimeData& _block): m_block(_block)
@@ -719,34 +805,41 @@ namespace dsp56k
 	void JitBlock::jumpToChild(const JitBlockRuntimeData* _child, const JitCondCode _cc/* = JitCondCode::kMaxValue*/) const
 	{
 		auto* p = asmjit::func_as_ptr(_child->getFunc());
-		auto addr = reinterpret_cast<uint64_t>(p);
+		const auto addr = reinterpret_cast<uint64_t>(p);
 
-#ifdef HAVE_X86_64
-		if(_cc == JitCondCode::kMaxValue)
-			m_asm.jmp(addr);
-		else
-			m_asm.j(_cc, addr);
-#else
-		auto tempReg = r64(g_funcArgGPs[1]);
+		const auto tempReg = r64(g_funcArgGPs[1]);
 
-		const auto offset = Jitmem::pointerOffset(p, &m_dsp.regs());
-		if(offset)
-			m_asm.lea_(tempReg, regDspPtr, offset);
-		else
-			m_asm.mov(tempReg, asmjit::Imm(addr));
+		auto initTemp = [&]()
+		{
+			if(const auto offset = Jitmem::pointerOffset(p, &m_dsp.regs()))
+				m_asm.lea_(tempReg, regDspPtr, offset);
+			else
+				m_asm.mov(tempReg, asmjit::Imm(addr));
+			return tempReg;
+		};
 
 		if(_cc == JitCondCode::kMaxValue)
 		{
-			m_asm.br(tempReg);
+#ifdef HAVE_ARM64
+			m_asm.br(initTemp());
+#else
+			m_asm.jmp(initTemp());
+#endif
 		}
 		else
 		{
+			// neither x86 nor ARM have a conditional jump to register
 			const auto l = m_asm.newLabel();
 			const auto cc = JitOps::reverseCC(_cc);
+
+#ifdef HAVE_ARM64
 			m_asm.b(cc, l);
-			m_asm.br(tempReg);
+			m_asm.br(initTemp());
+#else
+			m_asm.j(cc, l);
+			m_asm.jmp(initTemp());
+#endif
 			m_asm.bind(l);
 		}
-#endif
 	}
 }

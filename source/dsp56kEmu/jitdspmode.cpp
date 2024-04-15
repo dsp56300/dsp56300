@@ -18,12 +18,11 @@ namespace dsp56k
 		}
 
 		// only the upper 16 bits of the SR are used, the 8 LSBs (CCR) are ignored
-		auto sr = _dsp.regs().sr.var & 0xffff00;
+		auto sr = _dsp.regs().sr.toWord() & 0xffff00;
 
 		// furthermore, ignore SR bits that the code doesn't depend on or evaluates at runtime
-										
-//		        SR_CP1 | SR_CP0 | SR_RM | SR_SM | SR_CE | __SR_18 | SR_SA | SR_FV | SR_LF | SR_DM | SR_SC | __SR_12 | SR_S1 | SR_S0 | SR_I1 | SR_I0;
-		sr &= ~(SR_CP1 | SR_CP0                 | SR_CE | __SR_18 | SR_SA | SR_FV | SR_LF | SR_DM | SR_SC | __SR_12                 | SR_I1 | SR_I0);
+		sr &= SrModeChangeRelevantBits;
+
 		m_mode |= sr << 8;
 	}
 

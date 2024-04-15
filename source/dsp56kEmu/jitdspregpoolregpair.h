@@ -35,7 +35,6 @@ namespace dsp56k
 		DspValue get0(bool _read, bool _write) const;
 		DspValue get1(bool _read, bool _write) const;
 
-		void set(const JitReg64& _src) const;
 		void set0(const DspValue& _src) const;
 		void set1(const DspValue& _src) const;
 

@@ -243,7 +243,7 @@ namespace dsp56k
 		}
 
 		{
-			const RegGP tester(m_block);
+			const ShiftReg tester(m_block);
 			m_asm.mov(r32(tester), r32(_dst));
 
 			{

@@ -58,7 +58,10 @@ namespace dsp56k
 		double m_currentMips = 0.0;
 		double m_averageMips = 0.0;
 
-		char m_mipsString[64]{0};
+		double m_currentMcps = 0.0;
+		double m_averageMcps = 0.0;
+
+		char m_mipsString[128]{0};
 
 		bool m_logToDebug = true;
 		bool m_logToStdout = true;

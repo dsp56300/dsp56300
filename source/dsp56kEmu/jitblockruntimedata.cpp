@@ -33,12 +33,11 @@ namespace dsp56k
 	{
 		m_func = nullptr;
 
-		m_pcFirst = 0;
-		m_pMemSize = 0;
 		m_lastOpSize = 0;
 		m_singleOpWordA = 0;
 		m_singleOpWordB = 0;
 		m_encodedInstructionCount = 0;
+		m_encodedCycles = 0;
 
 		m_dspAsm.clear();
 		m_possibleBranch = false;

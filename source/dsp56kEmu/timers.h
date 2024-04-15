@@ -19,7 +19,14 @@ namespace dsp56k
 			M_TE = 0,								// Timer Enable
 			M_TOIE = 1,								// Timer Overflow Interrupt Enable
 			M_TCIE = 2,								// Timer Compare Interrupt Enable
+
+			// Timer Control Bits
+			M_TC0 = 4,								// Timer Control 0
+			M_TC1 = 5,								// Timer Control 1
+			M_TC2 = 6,								// Timer Control 2
+			M_TC3 = 7,								// Timer Control 3			
 			M_TC = 0xF0,							// Timer Control Mask (TC0-TC3)
+
 			M_INV = 8,								// Inverter Bit
 			M_TRM = 9,								// Timer Restart Mode
 
@@ -31,12 +38,6 @@ namespace dsp56k
 
 			M_TOF = 20,								// Timer Overflow Flag
 			M_TCF = 21,								// Timer Compare Flag
-
-			// Timer Control Bits
-			M_TC0 = 4,								// Timer Control 0
-			M_TC1 = 5,								// Timer Control 1
-			M_TC2 = 6,								// Timer Control 2
-			M_TC3 = 7,								// Timer Control 3			
 		};
 
 	private:
@@ -102,40 +103,21 @@ namespace dsp56k
 			ModeReserved15
 		};
 
-		Timers(IPeripherals& _peripherals) : m_peripherals(_peripherals) {}
+		Timers(IPeripherals& _peripherals, const TWord _vbaBase) : m_peripherals(_peripherals), m_vbaBase(_vbaBase) {}
 		void exec();
-		void execTimer(Timer& _t, uint32_t _index) const;
+		void execTimer(Timer& _t, uint32_t _index, uint32_t _cycles) const;
 
 		void writeTCSR(int _index, TWord _val);
 
-		void writeTLR(int _index, TWord _val)
-		{
-			m_timers[_index].m_tlr = _val;
-			LOG("Write Timer " << _index << " TLR: " << HEX(_val));
-		}
+		void writeTLR(int _index, TWord _val);
 
-		void writeTCPR(int _index, TWord _val)
-		{
-			m_timers[_index].m_tcpr = _val;
-			LOG("Write Timer " << _index << " TCPR: " << HEX(_val)); }
+		void writeTCPR(int _index, TWord _val);
 
-		void writeTCR(int _index, TWord _val)
-		{
-			m_timers[_index].m_tcr = _val;
-			LOG("Write Timer " << _index << " TCR: " << HEX(_val));
-		}
+		void writeTCR(int _index, TWord _val);
 
-		void writeTPLR(TWord _val)
-		{
-			m_tplr = _val;
-			LOG("Write Timer TPLR " << ": " << HEX(_val));
-		}
+		void writeTPLR(TWord _val);
 
-		void writeTPCR(TWord _val)
-		{
-			m_tpcr = _val;
-			LOG("Write Timer TPCR " << ": " << HEX(_val));
-		}
+		void writeTPCR(TWord _val);
 
 		const TWord& readTCSR(int _index) const			{ return m_timers[_index].m_tcsr; }
 		const TWord& readTLR(int _index) const			{ return m_timers[_index].m_tlr; }
@@ -144,6 +126,12 @@ namespace dsp56k
 
 		const TWord& readTPLR() const					{ return m_tplr; }
 		const TWord& readTPCR() const					{ return m_tpcr; }
+
+		void setDSP(const DSP* _dsp);
+
+		void setTimerUpdateInterval(const TWord _instructions);
+
+		void setSymbols(Disassembler& _disasm) const;
 
 	private:
 		template<Timer::TcsrBits B> static void timerFlagReset(const Bitfield<unsigned, Timer::TcsrBits, 22>& _tcsr, TWord& _val)
@@ -161,13 +149,19 @@ namespace dsp56k
 				_val |= (1<<B);
 		}
 
-		TimerMode mode(uint32_t _index) const
+		TimerMode mode(const uint32_t _index) const
 		{
 			const TWord v = m_timers[_index].m_tcsr;
 			return static_cast<TimerMode>((v & Timer::M_TC) >> 4);
 		}
 
+		void injectInterrupt(TWord _vba, uint32_t _index) const;
+
+		const TWord* m_dspInstructionCounter = nullptr;
+		TWord m_timerupdateInterval = 2048;
+
 		IPeripherals& m_peripherals;
+		const TWord m_vbaBase;
 
 		TWord m_tplr = 0;							// Timer Prescaler Load
 		TWord m_tpcr = 0;							// Timer Prescaler Count

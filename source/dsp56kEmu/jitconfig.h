@@ -16,5 +16,6 @@ namespace dsp56k
 		bool memoryWritesCallCpp = false;
 
 		bool asmjitDiagnostics = false;
+		uint32_t maxDoIterations = 0;	// maximum number of iterations of a do loop before the Jit block is exited (and later re-entered), giving a time slice for interrupts/peripherals
 	};
 }

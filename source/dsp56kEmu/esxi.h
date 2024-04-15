@@ -8,5 +8,8 @@ namespace dsp56k
 {
 	class Esxi : public Audio
 	{
+	public:
+		virtual void execTX() = 0;
+		virtual void execRX() = 0;
 	};
 }

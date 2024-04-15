@@ -7,12 +7,19 @@ add_subdirectory(dsp56kEmu)
 add_subdirectory(dsp56kTestRunner)
 add_subdirectory(disassemble)
 
+set_property(TARGET asmjit PROPERTY FOLDER "dsp56300")
+set_property(TARGET dsp56kEmu PROPERTY FOLDER "dsp56300")
+set_property(TARGET dsp56kTestRunner PROPERTY FOLDER "dsp56300")
+set_property(TARGET dsp56kDisassemble PROPERTY FOLDER "dsp56300")
+
 if(WIN32 OR (UNIX AND NOT APPLE))
 	add_subdirectory(vtuneSdk)
+	set_property(TARGET vtuneSdk PROPERTY FOLDER "dsp56300")
 endif()
 
 if(WIN32)
 	add_subdirectory(HxDplugin)
+	set_property(TARGET dsp56kHxD PROPERTY FOLDER "dsp56300")
 endif()
 
 if(DSP56300_DEBUGGER)
@@ -44,4 +51,6 @@ if(DSP56300_DEBUGGER)
 
 	add_subdirectory(wxWidgets)
 	add_subdirectory(dsp56kDebugger)
+
+	set_property(TARGET dsp56kDebugger PROPERTY FOLDER "dsp56300")
 endif()

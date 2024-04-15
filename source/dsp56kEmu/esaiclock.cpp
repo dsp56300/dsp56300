@@ -9,23 +9,19 @@
 
 namespace dsp56k
 {
-	EsaiClock::EsaiClock(IPeripherals& _peripherals)
+	EsxiClock::EsxiClock(IPeripherals& _peripherals)
 		: m_periph(_peripherals)
 	{
 	}
 
-	void EsaiClock::exec()
+	void EsxiClock::exec()
 	{
-		const auto clock = *m_dspInstructionCounter;
-		const auto diff = delta(clock, m_lastClock);
-		m_lastClock = clock;
+		const auto diff = delta(*m_dspInstructionCounter, m_lastClock);
 
-		m_cyclesSinceWrite += diff;
-
-		if(m_cyclesSinceWrite < m_cyclesPerSample)
+		if(diff < m_cyclesPerSample)
 			return;
 
-		m_cyclesSinceWrite -= m_cyclesPerSample;
+		m_lastClock += m_cyclesPerSample;
 
 		auto advanceClock = [](Clock& _c)
 		{
@@ -37,9 +33,9 @@ namespace dsp56k
 			return false;
 		};
 
-		std::array<Esai*, MaxEsais> processTx;
+		std::array<Esxi*, MaxEsais> processTx;
 		uint32_t txCount = 0;
-		std::array<Esai*, MaxEsais> processRx;
+		std::array<Esxi*, MaxEsais> processRx;
 		uint32_t rxCount = 0;
 
 		for (auto& e : m_esais)
@@ -50,21 +46,12 @@ namespace dsp56k
 			if (advanceClock(e.rx))
 				processRx[rxCount++] = e.esai;
 		}
-#if 0
-		for(size_t i=0; i<std::max(m_esaisProcessRX.size(), m_esaisProcessTX.size()); ++i)
-		{
-			if(i < m_esaisProcessTX.size())
-				m_esaisProcessTX[i]->execTX();
-			if (i < m_esaisProcessRX.size())
-				m_esaisProcessRX[i]->execRX();
-		}
-#else
+
 		for(size_t i=0; i<txCount; ++i) processTx[i]->execTX();
 		for(size_t i=0; i<rxCount; ++i) processRx[i]->execRX();
-#endif
 	}
 
-	void EsaiClock::setPCTL(const TWord _val)
+	void EsxiClock::setPCTL(const TWord _val)
 	{
 		if(m_pctl == _val)
 			return;
@@ -74,7 +61,7 @@ namespace dsp56k
 		updateCyclesPerSample();
 	}
 
-	void EsaiClock::setSamplerate(const uint32_t _samplerate)
+	void EsxiClock::setSamplerate(const uint32_t _samplerate)
 	{
 		if (m_samplerate == _samplerate)
 			return;
@@ -84,7 +71,7 @@ namespace dsp56k
 		updateCyclesPerSample();
 	}
 
-	void EsaiClock::setCyclesPerSample(const uint32_t _cyclesPerSample)
+	void EsxiClock::setCyclesPerSample(const uint32_t _cyclesPerSample)
 	{
 		if(m_fixedCyclesPerSample == _cyclesPerSample)
 			return;
@@ -94,7 +81,7 @@ namespace dsp56k
 		updateCyclesPerSample();
 	}
 
-	void EsaiClock::setExternalClockFrequency(const uint32_t _freq)
+	void EsxiClock::setExternalClockFrequency(const uint32_t _freq)
 	{
 		if(_freq == m_externalClockFrequency)
 			return;
@@ -103,12 +90,30 @@ namespace dsp56k
 		updateCyclesPerSample();
 	}
 
-	void EsaiClock::setDSP(const DSP* _dsp)
+	void EsxiClock::setDSP(const DSP* _dsp)
 	{
-		m_dspInstructionCounter = &_dsp->getInstructionCounter();
+		setClockSource(_dsp, ClockSource::Instructions);
 	}
 
-	void EsaiClock::updateCyclesPerSample()
+	void EsxiClock::setClockSource(const ClockSource _clockSource)
+	{
+		setClockSource(&m_periph.getDSP(), _clockSource);
+	}
+
+	void EsxiClock::setClockSource(const DSP* _dsp, const ClockSource _clockSource)
+	{
+		switch (_clockSource)
+		{
+		case ClockSource::Instructions:
+			m_dspInstructionCounter = &_dsp->getInstructionCounter();
+			break;
+		case ClockSource::Cycles:
+			m_dspInstructionCounter = &_dsp->getCycles();
+			break;
+		}
+	}
+
+	void EsxiClock::updateCyclesPerSample()
 	{
 		uint32_t cyclesPerSample = m_fixedCyclesPerSample;
 
@@ -144,10 +149,9 @@ namespace dsp56k
 		}
 
 		m_cyclesPerSample = cyclesPerSample;
-		m_cyclesSinceWrite = 0;
+		m_lastClock = *m_dspInstructionCounter;
 	}
-
-	void EsaiClock::setEsaiDivider(Esai* _esai, const TWord _dividerTX, const TWord _dividerRX)
+	void EsxiClock::setEsaiDivider(Esxi* _esai, const TWord _dividerTX, const TWord _dividerRX)
 	{
 		bool found = false;
 
@@ -168,11 +172,10 @@ namespace dsp56k
 		if(!found)
 		{
 			m_esais.emplace_back(EsaiEntry{ _esai, {_dividerTX}, {_dividerRX} });
-			_esai->setClockSource(this);
 		}
 	}
 
-	bool EsaiClock::setEsaiCounter(const Esai* _esai, const TWord _counterTX, const TWord _counterRX)
+	bool EsxiClock::setEsaiCounter(const Esxi* _esai, const TWord _counterTX, const TWord _counterRX)
 	{
 		for (auto& esai : m_esais)
 		{
@@ -186,36 +189,7 @@ namespace dsp56k
 		return false;
 	}
 
-	TWord EsaiClock::getRemainingInstructionsForFrameSync(const TWord _expectedBitValue) const
-	{
-		if (static_cast<bool>(bittest<TWord, Esai::M_TFS>(m_esais.front().esai->readStatusRegister())) == static_cast<bool>(_expectedBitValue))
-		{
-			// already reached the desired value
-			return 0;
-		}
-
-		constexpr TWord offset = 1;
-
-		if (m_cyclesSinceWrite >= m_cyclesPerSample - offset)
-			return 0;
-
-		const auto periphCycles = m_periph.getDSP().getRemainingPeripheralsCycles();
-
-		if(periphCycles < offset)
-			return 0;
-
-		const auto diff = m_cyclesPerSample - m_cyclesSinceWrite - offset;
-
-		return std::min(diff, periphCycles - offset);
-	}
-
-	void EsaiClock::onTCCRChanged(Esai*)
-	{
-//		for (auto& esai : m_esais)
-//			esai.clockCounter = 0;
-	}
-
-	bool EsaiClock::setSpeedPercent(const uint32_t _percent)
+	bool EsxiClock::setSpeedPercent(const uint32_t _percent)
 	{
 		if(m_speedPercent == _percent)
 			return true;
@@ -227,4 +201,40 @@ namespace dsp56k
 		updateCyclesPerSample();
 		return true;
 	}
+	
+	// ______________________
+	//
+
+	EsaiClock::EsaiClock(Peripherals56362& _peripherals) : EsxiClock(_peripherals)
+	{
+	}
+
+	template<bool ExpectedResult>
+	TWord EsaiClock::getRemainingInstructionsForFrameSync() const
+	{
+		if (static_cast<bool>(static_cast<Esai*>(getEsais().front().esai)->getFrameSync()) == ExpectedResult)
+		{
+			// already reached the desired value
+			return 0;
+		}
+
+		constexpr TWord offset = 1;
+
+		const auto cyclesSinceWrite = delta(getDspInstructionCounter(), getLastClock());
+
+		if (cyclesSinceWrite >= getCyclesPerSample() - offset)
+			return 0;
+
+		const auto periphCycles = getPeripherals().getDSP().getRemainingPeripheralsCycles();
+
+		if(periphCycles < offset)
+			return 0;
+
+		const auto diff = getCyclesPerSample() - cyclesSinceWrite - offset;
+
+		return std::min(diff, periphCycles - offset);
+	}
+
+	template TWord EsaiClock::getRemainingInstructionsForFrameSync<true>() const;
+	template TWord EsaiClock::getRemainingInstructionsForFrameSync<false>() const;
 }

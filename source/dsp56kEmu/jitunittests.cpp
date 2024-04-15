@@ -616,6 +616,9 @@ namespace dsp56k
 		{
 			m_checks.fill(0);
 
+			dsp.regs().a.var = 0;
+			dsp.regs().b.var = 0;
+
 			int i=0;
 			const RegGP r(*block);
 

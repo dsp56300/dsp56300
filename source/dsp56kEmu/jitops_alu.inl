@@ -75,6 +75,20 @@ namespace dsp56k
 		const auto bit		= getBit<Inst>(op);
 		const auto dddddd	= getFieldValue<Inst,Field_DDDDDD>(op);
 
+		// workaround for an undocumented DSP feature, a bug in a code we've seen. It uses
+		// bclr #22,b
+		// This is not supposed to work according to the documentation, but it does.
+		// The DSP transfers the alu to a 24 bit reg, modifies, then writes it back
+		// That is why we prevent to use a reference to the ALU directly here
+		if(dddddd == 0x0e || dddddd == 0x0f)
+		{
+			DspValue d(m_block);
+			decode_dddddd_read(d, dddddd);
+			(this->*_bitmodFunc)(d, getBit<Inst>(op));
+			decode_dddddd_write(dddddd, d);
+			return;
+		}
+
 		auto d = decode_dddddd_ref(dddddd, true, true);
 		if(!d.isRegValid())
 			decode_dddddd_read(d, dddddd);

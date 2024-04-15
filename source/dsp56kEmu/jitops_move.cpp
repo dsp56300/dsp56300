@@ -281,26 +281,26 @@ namespace dsp56k
 				decode_ee_read(rx, ee);
 
 				m_block.mem().writeDspMemory(eaX, eaY, rx, rx);
+
+				return;
 			}
-			else
+
+			auto rx = decode_ee_ref(ee, true, false);
+			auto ry = decode_ff_ref(ff, true, false);
+
+			if(!rx.isRegValid())
 			{
-				auto rx = decode_ee_ref(ee, true, false);
-				auto ry = decode_ff_ref(ff, true, false);
-
-				if(!rx.isRegValid())
-				{
-					rx = DspValue(m_block, UsePooledTemp);
-					decode_ee_read(rx, ee);
-				}
-
-				if(!ry.isRegValid())
-				{
-					ry = DspValue(m_block, UsePooledTemp);
-					decode_ff_read(ry, ff);
-				}
-
-				m_block.mem().writeDspMemory(eaX, eaY, rx, ry);
+				rx = DspValue(m_block, eaX.isTemp());
+				decode_ee_read(rx, ee);
 			}
+
+			if(!ry.isRegValid())
+			{
+				ry = DspValue(m_block, eaY.isTemp());
+				decode_ff_read(ry, ff);
+			}
+
+			m_block.mem().writeDspMemory(eaX, eaY, rx, ry);
 			return;
 		}
 

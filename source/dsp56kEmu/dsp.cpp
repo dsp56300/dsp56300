@@ -162,6 +162,7 @@ namespace dsp56k
 		reg.omr = TReg24(int(0));
 		
 		m_instructions = 0;
+		m_cycles = 0;
 		m_jit.resetHW();
 	}
 
@@ -238,20 +239,18 @@ namespace dsp56k
 
 	void DSP::execInterrupts()
 	{
-		// note: holding a ref and accessing the item after removal works because we operate on a ring buffer
-		const auto& interrupt = m_pendingInterrupts.front();
+		const auto interrupt = m_pendingInterrupts.front();
 
-		const auto vba = interrupt.vba;
+		const auto vba = interrupt;
 
 		if(isInterruptMasked(vba))
 			return;
 
-		if(interrupt.vba >= Vba_End)
+		if(interrupt >= Vba_End)
 		{
-			interrupt.func();
+			m_customInterrupts[interrupt - Vba_End]();
 
 			{
-				std::lock_guard lock(m_mutexInsertPendingInterrupt);
 				m_processingMode = Default;
 				m_pendingInterrupts.pop_front();
 
@@ -266,7 +265,6 @@ namespace dsp56k
 
 		// it is important that the processing mode is switched first before popping the vector to prevent a possible race condition in hasPendingInterrupt()
 		{
-			std::lock_guard lock(m_mutexInsertPendingInterrupt);
 			m_processingMode = FastInterrupt;
 			m_pendingInterrupts.pop_front();
 		}
@@ -354,8 +352,6 @@ namespace dsp56k
 	void DSP::execDefaultPreventInterrupt()
 	{
 		m_processingMode = Default;
-
-		std::lock_guard lock(m_mutexInsertPendingInterrupt);
 
 		if(m_pendingInterrupts.empty())
 			m_interruptFunc = m_execPeripheralsFunc;
@@ -1316,51 +1312,20 @@ namespace dsp56k
 		}
 	}
 
-
-	// _____________________________________________________________________________
-	// save
-	//
-	bool DSP::save( FILE* _file ) const
+	TWord DSP::registerInterruptFunc(std::function<void()>&& _func)
 	{
-		fwrite( &reg, sizeof(reg), 1, _file );
-		fwrite( &pcCurrentInstruction, 1, 1, _file );
-		fwrite( &cache, sizeof(cache), 1, _file );
-
-		return true;
-	}
-
-	// _____________________________________________________________________________
-	// load
-	//
-	bool DSP::load( FILE* _file )
-	{
-		fread( &reg, sizeof(reg), 1, _file );
-		fread( &pcCurrentInstruction, 1, 1, _file );
-		fread( &cache, sizeof(cache), 1, _file );
-
-		return true;
+		const auto vba = Vba_End + static_cast<TWord>(m_customInterrupts.size());
+		m_customInterrupts.emplace_back(std::move(_func));
+		return vba;
 	}
 
 	bool DSP::injectInterrupt(uint32_t _interruptVectorAddress)
 	{
-		std::lock_guard lock(m_mutexInsertPendingInterrupt);
-
-		m_pendingInterrupts.push_back({_interruptVectorAddress, nullptr});
+		m_pendingInterrupts.push_back({_interruptVectorAddress});
 
 		if(m_interruptFunc == m_execPeripheralsFunc)
 			m_interruptFunc = &dspTryExecInterrupts;
 
-		return true;
-	}
-
-	bool DSP::injectInterrupt(std::function<void()>&& func)
-	{
-		std::lock_guard lock(m_mutexInsertPendingInterrupt);
-		PendingInterrupt pi{Vba_End, std::move(func)};
-		m_pendingInterrupts.push_back(std::move(pi));
-
-		if(m_interruptFunc == m_execPeripheralsFunc)
-			m_interruptFunc = &dspTryExecInterrupts;
 		return true;
 	}
 
@@ -1383,6 +1348,18 @@ namespace dsp56k
 		const auto minPrio = mr().var & 0x3;
 
 		return prio < minPrio;
+	}
+
+	void DSP::injectExternalInterrupt(const TWord _vba)
+	{
+		m_pendingExternalInterrupts.waitNotFull();
+		m_pendingExternalInterrupts.push_back(_vba);
+	}
+
+	void DSP::processExternalInterrupts()
+	{
+		while(!m_pendingExternalInterrupts.empty())
+			injectInterrupt(m_pendingExternalInterrupts.pop_front());
 	}
 
 	void DSP::clearOpcodeCache()
@@ -1567,5 +1544,18 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 		coreDump(ss);
 		const std::string dump(ss.str());
 		LOG(std::endl << dump);
+	}
+
+	void DSP::op_Wait(const TWord)
+	{
+		while(m_pendingInterrupts.empty())
+		{
+			m_instructions += PeripheralsProcessingStepSize;
+			m_cycles += PeripheralsProcessingStepSize;
+
+			m_execPeripheralsFunc(this);
+		}
+
+		m_interruptFunc = &dspExecInterrupts;
 	}
 }

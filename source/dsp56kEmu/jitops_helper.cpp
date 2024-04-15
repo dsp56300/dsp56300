@@ -379,6 +379,13 @@ namespace dsp56k
 		_src.convertTo56(r.get());
 	}
 
+	void JitOps::callDSPFunc(TWord(* _func)(DSP*, TWord)) const
+	{
+		const FuncArg r0(m_block, 0);
+		m_block.mem().makeDspPtr(r0);
+		m_block.stack().call(asmjit::func_as_ptr(_func));
+	}
+
 	void JitOps::callDSPFunc(void(*_func)(DSP*, TWord)) const
 	{
 		const FuncArg r0(m_block, 0);

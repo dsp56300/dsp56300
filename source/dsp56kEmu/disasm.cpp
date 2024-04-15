@@ -354,12 +354,6 @@ namespace dsp56k
 			const TWord a = _memory[i];
 			const TWord b = i + 1 < _memory.size() ? _memory[i + 1] : 0;
 
-			if (_skipNops && !a)
-			{
-				++i;
-				continue;
-			}
-
 			Line assem;
 			const auto len = disassemble(assem, a, b, 0, 0, _pc + i);
 
@@ -385,14 +379,18 @@ namespace dsp56k
 			lines.emplace_back(std::move(assem));
 		}
 
-		for (const auto & line : lines)
+		for(size_t l=0; l<lines.size(); ++l)
 		{
+			const auto& line = lines[l];
+
 			std::stringstream lineOut;
 
 			if(_writePC)
 				lineOut << HEX(line.pc) << ": ";
 
-			if(branchTargets.find(line.pc) != branchTargets.end())
+			const auto isBranchTarget = branchTargets.find(line.pc) != branchTargets.end();
+
+			if(isBranchTarget)
 			{
 				out << std::endl;
 				std::stringstream funcName;
@@ -418,6 +416,30 @@ namespace dsp56k
 				}
 				out << funcName.str() << std::endl;
 			}
+			else if(l > 0)
+			{
+				// add a line break if the previous code is definitely terminated
+				const auto& prevLine = lines[l-1];
+
+				switch (prevLine.instA)
+				{
+				case Bra_Rn:
+				case Bra_xxx:
+				case Bra_xxxx:
+				case Jmp_ea:
+				case Jmp_xxx:
+				case Rti:
+				case Rts:
+					out <<  '\n';
+					break;
+				default:;
+				}
+			}
+
+			const auto isNop = line.opA == 0 && line.len == 1;
+
+			if(isNop && _skipNops && !isBranchTarget)
+				continue;
 
 			lineOut << formatLine(line);
 
@@ -2311,7 +2333,7 @@ namespace dsp56k
 		return addBitMaskSymbol(_type, _address, 1<<_bit, _symbol);
 	}
 
-	bool Disassembler::addBitMaskSymbol(SymbolType _type, TWord _address, TWord _bit, const std::string& _symbol)
+	bool Disassembler::addBitMaskSymbol(SymbolType _type, TWord _address, TWord _bitMask, const std::string& _symbol)
 	{
 		auto& symbols = m_bitSymbols[_type];
 
@@ -2320,12 +2342,12 @@ namespace dsp56k
 		if(it != symbols.end())
 		{
 			BitSymbols& bs = it->second;
-			bs.bits[_bit] = _symbol;
+			bs.bits[_bitMask] = _symbol;
 			return true;
 		}
 
 		BitSymbols bs;
-		bs.bits.insert(std::make_pair(_bit, _symbol));
+		bs.bits.insert(std::make_pair(_bitMask, _symbol));
 		symbols.insert(std::make_pair(_address, bs));
 
 		return true;
