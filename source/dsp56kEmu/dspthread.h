@@ -3,6 +3,7 @@
 #include <functional>
 #include <mutex>
 #include <memory>
+#include <string>
 #include <thread>
 
 #include "debuggerinterface.h"
