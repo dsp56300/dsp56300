@@ -1,5 +1,12 @@
 # Motorola DSP 56300 family emulator
 
+[![CMake][s0]][l0] ![GPLv3][s1]
+
+[s0]: https://github.com/dsp56300/dsp56300/actions/workflows/cmake.yml/badge.svg
+[l0]: https://github.com/dsp56300/dsp56300/actions/workflows/cmake.yml
+
+[s1]: https://img.shields.io/badge/license-GPLv3-blue.svg
+
 ### Emulation of the Motorola/Freescale/NXP 56300 family DSP
 
 This DSP has been used in plenty of virtual analogue synthesizers and other musical gear that was released after around the mid 90s, such as Access Virus A, B, C, TI / Clavia Nord Lead 3 / Waldorf Q, Microwave II / Novation Supernova, Nova and many others.
@@ -7,12 +14,6 @@ This DSP has been used in plenty of virtual analogue synthesizers and other musi
 The emulator should compile just fine on any platform that supports C++17, no configure is needed as the code uses C++17 standard data types. For performance reasons, it makes excessive use of C++17 features, for example to parse opcode definitions at compile time and to create jump tables of template permutations, so C++17 is a strong requirement.
 
 The build system used is [cmake](https://cmake.org/).
-
-### License
-
-The Open-Source version of this emulator is licensed as GPL v3, i.e. any derivative work must be open source, too.
-
-If you want to use this emulator for commercial projects, plese get in touch. A closed source derivative work exists that does static recompilation of existing DSP 56300 code and is available for purchase.
 
 ### Development
 
@@ -53,13 +54,3 @@ int main(int argc, char* argv[])
 	}
 }
 ```
-
-### Emulation of Access Virus B & C
-
-One derivative work emulates the Access Virus B & C synthesizers, this emulator project is used to execute the DSP code from the original synthesizer ROMs.
-
-If you want to follow the state of the project, join on Discord: https://discord.gg/WJ9cxySnsM
-
-Or visit the homepage with several audio & video examples, VST and AU plugins and more: [DSP 56300 Emulation Blog](https://dsp56300.wordpress.com/)
-
-The project source code can be found here: [gearmulator](https://github.com/dsp56300/gearmulator/)
