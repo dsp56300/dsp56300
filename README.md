@@ -17,7 +17,7 @@ The build system used is [cmake](https://cmake.org/).
 
 ### Development
 
-Please not that this project is a generic DSP emulator and outputs nothing but a static library after building. To use it, you need to create a project on your own, which can be a command line app, a VST plugin or whatever and instantiate the DSP class and feed data into it.
+Please note that this project is a generic DSP emulator and outputs nothing but a static library after building. To use it, you need to create a project on your own, which can be a command line app, a VST plugin or whatever and instantiate the DSP class and feed data into it.
 
 Minimal example:
 ```c++
