@@ -26,29 +26,33 @@ namespace dsp56k
 	{
 		constexpr auto len = 24;
 
-		for(uint32_t i=0; i<len;)
+		uint32_t count = 0;
+		uint32_t begin = 0;
+
+		for(uint32_t i=0; i<len; ++i)
 		{
-			if(_opcode[i] != _c)
+			if(_opcode[i] == _c)
 			{
-				++i;
-				continue;					
+				if(!count)
+					begin = i;
+				++count;
+				continue;
 			}
 
-			uint32_t count = 1;
-			for(auto j=i+1; j<len; ++j)
-			{
-				if(_opcode[j] != _c)
-					break;
-				++count;
-			}
 			if(count == _count)
 			{
-				const auto bit = 23 - i;
+				const auto bit = 23 - begin;
 				return FieldInfo(bit + 1 - count, count);
 			}
-
-			i += count;
+			count = 0;
 		}
+
+		if(count == _count)
+		{
+			const auto bit = 23 - begin;
+			return FieldInfo(bit + 1 - count, count);
+		}
+
 		return FieldInfo(0,0);
 	}
 
