@@ -29,6 +29,14 @@ namespace dsp56k
 	const RuntimeFieldInfos g_runtimeFieldInfos;
 
 	static_assert(getFieldInfoCE<Bsset_S, Field_DDDDDD>().bit == 8, "invalid");
+	static_assert(getFieldInfoCE<Bsset_S, Field_DDDDDD>().len == 6, "invalid");
+	static_assert(getFieldInfoCE<Bsset_S, Field_bbbbb>().bit == 0, "invalid");
+	static_assert(getFieldInfoCE<Bsset_S, Field_bbbbb>().len == 5, "invalid");
+
+	static_assert(getFieldInfoCE<Add_xxxx, Field_oo>().bit == 4, "invalid");
+	static_assert(getFieldInfoCE<Add_xxxx, Field_oo>().len == 2, "invalid");
+	static_assert(getFieldInfoCE<Add_xxxx, Field_ooooo>().len == 5, "invalid");
+	static_assert(getFieldInfoCE<Add_xxxx, Field_ooooo>().bit == 9, "invalid");
 
 	const FieldInfo& getFieldInfo(const Instruction _i, const Field _f)
 	{
