@@ -112,6 +112,8 @@ endif()
 
 if(MSVC)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /constexpr:steps10000000")
+elseif(UNIX AND NOT APPLE)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconstexpr-loop-limit=10000000")
 endif()
 
 if(UNIX AND NOT APPLE)
