@@ -6,7 +6,7 @@
 #include "vtuneSdk/include/ittnotify.h"
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #	include <Windows.h>
 #else
 #	include <pthread.h>
