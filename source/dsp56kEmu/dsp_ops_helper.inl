@@ -13,24 +13,24 @@ namespace dsp56k
 	}
 
 	// Effective Address
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> TWord DSP::effectiveAddress(const TWord op)
+	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>*> TWord DSP::effectiveAddress(const TWord op)
 	{
 		const TWord mmm = getFieldValue<Inst, Field_MMM>(op);
 		const TWord rrr = getFieldValue<Inst, Field_RRR>(op);
 		return decode_MMMRRR_read(mmm, rrr);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type*> TWord DSP::effectiveAddress(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaaaaaaaa>()>*> TWord DSP::effectiveAddress(const TWord op) const
 	{
 		return getEffectiveAddress<Inst>(op);
 	}
 
-	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst, Field_aaaaaa>()>::type*> TWord DSP::effectiveAddress(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst, Field_aaaaaa>()>*> TWord DSP::effectiveAddress(const TWord op) const
 	{
 		return getEffectiveAddress<Inst>(op);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_a, Field_RRR>()>::type*> TWord DSP::effectiveAddress(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_aaaaaa, Field_a, Field_RRR>()>*> TWord DSP::effectiveAddress(const TWord op) const
 	{
 		const TWord aaaaaaa	= getFieldValue<Inst,Field_aaaaaa, Field_a>(op);
 		const TWord rrr		= getFieldValue<Inst,Field_RRR>(op);
@@ -40,24 +40,24 @@ namespace dsp56k
 	}
 
 	// Relative Address
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaa, Field_aaaaa>()>::type*>	int DSP::relativeAddressOffset(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_aaaa, Field_aaaaa>()>*>	int DSP::relativeAddressOffset(const TWord op) const
 	{
 		return getRelativeAddressOffset<Inst>(op);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_RRR>()>::type*> int DSP::relativeAddressOffset(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_RRR>()>*> int DSP::relativeAddressOffset(const TWord op) const
 	{
 		const TWord r = getFieldValue<Inst,Field_RRR>(op);
 		return signextend<int,24>(decode_RRR_read(r));
 	}
 
 	// Memory Read	
-	template <Instruction Inst, typename std::enable_if<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type*> TWord DSP::readMem(const TWord op)
+	template <Instruction Inst, std::enable_if_t<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>*> TWord DSP::readMem(const TWord op)
 	{
 		return readMem<Inst>(op, getFieldValueMemArea<Inst>(op));
 	}
 
-	template <Instruction Inst, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> TWord DSP::readMem(const TWord op, EMemArea area)
+	template <Instruction Inst, std::enable_if_t<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>*> TWord DSP::readMem(const TWord op, EMemArea area)
 	{
 		const TWord mmm = getFieldValue<Inst, Field_MMM>(op);
 		const TWord rrr = getFieldValue<Inst, Field_RRR>(op);
@@ -73,7 +73,7 @@ namespace dsp56k
 		return memRead(area, ea);
 	}
 
-	template <Instruction Inst, TWord MMM, typename std::enable_if<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>::type*> TWord DSP::readMem(const TWord op, EMemArea area)
+	template <Instruction Inst, TWord MMM, std::enable_if_t<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>*> TWord DSP::readMem(const TWord op, EMemArea area)
 	{
 		const TWord rrr = getFieldValue<Inst, Field_RRR>(op);
 
@@ -91,38 +91,38 @@ namespace dsp56k
 		return memRead(area, ea);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type*> TWord DSP::readMem(const TWord op, EMemArea area) const
+	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaaaaaaaa>()>*> TWord DSP::readMem(const TWord op, EMemArea area) const
 	{
 		return memRead(area, effectiveAddress<Inst>(op));
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaa>()>::type*> TWord DSP::readMem(const TWord op, EMemArea area) const
+	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaa>()>*> TWord DSP::readMem(const TWord op, EMemArea area) const
 	{
 		return memRead(area, getFieldValue<Inst, Field_aaaaaa>(op));
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_S>()>::type*> TWord DSP::readMem(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_aaaaaa, Field_S>()>*> TWord DSP::readMem(const TWord op) const
 	{
 		return readMem<Inst>(op, getFieldValueMemArea<Inst>(op));
 	}
 
-	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> TWord DSP::readMem(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>*> TWord DSP::readMem(const TWord op) const
 	{
 		return memReadPeriphFFFF80(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_qqqqqq>(op), Inst);
 	}
 
-	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type*> TWord DSP::readMem(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>*> TWord DSP::readMem(const TWord op) const
 	{
 		return memReadPeriphFFFFC0(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_pppppp>(op), Inst);
 	}
 
 	// Memory Write	
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type*> void DSP::writeMem(const TWord op, const TWord value)
+	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>*> void DSP::writeMem(const TWord op, const TWord value)
 	{
 		return writeMem<Inst>(op, getFieldValueMemArea<Inst>(op), value);
 	}
 
-	template <Instruction Inst, TWord MMM, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
+	template <Instruction Inst, TWord MMM, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
 	{
 		const TWord rrr = getFieldValue<Inst, Field_RRR>(op);
 
@@ -137,7 +137,7 @@ namespace dsp56k
 			memWrite(area, ea, value);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
+	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
 	{
 		const TWord mmm = getFieldValue<Inst, Field_MMM>(op);
 		const TWord rrr = getFieldValue<Inst, Field_RRR>(op);
@@ -153,33 +153,33 @@ namespace dsp56k
 			memWrite(area, ea, value);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
+	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaaaaaaaa>()>*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
 	{
 		memWrite(area, effectiveAddress<Inst>(op), value);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaa>()>::type*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
+	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaa>()>*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
 	{
 		memWrite(area, getFieldValue<Inst, Field_aaaaaa>(op), value);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaaaa, Field_S>()>::type*> void DSP::writeMem(const TWord op, const TWord value)
+	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_aaaaaa, Field_S>()>*> void DSP::writeMem(const TWord op, const TWord value)
 	{
 		writeMem<Inst>(op, getFieldValueMemArea<Inst>(op), value);
 	}
 
-	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type*> void DSP::writeMem(const TWord op, const TWord value)
+	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>*> void DSP::writeMem(const TWord op, const TWord value)
 	{
 		memWritePeriphFFFF80(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_qqqqqq>(op), value);
 	}
 
-	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type*> void DSP::writeMem(const TWord op, const TWord value)
+	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>*> void DSP::writeMem(const TWord op, const TWord value)
 	{
 		memWritePeriphFFFFC0(getFieldValueMemArea<Inst>(op), getFieldValue<Inst, Field_pppppp>(op), value);
 	}
 
 	// Bit Manipulation & Access
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_bbbbb, Field_S>()>::type*> bool DSP::bitTestMemory(TWord op)
+	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_bbbbb, Field_S>()>*> bool DSP::bitTestMemory(TWord op)
 	{
 		return dsp56k::bittest<TWord>(readMem<Inst>(op), getBit<Inst>(op));
 	}

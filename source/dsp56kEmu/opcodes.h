@@ -303,17 +303,17 @@ namespace dsp56k
 		return static_cast<EMemArea>(getFieldValue<I,Field_S>(_op) + MemArea_X);
 	}
 	
-	template <Instruction Inst, typename std::enable_if<hasField<Inst, Field_aaaaaaaaaaaa>()>::type* = nullptr> TWord getEffectiveAddress(const TWord op)
+	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaaaaaaaa>()>* = nullptr> TWord getEffectiveAddress(const TWord op)
 	{
 		return getFieldValue<Inst, Field_aaaaaaaaaaaa>(op);
 	}
 
-	template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst, Field_aaaaaa>()>::type* = nullptr> TWord getEffectiveAddress(const TWord op)
+	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst, Field_aaaaaa>()>* = nullptr> TWord getEffectiveAddress(const TWord op)
 	{
 		return getFieldValue<Inst, Field_aaaaaa>(op);
 	}
 
-	template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_aaaa, Field_aaaaa>()>::type* = nullptr> int getRelativeAddressOffset(const TWord op)
+	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_aaaa, Field_aaaaa>()>* = nullptr> int getRelativeAddressOffset(const TWord op)
 	{
 		const TWord a = getFieldValue<Inst,Field_aaaa, Field_aaaaa>(op);
 		return signextend<int,9>( a );

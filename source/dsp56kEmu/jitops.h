@@ -373,21 +373,21 @@ namespace dsp56k
 			Dynamic
 		};
 
-		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> DspValue effectiveAddress(TWord _op);
-		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> EffectiveAddressType effectiveAddressType(TWord _op) const;
+		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr> DspValue effectiveAddress(TWord _op);
+		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr> EffectiveAddressType effectiveAddressType(TWord _op) const;
 
-		template <Instruction Inst, typename std::enable_if<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type* = nullptr> void readMem(DspValue& _dst, TWord _op);
-		template <Instruction Inst, typename std::enable_if<hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> EffectiveAddressType readMem(DspValue& _dst, TWord _op, EMemArea _area);
-		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void readMem(DspValue& _dst, TWord op) const;
-		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void readMem(DspValue& _dst, TWord op) const;
-		template <Instruction Inst, typename std::enable_if<!hasField<Inst, Field_s>() && hasFields<Inst, Field_aaaaaa, Field_S>()>::type* = nullptr> void readMem(DspValue& _dst, TWord op) const;
-		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>::type* = nullptr> void readMem(DspValue& _dst, TWord op, EMemArea _area) const;
+		template <Instruction Inst, std::enable_if_t<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr> void readMem(DspValue& _dst, TWord _op);
+		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr> EffectiveAddressType readMem(DspValue& _dst, TWord _op, EMemArea _area);
+		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>* = nullptr> void readMem(DspValue& _dst, TWord op) const;
+		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>* = nullptr> void readMem(DspValue& _dst, TWord op) const;
+		template <Instruction Inst, std::enable_if_t<!hasField<Inst, Field_s>() && hasFields<Inst, Field_aaaaaa, Field_S>()>* = nullptr> void readMem(DspValue& _dst, TWord op) const;
+		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>* = nullptr> void readMem(DspValue& _dst, TWord op, EMemArea _area) const;
 
-		template <Instruction Inst, typename std::enable_if<(!hasFields<Inst,Field_s, Field_S>() || Inst==Movep_ppea) && hasFields<Inst, Field_MMM, Field_RRR>()>::type* = nullptr> EffectiveAddressType writeMem(TWord _op, EMemArea _area, DspValue& _src);
-		template <Instruction Inst, typename std::enable_if<!hasField<Inst, Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>::type* = nullptr> void writeMem(TWord _op, DspValue& _src);
-		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>::type* = nullptr> void writeMem(TWord op, const DspValue& _src);
-		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>::type* = nullptr> void writeMem(TWord op, const DspValue& _src);
-		template <Instruction Inst, typename std::enable_if<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>::type* = nullptr> void writeMem(TWord op, EMemArea _area, const DspValue& _src) const;
+		template <Instruction Inst, std::enable_if_t<(!hasFields<Inst,Field_s, Field_S>() || Inst==Movep_ppea) && hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr> EffectiveAddressType writeMem(TWord _op, EMemArea _area, DspValue& _src);
+		template <Instruction Inst, std::enable_if_t<!hasField<Inst, Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr> void writeMem(TWord _op, DspValue& _src);
+		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>* = nullptr> void writeMem(TWord op, const DspValue& _src);
+		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>* = nullptr> void writeMem(TWord op, const DspValue& _src);
+		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>* = nullptr> void writeMem(TWord op, EMemArea _area, const DspValue& _src) const;
 		template<Instruction Inst> void writePmem(TWord _op, const DspValue& _src);
 
 		void readMemOrPeriph(DspValue& _dst, EMemArea _area, const DspValue& _offset, Instruction _inst);
