@@ -26,29 +26,29 @@ namespace dsp56k
 		return getFieldInfo(_inst, _field).len > 0;
 	}
 
-	template<Instruction I, Field F> constexpr bool hasField()
+	template<Instruction I, Field F> constexpr bool hasFieldT()
 	{
 		return getFieldInfoCE<I,F>().len > 0;
 	}
 
 	template<Instruction I, Field A, Field B> constexpr bool hasFields()
 	{
-		return hasField<I,A>() && hasField<I,B>();
+		return hasFieldT<I,A>() && hasFieldT<I,B>();
 	}
 
 	template<Instruction I, Field A, Field B> constexpr bool hasAnyField()
 	{
-		return hasField<I,A>() || hasField<I,B>();
+		return hasFieldT<I,A>() || hasFieldT<I,B>();
 	}
 
-	template<Instruction I, Field A, Field B, Field C> constexpr bool hasFields()
+	template<Instruction I, Field A, Field B, Field C> constexpr bool has3Fields()
 	{
-		return hasField<I,A>() && hasField<I,B>() && hasField<I,C>();
+		return hasFieldT<I,A>() && hasFieldT<I,B>() && hasFieldT<I,C>();
 	}
 
 	template<Instruction I, Field A, Field B, Field C> constexpr bool hasAnyField()
 	{
-		return hasField<I,A>() || hasField<I,B>() || hasField<I,C>();
+		return hasFieldT<I,A>() || hasFieldT<I,B>() || hasFieldT<I,C>();
 	}
 
 	static constexpr TWord getFieldValue(const FieldInfo& _fi, TWord _memoryValue)
@@ -303,12 +303,12 @@ namespace dsp56k
 		return static_cast<EMemArea>(getFieldValue<I,Field_S>(_op) + MemArea_X);
 	}
 	
-	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaaaaaaaa>()>* = nullptr> TWord getEffectiveAddress(const TWord op)
+	template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_aaaaaaaaaaaa>()>* = nullptr> TWord getEffectiveAddress(const TWord op)
 	{
 		return getFieldValue<Inst, Field_aaaaaaaaaaaa>(op);
 	}
 
-	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst, Field_aaaaaa>()>* = nullptr> TWord getEffectiveAddress(const TWord op)
+	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_a, Field_RRR>() && hasFieldT<Inst, Field_aaaaaa>()>* = nullptr> TWord getEffectiveAddress(const TWord op)
 	{
 		return getFieldValue<Inst, Field_aaaaaa>(op);
 	}

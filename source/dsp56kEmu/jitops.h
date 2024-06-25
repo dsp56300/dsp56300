@@ -376,28 +376,28 @@ namespace dsp56k
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr> DspValue effectiveAddress(TWord _op);
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr> EffectiveAddressType effectiveAddressType(TWord _op) const;
 
-		template <Instruction Inst, std::enable_if_t<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr> void readMem(DspValue& _dst, TWord _op);
+		template <Instruction Inst, std::enable_if_t<!hasFieldT<Inst,Field_s>() && has3Fields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr> void readMem(DspValue& _dst, TWord _op);
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr> EffectiveAddressType readMem(DspValue& _dst, TWord _op, EMemArea _area);
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>* = nullptr> void readMem(DspValue& _dst, TWord op) const;
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>* = nullptr> void readMem(DspValue& _dst, TWord op) const;
-		template <Instruction Inst, std::enable_if_t<!hasField<Inst, Field_s>() && hasFields<Inst, Field_aaaaaa, Field_S>()>* = nullptr> void readMem(DspValue& _dst, TWord op) const;
-		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>* = nullptr> void readMem(DspValue& _dst, TWord op, EMemArea _area) const;
+		template <Instruction Inst, std::enable_if_t<!hasFieldT<Inst, Field_s>() && hasFields<Inst, Field_aaaaaa, Field_S>()>* = nullptr> void readMem(DspValue& _dst, TWord op) const;
+		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_S, Field_s>() && hasFieldT<Inst, Field_aaaaaa>()>* = nullptr> void readMem(DspValue& _dst, TWord op, EMemArea _area) const;
 
 		template <Instruction Inst, std::enable_if_t<(!hasFields<Inst,Field_s, Field_S>() || Inst==Movep_ppea) && hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr> EffectiveAddressType writeMem(TWord _op, EMemArea _area, DspValue& _src);
-		template <Instruction Inst, std::enable_if_t<!hasField<Inst, Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr> void writeMem(TWord _op, DspValue& _src);
+		template <Instruction Inst, std::enable_if_t<!hasFieldT<Inst, Field_s>() && has3Fields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr> void writeMem(TWord _op, DspValue& _src);
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>* = nullptr> void writeMem(TWord op, const DspValue& _src);
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>* = nullptr> void writeMem(TWord op, const DspValue& _src);
-		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_S, Field_s>() && hasField<Inst, Field_aaaaaa>()>* = nullptr> void writeMem(TWord op, EMemArea _area, const DspValue& _src) const;
+		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_S, Field_s>() && hasFieldT<Inst, Field_aaaaaa>()>* = nullptr> void writeMem(TWord op, EMemArea _area, const DspValue& _src) const;
 		template<Instruction Inst> void writePmem(TWord _op, const DspValue& _src);
 
 		void readMemOrPeriph(DspValue& _dst, EMemArea _area, const DspValue& _offset, Instruction _inst);
 		void writeMemOrPeriph(EMemArea _area, const DspValue& _offset, const DspValue& _value);
 
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_bbbbb, Field_S>()>* = nullptr> void bitTestMemory(TWord _op, ExpectedBitValue _bitValue, asmjit::Label _skip);
-		template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_bbbbb>()>* = nullptr> void bitTest(TWord op, DspValue& _value, ExpectedBitValue _bitValue, asmjit::Label _skip) const;
+		template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_bbbbb>()>* = nullptr> void bitTest(TWord op, DspValue& _value, ExpectedBitValue _bitValue, asmjit::Label _skip) const;
 
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_bbbbb, Field_S>()>* = nullptr> JitCondCode bitTestMemory(TWord _op, ExpectedBitValue _bitValue);
-		template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_bbbbb>()>* = nullptr> JitCondCode bitTest(TWord op, DspValue& _value, ExpectedBitValue _bitValue) const;
+		template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_bbbbb>()>* = nullptr> JitCondCode bitTest(TWord op, DspValue& _value, ExpectedBitValue _bitValue) const;
 
 		// DSP register access
 		void getMR(const JitReg64& _dst) const;

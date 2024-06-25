@@ -1031,23 +1031,23 @@ namespace dsp56k
 		template<Instruction Inst, std::enable_if_t<hasFields<Inst,Field_MMM, Field_RRR>()>* = nullptr>
 		TWord effectiveAddress(TWord op);
 
-		template<Instruction Inst, std::enable_if_t<hasField<Inst,Field_aaaaaaaaaaaa>()>* = nullptr>
+		template<Instruction Inst, std::enable_if_t<hasFieldT<Inst,Field_aaaaaaaaaaaa>()>* = nullptr>
 		TWord effectiveAddress(TWord op) const;
 
-		template<Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst,Field_aaaaaa>()>* = nullptr>
+		template<Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_a, Field_RRR>() && hasFieldT<Inst,Field_aaaaaa>()>* = nullptr>
 		TWord effectiveAddress(TWord op) const;
 
-		template<Instruction Inst, std::enable_if_t<hasFields<Inst,Field_aaaaaa, Field_a, Field_RRR>()>* = nullptr>
+		template<Instruction Inst, std::enable_if_t<has3Fields<Inst,Field_aaaaaa, Field_a, Field_RRR>()>* = nullptr>
 		TWord effectiveAddress(TWord op) const;
 
 		// Relative Address Offset
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_aaaa, Field_aaaaa>()>* = nullptr>
 		int relativeAddressOffset(TWord op) const;
-		template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_RRR>()>* = nullptr> 
+		template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_RRR>()>* = nullptr> 
 		int relativeAddressOffset(TWord op) const;
 
 		// Memory Read
-		template <Instruction Inst, std::enable_if_t<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr>
+		template <Instruction Inst, std::enable_if_t<!hasFieldT<Inst,Field_s>() && has3Fields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr>
 		TWord readMem(TWord op);
 
 		template <Instruction Inst, std::enable_if_t<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr>
@@ -1056,10 +1056,10 @@ namespace dsp56k
 		template <Instruction Inst, TWord MMM, std::enable_if_t<!hasFields<Inst,Field_s, Field_S>() && hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr>
 		TWord readMem(TWord op, EMemArea area);
 
-		template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaaaaaaaa>()>* = nullptr>
+		template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_aaaaaaaaaaaa>()>* = nullptr>
 		TWord readMem(TWord op, EMemArea area) const;
 
-		template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaa>()>* = nullptr>
+		template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_aaaaaa>()>* = nullptr>
 		TWord readMem(TWord op, EMemArea area) const;
 
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_aaaaaa, Field_S>()>* = nullptr>
@@ -1069,7 +1069,7 @@ namespace dsp56k
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>* = nullptr> TWord readMem(TWord op) const;
 
 		// Memory Write
-		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr>
+		template <Instruction Inst, std::enable_if_t<has3Fields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr>
 		void writeMem(TWord op, TWord value);
 
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr>
@@ -1078,10 +1078,10 @@ namespace dsp56k
 		template <Instruction Inst, TWord MMM, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr>
 		void writeMem(TWord op, EMemArea area, TWord value);
 
-		template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaaaaaaaa>()>* = nullptr>
+		template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_aaaaaaaaaaaa>()>* = nullptr>
 		void writeMem(TWord op, EMemArea area, TWord value);
 
-		template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaa>()>* = nullptr>
+		template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_aaaaaa>()>* = nullptr>
 		void writeMem(TWord op, EMemArea area, TWord value);
 
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_aaaaaa, Field_S>()>* = nullptr>

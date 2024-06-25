@@ -20,17 +20,17 @@ namespace dsp56k
 		return decode_MMMRRR_read(mmm, rrr);
 	}
 
-	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaaaaaaaa>()>*> TWord DSP::effectiveAddress(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_aaaaaaaaaaaa>()>*> TWord DSP::effectiveAddress(const TWord op) const
 	{
 		return getEffectiveAddress<Inst>(op);
 	}
 
-	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_a, Field_RRR>() && hasField<Inst, Field_aaaaaa>()>*> TWord DSP::effectiveAddress(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_a, Field_RRR>() && hasFieldT<Inst, Field_aaaaaa>()>*> TWord DSP::effectiveAddress(const TWord op) const
 	{
 		return getEffectiveAddress<Inst>(op);
 	}
 
-	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_aaaaaa, Field_a, Field_RRR>()>*> TWord DSP::effectiveAddress(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<has3Fields<Inst, Field_aaaaaa, Field_a, Field_RRR>()>*> TWord DSP::effectiveAddress(const TWord op) const
 	{
 		const TWord aaaaaaa	= getFieldValue<Inst,Field_aaaaaa, Field_a>(op);
 		const TWord rrr		= getFieldValue<Inst,Field_RRR>(op);
@@ -45,14 +45,14 @@ namespace dsp56k
 		return getRelativeAddressOffset<Inst>(op);
 	}
 
-	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_RRR>()>*> int DSP::relativeAddressOffset(const TWord op) const
+	template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_RRR>()>*> int DSP::relativeAddressOffset(const TWord op) const
 	{
 		const TWord r = getFieldValue<Inst,Field_RRR>(op);
 		return signextend<int,24>(decode_RRR_read(r));
 	}
 
 	// Memory Read	
-	template <Instruction Inst, std::enable_if_t<!hasField<Inst,Field_s>() && hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>*> TWord DSP::readMem(const TWord op)
+	template <Instruction Inst, std::enable_if_t<!hasFieldT<Inst,Field_s>() && has3Fields<Inst, Field_MMM, Field_RRR, Field_S>()>*> TWord DSP::readMem(const TWord op)
 	{
 		return readMem<Inst>(op, getFieldValueMemArea<Inst>(op));
 	}
@@ -91,12 +91,12 @@ namespace dsp56k
 		return memRead(area, ea);
 	}
 
-	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaaaaaaaa>()>*> TWord DSP::readMem(const TWord op, EMemArea area) const
+	template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_aaaaaaaaaaaa>()>*> TWord DSP::readMem(const TWord op, EMemArea area) const
 	{
 		return memRead(area, effectiveAddress<Inst>(op));
 	}
 
-	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaa>()>*> TWord DSP::readMem(const TWord op, EMemArea area) const
+	template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_aaaaaa>()>*> TWord DSP::readMem(const TWord op, EMemArea area) const
 	{
 		return memRead(area, getFieldValue<Inst, Field_aaaaaa>(op));
 	}
@@ -117,7 +117,7 @@ namespace dsp56k
 	}
 
 	// Memory Write	
-	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR, Field_S>()>*> void DSP::writeMem(const TWord op, const TWord value)
+	template <Instruction Inst, std::enable_if_t<has3Fields<Inst, Field_MMM, Field_RRR, Field_S>()>*> void DSP::writeMem(const TWord op, const TWord value)
 	{
 		return writeMem<Inst>(op, getFieldValueMemArea<Inst>(op), value);
 	}
@@ -153,12 +153,12 @@ namespace dsp56k
 			memWrite(area, ea, value);
 	}
 
-	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaaaaaaaa>()>*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
+	template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_aaaaaaaaaaaa>()>*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
 	{
 		memWrite(area, effectiveAddress<Inst>(op), value);
 	}
 
-	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_aaaaaa>()>*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
+	template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_aaaaaa>()>*> void DSP::writeMem(const TWord op, EMemArea area, const TWord value)
 	{
 		memWrite(area, getFieldValue<Inst, Field_aaaaaa>(op), value);
 	}

@@ -7,7 +7,7 @@
 
 namespace dsp56k
 {
-	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_bbbbb>()>*> void JitOps::bitTest(TWord op, DspValue& _value, const ExpectedBitValue _bitValue, const asmjit::Label _skip) const
+	template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_bbbbb>()>*> void JitOps::bitTest(TWord op, DspValue& _value, const ExpectedBitValue _bitValue, const asmjit::Label _skip) const
 	{
 		const auto b = getBit<Inst>(op);
 
@@ -34,7 +34,7 @@ namespace dsp56k
 
 		bitTest<Inst>(_op, r, _bitValue, _skip);
 	}
-	template <Instruction Inst, std::enable_if_t<hasField<Inst, Field_bbbbb>()>*> JitCondCode JitOps::bitTest(TWord op, DspValue& _value, const ExpectedBitValue _bitValue) const
+	template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_bbbbb>()>*> JitCondCode JitOps::bitTest(TWord op, DspValue& _value, const ExpectedBitValue _bitValue) const
 	{
 		const auto b = getBit<Inst>(op);
 		m_asm.bitTest(_value.get(), b);
