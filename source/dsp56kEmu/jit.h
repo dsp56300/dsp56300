@@ -7,6 +7,7 @@
 
 #include <set>
 #include <vector>
+#include <unordered_map>
 
 #include "debuggerinterface.h"
 #include "jitblockchain.h"
@@ -101,7 +102,12 @@ namespace dsp56k
 
 		asmjit::_abi_1_9::JitRuntime* m_rt = nullptr;
 
-		std::map<JitDspMode, std::unique_ptr<JitBlockChain>> m_chains;
+		struct DspModeHash
+		{
+		    std::size_t operator () (const JitDspMode& m) const	{ return m.get(); }
+		};
+
+		std::unordered_map<JitDspMode, std::unique_ptr<JitBlockChain>, DspModeHash> m_chains;
 		JitBlockChain* m_currentChain = nullptr;
 
 		std::vector<TJitFunc> m_jitFuncs;
