@@ -224,9 +224,17 @@ namespace dsp56k
 
 		if (write)
 		{
-			m_block.mem().readDspMemory(x, y, ea);
+			auto [refX, refY] = decode_LLL_ref(LLL, false, true);
 
-			decode_LLL_write(LLL, std::move(x), std::move(y));
+			if(refX.isRegValid() && refY.isRegValid())
+			{
+				m_block.mem().readDspMemory(refX, refY, ea);
+			}
+			else
+			{
+				m_block.mem().readDspMemory(x, y, ea);
+				decode_LLL_write(LLL, std::move(x), std::move(y));
+			}
 		}
 		else
 		{

@@ -693,6 +693,16 @@ namespace dsp56k
 		}
 	}
 
+	std::pair<DspValue, DspValue> JitOps::decode_LLL_ref(const TWord _lll, const bool _read, const bool _write) const
+	{
+		switch(_lll)
+		{
+		case 2:		return {DspValue(m_block, DspX1, _read, _write), DspValue(m_block, DspX0, _read, _write)};
+		case 3:		return {DspValue(m_block, DspY1, _read, _write), DspValue(m_block, DspY0, _read, _write)};
+		default:	return {DspValue(m_block), DspValue(m_block)};
+		}
+	}
+
 	DspValue JitOps::decode_XMove_MMRRR(TWord _mm, TWord _rrr)
 	{
 		switch (_mm)

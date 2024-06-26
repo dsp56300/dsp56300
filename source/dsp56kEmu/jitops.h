@@ -538,6 +538,7 @@ namespace dsp56k
 		void decode_sss_read(DspValue& _dst, TWord _sss) const;
 		void decode_LLL_read(TWord _lll, DspValue& x, DspValue& y);
 		void decode_LLL_write(TWord _lll, DspValue&& x, DspValue&& y);
+		std::pair<DspValue,DspValue> decode_LLL_ref(TWord _lll, bool _read, bool _write) const;
 		DspValue decode_XMove_MMRRR(TWord _mm, TWord _rrr);
 
 		TWord getOpWordA() const { return m_opWordA; }

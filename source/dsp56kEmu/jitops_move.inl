@@ -131,32 +131,69 @@ namespace dsp56k
 
 		if( write )
 		{
+			auto [refX, refY] = decode_LLL_ref(LLL, false, true);
+
+			const auto validRefs = refX.isRegValid() && refY.isRegValid();
+
 			switch (eaType)
 			{
 			case Immediate:
-				x.set(getOpWordB(), DspValue::Immediate24);
-				y.set(m_opWordB, DspValue::Immediate24);
-				x.toTemp();	// very unlikely that this even happens, decode_LLL_write doesn't handle immediates
-				y.toTemp();
+				if(validRefs)
+				{
+					m_asm.mov(r32(refX), asmjit::Imm(getOpWordB()));
+					m_asm.mov(r32(refY), r32(refX));
+				}
+				else
+				{
+					x.set(getOpWordB(), DspValue::Immediate24);
+					y.set(m_opWordB, DspValue::Immediate24);
+					x.toTemp();	// very unlikely that this even happens, decode_LLL_write doesn't handle immediates
+					y.toTemp();
+					decode_LLL_write(LLL, std::move(x), std::move(y));
+				}
 				break;
 			case Peripherals:
-				m_block.mem().readPeriph(x, MemArea_X, getOpWordB(), Inst);
-				m_block.mem().readPeriph(y, MemArea_Y, m_opWordB, Inst);
+				if(validRefs)
+				{
+					m_block.mem().readPeriph(refX, MemArea_X, getOpWordB(), Inst);
+					m_block.mem().readPeriph(refY, MemArea_Y, m_opWordB, Inst);
+				}
+				else
+				{
+					m_block.mem().readPeriph(x, MemArea_X, getOpWordB(), Inst);
+					m_block.mem().readPeriph(y, MemArea_Y, m_opWordB, Inst);
+					decode_LLL_write(LLL, std::move(x), std::move(y));
+				}
 				break;
 			case Memory:
-				m_block.mem().readDspMemory(x, y, getOpWordB());
+				if(validRefs)
+				{
+					m_block.mem().readDspMemory(refX, refY, getOpWordB());
+				}
+				else
+				{
+					m_block.mem().readDspMemory(x, y, getOpWordB());
+					decode_LLL_write(LLL, std::move(x), std::move(y));
+				}
 				break;
 			case Dynamic:
 				{
 					const auto ea = effectiveAddress<Inst>(op);
-					m_block.mem().readDspMemory(x, y, ea);
-//					readMemOrPeriph(x, MemArea_X, ea, Inst);
-//					readMemOrPeriph(y, MemArea_Y, ea, Inst);
+					if(validRefs)
+					{
+						m_block.mem().readDspMemory(refX, refY, ea);
+					}
+					else
+					{
+						m_block.mem().readDspMemory(x, y, ea);
+						decode_LLL_write(LLL, std::move(x), std::move(y));
+//						readMemOrPeriph(x, MemArea_X, ea, Inst);
+//						readMemOrPeriph(y, MemArea_Y, ea, Inst);
+					}
 				}
 				break;
 			}
 
-			decode_LLL_write(LLL, std::move(x), std::move(y));
 		}
 		else
 		{
