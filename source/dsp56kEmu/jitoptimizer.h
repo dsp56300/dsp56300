@@ -3,9 +3,11 @@
 #include <set>
 #include <vector>
 
+#include "asmjit/core/api-config.h"
+
 namespace asmjit
 {
-	inline namespace _abi_1_9
+	inline namespace ASMJIT_ABI_NAMESPACE
 	{
 		class BaseNode;
 	}

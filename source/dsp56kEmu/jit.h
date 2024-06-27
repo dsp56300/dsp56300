@@ -17,7 +17,7 @@
 
 namespace asmjit
 {
-	inline namespace _abi_1_9
+	inline namespace ASMJIT_ABI_NAMESPACE
 	{
 		class JitRuntime;
 		class CodeHolder;
@@ -100,7 +100,7 @@ namespace dsp56k
 
 		DSP& m_dsp;
 
-		asmjit::_abi_1_9::JitRuntime* m_rt = nullptr;
+		asmjit::ASMJIT_ABI_NAMESPACE::JitRuntime* m_rt = nullptr;
 
 		struct DspModeHash
 		{
