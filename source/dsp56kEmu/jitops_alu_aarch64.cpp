@@ -10,6 +10,9 @@
 #include "jitops_mem.inl"
 #include "asmjit/core/operand.h"
 
+// Unfortunaly headers for Windows ARM define mvn as an unscoped macro, we need to get rid of it as its an aarch64 instruction and we use it via asmjit
+#undef mvn
+
 namespace dsp56k
 {
 	void JitOps::XY0to56(const JitReg64& _dst, int _xy) const

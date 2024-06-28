@@ -6,6 +6,9 @@
 #include "dsp.h"
 #include "agu.h"
 
+// Unfortunaly headers for Windows ARM define mvn as an unscoped macro, we need to get rid of it as its an aarch64 instruction and we use it via asmjit
+#undef mvn
+
 namespace dsp56k
 {
 	void JitOps::getALU0(DspValue& _dst, uint32_t _aluIndex) const
