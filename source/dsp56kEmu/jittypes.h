@@ -36,10 +36,10 @@ namespace dsp56k
 	using JitMemPtr = asmjit::arm::Mem;
 
 	using JitReg = asmjit::arm::Reg;
-	using JitRegGP = asmjit::arm::Gp;
-	using JitReg32 = asmjit::arm::GpW;
-	using JitReg64 = asmjit::arm::GpX;
-	using JitReg128 = asmjit::arm::VecV;
+	using JitRegGP = asmjit::a64::Gp;
+	using JitReg32 = asmjit::a64::GpW;
+	using JitReg64 = asmjit::a64::GpX;
+	using JitReg128 = asmjit::a64::VecV;
 	using JitCondCode = asmjit::arm::CondCode;
 }
 #else

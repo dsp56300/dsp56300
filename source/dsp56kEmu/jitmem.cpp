@@ -199,7 +199,7 @@ namespace dsp56k
 	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const JitRegGP& _index, const uint32_t _shift, const uint32_t _size)
 	{
 #ifdef HAVE_ARM64
-		auto p = asmjit::arm::ptr(_base, _index, asmjit::arm::Shift(asmjit::arm::ShiftOp::kLSL, _shift));
+		auto p = asmjit::a64::ptr(_base, _index, asmjit::arm::Shift(asmjit::arm::ShiftOp::kLSL, _shift));
 		p.setSize(_size);
 		return p;
 #else
@@ -210,7 +210,7 @@ namespace dsp56k
 	JitMemPtr Jitmem::makePtr(const JitReg64& _base, const uint32_t _size)
 	{
 #ifdef HAVE_ARM64
-		auto p = asmjit::arm::ptr(_base, 0);
+		auto p = asmjit::a64::ptr(_base, 0);
 		p.setSize(_size);
 		return p;
 #else
