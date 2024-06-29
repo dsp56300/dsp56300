@@ -130,7 +130,7 @@ namespace dsp56k
 		{
 			static_assert(sizeof(_reg.var) == sizeof(uint64_t) || sizeof(_reg.var) == sizeof(uint32_t) || sizeof(_reg.var) == sizeof(uint8_t), "unknown register size");
 
-			mov(makeDspPtr(_reg), _src);
+			mov<sizeof(_reg.var)>(makeDspPtr(_reg), _src);
 		}
 
 		template<typename T, unsigned int B>
@@ -150,24 +150,24 @@ namespace dsp56k
 
 		void movDspReg(const TWord& _reg, const JitRegGP& _src) const
 		{
-			mov(makeDspPtr(&_reg, sizeof(_reg)), r32(_src));
+			mov<sizeof(_reg)>(makeDspPtr(&_reg, sizeof(_reg)), r32(_src));
 		}
 
-		void movDspReg(const int8_t& _reg, const JitRegGP& _src) const;
+		void movDspReg(const int8_t& _dst, const JitRegGP& _src) const;
 
 		template<typename T, unsigned int B>
 		void movDspReg(const JitRegGP& _dst, const RegType<T, B>& _reg) const
 		{
 			static_assert(sizeof(_reg.var) == sizeof(uint64_t) || sizeof(_reg.var) == sizeof(uint32_t) || sizeof(_reg.var) == sizeof(uint8_t), "unknown register size");
-			mov(_dst, makeDspPtr(_reg));
+			mov<sizeof(_reg.var)>(_dst, makeDspPtr(_reg));
 		}
 
 		void movDspReg(const JitRegGP& _dst, const TWord& _reg) const
 		{
-			mov(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
+			mov<sizeof(_reg)>(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
 		}
 
-		void movDspReg(const JitRegGP& _dst, const int8_t& _reg) const;
+		void movDspReg(const JitRegGP& _dst, const int8_t& _src) const;
 
 		template<typename T, unsigned int B>
 		JitMemPtr makeDspPtr(const RegType<T, B>& _reg) const
@@ -341,10 +341,12 @@ namespace dsp56k
 			T m_usedMap[DspCount];
 		};
 
+		template<size_t ByteSize>
 		void mov (const JitMemPtr& _dst, const JitRegGP& _src) const;
 		void movd(const JitMemPtr& _dst, const SpillReg& _src) const;
 		void movq(const JitMemPtr& _dst, const SpillReg& _src) const;
 
+		template<size_t ByteSize>
 		void mov (const JitRegGP& _dst , const JitMemPtr& _src) const;
 		void movd(const JitReg128& _dst, const JitMemPtr& _src) const;
 		void movq(const JitReg128& _dst, const JitMemPtr& _src) const;
@@ -369,7 +371,6 @@ namespace dsp56k
 		const bool m_extendedSpillSpace;
 		bool m_isParallelOp = false;
 		bool m_repMode = false;
-		mutable JitMemPtr m_dspPtr;
 		bool m_dirty = false;
 
 		JitRegPoolRegPair m_pairX, m_pairY;

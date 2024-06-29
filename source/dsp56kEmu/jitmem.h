@@ -59,9 +59,11 @@ namespace dsp56k
 
 		Jitmem(JitBlock& _block) : m_block(_block) {}
 
-		void mov(void* _dst, const uint32_t& _imm) const;
-		void mov(void* _dst, const uint64_t& _imm) const;
-		void mov(void* _dst, const JitRegGP& _src, uint32_t _size) const;
+		void mov(uint32_t* _dst, const uint32_t& _imm) const;
+		void mov(uint64_t* _dst, const uint64_t& _imm) const;
+
+		template<size_t ByteSize>
+		void mov(void* _dst, const JitRegGP& _src) const;
 		void mov(uint64_t& _dst, const JitRegGP& _src) const;
 		void mov(uint64_t& _dst, const DspValue& _src) const;
 		void mov(uint32_t& _dst, const DspValue& _src) const;
@@ -72,9 +74,13 @@ namespace dsp56k
 		void mov(const JitRegGP& _dst, const uint32_t& _src) const;
 		void mov(const JitRegGP& _dst, const uint8_t& _src) const;
 
+		template<size_t ByteSize>
 		void mov(const JitMemPtr& _dst, const JitRegGP& _src) const;
+
+		template<size_t ByteSize>
 		void mov(const JitRegGP& _dst, const JitMemPtr& _src) const;
 
+		template<size_t ByteSize>
 		void mov(const JitMemPtr& _dst, const uint64_t& _immSrc) const;
 
 		void makeBasePtr(const JitReg64& _base, const void* _ptr, size_t _size = sizeof(uint64_t)) const;
@@ -114,10 +120,12 @@ namespace dsp56k
 		void writePeriph(EMemArea _area, const TWord& _offset, const DspValue& _value) const;
 		void writePeriph(EMemArea _area, const DspValue& _offset, const DspValue& _value) const;
 
+		template<size_t ByteSize>
 		void mov(const JitMemPtr& _dst, const DspValue& _src) const;
+
+		template<size_t ByteSize>
 		void mov(DspValue& _dst, const JitMemPtr& _src) const;
 
-		void readDspMemory(DspValue& _dst, const JitMemPtr& _src) const;
 		void readDspMemory(DspValue& _dst, const MemoryRef& _src) const;
 		void writeDspMemory(const JitMemPtr& _dst, const DspValue& _src) const;
 		void writeDspMemory(const MemoryRef& _dst, const DspValue& _src) const;

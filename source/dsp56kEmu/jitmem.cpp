@@ -11,30 +11,31 @@ constexpr bool g_debugMemoryWrites = false;
 
 namespace dsp56k
 {
-	void Jitmem::mov(void* _dst, const uint32_t& _imm) const
+	void Jitmem::mov(uint32_t* _dst, const uint32_t& _imm) const
 	{
 		const RegGP src(m_block);
 		m_block.asm_().mov(r32(src), asmjit::Imm(_imm));
-		mov(_dst, src, sizeof(uint32_t));
+		mov<sizeof(_imm)>(_dst, src);
 	}
 
-	void Jitmem::mov(void* _dst, const uint64_t& _imm) const
+	void Jitmem::mov(uint64_t* _dst, const uint64_t& _imm) const
 	{
 		const RegGP src(m_block);
 		m_block.asm_().mov(r64(src), asmjit::Imm(_imm));
-		mov(_dst, src, sizeof(uint64_t));
+		mov<sizeof(_imm)>(_dst, src);
 	}
 
-	void Jitmem::mov(void* _dst, const JitRegGP& _src, const uint32_t _size) const
+	template<size_t ByteSize>
+	void Jitmem::mov(void* _dst, const JitRegGP& _src) const
 	{
 		const RegScratch reg(m_block);
-		const auto p = makePtr(reg, _dst, _size);
-		mov(p, _src);
+		const auto p = makePtr(reg, _dst, ByteSize);
+		mov<ByteSize>(p, _src);
 	}
 
 	void Jitmem::mov(uint64_t& _dst, const JitRegGP& _src) const
 	{
-		mov(&_dst, _src, sizeof(uint64_t));
+		mov<sizeof(_dst)>(&_dst, _src);
 	}
 
 	void Jitmem::mov(uint64_t& _dst, const DspValue& _src) const
@@ -47,7 +48,7 @@ namespace dsp56k
 		}
 		else
 		{
-			mov(&_dst, _src.get(), sizeof(uint64_t));
+			mov<sizeof(_dst)>(&_dst, _src.get());
 		}
 	}
 
@@ -61,7 +62,7 @@ namespace dsp56k
 		}
 		else
 		{
-			mov(&_dst, _src.get(), sizeof(uint32_t));
+			mov<sizeof(_dst)>(&_dst, _src.get());
 		}
 	}
 
@@ -73,22 +74,25 @@ namespace dsp56k
 
 	void Jitmem::mov(const JitRegGP& _dst, const uint64_t& _src) const
 	{
-		mov(_dst, makePtr(r64(_dst), &_src, sizeof(_src)));
+		mov<sizeof(_src)>(_dst, makePtr(r64(_dst), &_src, sizeof(_src)));
 	}
 
 	void Jitmem::mov(const JitRegGP& _dst, const uint32_t& _src) const
 	{
-		mov(_dst, makePtr(r64(_dst), &_src, sizeof(_src)));
+		mov<sizeof(_src)>(_dst, makePtr(r64(_dst), &_src, sizeof(_src)));
 	}
 
 	void Jitmem::mov(const JitRegGP& _dst, const uint8_t& _src) const
 	{
-		mov(_dst, makePtr(r64(_dst), &_src, sizeof(_src)));
+		mov<sizeof(_src)>(_dst, makePtr(r64(_dst), &_src, sizeof(_src)));
 	}
 
+	template<size_t ByteSize>
 	void Jitmem::mov(const JitMemPtr& _dst, const JitRegGP& _src) const
 	{
-		switch (_dst.size())
+		static_assert(ByteSize == sizeof(TWord) || ByteSize == sizeof(uint64_t) || ByteSize == sizeof(uint8_t));
+
+		switch (ByteSize)
 		{
 		case sizeof(TWord):
 			m_block.asm_().mov(_dst, r32(_src));
@@ -104,14 +108,20 @@ namespace dsp56k
 #endif
 			break;
 		default:
-			assert(false && "unknown memory size");
 			break;
 		}
 	}
 
+	template void Jitmem::mov<1>(const JitMemPtr& _dst, const JitRegGP& _src) const;
+	template void Jitmem::mov<4>(const JitMemPtr& _dst, const JitRegGP& _src) const;
+	template void Jitmem::mov<8>(const JitMemPtr& _dst, const JitRegGP& _src) const;
+
+	template<size_t ByteSize>
 	void Jitmem::mov(const JitRegGP& _dst, const JitMemPtr& _src) const
 	{
-		switch (_src.size())
+		static_assert(ByteSize == sizeof(TWord) || ByteSize == sizeof(uint64_t) || ByteSize == sizeof(uint8_t));
+
+		switch (ByteSize)
 		{
 		case sizeof(TWord):
 			m_block.asm_().mov(r32(_dst), _src);
@@ -127,16 +137,17 @@ namespace dsp56k
 #endif
 			break;
 		default:
-			assert(false && "unknown memory size");
 			break;
 		}
 	}
+	template void Jitmem::mov<1>(const JitRegGP& _dst, const JitMemPtr& _src) const;
+	template void Jitmem::mov<4>(const JitRegGP& _dst, const JitMemPtr& _src) const;
+	template void Jitmem::mov<8>(const JitRegGP& _dst, const JitMemPtr& _src) const;
 
+	template<size_t ByteSize>
 	void Jitmem::mov(const JitMemPtr& _dst, const uint64_t& _immSrc) const
 	{
 		const auto imm = asmjit::Imm(_immSrc);
-
-		assert(_dst.size());
 
 		JitRegGP temp;
 		RegGP t(m_block, false);
@@ -157,15 +168,35 @@ namespace dsp56k
 		}
 
 #ifdef HAVE_ARM64
-		if (_dst.size() <= sizeof(uint32_t))
+		if (ByteSize <= sizeof(uint32_t))
 			m_block.asm_().mov(r32(temp), imm);
 		else
 			m_block.asm_().mov(r64(temp), imm);
-		mov(_dst, temp);
+		mov<ByteSize>(_dst, temp);
 #else
-		m_block.asm_().mov(_dst, imm);
+		auto ptr = _dst;
+		ptr.setSize(ByteSize);
+		m_block.asm_().mov(ptr, imm);
 #endif
 	}
+
+	template void Jitmem::mov<1>(const JitMemPtr& _dst, const uint64_t& _immSrc) const;
+	template void Jitmem::mov<4>(const JitMemPtr& _dst, const uint64_t& _immSrc) const;
+
+	template <size_t ByteSize> void Jitmem::mov(const JitMemPtr& _dst, const DspValue& _src) const
+	{
+		if(_src.isImmediate())
+		{
+			mov<ByteSize>(_dst, _src.imm());
+		}
+		else
+		{
+			mov<ByteSize>(_dst, _src.get());
+		}
+	}
+
+	template void Jitmem::mov<1>(const JitMemPtr& _dst, const DspValue& _src) const;
+	template void Jitmem::mov<4>(const JitMemPtr& _dst, const DspValue& _src) const;
 
 	void Jitmem::makeBasePtr(const JitReg64& _base, const void* _ptr, const size_t _size/* = sizeof(uint64_t)*/) const
 	{
@@ -173,7 +204,7 @@ namespace dsp56k
 		m_block.asm_().mov(_base, asmjit::Imm(_ptr));
 #else
 		const auto p = m_block.dspRegPool().makeDspPtr(_ptr, _size);
-		if(p.hasSize())
+		if(isValid(p))
 			m_block.asm_().lea(_base, p);
 		else
 			m_block.asm_().mov(_base, asmjit::Imm(reinterpret_cast<uint64_t>(_ptr)));
@@ -222,7 +253,7 @@ namespace dsp56k
 	{
 		const auto p = m_block.dspRegPool().makeDspPtr(_hostPtr, _size);
 
-		if(p.hasSize())
+		if(isValid(p))
 			return p;
 
 		makeBasePtr(_scratch, _hostPtr, _size);
@@ -236,7 +267,7 @@ namespace dsp56k
 
 		const auto offset = pointerOffset(_ptr, _base);
 		if(!offset)
-			return makePtr(_baseReg, 0);
+			return {};
 
 #ifdef HAVE_ARM64
 		bool canBeEncoded = false;
@@ -252,7 +283,7 @@ namespace dsp56k
 				canBeEncoded = true;
 		}
 		if(!canBeEncoded)
-			return makePtr(_baseReg, 0);
+			return {};
 #endif
 
 		auto p = makePtr(_baseReg, static_cast<uint32_t>(_size));
@@ -804,7 +835,7 @@ namespace dsp56k
 			ptr = makeRelativePtr(hostPtr, _ref.baseAddr, _ref.reg, 4);
 		}
 
-		if(ptr.hasSize())
+		if(isValid(ptr))
 		{
 #ifdef HAVE_ARM64
 			// ARM does not have an addressing mode that supports both an index register and an offset
@@ -958,41 +989,38 @@ namespace dsp56k
 		return m;
 	}
 
-	void Jitmem::mov(const JitMemPtr& _dst, const DspValue& _src) const
-	{
-		if(_src.isImmediate())
-		{
-			mov(_dst, _src.imm());
-		}
-		else
-		{
-			assert((_src.getBitCount() == 8 && _dst.size() == sizeof(uint8_t)) || (_src.getBitCount() == 24 && _dst.size() == sizeof(TWord)) || (_src.getBitCount() >= 48 && _dst.size() == sizeof(uint64_t)));
-			mov(_dst, _src.get());
-		}
-	}
-
+	template<size_t ByteSize>
 	void Jitmem::mov(DspValue& _dst, const JitMemPtr& _src) const
 	{
 		assert(_dst.isRegValid());
-		assert((_dst.getBitCount() == 8 && _src.size() == sizeof(uint8_t)) || (_dst.getBitCount() == 24 && _src.size() == sizeof(TWord)) || (_dst.getBitCount() >= 48 && _src.size() == sizeof(uint64_t)));
 
-		mov(_dst.get(), _src);
+		switch (ByteSize)
+		{
+		case sizeof(uint8_t):
+			mov<sizeof(uint8_t)>(_dst.get(), _src);
+			break;
+		case sizeof(uint32_t):
+			assert(_dst.getBitCount() == 24);
+			mov<sizeof(TWord)>(_dst.get(), _src);
+			break;
+		default:
+			assert(_dst.getBitCount() >= 48);
+			mov<sizeof(uint64_t)>(_dst.get(), _src);
+		}
 	}
 
-	void Jitmem::readDspMemory(DspValue& _dst, const JitMemPtr& _src) const
-	{
-		mov(r32(_dst.get()), _src);
-	}
+	template void Jitmem::mov<1>(DspValue& _dst, const JitMemPtr& _src) const;
+	template void Jitmem::mov<4>(DspValue& _dst, const JitMemPtr& _src) const;
 
 	void Jitmem::readDspMemory(DspValue& _dst, const MemoryRef& _src) const
 	{
-		return readDspMemory(_dst, _src.ptr);
+		mov<sizeof(TWord)>(_dst, _src.ptr);
 	}
 
 	void Jitmem::writeDspMemory(const JitMemPtr& _dst, const DspValue& _src) const
 	{
 		assert(_src.isRegValid());
-		mov(_dst, r32(_src.get()));
+		mov<sizeof(TWord)>(_dst, r32(_src.get()));
 	}
 
 	void Jitmem::writeDspMemory(const MemoryRef& _dst, const DspValue& _src) const

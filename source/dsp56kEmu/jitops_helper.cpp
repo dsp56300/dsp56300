@@ -186,12 +186,12 @@ namespace dsp56k
 		if(_mode == DSP::DefaultPreventInterrupt)
 		{
 			const auto* ptr = asmjit::func_as_ptr(&dspExecDefaultPreventInterrupt);
-			m_block.mem().mov(&m_block.dsp().m_interruptFunc, reinterpret_cast<uint64_t>(ptr));
+			m_block.mem().mov(reinterpret_cast<uint64_t*>(&m_block.dsp().m_interruptFunc), reinterpret_cast<uint64_t>(ptr));
 		}
 		else if(_mode == DSP::LongInterrupt)
 		{
 			const auto* ptr = asmjit::func_as_ptr(&dspExecNop);
-			m_block.mem().mov(&m_block.dsp().m_interruptFunc, reinterpret_cast<uint64_t>(ptr));
+			m_block.mem().mov(reinterpret_cast<uint64_t*>(&m_block.dsp().m_interruptFunc), reinterpret_cast<uint64_t>(ptr));
 		}
 		else
 			assert(false && "support missing");

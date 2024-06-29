@@ -86,4 +86,9 @@ namespace dsp56k
 	{
 		return r32(_reg.get());
 	}
+
+	bool isValid(const JitMemPtr& _ptr)
+	{
+		return _ptr.hasBase();
+	}
 }

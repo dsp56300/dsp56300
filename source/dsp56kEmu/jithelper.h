@@ -72,4 +72,6 @@ namespace dsp56k
 
 	JitReg64 r64(const DspValue& _reg);
 	JitReg32 r32(const DspValue& _reg);
+
+	bool isValid(const JitMemPtr& _ptr);
 }

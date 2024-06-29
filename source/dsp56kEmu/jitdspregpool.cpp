@@ -427,36 +427,36 @@ namespace dsp56k
 
 	void JitDspRegPool::movDspReg(const TReg5& _dst, const DspValue& _src) const
 	{
-		m_block.mem().mov(makeDspPtr(_dst), _src);
+		m_block.mem().mov<sizeof(_dst.var)>(makeDspPtr(_dst), _src);
 	}
 
 	void JitDspRegPool::movDspReg(DspValue& _dst, const TReg5& _src) const
 	{
 		if (!_dst.isRegValid() || _dst.getBitCount() != 8)
 			_dst.temp(DspValue::Temp8);
-		m_block.mem().mov(_dst, makeDspPtr(_src));
+		m_block.mem().mov<sizeof(_src.var)>(_dst, makeDspPtr(_src));
 	}
 
 	void JitDspRegPool::movDspReg(const TReg24& _dst, const DspValue& _src) const
 	{
-		m_block.mem().mov(makeDspPtr(_dst), _src);
+		m_block.mem().mov<sizeof(_dst.var)>(makeDspPtr(_dst), _src);
 	}
 
 	void JitDspRegPool::movDspReg(DspValue& _dst, const TReg24& _src) const
 	{
 		if (!_dst.isRegValid() || _dst.getBitCount() != 24)
 			_dst.temp(DspValue::Temp24);
-		m_block.mem().mov(_dst, makeDspPtr(_src));
+		m_block.mem().mov<sizeof(_src.var)>(_dst, makeDspPtr(_src));
 	}
 
-	void JitDspRegPool::movDspReg(const int8_t& _reg, const JitRegGP& _src) const
+	void JitDspRegPool::movDspReg(const int8_t& _dst, const JitRegGP& _src) const
 	{
-		m_block.mem().mov(makeDspPtr(&_reg, sizeof(_reg)), r32(_src));
+		m_block.mem().mov<sizeof(_dst)>(makeDspPtr(&_dst, sizeof(_dst)), r32(_src));
 	}
 
-	void JitDspRegPool::movDspReg(const JitRegGP& _dst, const int8_t& _reg) const
+	void JitDspRegPool::movDspReg(const JitRegGP& _dst, const int8_t& _src) const
 	{
-		m_block.mem().mov(r32(_dst), makeDspPtr(&_reg, sizeof(_reg)));
+		m_block.mem().mov<sizeof(_src)>(r32(_dst), makeDspPtr(&_src, sizeof(_src)));
 	}
 
 	bool JitDspRegPool::canMakeSpace(const PoolReg _reg, const PoolReg _excludeReg) const
@@ -987,27 +987,8 @@ namespace dsp56k
 	JitMemPtr JitDspRegPool::makeDspPtr(const void* _ptr, const size_t _size) const
 	{
 		const void* base = &m_block.dsp().regs();
-
 		const auto p = Jitmem::makeRelativePtr(_ptr, base, regDspPtr, _size);
-
-		if(!p.hasSize())
-		{
-			m_dspPtr.setSize(0);
-			m_dspPtr.setOffset(0);
-			return m_dspPtr;
-		}
-
-		if(!m_dspPtr.hasBase() || !m_dspPtr.hasSize())
-		{
-			m_block.stack().setUsed(regDspPtr);
-//			m_block.asm_().mov(regDspPtr, asmjit::Imm(reinterpret_cast<uint64_t>(base)));
-			m_dspPtr = Jitmem::makePtr(regDspPtr, static_cast<uint32_t>(_size));
-		}
-
-		m_dspPtr.setSize(p.size());
-		m_dspPtr.setOffset(p.offset());
-
-		return m_dspPtr;
+		return p;
 	}
 
 	void JitDspRegPool::reset()
@@ -1016,7 +997,6 @@ namespace dsp56k
 		m_moveToXmmInstruction.fill(nullptr);
 		m_isParallelOp = false;
 		m_repMode = false;
-		m_dspPtr.reset();
 		m_dirty = false;
 	}
 
@@ -1118,10 +1098,15 @@ namespace dsp56k
 		getPair(_xy > 0).set1(_src);
 	}
 
+	template<size_t ByteSize>
 	void JitDspRegPool::mov(const JitMemPtr& _dst, const JitRegGP& _src) const
 	{
-		m_block.mem().mov(_dst, _src);
+		m_block.mem().mov<ByteSize>(_dst, _src);
 	}
+
+	template void JitDspRegPool::mov<1>(const JitMemPtr& _dst, const JitRegGP& _src) const;
+	template void JitDspRegPool::mov<4>(const JitMemPtr& _dst, const JitRegGP& _src) const;
+	template void JitDspRegPool::mov<8>(const JitMemPtr& _dst, const JitRegGP& _src) const;
 
 	void JitDspRegPool::movd(const JitMemPtr& _dst, const SpillReg& _src) const
 	{
@@ -1139,10 +1124,15 @@ namespace dsp56k
 //			m_block.asm_().pextrq(_dst, _src.reg, asmjit::Imm(_src.offset));
 	}
 
+	template<size_t ByteSize>
 	void JitDspRegPool::mov(const JitRegGP& _dst, const JitMemPtr& _src) const
 	{
-		m_block.mem().mov(_dst, _src);
+		m_block.mem().mov<ByteSize>(_dst, _src);
 	}
+
+	template void JitDspRegPool::mov<1>(const JitRegGP& _dst, const JitMemPtr& _src) const;
+	template void JitDspRegPool::mov<4>(const JitRegGP& _dst, const JitMemPtr& _src) const;
+	template void JitDspRegPool::mov<8>(const JitRegGP& _dst, const JitMemPtr& _src) const;
 
 	void JitDspRegPool::movd(const JitReg128& _dst, const JitMemPtr& _src) const
 	{
