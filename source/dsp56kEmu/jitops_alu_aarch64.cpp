@@ -183,6 +183,9 @@ namespace dsp56k
 
 	void JitOps::alu_rnd(TWord ab, const JitReg64& d, const bool _needsSignextend/* = true*/)
 	{
+		if(_needsSignextend)
+			signextend56to64(d);
+
 		RegGP rounder(m_block);
 
 		const JitDspMode* mode = m_block.getMode();
@@ -207,9 +210,6 @@ namespace dsp56k
 			sr_getBitValue(shifter, SRB_S0);
 			m_asm.shl(rounder, shifter.get());
 		}
-
-		if(_needsSignextend)
-			signextend56to64(d);
 
 		m_asm.add(d, rounder.get());
 
@@ -238,7 +238,7 @@ namespace dsp56k
 
 			if(mode)
 			{
-				if(!mode->testSR(SRB_SM))
+				if(!mode->testSR(SRB_RM))
 					noSM();
 			}
 			else
@@ -246,7 +246,7 @@ namespace dsp56k
 				const auto skipNoScalingMode = m_asm.newLabel();
 
 				// if (!sr_test_noCache(SR_RM))
-				m_asm.tbnz(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_SM), skipNoScalingMode);
+				m_asm.tbnz(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(SRB_RM), skipNoScalingMode);
 				noSM();
 				m_asm.bind(skipNoScalingMode);
 			}
