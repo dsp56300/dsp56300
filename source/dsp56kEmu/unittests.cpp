@@ -2266,6 +2266,19 @@ namespace dsp56k
 
 		runTest([&]()
 		{
+			dsp.regs().a.var = 2;
+			dsp.regs().b.var = 4;
+
+			emit(0x20001e);		// subl a,b
+		},
+			[&]()
+		{
+			verify(dsp.regs().b.var == 6);
+			verify(!dsp.sr_test(CCR_Z));
+		});
+
+		runTest([&]()
+		{
 			dsp.reg.a.var = 0x00400000000000;
 			dsp.reg.b.var = 0x00200000000000;
 
