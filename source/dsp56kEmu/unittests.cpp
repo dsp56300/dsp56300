@@ -2099,6 +2099,55 @@ namespace dsp56k
 			verify(!dsp.sr_test(CCR_Z));
 			verify(!dsp.sr_test(CCR_V));
 		});
+
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0xffffffffffffff;
+
+			emit(0x200011);				// rnd a
+		},
+			[&]()
+		{
+			verify(dsp.regs().a.var == 0);
+		});
+
+		// test rnd with scaling mode bits set
+
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00222222ffffff;
+			dsp.sr_set(SR_S0);
+			dsp.sr_clear(SR_S1);
+			emit(0x200011);				// rnd a
+		},
+			[&]()
+		{
+			verify(dsp.regs().a.var == 0x00222222000000);
+		});
+
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00eeeeeebbbbbb;
+			dsp.sr_clear(SR_S0);
+			dsp.sr_set(SR_S1);
+			emit(0x200011);				// rnd a
+		},
+			[&]()
+		{
+			verify(dsp.regs().a.var == 0x00eeeeee800000);
+		});
+
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00eeeeeebbbbbb;
+			dsp.sr_clear(SR_S0);
+			dsp.sr_clear(SR_S1);
+			emit(0x200011);				// rnd a
+		},
+			[&]()
+		{
+			verify(dsp.regs().a.var == 0x00eeeeef000000);
+		});
 	}
 
 	void UnitTests::rol()
