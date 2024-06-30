@@ -329,13 +329,9 @@ namespace dsp56k
 	{
 	public:
 		explicit RegScratch(JitBlock& _block, bool _acquire = true);
-		RegScratch(RegScratch&& _other) noexcept : m_block(_other.m_block)
+		RegScratch(RegScratch&& _other) noexcept : m_block(_other.m_block), m_acquired(_other.m_acquired)
 		{
-			if(_other.isValid())
-			{
-				_other.release();
-				acquire();
-			}
+			_other.m_acquired = false;
 		}
 		explicit RegScratch(const RegScratch&) = delete;
 
