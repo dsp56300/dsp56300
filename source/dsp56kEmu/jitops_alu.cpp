@@ -749,7 +749,7 @@ namespace dsp56k
 
 		AluReg s(m_block, abSrc, abSrc != abDst);
 #ifdef HAVE_X86_64
-		if (m_asm.hasBMI2())
+		if (JitEmitter::hasBMI2())
 		{
 			m_asm.shrx(s, s, offset.get());
 		}

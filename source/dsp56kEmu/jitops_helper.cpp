@@ -14,7 +14,7 @@ namespace dsp56k
 #else
 		if(_dst != _src)
 		{
-			if(m_asm.hasBMI2())
+			if(JitEmitter::hasBMI2())
 			{
 				m_asm.rorx(_dst, _src, asmjit::Imm(64-8));
 				m_asm.sar(_dst, asmjit::Imm(8));
@@ -76,7 +76,7 @@ namespace dsp56k
 #else
 		if (_dst != _src)
 		{
-			if (_a.hasBMI2())
+			if (JitEmitter::hasBMI2())
 			{
 				_a.rorx(_dst, _src, asmjit::Imm(64 - 40));
 				_a.sar(_dst, asmjit::Imm(40));

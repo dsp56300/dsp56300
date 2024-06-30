@@ -159,7 +159,7 @@ namespace dsp56k
 
 		signextend24To32(n);
 
-		if(m_asm.hasBMI())
+		if(JitEmitter::hasBMI())
 		{
 			m_asm.andn(lowerBound, mMask, r);
 		}
