@@ -612,11 +612,12 @@ namespace dsp56k
 		signextend56to64(d);
 		m_asm.shl(d, asmjit::Imm(1));
 
-		RegGP s(m_block);
-		signextend56to64(s, r64(m_dspRegs.getALU(ab ? 0 : 1)));
+		{
+			const RegGP s(m_block);
+			signextend56to64(s, r64(m_dspRegs.getALU(ab ? 0 : 1)));
 
-		m_asm.sub(d, s);
-		s.release();
+			m_asm.sub(d, s);
+		}
 
 		ccr_dirty(ab ? 1 : 0, d, static_cast<CCRMask>(CCR_E | CCR_U | CCR_N | CCR_Z));
 

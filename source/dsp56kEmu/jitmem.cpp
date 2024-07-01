@@ -574,7 +574,7 @@ namespace dsp56k
 	{
 		if(m_block.getConfig().memoryWritesCallCpp || g_debugMemoryWrites)
 		{
-			const RegGP  r(m_block);
+			const RegGP r(m_block);
 			m_block.asm_().mov(r, asmjit::Imm(_offset));
 			return writeDspMemory(_area, r.get(), _src, std::move(_ref));
 		}
