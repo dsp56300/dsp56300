@@ -30,11 +30,16 @@ namespace dsp56k
 		JitBlockRuntimeData* getChildBlock(JitBlockRuntimeData* _parent, TWord _pc, bool _allowCreate = true);
 		JitBlockRuntimeData* emit(TWord _pc);
 
-		JitBlockRuntimeData* getBlock(const TWord _pc)
+		JitBlockRuntimeData* getBlock(const TWord _pc) const
 		{
 			if(_pc >= m_jitCache.size())
 				return nullptr;
 
+			return getBlockUnsafe(_pc);
+		}
+
+		JitBlockRuntimeData* getBlockUnsafe(const TWord _pc) const
+		{
 			return m_jitCache[_pc].block;
 		}
 

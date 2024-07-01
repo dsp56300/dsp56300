@@ -213,7 +213,7 @@ namespace dsp56k
 
 	void Jit::run(const TWord _pc)
 	{
-		const auto* block = m_currentChain->getBlock(_pc);
+		const auto* block = m_currentChain->getBlockUnsafe(_pc);
 		block->getFunc()(this, _pc);
 
 		if(g_traceOps && m_dsp.m_trace)
