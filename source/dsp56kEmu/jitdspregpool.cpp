@@ -148,6 +148,7 @@ namespace dsp56k
 		}
 		else
 		{
+//			m_block.asm_().mov(res, asmjit::Imm(0xbadc0debadc0de));
 			LOGRP("DSP reg " << g_dspRegNames[_reg] << " allocated, no read so no load, now " << m_gpList.size() << " GPs");
 		}
 

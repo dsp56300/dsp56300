@@ -290,6 +290,7 @@ namespace dsp56k
 			return;
 		m_block.lockScratch();
 		m_acquired = true;
+//		m_block.asm_().mov(reg(), asmjit::Imm(0xbadc0debadc0de));
 	}
 
 	void RegScratch::release()
@@ -389,6 +390,8 @@ namespace dsp56k
 		m_reg = m_pool.get(this, m_weak);
 		m_block.stack().setUsed(m_reg);
 		m_acquired = true;
+//		if(m_reg.isGp())
+//			m_block.asm_().mov(m_reg.as<JitRegGP>(), asmjit::Imm(0xbadc0debadc0de));
 	}
 
 	void JitScopedReg::release()
