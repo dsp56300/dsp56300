@@ -295,7 +295,6 @@ namespace dsp56k
 	void Jitmem::makeDspPtr(const JitReg64& _dst) const
 	{
 		m_block.asm_().lea_(r64(_dst), r64(regDspPtr), &m_block.dsp(), &m_block.dsp().regs());
-//		m_block.asm_().mov(r64(_dst), asmjit::Imm(&m_block.dsp()));
 	}
 
 	Jitmem::MemoryRef Jitmem::readDspMemory(DspValue& _dst, const EMemArea _area, const JitRegGP& _offset, MemoryRef&& _ref) const
