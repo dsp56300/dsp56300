@@ -196,77 +196,64 @@ namespace dsp56k
 		m_reg.reset();
 	}
 
-	PushXMMRegs::PushXMMRegs(JitBlock& _block) : m_block(_block)
+	template <typename T> PushRegs<T>::~PushRegs()
+	{
+		for (const auto& r : m_pushedRegs)
+			m_block.stack().pop(r);
+	}
+
+	template <typename T> void PushRegs<T>::push(const T& _reg)
+	{
+		if(!_reg.isValid() || JitStackHelper::isNonVolatile(_reg))
+			return;
+		m_pushedRegs.push_front(_reg);
+		m_block.stack().push(_reg);
+	}
+
+	template class PushRegs<JitReg64>;
+	template class PushRegs<JitReg128>;
+
+	PushXMMRegs::PushXMMRegs(JitBlock& _block) : PushRegs(_block)
 	{
 		for (const auto& xm : g_dspPoolXmms)
 		{
-			if (!xm.isValid())
-				continue;
-			if (!JitStackHelper::isNonVolatile(xm) && m_block.dspRegPool().isInUse(xm))
-			{
-				m_pushedRegs.push_front(xm);
-				m_block.stack().push(xm);
-			}
+			if (xm.isValid() && m_block.dspRegPool().isInUse(xm))
+				push(xm);
 		}
 
-		if (!JitStackHelper::isNonVolatile(regXMMTempA) && m_block.xmmPool().isInUse(regXMMTempA))
-		{
-			m_pushedRegs.push_front(regXMMTempA);
-			_block.stack().push(regXMMTempA);
-		}
+		if (m_block.xmmPool().isInUse(regXMMTempA))
+			push(regXMMTempA);
 
-		if(!JitStackHelper::isNonVolatile(regLastModAlu) && m_block.stack().isUsed(regLastModAlu))
-		{
-			m_pushedRegs.push_front(regLastModAlu);
-			_block.stack().push(regLastModAlu);
-		}
+		if (m_block.stack().isUsed(regLastModAlu))
+			push(regLastModAlu);
 	}
 
-	PushXMMRegs::~PushXMMRegs()
-	{
-		for (const auto& xm : m_pushedRegs)
-			m_block.stack().pop(xm);
-	}
-
-	PushGPRegs::PushGPRegs(JitBlock& _block) : m_block(_block)
+	PushGPRegs::PushGPRegs(JitBlock& _block) : PushRegs(_block)
 	{
 		for (const auto& gp : g_dspPoolGps)
 		{
-			if (!JitStackHelper::isNonVolatile(gp) && !m_block.stack().isUsedFuncArg(gp) && m_block.dspRegPool().isInUse(gp))
-			{
-				m_pushedRegs.push_front(gp);
-				_block.stack().push(r64(gp));
-			}
+			if (m_block.dspRegPool().isInUse(gp))
+				push(gp);
 		}
-		for (auto reg : g_regGPTemps)
+		for (const auto& reg : g_regGPTemps)
 		{
 			const auto gp = reg.as<JitRegGP>();
-
-			if (!JitStackHelper::isNonVolatile(gp) && !m_block.stack().isUsedFuncArg(gp) && m_block.gpPool().isInUse(gp))
-			{
-				m_pushedRegs.push_front(gp);
-				_block.stack().push(r64(gp));
-			}
+			if (m_block.gpPool().isInUse(gp))
+				push(gp);
 		}
 
-		if(!JitStackHelper::isNonVolatile(regDspPtr) && !m_block.stack().isUsedFuncArg(regDspPtr))
-		{
-			m_pushedRegs.push_front(regDspPtr);
-			_block.stack().push(regDspPtr);
-		}
+		push(regDspPtr);
 
 #ifdef HAVE_ARM64
-		m_pushedRegs.push_front(asmjit::a64::regs::x30);
-		_block.stack().push(asmjit::a64::regs::x30);
+		push(asmjit::a64::regs::x30);
 #endif
 	}
 
-	PushGPRegs::~PushGPRegs()
+	void PushGPRegs::push(const JitRegGP& _gp)
 	{
-		for (const auto& gp : m_pushedRegs)
-		{
-			m_block.stack().pop(gp);
-		}
+		if(m_block.stack().isUsedFuncArg(_gp))
+			return;
+		PushRegs::push(_gp.as<JitReg64>());
 	}
 
 	PushBeforeFunctionCall::PushBeforeFunctionCall(JitBlock& _block) : m_xmm(_block) , m_gp(_block)

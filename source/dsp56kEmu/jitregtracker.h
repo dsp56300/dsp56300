@@ -295,25 +295,34 @@ namespace dsp56k
 		std::unique_ptr<ShiftReg> m_reg;
 	};
 
-	class PushXMMRegs
+	template<typename T>
+	class PushRegs
+	{
+	public:
+		PushRegs(JitBlock& _block) : m_block(_block) {}
+		~PushRegs();
+
+		void push(const T& _reg);
+
+	protected:
+		JitBlock& m_block;
+	private:
+		std::list<T> m_pushedRegs;
+	};
+
+	class PushXMMRegs : PushRegs<JitReg128>
 	{
 	public:
 		PushXMMRegs(JitBlock& _block);
-		~PushXMMRegs();
-
-	private:
-		JitBlock& m_block;
-		std::list<JitReg128> m_pushedRegs;
 	};
 
-	class PushGPRegs
+	class PushGPRegs : PushRegs<JitReg64>
 	{
 	public:
 		PushGPRegs(JitBlock& _block);
-		~PushGPRegs();
+
 	private:
-		JitBlock& m_block;
-		std::list<JitRegGP> m_pushedRegs;
+		void push(const JitRegGP& _gp);
 	};
 
 	class PushBeforeFunctionCall
