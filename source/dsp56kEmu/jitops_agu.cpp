@@ -198,15 +198,35 @@ namespace dsp56k
 		const RegScratch scratch(m_block);
 		const auto temp = r32(scratch);
 
-		m_asm.mov(temp, _r);		// int32_t temp = r & moduloMask;
-		m_asm.and_(temp, _mask);
-		m_asm.xor_(_r, temp);		// r ^= temp;
+#ifdef HAVE_ARM64
 		if(_addN)
-			m_asm.inc(temp);		// temp += n;
+			m_asm.add(temp, _r, asmjit::Imm(1));
 		else
-			m_asm.dec(temp);		// temp -= n;
-		m_asm.and_(temp, _mask);	// temp &= moduloMask;
-		m_asm.or_(_r, temp);		// r |= temp;
+			m_asm.sub(temp, _r, asmjit::Imm(1));
+		m_asm.bic(_r, _r, _mask);
+		m_asm.and_(temp, temp, _mask);
+		m_asm.orr(_r, _r, temp);
+#else
+		if(JitEmitter::hasBMI())
+		{
+			m_asm.lea(temp, ptr(_r, _addN ? 1 : -1));
+			m_asm.andn(_r, _mask, _r);
+			m_asm.and_(temp, _mask);
+			m_asm.or_(_r, temp);
+		}
+		else
+		{
+			m_asm.mov(temp, _r);		// int32_t temp = r & moduloMask;
+			m_asm.and_(temp, _mask);
+			m_asm.xor_(_r, temp);		// r ^= temp;
+			if(_addN)
+				m_asm.inc(temp);		// temp += n;
+			else
+				m_asm.dec(temp);		// temp -= n;
+			m_asm.and_(temp, _mask);	// temp &= moduloMask;
+			m_asm.or_(_r, temp);		// r |= temp;
+		}
+#endif
 	}
 
 	void JitOps::updateAddressRegisterSubBitreverse(const JitReg32& _r, const JitReg32& _n, bool _addN)

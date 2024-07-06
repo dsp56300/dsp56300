@@ -154,11 +154,9 @@ namespace dsp56k
 		}
 		else
 		{
-			m_asm.and_(p, _r, _mMask);
-			m_asm.cmp(p, _m);
-			m_asm.mov(p, asmjit::Imm(-1));
-			m_asm.csel(p, _m, p, asmjit::arm::CondCode::kEQ);
-			m_asm.sub(_r, p);
+			m_asm.sub(p, _r, _m);
+			m_asm.tst(p, _mMask);
+			m_asm.csinc(_r, p, _r, asmjit::arm::CondCode::kZero);
 		}
 	}
 

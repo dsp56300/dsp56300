@@ -132,20 +132,18 @@ namespace dsp56k
 
 		if (!_addN)
 		{
-			m_asm.mov(p, _r);
-			m_asm.dec(p);
+			m_asm.lea(p, ptr(_r, -1));
 			m_asm.test(_r, _mMask);
 			m_asm.lea(_r, ptr(_r, _m));
-			m_asm.cmovne(_r, p);
+			m_asm.cmovnz(_r, p);
 		}
 		else
 		{
 			m_asm.mov(p, _r);
-			m_asm.and_(p, _mMask);
-			m_asm.cmp(p, _m);
-			m_asm.mov(p, -1);
-			m_asm.cmove(p, _m);
-			m_asm.sub(_r, p);
+			m_asm.sub(p, _m);
+			m_asm.inc(_r);
+			m_asm.test(p, _mMask);
+			m_asm.cmovz(_r, p);
 		}
 	}
 
@@ -175,8 +173,7 @@ namespace dsp56k
 		else
 			m_asm.sub(r, n);
 
-		m_asm.mov(mod, m);
-		m_asm.inc(mod);
+		m_asm.lea(mod, ptr(m, 1));
 
 		// if (n & mask) == 0
 		//     mod = 0
