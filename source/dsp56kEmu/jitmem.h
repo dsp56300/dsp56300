@@ -158,6 +158,8 @@ namespace dsp56k
 
 		bool hasMmuSupport() const;
 
+		static void assignFuncArgs(const std::vector<JitRegGP>& _target, const std::vector<JitRegGP>& _source, const std::function<void(uint32_t, JitRegGP, JitRegGP)>&& _assignFunc);
+
 		JitBlock& m_block;
 	};
 }

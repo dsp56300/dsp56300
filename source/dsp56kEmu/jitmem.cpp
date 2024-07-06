@@ -684,9 +684,17 @@ namespace dsp56k
 			const FuncArg r2(m_block, 2);
 			const FuncArg r3(m_block, 3);
 
-			makeDspPtr(r0);
+			auto assignArg = [this](const uint32_t _index, const JitRegGP& _d, const JitRegGP& _s)
+			{
+				if(_index == 0)
+					makeDspPtr(_d.as<JitReg64>());
+				else if(r32(_d) != r32(_s))
+					m_block.asm_().mov(r32(_d), r32(_s));
+			};
+
+			assignFuncArgs({r0, r2}, {regDspPtr, _offset}, assignArg);
+
 			m_block.asm_().mov(r32(r1), asmjit::Imm(_area == MemArea_Y ? 1 : 0));
-			m_block.asm_().mov(r32(r2), _offset);
 			m_block.asm_().mov(r32(r3), asmjit::Imm(_inst));
 
 			m_block.stack().call(asmjit::func_as_ptr(&callDSPMemReadPeriph));
@@ -726,20 +734,26 @@ namespace dsp56k
 		const FuncArg r2(m_block, 2);
 		const FuncArg r3(m_block, 3);
 
-		// value might be held in a func arg register, safe if we set the func arg for the value first
+		auto assignArg = [this](const uint32_t _index, const JitRegGP& _dst, const JitRegGP& _src)
+		{
+			if(_index == 0)
+				makeDspPtr(_dst.as<JitReg64>());
+			else if(r32(_dst) != r32(_src))
+				m_block.asm_().mov(r32(_dst), r32(_src));
+		};
+
 		if (_value.isImmediate())
 		{
+			assignFuncArgs({r0.get(), r2.get()}, {regDspPtr, _offset.as<JitRegGP>()}, assignArg);
+
 			m_block.asm_().mov(r32(r3), asmjit::Imm(_value.imm()));
 		}
 		else
 		{
-			if (r32(r3) != r32(_value.get()))
-				m_block.asm_().mov(r32(r3), r32(_value.get()));
+			assignFuncArgs({r0.get(), r2.get(), r3.get()}, {regDspPtr, _offset.as<JitRegGP>(), _value.get()}, assignArg);
 		}
 
-		makeDspPtr(r0);
 		m_block.asm_().mov(r32(r1), asmjit::Imm(_area == MemArea_Y ? 1 : 0));
-		m_block.asm_().mov(r32(r2), _offset);
 
 		m_block.stack().call(asmjit::func_as_ptr(&callDSPMemWritePeriph));
 	}
@@ -750,19 +764,25 @@ namespace dsp56k
 		const FuncArg r1(m_block, 1);
 		const FuncArg r2(m_block, 2);
 		const FuncArg r3(m_block, 3);
-
-		// value might be held in a func arg register, safe if we set the func arg for the value first
+		
 		if (_value.isImmediate())
 		{
+			makeDspPtr(r0);
 			m_block.asm_().mov(r32(r3), asmjit::Imm(_value.imm()));
 		}
 		else
 		{
-			if(r32(r3) != r32(_value.get()))
-				m_block.asm_().mov(r32(r3), r32(_value.get()));
+			auto assignArg = [this](const uint32_t _index, const JitRegGP& _dst, const JitRegGP& _src)
+			{
+				if(_index == 0)
+					makeDspPtr(_dst.as<JitReg64>());
+				else if(r32(_dst) != r32(_src))
+					m_block.asm_().mov(r32(_dst), r32(_src));
+			};
+
+			assignFuncArgs({r0, r3}, {regDspPtr, _value.get()}, assignArg);
 		}
 
-		makeDspPtr(r0);
 		m_block.asm_().mov(r32(r1), asmjit::Imm(_area == MemArea_Y ? 1 : 0));
 		m_block.asm_().mov(r32(r2), asmjit::Imm(_offset));
 
@@ -813,6 +833,76 @@ namespace dsp56k
 	bool Jitmem::hasMmuSupport() const
 	{
 		return m_block.dsp().memory().hasMmuSupport();
+	}
+
+	void Jitmem::assignFuncArgs(const std::vector<JitRegGP>& _target, const std::vector<JitRegGP>& _source, const std::function<void(uint32_t, JitRegGP, JitRegGP)>&& _assignFunc)
+	{
+		assert(_target.size() == _source.size());
+
+		std::unordered_map<uint32_t, JitRegGP> remainingSources;
+		std::unordered_map<uint32_t, JitRegGP> remainingTargets;
+
+		for(size_t i=0; i<_source.size(); ++i)
+			remainingSources.insert({static_cast<uint32_t>(i), _source[i]});
+
+		for(size_t i=0; i<_target.size(); ++i)
+			remainingTargets.insert({static_cast<uint32_t>(i), _target[i]});
+
+		auto equals = [&](const JitRegGP& _a, const JitRegGP& _b)
+		{
+			return r64(_a) == r64(_b);
+		};
+
+		auto isTarget = [&](const JitRegGP& _reg)
+		{
+			for (const auto& t : remainingTargets)
+			{
+				if(equals(t.second, _reg))
+					return true;
+			}
+			return false;
+		};
+
+		auto isSource = [&](const JitRegGP& _reg)
+		{
+			for (const auto& s : remainingSources)
+			{
+				if(equals(s.second, _reg))
+					return true;
+			}
+			return false;
+		};
+
+		// assign sources to targets as long as:
+		// - the target that we want to assign to is not another source
+		// - or target and source are equal registers anyway
+
+		bool assignedSomething = true;
+
+		while(assignedSomething)
+		{
+			assignedSomething = false;
+
+			for(auto it = remainingSources.begin(); it != remainingSources.end();)
+			{
+				const auto index = it->first;
+				const auto& source = it->second;
+
+				if(equals(_target[index], _source[index]) || !isSource(_target[index]))
+				{
+					_assignFunc(index, _target[index], _source[index]);
+					it = remainingSources.erase(it);
+					remainingTargets.erase(index);
+					assignedSomething = true;
+				}
+				else
+				{
+					++it;
+				}
+			}
+		}
+
+		assert(remainingTargets.empty() && remainingSources.empty());
 	}
 
 	Jitmem::MemoryRef Jitmem::getMemAreaPtr(const EMemArea _area, const TWord _offset, MemoryRef&& _ref, bool _supportIndexedAddressing) const
