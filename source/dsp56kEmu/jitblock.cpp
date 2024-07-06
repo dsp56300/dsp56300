@@ -637,6 +637,7 @@ namespace dsp56k
 		}
 
 		JitReg32 regLC;
+		RegGP tempLC(*this, false);
 
 		if(isLoopBody && m_config.maxDoIterations)
 		{
@@ -647,11 +648,25 @@ namespace dsp56k
 			// Also, we need to make sure that our LC reg is not the first function argument because we replace it with the Jit*
 			if(JitStackHelper::isNonVolatile(regLC) || r64(regLC) == g_funcArgGPs[0])
 			{
-				JitReg32 regTempLC = r32(g_regGPTemps.begin()->as<JitRegGP>());
-				assert(!m_gpPool.isInUse(r64(regTempLC)));
-				asm_().mov(r32(regTempLC), regLC);
-				regLC = r32(regTempLC);
-				assert(!JitStackHelper::isNonVolatile(regTempLC));
+				std::vector<RegGP> temps;
+
+				// acquire a temp that is volatile
+				while(!m_gpPool.empty())
+				{
+					temps.emplace_back(*this);
+					if(JitStackHelper::isNonVolatile(temps.back()))
+						continue;
+
+					tempLC = std::move(temps.back());
+					temps.clear();
+					break;
+				}
+
+				assert(tempLC.isValid());
+				assert(!JitStackHelper::isNonVolatile(tempLC));
+
+				asm_().mov(r32(tempLC), regLC);
+				regLC = r32(tempLC);
 			}
 		}
 
