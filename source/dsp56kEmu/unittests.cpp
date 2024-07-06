@@ -164,13 +164,13 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.set_m(0, 0x000fff);
-			dsp.regs().r[0].var = 0x000f00;
+			dsp.regs().r[0].var = 0x123f00;
 			dsp.regs().n[0].var = 0x000200;
 
 			emit(0x204800);	// move (r0)+n0
 		}, [&]()
 		{
-			verify(dsp.regs().r[0] == 0x000100);
+			verify(dsp.regs().r[0] == 0x123100);
 		});
 
 		runTest([&]()
