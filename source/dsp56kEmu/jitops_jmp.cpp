@@ -5,13 +5,13 @@
 
 namespace dsp56k
 {
-	TWord callDspRemainingInstructionsForFrameSyncFalse(DSP* _dsp, TWord)
+	TWord callDspRemainingInstructionsForFrameSyncFalse(DSP* _dsp)
 	{
 		auto* p = static_cast<Peripherals56362*>(_dsp->getPeriph(0));  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 		return p->getEsaiClock().getRemainingInstructionsForFrameSync<false>();
 	}
 
-	TWord callDspRemainingInstructionsForFrameSyncTrue(DSP* _dsp, TWord)
+	TWord callDspRemainingInstructionsForFrameSyncTrue(DSP* _dsp)
 	{
 		auto* p = static_cast<Peripherals56362*>(_dsp->getPeriph(0));  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 		return p->getEsaiClock().getRemainingInstructionsForFrameSync<true>();
@@ -28,14 +28,14 @@ namespace dsp56k
 
 		if (m_opWordB == 0 && addr == Esai::M_SAISR && bit == Esai::M_TFS)
 		{
+			{
+				const FuncArg r0(m_block, 0);
+				m_block.mem().makeDspPtr(r0);
+				m_block.stack().call(asmjit::func_as_ptr(BitValue == BitSet ? &callDspRemainingInstructionsForFrameSyncFalse : &callDspRemainingInstructionsForFrameSyncTrue));
+			}
+
 			// op word B = jump to self, addr = ESAI status register, bit test for bit Transmit Frame Sync
 			auto count = r32(regReturnVal);
-
-			{
-				const FuncArg r1(m_block, 1);
-				m_asm.mov(r32(r1), asmjit::Imm(0));
-				callDSPFunc(BitValue == BitSet ? &callDspRemainingInstructionsForFrameSyncFalse : &callDspRemainingInstructionsForFrameSyncTrue);
-			}
 
 			const SkipLabel skip(m_block);
 			// do nothing if the value is zero

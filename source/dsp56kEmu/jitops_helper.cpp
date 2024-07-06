@@ -379,31 +379,25 @@ namespace dsp56k
 		_src.convertTo56(r.get());
 	}
 
-	void JitOps::callDSPFunc(TWord(* _func)(DSP*, TWord)) const
-	{
-		const FuncArg r0(m_block, 0);
-		m_block.mem().makeDspPtr(r0);
-		m_block.stack().call(asmjit::func_as_ptr(_func));
-	}
-
-	void JitOps::callDSPFunc(void(*_func)(DSP*, TWord)) const
-	{
-		const FuncArg r0(m_block, 0);
-		m_block.mem().makeDspPtr(r0);
-		m_block.stack().call(asmjit::func_as_ptr(_func));
-	}
-
 	void JitOps::callDSPFunc(void(*_func)(DSP*, TWord), const TWord _arg) const
 	{
+		const FuncArg r0(m_block, 0);
 		const FuncArg r1(m_block, 1);
+
+		m_block.mem().makeDspPtr(r0);
 		m_block.asm_().mov(r32(r1), asmjit::Imm(_arg));
-		callDSPFunc(_func);
+
+		m_block.stack().call(asmjit::func_as_ptr(_func));
 	}
 
 	void JitOps::callDSPFunc(void(*_func)(DSP*, TWord), const JitRegGP& _arg) const
 	{
+		const FuncArg r0(m_block, 0);
 		const FuncArg r1(m_block, 1);
+
+		m_block.mem().makeDspPtr(r0);
 		m_block.asm_().mov(r1, _arg);
-		callDSPFunc(_func);
+
+		m_block.stack().call(asmjit::func_as_ptr(_func));
 	}
 }

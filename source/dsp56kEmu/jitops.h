@@ -324,8 +324,6 @@ namespace dsp56k
 			return static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 8ull) >> 8ull;
 		}
 
-		void callDSPFunc(TWord(* _func)(DSP*, TWord)) const;
-		void callDSPFunc(void(* _func)(DSP*, TWord)) const;
 		void callDSPFunc(void(* _func)(DSP*, TWord), TWord _arg) const;
 		void callDSPFunc(void(* _func)(DSP*, TWord), const JitRegGP& _arg) const;
 
