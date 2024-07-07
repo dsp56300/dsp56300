@@ -17,7 +17,7 @@ namespace dsp56k
 #endif
 	}
 
-	void JitOps::readMemOrPeriph(DspValue& _dst, EMemArea _area, const DspValue& _offset, Instruction _inst) const
+	void JitOps::readMemOrPeriph(DspValue& _dst, EMemArea _area, const DspValue& _offset, const Instruction _inst) const
 	{
 		if (_offset.isImm24())
 		{
@@ -59,7 +59,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::writeMemOrPeriph(EMemArea _area, const DspValue& _offset, const DspValue& _value) const
+	void JitOps::writeMemOrPeriph(const EMemArea _area, const DspValue& _offset, const DspValue& _value) const
 	{
 		if (_offset.isImm24())
 		{
