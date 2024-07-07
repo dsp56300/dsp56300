@@ -196,9 +196,10 @@ namespace dsp56k
 			if(m_debugger)
 				m_debugger->onExec(getPC().var);
 #endif
-			LOGJITPC(getPC().toWord());
-			m_jitEntries[getPC().toWord()](&m_jit, getPC().toWord());
-//			m_jit.exec(getPC().toWord());
+			const auto pc = getPC().toWord();
+			LOGJITPC(pc);
+			m_jitEntries[pc](&m_jit, pc);
+//			m_jit.exec(pc);
 		}
 		else
 		{
