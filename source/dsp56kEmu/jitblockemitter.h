@@ -13,13 +13,13 @@ namespace dsp56k
 
 	struct JitBlockEmitter
 	{
-		JitBlockEmitter(DSP& _dsp, JitRuntimeData& _runtimeData, const JitConfig& _config)
+		JitBlockEmitter(DSP& _dsp, JitRuntimeData& _runtimeData, JitConfig&& _config)
 		: emitter(nullptr)
-		, block(emitter, _dsp, _runtimeData, _config)
+		, block(emitter, _dsp, _runtimeData, std::move(_config))
 		{
 		}
 
-		void reset()
+		void reset(JitConfig&& _config)
 		{
 			emitter.~JitEmitter();
 			codeHolder.~CodeHolder();
@@ -27,7 +27,7 @@ namespace dsp56k
 			new (&codeHolder)asmjit::CodeHolder();
 			new (&emitter)JitEmitter(nullptr);
 
-			block.reset();
+			block.reset(std::move(_config));
 		}
 
 		asmjit::CodeHolder codeHolder;

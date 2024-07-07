@@ -248,6 +248,17 @@ namespace dsp56k
 		checkModeChange();
 	}
 
+	JitConfig Jit::getConfig(const TWord _pc) const
+	{
+		auto& globalConfig = getConfig();
+		if(!globalConfig.getBlockConfig)
+			return globalConfig;
+		auto localConfig = globalConfig.getBlockConfig(_pc);
+		if(localConfig)
+			return *localConfig;
+		return globalConfig;
+	}
+
 	void Jit::resetHW()
 	{
 		checkModeChange();
@@ -349,15 +360,15 @@ namespace dsp56k
 		checkModeChange();
 	}
 
-	JitBlockEmitter* Jit::acquireEmitter()
+	JitBlockEmitter* Jit::acquireEmitter(const TWord _pc)
 	{
 		if(m_emitters.empty())
-			return new JitBlockEmitter(dsp(), getRuntimeData(), getConfig());
+			return new JitBlockEmitter(dsp(), getRuntimeData(), getConfig(_pc));
 
 		auto* emitter = m_emitters.back();
 		m_emitters.pop_back();
 
-		emitter->reset();
+		emitter->reset(getConfig(_pc));
 
 		return emitter;
 	}

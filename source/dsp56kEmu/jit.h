@@ -53,6 +53,7 @@ namespace dsp56k
 		void runCheckModeChange(TWord _pc);
 
 		const JitConfig& getConfig() const { return m_config; }
+		JitConfig getConfig(TWord _pc) const;
 		void setConfig(const JitConfig& _config) { m_config = _config; }
 		void resetHW();
 		const std::map<TWord, TWord>& getLoops() const { return m_loops; }
@@ -87,7 +88,7 @@ namespace dsp56k
 
 		void destroyAllBlocks();
 
-		JitBlockEmitter* acquireEmitter();
+		JitBlockEmitter* acquireEmitter(TWord _pc);
 		void releaseEmitter(JitBlockEmitter* _emitter);
 
 		JitBlockRuntimeData* acquireBlockRuntimeData();

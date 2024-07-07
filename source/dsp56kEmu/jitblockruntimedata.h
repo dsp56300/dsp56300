@@ -4,6 +4,7 @@
 
 #include "interrupts.h"
 #include "jitblock.h"
+#include "jitblockinfo.h"
 #include "types.h"
 
 namespace dsp56k

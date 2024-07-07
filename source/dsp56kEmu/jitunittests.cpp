@@ -109,7 +109,7 @@ namespace dsp56k
 			config.dynamicPeripheralAddressing = true;
 			config.aguSupportBitreverse = true;
 
-			JitBlock b(m_asm, dsp, rtData, config);
+			JitBlock b(m_asm, dsp, rtData, std::move(config));
 			JitBlockRuntimeData rt;
 			JitOps o(b, rt);
 

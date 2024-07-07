@@ -1,6 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
+#include <functional>
+
+#include "types.h"
 
 namespace dsp56k
 {
@@ -17,5 +21,8 @@ namespace dsp56k
 
 		bool asmjitDiagnostics = false;
 		uint32_t maxDoIterations = 0;	// maximum number of iterations of a do loop before the Jit block is exited (and later re-entered), giving a time slice for interrupts/peripherals
+
+		// retrieves a JitConfig for a specific PC. If null, the global default config is used
+		std::function<std::optional<JitConfig>(TWord)> getBlockConfig;
 	};
 }

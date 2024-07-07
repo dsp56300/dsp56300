@@ -7,12 +7,9 @@
 #include "jitregtracker.h"
 #include "jitruntimedata.h"
 #include "jitstackhelper.h"
-#include "jitblockinfo.h"
 #include "jittypes.h"
+#include "jitconfig.h"
 
-#include "opcodeanalysis.h"
-
-#include <string>
 #include <vector>
 #include <set>
 
@@ -38,7 +35,7 @@ namespace dsp56k
 	{
 	public:
 
-		JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData, const JitConfig& _config);
+		JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData, JitConfig&& _config);
 		~JitBlock();
 
 		static void getInfo(JitBlockInfo& _info, const DSP& _dsp, TWord _pc, const JitConfig& _config, const std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds);
@@ -97,7 +94,7 @@ namespace dsp56k
 			m_shiftLocked = false;
 		}
 
-		void reset();
+		void reset(JitConfig&& _config);
 
 	private:
 		class JitBlockGenerating
@@ -122,7 +119,7 @@ namespace dsp56k
 		JitDspRegPool m_dspRegPool;
 		Jitmem m_mem;
 
-		const JitConfig& m_config;
+		JitConfig m_config;
 		JitBlockChain* m_chain = nullptr;
 
 		bool m_scratchLocked = false;

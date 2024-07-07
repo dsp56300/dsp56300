@@ -11,7 +11,7 @@
 
 namespace dsp56k
 {
-	JitBlock::JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData, const JitConfig& _config)
+	JitBlock::JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData, JitConfig&& _config)
 	: m_runtimeData(_runtimeData)
 	, m_asm(_a)
 	, m_dsp(_dsp)
@@ -21,7 +21,7 @@ namespace dsp56k
 	, m_dspRegs(*this)
 	, m_dspRegPool(*this)
 	, m_mem(*this)
-	, m_config(_config)
+	, m_config(std::move(_config))
 	{
 	}
 
@@ -796,8 +796,9 @@ namespace dsp56k
 		m_mode = _mode;
 	}
 
-	void JitBlock::reset()
+	void JitBlock::reset(JitConfig&& _config)
 	{
+		m_config = std::move(_config);
 		m_stack.reset();
 		m_xmmPool.reset({regXMMTempA});
 		m_gpPool.reset(g_regGPTemps);
