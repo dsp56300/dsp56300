@@ -60,6 +60,7 @@ namespace dsp56k
 		};
 
 		using CallbackTx = std::function<void()>;
+		using CallbackRx = std::function<void()>;
 
 		TWord readStatusRegister();
 
@@ -98,7 +99,7 @@ namespace dsp56k
 
 		TWord readRX(Instruction _inst);
 
-		void writeRX(const std::vector<TWord>& _data)		{ writeRX(&_data[0], _data.size()); }
+		void writeRX(const std::vector<TWord>& _data)		{ writeRX(_data.data(), _data.size()); }
 		void writeRX(const TWord* _data, size_t _count);
 		void clearRX();
 		
@@ -151,6 +152,14 @@ namespace dsp56k
 			m_rxRateLimit = _rateLimit;
 		}
 
+		void setReadRxCallback(const CallbackRx& _callback)
+		{
+			m_callbackRx = _callback;
+
+			if(!m_callbackRx)
+				m_callbackRx = [] {};
+		}
+
 	private:
 		TWord m_hsr = 0;
 		TWord m_hcr = 0;
@@ -164,6 +173,7 @@ namespace dsp56k
 		TWord m_hddr = 0;
 		bool m_transmitDataAlwaysEmpty = true;
 		CallbackTx m_callbackTx;
+		CallbackRx m_callbackRx = [] {};
 		uint32_t m_rxRateLimit;		// minimum number of instructions between two RX interrupts
 		bool m_waitServeRXInterrupt = false;
 		int32_t m_pendingHostFlags01 = -1;

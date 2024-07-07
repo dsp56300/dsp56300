@@ -75,7 +75,7 @@ namespace dsp56k
 		}
 	}
 
-	TWord HDI08::readRX(Instruction _inst)
+	TWord HDI08::readRX(const Instruction _inst)
 	{
 		if (m_dataRX.empty())
 		{
@@ -99,6 +99,7 @@ namespace dsp56k
 		default:
 			res = m_dataRX.pop_front();
 			m_waitServeRXInterrupt = false;
+			m_callbackRx();
 //			LOG("HDI08 RX = " << HEX(res) << " (pop)");
 			break;
 		}
