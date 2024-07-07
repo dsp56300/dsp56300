@@ -388,8 +388,9 @@ namespace dsp56k
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_S, Field_s>() && hasFieldT<Inst, Field_aaaaaa>()>* = nullptr> void writeMem(TWord op, EMemArea _area, const DspValue& _src) const;
 		template<Instruction Inst> void writePmem(TWord _op, const DspValue& _src);
 
-		void readMemOrPeriph(DspValue& _dst, EMemArea _area, const DspValue& _offset, Instruction _inst);
-		void writeMemOrPeriph(EMemArea _area, const DspValue& _offset, const DspValue& _value);
+		void readMemOrPeriph(DspValue& _dst, EMemArea _area, const DspValue& _offset, Instruction _inst) const;
+		void writeMemOrPeriph(EMemArea _area, const DspValue& _offset, const DspValue& _value) const;
+		void debugDynamicPeripheralAddressing(const JitRegGP& _offset) const;
 
 		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_bbbbb, Field_S>()>* = nullptr> void bitTestMemory(TWord _op, ExpectedBitValue _bitValue, asmjit::Label _skip);
 		template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_bbbbb>()>* = nullptr> void bitTest(TWord op, DspValue& _value, ExpectedBitValue _bitValue, asmjit::Label _skip) const;

@@ -16,6 +16,7 @@ namespace dsp56k
 		bool linkJitBlocks = true;
 		bool splitOpsByNops = false;
 		bool dynamicPeripheralAddressing = false;
+		bool debugDynamicPeripheralAddressing = false;	// x86-64 only: Will issue int3() = breakpoint interrupt if a memory address is detected that points to peripherals but DPA is disabled
 		uint32_t maxInstructionsPerBlock = 0;
 		bool memoryWritesCallCpp = false;
 
