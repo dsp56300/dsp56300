@@ -13,9 +13,15 @@ namespace dsp56k
 {
 	void Jitmem::mov(uint32_t* _dst, const uint32_t& _imm) const
 	{
+#ifdef HAVE_X86_64
+		const RegScratch reg(m_block);
+		const auto p = makePtr(reg, _dst, sizeof(_imm));
+		m_block.asm_().mov(p, asmjit::Imm(_imm));
+#else
 		const RegGP src(m_block);
 		m_block.asm_().mov(r32(src), asmjit::Imm(_imm));
 		mov<sizeof(_imm)>(_dst, src);
+#endif
 	}
 
 	void Jitmem::mov(uint64_t* _dst, const uint64_t& _imm) const
