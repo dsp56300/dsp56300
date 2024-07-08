@@ -304,7 +304,7 @@ namespace dsp56k
 
 			{
 				const RegGP s0s1(m_block);
-				m_asm.xor_(s0s1, s0s1.get());
+				m_asm.clr(s0s1);
 				sr_getBitValue(s0s1, SRB_S1);
 				m_asm.add(bit, s0s1.get());
 
