@@ -122,6 +122,19 @@ namespace dsp56k
 			return;
 		}
 
+		// if the source is an M reg too we can copy the previously calculated values from the source
+		const auto dspReg = _src.getDspReg().dspReg();
+
+		if(dspReg >= DspM0 && dspReg <= DspM7)
+		{
+			const auto m = dspReg - DspM0;
+
+			m_asm.mov(mod , r32(m_block.dspRegPool().get(static_cast<PoolReg>(DspM0mod  + m), true, false)));
+			m_asm.mov(mask, r32(m_block.dspRegPool().get(static_cast<PoolReg>(DspM0mask + m), true, false)));
+
+			return;
+		}
+
 		const asmjit::Label end = m_asm.newLabel();
 		const asmjit::Label isLinear = m_asm.newLabel();
 		const asmjit::Label isBitreverse = m_asm.newLabel();
