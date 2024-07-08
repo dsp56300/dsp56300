@@ -52,6 +52,8 @@ namespace dsp56k
 		void setUsed(const JitRegGP& _reg);
 		void setUsed(const JitReg128& _reg);
 
+		void setUnused(const JitReg128& _reg);
+
 		const auto& getUsedRegs() const { return m_usedRegs; }
 
 		bool isUsed(const JitReg& _reg) const;

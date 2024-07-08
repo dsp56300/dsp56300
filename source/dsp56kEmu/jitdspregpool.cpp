@@ -105,7 +105,7 @@ namespace dsp56k
 			{
 				LOGRP("DSP reg " << g_dspRegNames[_reg] << " available as xmm but not GP, copying to external GP directly");
 				spillMove(_dst, xm);
-				m_moveToXmmInstruction[_reg] = nullptr;
+				m_moveToXmmInstruction[_reg].reset();
 				return _dst;
 			}
 		}
@@ -133,12 +133,24 @@ namespace dsp56k
 		{
 			// yes, remove it and restore the content
 			LOGRP("DSP reg " << g_dspRegNames[_reg] << " previously stored in xmm reg, restoring value");
+
 			if(_read)
+			{
 				spillMove(res, xmReg);
+			}
+			else if(m_moveToXmmInstruction[_reg].isValid())
+			{
+				// we do not need the spill move if the register was never used anyway
+				m_block.asm_().removeNode(m_moveToXmmInstruction[_reg].spillMoveOp);
+			}
+			else
+			{
+				setUsed(xmReg.reg);
+			}
 
 			clearSpilled(_reg);
 
-			m_moveToXmmInstruction[_reg] = nullptr;
+			m_moveToXmmInstruction[_reg].reset();
 		}
 		else if(_read)
 		{
@@ -255,6 +267,13 @@ namespace dsp56k
 		for(size_t i=0; i<DspCount; ++i)
 			release(static_cast<PoolReg>(i));
 
+		// we might have flagged splill registers as used, but all moves to/from them were eliminated. Unmark them as used, no need to save them on stack
+		for (const JitReg128& xm : g_dspPoolXmms)
+		{
+			if(std::find(m_usedXmRegs.begin(), m_usedXmRegs.end(), xm) == m_usedXmRegs.end())
+				m_block.stack().setUnused(xm);
+		}
+
 		assert(m_gpList.empty());
 		assert(m_xmList.empty());
 
@@ -344,7 +363,7 @@ namespace dsp56k
 		return res;
 	}
 
-	void JitDspRegPool::releaseTemp(PoolReg _reg)
+	void JitDspRegPool::releaseTemp(const PoolReg _reg)
 	{
 		m_availableTemps.push_back(_reg);
 		release(_reg);
@@ -360,19 +379,19 @@ namespace dsp56k
 		else if(m_xmList.get(xmSrc, _src))
 		{
 			spillMove(_dst, xmSrc);
-			m_moveToXmmInstruction[_src] = nullptr;
+			m_moveToXmmInstruction[_src].reset();
 		}
 		else
 			return false;
 		return true;
 	}
 
-	void JitDspRegPool::setIsParallelOp(bool _isParallelOp)
+	void JitDspRegPool::setIsParallelOp(const bool _isParallelOp)
 	{
 		m_isParallelOp = _isParallelOp;
 	}
 
-	bool JitDspRegPool::move(PoolReg _dst, PoolReg _src)
+	bool JitDspRegPool::move(const PoolReg _dst, const PoolReg _src)
 	{
 		JitRegGP gpSrc;
 		SpillReg xmSrc;
@@ -387,10 +406,7 @@ namespace dsp56k
 			if(m_gpList.get(gpDst, _dst))
 				m_block.asm_().mov(gpDst, gpSrc);
 			else if(m_xmList.get(xmDst, _dst))
-			{
-				spillMove(xmDst, gpSrc);
-				m_moveToXmmInstruction[_dst] = m_block.asm_().cursor();
-			}
+				spillMove(_dst, xmDst, gpSrc);
 			else
 				return false;
 			return true;
@@ -406,12 +422,11 @@ namespace dsp56k
 			if(m_gpList.get(gpDst, _dst))
 			{
 				spillMove(gpDst, xmSrc);
-				m_moveToXmmInstruction[_dst] = nullptr;
+				m_moveToXmmInstruction[_dst].reset();
 			}
 			else if(m_xmList.get(xmDst, _dst))
 			{
 				spillMove(xmDst, xmSrc);
-				m_moveToXmmInstruction[_dst] = m_block.asm_().cursor();
 			}
 			else
 				return false;
@@ -567,8 +582,7 @@ namespace dsp56k
 
 			setSpilled(dspReg);
 
-			spillMove(xmReg, hostReg);
-			m_moveToXmmInstruction[dspReg] = m_block.asm_().cursor();
+			spillMove(dspReg, xmReg, hostReg);
 
 			return;
 		}
@@ -584,6 +598,8 @@ namespace dsp56k
 		m_writtenDspRegs = DspRegFlags::None;
 		m_spilledDspRegs = DspRegFlags::None;
 		m_loadedDspRegs = DspRegFlags::None;
+
+		m_usedXmRegs.clear();
 
 		for (const auto& g_dspPoolGp : g_dspPoolGps)
 			m_gpList.addHostReg(g_dspPoolGp);
@@ -828,8 +844,10 @@ namespace dsp56k
 		}
 	}
 
-	void JitDspRegPool::store(const PoolReg _dst, const SpillReg& _src) const
+	void JitDspRegPool::store(const PoolReg _dst, const SpillReg& _src)
 	{
+		setUsed(_src.reg);
+
 		auto& r = m_block.dsp().regs();
 
 		switch (_dst)
@@ -948,19 +966,37 @@ namespace dsp56k
 		{
 			clearSpilled(_dst);
 
+			auto& spillMove = m_moveToXmmInstruction[_dst];
+
 			if(isWritten(_dst))
 			{
 				LOGRP("Storing modified DSP reg " << g_dspRegNames[_dst] << " from XMM");
-				store(_dst, xmReg);
+
+				// If a written GP was spilled to an XMM and now needs to be stored, we can cancel the whole spill and store directly instead
+				if(spillMove.isValid())
+				{
+					// replace spill move by store to memory
+					m_block.asm_().setCursor(spillMove.spillMoveOp);
+
+					store(_dst, spillMove.sourceReg);
+					m_block.asm_().removeNode(m_moveToXmmInstruction[_dst].spillMoveOp);
+
+					m_block.asm_().setCursor(m_block.asm_().lastNode());
+				}
+				else
+				{
+					store(_dst, xmReg);
+				}
+
 				clearWritten(_dst);
 			}
-			else if(m_moveToXmmInstruction[_dst])
+			else if(spillMove.isValid())
 			{
 				// if a GP was moved to an XMM but the register was never used, we can remove the mov instruction, too
-				m_block.asm_().removeNode(m_moveToXmmInstruction[_dst]);
+				m_block.asm_().removeNode(spillMove.spillMoveOp);
 			}
 
-			m_moveToXmmInstruction[_dst] = nullptr;
+			spillMove.reset();
 		}
 
 		return true;
@@ -995,7 +1031,7 @@ namespace dsp56k
 	void JitDspRegPool::reset()
 	{
 		clear();
-		m_moveToXmmInstruction.fill(nullptr);
+		m_moveToXmmInstruction.fill({});
 		m_isParallelOp = false;
 		m_repMode = false;
 		m_dirty = false;
@@ -1145,8 +1181,9 @@ namespace dsp56k
 		m_block.asm_().movq(_dst, _src);
 	}
 
-	void JitDspRegPool::spillMove(const JitRegGP& _dst, const SpillReg& _src) const
+	void JitDspRegPool::spillMove(const JitRegGP& _dst, const SpillReg& _src)
 	{
+		setUsed(_src.reg);
 //		if(_src.offset == 0)
 			m_block.asm_().movq(r64(_dst), _src.reg);
 //		else
@@ -1161,7 +1198,15 @@ namespace dsp56k
 			m_block.asm_().movq(_dst.reg, r64(_src));
 	}
 
-	void JitDspRegPool::spillMove(const SpillReg& _dst, const SpillReg& _src) const
+	void JitDspRegPool::spillMove(const PoolReg _reg, const SpillReg& _dst, const JitRegGP& _src)
+	{
+		m_moveToXmmInstruction[_reg].beforeSpillMoveOp = m_block.asm_().cursor();
+		m_moveToXmmInstruction[_reg].sourceReg = _src;
+		spillMove(_dst, _src);
+		m_moveToXmmInstruction[_reg].spillMoveOp = m_block.asm_().cursor();
+	}
+
+	void JitDspRegPool::spillMove(const SpillReg& _dst, const SpillReg& _src)
 	{
 		if(m_extendedSpillSpace)
 		{
@@ -1174,11 +1219,20 @@ namespace dsp56k
 				const RegScratch s(m_block);
 				spillMove(s, _src);
 				spillMove(_dst, s);
+				setUsed(_dst.reg);
 			}
 		}
 		else
 		{
 			m_block.asm_().movdqa(_dst.reg, _src.reg);
 		}
+	}
+
+	void JitDspRegPool::setUsed(const JitReg128& _reg)
+	{
+		if(std::find(m_usedXmRegs.begin(), m_usedXmRegs.end(), _reg) != m_usedXmRegs.end())
+			return;
+
+		m_usedXmRegs.push_back(_reg);
 	}
 }

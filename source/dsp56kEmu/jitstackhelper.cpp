@@ -306,6 +306,18 @@ namespace dsp56k
 		m_usedRegs.push_back(_reg);
 	}
 
+	void JitStackHelper::setUnused(const JitReg128& _reg)
+	{
+		for(size_t i=0; i<m_usedRegs.size(); ++i)
+		{
+			if(m_usedRegs[i] == _reg)
+			{
+				m_usedRegs.erase(m_usedRegs.begin() + i);
+				return;
+			}
+		}
+	}
+
 	bool JitStackHelper::isUsed(const JitReg& _reg) const
 	{
 		for (const auto& m_usedReg : m_usedRegs)

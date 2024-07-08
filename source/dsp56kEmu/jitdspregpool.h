@@ -206,7 +206,7 @@ namespace dsp56k
 
 		void load(const JitRegGP& _dst, PoolReg _src);
 		void store(PoolReg _dst, const JitRegGP& _src) const;
-		void store(PoolReg _dst, const SpillReg& _src) const;
+		void store(PoolReg _dst, const SpillReg& _src);
 
 		bool release(PoolReg _dst);
 
@@ -351,9 +351,12 @@ namespace dsp56k
 		void movd(const JitReg128& _dst, const JitMemPtr& _src) const;
 		void movq(const JitReg128& _dst, const JitMemPtr& _src) const;
 
-		void spillMove(const JitRegGP& _dst, const SpillReg& _src) const;
+		void spillMove(const JitRegGP& _dst, const SpillReg& _src);
 		void spillMove(const SpillReg& _dst, const JitRegGP& _src) const;
-		void spillMove(const SpillReg& _dst, const SpillReg& _src) const;
+		void spillMove(PoolReg _reg, const SpillReg& _dst, const JitRegGP& _src);
+		void spillMove(const SpillReg& _dst, const SpillReg& _src);
+
+		void setUsed(const JitReg128& _reg);
 
 		JitBlock& m_block;
 
@@ -364,9 +367,26 @@ namespace dsp56k
 
 		RegisterList<JitRegGP> m_gpList;
 		RegisterList<SpillReg> m_xmList;
-		std::array<asmjit::BaseNode*, DspCount> m_moveToXmmInstruction{};
+
+		struct SpillMove
+		{
+			asmjit::BaseNode* beforeSpillMoveOp = nullptr;
+			asmjit::BaseNode* spillMoveOp = nullptr;
+			JitRegGP sourceReg{};
+
+			bool isValid() const { return spillMoveOp != nullptr; }
+
+			void reset()
+			{
+				beforeSpillMoveOp = spillMoveOp = nullptr;
+				sourceReg.reset();
+			}
+		};
+
+		std::array<SpillMove, DspCount> m_moveToXmmInstruction{};
 
 		std::vector<PoolReg> m_availableTemps;
+		std::list<JitReg128> m_usedXmRegs;
 
 		const bool m_extendedSpillSpace;
 		bool m_isParallelOp = false;
