@@ -63,8 +63,8 @@ namespace dsp56k
 		m_asm.sbfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(24));
 		m_asm.ubfx(_reg, _reg, asmjit::Imm(0), asmjit::Imm(56));
 #else
-		m_asm.sal(_reg, asmjit::Imm(40));
-		m_asm.sar(_reg, asmjit::Imm(32));	// we need to work around the fact that there is no AND with 64 bit immediate operand
+		m_asm.sal(r32(_reg), asmjit::Imm(8));
+		m_asm.movsxd(r64(_reg), r32(_reg));
 		m_asm.shr(_reg, asmjit::Imm(8));
 #endif
 	}
