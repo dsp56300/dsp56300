@@ -35,8 +35,6 @@ namespace dsp56k
 		void pop();
 
 		void popAll();
-
-		void pushNonVolatiles();
 		
 		void call(const std::function<void()>& _execCall);
 		void call(const void* _funcAsPtr);
@@ -52,7 +50,7 @@ namespace dsp56k
 		void setUsed(const JitRegGP& _reg);
 		void setUsed(const JitReg128& _reg);
 
-		void setUnused(const JitReg128& _reg);
+		void setUnused(const JitReg& _reg);
 
 		const auto& getUsedRegs() const { return m_usedRegs; }
 

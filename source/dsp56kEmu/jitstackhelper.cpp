@@ -28,31 +28,15 @@ namespace dsp56k
 	constexpr size_t g_shadowSpaceSize = 0;
 #endif
 
-	constexpr bool g_dynamicNonVolatilePushes = true;
-
 	JitStackHelper::JitStackHelper(JitBlock& _block) : m_block(_block)
 	{
 		m_pushedRegs.reserve(32);
 		m_usedRegs.reserve(32);
-
-		if constexpr (!g_dynamicNonVolatilePushes)
-			pushNonVolatiles();
 	}
 
 	JitStackHelper::~JitStackHelper()
 	{
 		popAll();
-	}
-
-	void JitStackHelper::pushNonVolatiles()
-	{
-		for (const auto& reg : g_nonVolatileGPs)
-			setUsed(reg);
-		for (const auto& reg : g_nonVolatileXMMs)
-		{
-			if(reg.isValid())
-				setUsed(reg);
-		}
 	}
 
 	void JitStackHelper::push(const JitReg64& _reg)
@@ -306,11 +290,11 @@ namespace dsp56k
 		m_usedRegs.push_back(_reg);
 	}
 
-	void JitStackHelper::setUnused(const JitReg128& _reg)
+	void JitStackHelper::setUnused(const JitReg& _reg)
 	{
 		for(size_t i=0; i<m_usedRegs.size(); ++i)
 		{
-			if(m_usedRegs[i] == _reg)
+			if(m_usedRegs[i].equals(_reg))
 			{
 				m_usedRegs.erase(m_usedRegs.begin() + i);
 				return;
@@ -320,9 +304,9 @@ namespace dsp56k
 
 	bool JitStackHelper::isUsed(const JitReg& _reg) const
 	{
-		for (const auto& m_usedReg : m_usedRegs)
+		for (const auto& usedReg : m_usedRegs)
 		{
-			if(m_usedReg.equals(_reg))
+			if(usedReg.equals(_reg))
 				return true;
 		}
 		return false;
