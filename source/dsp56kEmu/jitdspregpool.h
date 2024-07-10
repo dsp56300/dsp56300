@@ -351,7 +351,7 @@ namespace dsp56k
 		void movd(const JitReg128& _dst, const JitMemPtr& _src) const;
 		void movq(const JitReg128& _dst, const JitMemPtr& _src) const;
 
-		void spillMove(const JitRegGP& _dst, const SpillReg& _src);
+		void spillMove(PoolReg _reg, const JitRegGP& _dst, const SpillReg& _src);
 		void spillMove(const SpillReg& _dst, const JitRegGP& _src) const;
 		void spillMove(PoolReg _reg, const SpillReg& _dst, const JitRegGP& _src);
 		void spillMove(const SpillReg& _dst, const SpillReg& _src);
@@ -388,7 +388,6 @@ namespace dsp56k
 		std::vector<PoolReg> m_availableTemps;
 		std::list<JitReg128> m_usedXmRegs;
 
-		const bool m_extendedSpillSpace;
 		bool m_isParallelOp = false;
 		bool m_repMode = false;
 		bool m_dirty = false;

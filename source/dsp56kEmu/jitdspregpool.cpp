@@ -4,8 +4,6 @@
 #include "jitblock.h"
 #include "jitemitter.h"
 
-#include <limits>
-
 #include "jitblockruntimedata.h"
 
 #define LOGRP(S)		do{}while(0)
@@ -39,7 +37,7 @@ namespace dsp56k
 	static_assert(std::size(g_dspRegNames) == DspCount);
 	static_assert(DspCount < 64);	// our flag sets for used/read/written registers is 64 bits wide
 
-	JitDspRegPool::JitDspRegPool(JitBlock& _block) : m_block(_block), m_extendedSpillSpace(false)//_block.asm_().hasFeature(asmjit::CpuFeatures::X86::kSSE4_1))
+	JitDspRegPool::JitDspRegPool(JitBlock& _block) : m_block(_block)
 	, m_pairX(*this, PoolReg::DspX, PoolReg::DspX0, PoolReg::DspX1)
 	, m_pairY(*this, PoolReg::DspY, PoolReg::DspY0, PoolReg::DspY1)
 	{
@@ -104,8 +102,7 @@ namespace dsp56k
 			if(m_xmList.get(xm, _reg))
 			{
 				LOGRP("DSP reg " << g_dspRegNames[_reg] << " available as xmm but not GP, copying to external GP directly");
-				spillMove(_dst, xm);
-				m_moveToXmmInstruction[_reg].reset();
+				spillMove(_reg, _dst, xm);
 				return _dst;
 			}
 		}
@@ -136,7 +133,7 @@ namespace dsp56k
 
 			if(_read)
 			{
-				spillMove(res, xmReg);
+				spillMove(_reg, res, xmReg);
 			}
 			else if(m_moveToXmmInstruction[_reg].isValid())
 			{
@@ -267,10 +264,10 @@ namespace dsp56k
 		for(size_t i=0; i<DspCount; ++i)
 			release(static_cast<PoolReg>(i));
 
-		// we might have flagged splill registers as used, but all moves to/from them were eliminated. Unmark them as used, no need to save them on stack
+		// we might have flagged spill registers as used, but all moves to/from them were eliminated. Unmark them as used, no need to save them on stack
 		for (const JitReg128& xm : g_dspPoolXmms)
 		{
-			if(std::find(m_usedXmRegs.begin(), m_usedXmRegs.end(), xm) == m_usedXmRegs.end())
+			if(m_usedXmRegs.empty() || std::find(m_usedXmRegs.begin(), m_usedXmRegs.end(), xm) == m_usedXmRegs.end())
 				m_block.stack().setUnused(xm);
 		}
 
@@ -284,7 +281,7 @@ namespace dsp56k
 		assert(m_spilledDspRegs == DspRegFlags::None);
 
 		assert(m_gpList.available() == std::size(g_dspPoolGps));
-		assert(m_xmList.available() == (m_extendedSpillSpace ? std::size(g_dspPoolXmms) * 2 : std::size(g_dspPoolXmms)));
+		assert(m_xmList.available() == std::size(g_dspPoolXmms));
 
 		// We use this to restore ordering of GPs and XMMs as they need to be predictable in native loops
 		clear();
@@ -377,10 +374,7 @@ namespace dsp56k
 		if(m_gpList.get(gpSrc, _src))
 			m_block.asm_().mov(_dst, gpSrc);
 		else if(m_xmList.get(xmSrc, _src))
-		{
-			spillMove(_dst, xmSrc);
-			m_moveToXmmInstruction[_src].reset();
-		}
+			spillMove(_src, _dst, xmSrc);
 		else
 			return false;
 		return true;
@@ -421,8 +415,7 @@ namespace dsp56k
 
 			if(m_gpList.get(gpDst, _dst))
 			{
-				spillMove(gpDst, xmSrc);
-				m_moveToXmmInstruction[_dst].reset();
+				spillMove(_src, gpDst, xmSrc);
 			}
 			else if(m_xmList.get(xmDst, _dst))
 			{
@@ -614,12 +607,6 @@ namespace dsp56k
 				m_xmList.addHostReg({xm, 0});
 		}
 		*/
-		if(m_extendedSpillSpace)
-		{
-			for (const auto& g_dspPoolXmm : g_dspPoolXmms)
-				m_xmList.addHostReg({g_dspPoolXmm, 1});
-		}
-
 		m_availableTemps.clear();
 
 		for(int i=TempA; i<=LastTemp; ++i)
@@ -1182,21 +1169,17 @@ namespace dsp56k
 		m_block.asm_().movq(_dst, _src);
 	}
 
-	void JitDspRegPool::spillMove(const JitRegGP& _dst, const SpillReg& _src)
+	void JitDspRegPool::spillMove(PoolReg _reg, const JitRegGP& _dst, const SpillReg& _src)
 	{
 		setUsed(_src.reg);
-//		if(_src.offset == 0)
-			m_block.asm_().movq(r64(_dst), _src.reg);
-//		else
-//			m_block.asm_().pextrq(r64(_dst), _src.reg, asmjit::Imm(_src.offset));
+		m_block.asm_().movq(r64(_dst), _src.reg);
+		m_moveToXmmInstruction[_reg].reset();
 	}
 
 	void JitDspRegPool::spillMove(const SpillReg& _dst, const JitRegGP& _src) const
 	{
-		// if(m_extendedSpillSpace)
-		// 	m_block.asm_().pinsrq(_dst.reg, r64(_src), asmjit::Imm(_dst.offset));
-		// else
-			m_block.asm_().movq(_dst.reg, r64(_src));
+		m_block.stack().setUsed(_dst.reg);
+		m_block.asm_().movq(_dst.reg, r64(_src));
 	}
 
 	void JitDspRegPool::spillMove(const PoolReg _reg, const SpillReg& _dst, const JitRegGP& _src)
@@ -1209,24 +1192,10 @@ namespace dsp56k
 
 	void JitDspRegPool::spillMove(const SpillReg& _dst, const SpillReg& _src)
 	{
-		if(m_extendedSpillSpace)
-		{
-			if(_dst.offset == 0 && _src.offset == 0)
-			{
-				m_block.asm_().movq(_dst.reg, _src.reg);
-			}
-			else
-			{
-				const RegScratch s(m_block);
-				spillMove(s, _src);
-				spillMove(_dst, s);
-				setUsed(_dst.reg);
-			}
-		}
-		else
-		{
-			m_block.asm_().movdqa(_dst.reg, _src.reg);
-		}
+		setUsed(_dst.reg);
+		setUsed(_src.reg);
+
+		m_block.asm_().movdqa(_dst.reg, _src.reg);
 	}
 
 	void JitDspRegPool::setUsed(const JitReg128& _reg)
