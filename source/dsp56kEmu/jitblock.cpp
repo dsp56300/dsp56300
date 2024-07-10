@@ -321,6 +321,7 @@ namespace dsp56k
 			}
 
 			dspAsm += opDisasm + '\n';
+			m_asm.comment(("DSPasm: " + opDisasm).c_str());
 #endif
 
 			if(_profilingSupport)
