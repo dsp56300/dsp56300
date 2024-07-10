@@ -599,7 +599,8 @@ namespace dsp56k
 		m_spilledDspRegs = DspRegFlags::None;
 		m_loadedDspRegs = DspRegFlags::None;
 
-		m_usedXmRegs.clear();
+		// do not clear the used xm regs. Even though the reg pool is cleared, this information needs to be kept as we only push/pop only once per block
+//		m_usedXmRegs.clear();
 
 		for (const auto& g_dspPoolGp : g_dspPoolGps)
 			m_gpList.addHostReg(g_dspPoolGp);
