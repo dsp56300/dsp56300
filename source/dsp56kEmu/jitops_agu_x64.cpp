@@ -64,7 +64,7 @@ namespace dsp56k
 		updateAddressRegisterSubBitreverse(_r, _n, _addN);
 
 		m_asm.bind(end);
-		m_asm.and_(_r, asmjit::Imm(0xffffff));
+		maskSC1624(_r);
 	}
 
 	void JitOps::updateAddressRegisterSubN1(const JitReg32& _r, uint32_t _rrr, bool _addN)

@@ -68,7 +68,7 @@ namespace dsp56k
 		const auto ea = decode_MMMRRR_read(mmm, rrr);
 
 		// TODO: I don't like this. There are special instructions to access peripherals, but the decoding allows to access peripherals with regular addressing.
-		if(ea >= XIO_Reserved_High_First)
+		if(isPeripheralAddress(ea))
 			return memReadPeriph(area, ea, Inst);
 		return memRead(area, ea);
 	}
@@ -86,7 +86,7 @@ namespace dsp56k
 		const auto ea = decode_MMMRRR_read<MMM>(rrr);
 
 		// TODO: I don't like this. There are special instructions to access peripherals, but the decoding allows to access peripherals with regular addressing.
-		if(ea >= XIO_Reserved_High_First)
+		if(isPeripheralAddress(ea))
 			return memReadPeriph(area, ea, Inst);
 		return memRead(area, ea);
 	}
@@ -131,7 +131,7 @@ namespace dsp56k
 		const auto ea = decode_MMMRRR_read<MMM>(rrr);
 
 		// TODO: I don't like this. There are special instructions to access peripherals, but the decoding allows to access peripherals with regular addressing.
-		if(ea >= XIO_Reserved_High_First)
+		if(isPeripheralAddress(ea))
 			memWritePeriph(area, ea, value);
 		else
 			memWrite(area, ea, value);
@@ -147,7 +147,7 @@ namespace dsp56k
 		const auto ea = decode_MMMRRR_read(mmm, rrr);
 
 		// TODO: I don't like this. There are special instructions to access peripherals, but the decoding allows to access peripherals with regular addressing.
-		if(ea >= XIO_Reserved_High_First)
+		if(isPeripheralAddress(ea))
 			memWritePeriph(area, ea, value);
 		else
 			memWrite(area, ea, value);

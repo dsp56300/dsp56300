@@ -312,12 +312,21 @@ namespace dsp56k
 		ProcessingMode getProcessingMode() const		{return m_processingMode;}
 
 		Jit&			getJit							() { return m_jit; }
+		const Jit&		getJit							() const { return m_jit; }
+
 		void			setJitEntries					(const TJitFunc* _funcs)			{ m_jitEntries = _funcs; }
 
 		void			terminate						();
 
 		void				setDebugger						(DebuggerInterface* _debugger);
 		DebuggerInterface*	getDebugger						()								{ return m_debugger; }
+
+		bool			isPeripheralAddress(const TWord _addr) const
+		{
+			if(sr_test(SR_SC))
+				return _addr >= XIO_Reserved_High_First_16;
+			return _addr >= XIO_Reserved_High_First;
+		}
 
 	private:
 

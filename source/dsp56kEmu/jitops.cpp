@@ -765,12 +765,12 @@ namespace dsp56k
 			callDSPFunc(&callDSPPlock, r64(ea.get()));
 	}
 
-	void JitOps::jmp(DspValue& _absAddr)
+	void JitOps::jmp(const DspValue& _absAddr)
 	{
 		m_dspRegs.setPC(_absAddr);
 	}
 
-	void JitOps::jsr(DspValue& _absAddr)
+	void JitOps::jsr(const DspValue& _absAddr)
 	{
 		pushPCSR();
 		jmp(_absAddr);
@@ -1048,4 +1048,23 @@ namespace dsp56k
 	{
 		callDSPFunc(&callDSPReset, op);
 	}
+
+	bool JitOps::isPeriphAddress(const TWord _addr) const
+	{
+		return _addr >= getPeriphStartAddr();
+	}
+
+	TWord JitOps::getPeriphStartAddr() const
+	{
+		const auto* mode = m_block.getMode();
+		if(!mode)
+		{
+			assert(!m_block.getConfig().support16BitSCMode);
+			return XIO_Reserved_High_First;
+		}
+		if(mode->testSR(SRB_SC))
+			return XIO_Reserved_High_First_16;
+		return XIO_Reserved_High_First;
+	}
+
 }

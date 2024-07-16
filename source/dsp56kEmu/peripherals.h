@@ -17,8 +17,10 @@ namespace dsp56k
 
 	enum XIO
 	{
-		XIO_Reserved_High_First	= 0xffff80,	// 24 bit mode
-		XIO_Reserved_High_Last	= 0xffffff,
+		XIO_Reserved_High_First		= 0xffff80,							// 24 bit mode - SC bit clear
+		XIO_Reserved_High_First_16	= XIO_Reserved_High_First & 0xffff,	// 16 bit mode - SC bit set
+
+		XIO_Reserved_High_Last		= 0xffffff,
 
 		// DMA
 		XIO_DCR5				= 0xffffd8,	// DMA 5 Control Register

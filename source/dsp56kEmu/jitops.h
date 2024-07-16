@@ -296,6 +296,12 @@ namespace dsp56k
 
 		void bitreverse24(const JitReg32& x) const;
 
+		void maskSC1624(const JitRegGP& _reg, bool _mask24 = true) const;
+		void maskSC16(const JitRegGP& _reg) const { return maskSC1624(_reg, false); }
+
+		bool isPeriphAddress(const TWord _addr) const;
+		TWord getPeriphStartAddr() const;
+
 		// The main AGU entry point.
 		DspValue updateAddressRegister(TWord _mmm, TWord _rrr, bool _writeR = true, bool _returnPostR = false);
 
@@ -617,8 +623,8 @@ namespace dsp56k
 		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestMem(TWord _op);
 		template<Instruction Inst, JumpMode Jsr, ExpectedBitValue BitValue> void jumpIfBitTestDDDDDD(TWord op);
 
-		void jmp(DspValue& _absAddr);
-		void jsr(DspValue& _absAddr);
+		void jmp(const DspValue& _absAddr);
+		void jsr(const DspValue& _absAddr);
 
 		void jmp(TWord _absAddr);
 		void jsr(TWord _absAddr);

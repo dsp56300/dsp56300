@@ -10,7 +10,7 @@ namespace dsp56k
 			return;
 
 		const SkipLabel skip(m_block.asm_());
-		m_asm.cmp(r32(_offset), asmjit::Imm(XIO_Reserved_High_First));
+		m_asm.cmp(r32(_offset), asmjit::Imm(getPeriphStartAddr()));
 		m_asm.jl(skip);
 		m_asm.int3();
 		m_asm.nop(ptr(JitReg64(0), static_cast<int>(m_pcCurrentOp)));
@@ -22,7 +22,7 @@ namespace dsp56k
 		if (_offset.isImm24())
 		{
 			const auto o = _offset.imm24();
-			if (o >= XIO_Reserved_High_First)
+			if (isPeriphAddress(o))
 				m_block.mem().readPeriph(_dst, _area, o, _inst);
 			else
 				m_block.mem().readDspMemory(_dst, _area, o);
@@ -41,10 +41,10 @@ namespace dsp56k
 				{
 #ifdef HAVE_ARM64
 					const RegScratch scratch(m_block);
-					m_asm.mov(r32(scratch), asmjit::Imm(XIO_Reserved_High_First));
+					m_asm.mov(r32(scratch), asmjit::Imm(getPeriphStartAddr()));
 					m_asm.cmp(_offset.get(), r32(scratch));
 #else
-					m_asm.cmp(_offset.get(), asmjit::Imm(XIO_Reserved_High_First));
+					m_asm.cmp(_offset.get(), asmjit::Imm(getPeriphStartAddr()));
 #endif
 					m_asm.jge(_toFalse);
 				}, [&]()
@@ -64,7 +64,7 @@ namespace dsp56k
 		if (_offset.isImm24())
 		{
 			const auto o = _offset.imm24();
-			if (o >= XIO_Reserved_High_First)
+			if (isPeriphAddress(o))
 				m_block.mem().writePeriph(_area, o, _value);
 			else
 				m_block.mem().writeDspMemory(_area, o, _value);
@@ -83,10 +83,10 @@ namespace dsp56k
 				{
 #ifdef HAVE_ARM64
 					const RegScratch scratch(m_block);
-					m_asm.mov(r32(scratch), asmjit::Imm(XIO_Reserved_High_First));
+					m_asm.mov(r32(scratch), asmjit::Imm(getPeriphStartAddr()));
 					m_asm.cmp(_offset.get(), r32(scratch));
 #else
-					m_asm.cmp(r32(_offset.get()), asmjit::Imm(XIO_Reserved_High_First));
+					m_asm.cmp(r32(_offset.get()), asmjit::Imm(getPeriphStartAddr()));
 #endif
 					m_asm.jge(_toFalse);
 				}, [&]()

@@ -313,20 +313,20 @@ namespace dsp56k
 		}
 	}
 
-	bool DmaChannel::isPeripheralAddr(EMemArea _area, TWord _first, TWord _count)
+	bool DmaChannel::isPeripheralAddr(const EMemArea _area, const TWord _first, const TWord _count) const
 	{
 		if (_area == MemArea_P)
 			return false;
-		if (_first >= XIO_Reserved_High_First)
+		if (m_peripherals.getDSP().isPeripheralAddress(_first))
 			return true;
-		if ((_first + _count) <= XIO_Reserved_High_First)
+		if (!m_peripherals.getDSP().isPeripheralAddress(_first + _count - 1))
 			return false;
 		return true;
 	}
 
-	bool DmaChannel::isPeripheralAddr(EMemArea _area, TWord _addr)
+	bool DmaChannel::isPeripheralAddr(const EMemArea _area, const TWord _addr) const
 	{
-		return _area != MemArea_P && _addr >= XIO_Reserved_High_First;
+		return _area != MemArea_P && m_peripherals.getDSP().isPeripheralAddress(_addr);
 	}
 
 	bool DmaChannel::bridgedOverlap(EMemArea _area, TWord _first, TWord _count) const
@@ -375,7 +375,7 @@ namespace dsp56k
 	{
 		auto& dsp = m_peripherals.getDSP();
 		if (isPeripheralAddr(_area, _addr))
-			return dsp.getPeriph(_area)->read(_addr, Nop);
+			return dsp.getPeriph(_area)->read(_addr | 0xff0000, Nop);
 		return dsp.memory().get(_area, _addr);
 	}
 
@@ -383,7 +383,7 @@ namespace dsp56k
 	{
 		auto& dsp = m_peripherals.getDSP();
 		if (isPeripheralAddr(_area, _addr))
-			dsp.getPeriph(_area)->write(_addr, _value);
+			dsp.getPeriph(_area)->write(_addr | 0xff0000, _value);
 		else if (_area == MemArea_P)
 			dsp.memWriteP(_addr, _value);
 		else

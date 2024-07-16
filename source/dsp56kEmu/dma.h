@@ -122,8 +122,8 @@ namespace dsp56k
 
 		static EMemArea convertMemArea(TWord _space);
 
-		static bool isPeripheralAddr(EMemArea _area, TWord _first, TWord _count);
-		static bool isPeripheralAddr(EMemArea _area, TWord _addr);
+		bool isPeripheralAddr(EMemArea _area, TWord _first, TWord _count) const;
+		bool isPeripheralAddr(EMemArea _area, TWord _addr) const;
 
 		bool bridgedOverlap(EMemArea _area, TWord _first, TWord _count) const;
 

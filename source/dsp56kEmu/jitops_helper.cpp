@@ -140,6 +140,31 @@ namespace dsp56k
 #endif
 	}
 
+	void JitOps::maskSC1624(const JitRegGP& _reg, const bool _mask24/* = true*/) const
+	{
+		const auto r = r32(_reg);
+
+		if(!m_block.getConfig().support16BitSCMode)
+		{
+			if(!_mask24)
+				return;
+			m_asm.and_(r, asmjit::Imm(0xffffff));
+			return;
+		}
+
+		if(const auto* mode = m_block.getMode())
+		{
+			if(mode->testSR(SRB_SC))
+				m_asm.and_(r, asmjit::Imm(0x00ffff));
+			else if(_mask24)
+				m_asm.and_(r, asmjit::Imm(0xffffff));
+		}
+		else
+		{
+			assert(false && "dynamic SC bit needs implementation");
+		}
+	}
+
 	void JitOps::pushPCSR()
 	{
 		DspValue pc(m_block);

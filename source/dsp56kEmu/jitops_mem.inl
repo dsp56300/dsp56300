@@ -18,7 +18,7 @@ namespace dsp56k
 			return Immediate;
 
 		if(mmm == MMM_AbsAddr)
-			return m_opWordB >= XIO_Reserved_High_First ? Peripherals : Memory;
+			return isPeriphAddress(m_opWordB) ? Peripherals : Memory;
 
 		return Dynamic;
 	}

@@ -15,7 +15,7 @@ namespace dsp56k
 
 		// not sure if this can happen, iirc I've seen this once. Handle it
 		if(eaType == Immediate)
-			eaType = m_opWordB >= XIO_Reserved_High_First ? Peripherals : Memory;
+			eaType = isPeriphAddress(m_opWordB) ? Peripherals : Memory;
 
 		DspValue regMem(m_block);
 

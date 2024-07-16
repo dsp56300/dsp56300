@@ -51,7 +51,7 @@ namespace dsp56k
 
 		const TWord ea = effectiveAddress<Bclr_ea>(op);
 		
-		if(ea >= XIO_Reserved_High_First)
+		if(isPeripheralAddress(ea))
 		{
 			auto mem = memReadPeriph( S, ea, Bclr_ea);
 			mem = alu_bclr( bbbbb, mem );
@@ -117,7 +117,7 @@ namespace dsp56k
 		const EMemArea S	= getFieldValueMemArea<Bset_ea>(op);
 		const TWord ea		= effectiveAddress<Bset_ea>(op);
 
-		if(ea >= XIO_Reserved_High_First)
+		if(isPeripheralAddress(ea))
 		{
 			auto val = memReadPeriph( S, ea, Bset_ea );
 			sr_toggle( CCR_C, bittestandset( val, bit ) );

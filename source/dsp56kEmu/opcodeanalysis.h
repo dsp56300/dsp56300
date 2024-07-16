@@ -1147,7 +1147,7 @@ namespace dsp56k
 		return g_invalidAddress;
 	}
 
-	inline bool accessesPeripherals(const Instruction _inst, const TWord _op, const TWord _opB)
+	inline bool accessesPeripherals(const Instruction _inst, const TWord _op, const TWord _opB, const TWord _sr)
 	{
 		if(_inst == Invalid)
 			return false;
@@ -1163,6 +1163,9 @@ namespace dsp56k
 
 			if (mmmrrr == dsp56k::MMMRRR_ImmediateData || mmmrrr == dsp56k::MMMRRR_AbsAddr)
 			{
+				if((_sr & SR_SC) && _opB >= XIO_Reserved_High_First_16)
+					return true;
+
 				if (_opB >= XIO_Reserved_High_First)
 					return true;
 			}

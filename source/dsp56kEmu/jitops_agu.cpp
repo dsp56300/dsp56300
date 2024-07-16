@@ -1,6 +1,7 @@
 #include "jitops.h"
 
 #include "jitconfig.h"
+#include "jitdspmode.h"
 
 namespace dsp56k
 {
@@ -35,7 +36,7 @@ namespace dsp56k
 			break;
 		}
 
-		m_asm.and_(_r, asmjit::Imm(0xffffff));
+		maskSC1624(_r);
 	}
 
 	void JitOps::updateAddressRegisterSubN1(const AddressingMode _mode, const JitReg32& _r, uint32_t _rrr, bool _addN)
@@ -68,7 +69,7 @@ namespace dsp56k
 			break;
 		}
 
-		m_asm.and_(_r, asmjit::Imm(0xffffff));
+		maskSC1624(_r);
 	}
 
 	DspValue JitOps::updateAddressRegister(const TWord _mmm, const TWord _rrr, bool _writeR/* = true*/, bool _returnPostR/* = false*/)
