@@ -1104,32 +1104,32 @@ namespace dsp56k
 
 	inline TWord getBranchTarget(const Instruction _inst, const TWord op, const TWord opB, const TWord _pc)
 	{
-		const auto& oi = dsp56k::g_opcodes[_inst];
+		const auto& oi = g_opcodes[_inst];
 
-		if (!oi.flag(dsp56k::OpFlagBranch))
+		if (!oi.flag(OpFlagBranch))
 			return g_invalidAddress;
 
-		if (oi.m_extensionWordType & dsp56k::AbsoluteAddressExt)
+		if (oi.m_extensionWordType & AbsoluteAddressExt)
 			return opB;
 
-		if (oi.m_extensionWordType & dsp56k::PCRelativeAddressExt)
+		if (oi.m_extensionWordType & PCRelativeAddressExt)
 			return _pc + dsp56k::signextend<int, 24>(static_cast<int>(opB));
 
 		if (hasField(oi, Field_aaaa) && hasField(oi, Field_aaaaa))
 		{
-			const auto o = dsp56k::getFieldValue(oi.getInstruction(), Field_aaaa, Field_aaaaa, op);
+			const auto o = getFieldValue(oi.getInstruction(), Field_aaaa, Field_aaaaa, op);
 			const auto offset = dsp56k::signextend<int, 9>(static_cast<int>(o));
 			return _pc + offset;
 		}
 
-		if (hasField(oi, dsp56k::Field_aaaaaaaaaaaa))
-			return dsp56k::getFieldValue(oi.getInstruction(), dsp56k::Field_aaaaaaaaaaaa, op);
+		if (hasField(oi, Field_aaaaaaaaaaaa))
+			return getFieldValue(oi.getInstruction(), Field_aaaaaaaaaaaa, op);
 
-		if (hasField(oi, dsp56k::Field_MMM) && hasField(oi, dsp56k::Field_RRR))
+		if (hasField(oi, Field_MMM) && hasField(oi, Field_RRR))
 		{
 			// no chance to follow branch as target address is dynamic
-			const auto mmmrrr = dsp56k::getFieldValue(oi.getInstruction(), dsp56k::Field_MMM, dsp56k::Field_RRR, op);
-			if (mmmrrr == dsp56k::MMMRRR_ImmediateData || mmmrrr == dsp56k::MMMRRR_AbsAddr)
+			const auto mmmrrr = getFieldValue(oi.getInstruction(), Field_MMM, Field_RRR, op);
+			if (mmmrrr == MMMRRR_ImmediateData || mmmrrr == MMMRRR_AbsAddr)
 			{
 				return opB;
 			}
@@ -1137,7 +1137,7 @@ namespace dsp56k
 			return g_dynamicAddress;
 		}
 
-		if (hasField(oi, dsp56k::Field_RRR))
+		if (hasField(oi, Field_RRR))
 		{
 			// no chance to follow branch as target address is dynamic
 			return g_dynamicAddress;
@@ -1152,16 +1152,16 @@ namespace dsp56k
 		if(_inst == Invalid)
 			return false;
 
-		const auto& oi = dsp56k::g_opcodes[_inst];
+		const auto& oi = g_opcodes[_inst];
 
 		if (hasField(oi, Field_qqqqqq) || hasField(oi, Field_qqqqq) || hasField(oi, Field_q) || hasField(oi, Field_pppppp))
 			return true;
 
 		if(hasField(oi, Field_MMM) && hasField(oi, Field_RRR))
 		{
-			const auto mmmrrr = dsp56k::getFieldValue(oi.getInstruction(), dsp56k::Field_MMM, dsp56k::Field_RRR, _op);
+			const auto mmmrrr = getFieldValue(oi.getInstruction(), Field_MMM, Field_RRR, _op);
 
-			if (mmmrrr == dsp56k::MMMRRR_ImmediateData || mmmrrr == dsp56k::MMMRRR_AbsAddr)
+			if (mmmrrr == MMMRRR_ImmediateData || mmmrrr == MMMRRR_AbsAddr)
 			{
 				if((_sr & SR_SC) && _opB >= XIO_Reserved_High_First_16)
 					return true;
