@@ -1,3 +1,4 @@
+#include "jitdspmode.h"
 #include "jitops.h"
 #include "types.h"
 
@@ -195,6 +196,15 @@ namespace dsp56k
 			return DspValue(m_block, _reg, _read, _write);
 		};
 
+		// do not support references in 16 bit compat mode as we need to manipulate these regs when reading/writing by limiting to 16 bits
+		auto makeRefNonSC = [&](const PoolReg _reg) -> DspValue
+		{
+			const auto* mode = m_block.getMode();
+			if(mode && mode->testSR(SRB_SC))
+				return DspValue(m_block);
+			return makeRef(_reg);
+		};
+
 		switch( i )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
@@ -220,34 +230,34 @@ namespace dsp56k
 		case 0x0f:	return makeRef(PoolReg::DspB);
 
 		// 010TTT - 8 address registers in AGU
-		case 0x10:	return makeRef(PoolReg::DspR0);
-		case 0x11:	return makeRef(PoolReg::DspR1);
-		case 0x12:	return makeRef(PoolReg::DspR2);
-		case 0x13:	return makeRef(PoolReg::DspR3);
-		case 0x14:	return makeRef(PoolReg::DspR4);
-		case 0x15:	return makeRef(PoolReg::DspR5);
-		case 0x16:	return makeRef(PoolReg::DspR6);
-		case 0x17:	return makeRef(PoolReg::DspR7);
+		case 0x10:	return makeRefNonSC(PoolReg::DspR0);
+		case 0x11:	return makeRefNonSC(PoolReg::DspR1);
+		case 0x12:	return makeRefNonSC(PoolReg::DspR2);
+		case 0x13:	return makeRefNonSC(PoolReg::DspR3);
+		case 0x14:	return makeRefNonSC(PoolReg::DspR4);
+		case 0x15:	return makeRefNonSC(PoolReg::DspR5);
+		case 0x16:	return makeRefNonSC(PoolReg::DspR6);
+		case 0x17:	return makeRefNonSC(PoolReg::DspR7);
 
 		// 011NNN - 8 address offset registers in AGU
-		case 0x18:	return makeRef(PoolReg::DspN0);
-		case 0x19:	return makeRef(PoolReg::DspN1);
-		case 0x1a:	return makeRef(PoolReg::DspN2);
-		case 0x1b:	return makeRef(PoolReg::DspN3);
-		case 0x1c:	return makeRef(PoolReg::DspN4);
-		case 0x1d:	return makeRef(PoolReg::DspN5);
-		case 0x1e:	return makeRef(PoolReg::DspN6);
-		case 0x1f:	return makeRef(PoolReg::DspN7);
+		case 0x18:	return makeRefNonSC(PoolReg::DspN0);
+		case 0x19:	return makeRefNonSC(PoolReg::DspN1);
+		case 0x1a:	return makeRefNonSC(PoolReg::DspN2);
+		case 0x1b:	return makeRefNonSC(PoolReg::DspN3);
+		case 0x1c:	return makeRefNonSC(PoolReg::DspN4);
+		case 0x1d:	return makeRefNonSC(PoolReg::DspN5);
+		case 0x1e:	return makeRefNonSC(PoolReg::DspN6);
+		case 0x1f:	return makeRefNonSC(PoolReg::DspN7);
 
 		// 100FFF - 8 address modifier registers in AGU
-		case 0x20:	return makeRef(PoolReg::DspM0);
-		case 0x21:	return makeRef(PoolReg::DspM1);
-		case 0x22:	return makeRef(PoolReg::DspM2);
-		case 0x23:	return makeRef(PoolReg::DspM3);
-		case 0x24:	return makeRef(PoolReg::DspM4);
-		case 0x25:	return makeRef(PoolReg::DspM5);
-		case 0x26:	return makeRef(PoolReg::DspM6);
-		case 0x27:	return makeRef(PoolReg::DspM7);
+		case 0x20:	return _write ? DspValue(m_block) : makeRefNonSC(PoolReg::DspM0);
+		case 0x21:	return _write ? DspValue(m_block) : makeRefNonSC(PoolReg::DspM1);
+		case 0x22:	return _write ? DspValue(m_block) : makeRefNonSC(PoolReg::DspM2);
+		case 0x23:	return _write ? DspValue(m_block) : makeRefNonSC(PoolReg::DspM3);
+		case 0x24:	return _write ? DspValue(m_block) : makeRefNonSC(PoolReg::DspM4);
+		case 0x25:	return _write ? DspValue(m_block) : makeRefNonSC(PoolReg::DspM5);
+		case 0x26:	return _write ? DspValue(m_block) : makeRefNonSC(PoolReg::DspM6);
+		case 0x27:	return _write ? DspValue(m_block) : makeRefNonSC(PoolReg::DspM7);
 
 		// 101EEE - 1 address register in AGU
 		case 0x2a:

@@ -603,11 +603,6 @@ namespace dsp56k
 				assert(writeRef.getDspReg().dspReg() != PoolReg::DspRegInvalid);
 				decode_dddddd_write(_dddddd, writeRef);
 			}
-
-			const auto targetReg = writeRef.getDspReg().dspReg();
-
-			if(targetReg >= PoolReg::DspM0 && targetReg <= PoolReg::DspM7)
-				m_block.regs().setM(targetReg - PoolReg::DspM0, writeRef);
 		}
 		else
 		{

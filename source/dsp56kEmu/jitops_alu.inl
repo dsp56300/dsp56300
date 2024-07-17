@@ -89,12 +89,15 @@ namespace dsp56k
 			return;
 		}
 
-		auto d = decode_dddddd_ref(dddddd, true, true);
-		if(!d.isRegValid())
-			decode_dddddd_read(d, dddddd);
-		(this->*_bitmodFunc)(d, getBit<Inst>(op));
-		if(!d.isType(DspValue::DspReg24))
-			decode_dddddd_write(dddddd, d);
+		auto dRead = decode_dddddd_ref(dddddd, true, false);
+		if(!dRead.isRegValid())
+			decode_dddddd_read(dRead, dddddd);
+
+		(this->*_bitmodFunc)(dRead, getBit<Inst>(op));
+
+		auto dWrite = decode_dddddd_ref(dddddd, true, true);
+		if(!dWrite.isType(DspValue::DspReg24))
+			decode_dddddd_write(dddddd, dRead);
 	}
 
 	template<Instruction Inst, bool Accumulate, bool Round> void JitOps::op_Mac_S(TWord op)
