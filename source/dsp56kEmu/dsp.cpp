@@ -286,12 +286,14 @@ namespace dsp56k
 		if(g_useJIT)
 		{
 			LOGJITPC(vba);
+			const auto pc = getPC();
 			m_jitEntries[vba](&m_jit, vba);
 //			m_jit.exec(vba);
 			if(m_processingMode != LongInterrupt)
 			{
 				m_processingMode = DefaultPreventInterrupt;
 				m_interruptFunc = &dspExecDefaultPreventInterrupt;
+				setPC(pc);
 			}
 			else
 			{

@@ -237,6 +237,7 @@ namespace dsp56k
 		m_chain = _chain;
 
 		const bool isFastInterrupt = _pc < Vba_End;
+		const auto fastInterruptMode = isFastInterrupt ? (m_config.dynamicFastInterrupts ? JitOps::FastInterruptMode::Dynamic : JitOps::FastInterruptMode::Static) : JitOps::FastInterruptMode::None;
 
 		dspAsm.clear();
 
@@ -270,7 +271,7 @@ namespace dsp56k
 
 		const auto pcNext = _pc + info.memSize;
 
-		if(!isFastInterrupt && info.terminationReason != JitBlockInfo::TerminationReason::PopPC)
+		if(fastInterruptMode != JitOps::FastInterruptMode::Static && info.terminationReason != JitBlockInfo::TerminationReason::PopPC)
 		{
 			if(info.branchTarget == g_invalidAddress || info.branchIsConditional)
 			{
@@ -335,7 +336,7 @@ namespace dsp56k
 				profilingInfo.emplace_back(pi);
 			}
 
-			JitOps ops(*this, _rt, isFastInterrupt);
+			JitOps ops(*this, _rt, fastInterruptMode);
 
 			if (m_config.splitOpsByNops)	m_asm.nop();
 			ops.emit(opPC, opA, opB);
@@ -521,7 +522,7 @@ namespace dsp56k
 			const auto skip = m_asm.newLabel();
 			const auto enddo = m_asm.newLabel();
 
-			JitOps ops(*this, _rt, isFastInterrupt);
+			JitOps ops(*this, _rt, fastInterruptMode);
 
 			// It is important that this code does not allocate any temp registers inside the branches. thefore, we prewarm everything
 			RegGP temp(*this);
@@ -607,7 +608,7 @@ namespace dsp56k
 						);
 				}
 
-				JitOps op(*this, _rt, isFastInterrupt);
+				JitOps op(*this, _rt, fastInterruptMode);
 
 				op.updateDirtyCCR(ccrDirty);
 

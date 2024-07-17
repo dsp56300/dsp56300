@@ -32,7 +32,14 @@ namespace dsp56k
 			PopPC				= 0x08
 		};
 
-		JitOps(JitBlock& _block, JitBlockRuntimeData& _brt, bool _fastInterrupt = false);
+		enum class FastInterruptMode
+		{
+			None,
+			Dynamic,
+			Static
+		};
+
+		JitOps(JitBlock& _block, JitBlockRuntimeData& _brt, FastInterruptMode _fastInterruptMode = FastInterruptMode::None);
 
 		void emit(TWord _pc);
 		void emit(TWord _pc, TWord _op, TWord _opB = 0);
@@ -333,7 +340,8 @@ namespace dsp56k
 		void callDSPFunc(void(* _func)(DSP*, TWord), TWord _arg) const;
 		void callDSPFunc(void(* _func)(DSP*, TWord), const JitRegGP& _arg) const;
 
-		void setDspProcessingMode(uint32_t _mode);
+		void setDspProcessingMode(uint32_t _mode) const;
+		void getDspProcessingMode(const JitRegGP& _dst) const;
 		
 		// Check Condition
 		void checkCondition(TWord _cc, const std::function<void()>& _true, const std::function<void()>& _false, bool _hasFalseFunc, bool _updateDirtyCCR, bool _releaseRegPool = true);
@@ -680,7 +688,7 @@ namespace dsp56k
 		std::vector<DspValue> m_repTemps;
 		RegisterMask m_writtenRegs = RegisterMask::None;
 		RegisterMask m_readRegs = RegisterMask::None;
-		bool m_fastInterrupt = false;
+		FastInterruptMode m_fastInterruptMode;
 		bool m_disableCCRUpdates = false;
 	};
 }

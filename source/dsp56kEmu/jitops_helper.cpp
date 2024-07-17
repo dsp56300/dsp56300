@@ -169,7 +169,7 @@ namespace dsp56k
 	{
 		DspValue pc(m_block);
 
-		if (m_fastInterrupt)
+		if (m_fastInterruptMode != FastInterruptMode::None)
 		{
 			pc = m_block.dspRegPool().read(PoolReg::DspPC);
 		}
@@ -197,7 +197,7 @@ namespace dsp56k
 		getSSH(pc);
 	}
 
-	void JitOps::setDspProcessingMode(uint32_t _mode)
+	void JitOps::setDspProcessingMode(const uint32_t _mode) const
 	{
 		const DspValue r(m_block, _mode, DspValue::Immediate24);
 
@@ -220,6 +220,14 @@ namespace dsp56k
 		}
 		else
 			assert(false && "support missing");
+	}
+
+	void JitOps::getDspProcessingMode(const JitRegGP& _dst) const
+	{
+		if constexpr (sizeof(m_block.dsp().m_processingMode) == sizeof(uint32_t))
+			m_block.mem().mov(r64(_dst), reinterpret_cast<uint32_t&>(m_block.dsp().m_processingMode));
+		else if constexpr (sizeof(m_block.dsp().m_processingMode) == sizeof(uint64_t))
+			m_block.mem().mov(r32(_dst), reinterpret_cast<uint64_t&>(m_block.dsp().m_processingMode));
 	}
 
 	TWord JitOps::getOpWordB()

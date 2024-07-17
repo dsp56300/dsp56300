@@ -255,14 +255,14 @@ namespace dsp56k
 		&JitOps::op_Wait							// Wait 
 	};
 
-	JitOps::JitOps(JitBlock& _block, JitBlockRuntimeData& _brt, bool _fastInterrupt/* = false*/)
+	JitOps::JitOps(JitBlock& _block, JitBlockRuntimeData& _brt, const FastInterruptMode _fastInterruptMode/* = FastInterruptMode::None*/)
 	: m_block(_block)
 	, m_blockRuntimeData(_brt)
 	, m_opcodes(_block.dsp().opcodes())
 	, m_dspRegs(_block.regs())
 	, m_asm(_block.asm_())
 	, m_ccrDirty(_block.regs().ccrDirtyFlags())
-	, m_fastInterrupt(_fastInterrupt)
+	, m_fastInterruptMode(_fastInterruptMode)
 	{
 	}
 
@@ -775,9 +775,22 @@ namespace dsp56k
 		pushPCSR();
 		jmp(_absAddr);
 
-		if (m_fastInterrupt)
+		if (m_fastInterruptMode != FastInterruptMode::None)
 		{
-			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
+			DspValue srVal(m_block, PoolReg::DspSR, true, true);
+			const auto sr = r32(srVal);
+
+			const SkipLabel skip(m_asm);
+
+			if(m_fastInterruptMode == FastInterruptMode::Dynamic)
+			{
+				const RegGP processingMode(m_block);
+				getDspProcessingMode(r64(processingMode));
+
+				m_asm.cmp(processingMode, DSP::ProcessingMode::FastInterrupt);
+				m_asm.jnz(skip);
+			}
+
 #ifdef HAVE_ARM64
 			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0)));
 			m_asm.and_(sr, asmjit::Imm(~(SR_SA)));
@@ -789,7 +802,7 @@ namespace dsp56k
 		}
 	}
 
-	void JitOps::jmp(TWord _absAddr)
+	void JitOps::jmp(const TWord _absAddr)
 	{
 		DspValue r(m_block, _absAddr, DspValue::Immediate24);
 		jmp(r);
