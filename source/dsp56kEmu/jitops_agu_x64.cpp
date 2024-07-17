@@ -122,7 +122,7 @@ namespace dsp56k
 			updateAddressRegisterSubMultipleWrapModuloN1(_r, _addN, r32(moduloMask));
 
 		m_asm.bind(end);
-		m_asm.and_(_r, asmjit::Imm(0xffffff));
+		maskSC1624(_r);
 	}
 
 	void JitOps::updateAddressRegisterSubModuloN1(const JitReg32& _r, const JitReg32& _m, const JitReg32& _mMask, bool _addN) const
