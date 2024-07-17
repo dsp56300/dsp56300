@@ -46,10 +46,10 @@ namespace dsp56k
 	{
 		const auto m = _m.toWord();
 
-		if(m == 0xffffff)
-			return AddressingMode::Linear;
-
 		const auto m16 = m & 0xffff;
+
+		if(m16 == 0xffff)
+			return AddressingMode::Linear;
 
 		if(m16 >= 0x8000)
 			return AddressingMode::MultiWrapModulo;

@@ -26,9 +26,10 @@ namespace dsp56k
 		const DspValue moduloMask = makeDspValueAguReg(m_block, PoolReg::DspM0mask, _rrr);
 
 		{
+			 // linear shortcut
 			const RegScratch scratch(m_block);
-			m_asm.mov(r32(scratch), asmjit::Imm(0xffffff));	// linear shortcut
-			m_asm.cmp(r32(m), r32(scratch));
+			m_asm.add(r32(scratch), r32(m), asmjit::Imm(1));
+			m_asm.tst(r32(scratch), asmjit::Imm(0xffff));
 			m_asm.jnz(notLinear);
 		}
 
@@ -93,8 +94,8 @@ namespace dsp56k
 
 		{
 			const RegScratch scratch(m_block);
-			m_asm.mov(r32(scratch), asmjit::Imm(0xffffff));		// linear shortcut
-			m_asm.cmp(r32(m), r32(scratch));
+			m_asm.add(r32(scratch), r32(m), asmjit::Imm(1));				// linear shortcut
+			m_asm.tst(r32(scratch), asmjit::Imm(0xffff));
 			m_asm.jnz(notLinear);
 		}
 

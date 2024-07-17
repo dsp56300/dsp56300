@@ -1286,14 +1286,14 @@ namespace dsp56k
 	{
 		reg.m[which].var = val;
 
-		if (val == 0xffffff)	// Linear addressing
+		const TWord moduloTest = (val & 0xffff);
+
+		if (moduloTest == 0xffff)			// Linear addressing
 		{
 			reg.mModulo[which] = 0;
 			reg.mMask[which] = 0xffffff;
 			return;
 		}
-
-		const TWord moduloTest = (val & 0xffff);
 
 		if (moduloTest == 0)				// Bit reverse
 		{

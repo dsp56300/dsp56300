@@ -25,7 +25,7 @@ namespace dsp56k
 		const DspValue m = makeDspValueAguReg(m_block, PoolReg::DspM0, _rrr, true, false);
 		const DspValue moduloMask = makeDspValueAguReg(m_block, PoolReg::DspM0mask, _rrr);
 
-		m_asm.cmp(r32(m), asmjit::Imm(0xffffff));		// linear shortcut
+		m_asm.cmp(m.get().r16(), asmjit::Imm(0xffff));		// linear shortcut
 		m_asm.jnz(notLinear);
 
 		// linear:
@@ -84,7 +84,7 @@ namespace dsp56k
 		const auto bitreverse = m_asm.newLabel();
 		const auto multiwrapModulo = m_asm.newLabel();
 
-		m_asm.cmp(r32(m), asmjit::Imm(0xffffff));		// linear shortcut
+		m_asm.cmp(m.get().r16(), asmjit::Imm(0xffff));		// linear shortcut
 		m_asm.jnz(notLinear);
 
 		if (_addN)	m_asm.inc(_r);

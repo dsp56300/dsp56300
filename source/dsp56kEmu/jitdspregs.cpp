@@ -93,14 +93,14 @@ namespace dsp56k
 		{
 			const auto val = _src.imm24();
 
-			if (val == 0xffffff)
+			const TWord moduloTest = val & 0xffff;
+
+			if (moduloTest == 0xffff)
 			{
 				m_asm.mov(mod, asmjit::Imm(0));
 				m_asm.mov(mask, asmjit::Imm(0xffffff));
 				return;
 			}
-
-			const TWord moduloTest = (val & 0xffff);
 
 			if (moduloTest == 0)
 			{
@@ -143,17 +143,18 @@ namespace dsp56k
 #ifdef HAVE_ARM64
 		{
 			const RegScratch scratch(m_block);
-			m_asm.mov(scratch, Imm(0xffffff));
-			m_asm.cmp(_src.get(), r32(scratch));
+			m_asm.add(r32(scratch), r32(_src), asmjit::Imm(1));
+			m_asm.tst(r32(scratch), asmjit::Imm(0xffff));
+			m_asm.jz(isLinear);
 		}
 #else
-		m_asm.cmp(_src.get(), Imm(0xffffff));
-#endif
+		m_asm.cmp(_src.get().r16(), Imm(0xffff));
 		m_asm.jz(isLinear);
+#endif
 
 		m_asm.mov(mod, _src.get());
-
 		m_asm.and_(mod, asmjit::Imm(0xffff));
+
 		m_asm.test_(mod);
 		m_asm.jz(isBitreverse);
 
