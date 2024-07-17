@@ -140,7 +140,7 @@ namespace dsp56k
 		{
 			// build shift value:
 			// const auto offset = sr_val_noCache(SRB_S0) - sr_val_noCache(SRB_S1);
-			const ShiftReg shift(m_block);
+			ShiftReg shift(m_block);
 			sr_getBitValue(shift, SRB_S0);
 			{
 				const RegGP s1(m_block);
@@ -151,6 +151,8 @@ namespace dsp56k
 			const RegGP r(m_block);
 			m_asm.lsr(r, _alu, asmjit::Imm(46));
 			m_asm.shr(r, shift.get());	// FIXME: how can this work? shift might be negative if SRB_S1 is one but SRB_S0 is zero
+
+			shift.release();
 
 			m_asm.eon(r, r, r, asmjit::arm::lsr(1));
 			copyBitToCCR(r, 0, CCRB_U);
