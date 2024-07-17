@@ -58,7 +58,7 @@ namespace dsp56k
 		}
 		else
 		{
-			assert(_pc != hiword(_dsp.regs().ss[_dsp.ssIndex()]).toWord());
+			assert(_pc == 0 || _pc != hiword(_dsp.regs().ss[_dsp.ssIndex()]).toWord());
 		}
 
 		auto writesM = RegisterMask::None;
