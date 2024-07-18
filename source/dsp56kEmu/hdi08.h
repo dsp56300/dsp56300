@@ -102,7 +102,10 @@ namespace dsp56k
 		void writeRX(const std::vector<TWord>& _data)		{ writeRX(_data.data(), _data.size()); }
 		void writeRX(const TWord* _data, size_t _count);
 		void clearRX();
-		
+
+		const auto& rxData() const { return m_dataRX; }
+		const auto& txData() const { return m_dataTX; }
+
 		bool hasRXData() const {return !m_dataRX.empty();}
 
 		void setPendingHostFlags01(uint32_t _pendingHostFlags);
