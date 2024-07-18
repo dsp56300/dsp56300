@@ -36,7 +36,7 @@ namespace dsp56k
 			break;
 		}
 
-		maskSC1624(_r);
+		m_dspRegs.maskSC1624(_r);
 	}
 
 	void JitOps::updateAddressRegisterSubN1(const AddressingMode _mode, const JitReg32& _r, uint32_t _rrr, bool _addN)
@@ -69,7 +69,7 @@ namespace dsp56k
 			break;
 		}
 
-		maskSC1624(_r);
+		m_dspRegs.maskSC1624(_r);
 	}
 
 	DspValue JitOps::updateAddressRegister(const TWord _mmm, const TWord _rrr, bool _writeR/* = true*/, bool _returnPostR/* = false*/)

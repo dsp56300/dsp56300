@@ -71,18 +71,24 @@ namespace dsp56k
 
 	void JitDspRegs::setR(TWord _agu, const DspValue& _src) const
 	{
-		pool().write(static_cast<PoolReg>(PoolReg::DspR0 + _agu), _src);
+		const auto poolReg = static_cast<PoolReg>(PoolReg::DspR0 + _agu);
+		pool().write(poolReg, _src);
+
+		const DSPReg r(m_block, poolReg, true, true);
+		maskSC16(r);
 	}
 
 	void JitDspRegs::setN(TWord _agu, const DspValue& _src) const
 	{
-		pool().write(static_cast<PoolReg>(PoolReg::DspN0 + _agu), _src);
+		const auto poolReg = static_cast<PoolReg>(PoolReg::DspN0 + _agu);
+		pool().write(poolReg, _src);
+
+		const DSPReg r(m_block, poolReg, true, true);
+		maskSC16(r);
 	}
 
 	void JitDspRegs::setM(TWord _agu, const DspValue& _src) const
 	{
-		pool().write(static_cast<PoolReg>(PoolReg::DspM0 + _agu), _src);
-
 		const DspValue mMod = makeDspValueAguReg(m_block, PoolReg::DspM0mod, _agu, false, true);
 		const DspValue mMask = makeDspValueAguReg(m_block, PoolReg::DspM0mask, _agu, false, true);
 
@@ -91,7 +97,12 @@ namespace dsp56k
 
 		if(_src.isImmediate())
 		{
-			const auto val = _src.imm24();
+			auto val = _src.imm24();
+
+			if(m_block.getMode() && m_block.getMode()->testSR(SRB_SC))
+				val &= 0xffff;
+
+			pool().write(static_cast<PoolReg>(PoolReg::DspM0 + _agu), DspValue(m_block, val));
 
 			const TWord moduloTest = val & 0xffff;
 
@@ -129,10 +140,19 @@ namespace dsp56k
 		{
 			const auto m = dspReg - DspM0;
 
+			pool().write(static_cast<PoolReg>(PoolReg::DspM0 + _agu), _src);
+
 			m_asm.mov(mod , r32(m_block.dspRegPool().get(static_cast<PoolReg>(DspM0mod  + m), true, false)));
 			m_asm.mov(mask, r32(m_block.dspRegPool().get(static_cast<PoolReg>(DspM0mask + m), true, false)));
 
 			return;
+		}
+
+		pool().write(static_cast<PoolReg>(PoolReg::DspM0 + _agu), _src);
+
+		{
+			DSPReg r(m_block, static_cast<PoolReg>(PoolReg::DspM0 + _agu), true ,true);
+			maskSC16(r);
 		}
 
 		const asmjit::Label end = m_asm.newLabel();
@@ -456,6 +476,32 @@ namespace dsp56k
 		m_asm.shl(r64(_alu), Imm(16));	
 		m_asm.shr(r64(_alu), Imm(16));
 #endif
+	}
+
+	JitRegGP JitDspRegs::maskSC1624(const JitRegGP& _reg, const bool _mask24) const
+	{
+		const auto r = r32(_reg);
+
+		if(!m_block.getConfig().support16BitSCMode)
+		{
+			if(!_mask24)
+				return _reg;
+			m_asm.and_(r, asmjit::Imm(0xffffff));
+			return _reg;
+		}
+
+		if(const auto* mode = m_block.getMode())
+		{
+			if(mode->testSR(SRB_SC))
+				m_asm.and_(r, asmjit::Imm(0x00ffff));
+			else if(_mask24)
+				m_asm.and_(r, asmjit::Imm(0xffffff));
+		}
+		else
+		{
+			assert(false && "dynamic SC bit needs implementation");
+		}
+		return _reg;
 	}
 
 	void JitDspRegs::setPC(const DspValue& _pc) const

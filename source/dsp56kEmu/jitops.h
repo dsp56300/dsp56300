@@ -303,9 +303,6 @@ namespace dsp56k
 
 		void bitreverse24(const JitReg32& x) const;
 
-		void maskSC1624(const JitRegGP& _reg, bool _mask24 = true) const;
-		void maskSC16(const JitRegGP& _reg) const { return maskSC1624(_reg, false); }
-
 		bool isPeriphAddress(const TWord _addr) const;
 		TWord getPeriphStartAddr() const;
 
