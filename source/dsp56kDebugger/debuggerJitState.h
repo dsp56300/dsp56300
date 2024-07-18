@@ -5,6 +5,7 @@
 #include <mutex>
 
 #include "dsp56kEmu/jitblock.h"
+#include "dsp56kEmu/jitblockinfo.h"
 #include "dsp56kEmu/types.h"
 
 namespace dsp56k
