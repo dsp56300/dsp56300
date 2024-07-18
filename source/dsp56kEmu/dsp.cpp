@@ -171,9 +171,6 @@ namespace dsp56k
 	//
 	void DSP::exec()
 	{
-		// we do not support 16-bit compatibility mode
-		assert( (reg.sr.var & SR_SC) == 0 && "16 bit compatibility mode is not supported");
-
 		if(g_useJIT)
 		{
 #if 0
