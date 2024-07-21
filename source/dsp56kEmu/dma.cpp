@@ -87,25 +87,26 @@ namespace dsp56k
 			const auto srcSpace = getSourceSpace();
 			const auto dstSpace = getDestinationSpace();
 
-			if(tm == TransferMode::WordTriggerRequest && reqSrc == RequestSource::EsaiTransmitData)
+			const auto isWordTrigerReq = tm == TransferMode::WordTriggerRequest || tm == TransferMode::WordTriggerRequestClearDE;
+
+			if(isWordTrigerReq)
 			{
-				m_dma.addTriggerTarget(this);
-			}
-			else if(tm == TransferMode::WordTriggerRequest && reqSrc == RequestSource::EsaiReceiveData)
-			{
-				m_dma.addTriggerTarget(this);
-			}
-			else if(tm == TransferMode::WordTriggerRequest && reqSrc == RequestSource::Essi0TransmitData)
-			{
-				m_dma.addTriggerTarget(this);
-			}
-			else if(tm == TransferMode::WordTriggerRequest && reqSrc == RequestSource::Essi0ReceiveData)
-			{
-				m_dma.addTriggerTarget(this);
+				// FIXME: these should depend on the used peripheral
+				switch (reqSrc)
+				{
+				case RequestSource::EsaiTransmitData:
+				case RequestSource::EsaiReceiveData:
+//				case RequestSource::Essi0TransmitData:
+				case RequestSource::Essi0ReceiveData:
+					m_dma.addTriggerTarget(this);
+					break;
+				default:
+					assert(false && "TODO implement request source");
+				}
 			}
 			else
 			{
-				assert(false && "TODO");
+				assert(false && "TODO implement trigger type");
 			}
 		}
 	}
