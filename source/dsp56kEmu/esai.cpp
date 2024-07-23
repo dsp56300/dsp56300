@@ -18,6 +18,11 @@ namespace dsp56k
 		{
 			readSlotFromFrame();
 
+			if (0 == m_rxSlotCounter)
+				m_sr.set(M_RFS);
+			else
+				m_sr.clear(M_RFS);
+
 			++m_rxSlotCounter;
 
 			if(m_rxSlotCounter > getRxWordCount())
@@ -105,20 +110,10 @@ namespace dsp56k
 
 	void Esai::writeTransmitControlRegister(TWord _val)
 	{
-//		const auto temOld  = getTxWordCount();
-
 		m_sr.clear(M_TUE);
 		LOG("Write ESAI TCR " << HEX(_val));
 		m_tcr = _val;
-/*
-		const auto tem  = getTxWordCount();
-
-		if(tem != temOld && temOld)
-		{
-			if(m_txSlotCounter != 0)
-				__debugbreak();
-		}
-*/	}
+	}
 
 	void Esai::writeTransmitClockControlRegister(TWord _val)
 	{
