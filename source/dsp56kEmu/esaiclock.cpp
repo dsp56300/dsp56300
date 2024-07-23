@@ -25,7 +25,7 @@ namespace dsp56k
 
 		auto advanceClock = [](Clock& _c)
 		{
-			if (++_c.counter > _c.divider)
+			if (++_c.counter > static_cast<int32_t>(_c.divider))
 			{
 				_c.counter = 0;
 				return true;
@@ -175,7 +175,7 @@ namespace dsp56k
 		}
 	}
 
-	bool EsxiClock::setEsaiCounter(const Esxi* _esai, const TWord _counterTX, const TWord _counterRX)
+	bool EsxiClock::setEsaiCounter(const Esxi* _esai, const int _counterTX, const int _counterRX)
 	{
 		for (auto& esai : m_esais)
 		{

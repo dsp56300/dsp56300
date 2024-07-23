@@ -37,11 +37,11 @@ namespace dsp56k
 			setEsaiDivider(_esai, _divider, _divider);
 		}
 		void setEsaiDivider(Esxi* _esai, TWord _dividerTX, TWord _dividerRX);
-		bool setEsaiCounter(const Esxi* _esai, TWord _counter)
+		bool setEsaiCounter(const Esxi* _esai, int _counter)
 		{
 			return setEsaiCounter(_esai, _counter, _counter);
 		}
-		bool setEsaiCounter(const Esxi* _esai, TWord _counterTX, TWord _counterRX);
+		bool setEsaiCounter(const Esxi* _esai, int _counterTX, int _counterRX);
 
 		bool setSpeedPercent(uint32_t _percent = 100);
 
@@ -80,7 +80,7 @@ namespace dsp56k
 		struct Clock
 		{
 			uint32_t divider = 0;
-			uint32_t counter = 0;
+			int32_t counter = 0;
 		};
 
 		struct EsaiEntry
