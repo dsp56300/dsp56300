@@ -1,5 +1,7 @@
 #include "dma.h"
 
+// DSP56300FM.pdf chapter 10 (page 181 ff)
+
 #include "dsp.h"
 #include "logging.h"
 #include "peripherals.h"
@@ -43,6 +45,9 @@ namespace dsp56k
 
 	void DmaChannel::setDCR(const TWord _controlRegister)
 	{
+		if(m_dcr == _controlRegister)
+			return;
+
 		m_dma.removeTriggerTarget(this);
 
 		m_dcr = _controlRegister;
@@ -55,9 +60,22 @@ namespace dsp56k
 		if(bitvalue(m_dcr, D3d))
 		{
 			extractDCOHML(m_dcoh, m_dcom, m_dcol);
+
 			m_dcohInit = m_dcoh;
 			m_dcomInit = m_dcom;
 			m_dcolInit = m_dcol;
+		}
+		else
+		{
+			m_dcohInit = m_dco >> 12;
+			m_dcolInit = m_dco & 0xff;
+
+			m_dcoh = m_dcohInit;
+			m_dcol = m_dcolInit;
+
+			// we use dcoM as backup storage for the full DCO reg for all non-3D transfer modes
+			m_dcomInit = m_dco;
+			m_dcom = m_dcomInit;
 		}
 
 		if (!isRequestTrigger())
@@ -87,11 +105,11 @@ namespace dsp56k
 			const auto srcSpace = getSourceSpace();
 			const auto dstSpace = getDestinationSpace();
 
-			const auto isWordTrigerReq = tm == TransferMode::WordTriggerRequest || tm == TransferMode::WordTriggerRequestClearDE;
+			const auto isSupportedTransferMode = tm == TransferMode::WordTriggerRequest || tm == TransferMode::WordTriggerRequestClearDE || tm == TransferMode::LineTriggerRequestClearDE;
 
-			if(isWordTrigerReq)
+			if(isSupportedTransferMode)
 			{
-				// FIXME: these should depend on the used peripheral
+				// FIXME: these should depend on the used DSP type / peripheral type
 				switch (reqSrc)
 				{
 				case RequestSource::EsaiTransmitData:
@@ -106,7 +124,7 @@ namespace dsp56k
 			}
 			else
 			{
-				assert(false && "TODO implement trigger type");
+				assert(false && "TODO implement transfer mode in execTransfer()");
 			}
 		}
 	}
@@ -161,6 +179,9 @@ namespace dsp56k
 
 	void DmaChannel::triggerByRequest()
 	{
+		if(!bittest(m_dcr, De))
+			return;
+
 		if(execTransfer())
 			finishTransfer();
 	}
@@ -312,6 +333,42 @@ namespace dsp56k
 					*dst++ = data;
 			}
 		}
+	}
+
+	void DmaChannel::memCopyToFixedDest(EMemArea _dstArea, TWord _dstAddr, EMemArea _srcArea, TWord _srcAddr, TWord _count) const
+	{
+		TWord srcAddr = _srcAddr;
+
+		for (TWord i = 0; i < _count; ++i)
+		{
+			const TWord data = memRead(_srcArea, srcAddr);
+			memWrite(_dstArea, _dstAddr, data);
+			++srcAddr;
+		}
+	}
+
+	bool DmaChannel::dualModeIncrement(TWord& _dst, const TWord _dor)
+	{
+		if(m_dcol > 0)
+		{
+			--m_dcol;
+			++_dst;
+		}
+		else if(m_dcoh > 0)
+		{
+			_dst += _dor;
+			m_dcol = m_dcolInit;
+			--m_dcoh;
+		}
+		else
+		{
+			_dst += _dor;
+			_dst &= 0xffffff;
+			return true;
+		}
+
+		_dst &= 0xffffff;
+		return false;
 	}
 
 	bool DmaChannel::isPeripheralAddr(const EMemArea _area, const TWord _first, const TWord _count) const
@@ -476,20 +533,85 @@ namespace dsp56k
 
 			return blockFinished;
 		}
-		else
+
+		const auto agmS = getSourceAddressGenMode();
+		const auto agmD = getDestinationAddressGenMode();
+
+		if (agmS == AddressGenMode::SingleCounterApostInc && agmD == AddressGenMode::SingleCounterApostInc)
 		{
-			const auto agmS = getSourceAddressGenMode();
-			const auto agmD = getDestinationAddressGenMode();
-
-			if (agmS == AddressGenMode::SingleCounterApostInc && agmD == AddressGenMode::SingleCounterApostInc)
-				memCopy(areaD, m_ddr, areaS, m_dsr, m_dco + 1);
-			else if (agmS == AddressGenMode::SingleCounterAnoUpdate && agmD == AddressGenMode::SingleCounterApostInc)
-				memFill(areaD, m_ddr, areaS, m_dsr, m_dco + 1);
-			else
-				assert(false && "counter modes not supported yet");
-
+			assert(!isRequestTrigger() && "not supported yet, needs to be transfer one word at a time");
+			memCopy(areaD, m_ddr, areaS, m_dsr, m_dco + 1);
+			m_dsr += m_dco + 1;
+			m_ddr += m_dco + 1;
 			return true;
 		}
+
+		if (agmS == AddressGenMode::SingleCounterAnoUpdate && agmD == AddressGenMode::SingleCounterApostInc)
+		{
+			// can be used to continously read a peripheral and write to a memory region
+			if(isRequestTrigger())
+			{
+				memWrite(areaD, m_ddr, memRead(areaS, m_dsr));
+				++m_ddr;
+				if(m_dco)
+				{
+					--m_dco;
+					return false;
+				}
+
+				m_dco = m_dcomInit;
+				return true;
+			}
+
+			memFill(areaD, m_ddr, areaS, m_dsr, m_dco + 1);
+			m_ddr += m_dco + 1;
+			return true;
+		}
+
+		if(agmS == AddressGenMode::SingleCounterApostInc && agmD == AddressGenMode::SingleCounterAnoUpdate)
+		{
+			// can be used to continously feed a peripheral from a memory region
+			if(isRequestTrigger())
+			{
+				memWrite(areaD, m_ddr, memRead(areaS, m_dsr));
+				++m_dsr;
+				if(m_dco)
+				{
+					--m_dco;
+					return false;
+				}
+
+				m_dco = m_dcomInit;
+				return true;
+			}
+
+			memCopyToFixedDest(areaD, m_ddr, areaS, m_dsr, m_dco + 1);
+			m_dsr += m_dco + 1;
+			return true;
+		}
+
+		if(agmS == AddressGenMode::SingleCounterApostInc && agmD == AddressGenMode::DualCounterDOR1)
+		{
+			// 2D mode, can be either line or word
+
+			const auto tm = getTransferMode();
+			const auto isLineTransfer = tm == TransferMode::LineTriggerRequestClearDE;
+
+			do
+			{
+				memWrite(areaD, m_ddr, memRead(areaS, m_dsr));
+				++m_dsr;
+
+				if(dualModeIncrement(m_ddr, m_dma.getDOR(1)))
+					return true;
+			}
+			while(isLineTransfer && m_dcol != m_dcolInit);
+
+			return false;
+		}
+
+		assert(false && "DMA transfer mode not supported yet");
+		return true;
 	}
 
 	void DmaChannel::finishTransfer()

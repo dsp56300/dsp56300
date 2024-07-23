@@ -28,10 +28,10 @@ namespace dsp56k
 
 		enum class AddressGenMode
 		{
-			DualCounterDCO0,
-			DualCounterDCO1,
-			DualCounterDCO2,
-			DualCounterDCO3,
+			DualCounterDOR0,
+			DualCounterDOR1,
+			DualCounterDOR2,
+			DualCounterDOR3,
 			SingleCounterAnoUpdate,
 			SingleCounterApostInc,
 			reserved110,
@@ -132,6 +132,9 @@ namespace dsp56k
 	private:
 		void memCopy(EMemArea _dstArea, TWord _dstAddr, EMemArea _srcArea, TWord _srcAddr, TWord _count) const;
 		void memFill(EMemArea _dstArea, TWord _dstAddr, EMemArea _srcArea, TWord _srcAddr, TWord _count) const;
+		void memCopyToFixedDest(EMemArea _dstArea, TWord _dstAddr, EMemArea _srcArea, TWord _srcAddr, TWord _count) const;
+
+		bool dualModeIncrement(TWord& _dst, TWord _dor);
 
 		TWord memRead(EMemArea _area, TWord _addr) const;
 		void memWrite(EMemArea _area, TWord _addr, TWord _value) const;
