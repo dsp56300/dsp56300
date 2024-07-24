@@ -192,7 +192,7 @@ namespace dsp56k
 
 		const auto oldPushedSize = m_pushedBytes;
 
-		JitReg lastReg;
+		JitReg64 lastReg;
 
 		for (const auto& reg : m_usedRegs)
 		{
@@ -202,8 +202,10 @@ namespace dsp56k
 			if(reg.isVec())
 				push(reg.as<JitReg128>());
 			else
-				push(reg.as<JitReg64>());
-			lastReg = reg;
+			{
+				lastReg = reg.as<JitReg64>();
+				push(lastReg);
+			}
 		}
 
 		const auto newPushedSize = m_pushedBytes;
@@ -212,10 +214,7 @@ namespace dsp56k
 		// push the last one again to fix alignment. Only needed if we have function calls inbetween as the stack needs to be aligned for this purpose only
 		if(m_callCount && (pushedBytes & (g_stackAlignmentBytes-1)))
 		{
-			if(lastReg.isVec())
-				push(lastReg.as<JitReg128>());
-			else
-				push(lastReg.as<JitReg64>());
+			push(lastReg);
 		}
 
 		m_block.asm_().setCursor(m_block.asm_().lastNode());
