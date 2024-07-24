@@ -647,8 +647,10 @@ namespace dsp56k
 		_dsp->getPeriph(_area)->write(_offset | 0xff0000, _value);
 	}
 
-	void Jitmem::readPeriph(DspValue& _dst, const EMemArea _area, const TWord& _offset, const Instruction _inst) const
+	void Jitmem::readPeriph(DspValue& _dst, const EMemArea _area, TWord _offset, const Instruction _inst) const
 	{
+		_offset |= 0xff0000;
+
 		auto* periph = m_block.dsp().getPeriph(_area);
 
 		const auto* memPtr = periph->readAsPtr(_offset, _inst);

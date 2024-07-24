@@ -114,7 +114,7 @@ namespace dsp56k
 		MemoryRef writeDspMemory(const DspValue& _offsetX, const DspValue& _offsetY, const DspValue& _srcX, const DspValue& _srcY) const;
 		void writeDspMemory(const DspValue& _offset, const DspValue& _srcX, const DspValue& _srcY) const;
 
-		void readPeriph(DspValue& _dst, EMemArea _area, const TWord& _offset, Instruction _inst) const;
+		void readPeriph(DspValue& _dst, EMemArea _area, TWord _offset, Instruction _inst) const;
 		void readPeriph(DspValue& _dst, EMemArea _area, const DspValue& _offset, Instruction _inst) const;
 
 		void writePeriph(EMemArea _area, const TWord& _offset, const DspValue& _value) const;
