@@ -21,6 +21,7 @@ namespace dsp56k
 		explicit DSPThread(DSP& _dsp, const char* _name = nullptr, std::shared_ptr<DebuggerInterface> _debugger = {});
 		~DSPThread();
 		void join();
+		void terminate();
 
 		std::mutex& mutex() { return m_mutex; }
 

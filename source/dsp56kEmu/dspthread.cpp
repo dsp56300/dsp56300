@@ -46,14 +46,19 @@ namespace dsp56k
 		if(m_debugger)
 			detachDebugger(m_debugger.get());
 
-		m_runThread = false;
-
-		m_dsp.terminate();
+		terminate();
 
 		m_thread->join();
 		m_thread.reset();
 
 		m_debugger.reset();
+	}
+
+	void DSPThread::terminate()
+	{
+		m_runThread = false;
+
+		m_dsp.terminate();
 	}
 
 	void DSPThread::setCallback(const Callback& _callback)
