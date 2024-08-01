@@ -39,6 +39,8 @@ namespace dsp56k
 
 		DSP& dsp() { return m_dsp; }
 
+		bool runThread() const { return m_runThread; }
+
 	private:
 		void threadFunc();
 

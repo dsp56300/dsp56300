@@ -182,5 +182,7 @@ namespace dsp56k
 		}
 
 		m_dsp.setDebugger(m_nextDebugger);
+
+		m_runThread = true;
 	}
 }
