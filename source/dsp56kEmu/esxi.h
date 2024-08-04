@@ -11,5 +11,8 @@ namespace dsp56k
 	public:
 		virtual void execTX() = 0;
 		virtual void execRX() = 0;
+
+		virtual TWord hasEnabledTransmitters() const = 0;
+		virtual TWord hasEnabledReceivers() const = 0;
 	};
 }

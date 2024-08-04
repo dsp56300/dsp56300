@@ -270,6 +270,9 @@ namespace dsp56k
 		void execTX() override;
 		void execRX() override;
 
+		TWord hasEnabledTransmitters() const override { return getEnabledTransmitters(); }
+		TWord hasEnabledReceivers() const override { return getEnabledReceivers(); }
+
 		uint32_t getFrameSync() const
 		{
 			return bittest<TWord, M_TFS>(readStatusRegister());
@@ -379,6 +382,16 @@ namespace dsp56k
 		bool getRxClockPrescalerRange() const
 		{
 			return (m_rccr & M_RPSR) != 0;
+		}
+
+		TWord getEnabledReceivers() const
+		{
+			return m_rcr & M_REM;
+		}
+
+		TWord getEnabledTransmitters() const
+		{
+			return m_tcr & M_TEM;
 		}
 
 		std::string getTccrAsString() const;

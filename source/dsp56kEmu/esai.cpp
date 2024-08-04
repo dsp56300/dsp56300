@@ -37,7 +37,7 @@ namespace dsp56k
 	{
 //		LOG(HEX(&m_periph.getDSP()) << " exec ESAI " << g_memAreaNames[m_area]  <<  " ictr " << m_periph.getDSP().getInstructionCounter());
 
-		const auto tem = m_tcr & M_TEM;
+		const auto tem = getEnabledTransmitters();
 
 		if(!tem)
 			return;
@@ -79,7 +79,7 @@ namespace dsp56k
 
 	void Esai::execRX()
 	{
-		const auto rem = m_rcr & M_REM;
+		const auto rem = getEnabledReceivers();
 
 		if(!rem)
 			return;
@@ -155,7 +155,7 @@ namespace dsp56k
 
 		m_writtenTX |= (1<<_index);
 
-		if(m_writtenTX == (m_tcr & M_TEM))
+		if(m_writtenTX == (getEnabledTransmitters()))
 		{
 //			if (m_hasReadStatus)
 				m_sr.clear(M_TUE);
@@ -243,7 +243,7 @@ namespace dsp56k
 		ss << "M_TMOD=" << ((m_tcr & M_TMOD) >> M_TMOD0) << ' ';
 		ss << "M_TWA=" << (m_tcr.test(M_TWA) ? 1 : 0) << ' ';
 		ss << "M_TSHFD=" << (m_tcr.test(M_TSHFD) ? 1 : 0) << ' ';
-		ss << "M_TEM=" << ((m_tcr & M_TEM) >> M_TE0);
+		ss << "M_TEM=" << ((getEnabledTransmitters()) >> M_TE0);
 		return ss.str();
 	}
 
@@ -261,7 +261,7 @@ namespace dsp56k
 		ss << "M_RMOD=" << ((m_rcr & M_RMOD) >> M_RMOD0) << ' ';
 		ss << "M_RWA=" << (m_rcr.test(M_RWA) ? 1 : 0) << ' ';
 		ss << "M_RSHFD=" << (m_rcr.test(M_RSHFD) ? 1 : 0) << ' ';
-		ss << "M_REM=" << ((m_rcr & M_REM) >> M_RE0);
+		ss << "M_REM=" << (getEnabledReceivers() >> M_RE0);
 		return ss.str();
 	}
 
@@ -272,7 +272,7 @@ namespace dsp56k
 
 	void Esai::readSlotFromFrame()
 	{
-		const auto rem = m_rcr & M_REM;
+		const auto rem = getEnabledReceivers();
 
 		if(!rem)
 			return;
@@ -295,7 +295,7 @@ namespace dsp56k
 
 	void Esai::writeSlotToFrame()
 	{
-		const auto tem = m_tcr & M_TEM;
+		const auto tem = getEnabledTransmitters();
 
 		if(!tem)
 			return;

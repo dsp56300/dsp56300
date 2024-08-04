@@ -166,6 +166,9 @@ namespace dsp56k
 		void execTX() override;
 		void execRX() override;
 
+		TWord hasEnabledTransmitters() const override	{ return m_crb.testMask(RegCRBbits::CRB_TE); }
+		TWord hasEnabledReceivers() const override		{ return m_crb.test(RegCRBbits::CRB_RE); }
+
 		void setDSP(DSP* _dsp);
 
 		void setSymbols(Disassembler& _disasm) const;

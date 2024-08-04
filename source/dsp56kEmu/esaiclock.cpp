@@ -40,10 +40,10 @@ namespace dsp56k
 
 		for (auto& e : m_esais)
 		{
-			if(advanceClock(e.tx))
+			if(e.esai->hasEnabledTransmitters() && advanceClock(e.tx))
 				processTx[txCount++] = e.esai;
 
-			if (advanceClock(e.rx))
+			if (e.esai->hasEnabledReceivers() && advanceClock(e.rx))
 				processRx[rxCount++] = e.esai;
 		}
 
@@ -98,6 +98,11 @@ namespace dsp56k
 	void EsxiClock::setClockSource(const ClockSource _clockSource)
 	{
 		setClockSource(&m_periph.getDSP(), _clockSource);
+	}
+
+	void EsxiClock::restartClock()
+	{
+		m_lastClock = *m_dspInstructionCounter;
 	}
 
 	void EsxiClock::setClockSource(const DSP* _dsp, const ClockSource _clockSource)

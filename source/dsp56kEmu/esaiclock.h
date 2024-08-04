@@ -51,6 +51,8 @@ namespace dsp56k
 		void setDSP(const DSP* _dsp);
 		void setClockSource(ClockSource _clockSource);
 
+		void restartClock();
+
 	protected:
 		auto getDspInstructionCounter() const { return *m_dspInstructionCounter; }
 		auto getLastClock() const { return m_lastClock; }
