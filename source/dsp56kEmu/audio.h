@@ -47,7 +47,7 @@ namespace dsp56k
 	class Audio
 	{
 	public:
-		static constexpr uint32_t MaxSlotsPerFrame = 32;
+		static constexpr uint32_t MaxSlotsPerFrame = 8;
 		static constexpr uint32_t TxRegisterCount = 6;
 		static constexpr uint32_t RxRegisterCount = 4;
 
@@ -252,7 +252,7 @@ namespace dsp56k
 		auto& getAudioOutputs() { return m_audioOutputs; }
 
 	public:
-		static constexpr uint32_t RingBufferSize = 8192 * 16;
+		static constexpr uint32_t RingBufferSize = 8192 * 4;
 
 	protected:
 		void readRXimpl(RxFrame& _values);
