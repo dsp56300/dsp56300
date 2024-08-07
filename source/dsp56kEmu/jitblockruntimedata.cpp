@@ -40,7 +40,6 @@ namespace dsp56k
 		m_encodedCycles = 0;
 
 		m_dspAsm.clear();
-		m_possibleBranch = false;
 		m_child = g_invalidAddress;			// JIT block that we call
 		m_nonBranchChild = g_invalidAddress;
 		m_codeSize = 0;

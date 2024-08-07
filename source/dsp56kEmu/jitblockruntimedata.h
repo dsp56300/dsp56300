@@ -35,8 +35,6 @@ namespace dsp56k
 
 		const std::string& getDisasm() const { return m_dspAsm; }
 		TWord getLastOpSize() const { return m_lastOpSize; }
-		TWord getSingleOpWordA() const { return m_singleOpWordA; }
-		TWord getSingleOpWordB() const { return m_singleOpWordB; }
 
 		uint64_t getSingleOpCacheKey() const
 		{
@@ -88,7 +86,6 @@ namespace dsp56k
 		TWord m_encodedCycles = 0;
 
 		std::string m_dspAsm;
-		bool m_possibleBranch = false;
 		TWord m_child = g_invalidAddress;			// JIT block that we call
 		TWord m_nonBranchChild = g_invalidAddress;
 		size_t m_codeSize = 0;
