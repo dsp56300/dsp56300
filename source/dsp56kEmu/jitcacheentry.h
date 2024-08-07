@@ -55,7 +55,7 @@ namespace dsp56k
 		void addSingleOp(const uint64_t _key, JitBlockRuntimeData* _block)
 		{
 			if(!singleOpCache)
-				singleOpCache = new std::map<uint64_t, JitBlockRuntimeData*>();
+				singleOpCache = new SingleOpMap();
 			singleOpCache->insert(std::make_pair(_key, _block));
 		}
 
@@ -65,6 +65,6 @@ namespace dsp56k
 		}
 
 		JitBlockRuntimeData* block = nullptr;
-		std::map<uint64_t, JitBlockRuntimeData*>* singleOpCache = nullptr;
+		SingleOpMap* singleOpCache = nullptr;
 	};
 }
