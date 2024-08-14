@@ -47,7 +47,7 @@ namespace dsp56k
 	class Audio
 	{
 	public:
-		static constexpr uint32_t MaxSlotsPerFrame = 8;
+		static constexpr uint32_t MaxSlotsPerFrame = 16;
 		static constexpr uint32_t TxRegisterCount = 6;
 		static constexpr uint32_t RxRegisterCount = 4;
 
