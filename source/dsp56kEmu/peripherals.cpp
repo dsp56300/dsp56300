@@ -8,6 +8,109 @@
 
 namespace dsp56k
 {
+	namespace
+	{
+		void setSymbolsX(Disassembler& _disasm)
+		{
+			constexpr std::pair<int,const char*> symbols[] =
+			{
+				// AAR
+				{M_AAR0, "M_AAR0"},
+				{M_AAR1, "M_AAR1"},
+				{M_AAR2, "M_AAR2"},
+				{M_AAR3, "M_AAR3"},
+
+				// Others
+				{XIO_DCR5, "M_DCR5"},
+				{XIO_DCO5, "M_DCO5"},
+				{XIO_DDR5, "M_DDR5"},
+				{XIO_DSR5, "M_DSR5"},
+				{XIO_DCR4, "M_DCR4"},
+				{XIO_DCO4, "M_DCO4"},
+				{XIO_DDR4, "M_DDR4"},
+				{XIO_DSR4, "M_DSR4"},
+				{XIO_DCR3, "M_DCR3"},
+				{XIO_DCO3, "M_DCO3"},
+				{XIO_DDR3, "M_DDR3"},
+				{XIO_DSR3, "M_DSR3"},
+				{XIO_DCR2, "M_DCR2"},
+				{XIO_DCO2, "M_DCO2"},
+				{XIO_DDR2, "M_DDR2"},
+				{XIO_DSR2, "M_DSR2"},
+				{XIO_DCR1, "M_DCR1"},
+				{XIO_DCO1, "M_DCO1"},
+				{XIO_DDR1, "M_DDR1"},
+				{XIO_DSR1, "M_DSR1"},
+				{XIO_DCR0, "M_DCR0"},
+				{XIO_DCO0, "M_DCO0"},
+				{XIO_DDR0, "M_DDR0"},
+				{XIO_DSR0, "M_DSR0"},
+				{XIO_DOR3, "M_DOR3"},
+				{XIO_DOR2, "M_DOR2"},
+				{XIO_DOR1, "M_DOR1"},
+				{XIO_DOR0, "M_DOR0"},
+				{XIO_DSTR, "M_DSTR"},
+				{XIO_IDR,  "M_IDR"},
+				{XIO_AAR3, "M_AAR3"},
+				{XIO_AAR2, "M_AAR2"},
+				{XIO_AAR1, "M_AAR1"},
+				{XIO_AAR0, "M_AAR0"},
+				{XIO_DCR,  "M_DCR"},
+				{XIO_BCR,  "M_BCR"},
+				{XIO_OGDB, "M_OGDB"},
+				{XIO_PCTL, "M_PCTL"},
+				{XIO_IPRP, "M_IPRP"},
+				{XIO_IPRC, "M_IPRC"},
+
+				{0xFFFF90, "M_HCKR"},	// SHI Clock Control Register (HCKR)
+				{0xFFFF91, "M_HCSR"},	// SHI Control/Status Register (HCSR)
+			};
+
+			for (const auto& symbol : symbols)
+				_disasm.addSymbol(Disassembler::MemX, symbol.first, symbol.second);
+
+			// AAR bits
+			constexpr std::pair<TWord, const char*> aarBitSymbols[] =
+			{
+				{M_BAT  , "M_BAT"},
+				{1<<M_BAT0 , "M_BAT0"},
+				{1<<M_BAT1 , "M_BAT1"},
+				{1<<M_BAAP , "M_BAAP"},
+				{1<<M_BPEN , "M_BPEN"},
+				{1<<M_BXEN , "M_BXEN"},
+				{1<<M_BYEN , "M_BYEN"},
+				{1<<M_BAM  , "M_BAM"},
+				{1<<M_BPAC , "M_BPAC"},
+				{M_BNC  , "M_BNC"},
+				{1<<M_BNC0 , "M_BNC0"},
+				{1<<M_BNC1 , "M_BNC1"},
+				{1<<M_BNC2 , "M_BNC2"},
+				{1<<M_BNC3 , "M_BNC3"},
+				{M_BAC  , "M_BAC"},
+				{1<<M_BAC0 , "M_BAC0"},
+				{1<<M_BAC1 , "M_BAC1"},
+				{1<<M_BAC2 , "M_BAC2"},
+				{1<<M_BAC3 , "M_BAC3"},
+				{1<<M_BAC4 , "M_BAC4"},
+				{1<<M_BAC5 , "M_BAC5"},
+				{1<<M_BAC6 , "M_BAC6"},
+				{1<<M_BAC7 , "M_BAC7"},
+				{1<<M_BAC8 , "M_BAC8"},
+				{1<<M_BAC9 , "M_BAC9"},
+				{1<<M_BAC10, "M_BAC10"},
+				{1<<M_BAC11, "M_BAC11"}
+			};
+
+			for(TWord a = M_AAR3; a <= M_AAR0; ++a)
+			{
+				for (const auto& aarBitSymbol : aarBitSymbols)
+				{
+					_disasm.addBitMaskSymbol(Disassembler::MemX, a, aarBitSymbol.first, aarBitSymbol.second);
+				}
+			}
+		}
+	}
+
 	// _____________________________________________________________________________
 	// Peripherals
 	//
@@ -245,6 +348,7 @@ namespace dsp56k
 		m_essi1.setSymbols(_disasm);
 		HDI08::setSymbols(_disasm);
 		m_timers.setSymbols(_disasm);
+		setSymbolsX(_disasm);
 	}
 
 	void Peripherals56303::terminate()
@@ -595,102 +699,7 @@ namespace dsp56k
 
 		m_timers.setSymbols(_disasm);
 
-		constexpr std::pair<int,const char*> symbols[] =
-		{
-			// AAR
-			{M_AAR0, "M_AAR0"},
-			{M_AAR1, "M_AAR1"},
-			{M_AAR2, "M_AAR2"},
-			{M_AAR3, "M_AAR3"},
-
-			// Others
-			{XIO_DCR5, "M_DCR5"},
-			{XIO_DCO5, "M_DCO5"},
-			{XIO_DDR5, "M_DDR5"},
-			{XIO_DSR5, "M_DSR5"},
-			{XIO_DCR4, "M_DCR4"},
-			{XIO_DCO4, "M_DCO4"},
-			{XIO_DDR4, "M_DDR4"},
-			{XIO_DSR4, "M_DSR4"},
-			{XIO_DCR3, "M_DCR3"},
-			{XIO_DCO3, "M_DCO3"},
-			{XIO_DDR3, "M_DDR3"},
-			{XIO_DSR3, "M_DSR3"},
-			{XIO_DCR2, "M_DCR2"},
-			{XIO_DCO2, "M_DCO2"},
-			{XIO_DDR2, "M_DDR2"},
-			{XIO_DSR2, "M_DSR2"},
-			{XIO_DCR1, "M_DCR1"},
-			{XIO_DCO1, "M_DCO1"},
-			{XIO_DDR1, "M_DDR1"},
-			{XIO_DSR1, "M_DSR1"},
-			{XIO_DCR0, "M_DCR0"},
-			{XIO_DCO0, "M_DCO0"},
-			{XIO_DDR0, "M_DDR0"},
-			{XIO_DSR0, "M_DSR0"},
-			{XIO_DOR3, "M_DOR3"},
-			{XIO_DOR2, "M_DOR2"},
-			{XIO_DOR1, "M_DOR1"},
-			{XIO_DOR0, "M_DOR0"},
-			{XIO_DSTR, "M_DSTR"},
-			{XIO_IDR,  "M_IDR"},
-			{XIO_AAR3, "M_AAR3"},
-			{XIO_AAR2, "M_AAR2"},
-			{XIO_AAR1, "M_AAR1"},
-			{XIO_AAR0, "M_AAR0"},
-			{XIO_DCR,  "M_DCR"},
-			{XIO_BCR,  "M_BCR"},
-			{XIO_OGDB, "M_OGDB"},
-			{XIO_PCTL, "M_PCTL"},
-			{XIO_IPRP, "M_IPRP"},
-			{XIO_IPRC, "M_IPRC"},
-
-			{0xFFFF90, "M_HCKR"},	// SHI Clock Control Register (HCKR)
-			{0xFFFF91, "M_HCSR"},	// SHI Control/Status Register (HCSR)
-		};
-
-		for (const auto& symbol : symbols)
-			_disasm.addSymbol(Disassembler::MemX, symbol.first, symbol.second);
-
-		// AAR bits
-		constexpr std::pair<TWord, const char*> aarBitSymbols[] =
-		{
-			{M_BAT  , "M_BAT"},
-			{1<<M_BAT0 , "M_BAT0"},
-			{1<<M_BAT1 , "M_BAT1"},
-			{1<<M_BAAP , "M_BAAP"},
-			{1<<M_BPEN , "M_BPEN"},
-			{1<<M_BXEN , "M_BXEN"},
-			{1<<M_BYEN , "M_BYEN"},
-			{1<<M_BAM  , "M_BAM"},
-			{1<<M_BPAC , "M_BPAC"},
-			{M_BNC  , "M_BNC"},
-			{1<<M_BNC0 , "M_BNC0"},
-			{1<<M_BNC1 , "M_BNC1"},
-			{1<<M_BNC2 , "M_BNC2"},
-			{1<<M_BNC3 , "M_BNC3"},
-			{M_BAC  , "M_BAC"},
-			{1<<M_BAC0 , "M_BAC0"},
-			{1<<M_BAC1 , "M_BAC1"},
-			{1<<M_BAC2 , "M_BAC2"},
-			{1<<M_BAC3 , "M_BAC3"},
-			{1<<M_BAC4 , "M_BAC4"},
-			{1<<M_BAC5 , "M_BAC5"},
-			{1<<M_BAC6 , "M_BAC6"},
-			{1<<M_BAC7 , "M_BAC7"},
-			{1<<M_BAC8 , "M_BAC8"},
-			{1<<M_BAC9 , "M_BAC9"},
-			{1<<M_BAC10, "M_BAC10"},
-			{1<<M_BAC11, "M_BAC11"}
-		};
-
-		for(TWord a = M_AAR3; a <= M_AAR0; ++a)
-		{
-			for (const auto& aarBitSymbol : aarBitSymbols)
-			{
-				_disasm.addBitMaskSymbol(Disassembler::MemX, a, aarBitSymbol.first, aarBitSymbol.second);
-			}
-		}
+		setSymbolsX(_disasm);
 	}
 
 	void Peripherals56362::terminate()
