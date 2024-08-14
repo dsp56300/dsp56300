@@ -4,7 +4,29 @@
 
 namespace dsp56k
 {
-	HDI08::HDI08(IPeripherals& _peripheral) : m_periph(_peripheral), m_pendingTXInterrupts(0), m_rxRateLimit(200)
+	bool is56303(IPeripherals& _peripherals)
+	{
+		return dynamic_cast<Peripherals56303*>(&_peripherals) != nullptr;
+	}
+
+	Dma* getDma(IPeripherals& _peripherals)
+	{
+		if(auto* p = dynamic_cast<Peripherals56303*>(&_peripherals))
+			return &p->getDMA();
+
+		if(auto* p = dynamic_cast<Peripherals56362*>(&_peripherals))
+			return &p->getDMA();
+
+		return nullptr;
+	}
+
+	HDI08::HDI08(IPeripherals& _peripheral)
+	: m_periph(_peripheral)
+	, m_pendingTXInterrupts(0)
+	, m_rxRateLimit(200)
+	, m_dmaReqSourceReceive (is56303(_peripheral) ? DmaChannel::RequestSource::Hi08ReceiveDataFull : DmaChannel::RequestSource::HostReceiveData)
+	, m_dmaReqSourceTransmit(is56303(_peripheral) ? DmaChannel::RequestSource::Hi08TransmitDataEmpty : DmaChannel::RequestSource::HostTransmitData)
+	, m_dma(getDma(_peripheral))
 	{
 	}
 
@@ -31,16 +53,18 @@ namespace dsp56k
 		if (!bittest(m_hpcr, HPCR_HEN)) 
 			return;
 
-		if (!m_waitServeRXInterrupt && rxInterruptEnabled() && !m_dataRX.empty())
+		if (!m_waitServeRXInterrupt && !m_dataRX.empty() && (rxInterruptEnabled() || hasDmaReceiveTrigger()))
 		{
 			const auto clock = m_periph.getDSP().getInstructionCounter();
 
 			const auto d = delta(clock, m_lastRXClock);
 			if(d >= m_rxRateLimit)
 			{
-				m_periph.getDSP().injectInterrupt(Vba_Host_Receive_Data_Full);
+				if(rxInterruptEnabled())
+					m_periph.getDSP().injectInterrupt(Vba_Host_Receive_Data_Full);
 				m_lastRXClock = clock;
 				m_waitServeRXInterrupt = true;
+				dmaTriggerReceive();
 //				LOG("Wait serve interrupt");
 			}
 		}
@@ -48,12 +72,20 @@ namespace dsp56k
 		{
 			if(m_transmitDataAlwaysEmpty)
 			{
-				if (txInterruptEnabled() && m_pendingTXInterrupts > 0)
+				if (m_pendingTXInterrupts > 0)
 				{
-					--m_pendingTXInterrupts;
-					dsp56k::bitset<TWord, HSR_HTDE>(m_hsr, 1);
+					const auto interruptEnabled = txInterruptEnabled();
+					const auto dmaTriggered = dmaTriggerTransmit();
+
+					if(interruptEnabled || dmaTriggered)
+					{
+						--m_pendingTXInterrupts;
+						dsp56k::bitset<TWord, HSR_HTDE>(m_hsr, 1);
+
+						if(interruptEnabled)
+							m_periph.getDSP().injectInterrupt(Vba_Host_Transmit_Data_Empty);
+					}
 //					LOG("HTDE=1");
-					m_periph.getDSP().injectInterrupt(Vba_Host_Transmit_Data_Empty);
 				}
 			}
 			else
@@ -69,6 +101,10 @@ namespace dsp56k
 					{
 //						LOG("Inject HTDE");
 						m_periph.getDSP().injectInterrupt(Vba_Host_Transmit_Data_Empty);
+					}
+					if(!hadHTDE)
+					{
+						dmaTriggerTransmit();
 					}
 				}
 			}
@@ -324,5 +360,26 @@ namespace dsp56k
 		{
 			LOG("RX interrupt disabled");
 		}
+	}
+
+	bool HDI08::dmaTriggerReceive() const
+	{
+		if(!m_dma)
+			return false;
+		return m_dma->trigger(m_dmaReqSourceReceive);
+	}
+
+	bool HDI08::dmaTriggerTransmit() const
+	{
+		if(!m_dma)
+			return false;
+		return m_dma->trigger(m_dmaReqSourceTransmit);
+	}
+
+	bool HDI08::hasDmaReceiveTrigger() const
+	{
+		if(!m_dma)
+			return false;
+		return m_dma->hasTrigger(m_dmaReqSourceReceive);
 	}
 };

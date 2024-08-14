@@ -1,4 +1,5 @@
 #pragma once
+
 #include <array>
 #include <set>
 
@@ -49,38 +50,44 @@ namespace dsp56k
 
 		enum class RequestSource
 		{
-			ExternalIRQA       = 0b00000, // External (IRQA pin)
-			ExternalIRQB       = 0b00001, // External (IRQB pin)
-			ExternalIRQC       = 0b00010, // External (IRQC pin)
-			ExternalIRQD       = 0b00011, // External (IRQD pin)
-			DMAChannel0        = 0b00100, // Transfer done from DMA channel 0
-			DMAChannel1        = 0b00101, // Transfer done from DMA channel 1
-			DMAChannel2        = 0b00110, // Transfer done from DMA channel 2
-			DMAChannel3        = 0b00111, // Transfer done from DMA channel 3
-			DMAChannel4        = 0b01000, // Transfer done from DMA channel 4
-			DMAChannel5        = 0b01001, // Transfer done from DMA channel 5
+			ExternalIRQA          = 0b00000, // External (IRQA pin)
+			ExternalIRQB          = 0b00001, // External (IRQB pin)
+			ExternalIRQC          = 0b00010, // External (IRQC pin)
+			ExternalIRQD          = 0b00011, // External (IRQD pin)
+			DMAChannel0           = 0b00100, // Transfer done from DMA channel 0
+			DMAChannel1           = 0b00101, // Transfer done from DMA channel 1
+			DMAChannel2           = 0b00110, // Transfer done from DMA channel 2
+			DMAChannel3           = 0b00111, // Transfer done from DMA channel 3
+			DMAChannel4           = 0b01000, // Transfer done from DMA channel 4
+			DMAChannel5           = 0b01001, // Transfer done from DMA channel 5
 
 			// DSP56362
-			DaxTransmitData    = 0b01010, // DAX transmit data
-			EsaiReceiveData    = 0b01011, // ESAI receive data (RDF=1)
-			EsaiTransmitData   = 0b01100, // ESAI transmit data (TDE=1)
-			ShiHtxEmpty        = 0b01101, // SHI HTX empty
-			ShiFifoNotEmpty    = 0b01110, // SHI FIFO not empty
-			ShiFifoFull        = 0b01111, // SHI FIFO full
-			HostReceiveData    = 0b10000, // Host receive data
-			HostTransmitData   = 0b10001, // Host transmit data
-			Timer0             = 0b10010, // TIMER0 (TCF=1)
-			Timer1             = 0b10011, // TIMER1 (TCF=1)
-			Timer2             = 0b10100, // TIMER2 (TCF=1)
-
-			Count,
+			DaxTransmitData       = 0b01010, // DAX transmit data
+			EsaiReceiveData       = 0b01011, // ESAI receive data (RDF=1)
+			EsaiTransmitData      = 0b01100, // ESAI transmit data (TDE=1)
+			ShiHtxEmpty           = 0b01101, // SHI HTX empty
+			ShiFifoNotEmpty       = 0b01110, // SHI FIFO not empty
+			ShiFifoFull           = 0b01111, // SHI FIFO full
+			HostReceiveData       = 0b10000, // Host receive data
+			HostTransmitData      = 0b10001, // Host transmit data
+			Timer0                = 0b10010, // TIMER0 (TCF=1)
+			Timer1                = 0b10011, // TIMER1 (TCF=1)
+			Timer2                = 0b10100, // TIMER2 (TCF=1)
+			Dsp56362Reserved      = 0b10101,
 
 			// DSP56303
-			Essi0ReceiveData   = 0b01010, // ESSI0 receive data (RDF0 = 1)
-			Essi0TransmitData  = 0b01011, // ESSI0 transmit data (TDE0 = 1))
-			Essi1ReceiveData   = 0b01100, // ESSI1 receive data (RDF1 = 1)
-			Essi1TransmitData  = 0b01101, // ESSI1 transmit data (TDE1 = 1))
+			Essi0ReceiveData      = 0b01010, // ESSI0 receive data (RDF0 = 1)
+			Essi0TransmitData     = 0b01011, // ESSI0 transmit data (TDE0 = 1))
+			Essi1ReceiveData      = 0b01100, // ESSI1 receive data (RDF1 = 1)
+			Essi1TransmitData     = 0b01101, // ESSI1 transmit data (TDE1 = 1))
+			Hi08ReceiveDataFull   = 0b10011, // Host receive data full (HRDF = 1)
+			Hi08TransmitDataEmpty = 0b10100, // Host transmit data empty (HTDE = 1)
+			Dsp56303Reserved      = 0b10101,
+
+			Count = Dsp56303Reserved
 		};
+
+		static_assert(RequestSource::Dsp56362Reserved == RequestSource::Dsp56303Reserved, "update definition of Count in request sources");
 
 		enum class TransferMode
 		{
@@ -203,6 +210,7 @@ namespace dsp56k
 		void setActiveChannel(TWord _channel);
 		void clearActiveChannel();
 
+		bool hasTrigger(DmaChannel::RequestSource _source) const;
 		bool trigger(DmaChannel::RequestSource _source);
 		void addTriggerTarget(DmaChannel* _channel);
 		void removeTriggerTarget(DmaChannel* _channel);

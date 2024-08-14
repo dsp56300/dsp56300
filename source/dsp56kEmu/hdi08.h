@@ -9,6 +9,7 @@
 #include "ringbuffer.h"
 #include "utils.h"
 #include "logging.h"
+#include "dma.h"
 
 namespace dsp56k
 {
@@ -164,6 +165,10 @@ namespace dsp56k
 		}
 
 	private:
+		bool dmaTriggerReceive() const;
+		bool dmaTriggerTransmit() const;
+		bool hasDmaReceiveTrigger() const;
+
 		TWord m_hsr = 0;
 		TWord m_hcr = 0;
 		TWord m_hpcr = 0;
@@ -180,5 +185,9 @@ namespace dsp56k
 		uint32_t m_rxRateLimit;		// minimum number of instructions between two RX interrupts
 		bool m_waitServeRXInterrupt = false;
 		int32_t m_pendingHostFlags01 = -1;
+
+		DmaChannel::RequestSource m_dmaReqSourceReceive;
+		DmaChannel::RequestSource m_dmaReqSourceTransmit;
+		Dma* m_dma;
 	};
 }

@@ -109,13 +109,16 @@ namespace dsp56k
 
 			if(isSupportedTransferMode)
 			{
-				// FIXME: these should depend on the used DSP type / peripheral type
 				switch (reqSrc)
 				{
 				case RequestSource::EsaiTransmitData:
 				case RequestSource::EsaiReceiveData:
 //				case RequestSource::Essi0TransmitData:
 				case RequestSource::Essi0ReceiveData:
+				case RequestSource::HostReceiveData:
+				case RequestSource::HostTransmitData:
+				case RequestSource::Hi08ReceiveDataFull:
+				case RequestSource::Hi08TransmitDataEmpty:
 					m_dma.addTriggerTarget(this);
 					break;
 				default:
@@ -685,6 +688,12 @@ namespace dsp56k
 	inline void Dma::clearActiveChannel()
 	{
 		m_dstr &= ~(1 << Dact);
+	}
+
+	bool Dma::hasTrigger(DmaChannel::RequestSource _source) const
+	{
+		const auto& channels = m_requestTargets[static_cast<uint32_t>(_source)];
+		return !channels.empty();
 	}
 
 	bool Dma::trigger(DmaChannel::RequestSource _source)
