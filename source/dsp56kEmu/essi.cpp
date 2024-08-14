@@ -336,7 +336,7 @@ namespace dsp56k
 			LOGESSI("Write TX " << _index << " = " << HEX(_val));
 		m_tx[_index] = _val;
 
-		m_writtenTX |= (1<<(_index + RegCRBbits::CRB_TE0));
+		m_writtenTX |= (1<<(RegCRBbits::CRB_TE0 - _index));
 
 		if(m_writtenTX == (m_crb & RegCRBbits::CRB_TE))
 		{
