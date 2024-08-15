@@ -332,8 +332,6 @@ namespace dsp56k
 
 	void Essi::writeTX(const uint32_t _index, const TWord _val)
 	{
-		if(m_index == 1)
-			LOGESSI("Write TX " << _index << " = " << HEX(_val));
 		m_tx[_index] = _val;
 
 		m_writtenTX |= (1<<(RegCRBbits::CRB_TE0 - _index));
