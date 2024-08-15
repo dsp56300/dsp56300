@@ -110,6 +110,10 @@ namespace dsp56k
 		bool hasRXData() const {return !m_dataRX.empty();}
 
 		void setPendingHostFlags01(uint32_t _pendingHostFlags);
+		bool hasPendingHostFlags01() const
+		{
+			return m_pendingHostFlags01 >= 0;
+		}
 		void setHostFlags(uint8_t _flag0, uint8_t _flag1);
 		void setHostFlagsWithWait(uint8_t _flag0, uint8_t _flag1);
 		bool needsToWaitForHostFlags(uint8_t _flag0, uint8_t _flag1) const;
