@@ -239,11 +239,6 @@ namespace dsp56k
 	{
 		const auto interrupt = m_pendingInterrupts.front();
 
-		const auto vba = interrupt;
-
-		if(isInterruptMasked(vba))
-			return;
-
 		if(interrupt >= Vba_End)
 		{
 			m_customInterrupts[interrupt - Vba_End]();
@@ -260,6 +255,11 @@ namespace dsp56k
 
 			return;
 		}
+
+		const auto vba = interrupt;
+
+		if(isInterruptMasked(vba))
+			return;
 
 		// it is important that the processing mode is switched first before popping the vector to prevent a possible race condition in hasPendingInterrupt()
 		{
