@@ -223,7 +223,7 @@ namespace dsp56k
 		case XIO_DSTR: return m_dma.getDSTR();	// DMA Status Register
 		}
 
-		LOG( "Periph read @ " << std::hex << _addr );
+//		LOG( "Periph read @ " << std::hex << _addr );
 
 		return m_mem[_addr - XIO_Reserved_High_First];
 	}
@@ -322,7 +322,7 @@ namespace dsp56k
 
 //		case XIO_DSTR: m_dma.setDSTR(_val); return;		// DMA Status Register is read only
 		default:
-			LOG( "Periph write @ " << std::hex << _addr );
+//			LOG( "Periph write @ " << std::hex << _addr );
 			m_mem[_addr - XIO_Reserved_High_First] = _val;
 		}
 	}
@@ -475,7 +475,7 @@ namespace dsp56k
 
 		const auto& value = m_mem[_addr - XIO_Reserved_High_First];
 
-		if (_addr!=0xffffd5) {LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  HEX(value) << ")");}
+//		if (_addr!=0xffffd5) {LOG( "Periph read @ " << std::hex << _addr << ": returning (0x" <<  HEX(value) << ")");}
 
 		return value;
 	}
@@ -639,7 +639,7 @@ namespace dsp56k
 		}
 		if (_addr!=0xffffd5)
 		{
-			LOG( "Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));
+//			LOG( "Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));
 		}
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
 	}
@@ -765,7 +765,7 @@ namespace dsp56k
 		}
 		if (_addr != 0xffffd5)
 		{
-			LOG("Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));
+//			LOG("Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));
 		}
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
 	}

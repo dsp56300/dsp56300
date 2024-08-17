@@ -230,7 +230,7 @@ namespace dsp56k
 
 	void HDI08::writeHDR(TWord _val)
 	{
-		LOG("Write HDR: " << HEX(_val));
+//		LOG("Write HDR: " << HEX(_val));
 		m_hdr = _val;
 	}
 
