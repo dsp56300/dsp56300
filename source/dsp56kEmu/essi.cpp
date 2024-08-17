@@ -398,6 +398,40 @@ namespace dsp56k
 		m_rsmb = _val;
 	}
 
+	std::string Essi::getCraAsString() const
+	{
+		std::stringstream ss;
+		ss << "CRA_SSC1=" << (m_cra.test(CRA_SSC1) ? 1 : 0) << ' ';
+		ss << "CRA_WL=" << (m_cra.testMask(CRA_WL) >> CRA_WL0) << ' ';
+		ss << "CRA_ALC=" << (m_cra.test(CRA_ALC) ? 1 : 0) << ' ';
+		ss << "CRA_DC=" << (m_cra.testMask(CRA_DC) >> CRA_DC0) << ' ';
+		ss << "CRA_PM=" << (m_cra.testMask(CRA_PM) >> CRA_PM0) << ' ';
+		return ss.str();
+	}
+
+	std::string Essi::getCrbAsString() const
+	{
+		std::stringstream ss;
+		ss << "CRB_REIE=" << (m_crb.test(CRB_REIE) ? 1 : 0) << ' ';
+		ss << "CRB_TEIE=" << (m_crb.test(CRB_TEIE) ? 1 : 0) << ' ';
+		ss << "CRB_RLIE=" << (m_crb.test(CRB_RLIE) ? 1 : 0) << ' ';
+		ss << "CRB_TLIE=" << (m_crb.test(CRB_TLIE) ? 1 : 0) << ' ';
+		ss << "CRB_RIE=" << (m_crb.test(CRB_RIE) ? 1 : 0) << ' ';
+		ss << "CRB_RE=" << (m_crb.test(CRB_RE) ? 1 : 0) << ' ';
+		ss << "CRB_TE=" << (m_crb.testMask(CRB_TE) >> CRB_TE2) << ' ';
+		ss << "CRB_MOD=" << (m_crb.test(CRB_MOD) ? 1 : 0) << ' ';
+		ss << "CRB_SYN=" << (m_crb.test(CRB_SYN) ? 1 : 0) << ' ';
+		ss << "CRB_CKP=" << (m_crb.test(CRB_CKP) ? 1 : 0) << ' ';
+		ss << "CRB_FSP=" << (m_crb.test(CRB_FSP) ? 1 : 0) << ' ';
+		ss << "CRB_FSR=" << (m_crb.test(CRB_FSR) ? 1 : 0) << ' ';
+		ss << "CRB_FSL=" << (m_crb.testMask(CRB_FSL) >> CRB_FSL0) << ' ';
+		ss << "CRB_SHFD=" << (m_crb.test(CRB_SHFD) ? 1 : 0) << ' ';
+		ss << "CRB_SCKD=" << (m_crb.test(CRB_SCKD) ? 1 : 0) << ' ';
+		ss << "CRB_SCD=" << (m_crb.testMask(CRB_SCD) >> CRB_SCD0) << ' ';
+		ss << "CRB_OF=" << (m_crb.testMask(CRB_OF) >> CRB_OF0) << ' ';
+		return ss.str();
+	}
+
 	TWord Essi::getRxWordCount() const
 	{
 		return (m_cra & RegCRAbits::CRA_DC) >> RegCRAbits::CRA_DC0;

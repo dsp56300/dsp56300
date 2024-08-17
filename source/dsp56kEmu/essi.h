@@ -5,6 +5,8 @@
 #include "esxi.h"
 #include "types.h"
 
+#include <string>
+
 namespace dsp56k
 {
 	class Peripherals56303;
@@ -194,6 +196,9 @@ namespace dsp56k
 		void writeTSMB(TWord _val);
 		void writeRSMA(TWord _val);
 		void writeRSMB(TWord _val);
+		
+		std::string getCraAsString() const;
+		std::string getCrbAsString() const;
 
 	private:
 		TWord getRxWordCount() const;
