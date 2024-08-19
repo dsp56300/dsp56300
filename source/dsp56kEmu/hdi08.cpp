@@ -37,13 +37,14 @@ namespace dsp56k
 
 		// Apply pending host flags, if applicable
 		const auto hf01 = m_pendingHostFlags01;
+
+		if(hf01 < 0)
+			return m_hsr;
+
 		m_pendingHostFlags01 = -1;
 
-		if(hf01 >= 0)
-		{
-			m_hsr &= ~0x18;
-			m_hsr |= static_cast<uint32_t>(hf01);
-		}
+		m_hsr &= ~0x18;
+		m_hsr |= static_cast<uint32_t>(hf01);
 
 		return m_hsr;
 	}
@@ -157,11 +158,6 @@ namespace dsp56k
 	void HDI08::clearRX()
 	{
 		m_dataRX.clear();
-	}
-
-	void HDI08::setPendingHostFlags01(uint32_t _pendingHostFlags)
-	{
-		m_pendingHostFlags01 = static_cast<int32_t>(_pendingHostFlags);
 	}
 
 	void HDI08::setHostFlags(const uint8_t _flag0, const uint8_t _flag1)
@@ -360,6 +356,12 @@ namespace dsp56k
 		{
 			LOG("RX interrupt disabled");
 		}
+	}
+
+	void HDI08::writeStatusRegister(const TWord _val)
+	{
+//		LOG("Write HDI08 HSR " << HEX(_val));
+		m_hsr = _val;
 	}
 
 	bool HDI08::dmaTriggerReceive() const

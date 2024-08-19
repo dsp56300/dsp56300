@@ -77,11 +77,7 @@ namespace dsp56k
 
 		void writeControlRegister(TWord _val);
 
-		void writeStatusRegister(const TWord _val)
-		{
-//			LOG("Write HDI08 HSR " << HEX(_val));
-			m_hsr = _val;
-		}
+		void writeStatusRegister(const TWord _val);
 
 		void writePortControlRegister(const TWord _val)
 		{
@@ -109,11 +105,16 @@ namespace dsp56k
 
 		bool hasRXData() const {return !m_dataRX.empty();}
 
-		void setPendingHostFlags01(uint32_t _pendingHostFlags);
+		void setPendingHostFlags01(uint32_t _pendingHostFlags)
+		{
+			m_pendingHostFlags01 = static_cast<int32_t>(_pendingHostFlags);
+		}
+
 		bool hasPendingHostFlags01() const
 		{
 			return m_pendingHostFlags01 >= 0;
 		}
+
 		void setHostFlags(uint8_t _flag0, uint8_t _flag1);
 		void setHostFlagsWithWait(uint8_t _flag0, uint8_t _flag1);
 		bool needsToWaitForHostFlags(uint8_t _flag0, uint8_t _flag1) const;
