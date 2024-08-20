@@ -1874,6 +1874,23 @@ namespace dsp56k
 			verify(dsp.reg.a.var == 0x00000036000000);
 			verify(dsp.getSR().var == 0x0800d1);
 		});
+
+		// mpy xn,#imm,alu
+
+		runTest([&]()
+		{
+			dsp.x0(0x020);
+			dsp.x1(0x400);
+			dsp.reg.a.var = 0x12abcdefabdef;
+			dsp.reg.b.var = 0x12abcdefabdef;
+
+			emit(0x0113f0);	// mpy x1,#19,a
+			emit(0x010ad8);	// mpy x0,#10,b
+		}, [&]()
+		{
+			verify(dsp.reg.a.var == 0x8000);
+			verify(dsp.reg.b.var == 0x80000);
+		});
 	}
 
 	void UnitTests::mpyr()
