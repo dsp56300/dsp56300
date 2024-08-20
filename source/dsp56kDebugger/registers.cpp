@@ -163,7 +163,7 @@ namespace dsp56kDebugger
 			updateCellT(regs.m[i], posM0 + wxPoint(0,i));
 		}
 
-		const auto ss = regs.ss[regs.sp.var];
+		const auto ss = regs.sp.var < regs.ss.size() ? regs.ss[regs.sp.var] : regs.ss[regs.ss.size()-1];
 
 		updateCellT(regs.pc, posPC);		updateCellT(regs.sr, posSR);		updateCellT(regs.omr, posOMR);
 		updateCellT(regs.la, posLA);		updateCellT(regs.lc, posLC);
