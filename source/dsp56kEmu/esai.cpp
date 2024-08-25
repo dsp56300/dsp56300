@@ -51,10 +51,10 @@ namespace dsp56k
 			m_sr.clear(M_TFS);
 
 		++m_txSlotCounter;
-
-		if (m_txSlotCounter > getTxWordCount())
+		const auto txWordCount = getTxWordCount();
+		if (m_txSlotCounter > txWordCount)
 		{
-			m_txFrame.resize(getTxWordCount() + 1);
+			m_txFrame.resize(txWordCount + 1);
 			writeTXimpl(m_txFrame);
 			m_txFrame.clear();
 
@@ -155,7 +155,9 @@ namespace dsp56k
 
 		m_writtenTX |= (1<<_index);
 
-		if(m_writtenTX == (getEnabledTransmitters()))
+		const auto enabledTransmitters = getEnabledTransmitters();
+
+		if(m_writtenTX == enabledTransmitters)
 		{
 //			if (m_hasReadStatus)
 				m_sr.clear(M_TUE);
@@ -175,24 +177,6 @@ namespace dsp56k
 			m_sr.clear(M_RDF, M_ROE);
 		}
 
-		/* Master to Slave clocking test code
-		if(m_area == MemArea_Y)// && _index == 1)
-		{
-			const auto c = (m_txFrameCounter % (768*2));
-			if(m_txSlotCounter == 2 && c == 0)
-				return 0xedc987;
-		}
-		*/
-		/* return noise for testing purposes
-		if(m_area == MemArea_Y && _index == 0 && m_txSlotCounter == 1 && (m_txFrameCounter & 1) == 1)
-		{
-			int32_t r = ((rand() & 0xff) << 24) | ((rand() & 0xfff) << 12) | (rand() & 0xfff);
-			r >>= 2;	// 25% gain
-			r >>= 8;
-
-			return r;
-		}
-		*/
 		return m_rx[_index];
 	}
 
