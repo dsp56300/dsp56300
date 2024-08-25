@@ -14,13 +14,48 @@
 #if 0
 #define LOGDMA(S) LOG(S)
 #else
-#define LOGDMA(S) {}
+#define LOGDMA(S) do{}while(0)
 #endif
 
 constexpr bool g_delayedDmaTransfer = true;
 
 namespace dsp56k
 {
+	namespace
+	{
+		using RequestSource = DmaChannel::RequestSource;
+
+		bool checkTrigger(Peripherals56303& _p, const RequestSource _src)
+		{
+			switch (_src)
+			{
+			case RequestSource::Essi0TransmitData:			return _p.getEssi0().getSR().test(Essi::SSISR_TDE);
+			case RequestSource::Essi0ReceiveData:			return _p.getEssi0().getSR().test(Essi::SSISR_RDF);
+			case RequestSource::Essi1TransmitData:			return _p.getEssi1().getSR().test(Essi::SSISR_TDE);
+			case RequestSource::Essi1ReceiveData:			return _p.getEssi1().getSR().test(Essi::SSISR_RDF);
+			case RequestSource::Hi08ReceiveDataFull:		return _p.getHI08().readStatusRegister() & (1 << dsp56k::HDI08::HSR_HRDF);
+			case RequestSource::Hi08TransmitDataEmpty:		return _p.getHI08().readStatusRegister() & (1 << dsp56k::HDI08::HSR_HTDE);
+			default:
+				assert("Unsupported request source for 56303");
+				return false;
+			}
+		}
+
+		bool checkTrigger(Peripherals56362& _p, const RequestSource _src)
+		{
+			switch (_src)
+			{
+			case RequestSource::EsaiReceiveData:			return _p.getEsai().getSR().test(Esai::M_RDF);
+			case RequestSource::EsaiTransmitData:			return _p.getEsai().getSR().test(Esai::M_TDE);
+			case RequestSource::HostReceiveData:			return _p.getHDI08().readStatusRegister() & (1 << dsp56k::HDI08::HSR_HRDF);
+			case RequestSource::HostTransmitData:			return _p.getHDI08().readStatusRegister() & (1 << dsp56k::HDI08::HSR_HTDE);
+			default:
+				assert("Unsupported request source for 56362");
+				return false;
+			}
+		}
+	}
+
 	DmaChannel::DmaChannel(Dma& _dma, IPeripherals& _peripherals, const TWord _index): m_index(_index), m_dma(_dma), m_peripherals(_peripherals)
 	{
 	}
@@ -109,20 +144,21 @@ namespace dsp56k
 
 			if(isSupportedTransferMode)
 			{
-				switch (reqSrc)
+				if(auto* p303 = dynamic_cast<Peripherals56303*>(&m_peripherals))
 				{
-				case RequestSource::EsaiTransmitData:
-				case RequestSource::EsaiReceiveData:
-//				case RequestSource::Essi0TransmitData:
-				case RequestSource::Essi0ReceiveData:
-				case RequestSource::HostReceiveData:
-				case RequestSource::HostTransmitData:
-				case RequestSource::Hi08ReceiveDataFull:
-				case RequestSource::Hi08TransmitDataEmpty:
 					m_dma.addTriggerTarget(this);
-					break;
-				default:
-					assert(false && "TODO implement request source");
+					if(checkTrigger(*p303, reqSrc))
+						triggerByRequest();
+				}
+				else if(auto* p362 = dynamic_cast<Peripherals56362*>(&m_peripherals))
+				{
+					m_dma.addTriggerTarget(this);
+					if(checkTrigger(*p362, reqSrc))
+						triggerByRequest();
+				}
+				else
+				{
+					assert(false && "TODO unknown peripherals, not supported yet");
 				}
 			}
 			else
@@ -696,7 +732,7 @@ namespace dsp56k
 		return !channels.empty();
 	}
 
-	bool Dma::trigger(DmaChannel::RequestSource _source)
+	bool Dma::trigger(DmaChannel::RequestSource _source) const
 	{
 		const auto& channels = m_requestTargets[static_cast<uint32_t>(_source)];
 

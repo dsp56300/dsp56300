@@ -200,6 +200,8 @@ namespace dsp56k
 		std::string getCraAsString() const;
 		std::string getCrbAsString() const;
 
+		const auto& getSR() const { return m_sr; }
+
 	private:
 		TWord getRxWordCount() const;
 		TWord getTxWordCount() const;

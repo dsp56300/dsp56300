@@ -134,7 +134,7 @@ namespace dsp56k
 
 		bool bridgedOverlap(EMemArea _area, TWord _first, TWord _count) const;
 
-		void extractDCOHML(TWord& __h, TWord& _m, TWord& _l) const;
+		void extractDCOHML(TWord& _h, TWord& _m, TWord& _l) const;
 
 	private:
 		void memCopy(EMemArea _dstArea, TWord _dstAddr, EMemArea _srcArea, TWord _srcAddr, TWord _count) const;
@@ -211,7 +211,7 @@ namespace dsp56k
 		void clearActiveChannel();
 
 		bool hasTrigger(DmaChannel::RequestSource _source) const;
-		bool trigger(DmaChannel::RequestSource _source);
+		bool trigger(DmaChannel::RequestSource _source) const;
 		void addTriggerTarget(DmaChannel* _channel);
 		void removeTriggerTarget(DmaChannel* _channel);
 

@@ -400,6 +400,8 @@ namespace dsp56k
 		std::string getTcrAsString() const;
 		std::string getRcrAsString() const;
 
+		const auto& getSR() const { return m_sr; }
+
 	private:
 		bool inputEnabled(uint32_t _index) const	{ return m_rcr.test(static_cast<RcrBits>(_index)); }
 		bool outputEnabled(uint32_t _index) const	{ return m_tcr.test(static_cast<TcrBits>(_index)); }
