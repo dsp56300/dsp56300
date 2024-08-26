@@ -6,6 +6,7 @@
 
 namespace dsp56k
 {
+	class Peripherals56303;
 	class Peripherals56362;
 	class Esxi;
 	class IPeripherals;
@@ -52,6 +53,8 @@ namespace dsp56k
 		void setClockSource(ClockSource _clockSource);
 
 		void restartClock();
+
+		TWord getRemainingInstructionsForFrameSync() const;
 
 	protected:
 		auto getDspInstructionCounter() const { return *m_dspInstructionCounter; }
@@ -100,6 +103,15 @@ namespace dsp56k
 	{
 	public:
 		EsaiClock(Peripherals56362& _peripherals);
-		template<bool ExpectedResult> TWord getRemainingInstructionsForFrameSync() const;
+		template<bool ExpectedResult> TWord getRemainingInstructionsForTransmitFrameSync() const;
+		template<bool ExpectedResult> TWord getRemainingInstructionsForReceiveFrameSync() const;
+	};
+
+	class EssiClock : public EsxiClock
+	{
+	public:
+		EssiClock(Peripherals56303& _peripherals);
+		template<bool ExpectedResult> TWord getRemainingInstructionsForTransmitFrameSync(uint32_t _esaiIndex) const;
+		template<bool ExpectedResult> TWord getRemainingInstructionsForReceiveFrameSync(uint32_t _esaiIndex) const;
 	};
 }

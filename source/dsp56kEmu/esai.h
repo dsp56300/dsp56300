@@ -273,9 +273,14 @@ namespace dsp56k
 		TWord hasEnabledTransmitters() const override { return getEnabledTransmitters(); }
 		TWord hasEnabledReceivers() const override { return getEnabledReceivers(); }
 
-		uint32_t getFrameSync() const
+		uint32_t getTransmitFrameSync() const
 		{
 			return bittest<TWord, M_TFS>(readStatusRegister());
+		}
+
+		uint32_t getReceiveFrameSync() const
+		{
+			return bittest<TWord, M_RFS>(readStatusRegister());
 		}
 
 		const TWord& readStatusRegister() const;

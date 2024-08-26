@@ -328,6 +328,12 @@ namespace dsp56k
 			return _addr >= XIO_Reserved_High_First;
 		}
 
+		void fastForward(const TWord _instructions, const TWord _cycles)
+		{
+			m_instructions += _instructions;
+			m_cycles += _cycles;
+		}
+
 	private:
 
 		std::string getSSindent() const;

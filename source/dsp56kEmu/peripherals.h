@@ -147,7 +147,7 @@ namespace dsp56k
 		}
 
 		Dma& getDMA()					{ return m_dma; }
-		EsxiClock& getEssiClock()		{ return m_essiClock; }
+		auto& getEssiClock()			{ return m_essiClock; }
 		Essi& getEssi0()				{ return m_essi0; }
 		Essi& getEssi1()				{ return m_essi1; }
 		HDI08& getHI08()				{ return m_hi08; }
@@ -159,7 +159,7 @@ namespace dsp56k
 
 	private:
 		Dma m_dma;
-		EsxiClock m_essiClock;
+		EssiClock m_essiClock;
 		Essi m_essi0;
 		Essi m_essi1;
 		HDI08 m_hi08;

@@ -171,6 +171,9 @@ namespace dsp56k
 		TWord hasEnabledTransmitters() const override	{ return m_crb.testMask(RegCRBbits::CRB_TE); }
 		TWord hasEnabledReceivers() const override		{ return m_crb.test(RegCRBbits::CRB_RE); }
 
+		bool getReceiveFrameSync() const				{ return m_sr.test(SSISR_RFS); }
+		bool getTransmitFrameSync() const				{ return m_sr.test(SSISR_TFS); }
+
 		void setDSP(DSP* _dsp);
 
 		void setSymbols(Disassembler& _disasm) const;
