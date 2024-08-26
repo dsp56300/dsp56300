@@ -25,8 +25,24 @@ namespace dsp56k
 	{
 		using RequestSource = DmaChannel::RequestSource;
 
+		/*
+		Unfortunately the doc is a bit unclear here, at the moment we assume that DMA does never instantly trigger if it is enabled.
+		It needs the request from the peripheral and acts if its state **changes**
+
+		"
+		DMA Channel Enable
+		Enables the channel operation. Setting DE either triggers a single block DMA transfer
+		in the DMA transfer mode that uses DE as a trigger or enables a single-block,
+		single-line, or single-word DMA transfer in the transfer modes that use a requesting
+		device as a trigger."
+
+		For DE based triggers, it says  **triggers a ... transfer**, but for requests it says **enables a .... transfer**, assuming that
+		enabling means just setting it up so that its ready for transfer, but not immediately executing one
+		*/
+
 		bool checkTrigger(Peripherals56303& _p, const RequestSource _src)
 		{
+			return false;
 			switch (_src)
 			{
 			case RequestSource::Essi0TransmitData:			return _p.getEssi0().getSR().test(Essi::SSISR_TDE);
@@ -43,6 +59,7 @@ namespace dsp56k
 
 		bool checkTrigger(Peripherals56362& _p, const RequestSource _src)
 		{
+			return false;
 			switch (_src)
 			{
 			case RequestSource::EsaiReceiveData:			return _p.getEsai().getSR().test(Esai::M_RDF);

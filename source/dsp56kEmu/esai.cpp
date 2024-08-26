@@ -10,26 +10,15 @@ namespace dsp56k
 	{
 		m_tx.fill(0);
 		m_rx.fill(0);
+
+		m_sr.set(M_TFS);
+		m_sr.set(M_TDE);
 	}
 
 	void Esai::setDSP(DSP* _dsp)
 	{
 		m_vbaRead = _dsp->registerInterruptFunc([this]
 		{
-			readSlotFromFrame();
-
-			if (0 == m_rxSlotCounter)
-				m_sr.set(M_RFS);
-			else
-				m_sr.clear(M_RFS);
-
-			++m_rxSlotCounter;
-
-			if(m_rxSlotCounter > getRxWordCount())
-			{
-				m_rxSlotCounter = 0;
-				++m_rxFrameCounter;
-			}
 		});
 	}
 
@@ -84,7 +73,12 @@ namespace dsp56k
 		if(!rem)
 			return;
 
-		m_periph.getDSP().injectInterrupt(m_vbaRead);
+		readSlotFromFrame();
+
+		if (0 == m_rxSlotCounter)
+			m_sr.set(M_RFS);
+		else
+			m_sr.clear(M_RFS);
 
 		if (m_sr.test(M_ROE) && m_rcr.test(M_REIE))
 		{
@@ -94,6 +88,14 @@ namespace dsp56k
 		else if (m_rcr.test(M_RIE))
 		{
 			injectInterrupt(Vba_ESAI_Receive_Data);
+		}
+
+		++m_rxSlotCounter;
+
+		if(m_rxSlotCounter > getRxWordCount())
+		{
+			m_rxSlotCounter = 0;
+			++m_rxFrameCounter;
 		}
 	}
 
@@ -105,14 +107,30 @@ namespace dsp56k
 	void Esai::writeReceiveControlRegister(TWord _val)
 	{
 		LOG("Write ESAI RCR " << HEX(_val));
+		const auto rem = getEnabledReceivers();
 		m_rcr = _val;
+		if(rem != getEnabledReceivers())
+		{
+			// Note: cannot cast m_periph directly here because we might be a Y peripheral
+			if(auto* p = dynamic_cast<Peripherals56362*>(m_periph.getDSP().getPeriph(0)))
+				p->getEsaiClock().restartClock();
+//			execRX();
+		}
 	}
 
 	void Esai::writeTransmitControlRegister(TWord _val)
 	{
 		m_sr.clear(M_TUE);
 		LOG("Write ESAI TCR " << HEX(_val));
+		const auto tem = getEnabledTransmitters();
 		m_tcr = _val;
+		if(tem != getEnabledTransmitters())
+		{
+			// Note: cannot cast m_periph directly here because we might be a Y peripheral
+			if(auto* p = dynamic_cast<Peripherals56362*>(m_periph.getDSP().getPeriph(0)))
+				p->getEsaiClock().restartClock();
+			execTX();
+		}
 	}
 
 	void Esai::writeTransmitClockControlRegister(TWord _val)

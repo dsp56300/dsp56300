@@ -17,6 +17,9 @@ namespace dsp56k
 	{
 		m_tx.fill(0);
 		m_rx.fill(0);
+
+		m_sr.set(SSISR_TDE);
+		m_sr.set(SSISR_TFS);
 	}
 
 	void Essi::reset()
@@ -77,7 +80,12 @@ namespace dsp56k
 		if(!rem)
 			return;
 
-		m_periph.getDSP().injectInterrupt(m_vbaRead);
+		readSlotFromFrame();
+
+		if (0 == m_rxSlotCounter)
+			m_sr.set(SSISR_RFS);
+		else
+			m_sr.clear(SSISR_RFS);
 
 		if (m_sr.test(RegSSISRbits::SSISR_ROE) && m_crb.test(RegCRBbits::CRB_REIE))
 		{
@@ -88,22 +96,18 @@ namespace dsp56k
 		{
 			injectInterrupt(Vba_ESSI0receivedata);
 		}
+
+		++m_rxSlotCounter;
+
+		if(m_rxSlotCounter > getRxWordCount())
+		{
+			m_rxSlotCounter = 0;
+			++m_rxFrameCounter;
+		}
 	}
 
 	void Essi::setDSP(DSP* _dsp)
 	{
-		m_vbaRead = _dsp->registerInterruptFunc([this]
-		{
-			readSlotFromFrame();
-
-			++m_rxSlotCounter;
-
-			if(m_rxSlotCounter > getRxWordCount())
-			{
-				m_rxSlotCounter = 0;
-				++m_rxFrameCounter;
-			}
-		});
 	}
 
 	void Essi::setSymbols(Disassembler& _disasm) const
@@ -371,7 +375,21 @@ namespace dsp56k
 	void Essi::writeCRB(TWord _val)
 	{
 		LOGESSI("Write CRB " << "= " << HEX(_val));
+
+		const auto remO = m_crb.test(RegCRBbits::CRB_RE);
+		const auto temO = m_crb.testMask(CRB_TE);
+
 		m_crb = _val;
+
+		const auto remN = m_crb.test(RegCRBbits::CRB_RE);
+		const auto temN = m_crb.testMask(CRB_TE);
+
+		if(remO != remN || temO != temN)
+		{
+			m_periph.getEssiClock().restartClock();
+			if(temO != temN)
+				execTX();
+		}
 	}
 
 	void Essi::writeTSMA(TWord _val)
@@ -482,7 +500,7 @@ namespace dsp56k
 
 		if((m_writtenTX & tem) != tem)
 		{
-//			LOGESSI("Transmit underrun, written is " << HEX(m_writtenTX) << ", enabled is " << HEX(tem));
+			LOGESSI("Transmit underrun, written is " << HEX(m_writtenTX) << ", enabled is " << HEX(tem));
 			m_sr.set(RegSSISRbits::SSISR_TUE);
 		}
 
