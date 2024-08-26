@@ -130,7 +130,7 @@ namespace dsp56k
 		Peripherals56303();
 		
 		TWord read(TWord _addr, Instruction _inst) override;
-		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
+		const TWord* readAsPtr(TWord _addr, Instruction _inst) override;
 		void write(TWord _addr, TWord _val) override;
 
 		void exec();

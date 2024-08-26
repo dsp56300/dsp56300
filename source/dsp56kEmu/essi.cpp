@@ -292,7 +292,7 @@ namespace dsp56k
 		return m_rx[0];
 	}
 
-	TWord Essi::readSR()
+	const TWord& Essi::readSR() const
 	{
 //		LOGESSI("Read SR, returning " << HEX(m_sr));
 		return m_sr;

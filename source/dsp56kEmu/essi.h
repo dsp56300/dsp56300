@@ -178,7 +178,7 @@ namespace dsp56k
 		TWord readTX(uint32_t _index);
 		TWord readTSR();
 		TWord readRX();
-		TWord readSR();
+		const TWord& readSR() const;
 		TWord readCRA();
 		TWord readCRB();
 		TWord readTSMA();

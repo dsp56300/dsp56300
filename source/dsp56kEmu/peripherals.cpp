@@ -228,6 +228,16 @@ namespace dsp56k
 		return m_mem[_addr - XIO_Reserved_High_First];
 	}
 
+	const TWord* Peripherals56303::readAsPtr(const TWord _addr, Instruction _inst)
+	{
+		switch (_addr)
+		{
+		case Essi::ESSI0_SSISR:		return &m_essi0.readSR();
+		case Essi::ESSI1_SSISR:		return &m_essi1.readSR();
+		default:					return nullptr;
+		}
+	}
+
 	void Peripherals56303::write(TWord _addr, TWord _val)
 	{
 		switch (_addr)
