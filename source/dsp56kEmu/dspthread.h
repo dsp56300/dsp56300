@@ -68,6 +68,6 @@ namespace dsp56k
 		char m_mipsString[128]{0};
 
 		bool m_logToDebug = true;
-		bool m_logToStdout = true;
+		bool m_logToStdout = false;
 	};
 }

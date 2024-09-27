@@ -22,6 +22,9 @@ namespace dsp56k
 		, m_runThread(true)
 		, m_debugger(std::move(_debugger))
 	{
+#ifdef _WIN32
+		m_logToStdout = true;
+#endif
 		if(m_debugger)
 			setDebugger(m_debugger.get());
 
