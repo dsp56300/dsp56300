@@ -6,8 +6,11 @@
 
 namespace Logging
 {
+	typedef void (*LogFunc)(const std::string&);
+
 	void g_logToConsole( const std::string& _s );
 	void g_logToFile( const std::string& _s );
+	void setLogFunc(LogFunc _func);
 }
 
 #define LOGTOCONSOLE(ss)	{ Logging::g_logToConsole( (ss).str() ); }

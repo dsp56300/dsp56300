@@ -18,9 +18,19 @@
 
 namespace Logging
 {
-	void g_logToConsole( const std::string& _s )
+	void g_defaultLogToConsole(const std::string& _s)
 	{
 		output_string( (_s + "\n").c_str() );
+	}
+
+	namespace
+	{
+		LogFunc g_logFunc = &g_defaultLogToConsole;
+	}
+
+	void g_logToConsole( const std::string& _s)
+	{
+		g_logFunc(_s);
 	}
 
 	std::string buildOutfilename()
@@ -84,14 +94,19 @@ namespace Logging
 						if(pendingLogs.empty())
 							std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-						for(auto log : pendingLogs)
-							o << log << std::endl;
+						for(const auto& log : pendingLogs)
+							o << log << '\n';
 
 						o.flush();
 					}
 				}
 			}));
 		}
+	}
+
+	void setLogFunc(const LogFunc _func)
+	{
+		g_logFunc = _func;
 	}
 }
 
