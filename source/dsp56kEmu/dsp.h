@@ -270,13 +270,16 @@ namespace dsp56k
 
 		bool			hasPendingInterrupts			() const
 		{
+			if(m_processingMode != Default)
+				return true;
+
 			if(!m_pendingExternalInterrupts.empty())
 				return true;
 
 			if(!m_pendingInterrupts.empty())
 				return true;
 
-			return m_processingMode != Default;
+			return false;
 		}
 
 		void			clearOpcodeCache				();
