@@ -314,6 +314,9 @@ namespace dsp56k
 		const Jit&		getJit							() const { return m_jit; }
 
 		void			setJitEntries					(const TJitFunc* _funcs)			{ m_jitEntries = _funcs; }
+		const auto&		getJitEntries					() const			{ return m_jitEntries; }
+
+		const auto&		getInterruptFunc				() const			{ return m_interruptFunc; }
 
 		void			terminate						();
 
