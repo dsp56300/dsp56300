@@ -126,8 +126,6 @@ namespace dsp56k
 		TWord							m_opWordB = 0;
 		uint32_t						m_currentOpLen = 0;
 
-		const TJitFunc*					m_jitEntries = nullptr;
-
 		TInterruptFunc					m_execPeripheralsFunc;
 
 		// these members are accessed via JIT asm code, keep them tightly together
@@ -138,6 +136,7 @@ namespace dsp56k
 		ProcessingMode					m_processingMode = Default;
 		TInterruptFunc					m_interruptFunc;
 
+		const TJitFunc*					m_jitEntries = nullptr;
 		CCRCache						ccrCache;
 
 #ifdef HAVE_ARM64
