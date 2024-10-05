@@ -21,11 +21,11 @@ namespace dsp56k
 			initBuffer(m_data);
 		}
 
-		size_t capacity() const		{ return C; }
-		bool empty() const			{ return m_readCount == m_writeCount; }
-		bool full() const			{ return size() >= C; }
-		size_t size() const			{ return m_writeCount - m_readCount; }
-		size_t remaining() const	{ return (C - size()); }
+		constexpr static size_t capacity()	{ return C; }
+		bool empty() const					{ return m_readCount == m_writeCount; }
+		bool full() const					{ return size() >= C; }
+		size_t size() const					{ return m_writeCount - m_readCount; }
+		size_t remaining() const			{ return (C - size()); }
 
 		void push_back( const T& _val )
 		{
@@ -97,29 +97,14 @@ namespace dsp56k
 			return res;
 		}
 
-		void removeAt( size_t i )
+		T& operator[](const size_t _i)
 		{
-			if( !i )
-			{
-				pop_front();
-				return;
-			}
-
-			convertIdx(i);
-
-			std::swap( m_data[i], m_data[wrapCounter(m_readCount)] );
-
-			pop_front();
+			return get(_i);
 		}
 
-		T& operator[](size_t i)
+		const T& operator[](const size_t _i) const
 		{
-			return get(i);
-		}
-
-		const T& operator[](size_t i) const
-		{
-			return const_cast< RingBuffer<T,C, Lock>* >(this)->get(i);
+			return const_cast<RingBuffer*>(this)->get(_i);
 		}
 
 		const T& front() const
@@ -160,11 +145,11 @@ namespace dsp56k
 			return _counter & (C-1);
 		}
 
-		T& get( size_t i )
+		T& get( size_t _i )
 		{
-			convertIdx( i );
+			convertIdx( _i );
 
-			return m_data[i];
+			return m_data[_i];
 		}
 
 		void convertIdx( size_t& _i ) const
