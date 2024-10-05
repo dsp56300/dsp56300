@@ -8,6 +8,18 @@
 
 namespace dsp56k
 {
+	void IPeripherals::setDelayCycles(const uint32_t _delayCycles)
+	{
+		m_delayCycles = std::min(m_delayCycles, _delayCycles);
+		m_targetClock = m_dsp->getInstructionCounter() + m_delayCycles;
+	}
+
+	void IPeripherals::resetDelayCycles(const uint32_t _delayCycles)
+	{
+		m_delayCycles = _delayCycles;
+		m_targetClock = m_dsp->getInstructionCounter() + m_delayCycles;
+	}
+
 	// _____________________________________________________________________________
 	// Peripherals
 	//
@@ -224,12 +236,13 @@ namespace dsp56k
 		}
 	}
 
-	void Peripherals56303::exec()
+	uint32_t Peripherals56303::exec()
 	{
-		m_essiClock.exec();
-		m_hi08.exec();
-		m_timers.exec();
-		m_dma.exec();
+		auto delay = m_essiClock.exec();
+		delay = std::min(delay, m_hi08.exec());
+		delay = std::min(delay, m_timers.exec());
+		delay = std::min(delay, m_dma.exec());
+		return delay;
 	}
 
 	void Peripherals56303::reset()
@@ -540,12 +553,14 @@ namespace dsp56k
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
 	}
 
-	void Peripherals56362::exec()
+	uint32_t Peripherals56362::exec()
 	{
-		m_esaiClock.exec();
-		m_hdi08.exec();
-		if (!m_disableTimers) m_timers.exec();
-		m_dma.exec();
+		auto delay = m_esaiClock.exec();
+		delay = std::min(delay, m_hdi08.exec());
+		if (!m_disableTimers)
+			delay = std::min(delay, m_timers.exec());
+		delay = std::min(delay, m_dma.exec());
+		return delay;
 	}
 
 	void Peripherals56362::reset()
@@ -759,14 +774,6 @@ namespace dsp56k
 			LOG("Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));
 		}
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
-	}
-
-	void Peripherals56367::exec()
-	{
-	}
-
-	void Peripherals56367::reset()
-	{
 	}
 
 	void Peripherals56367::setSymbols(Disassembler& _disasm) const

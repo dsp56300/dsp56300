@@ -104,7 +104,7 @@ namespace dsp56k
 		const TWord& getDCO() const;
 		const TWord& getDCR() const;
 
-		void exec();
+		uint32_t exec();
 
 		void triggerByRequest();
 
@@ -163,7 +163,7 @@ namespace dsp56k
 		TWord m_dcolInit = 0;
 
 		int32_t m_pendingTransfer = 0;
-		TWord m_lastClock = 0;
+		uint64_t m_lastClock = 0;
 	};
 
 	class Dma
@@ -199,7 +199,7 @@ namespace dsp56k
 		const TWord& getDCO(const TWord _channel) const { return m_channels[_channel].getDCO(); }
 		const TWord& getDCR(const TWord _channel) const { return m_channels[_channel].getDCR(); }
 
-		void exec();
+		uint32_t exec();
 		void setActiveChannel(TWord _channel);
 		void clearActiveChannel();
 

@@ -58,11 +58,6 @@ namespace dsp56k
 	{
 		_dsp->execInterrupts();
 	}
-	void dspTryExecInterrupts(DSP* _dsp)
-	{
-		_dsp->tryExecInterrupts();
-	}
-
 	template <typename Ta, typename Tb> void dspExecPeripherals(DSP* _dsp)
 	{
 		_dsp->execPeriph<Ta, Tb>();
@@ -227,12 +222,6 @@ namespace dsp56k
 
 			execOp(op);
 		}
-	}
-
-	void DSP::tryExecInterrupts()
-	{
-		if (!m_pendingInterrupts.empty())
-			execInterrupts();
 	}
 
 	void DSP::execInterrupts()
@@ -1324,7 +1313,7 @@ namespace dsp56k
 		m_pendingInterrupts.push_back({_interruptVectorAddress});
 
 		if(m_interruptFunc == m_execPeripheralsFunc)
-			m_interruptFunc = &dspTryExecInterrupts;
+			m_interruptFunc = &dspExecInterrupts;
 
 		return true;
 	}

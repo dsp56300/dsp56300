@@ -76,17 +76,9 @@ namespace dsp56k
 
 		void writeControlRegister(TWord _val);
 
-		void writeStatusRegister(const TWord _val)
-		{
-//			LOG("Write HDI08 HSR " << HEX(_val));
-			m_hsr = _val;
-		}
+		void writeStatusRegister(const TWord _val);
 
-		void writePortControlRegister(const TWord _val)
-		{
-			LOG("Write HDI08 HPCR " << HEX(_val));
-			m_hpcr = _val;
-		}
+		void writePortControlRegister(const TWord _val);
 
 		bool hasTX() const
 		{
@@ -95,7 +87,7 @@ namespace dsp56k
 		TWord readTX();
 		void writeTX(TWord _val);
 
-		void exec();
+		uint32_t exec();
 
 		TWord readRX(Instruction _inst);
 
@@ -171,7 +163,7 @@ namespace dsp56k
 		RingBuffer<TWord, 8192, true> m_dataTX;
 		IPeripherals& m_periph;
 		std::atomic<uint32_t> m_pendingTXInterrupts;
-		uint32_t m_lastRXClock = 0;
+		uint64_t m_lastRXClock = 0;
 		TWord m_hdr = 0;
 		TWord m_hddr = 0;
 		bool m_transmitDataAlwaysEmpty = true;

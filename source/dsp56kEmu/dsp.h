@@ -120,7 +120,6 @@ namespace dsp56k
 		//
 		Memory&							mem;
 		std::array<IPeripherals*, 2>	perif;
-		uint32_t						m_peripheralCounter = 0;
 		
 		TWord							pcCurrentInstruction = 0;
 		TWord							m_opWordB = 0;
@@ -131,8 +130,8 @@ namespace dsp56k
 		// these members are accessed via JIT asm code, keep them tightly together
 		Jit								m_jit;
 		SRegs							reg;							// this is the base pointer that is used to access all surrounding members
-		uint32_t						m_instructions = 0;
-		uint32_t						m_cycles = 0;
+		uint64_t						m_instructions = 0;
+		uint64_t						m_cycles = 0;
 		ProcessingMode					m_processingMode = Default;
 		TInterruptFunc					m_interruptFunc;
 
@@ -210,29 +209,39 @@ namespace dsp56k
 
 		void 	exec							();
 
-		template<typename Ta, typename Tb>
-		void	execPeriph						()
+		template<typename Ta, typename Tb> void execPeriph() noexcept
 		{
-			const auto diff = getRemainingPeripheralsCycles();
-
-			if (diff > 0 && diff < PeripheralsProcessingStepSize)
+			// this is a super hot function and for some reason the compiler insists of doing all the stack frame work
+			// before this early out. To fix this, we move the remaining code into a helper func below, marked as noinline
+			if (ASMJIT_LIKELY(perif[0]->getTargetClock() > m_instructions))
 				return;
 
-			m_peripheralCounter += PeripheralsProcessingStepSize;
+			execPeripherals<Ta, Tb>();
+		}
 
-			static_cast<Ta*>(perif[0])->exec();
-			static_cast<Tb*>(perif[1])->exec();
+		template<typename Ta, typename Tb> ASMJIT_NOINLINE void execPeripherals()
+		{
+			// we do not have any Y peripherals that need processing atm
+			const auto delayA = static_cast<Ta*>(perif[0])->exec();
+//			const auto delayB = static_cast<Tb*>(perif[1])->exec();
+
+			perif[0]->resetDelayCycles(delayA);
+//			perif[1]->resetDelayCycles(delayB);
 
 			processExternalInterrupts();
 		}
 
-		void	tryExecInterrupts				();
+		uint32_t getRemainingPeripheralsCycles() const
+		{
+			const auto targetCycles = perif[0]->getTargetClock();
+			if(m_instructions > targetCycles)
+				return 0;
+			return static_cast<uint32_t>(targetCycles - m_instructions);
+		}
+
 		void	execInterrupts					();
 		void	execInterrupt					(uint32_t vba);
 		void	execDefaultPreventInterrupt		();
-		void	nop								() {}
-
-		uint32_t	getRemainingPeripheralsCycles() const	{ return m_peripheralCounter - m_instructions; }
 
 		bool	readReg							( EReg _reg, TReg8& _res ) const;
 		bool	readReg							( EReg _reg, TReg48& _res ) const;
@@ -246,8 +255,8 @@ namespace dsp56k
 
 		bool	readRegToInt					( EReg _reg, int64_t& _dst ) const;
 
-		const uint32_t&	getInstructionCounter		() const									{ return m_instructions; }
-		const uint32_t&	getCycles					() const									{ return m_cycles; }
+		const auto&		getInstructionCounter		() const	{ return m_instructions; }
+		const auto&		getCycles					() const	{ return m_cycles; }
 
 		const char*			getASM						(TWord wordA, TWord wordB);
 		const std::string&	getASM						() const							{ return m_asm; }

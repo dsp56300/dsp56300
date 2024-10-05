@@ -104,7 +104,7 @@ namespace dsp56k
 		};
 
 		Timers(IPeripherals& _peripherals, const TWord _vbaBase) : m_peripherals(_peripherals), m_vbaBase(_vbaBase) {}
-		void exec();
+		uint32_t exec();
 		void execTimer(Timer& _t, uint32_t _index, uint32_t _cycles) const;
 
 		void writeTCSR(int _index, TWord _val);
@@ -157,7 +157,7 @@ namespace dsp56k
 
 		void injectInterrupt(TWord _vba, uint32_t _index) const;
 
-		const TWord* m_dspInstructionCounter = nullptr;
+		const uint64_t* m_dspInstructionCounter = nullptr;
 		TWord m_timerupdateInterval = 2048;
 
 		IPeripherals& m_peripherals;
@@ -166,7 +166,7 @@ namespace dsp56k
 		TWord m_tplr = 0;							// Timer Prescaler Load
 		TWord m_tpcr = 0;							// Timer Prescaler Count
 
-		uint32_t m_lastClock = 0;
+		uint64_t m_lastClock = 0;
 		std::array<Timer,3> m_timers;
 	};
 }

@@ -90,10 +90,12 @@ namespace dsp56k
 			else
 			{
 				// "When the needed resources are available, each word transfer performed by the DMA takes at least two core clock cycles"
-				m_pendingTransfer = std::max(1, static_cast<int32_t>((m_dco + 1) << 1)); 
+				m_pendingTransfer = std::max(1, static_cast<int32_t>((m_dco + 1) << 1));
 //				m_pendingTransfer = 1;
+				m_peripherals.setDelayCycles(m_pendingTransfer);
 				m_lastClock = m_peripherals.getDSP().getInstructionCounter();
 			}
+			return;
 		}
 		else
 		{
@@ -127,6 +129,8 @@ namespace dsp56k
 				assert(false && "TODO implement transfer mode in execTransfer()");
 			}
 		}
+
+		m_peripherals.setDelayCycles(0);
 	}
 
 	const TWord& DmaChannel::getDSR() const
@@ -149,16 +153,16 @@ namespace dsp56k
 		return m_dcr;
 	}
 
-	void DmaChannel::exec()
+	uint32_t DmaChannel::exec()
 	{
 		if constexpr (!g_delayedDmaTransfer)
-			return;
+			return IPeripherals::MaxDelayCycles;
 
 		if(m_pendingTransfer <= 0)
-			return;
+			return IPeripherals::MaxDelayCycles;
 
 		const auto clock = m_peripherals.getDSP().getInstructionCounter();
-		const auto diff = delta(clock, m_lastClock);
+		const auto diff = clock - m_lastClock;
 		m_lastClock = clock;
 
 		m_pendingTransfer -= static_cast<int32_t>(diff);
@@ -175,6 +179,8 @@ namespace dsp56k
 				m_pendingTransfer = 1;
 			}
 		}
+
+		return m_pendingTransfer;
 	}
 
 	void DmaChannel::triggerByRequest()
@@ -661,17 +667,20 @@ namespace dsp56k
 		return m_dor[_index];
 	}
 
-	void Dma::exec()
+	uint32_t Dma::exec()
 	{
 		if((m_dstr & (1 << Dact)) == 0)
-			return;
+			return IPeripherals::MaxDelayCycles;
 
-		m_channels[0].exec();
-		m_channels[1].exec();
-		m_channels[2].exec();
-		m_channels[3].exec();
-		m_channels[4].exec();
-		m_channels[5].exec();
+		auto delay = m_channels[0].exec();
+
+		delay = std::min(delay, m_channels[1].exec());
+		delay = std::min(delay, m_channels[2].exec());
+		delay = std::min(delay, m_channels[3].exec());
+		delay = std::min(delay, m_channels[4].exec());
+		delay = std::min(delay, m_channels[5].exec());
+
+		return delay;
 	}
 
 	void Dma::setActiveChannel(const TWord _channel)

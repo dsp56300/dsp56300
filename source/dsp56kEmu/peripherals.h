@@ -80,6 +80,8 @@ namespace dsp56k
 	class IPeripherals
 	{
 	public:
+		static constexpr uint32_t MaxDelayCycles = 16384;
+
 		virtual ~IPeripherals() = default;
 
 		virtual void setDSP(DSP* _dsp)
@@ -87,10 +89,8 @@ namespace dsp56k
 			m_dsp = _dsp;
 		}
 
-		DSP& getDSP() const
-		{
-			return *m_dsp;
-		}
+		DSP& getDSP() const		{ return *m_dsp; }
+		bool hasDSP() const		{ return m_dsp != nullptr; }
 
 		virtual TWord read(TWord _addr, Instruction _inst) = 0;
 		virtual const TWord* readAsPtr(TWord _addr, Instruction _inst) = 0;
@@ -99,14 +99,24 @@ namespace dsp56k
 		virtual void setSymbols(Disassembler& _disasm) const = 0;
 		virtual void terminate() = 0;
 
+		void setDelayCycles(const uint32_t _delayCycles);
+
+		void resetDelayCycles(const uint32_t _delayCycles);
+
+		uint32_t getDelayCycles() const { return m_delayCycles; }
+		auto getTargetClock() const { return m_targetClock; }
+
 	private:
 		DSP* m_dsp = nullptr;
+		uint32_t m_delayCycles = 0;
+		uint64_t m_targetClock = 0;
 	};
 
 	class PeripheralsNop final : public IPeripherals
 	{
 	public:
-		void exec() {}
+		uint32_t exec() { return MaxDelayCycles; }
+
 	private:
 		TWord read(TWord _addr, Instruction _inst) override { return 0; }
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
@@ -133,7 +143,7 @@ namespace dsp56k
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
 		void write(TWord _addr, TWord _val) override;
 
-		void exec();
+		uint32_t exec();
 		void reset() override;
 
 		void setDSP(DSP* _dsp) override
@@ -185,7 +195,7 @@ namespace dsp56k
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override;
 		void write(TWord _addr, TWord _val) override;
 
-		void exec();
+		uint32_t exec();
 		void reset() override;
 
 		EsaiClock& getEsaiClock()		{ return m_esaiClock; }
@@ -225,8 +235,9 @@ namespace dsp56k
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
 		void write(TWord _addr, TWord _val) override;
 
-		void exec();
-		void reset() override;
+		uint32_t exec() const { return MaxDelayCycles; }
+
+		void reset() override {}
 
 		Esai& getEsai() { return m_esai; }
 

@@ -26,57 +26,62 @@ namespace dsp56k
 		return m_hsr;
 	}
 
-	void HDI08::exec()
+	uint32_t HDI08::exec()
 	{
 		if (!bittest(m_hpcr, HPCR_HEN)) 
-			return;
+			return IPeripherals::MaxDelayCycles;
 
 		if (!m_waitServeRXInterrupt && rxInterruptEnabled() && !m_dataRX.empty())
 		{
 			const auto clock = m_periph.getDSP().getInstructionCounter();
 
-			const auto d = delta(clock, m_lastRXClock);
+			const auto d = clock - m_lastRXClock;
 			if(d >= m_rxRateLimit)
 			{
 				m_periph.getDSP().injectInterrupt(Vba_Host_Receive_Data_Full);
 				m_lastRXClock = clock;
 				m_waitServeRXInterrupt = true;
 //				LOG("Wait serve interrupt");
+				return 0;
+			}
+			return static_cast<uint32_t>(m_rxRateLimit - d);
+		}
+
+		if(m_transmitDataAlwaysEmpty)
+		{
+			if (txInterruptEnabled() && m_pendingTXInterrupts > 0)
+			{
+				--m_pendingTXInterrupts;
+				dsp56k::bitset<TWord, HSR_HTDE>(m_hsr, 1);
+//				LOG("HTDE=1");
+				m_periph.getDSP().injectInterrupt(Vba_Host_Transmit_Data_Empty);
+				return 0;
 			}
 		}
 		else
 		{
-			if(m_transmitDataAlwaysEmpty)
+			if (m_dataTX.empty())
 			{
-				if (txInterruptEnabled() && m_pendingTXInterrupts > 0)
-				{
-					--m_pendingTXInterrupts;
-					dsp56k::bitset<TWord, HSR_HTDE>(m_hsr, 1);
+				const auto hadHTDE = bittest(m_hsr, HSR_HTDE);
+				const auto injectInterrupt = txInterruptEnabled() && !hadHTDE;
+				dsp56k::bitset<TWord, HSR_HTDE>(m_hsr, 1);
+//				if(!hadHTDE)
 //					LOG("HTDE=1");
+				if (injectInterrupt)
+				{
+//					LOG("Inject HTDE");
 					m_periph.getDSP().injectInterrupt(Vba_Host_Transmit_Data_Empty);
 				}
 			}
-			else
-			{
-				if (m_dataTX.empty())
-				{
-					const auto hadHTDE = bittest(m_hsr, HSR_HTDE);
-					const auto injectInterrupt = txInterruptEnabled() && !hadHTDE;
-					dsp56k::bitset<TWord, HSR_HTDE>(m_hsr, 1);
-//					if(!hadHTDE)
-//						LOG("HTDE=1");
-					if (injectInterrupt)
-					{
-//						LOG("Inject HTDE");
-						m_periph.getDSP().injectInterrupt(Vba_Host_Transmit_Data_Empty);
-					}
-				}
-			}
 		}
+
+		return IPeripherals::MaxDelayCycles;
 	}
 
 	TWord HDI08::readRX(const Instruction _inst)
 	{
+		m_periph.setDelayCycles(0);
+
 		if (m_dataRX.empty())
 		{
 			LOG("Empty read, PC=" << HEX(m_periph.getDSP().getPC().toWord()) << ", processingMode=" << m_periph.getDSP().getProcessingMode());
@@ -116,11 +121,13 @@ namespace dsp56k
 //			LOG("Write RX: " << HEX(d));
 			m_dataRX.push_back(d);
 		}
+		m_periph.setDelayCycles(0);
 	}
 
 	void HDI08::clearRX()
 	{
 		m_dataRX.clear();
+		m_periph.setDelayCycles(0);
 	}
 
 	void HDI08::setPendingHostFlags01(uint32_t _pendingHostFlags)
@@ -261,6 +268,7 @@ namespace dsp56k
 	uint32_t HDI08::readTX()
 	{
 		m_dataTX.waitNotEmpty();
+		m_periph.setDelayCycles(0);
 		return m_dataTX.pop_front();
 	}
 
@@ -285,6 +293,8 @@ namespace dsp56k
 
 		if(m_callbackTx)
 			m_callbackTx();
+
+		m_periph.setDelayCycles(0);
 	}
 
 	void HDI08::writeControlRegister(TWord _val)
@@ -305,6 +315,8 @@ namespace dsp56k
 				dsp56k::bitset<TWord, HSR_HTDE>(m_hsr, 0);	// force inject
 		}
 
+		m_periph.setDelayCycles(0);
+
 		return;
 
 		if(!hadTXInterrupt && hasTXInterrupt)
@@ -324,5 +336,19 @@ namespace dsp56k
 		{
 			LOG("RX interrupt disabled");
 		}
+	}
+
+	void HDI08::writeStatusRegister(const TWord _val)
+	{
+//		LOG("Write HDI08 HSR " << HEX(_val));
+		m_hsr = _val;
+		m_periph.setDelayCycles(0);
+	}
+
+	void HDI08::writePortControlRegister(const TWord _val)
+	{
+		LOG("Write HDI08 HPCR " << HEX(_val));
+		m_hpcr = _val;
+		m_periph.setDelayCycles(0);
 	}
 };

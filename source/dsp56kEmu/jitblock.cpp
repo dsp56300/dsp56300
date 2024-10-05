@@ -243,7 +243,7 @@ namespace dsp56k
 
 		// needed so that the dsp register is available
 		m_asm.lea_(regDspPtr, g_funcArgGPs[0], Jitmem::pointerOffset(&m_dsp.regs(), &m_dsp.getJit()));
-		dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(TWord));
+		dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(uint64_t));
 
 #ifdef HAVE_X86_64
 		if constexpr (false)
@@ -734,21 +734,21 @@ namespace dsp56k
 
 	void JitBlock::increaseInstructionCount(const asmjit::Operand& _count)
 	{
-		increaseUint32(_count, m_dsp.getInstructionCounter());
+		increaseUint64(_count, m_dsp.getInstructionCounter());
 	}
 
 	void JitBlock::increaseCycleCount(const asmjit::Operand& _count)
 	{
-		increaseUint32(_count, m_dsp.getCycles());
+		increaseUint64(_count, m_dsp.getCycles());
 	}
 
-	void JitBlock::increaseUint32(const asmjit::Operand& _count, const uint32_t& _target)
+	void JitBlock::increaseUint64(const asmjit::Operand& _count, const uint64_t& _target)
 	{
-		const auto ptr = dspRegPool().makeDspPtr(&_target, sizeof(TWord));
+		const auto ptr = dspRegPool().makeDspPtr(&_target, sizeof(uint64_t));
 
 #ifdef HAVE_ARM64
 		const RegScratch scratch(*this);
-		const auto r = r32(scratch);
+		const auto r = r64(scratch);
 		m_asm.ldr(r, ptr);
 		if (_count.isImm())
 		{
@@ -767,7 +767,7 @@ namespace dsp56k
 		}
 		else
 		{
-			m_asm.add(r, r, _count.as<JitRegGP>());
+			m_asm.add(r, r, r64(_count.as<JitRegGP>()));
 		}
 		m_asm.str(r, ptr);
 #else
@@ -777,7 +777,7 @@ namespace dsp56k
 		}
 		else
 		{
-			m_asm.add(ptr, _count.as<JitRegGP>());
+			m_asm.add(ptr, r64(_count.as<JitRegGP>()));
 		}
 #endif
 	}
