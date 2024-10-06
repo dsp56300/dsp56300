@@ -9,35 +9,38 @@ namespace dsp56k
 	class Semaphore
 	{
 	public:
-		explicit Semaphore (const int _count = 0) : m_count(_count) 
+		explicit Semaphore (const uint32_t _count = 0) : m_count(_count) 
 	    {
 	    }
 	    
-	    void notify()
+	    void notify(const uint32_t _count = 1)
 		{
-	        Lock lock(m_mutex);
-	        m_count++;
-	        //notify the waiting thread
+			{
+		        Lock lock(m_mutex);
+		        m_count += _count;
+			}
+
+			//notify the waiting thread
 	        m_cv.notify_one();
 	    }
 
-	    void wait()
+	    void wait(const uint32_t _count = 1)
 		{
 	        Lock lock(m_mutex);
 
-	    	while(m_count == 0)
+            // wait on the mutex until notify is called
+			m_cv.wait(lock, [&]()
 			{
-	            // wait on the mutex until notify is called
-	            m_cv.wait(lock);
-	        }
+				return m_count >= _count;
+			});
 
-	    	m_count--;
+			m_count -= _count;
 	    }
 	private:
 		using Lock = std::unique_lock<std::mutex>;
 	    std::mutex m_mutex;
 	    std::condition_variable m_cv;
-	    int m_count;
+	    uint32_t m_count;
 	};
 
 	class SpscSemaphore
@@ -98,8 +101,8 @@ namespace dsp56k
 	class NopSemaphore
 	{
 	public:
-		explicit NopSemaphore (const int _count = 0) {}
-	    void notify()	    {}
-		void wait()			{}
+		explicit NopSemaphore (const uint32_t _count = 0)	{}
+	    void notify(uint32_t _count = 1)					{}
+		void wait(uint32_t _count = 1)						{}
 	};
 };

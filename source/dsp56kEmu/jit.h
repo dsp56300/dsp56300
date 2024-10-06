@@ -2,7 +2,6 @@
 
 #include <memory>
 
-#include "jitcacheentry.h"
 #include "types.h"
 
 #include <set>
@@ -10,7 +9,9 @@
 #include <unordered_map>
 
 #include "debuggerinterface.h"
+
 #include "jitblockchain.h"
+#include "jitcacheentry.h"
 #include "jitconfig.h"
 #include "jitdspmode.h"
 #include "jitruntimedata.h"

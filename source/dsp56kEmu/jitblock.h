@@ -62,7 +62,7 @@ namespace dsp56k
 
 		void increaseInstructionCount(const asmjit::Operand& _count);
 		void increaseCycleCount(const asmjit::Operand& _count);
-		void increaseUint32(const asmjit::Operand& _count, const uint32_t& _target);
+		void increaseUint64(const asmjit::Operand& _count, const uint64_t& _target);
 
 		const JitConfig& getConfig() const { return m_config; }
 

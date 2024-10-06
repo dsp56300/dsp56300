@@ -6,7 +6,7 @@
 
 namespace dsp56k
 {
-	void Timers::exec()
+	uint32_t Timers::exec()
 	{
 		// Prescaler Counter
 		// The prescaler counter is a 21-bit counter that is decremented on the rising edge of the prescaler input clock.
@@ -15,12 +15,13 @@ namespace dsp56k
 
 		// If the timer runs on internal clock, the frequency is DSP / 2
 		const auto clock = *m_dspInstructionCounter;
-		auto diff = delta(clock, m_lastClock);
+
+		const auto diff = clock - m_lastClock;
 
 		if(diff < m_timerupdateInterval)
-			return;
+			return static_cast<uint32_t>(m_timerupdateInterval - diff);
 
-		diff >>= 1;
+		const uint32_t diffDiv2 = static_cast<uint32_t>(diff >> 1);
 
 		m_lastClock = clock;
 
@@ -30,9 +31,13 @@ namespace dsp56k
 		if(m_tpcr == 0)
 			m_tpcr = m_tplr & 0xfffff;
 
-		execTimer(m_timers[0], 0, diff);
-		execTimer(m_timers[1], 1, diff);
-		execTimer(m_timers[2], 2, diff);
+		execTimer(m_timers[0], 0, diffDiv2);
+		execTimer(m_timers[1], 1, diffDiv2);
+		execTimer(m_timers[2], 2, diffDiv2);
+
+		if(diff > m_timerupdateInterval<<1)
+			return 0;
+		return static_cast<uint32_t>((m_timerupdateInterval << 1) - diff);
 	}
 
 	void Timers::execTimer(Timer& _t, const uint32_t _index, uint32_t _cycles) const

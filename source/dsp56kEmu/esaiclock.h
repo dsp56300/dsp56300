@@ -24,7 +24,7 @@ namespace dsp56k
 		static constexpr uint32_t MaxEsais = 2;
 
 		EsxiClock(IPeripherals& _peripherals);
-		void exec();
+		uint32_t exec();
 
 		void setPCTL(TWord _val);
 		TWord getPCTL() const { return m_pctl; }
@@ -68,9 +68,11 @@ namespace dsp56k
 
 		void updateCyclesPerSample();
 
-		const uint32_t* m_dspInstructionCounter = nullptr;
-		uint32_t m_lastClock = 0;
+		const uint64_t* m_dspInstructionCounter = nullptr;
+		uint64_t m_lastClock = 0;
 		uint32_t m_cyclesPerSample = 2133;				// estimated cycles per sample before calculated
+
+		ClockSource m_clockSource = ClockSource::Instructions;
 
 		IPeripherals& m_periph;
 

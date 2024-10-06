@@ -22,6 +22,9 @@ namespace dsp56k
 		, m_runThread(true)
 		, m_debugger(std::move(_debugger))
 	{
+#ifdef _WIN32
+		m_logToStdout = true;
+#endif
 		if(m_debugger)
 			setDebugger(m_debugger.get());
 
@@ -131,8 +134,8 @@ namespace dsp56k
 				const auto iEnd = m_dsp.getInstructionCounter();
 				const auto cEnd = m_dsp.getCycles();
 
-				const auto di = delta(iEnd, iBegin);
-				const auto dc = delta(cEnd, cBegin);
+				const auto di = iEnd - iBegin;
+				const auto dc = cEnd - cBegin;
 
 				instructions += di;
 				totalInstructions += di;
@@ -142,7 +145,7 @@ namespace dsp56k
 
 				counter += 128;
 
-				m_callback(di);
+				m_callback(static_cast<uint32_t>(di));
 
 #if DSP56300_DEBUGGER
 				m_dsp.setDebugger(m_nextDebugger);

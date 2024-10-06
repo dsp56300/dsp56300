@@ -14,12 +14,12 @@ namespace dsp56k
 	{
 	}
 
-	void EsxiClock::exec()
+	uint32_t EsxiClock::exec()
 	{
-		const auto diff = delta(*m_dspInstructionCounter, m_lastClock);
+		const auto diff = *m_dspInstructionCounter - m_lastClock;
 
 		if(diff < m_cyclesPerSample)
-			return;
+			return (static_cast<uint32_t>(m_cyclesPerSample - diff)) >> static_cast<uint32_t>(m_clockSource);	// see explanation at end of this func
 
 		m_lastClock += m_cyclesPerSample;
 
@@ -49,6 +49,17 @@ namespace dsp56k
 
 		for(size_t i=0; i<txCount; ++i) processTx[i]->execTX();
 		for(size_t i=0; i<rxCount; ++i) processRx[i]->execRX();
+
+		if(diff >= (m_cyclesPerSample<<1))
+			return 0;
+
+		const auto delay = static_cast<uint32_t>((m_cyclesPerSample << 1) - diff);
+
+		// if the clock source is not instructions but cycles, we will miss frames if we return the cycle delay here because
+		// peripherals are processed via instruction counts. Return only half of the cycles in this case
+		static_assert(static_cast<uint32_t>(ClockSource::Instructions) == 0);
+		static_assert(static_cast<uint32_t>(ClockSource::Cycles) == 1);
+		return delay >> static_cast<uint32_t>(m_clockSource);
 	}
 
 	void EsxiClock::setPCTL(const TWord _val)
@@ -103,13 +114,14 @@ namespace dsp56k
 	void EsxiClock::restartClock()
 	{
 		m_lastClock = *m_dspInstructionCounter;
+		m_periph.setDelayCycles(0);
 	}
 
 	TWord EsxiClock::getRemainingInstructionsForFrameSync() const
 	{
 		constexpr TWord offset = 1;
 
-		const auto cyclesSinceWrite = delta(getDspInstructionCounter(), getLastClock());
+		const auto cyclesSinceWrite = getDspInstructionCounter() - getLastClock();
 
 		if (cyclesSinceWrite >= getCyclesPerSample() - offset)
 			return 0;
@@ -135,6 +147,7 @@ namespace dsp56k
 			m_dspInstructionCounter = &_dsp->getCycles();
 			break;
 		}
+		m_clockSource = _clockSource;
 	}
 
 	void EsxiClock::updateCyclesPerSample()
@@ -174,6 +187,7 @@ namespace dsp56k
 
 		m_cyclesPerSample = cyclesPerSample;
 		m_lastClock = *m_dspInstructionCounter;
+		m_periph.setDelayCycles(0);
 	}
 	void EsxiClock::setEsaiDivider(Esxi* _esai, const TWord _dividerTX, const TWord _dividerRX)
 	{
@@ -197,6 +211,9 @@ namespace dsp56k
 		{
 			m_esais.emplace_back(EsaiEntry{ _esai, {_dividerTX}, {_dividerRX} });
 		}
+
+		if(m_periph.hasDSP())
+			m_periph.setDelayCycles(0);
 	}
 
 	bool EsxiClock::setEsaiCounter(const Esxi* _esai, const int _counterTX, const int _counterRX)
