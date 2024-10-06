@@ -133,7 +133,7 @@ namespace dsp56k
 
 		const auto diff = getCyclesPerSample() - cyclesSinceWrite - offset;
 
-		return std::min(diff, periphCycles - offset);
+		return std::min(static_cast<uint32_t>(diff), periphCycles - offset);
 	}
 
 	void EsxiClock::setClockSource(const DSP* _dsp, const ClockSource _clockSource)
