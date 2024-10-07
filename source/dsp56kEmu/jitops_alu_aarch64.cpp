@@ -503,18 +503,16 @@ namespace dsp56k
 			m_asm.cneg(sNeg, r64(s), asmjit::arm::CondCode::kZero);
 
 			m_asm.add(alu, carry.get(), alu, asmjit::arm::lsl(1));
-			m_asm.add(alu, sNeg.get());
+			m_asm.adds(alu, alu, sNeg.get());
 
 			// C is set if bit 55 of the result is cleared
 			if (last)
 			{
-				m_asm.bitTest(alu, 55);
-				ccr_update_ifZero(CCRB_C);
+				ccr_update(CCRB_C, asmjit::arm::CondCode::kNotSign);
 			}
 			else
 			{
-				m_asm.ubfx(carry, alu, 55, 1);
-				m_asm.eor(carry, carry, asmjit::Imm(1));
+				m_asm.cset(carry, asmjit::arm::CondCode::kNotSign);
 			}
 		};
 
