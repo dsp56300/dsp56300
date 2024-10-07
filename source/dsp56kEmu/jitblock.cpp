@@ -710,6 +710,8 @@ namespace dsp56k
 
 				if(nonBranchChild)
 					jumpToChild(nonBranchChild);
+				else
+					m_asm.ret();
 			}
 			else
 			{
@@ -719,6 +721,10 @@ namespace dsp56k
 		else if(nonBranchChild)
 		{
 			jumpToChild(nonBranchChild);
+		}
+		else
+		{
+			m_asm.ret();
 		}
 
 		profileEnd(lj);

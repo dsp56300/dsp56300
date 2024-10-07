@@ -356,8 +356,6 @@ namespace dsp56k
 
 		m_generatingBlocks.erase(_pc);
 
-		emitter->emitter.ret();
-
 		emitter->emitter.finalize();
 
 		TJitFunc func;

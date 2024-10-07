@@ -42,10 +42,7 @@ namespace dsp56k
 	void JitStackHelper::push(const JitReg64& _reg)
 	{
 		PushedReg reg;
-		reg.cursorFirst = m_block.asm_().cursor();
 		m_block.asm_().push(_reg);
-		reg.cursorFirst = reg.cursorFirst->next();
-		reg.cursorLast = m_block.asm_().cursor();
 		reg.reg = _reg;
 
 		m_pushedBytes += pushSize(_reg);
@@ -57,11 +54,8 @@ namespace dsp56k
 	void JitStackHelper::push(const JitReg128& _reg)
 	{
 		PushedReg reg;
-		reg.cursorFirst = m_block.asm_().cursor();
 		stackRegSub(pushSize(_reg));
-		reg.cursorFirst = reg.cursorFirst->next();
 		m_block.asm_().movq(ptr(g_stackReg), _reg);
-		reg.cursorLast = m_block.asm_().cursor();
 		reg.reg = _reg;
 
 		m_pushedBytes += pushSize(_reg);
@@ -130,7 +124,7 @@ namespace dsp56k
 			for(size_t i=0; i<m_pushedRegs.size(); ++i)
 			{
 				const auto& r = m_pushedRegs[i];
-				const int offset = m_pushedBytes - static_cast<int>(m_pushedRegs[i].stackOffset);
+				const int offset = static_cast<int>(m_pushedBytes - m_pushedRegs[i].stackOffset);
 
 				const auto memPtr = ptr(g_stackReg, offset);
 
@@ -160,6 +154,76 @@ namespace dsp56k
 		}
 	}
 
+	void JitStackHelper::pushAllUsed(asmjit::BaseNode* _baseNode)
+	{
+		m_block.asm_().setCursor(_baseNode);
+
+		std::vector<JitReg> regsToPush;
+		regsToPush.reserve(m_usedRegs.size());
+
+		uint32_t bytesToPush = 0;
+		bool hasVectors = false;
+
+		JitReg64 lastReg;
+
+		for (const auto& reg : m_usedRegs)
+		{
+			if(!isNonVolatile(reg))
+				continue;
+
+			regsToPush.push_back(reg);
+			bytesToPush += pushSize(reg);
+
+			if(reg.isVec())
+				hasVectors = true;
+			else
+				lastReg = reg.as<JitReg64>();
+		}
+
+		// push the last one again to fix alignment. Only needed if we have function calls inbetween as the stack needs to be aligned for this purpose only
+		const auto needsAlignment = m_callCount && (bytesToPush & (g_stackAlignmentBytes-1)) != 0;
+
+		if(needsAlignment)
+		{
+			regsToPush.push_back(lastReg);
+			bytesToPush += pushSize(lastReg);
+		}
+
+		if(hasVectors)
+		{
+			stackRegSub(bytesToPush);
+			m_pushedBytes += bytesToPush;
+
+			int32_t offset = 0;
+
+			for (const auto & reg : regsToPush)
+			{
+				const auto size = pushSize(reg);
+				const auto memPtr = ptr(g_stackReg, offset);
+				m_pushedRegs.push_back({m_pushedBytes - offset, reg});
+				offset += static_cast<int32_t>(size);
+				if(reg.isVec())
+				{
+					m_block.asm_().movq(memPtr, reg.as<JitReg128>());
+				}
+				else
+				{
+					m_block.asm_().mov(memPtr, r64(reg.as<JitRegGP>()));
+				}
+			}
+		}
+		else
+		{
+			for (auto reg : regsToPush)
+			{
+				if(reg.isVec())
+					push(reg.as<JitReg128>());
+				else
+					push(reg.as<JitReg64>());
+			}
+		}
+		m_block.asm_().setCursor(m_block.asm_().lastNode());
+	}
 	void JitStackHelper::call(const void* _funcAsPtr)
 	{
 		call([&]()
@@ -184,40 +248,6 @@ namespace dsp56k
 		stackRegAdd(offset);
 
 		++m_callCount;
-	}
-
-	void JitStackHelper::pushAllUsed(asmjit::BaseNode* _baseNode)
-	{
-		m_block.asm_().setCursor(_baseNode);
-
-		const auto oldPushedSize = m_pushedBytes;
-
-		JitReg64 lastReg;
-
-		for (const auto& reg : m_usedRegs)
-		{
-			if(!isNonVolatile(reg))
-				continue;
-
-			if(reg.isVec())
-				push(reg.as<JitReg128>());
-			else
-			{
-				lastReg = reg.as<JitReg64>();
-				push(lastReg);
-			}
-		}
-
-		const auto newPushedSize = m_pushedBytes;
-		const auto pushedBytes = newPushedSize - oldPushedSize;
-
-		// push the last one again to fix alignment. Only needed if we have function calls inbetween as the stack needs to be aligned for this purpose only
-		if(m_callCount && (pushedBytes & (g_stackAlignmentBytes-1)))
-		{
-			push(lastReg);
-		}
-
-		m_block.asm_().setCursor(m_block.asm_().lastNode());
 	}
 
 	bool JitStackHelper::isFuncArg(const JitRegGP& _gp, uint32_t _maxIndex/* = 255*/)
