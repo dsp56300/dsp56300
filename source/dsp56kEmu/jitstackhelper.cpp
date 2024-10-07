@@ -124,7 +124,7 @@ namespace dsp56k
 			for(size_t i=0; i<m_pushedRegs.size(); ++i)
 			{
 				const auto& r = m_pushedRegs[i];
-				const int offset = m_pushedBytes - static_cast<int>(m_pushedRegs[i].stackOffset);
+				const int offset = static_cast<int>(m_pushedBytes - m_pushedRegs[i].stackOffset);
 
 				const auto memPtr = ptr(g_stackReg, offset);
 
