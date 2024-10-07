@@ -80,8 +80,6 @@ namespace dsp56k
 		{
 			uint32_t stackOffset = 0;
 			JitReg reg;
-			asmjit::BaseNode* cursorFirst = nullptr;
-			asmjit::BaseNode* cursorLast = nullptr;
 
 			bool operator < (const PushedReg& _r) const
 			{

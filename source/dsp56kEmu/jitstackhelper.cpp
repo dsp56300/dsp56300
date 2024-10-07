@@ -42,10 +42,7 @@ namespace dsp56k
 	void JitStackHelper::push(const JitReg64& _reg)
 	{
 		PushedReg reg;
-		reg.cursorFirst = m_block.asm_().cursor();
 		m_block.asm_().push(_reg);
-		reg.cursorFirst = reg.cursorFirst->next();
-		reg.cursorLast = m_block.asm_().cursor();
 		reg.reg = _reg;
 
 		m_pushedBytes += pushSize(_reg);
@@ -57,11 +54,8 @@ namespace dsp56k
 	void JitStackHelper::push(const JitReg128& _reg)
 	{
 		PushedReg reg;
-		reg.cursorFirst = m_block.asm_().cursor();
 		stackRegSub(pushSize(_reg));
-		reg.cursorFirst = reg.cursorFirst->next();
 		m_block.asm_().movq(ptr(g_stackReg), _reg);
-		reg.cursorLast = m_block.asm_().cursor();
 		reg.reg = _reg;
 
 		m_pushedBytes += pushSize(_reg);
