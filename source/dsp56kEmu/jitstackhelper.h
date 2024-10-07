@@ -36,10 +36,10 @@ namespace dsp56k
 
 		void popAll();
 		
+		void pushAllUsed(asmjit::BaseNode* _baseNode);
+
 		void call(const std::function<void()>& _execCall);
 		void call(const void* _funcAsPtr);
-
-		void pushAllUsed(asmjit::BaseNode* _baseNode);
 
 		static bool isFuncArg(const JitRegGP& _gp, uint32_t _maxIndex = 255);
 		static bool isNonVolatile(const JitReg& _gp);
