@@ -492,6 +492,8 @@ namespace dsp56k
 		m_asm.shl(r64(s), asmjit::Imm(40));
 		m_asm.sar(r64(s), asmjit::Imm(16));
 
+		signextend56to64(alu);
+
 		m_asm.ubfx(carry, m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C), 1);
 
 		const auto loopIteration = [&](bool last)
