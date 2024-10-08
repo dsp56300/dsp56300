@@ -278,8 +278,11 @@ namespace dsp56k
 		if(i.hasFlag(JitBlockInfo::Flags::ModeChange))
 			return &funcRunCheckModeChange;
 
-		if (g_traceOps)
-			return &funcRun;
+		if constexpr(g_traceOps)
+		{
+			if(e.block->getFunc())
+				return &funcRun;
+		}
 
 		return e.block->getFunc();
 	}
