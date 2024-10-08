@@ -298,7 +298,8 @@ namespace dsp56k
 	uint32_t HDI08::readTX()
 	{
 		m_dataTX.waitNotEmpty();
-		m_periph.setDelayCycles(0);
+		if(!m_transmitDataAlwaysEmpty)
+			m_periph.setDelayCycles(0);
 		return m_dataTX.pop_front();
 	}
 
