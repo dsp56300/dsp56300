@@ -222,19 +222,22 @@ namespace dsp56k
 	{
 		const OpcodeInfo* res = nullptr;
 
-		for (size_t i=0; i<_opcodes.size(); ++i)
+		for (const auto* oi : _opcodes)
 		{
-			const auto* oi = _opcodes[i];
-
 			if(match(*oi, _opcode))
 			{
+#ifdef _DEBUG
 				if(res != nullptr)
 				{
+					// it is unexpected that we have a second match. debugging helpers below, two opcodes for the same opcode should not happen
 					match(*oi, _opcode);
 					match(*res, _opcode);
-					assert(res == nullptr);
+					assert(res == nullptr && "opcode collision, more than one instruction possible");
 				}
 				res = oi;
+#else
+				return oi;
+#endif
 			}
 		}
 		return res;
