@@ -1469,8 +1469,16 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 	{
 		while(m_pendingInterrupts.empty())
 		{
-			m_instructions += PeripheralsProcessingStepSize;
-			m_cycles += PeripheralsProcessingStepSize;
+			auto delay = perif[0]->getTargetClock();
+
+			if (delay > m_instructions)
+				delay = std::max(delay - m_instructions, static_cast<uint64_t>(PeripheralsProcessingStepSize));
+			else
+				delay = PeripheralsProcessingStepSize;
+
+//			LOG("Delay " << delay);
+			m_instructions += delay;
+			m_cycles += delay;
 
 			m_execPeripheralsFunc(this);
 		}
