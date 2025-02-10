@@ -363,17 +363,22 @@ namespace dsp56k
 		checkModeChange();
 	}
 
-	JitBlockEmitter* Jit::acquireEmitter(const TWord _pc)
+	JitBlockEmitter* Jit::acquireEmitter(JitConfig&& _config)
 	{
 		if(m_emitters.empty())
-			return new JitBlockEmitter(dsp(), getRuntimeData(), getConfig(_pc));
+			return new JitBlockEmitter(dsp(), getRuntimeData(), std::move(_config));
 
 		auto* emitter = m_emitters.back();
 		m_emitters.pop_back();
 
-		emitter->reset(getConfig(_pc));
+		emitter->reset(std::move(_config));
 
 		return emitter;
+	}
+
+	JitBlockEmitter* Jit::acquireEmitter(const TWord _pc)
+	{
+		return acquireEmitter(getConfig(_pc));
 	}
 
 	void Jit::releaseEmitter(JitBlockEmitter* _emitter)

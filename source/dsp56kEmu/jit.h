@@ -89,6 +89,7 @@ namespace dsp56k
 
 		void destroyAllBlocks();
 
+		JitBlockEmitter* acquireEmitter(JitConfig&& _config);
 		JitBlockEmitter* acquireEmitter(TWord _pc);
 		void releaseEmitter(JitBlockEmitter* _emitter);
 
