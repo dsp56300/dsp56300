@@ -111,7 +111,7 @@ namespace dsp56k
 		}
 	}
 
-	void IPeripherals::setDelayCycles(const uint32_t _delayCycles)
+	void IPeripherals::setDelayCycles(const uint32_t _delayCycles) noexcept
 	{
 		m_delayCycles = std::min(m_delayCycles, _delayCycles);
 		m_targetClock = m_dsp->getInstructionCounter() + m_delayCycles;
@@ -344,7 +344,7 @@ namespace dsp56k
 		}
 	}
 
-	uint32_t Peripherals56303::exec()
+	uint32_t Peripherals56303::exec() noexcept
 	{
 		auto delay = m_essiClock.exec();
 		delay = std::min(delay, m_hi08.exec());
@@ -663,7 +663,7 @@ namespace dsp56k
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
 	}
 
-	uint32_t Peripherals56362::exec()
+	uint32_t Peripherals56362::exec() noexcept
 	{
 		auto delay = m_esaiClock.exec();
 		delay = std::min(delay, m_hdi08.exec());

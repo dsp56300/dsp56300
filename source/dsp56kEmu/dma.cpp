@@ -727,7 +727,7 @@ namespace dsp56k
 		return m_dor[_index];
 	}
 
-	uint32_t Dma::exec()
+	uint32_t Dma::exec() noexcept
 	{
 		if((m_dstr & (1 << Dact)) == 0)
 			return IPeripherals::MaxDelayCycles;

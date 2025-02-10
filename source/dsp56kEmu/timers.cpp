@@ -6,7 +6,7 @@
 
 namespace dsp56k
 {
-	uint32_t Timers::exec()
+	uint32_t Timers::exec() noexcept
 	{
 		// Prescaler Counter
 		// The prescaler counter is a 21-bit counter that is decremented on the rising edge of the prescaler input clock.

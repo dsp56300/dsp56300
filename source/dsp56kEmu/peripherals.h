@@ -110,7 +110,7 @@ namespace dsp56k
 		virtual void setSymbols(Disassembler& _disasm) const = 0;
 		virtual void terminate() = 0;
 
-		void setDelayCycles(uint32_t _delayCycles);
+		void setDelayCycles(uint32_t _delayCycles) noexcept;
 
 		void resetDelayCycles(const uint64_t _instructionCount, const uint32_t _delayCycles) noexcept
 		{
@@ -134,7 +134,7 @@ namespace dsp56k
 	{
 	public:
 		PeripheralsNop() : IPeripherals(PeripheralType::PeripheralsNop) {}
-		uint32_t exec() { return MaxDelayCycles; }
+		uint32_t exec() noexcept { return MaxDelayCycles; }
 
 	private:
 		TWord read(TWord _addr, Instruction _inst) override { return 0; }
@@ -162,7 +162,7 @@ namespace dsp56k
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override;
 		void write(TWord _addr, TWord _val) override;
 
-		uint32_t exec();
+		uint32_t exec() noexcept;
 		void reset() override;
 
 		void setDSP(DSP* _dsp) override
@@ -214,7 +214,7 @@ namespace dsp56k
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override;
 		void write(TWord _addr, TWord _val) override;
 
-		uint32_t exec();
+		uint32_t exec() noexcept;
 		void reset() override;
 
 		EsaiClock& getEsaiClock()		{ return m_esaiClock; }
@@ -254,7 +254,7 @@ namespace dsp56k
 		const TWord* readAsPtr(TWord _addr, Instruction _inst) override { return nullptr; }
 		void write(TWord _addr, TWord _val) override;
 
-		uint32_t exec() const { return MaxDelayCycles; }
+		uint32_t exec() noexcept { return MaxDelayCycles; }
 
 		void reset() override {}
 

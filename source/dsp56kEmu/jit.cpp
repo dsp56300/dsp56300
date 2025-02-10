@@ -211,7 +211,7 @@ namespace dsp56k
 		m_maxUsedPAddress = std::max(m_maxUsedPAddress, static_cast<size_t>(_offset));
 	}
 
-	void Jit::run(const TWord _pc)
+	void Jit::run(const TWord _pc) noexcept
 	{
 		const auto* block = m_currentChain->getBlockUnsafe(_pc);
 		block->getFunc()(this, _pc);
@@ -229,20 +229,20 @@ namespace dsp56k
 		}
 	}
 
-	void Jit::runCheckPMemWrite(const TWord _pc)
+	void Jit::runCheckPMemWrite(const TWord _pc) noexcept
 	{
 		m_runtimeData.m_pMemWriteAddress = g_pcInvalid;
 		run(_pc);
 		checkPMemWrite();
 	}
 
-	void Jit::runCheckPMemWriteAndModeChange(const TWord _pc)
+	void Jit::runCheckPMemWriteAndModeChange(const TWord _pc) noexcept
 	{
 		runCheckPMemWrite(_pc);
 		checkModeChange();
 	}
 
-	void Jit::runCheckModeChange(const TWord _pc)
+	void Jit::runCheckModeChange(const TWord _pc) noexcept
 	{
 		run(_pc);
 		checkModeChange();
@@ -287,7 +287,7 @@ namespace dsp56k
 		return e.block->getFunc();
 	}
 
-	void Jit::checkPMemWrite()
+	void Jit::checkPMemWrite() noexcept
 	{
 		// if JIT code has written to P memory, destroy a JIT block if present at the write location
 		const TWord pMemWriteAddr = m_runtimeData.m_pMemWriteAddress;
@@ -308,7 +308,7 @@ namespace dsp56k
 		m_dsp.notifyProgramMemWrite(pMemWriteAddr);
 	}
 
-	void Jit::checkModeChange()
+	void Jit::checkModeChange() noexcept
 	{
 		JitDspMode mode;
 

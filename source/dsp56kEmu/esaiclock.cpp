@@ -14,7 +14,7 @@ namespace dsp56k
 	{
 	}
 
-	uint32_t EsxiClock::exec()
+	uint32_t EsxiClock::exec() noexcept
 	{
 		const auto diff = *m_dspInstructionCounter - m_lastClock;
 

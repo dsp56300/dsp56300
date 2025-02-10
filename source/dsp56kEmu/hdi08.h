@@ -88,7 +88,7 @@ namespace dsp56k
 		TWord readTX();
 		void writeTX(TWord _val);
 
-		uint32_t exec();
+		uint32_t exec() noexcept;
 
 		TWord readRX(Instruction _inst);
 

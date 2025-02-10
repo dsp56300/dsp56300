@@ -104,7 +104,7 @@ namespace dsp56k
 		};
 
 		Timers(IPeripherals& _peripherals, const TWord _vbaBase) : m_peripherals(_peripherals), m_vbaBase(_vbaBase) {}
-		uint32_t exec();
+		uint32_t exec() noexcept;
 		void execTimer(Timer& _t, uint32_t _index, uint32_t _cycles) const;
 
 		void writeTCSR(int _index, TWord _val);

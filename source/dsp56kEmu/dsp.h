@@ -286,7 +286,7 @@ namespace dsp56k
 			execPeripherals<Ta, Tb>();
 		}
 
-		template<typename Ta, typename Tb> ASMJIT_NOINLINE void execPeripherals()
+		template<typename Ta, typename Tb> ASMJIT_NOINLINE void execPeripherals() noexcept
 		{
 			// we do not have any Y peripherals that need processing atm
 			const auto delayA = static_cast<Ta*>(perif[0])->exec();

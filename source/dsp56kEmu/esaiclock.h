@@ -24,7 +24,7 @@ namespace dsp56k
 		static constexpr uint32_t MaxEsais = 2;
 
 		EsxiClock(IPeripherals& _peripherals);
-		uint32_t exec();
+		uint32_t exec() noexcept;
 
 		void setPCTL(TWord _val);
 		TWord getPCTL() const { return m_pctl; }

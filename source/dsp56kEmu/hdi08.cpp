@@ -49,7 +49,7 @@ namespace dsp56k
 		return m_hsr;
 	}
 
-	uint32_t HDI08::exec()
+	uint32_t HDI08::exec() noexcept
 	{
 		if (!bittest(m_hpcr, HPCR_HEN)) 
 			return IPeripherals::MaxDelayCycles;

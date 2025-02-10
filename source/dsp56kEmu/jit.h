@@ -48,10 +48,10 @@ namespace dsp56k
 
 		void notifyProgramMemWrite(const TWord _offset);
 
-		void run(TWord _pc);
-		void runCheckPMemWrite(TWord _pc);
-		void runCheckPMemWriteAndModeChange(TWord _pc);
-		void runCheckModeChange(TWord _pc);
+		void run(TWord _pc) noexcept;
+		void runCheckPMemWrite(TWord _pc) noexcept;
+		void runCheckPMemWriteAndModeChange(TWord _pc) noexcept;
+		void runCheckModeChange(TWord _pc) noexcept;
 
 		const JitConfig& getConfig() const { return m_config; }
 		JitConfig getConfig(TWord _pc) const;
@@ -83,7 +83,7 @@ namespace dsp56k
 		void destroy(TWord _pc);
 		void destroyToRecreate(TWord _pc);
 
-		void checkModeChange();
+		void checkModeChange() noexcept;
 
 		void onDebuggerAttached(DebuggerInterface& _debugger) const;
 
@@ -98,7 +98,7 @@ namespace dsp56k
 		void onFuncsResized(const JitBlockChain& _chain) const;
 
 	private:
-		void checkPMemWrite();
+		void checkPMemWrite() noexcept;
 
 		DSP& m_dsp;
 

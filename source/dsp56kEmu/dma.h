@@ -206,7 +206,7 @@ namespace dsp56k
 		const TWord& getDCO(const TWord _channel) const { return m_channels[_channel].getDCO(); }
 		const TWord& getDCR(const TWord _channel) const { return m_channels[_channel].getDCR(); }
 
-		uint32_t exec();
+		uint32_t exec() noexcept;
 		void setActiveChannel(TWord _channel);
 		void clearActiveChannel();
 
