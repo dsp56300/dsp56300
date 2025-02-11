@@ -11,9 +11,9 @@
 
 namespace dsp56k
 {
-	void funcRun(Jit* _jit, TWord _pc) noexcept;
-	void funcCreate(Jit* _jit, TWord _pc) noexcept;
-	void funcRecreate(Jit* _jit, TWord _pc) noexcept;
+	void funcRun(JitDspPtr* _jit, TWord _pc) noexcept;
+	void funcCreate(JitDspPtr* _jit, TWord _pc) noexcept;
+	void funcRecreate(JitDspPtr* _jit, TWord _pc) noexcept;
 
 	JitBlockChain::JitBlockChain(Jit& _jit, const JitDspMode& _mode, const size_t _usedFuncSize) : m_jit(_jit), m_mode(_mode)
 	{

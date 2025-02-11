@@ -12,7 +12,10 @@
 namespace dsp56k
 {
 	class Jit;
-	typedef void (*TJitFunc)(Jit*, TWord) noexcept;
+
+	using JitDspPtr = Jit;
+
+	typedef void (*TJitFunc)(JitDspPtr*, TWord) noexcept;
 }
 
 #if defined(HAVE_ARM64)
