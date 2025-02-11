@@ -87,6 +87,7 @@ jitregtypes.h
 jitruntimedata.cpp jitruntimedata.h
 jitstackhelper.cpp jitstackhelper.h
 jittypes.h
+jittrampoline.cpp jittrampoline.h
 jitunittests.cpp jitunittests.h
 
 jitops_agu_aarch64.cpp
