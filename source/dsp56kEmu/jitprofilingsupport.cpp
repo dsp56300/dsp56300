@@ -150,6 +150,35 @@ namespace dsp56k
 		m_outQueue.push_back(fi);
 	}
 
+	void JitProfilingSupport::addFunction(const char* _name, void* _funcAddress, const asmjit::CodeHolder& _codeHolder)
+	{
+#ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
+		iJIT_Method_Load jmethod = {};
+		jmethod.method_id = iJIT_GetNewMethodID();
+		jmethod.method_name = const_cast<char*>(_name);
+		jmethod.class_file_name = const_cast<char*>("dsp56k::Jit");
+		jmethod.source_file_name = nullptr;
+		jmethod.method_load_address = _funcAddress;
+		jmethod.method_size = static_cast<unsigned int>(_codeHolder.codeSize());
+
+		jmethod.line_number_size = 0;
+		jmethod.line_number_table = nullptr;
+
+		iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &jmethod);
+#endif
+
+#ifdef DSP56K_USE_PERF_JIT_PROFILING
+		PerfSymbolInfo si;
+		si.pid = getpid();
+		si.startAdr = reinterpret_cast<uint64_t>(_funcAddress);
+		si.codeSize = _codeHolder.codeSize();
+		si.symbolName = _name;
+		si.sourceFile.clear();
+
+		m_symbolQueue.push_back(si);
+#endif
+	}
+
 	void JitProfilingSupport::threadWriteSources()
 	{
 		const Opcodes opcodes;

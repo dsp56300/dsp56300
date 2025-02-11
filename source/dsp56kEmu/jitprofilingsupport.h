@@ -11,7 +11,9 @@ namespace dsp56k
 		~JitProfilingSupport();
 
 		static bool isBeingProfiled();
+
 		void addJitBlock(JitBlockRuntimeData& _jitBlock);
+		void addFunction(const char* _name, void* _funcAddress, const asmjit::CodeHolder& _codeHolder);
 
 	private:
 		struct FileInfo
@@ -19,7 +21,7 @@ namespace dsp56k
 			std::string name;
 			std::vector<JitBlockRuntimeData::InstructionProfilingInfo> info;
 		};
-#ifdef DSP56K_USE_PERF_JIT_PROFILING
+
 		struct PerfSymbolInfo
 		{
 			int pid;
@@ -28,7 +30,6 @@ namespace dsp56k
 			std::string symbolName;
 			std::string sourceFile;
 		};
-#endif
 
 		void threadWriteSources();
 
