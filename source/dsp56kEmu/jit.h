@@ -15,6 +15,7 @@
 #include "jitconfig.h"
 #include "jitdspmode.h"
 #include "jitruntimedata.h"
+#include "jittrampoline.h"
 
 namespace asmjit
 {
@@ -98,10 +99,13 @@ namespace dsp56k
 
 		void onFuncsResized(const JitBlockChain& _chain) const;
 
+		JitTrampoline& getTrampoline() { return m_trampoline; }
+
 	private:
 		void checkPMemWrite() noexcept;
 
 		DSP& m_dsp;
+		JitTrampoline m_trampoline;
 
 		asmjit::ASMJIT_ABI_NAMESPACE::JitRuntime* m_rt = nullptr;
 

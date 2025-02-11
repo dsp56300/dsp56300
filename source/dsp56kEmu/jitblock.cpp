@@ -242,7 +242,7 @@ namespace dsp56k
 		dspAsm.clear();
 
 		// needed so that the dsp register is available
-		m_asm.lea_(regDspPtr, g_funcArgGPs[0], Jitmem::pointerOffset(&m_dsp.regs(), &m_dsp.getJit()));
+		m_asm.lea_(regDspPtr, regDspPtr, Jitmem::pointerOffset(&m_dsp.regs(), &m_dsp.getJit()));
 		dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(uint64_t));
 
 #ifdef HAVE_X86_64
@@ -689,8 +689,6 @@ namespace dsp56k
 		if(child || nonBranchChild)
 		{
 			lj = profileBegin("jump");
-			// first func arg needs to point to Jit*
-			asm_().lea_(g_funcArgGPs[0], regDspPtr, Jitmem::pointerOffset(&dsp().getJit(), &dsp().regs()));
 		}
 
 		if (child)
@@ -727,6 +725,7 @@ namespace dsp56k
 		}
 		else
 		{
+			asm_().lea_(regDspPtr, regDspPtr, Jitmem::pointerOffset(&dsp().getJit(), &dsp().regs()));
 			m_asm.ret();
 		}
 
@@ -851,12 +850,16 @@ namespace dsp56k
 			return getJumpTarget(tempReg, _child);
 		};
 
+		auto temp = initTemp();
+
+		m_asm.lea_(regDspPtr, regDspPtr, Jitmem::pointerOffset(&m_dsp.getJit(), &m_dsp.regs()));
+
 		if(_cc == JitCondCode::kMaxValue)
 		{
 #ifdef HAVE_ARM64
-			m_asm.br(initTemp());
+			m_asm.br(temp);
 #else
-			m_asm.jmp(initTemp());
+			m_asm.jmp(temp);
 #endif
 		}
 		else
@@ -867,10 +870,10 @@ namespace dsp56k
 
 #ifdef HAVE_ARM64
 			m_asm.b(cc, l);
-			m_asm.br(initTemp());
+			m_asm.br(temp);
 #else
 			m_asm.j(cc, l);
-			m_asm.jmp(initTemp());
+			m_asm.jmp(temp);
 #endif
 			m_asm.bind(l);
 		}
@@ -878,8 +881,10 @@ namespace dsp56k
 
 	void JitBlock::jumpToOneOf(const JitCondCode _ccTrue, const JitBlockRuntimeData* _childTrue, const JitBlockRuntimeData* _childFalse) const
 	{
-		auto regTrue = getJumpTarget(r64(regDspPtr == r64(g_funcArgGPs[1]) ? r64(g_funcArgGPs[3]) : r64(g_funcArgGPs[1])), _childTrue);
-		auto regFalse = getJumpTarget(r64(regDspPtr == r64(g_funcArgGPs[2]) ? r64(g_funcArgGPs[3]) : r64(g_funcArgGPs[2])), _childFalse);
+		auto regTrue = getJumpTarget(r64(g_funcArgGPs[1]), _childTrue);
+		auto regFalse = getJumpTarget(r64(g_funcArgGPs[2]), _childFalse);
+
+		m_asm.lea_(regDspPtr, regDspPtr, Jitmem::pointerOffset(&m_dsp.getJit(), &m_dsp.regs()));
 
 #ifdef HAVE_ARM64
 		m_asm.csel(regFalse, regTrue, regFalse, _ccTrue);

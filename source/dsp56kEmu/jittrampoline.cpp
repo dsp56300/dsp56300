@@ -9,22 +9,19 @@
 namespace dsp56k
 {
 #ifdef HAVE_ARM64
-	constexpr auto g_funcToCall = g_nonVolatileGPs[1];
-	constexpr auto g_ptrDSP = g_nonVolatileGPs[2];
-	constexpr auto g_ptrJit = g_nonVolatileGPs[3];
-	constexpr auto g_counter = g_nonVolatileGPs[4];
-	constexpr auto g_temp = g_nonVolatileGPs[5];
+	constexpr auto g_funcToCall = JitReg64(21);
+	constexpr auto g_ptrDSP = JitReg64(22);
+	constexpr auto g_counter = JitReg64(23);
+	constexpr auto g_temp = JitReg64(24);
 #else
-	constexpr auto g_funcToCall = asmjit::x86::rbx;
+	constexpr auto g_funcToCall = asmjit::x86::rsi;
 	constexpr auto g_ptrDSP = asmjit::x86::rbp;
-	constexpr auto g_ptrJit = asmjit::x86::r12;
 	constexpr auto g_counter = asmjit::x86::r13;
 	constexpr auto g_temp = asmjit::x86::r14;
 #endif
 
 	static_assert(!g_funcToCall.equals(regDspPtr));
 	static_assert(!g_ptrDSP.equals(regDspPtr));
-	static_assert(!g_ptrJit.equals(regDspPtr));
 	static_assert(!g_counter.equals(regDspPtr));
 	static_assert(!g_temp.equals(regDspPtr));
 
@@ -47,9 +44,9 @@ namespace dsp56k
 		// fill nonvolatile registers with pointers that we need
 		m_asm.push(r64(g_funcToCall));
 		m_asm.push(r64(g_ptrDSP));
-		m_asm.push(r64(g_ptrJit));
 		m_asm.push(r64(g_counter));
 		m_asm.push(r64(g_temp));
+		m_asm.push(r64(regDspPtr));
 
 #ifdef HAVE_ARM64
 		m_asm.push(asmjit::a64::regs::x30);
@@ -62,9 +59,6 @@ namespace dsp56k
 		m_asm.mov(r64(g_ptrDSP), r64(g_funcArgGPs[0]));
 		m_asm.mov(r32(g_counter), r32(g_funcArgGPs[1]));
 
-		const auto label = m_asm.newNamedLabel("beginExec8times");
-		m_asm.bind(label);
-
 		const auto ptrJit           = Jitmem::makeRelativePtr(&m_dsp.getJit()          , &m_dsp, g_ptrDSP, 8);
 		const auto ptrJitEntries    = Jitmem::makeRelativePtr(&m_dsp.getJitEntries()   , &m_dsp, g_ptrDSP, 8);
 		const auto ptrInterruptFunc = Jitmem::makeRelativePtr(&m_dsp.getInterruptFunc(), &m_dsp, g_ptrDSP, 8);
@@ -74,6 +68,14 @@ namespace dsp56k
 		assert(ptrJitEntries.offset());
 		assert(ptrInterruptFunc.offset());
 		assert(ptrPC.offset());
+
+#ifdef HAVE_ARM64
+		m_asm.add(regDspPtr, g_ptrDSP, ptrJit.offset());
+#else
+		m_asm.lea(regDspPtr, ptrJit);
+#endif
+		const auto label = m_asm.newNamedLabel("beginExec8times");
+		m_asm.bind(label);
 
 		for(uint32_t i=0; i<UnrollSize; ++i)
 		{
@@ -102,7 +104,7 @@ namespace dsp56k
 			m_asm.mov(r32(g_funcArgGPs[1]), ptrPC);
 			m_asm.mov(g_funcToCall, Jitmem::makePtr(g_funcToCall, g_funcArgGPs[1], 3, 8));
 
-			m_asm.lea(r64(g_funcArgGPs[0]), ptrJit);
+			m_asm.mov(r64(g_funcArgGPs[0]), regDspPtr);
 
 			m_asm.call(g_funcToCall);
 #endif
@@ -123,9 +125,9 @@ namespace dsp56k
 		m_asm.pop(asmjit::a64::regs::x30);
 #endif
 
+		m_asm.pop(r64(regDspPtr));
 		m_asm.pop(r64(g_temp));
 		m_asm.pop(r64(g_counter));
-		m_asm.pop(r64(g_ptrJit));
 		m_asm.pop(r64(g_ptrDSP));
 		m_asm.pop(r64(g_funcToCall));
 
@@ -134,14 +136,7 @@ namespace dsp56k
 		m_runtime.add(&m_funcExecLoop, &codeHolder);
 
 		if (auto* profiling = m_dsp.getJit().getProfilingSupport())
-		{
 			profiling->addFunction("trampolineExecLoop", reinterpret_cast<void*>(m_funcExecLoop), codeHolder);
-			LOG("ADD TRAMPOLINE: trampolineExecLoop");
-		}
-		else
-		{
-			LOG("NO PROFILER AVAILABLE");
-		}
 	}
 
 	void JitTrampoline::generateExecOneFunc()
@@ -158,7 +153,7 @@ namespace dsp56k
 
 		m_asm.push(regDspPtr);
 
-//		m_asm.mov(regDspPtr, g_funcArgGPs[0]);
+		m_asm.mov(regDspPtr, g_funcArgGPs[0]);
 
 #ifdef _WIN32
 		m_asm.sub(asmjit::x86::regs::rsp, asmjit::Imm(32));	// shadow space
