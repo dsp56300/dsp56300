@@ -2,6 +2,7 @@
 
 #include "disasm.h"
 #include "dspconfig.h"
+#include "dspregs.h"
 #include "registers.h"
 #include "memory.h"
 #include "utils.h"
@@ -49,51 +50,7 @@ namespace dsp56k
 		// types
 		//
 	public:
-		struct SRegs
-		{
-			// accumulator
-			TReg48 x,y;						// 48 bit
-			TReg56 a,b;						// 56 bit
-
-			// ---- AGU ----
-			std::array<TReg24, 8> r;
-			std::array<TReg24, 8> n;
-			std::array<TReg24, 8> m;
-			std::array<TWord, 8> mMask;
-			std::array<TWord, 8> mModulo;
-
-			// ---- PCU ----
-			TReg24 sr;						// status register (SR_..)
-			TReg24 omr;						// operation mode register
-
-			TReg24 pc;						// program counter
-			TReg24 la, lc;					// loop address, loop counter
-
-			//TReg24	ssh, ssl;			// system stack high, system stack low
-			TReg24	sp;						// stack pointer
-			TReg5	sc;						// stack counter
-
-			StaticArray< TReg48, 16> ss;	// system stack
-
-			TReg24	sz;						// stack size (used for stack extension)
-
-			TReg24 vba;						// vector base address
-
-//			TReg24 bcr, dcr;
-//			TReg24 aar0, aar1, aar2, aar3;
-
-			TReg24 ep;						// stack extension pointer register
-
-			// ---- ----
-//			TReg24 hit;		
-//			TReg24 miss;		
-//			TReg24 replace;	
-//			TReg24 cyc;
-//			TReg24 cnt1;
-//			TReg24 cnt2;
-//			TReg24 cnt3;		
-//			TReg24 cnt4;
-		};
+		using SRegs = DspRegs;
 
 		struct CCRCache
 		{

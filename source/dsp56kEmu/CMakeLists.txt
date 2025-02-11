@@ -16,6 +16,7 @@ dma.cpp dma.h
 dspassert.cpp dspassert.h
 dspconfig.h
 dsplistener.h
+dspregs.h
 dsp.cpp dsp.h 
 dsp_decode.inl
 dsp_jumptable.inl

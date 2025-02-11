@@ -631,7 +631,7 @@ namespace dsp56k
 
 	void DSP::incSP()
 	{
-		assert(ssIndex() < reg.ss.eSize-1);
+		assert(ssIndex() < reg.ss.size()-1);
 		++reg.sp.var;
 		++reg.sc.var;
 
