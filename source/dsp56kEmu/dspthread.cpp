@@ -1,5 +1,6 @@
 #include "dspthread.h"
 
+#include <chrono>
 #include <iostream>
 
 #include "debuggerinterface.h"
