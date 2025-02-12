@@ -14,8 +14,8 @@ namespace dsp56k
 	constexpr auto g_counter = JitReg64(23);
 	constexpr auto g_temp = JitReg64(24);
 #else
-	constexpr auto g_funcToCall = asmjit::x86::rsi;
-	constexpr auto g_ptrDSP = asmjit::x86::rbp;
+	constexpr auto g_funcToCall = asmjit::x86::rbp;
+	constexpr auto g_ptrDSP = asmjit::x86::r12;
 	constexpr auto g_counter = asmjit::x86::r13;
 	constexpr auto g_temp = asmjit::x86::r14;
 #endif
@@ -153,10 +153,14 @@ namespace dsp56k
 
 		m_asm.mov(regDspPtr, g_funcArgGPs[0]);
 
+#ifdef HAVE_X86_64
 #ifdef _WIN32
 		m_asm.sub(asmjit::x86::regs::rsp, asmjit::Imm(32));	// shadow space
+#endif
 		m_asm.call(g_funcArgGPs[2]);
+#ifdef _WIN32
 		m_asm.add(asmjit::x86::regs::rsp, asmjit::Imm(32));	// shadow space
+#endif
 #else
 		m_asm.push(asmjit::a64::regs::x30);
 		m_asm.blr(g_funcArgGPs[2]);
