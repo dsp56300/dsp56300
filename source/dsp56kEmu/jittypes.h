@@ -11,9 +11,9 @@
 
 namespace dsp56k
 {
-	class Jit;
+	struct DspRegs;
 
-	using JitDspPtr = Jit;
+	using JitDspPtr = DspRegs;
 
 	typedef void (*TJitFunc)(JitDspPtr*, TWord) noexcept;
 }

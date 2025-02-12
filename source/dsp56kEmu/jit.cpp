@@ -59,32 +59,32 @@ namespace dsp56k
 
 	void funcCreate(JitDspPtr* _jit, const TWord _pc) noexcept
 	{
-		_jit->create(_pc, true);
+		Jit::toJitPtr(_jit)->create(_pc, true);
 	}
 
 	void funcRecreate(JitDspPtr* _jit, const TWord _pc) noexcept
 	{
-		_jit->recreate(_pc);
+		Jit::toJitPtr(_jit)->recreate(_pc);
 	}
 
 	void funcRunCheckPMemWrite(JitDspPtr* _jit, const TWord _pc) noexcept
 	{
-		_jit->runCheckPMemWrite(_pc);
+		Jit::toJitPtr(_jit)->runCheckPMemWrite(_pc);
 	}
 
 	void funcRunCheckModeChange(JitDspPtr* _jit, const TWord _pc) noexcept
 	{
-		_jit->runCheckModeChange(_pc);
+		Jit::toJitPtr(_jit)->runCheckModeChange(_pc);
 	}
 
 	void funcRunCheckPMemWriteAndModeChange(JitDspPtr* _jit, const TWord _pc) noexcept
 	{
-		_jit->runCheckPMemWriteAndModeChange(_pc);
+		Jit::toJitPtr(_jit)->runCheckPMemWriteAndModeChange(_pc);
 	}
 
 	void funcRun(JitDspPtr* _jit, TWord _pc) noexcept
 	{
-		_jit->run(_pc);
+		Jit::toJitPtr(_jit)->run(_pc);
 	}
 
 	Jit::Jit(DSP& _dsp) : m_dsp(_dsp), m_trampoline(_dsp), m_rt(new JitRuntime())
@@ -205,6 +205,14 @@ namespace dsp56k
 			it.second->destroyToRecreate(_pc);
 	}
 
+	Jit* Jit::toJitPtr(DspRegs* _regs)
+	{
+		const auto offsetRegs = offsetof(DSP, reg);
+		const auto offsetJit = offsetof(DSP, m_jit);
+
+		return reinterpret_cast<Jit*>(reinterpret_cast<uint8_t*>(_regs) + offsetJit - offsetRegs);
+	}
+
 	void Jit::notifyProgramMemWrite(const TWord _offset)
 	{
 		for (auto& it : m_chains)
@@ -216,7 +224,7 @@ namespace dsp56k
 	void Jit::run(const TWord _pc) noexcept
 	{
 		const auto* block = m_currentChain->getBlockUnsafe(_pc);
-		m_trampoline.execOne(this, _pc, block->getFunc());
+		m_trampoline.execOne(&m_dsp.regs(), _pc, block->getFunc());
 
 		if(g_traceOps && m_dsp.m_trace)
 		{

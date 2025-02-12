@@ -28,6 +28,7 @@ namespace asmjit
 
 namespace dsp56k
 {
+	struct DspRegs;
 	struct JitBlockInfo;
 	class DSP;
 	class JitBlock;
@@ -47,6 +48,7 @@ namespace dsp56k
 			m_currentChain->exec(_pc);
 		}
 
+		static Jit* toJitPtr(DspRegs* _regs);
 		void notifyProgramMemWrite(const TWord _offset);
 
 		void run(TWord _pc) noexcept;

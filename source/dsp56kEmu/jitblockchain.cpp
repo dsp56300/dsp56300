@@ -152,7 +152,7 @@ namespace dsp56k
 
 	void JitBlockChain::exec(const TWord _pc, const TJitFunc& _f) const
 	{
-		m_jit.getTrampoline().execOne(&m_jit, _pc, _f);
+		m_jit.getTrampoline().execOne(&m_jit.dsp().regs(), _pc, _f);
 	}
 
 	void JitBlockChain::notifyPMemWrite(const TWord _addr, const bool _isCurrentChain)

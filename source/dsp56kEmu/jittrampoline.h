@@ -15,8 +15,7 @@ namespace dsp56k
 	{
 	public:
 		typedef void (*TExecLoopFunc)(DSP*, uint32_t) noexcept;				// DSP, iteration count
-		typedef void (*TExecOneFunc)(JitDspPtr*, TWord, TJitFunc) noexcept;	// Jit*, PC, JIT function
-		typedef JitDspPtr* (*TGetDspPtrFunc)() noexcept;					// returns pointer to Jit*
+		typedef void (*TExecOneFunc)(JitDspPtr*, TWord, TJitFunc) noexcept;	// DspRegs, PC, function to be called
 
 		static constexpr uint32_t UnrollShift = 3;
 		static constexpr uint32_t UnrollSize = 1<<UnrollShift;
@@ -27,7 +26,6 @@ namespace dsp56k
 		{
 			generateExecLoopFunc();
 			generateExecOneFunc();
-			generateGetDspRegPtrFunc();
 		}
 
 		void exec(DSP* _dsp, uint32_t _count) const noexcept
@@ -44,7 +42,6 @@ namespace dsp56k
 	private:
 		void generateExecLoopFunc();
 		void generateExecOneFunc();
-		void generateGetDspRegPtrFunc();
 
 		DSP& m_dsp;
 		asmjit::JitRuntime m_runtime;
@@ -52,6 +49,5 @@ namespace dsp56k
 		AsmJitErrorHandler m_errorHandler;
 		TExecLoopFunc m_funcExecLoop = nullptr;
 		TExecOneFunc m_funcExecOne = nullptr;
-		TGetDspPtrFunc m_funcGetDspPtr = nullptr;
 	};
 }

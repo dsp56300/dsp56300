@@ -154,7 +154,7 @@ namespace dsp56k
 			if(m_logging)
 				LOG("Running test code");
 
-			dsp.getJit().getTrampoline().execOne(&dsp.getJit(), 0xbadbc, func);
+			dsp.getJit().getTrampoline().execOne(&dsp.regs(), 0xbadbc, func);
 //			func(&dsp.getJit(), 0xbadbc);
 
 			if(m_logging)

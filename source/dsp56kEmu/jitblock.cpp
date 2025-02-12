@@ -242,7 +242,6 @@ namespace dsp56k
 		dspAsm.clear();
 
 		// needed so that the dsp register is available
-		m_asm.lea_(regDspPtr, regDspPtr, Jitmem::pointerOffset(&m_dsp.regs(), &m_dsp.getJit()));
 		dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(uint64_t));
 
 #ifdef HAVE_X86_64
@@ -725,7 +724,6 @@ namespace dsp56k
 		}
 		else
 		{
-			asm_().lea_(regDspPtr, regDspPtr, Jitmem::pointerOffset(&dsp().getJit(), &dsp().regs()));
 			m_asm.ret();
 		}
 
@@ -852,8 +850,6 @@ namespace dsp56k
 
 		auto temp = initTemp();
 
-		m_asm.lea_(regDspPtr, regDspPtr, Jitmem::pointerOffset(&m_dsp.getJit(), &m_dsp.regs()));
-
 		if(_cc == JitCondCode::kMaxValue)
 		{
 #ifdef HAVE_ARM64
@@ -883,8 +879,6 @@ namespace dsp56k
 	{
 		auto regTrue = getJumpTarget(r64(g_funcArgGPs[1]), _childTrue);
 		auto regFalse = getJumpTarget(r64(g_funcArgGPs[2]), _childFalse);
-
-		m_asm.lea_(regDspPtr, regDspPtr, Jitmem::pointerOffset(&m_dsp.getJit(), &m_dsp.regs()));
 
 #ifdef HAVE_ARM64
 		m_asm.csel(regFalse, regTrue, regFalse, _ccTrue);

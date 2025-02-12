@@ -59,20 +59,20 @@ namespace dsp56k
 		m_asm.mov(r64(g_ptrDSP), r64(g_funcArgGPs[0]));
 		m_asm.mov(r32(g_counter), r32(g_funcArgGPs[1]));
 
-		const auto ptrJit           = Jitmem::makeRelativePtr(&m_dsp.getJit()          , &m_dsp, g_ptrDSP, 8);
+		const auto ptrDspRegs       = Jitmem::makeRelativePtr(&m_dsp.regs()            , &m_dsp, g_ptrDSP, 8);
 		const auto ptrJitEntries    = Jitmem::makeRelativePtr(&m_dsp.getJitEntries()   , &m_dsp, g_ptrDSP, 8);
 		const auto ptrInterruptFunc = Jitmem::makeRelativePtr(&m_dsp.getInterruptFunc(), &m_dsp, g_ptrDSP, 8);
 		const auto ptrPC            = Jitmem::makeRelativePtr(&m_dsp.regs().pc.var     , &m_dsp, g_ptrDSP, 4);
 
-		assert(ptrJit.offset());
+		assert(ptrDspRegs.offset());
 		assert(ptrJitEntries.offset());
 		assert(ptrInterruptFunc.offset());
 		assert(ptrPC.offset());
 
 #ifdef HAVE_ARM64
-		m_asm.add(regDspPtr, g_ptrDSP, ptrJit.offset());
+		m_asm.add(regDspPtr, g_ptrDSP, ptrDspRegs.offset());
 #else
-		m_asm.lea(regDspPtr, ptrJit);
+		m_asm.lea(regDspPtr, ptrDspRegs);
 #endif
 		const auto label = m_asm.newNamedLabel("beginExec8times");
 		m_asm.bind(label);
@@ -90,9 +90,8 @@ namespace dsp56k
 
 			m_asm.mov(g_funcToCall, ptrJitEntries);
 			m_asm.mov(r32(g_funcArgGPs[1]), ptrPC);
+			m_asm.mov(r64(g_funcArgGPs[0]), regDspPtr);
 			m_asm.ldr(g_funcToCall, Jitmem::makePtr(g_funcToCall, g_funcArgGPs[1], 3));
-
-			m_asm.add(r64(g_funcArgGPs[0]), g_ptrDSP, asmjit::Imm(ptrJit.offset()));
 
 			m_asm.blr(g_funcToCall);
 #else
@@ -102,9 +101,8 @@ namespace dsp56k
 
 			m_asm.mov(g_funcToCall, ptrJitEntries);
 			m_asm.mov(r32(g_funcArgGPs[1]), ptrPC);
-			m_asm.mov(g_funcToCall, Jitmem::makePtr(g_funcToCall, g_funcArgGPs[1], 3, 8));
-
 			m_asm.mov(r64(g_funcArgGPs[0]), regDspPtr);
+			m_asm.mov(g_funcToCall, Jitmem::makePtr(g_funcToCall, g_funcArgGPs[1], 3, 8));
 
 			m_asm.call(g_funcToCall);
 #endif
@@ -173,29 +171,5 @@ namespace dsp56k
 
 		if (auto* profiling = m_dsp.getJit().getProfilingSupport())
 			profiling->addFunction("trampolineExecOne", reinterpret_cast<void*>(m_funcExecOne), codeHolder);
-	}
-
-	void JitTrampoline::generateGetDspRegPtrFunc()
-	{
-		asmjit::CodeHolder codeHolder;
-		codeHolder.init(m_runtime.environment());
-		codeHolder.setLogger(&m_logger);
-		codeHolder.setErrorHandler(&m_errorHandler);
-
-		JitEmitter m_asm(&codeHolder);
-
-		m_asm.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateIntermediate);
-		m_asm.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateAssembler);
-
-		{
-			m_asm.mov(regReturnVal, regDspPtr);
-			m_asm.ret();
-		}
-	
-		m_asm.finalize();
-		m_runtime.add(&m_funcGetDspPtr, &codeHolder);
-
-		if (auto* profiling = m_dsp.getJit().getProfilingSupport())
-			profiling->addFunction("trampolineGetDspRegPtr", reinterpret_cast<void*>(m_funcGetDspPtr), codeHolder);
 	}
 }
