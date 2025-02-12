@@ -6,6 +6,8 @@
 #include "dsp.h"
 #include "threadtools.h"
 
+#include "asmjit/core/codeholder.h"
+
 #ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
 #include "../vtuneSdk/include/jitprofiling.h"
 #endif

@@ -517,11 +517,10 @@ namespace dsp56k
 		const auto loopIteration = [&](const bool _last)
 		{
 			m_asm.mov(addOrSub, r64(sPos));
-			m_asm.xor_(addOrSub, alu);
 
 			m_asm.mov(s, r64(sNeg));
+			m_asm.xor_(addOrSub, alu);
 			m_asm.cmovs(s, r64(sPos));
-
 			m_asm.lea(alu, asmjit::x86::ptr(carry, alu, 1));
 			m_asm.add(alu, s.get());
 
