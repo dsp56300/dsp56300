@@ -279,14 +279,6 @@ namespace dsp56k
 			m_interruptFunc = &dspExecInterrupts;
 	}
 
-	void DSP::setPeriph(const size_t _index, IPeripherals* _periph)
-	{
-		perif[_index] = _periph;
-		_periph->setDSP(this);
-
-		m_execPeripheralsFunc = findExecPeripheralsFunc(perif[0], perif[1]);
-	}
-
 	void DSP::terminate()
 	{
 		for(size_t i=0; i<perif.size(); ++i)

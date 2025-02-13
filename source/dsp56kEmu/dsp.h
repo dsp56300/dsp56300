@@ -85,7 +85,7 @@ namespace dsp56k
 		// members
 		//
 		Memory&							mem;
-		std::array<IPeripherals*, 2>	perif;
+		std::array<IPeripherals* const, 2>	perif;
 		
 		TWord							pcCurrentInstruction = 0;
 		TWord							m_opWordB = 0;
@@ -308,7 +308,6 @@ namespace dsp56k
 		const Opcodes&	opcodes							() const									{ return m_opcodes; }
 		Disassembler&	disassembler					()											{ return m_disasm; }
 
-		void			setPeriph						(const size_t _index, IPeripherals* _periph);
 		const IPeripherals*	getPeriph					(const size_t _index) const						{ return perif[_index]; }
 		IPeripherals*	getPeriph						(const size_t _index)							{ return perif[_index]; }
 		IPeripherals*	getPeriph						(const EMemArea _area)
