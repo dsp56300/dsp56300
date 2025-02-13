@@ -1042,6 +1042,71 @@ namespace dsp56k
 			verify(dsp.regs().a.var == 0xffeadd5401e848);
 			verify(dsp.getSR().var == 0x0800d4);
 		});
+		{
+			// regular mode for comparison
+
+			dsp.y0(0xde7214);
+			dsp.regs().a.var = 0x00008000000000;
+			dsp.setSR(0x0800d4);
+
+			static constexpr uint64_t expectedValues[24] =
+			{
+				0xffdf7214000000,
+				0xffe07214000000,
+				0xffe27214000000,
+				0xffe67214000000,
+				0xffee7214000000,
+				0xfffe7214000000,
+				0x001e7214000000,
+				0x001b563c000001,
+				0x00151e8c000003,
+				0x0008af2c000007,
+				0xffefd06c00000f,
+				0x00012ec400001e,
+				0xffe0cf9c00003d,
+				0xffe32d2400007a,
+				0xffe7e8340000f4,
+				0xfff15e540001e8,
+				0x00044a940003d0,
+				0xffe7073c0007a1,
+				0xffef9c64000f42,
+				0x0000c6b4001e84,
+				0xffdfff7c003d09,
+				0xffe18ce4007a12,
+				0xffe4a7b400f424,
+				0xffeadd5401e848,
+			};
+
+			for (size_t i = 0; i < 24; ++i)
+			{
+				runTest([&]()
+				{
+
+					emit(0x018050);	// div y0,a
+				},
+					[&]()
+				{
+					verify(dsp.regs().a.var == static_cast<int64_t>(expectedValues[i]));
+				});
+			}
+		}
+
+		runTest([&]()
+		{
+			dsp.y0(0xde7214);
+			dsp.regs().a.var = 0x00008000000000;
+			dsp.setSR(0x0800d4);
+
+			dsp.memory().set(MemArea_P, 0, 0x0618a0);	// rep #<18
+			dsp.memory().set(MemArea_P, 1, 0x018050);	// div y0,a
+
+			ops->emit(0);
+		},
+		[&]()
+		{
+			verify(dsp.regs().a.var == 0xffeadd5401e848);
+			verify(dsp.getSR().var == 0x0800d4);
+		});
 	}
 
 	void JitUnittests::parallelMoveXY()

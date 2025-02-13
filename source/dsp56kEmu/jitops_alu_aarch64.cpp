@@ -492,44 +492,49 @@ namespace dsp56k
 		m_asm.shl(r64(s), asmjit::Imm(40));
 		m_asm.sar(r64(s), asmjit::Imm(16));
 
+		m_asm.tst(r64(s), r64(s));
+		m_asm.cneg(r64(s), r64(s), asmjit::arm::CondCode::kSign);
+
 		signextend56to64(alu);
 
 		m_asm.ubfx(carry, m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C), 1);
 
-		const auto loopIteration = [&](bool last)
+		const auto loopIteration = [&](bool _needsTestAlu, bool _updateCCR)
 		{
-			m_asm.eor(addOrSub, r64(s), alu);
-			m_asm.bitTest(addOrSub, 55);
-			m_asm.cneg(sNeg, r64(s), asmjit::arm::CondCode::kZero);
+			if (_needsTestAlu)
+				m_asm.tst(alu, alu);
+			m_asm.cneg(sNeg, r64(s), asmjit::arm::CondCode::kNotSign);
 
 			m_asm.add(alu, carry.get(), alu, asmjit::arm::lsl(1));
 			m_asm.adds(alu, alu, sNeg.get());
 
 			// C is set if bit 55 of the result is cleared
-			if (last)
-			{
+			if (_updateCCR)
 				ccr_update(CCRB_C, asmjit::arm::CondCode::kNotSign);
-			}
 			else
-			{
 				m_asm.cset(carry, asmjit::arm::CondCode::kNotSign);
-			}
 		};
 
 		// loop
+		if (_iterationCount <= 24)
+		{
+			for (TWord i = 0; i < _iterationCount - 1; ++i)
+				loopIteration(i == 0, false);
+		}
+		else
 		{
 			RegGP lc(m_block);
 			m_asm.mov(lc, asmjit::Imm(_iterationCount - 1));
 			const auto start = m_asm.newLabel();
 			m_asm.bind(start);
-			loopIteration(false);
+			loopIteration(true, false);
 			m_asm.subs(lc, lc, asmjit::Imm(1));
 			m_asm.jnz(start);
 		}
 
 		// once
 		ccrUpdateVL();
-		loopIteration(true);
+		loopIteration(true, true);
 
 		m_dspRegs.mask56(alu);
 	}

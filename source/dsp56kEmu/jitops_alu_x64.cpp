@@ -494,65 +494,73 @@ namespace dsp56k
 
 		DspValue sPos(m_block, UsePooledTemp);
 
-		decode_JJ_read(sPos, jj);
-
-		RegGP addOrSub(m_block);
 		RegGP carry(m_block);
+
 		ShiftReg s(m_block);
 
 		DspValue sNeg(m_block, true);
 		sNeg.temp(DspValue::Temp56);
 
-		// once
+		decode_JJ_read(sPos, jj);
+
+		// force S to be always positive
+
+		// left shift by 24 and signextend to full 64 bit
 		m_asm.shl(r64(sPos), asmjit::Imm(40));
 		m_asm.sar(r64(sPos), asmjit::Imm(16));
 
-		signextend56to64(alu);
-
+		// copy tosNeg and negate
 		m_asm.mov(r64(sNeg), r64(sPos));
 		m_asm.neg(r64(sNeg));
 
+		// swap sNeg and sPos if needed
+		m_asm.cmovns(r64(s), r64(sNeg));
+		m_asm.cmovns(r64(sNeg), r64(sPos));
+		m_asm.cmovns(r64(sPos), r64(s));
+
+		signextend56to64(alu);
+
 		m_asm.copyBitToReg(carry, m_dspRegs.getSR(JitDspRegs::Read), CCRB_C);
 
-		const auto loopIteration = [&](const bool _last)
+		const auto loopIteration = [&](const bool _needsTestAlu, const bool _updateCCR)
 		{
-			m_asm.mov(addOrSub, r64(sPos));
-
-			m_asm.mov(s, r64(sNeg));
-			m_asm.xor_(addOrSub, alu);
-			m_asm.cmovs(s, r64(sPos));
-			m_asm.lea(alu, asmjit::x86::ptr(carry, alu, 1));
+			m_asm.mov(s, r64(sPos));
+			if (_needsTestAlu)
+				m_asm.test(alu, alu);
+			m_asm.cmovns(s, r64(sNeg));
+			m_asm.lea(alu, ptr(carry, alu, 1));
 			m_asm.add(alu, s.get());
 
 			// C is set if bit 55 of the result is cleared
-			if (_last)
+			if (_updateCCR)
 				ccr_update(CCRB_C, asmjit::x86::CondCode::kNotSign);
 			else
 				m_asm.setns(carry.get().r8());
 		};
 
 		// loop
+		if (_iterationCount <= 24)
 		{
-#if 1
+			for(TWord i=0; i<_iterationCount-1; ++i)
+				loopIteration(i==0, false);
+		}
+		else
+		{
 			RegGP lc(m_block);
 			m_asm.mov(r32(lc), _iterationCount - 1);
 
 			const auto start = m_asm.newLabel();
 			m_asm.bind(start);
 
-			loopIteration(false);
+			loopIteration(true, false);
 
 			m_asm.dec(r32(lc));
 			m_asm.jnz(start);
-#else
-			for(TWord i=0; i<_iterationCount-1; ++i)
-				loopIteration(false);
-#endif
 		}
 
 		// once
 		ccrUpdateVL();
-		loopIteration(true);
+		loopIteration(true, true);
 
 		m_dspRegs.mask56(alu);
 	}
