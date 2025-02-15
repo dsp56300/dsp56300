@@ -480,20 +480,20 @@ namespace dsp56k
 			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~(CCR_L | CCR_V));
 		};
 
-		DspValue s(m_block, UsePooledTemp);
+		DspValue sPos(m_block, UsePooledTemp);
 
-		decode_JJ_read(s, jj);
+		decode_JJ_read(sPos, jj);
 
 		RegGP addOrSub(m_block);
 		RegGP carry(m_block);
-		const RegGP sNeg(m_block);
+		const RegGP s(m_block);
 
 		// once
-		m_asm.shl(r64(s), asmjit::Imm(40));
-		m_asm.sar(r64(s), asmjit::Imm(16));
+		m_asm.shl(r64(sPos), asmjit::Imm(40));
+		m_asm.sar(r64(sPos), asmjit::Imm(16));
 
-		m_asm.tst(r64(s), r64(s));
-		m_asm.cneg(r64(s), r64(s), asmjit::arm::CondCode::kSign);
+		m_asm.tst(r64(sPos), r64(sPos));
+		m_asm.cneg(r64(sPos), r64(sPos), asmjit::arm::CondCode::kSign);
 
 		signextend56to64(alu);
 
@@ -503,10 +503,10 @@ namespace dsp56k
 		{
 			if (_needsTestAlu)
 				m_asm.tst(alu, alu);
-			m_asm.cneg(sNeg, r64(s), asmjit::arm::CondCode::kNotSign);
+			m_asm.cneg(s, r64(sPos), asmjit::arm::CondCode::kNotSign);
 
 			m_asm.add(alu, carry.get(), alu, asmjit::arm::lsl(1));
-			m_asm.adds(alu, alu, sNeg.get());
+			m_asm.adds(alu, alu, s.get());
 
 			// C is set if bit 55 of the result is cleared
 			if (_updateCCR)
