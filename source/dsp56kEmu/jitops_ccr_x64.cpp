@@ -115,6 +115,24 @@ namespace dsp56k
 			return;
 		}
 
+		if (!m_ccr_update_clear)
+		{
+			const auto mask = static_cast<CCRMask>(1 << _bit);
+
+			ccr_clearDirty(mask);
+
+			const RegScratch r(m_block);
+
+			// this only works if the target bit in SR is currently 0. If m_ccr_update_clear
+			// is false, this is guaranteed, this is why this nice trick works
+			m_asm.lea(r32(r), asmjit::x86::ptr(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), 1 << _bit, 4));
+
+			m_asm.cmov(_cc, r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), r32(r));
+
+			return;
+		}
+
+		// setcc L 
 		const RegScratch r(m_block);
 		m_asm.set(_cc, r.r8());
 		ccr_update(r, _bit);
