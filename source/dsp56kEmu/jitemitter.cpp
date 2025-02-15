@@ -282,9 +282,7 @@ namespace dsp56k
 			return;
 		}
 
-		if(_dstBit >= 32)
-			xor_(r64(_dst), r64(_dst));														// 0.25
-		else if(_dstBit >= 8)
+		if(_dstBit >= 8)
 			xor_(r32(_dst), r32(_dst));														// 0.25
 
 		if(_srcBit >= 32)
