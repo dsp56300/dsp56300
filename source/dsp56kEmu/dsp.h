@@ -181,21 +181,7 @@ namespace dsp56k
 			}
 			else
 			{
-#if 0
-				if (m_processingMode == Default)
-				{
-					if (m_pendingInterrupts.empty())
-						execNoPendingInterrupts();
-					else
-						execInterrupts();
-				}
-				else if (m_processingMode == DefaultPreventInterrupt)
-				{
-					m_processingMode = Default;
-				}
-#else
 				m_interruptFunc(this);
-#endif
 
 #if DSP56300_DEBUGGER
 				if(m_debugger)
