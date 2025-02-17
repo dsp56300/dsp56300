@@ -71,6 +71,22 @@ namespace dsp56k
 		}
 
 		template<typename TFunc>
+		void emplace_back(size_t _count, const TFunc& _fillEntry)
+		{
+	//		assert( m_usage < C && "ring buffer is already full!" );
+
+			m_writeSem.wait(static_cast<uint32_t>(_count));
+
+			for (size_t i=0; i<_count; ++i)
+				_fillEntry(i, m_data[wrapCounter(m_writeCount)]);
+
+			// usage need to be incremented AFTER data has been written, otherwise, reader thread would read incomplete data
+			m_writeCount += _count;
+
+			m_readSem.notify(static_cast<uint32_t>(_count));
+		}
+
+		template<typename TFunc>
 		void pop_front(const TFunc& _readCallback)
 		{
 			m_readSem.wait();
@@ -81,6 +97,20 @@ namespace dsp56k
 			++m_readCount;
 
 			m_writeSem.notify();
+		}
+
+		template<typename TFunc>
+		void pop_front(const size_t _count, const TFunc& _readCallback)
+		{
+			m_readSem.wait(static_cast<uint32_t>(_count));
+
+			for (size_t i=0; i<_count; ++i)
+			{
+				_readCallback(i, front());
+				++m_readCount;
+			}
+
+			m_writeSem.notify(static_cast<uint32_t>(_count));
 		}
 
 		T pop_front()
@@ -175,7 +205,7 @@ namespace dsp56k
 		size_t				m_writeCount;
 		size_t				m_readCount;
 
-		typedef std::conditional_t<Lock, SpscSemaphore, NopSemaphore> Sem;
+		typedef std::conditional_t<Lock, SpscSemaphoreWithCount, NopSemaphore> Sem;
 
 		Sem					m_readSem;
 		Sem					m_writeSem;
