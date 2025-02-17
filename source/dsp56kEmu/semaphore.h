@@ -77,6 +77,14 @@ namespace dsp56k
 		{
 		}
 
+		void notify()
+		{
+			const auto prev = m_count.fetch_add(1, std::memory_order_release);
+
+	        if (prev < 0)
+		        m_sem.notify();
+		}
+
 		void notify(const uint32_t _count)
 		{
 			const auto prev = m_count.fetch_add(static_cast<int>(_count), std::memory_order_release);
@@ -86,6 +94,14 @@ namespace dsp56k
 				for (uint32_t i = 0; i < _count; ++i)
 					m_sem.notify();
 	        }
+		}
+
+		void wait()
+		{
+			const int prev = m_count.fetch_sub(1, std::memory_order_acquire);
+
+			if (prev < 1)
+				m_sem.wait();
 		}
 
 		void wait(const uint32_t _count)
