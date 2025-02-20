@@ -51,7 +51,7 @@ namespace dsp56k
 
 		// these are important as we do not have to push anything on the stack for simple functions if we can use volatiles only
 		static_assert(!contains(g_nonVolatileGPs, *g_regGPTemps.begin()), "first temp must be volatile");
-		static_assert(contains(g_nonVolatileGPs, regDspPtr), "register for DSP pointer must be non-volatile");
+		static_assert(!contains(g_nonVolatileGPs, regDspPtr), "register for DSP pointer must be volatile");
 		static_assert(!contains(g_nonVolatileGPs, g_dspPoolGps[0]), "first pool reg must be volatile");
 	}
 #endif
@@ -87,7 +87,7 @@ namespace dsp56k
 		Jit::toJitPtr(_jit)->run(_pc);
 	}
 
-	Jit::Jit(DSP& _dsp) : m_dsp(_dsp), m_trampoline(_dsp), m_rt(new JitRuntime())
+	Jit::Jit(DSP& _dsp) : m_dsp(_dsp), m_rt(new JitRuntime())
 	{
 		m_emitters.reserve(16);
 		m_blockRuntimeDatas.reserve(0x10000);
@@ -120,8 +120,6 @@ namespace dsp56k
 		{
 			LOG("No profiler detected");
 		}
-
-		m_trampoline.generateCode();
 	}
 
 	Jit::~Jit()
@@ -224,7 +222,7 @@ namespace dsp56k
 	void Jit::run(const TWord _pc) noexcept
 	{
 		const auto* block = m_currentChain->getBlockUnsafe(_pc);
-		m_trampoline.execOne(&m_dsp.regs(), _pc, block->getFunc());
+		block->getFunc()(&m_dsp.regs(), _pc);
 
 		if(g_traceOps && m_dsp.m_trace)
 		{

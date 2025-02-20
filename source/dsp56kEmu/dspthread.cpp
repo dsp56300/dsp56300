@@ -120,9 +120,6 @@ namespace dsp56k
 				const auto iBegin = m_dsp.getInstructionCounter();
 				const auto cBegin = m_dsp.getCycles();
 
-#if 1
-				m_dsp.getJit().getTrampoline().exec(&m_dsp, 128);
-#else
 				for(size_t i=0; i<128; i += 8)
 				{
 					m_dsp.exec();
@@ -134,7 +131,7 @@ namespace dsp56k
 					m_dsp.exec();
 					m_dsp.exec();
 				}
-#endif
+
 				const auto iEnd = m_dsp.getInstructionCounter();
 				const auto cEnd = m_dsp.getCycles();
 

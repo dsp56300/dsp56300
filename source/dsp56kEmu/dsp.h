@@ -177,7 +177,11 @@ namespace dsp56k
 		{
 			if(g_useJIT)
 			{
-				assert(false && "JIT not supported, use trampoline to enter JIT");
+				m_interruptFunc(this);
+
+				const auto pc = getPC().toWord();
+				LOGJITPC(pc);
+				m_jitEntries[pc](&reg, pc);
 			}
 			else
 			{

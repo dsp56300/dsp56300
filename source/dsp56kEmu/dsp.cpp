@@ -203,8 +203,7 @@ namespace dsp56k
 		{
 			LOGJITPC(vba);
 			const auto pc = getPC();
-			m_jit.getTrampoline().execOne(&reg, vba, m_jitEntries[vba]);
-//			m_jitEntries[vba](&m_jit, vba);
+			m_jitEntries[vba](&reg, vba);
 //			m_jit.exec(vba);
 			if(m_processingMode != LongInterrupt)
 			{

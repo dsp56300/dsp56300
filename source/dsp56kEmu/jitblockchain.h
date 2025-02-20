@@ -58,7 +58,10 @@ namespace dsp56k
 			exec(_pc, m_jitFuncs[_pc]);
 		}
 
-		void exec(const TWord _pc, const TJitFunc& _f) const;
+		void exec(const TWord _pc, const TJitFunc& _f) const
+		{
+			_f(&getDspRegs(), _pc);
+		}
 
 		const JitDspMode& getMode() const
 		{
@@ -81,6 +84,8 @@ namespace dsp56k
 		{
 			return m_jit;
 		}
+
+		DspRegs& getDspRegs() const;
 
 	private:
 

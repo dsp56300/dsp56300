@@ -242,6 +242,7 @@ namespace dsp56k
 		dspAsm.clear();
 
 		// needed so that the dsp register is available
+		m_asm.mov(regDspPtr, g_funcArgGPs[0]);
 		dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(uint64_t));
 
 #ifdef HAVE_X86_64
@@ -688,6 +689,8 @@ namespace dsp56k
 		if(child || nonBranchChild)
 		{
 			lj = profileBegin("jump");
+			// first func arg needs to point to DspRegs*
+			asm_().mov(g_funcArgGPs[0], regDspPtr);
 		}
 
 		if (child)
@@ -848,14 +851,12 @@ namespace dsp56k
 			return getJumpTarget(tempReg, _child);
 		};
 
-		auto temp = initTemp();
-
 		if(_cc == JitCondCode::kMaxValue)
 		{
 #ifdef HAVE_ARM64
-			m_asm.br(temp);
+			m_asm.br(initTemp());
 #else
-			m_asm.jmp(temp);
+			m_asm.jmp(initTemp());
 #endif
 		}
 		else
@@ -866,10 +867,10 @@ namespace dsp56k
 
 #ifdef HAVE_ARM64
 			m_asm.b(cc, l);
-			m_asm.br(temp);
+			m_asm.br(initTemp());
 #else
 			m_asm.j(cc, l);
-			m_asm.jmp(temp);
+			m_asm.jmp(initTemp());
 #endif
 			m_asm.bind(l);
 		}
@@ -877,8 +878,8 @@ namespace dsp56k
 
 	void JitBlock::jumpToOneOf(const JitCondCode _ccTrue, const JitBlockRuntimeData* _childTrue, const JitBlockRuntimeData* _childFalse) const
 	{
-		auto regTrue = getJumpTarget(r64(g_funcArgGPs[1]), _childTrue);
-		auto regFalse = getJumpTarget(r64(g_funcArgGPs[2]), _childFalse);
+		auto regTrue = getJumpTarget(r64(regDspPtr == r64(g_funcArgGPs[1]) ? r64(g_funcArgGPs[3]) : r64(g_funcArgGPs[1])), _childTrue);
+		auto regFalse = getJumpTarget(r64(regDspPtr == r64(g_funcArgGPs[2]) ? r64(g_funcArgGPs[3]) : r64(g_funcArgGPs[2])), _childFalse);
 
 #ifdef HAVE_ARM64
 		m_asm.csel(regFalse, regTrue, regFalse, _ccTrue);
