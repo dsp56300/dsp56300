@@ -115,22 +115,23 @@ namespace dsp56k
 			return;
 		}
 
-		if (!m_ccr_update_clear)
+		/* the previous method was unreliable so we use a different approach now,but it is unclear if this is faster, it depends on the CPU
+		if (!m_ccr_update_clear && _bit != CCRB_Z)
 		{
 			const auto mask = static_cast<CCRMask>(1 << _bit);
 
 			ccr_clearDirty(mask);
 
+			auto sr = r32(m_dspRegs.getSR(JitDspRegs::ReadWrite));
+
 			const RegScratch r(m_block);
-
-			// this only works if the target bit in SR is currently 0. If m_ccr_update_clear
-			// is false, this is guaranteed, this is why this nice trick works
-			m_asm.lea(r32(r), asmjit::x86::ptr(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), 1 << _bit, 4));
-
-			m_asm.cmov(_cc, r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), r32(r));
+			m_asm.mov(r32(r), asmjit::Imm(1 << _bit));
+			m_asm.cmov(reverseCC(_cc), r32(r), sr);
+			m_asm.or_(sr, r32(r));
 
 			return;
 		}
+		*/
 
 		// setcc L 
 		const RegScratch r(m_block);
