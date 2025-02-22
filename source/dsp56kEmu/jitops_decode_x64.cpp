@@ -9,15 +9,9 @@
 
 namespace dsp56k
 {
-	asmjit::x86::CondCode JitOps::reverseCC(asmjit::x86::CondCode _cc)
+	asmjit::x86::CondCode JitOps::reverseCC(const asmjit::x86::CondCode _cc)
 	{
-		if (_cc == asmjit::x86::CondCode::kZero)		return asmjit::x86::CondCode::kNotZero;
-		if (_cc == asmjit::x86::CondCode::kNotZero)		return asmjit::x86::CondCode::kZero;
-		if (_cc == asmjit::x86::CondCode::kP)			return asmjit::x86::CondCode::kNP;
-		if (_cc == asmjit::x86::CondCode::kNP)			return asmjit::x86::CondCode::kP;
-
-		assert(false && "invalid CC");
-		return _cc;
+		return negateCond(_cc);
 	}
 
 	asmjit::x86::CondCode JitOps::decode_cccc(TWord cccc)
