@@ -85,6 +85,32 @@ namespace dsp56k
 			return false;
 		}
 #elif defined(__APPLE__)
+		const auto max = sched_get_priority_max(SCHED_OTHER);
+		const auto min = sched_get_priority_min(SCHED_OTHER);
+		const auto normal = (max - min) >> 1;
+		const auto above = (max + normal) >> 1;
+		const auto below = (min + normal) >> 1;
+
+		int prio;
+		switch(_priority)
+		{
+		case ThreadPriority::Lowest:	prio = min; break;
+		case ThreadPriority::Low:		prio = below; break;
+		case ThreadPriority::Normal:	prio = normal; break;
+		case ThreadPriority::High:		prio = above; break;
+		case ThreadPriority::Highest:	prio = max; break;
+		default: return false;
+		}
+
+		sched_param sch_params;
+		sch_params.sched_priority = prio;
+
+		const auto id = pthread_self();
+
+		const auto result = pthread_setschedparam(id, SCHED_OTHER, &sch_params);
+		if(result)
+			LOG("Failed to set thread priority to " << prio << ", error code " << result);
+
 		if (_priority == ThreadPriority::Highest)
 		{
 			pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
