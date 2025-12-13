@@ -3,7 +3,7 @@
 #pragma once
 
 #include "esxi.h"
-#include "logging.h"
+#include "dsp56kBase/logging.h"
 #include "bitfield.h"
 
 namespace dsp56k

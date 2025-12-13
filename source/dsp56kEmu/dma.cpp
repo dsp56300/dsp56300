@@ -3,7 +3,6 @@
 // DSP56300FM.pdf chapter 10 (page 181 ff)
 
 #include "dsp.h"
-#include "logging.h"
 #include "peripherals.h"
 #include "utils.h"
 
@@ -12,6 +11,7 @@
 #include "interrupts.h"
 
 #if 0
+#include "dsp56kBase/logging.h"
 #define LOGDMA(S) LOG(S)
 #else
 #define LOGDMA(S) do{}while(0)

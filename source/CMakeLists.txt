@@ -3,11 +3,13 @@ set(ASMJIT_STATIC TRUE)
 option(DSP56300_DEBUGGER "Build wxWidgets based debugger" OFF)
 
 add_subdirectory(asmjit)
+add_subdirectory(dsp56kBase)
 add_subdirectory(dsp56kEmu)
 add_subdirectory(dsp56kTestRunner)
 add_subdirectory(disassemble)
 
 set_property(TARGET asmjit PROPERTY FOLDER "dsp56300")
+set_property(TARGET dsp56kBase PROPERTY FOLDER "dsp56300")
 set_property(TARGET dsp56kEmu PROPERTY FOLDER "dsp56300")
 set_property(TARGET dsp56kTestRunner PROPERTY FOLDER "dsp56300")
 set_property(TARGET dsp56kDisassemble PROPERTY FOLDER "dsp56300")

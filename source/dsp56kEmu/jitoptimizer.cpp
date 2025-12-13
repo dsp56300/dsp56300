@@ -1,6 +1,6 @@
 #include "jitoptimizer.h"
 
-#include "logging.h"
+#include "dsp56kBase/logging.h"
 
 #include <asmjit/asmjit.h>
 

@@ -35,9 +35,8 @@ hdi08queue.cpp hdi08queue.h
 hi08.h
 instructioncache.cpp instructioncache.h
 interpreterunittests.cpp interpreterunittests.h
-interrupts.h
-logging.cpp logging.h
 memory.cpp memory.h
+interrupts.h
 memorybuffer.cpp memorybuffer.h
 omfloader.cpp omfloader.h
 opcodes.cpp opcodes.h
@@ -51,7 +50,6 @@ registers.cpp registers.h
 ringbuffer.h
 semaphore.h
 staticArray.h
-threadtools.cpp threadtools.h
 timers.cpp timers.h
 trigger.cpp trigger.h
 types.cpp types.h
@@ -130,7 +128,7 @@ if(UNIX AND NOT APPLE)
 	target_compile_definitions(dsp56kEmu PRIVATE DSP56K_USE_PERF_JIT_PROFILING)
 endif()
 
-target_link_libraries(dsp56kEmu PUBLIC asmjit)
+target_link_libraries(dsp56kEmu PUBLIC dsp56kBase asmjit)
 
 if(DSP56300_DEBUGGER)
 	target_compile_definitions(dsp56kEmu PUBLIC DSP56300_DEBUGGER=1)

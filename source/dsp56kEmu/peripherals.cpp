@@ -4,7 +4,6 @@
 #include "disasm.h"
 #include "dsp.h"
 #include "interrupts.h"
-#include "logging.h"
 
 namespace dsp56k
 {

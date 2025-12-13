@@ -3,7 +3,7 @@
 #include <ios>
 
 #include "dsp.h"
-#include "logging.h"
+#include "dsp56kBase/logging.h"
 
 #include "peripherals.h"
 

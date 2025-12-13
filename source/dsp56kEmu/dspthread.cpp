@@ -5,7 +5,7 @@
 
 #include "debuggerinterface.h"
 #include "dsp.h"
-#include "threadtools.h"
+#include "dsp56kBase/threadtools.h"
 
 #if DSP56300_DEBUGGER
 #include "dsp56kDebugger/debugger.h"

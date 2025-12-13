@@ -4,7 +4,7 @@
 
 #include "disasm.h"
 #include "dsp.h"
-#include "threadtools.h"
+#include "dsp56kBase/threadtools.h"
 
 #include "asmjit/core/codeholder.h"
 

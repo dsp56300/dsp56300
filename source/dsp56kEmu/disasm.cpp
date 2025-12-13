@@ -8,7 +8,7 @@
 
 #include "aar.h"
 #include "interrupts.h"
-#include "logging.h"
+#include "dsp56kBase/logging.h"
 #include "memory.h"
 #include "peripherals.h"
 #include "registers.h"

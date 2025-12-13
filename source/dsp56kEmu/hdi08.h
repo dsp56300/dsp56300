@@ -8,7 +8,6 @@
 #include "types.h"
 #include "ringbuffer.h"
 #include "utils.h"
-#include "logging.h"
 #include "dma.h"
 
 namespace dsp56k

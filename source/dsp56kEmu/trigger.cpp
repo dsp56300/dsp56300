@@ -1,6 +1,6 @@
 #include "trigger.h"
 
-#include "logging.h"
+#include "dsp56kBase/logging.h"
 #include "win8sync.h"
 
 namespace dsp56k

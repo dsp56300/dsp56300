@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../dsp56kEmu/logging.h"
+#include "dsp56kBase/logging.h"
 
 #include <string>
 #include <map>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "dspassert.h"
-#include "logging.h"
+#include "dsp56kBase/logging.h"
 
 namespace dsp56k
 {
