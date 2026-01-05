@@ -1,3 +1,7 @@
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
+
 #include "threadtools.h"
 
 #include "logging.h"
@@ -12,6 +16,8 @@
 #	include <pthread.h>
 #	include <sched.h>
 #	include <sys/resource.h>
+#	include <sys/syscall.h>
+#	include <unistd.h>
 #	include <string.h>	// strerror
 #endif
 
@@ -121,22 +127,30 @@ namespace dsp56k
 			pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
 		}
 #else
-		if (_priority == ThreadPriority::Highest)
+		// On Linux we adjust the 'nice' value of the thread
+		int prio;
+		switch (_priority)
 		{
-			// Linux SCHED_RR real-time (requires CAP_SYS_NICE)
-	        sched_param sch_params;
-	        sch_params.sched_priority = 10; // small RT priority
-	        auto result = pthread_setschedparam(pthread_self(), SCHED_RR, &sch_params);
-	        if (result != 0)
-	        {
-				LOG("pthread_setschedparam failed, error " << result << ": " << strerror(result));
-	        }
-			LOG("Success setting thread to real-time priority");
-	        return result == 0;
+			case ThreadPriority::Lowest:	prio = 15;
+			case ThreadPriority::Low:		prio = 10;
+			case ThreadPriority::Normal:	prio = 0;
+			case ThreadPriority::High:		prio = -5;
+			case ThreadPriority::Highest:	prio = -10;
 		}
-		if (_priority == ThreadPriority::Low || _priority == ThreadPriority::Lowest)
+#ifdef PRIO_THREAD
+		const auto result = setpriority(PRIO_THREAD, 0, prio);
+#else
+		const auto tid = syscall(SYS_gettid);
+		if (!tid)
 		{
-			setpriority(PRIO_PROCESS, 0, 10);
+			LOG("Failed to get thread id for setting priority");
+			return false;
+		}
+		const auto result = setpriority(PRIO_PROCESS, tid, prio);
+#endif
+		if (result != 0)
+		{
+			LOG("Failed to set thread priority to " << prio << ", error code " << result);
 		}
 #endif
 		return true;
