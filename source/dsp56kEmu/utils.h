@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bitfield.h"
+#include "dsp56kBase/bitfield.h"
 #include "types.h"
 
 //#include "buildconfig.h"

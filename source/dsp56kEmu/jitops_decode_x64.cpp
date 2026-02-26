@@ -2,7 +2,7 @@
 
 #ifdef HAVE_X86_64
 
-#include "dspassert.h"
+#include "dsp56kBase/dspassert.h"
 
 #include "jitops.h"
 #include "asmjit/core/operand.h"

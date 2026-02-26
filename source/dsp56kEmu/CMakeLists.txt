@@ -7,13 +7,9 @@ set(SOURCES
 aar.h
 agu.cpp agu.h
 audio.cpp audio.h
-bitfield.h
-buildconfig.h
-conditionvariable.cpp conditionvariable.h
 debuggerinterface.cpp debuggerinterface.h
 disasm.cpp disasm.h
 dma.cpp dma.h
-dspassert.cpp dspassert.h
 dspconfig.h
 dsplistener.h
 dspregs.h
@@ -28,7 +24,6 @@ esai.cpp esai.h
 esaiclock.cpp esaiclock.h
 essi.cpp essi.h
 esxi.cpp esxi.h
-fastmath.h
 gpio.cpp gpio.h
 hdi08.cpp hdi08.h
 hdi08queue.cpp hdi08queue.h
@@ -47,15 +42,10 @@ opcodeinfo.h
 opcodetypes.h
 peripherals.cpp peripherals.h
 registers.cpp registers.h
-ringbuffer.h
-semaphore.h
-staticArray.h
 timers.cpp timers.h
-trigger.cpp trigger.h
 types.cpp types.h
 unittests.cpp unittests.h
 utils.cpp utils.h
-win8sync.cpp win8sync.h
 )
 
 set(SOURCES_JIT

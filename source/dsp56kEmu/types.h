@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include "dspassert.h"
+#include "dsp56kBase/dspassert.h"
 
 #ifndef CHAR_BIT
 #define CHAR_BIT 8

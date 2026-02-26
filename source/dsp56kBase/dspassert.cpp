@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "dsp56kBase/logging.h"
+#include "logging.h"
 
 #ifndef _WIN32
 #ifndef ANDROID

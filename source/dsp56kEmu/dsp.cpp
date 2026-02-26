@@ -121,7 +121,7 @@ namespace dsp56k
 		iprc(0);
 		iprp(0);
 
-		// TODO: The Bus Control Register (BCR), the Address Attribute Registers (AAR3–AAR0) and the DRAM Control Register (DCR) are set to their initial values as described in Chapter 9, External Memory Interface (Port A). The initial value causes a maximum number of wait states to be added to every external memory access.
+		// TODO: The Bus Control Register (BCR), the Address Attribute Registers (AAR3ï¿½AAR0) and the DRAM Control Register (DCR) are set to their initial values as described in Chapter 9, External Memory Interface (Port A). The initial value causes a maximum number of wait states to be added to every external memory access.
 
 		reg.sp = TReg24(int(0));
 		reg.sc = TReg5(char(0));
@@ -250,7 +250,7 @@ namespace dsp56k
 
 				// 1.The PC (containing the return address) and the SR are stacked.
 				// 2.The Loop Flag is cleared.
-				// 3.The Scaling mode bits (S[1–0]) in the Status Register (SR) are cleared.
+				// 3.The Scaling mode bits (S[1ï¿½0]) in the Status Register (SR) are cleared.
 				// 4.The Sixteen-bit Arithmetic (SA) mode bit is cleared.
 				// 5.The IPL is raised to disallow further interrupts of the same or lower levels.
 
@@ -1186,7 +1186,7 @@ namespace dsp56k
 		d |= masked;
 
 		sr_toggle(CCRB_N, bitvalue<uint64_t, 47>(d));	// Set if bit 47 of the result is set
-		sr_toggle(CCR_Z, masked == 0);					// Set if bits 47–24 of the result are 0
+		sr_toggle(CCR_Z, masked == 0);					// Set if bits 47ï¿½24 of the result are 0
 		sr_clear(CCR_V);								// Always cleared
 		//sr_s_update();								// Changed according to the standard definition
 		//sr_l_update_by_v();							// Changed according to the standard definition

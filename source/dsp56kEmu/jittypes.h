@@ -1,6 +1,6 @@
 #pragma once
 
-#include "buildconfig.h"
+#include "dsp56kBase/buildconfig.h"
 #include "types.h"
 
 // set to 1 to compile for ARM even if on an x64 system

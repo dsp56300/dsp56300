@@ -6,7 +6,7 @@
 
 #include "opcodetypes.h"
 #include "types.h"
-#include "ringbuffer.h"
+#include "dsp56kBase/ringbuffer.h"
 #include "utils.h"
 #include "dma.h"
 

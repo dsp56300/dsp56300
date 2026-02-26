@@ -1,6 +1,6 @@
 #pragma once
 
-#include "buildconfig.h"
+#include "dsp56kBase/buildconfig.h"
 
 namespace dsp56k
 {

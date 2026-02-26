@@ -2,7 +2,7 @@
 
 #ifdef HAVE_ARM64
 
-#include "dspassert.h"
+#include "dsp56kBase/dspassert.h"
 
 #include "jitops.h"
 #include "asmjit/core/operand.h"

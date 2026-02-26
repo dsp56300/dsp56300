@@ -9,7 +9,7 @@
 #include "opcodetypes.h"
 #include "timers.h"
 #include "types.h"
-#include "staticArray.h"
+#include "dsp56kBase/staticArray.h"
 
 namespace dsp56k
 {

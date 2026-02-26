@@ -4,7 +4,7 @@
 #include "jitemitter.h"
 #include "jitblockruntimedata.h"
 
-#include "dspassert.h"
+#include "dsp56kBase/dspassert.h"
 
 #include "asmjit/core/builder.h"
 

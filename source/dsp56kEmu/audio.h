@@ -6,8 +6,8 @@
 #include <array>
 #include <cstring> // memcpy
 
-#include "fastmath.h"
-#include "ringbuffer.h"
+#include "dsp56kBase/fastmath.h"
+#include "dsp56kBase/ringbuffer.h"
 #include "utils.h"
 
 namespace dsp56k

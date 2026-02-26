@@ -4,8 +4,18 @@ project(dsp56kBase)
 add_library(dsp56kBase)
 
 set(SOURCES
+bitfield.h
+buildconfig.h
+conditionvariable.cpp conditionvariable.h
+dspassert.cpp dspassert.h
+fastmath.h
 logging.cpp logging.h
+ringbuffer.h
+semaphore.h
+staticArray.h
 threadtools.cpp threadtools.h
+trigger.cpp trigger.h
+win8sync.cpp win8sync.h
 )
 
 target_sources(dsp56kBase PRIVATE ${SOURCES})

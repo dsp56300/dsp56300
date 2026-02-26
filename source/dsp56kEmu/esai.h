@@ -4,7 +4,7 @@
 
 #include "esxi.h"
 #include "dsp56kBase/logging.h"
-#include "bitfield.h"
+#include "dsp56kBase/bitfield.h"
 
 namespace dsp56k
 {
