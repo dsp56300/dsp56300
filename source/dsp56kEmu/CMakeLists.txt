@@ -19,6 +19,7 @@ dsp_jumptable.inl
 dsp_ops.inl dsp_ops_helper.inl 
 dsp_ops_alu.inl dsp_ops_bra.inl dsp_ops_jmp.inl dsp_ops_move.inl
 dspthread.cpp dspthread.h
+dspBootCode.cpp dspBootCode.h
 error.cpp error.h
 esai.cpp esai.h
 esaiclock.cpp esaiclock.h
@@ -27,6 +28,7 @@ esxi.cpp esxi.h
 gpio.cpp gpio.h
 hdi08.cpp hdi08.h
 hdi08queue.cpp hdi08queue.h
+haltDSP.cpp haltDSP.h
 hi08.h
 instructioncache.cpp instructioncache.h
 interpreterunittests.cpp interpreterunittests.h
