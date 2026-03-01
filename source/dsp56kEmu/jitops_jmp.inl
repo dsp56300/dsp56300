@@ -126,7 +126,15 @@ namespace dsp56k
 			bitTestMemory<Inst>(_op, BitValue, _toFalse);
 		}, [&]()
 		{
-			jumpOrJSR<Bmode>(a);
+			// seen in the wild:
+			// jsclr #M_RDF,x:M_SSISR1,*    ; wait for data
+			// This is clearly a bug, a jump to subroutine is wrong, do a regular jump to prevent stack mess
+			if constexpr (Bmode == Jump)
+				jumpOrJSR<Jump>(a);
+			else if (m_pcCurrentOp == addr)
+				jumpOrJSR<Jump>(a);
+			else
+				jumpOrJSR<JSR>(a);
 		}, Bmode == JSR);
 	}
 
