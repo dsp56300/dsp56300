@@ -204,10 +204,12 @@ namespace dsp56k
 		std::string getCrbAsString() const;
 
 		const auto& getSR() const { return m_sr; }
+		const auto& getCRA() const { return m_cra; }
+		const auto& getCRB() const { return m_crb; }
+		TWord getTxWordCount() const;
+		TWord getRxWordCount() const;
 
 	private:
-		TWord getRxWordCount() const;
-		TWord getTxWordCount() const;
 
 		void injectInterrupt(TWord _interrupt) const;
 		void readSlotFromFrame();
