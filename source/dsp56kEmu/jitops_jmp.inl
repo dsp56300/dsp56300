@@ -23,7 +23,7 @@ namespace dsp56k
 		DspValue a(m_block, addr, DspValue::Immediate24);
 
 		DSPReg pc(m_block, PoolReg::DspPC, true, true);
-		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
+		If(m_block, m_blockRuntimeData, [&](const auto& _toFalse)
 		{
 			bitTestMemory<Inst>(op, BitValue, _toFalse);
 		}, [&]()
@@ -43,7 +43,7 @@ namespace dsp56k
 		decode_dddddd_read(r, dddddd);
 
 		DSPReg pc(m_block, PoolReg::DspPC, true, true);
-		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
+		If(m_block, m_blockRuntimeData, [&](const auto& _toFalse)
 		{
 			bitTest<Inst>(op, r, BitValue, _toFalse);
 		}, [&]()
@@ -121,7 +121,7 @@ namespace dsp56k
 		DspValue a(m_block, addr, DspValue::Immediate24);
 
 		DSPReg pc(m_block, PoolReg::DspPC, true, true);
-		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
+		If(m_block, m_blockRuntimeData, [&](const auto& _toFalse)
 		{
 			bitTestMemory<Inst>(_op, BitValue, _toFalse);
 		}, [&]()
@@ -138,7 +138,7 @@ namespace dsp56k
 		const auto dddddd = getFieldValue<Inst,Field_DDDDDD>(op);
 
 		DSPReg pc(m_block, PoolReg::DspPC, true, true);
-		If(m_block, m_blockRuntimeData, [&](auto _toFalse)
+		If(m_block, m_blockRuntimeData, [&](const auto& _toFalse)
 		{
 			DspValue r(m_block);
 			decode_dddddd_read(r, dddddd);
