@@ -500,7 +500,7 @@ namespace dsp56k
 
 		if((m_writtenTX & tem) != tem)
 		{
-			LOGESSI("Transmit underrun, written is " << HEX(m_writtenTX) << ", enabled is " << HEX(tem));
+//			LOGESSI("Transmit underrun, written is " << HEX(m_writtenTX) << ", enabled is " << HEX(tem));
 			m_sr.set(RegSSISRbits::SSISR_TUE);
 		}
 
