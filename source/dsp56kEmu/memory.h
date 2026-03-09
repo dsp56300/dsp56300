@@ -103,7 +103,7 @@ namespace dsp56k
 		void				getOpcode			( TWord _offset, TWord& _wordA, TWord& _wordB ) const;
 
 		bool				save				(const char* _file, EMemArea _area) const;
-		bool				saveAssembly		(const char* _file, TWord _offset, const TWord _count, bool _skipNops = true, bool _skipDC = false, IPeripherals* _peripheralsX = nullptr, IPeripherals* _peripheralsY = nullptr) const;
+		bool				saveAssembly		(const char* _file, TWord _offset, const TWord _count, bool _skipNops = true, bool _skipDC = false, const IPeripherals* _peripheralsX = nullptr, const IPeripherals* _peripheralsY = nullptr) const;
 
 		bool				saveAsText			(const char* _file, EMemArea _area, const TWord _offset, const TWord _count) const;
 

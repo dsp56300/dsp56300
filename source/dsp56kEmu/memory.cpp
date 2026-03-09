@@ -257,7 +257,7 @@ namespace dsp56k
 		return true;
 	}
 
-	bool Memory::saveAssembly(const char* _file, TWord _offset, const TWord _count, bool _skipNops, bool _skipDC, IPeripherals* _peripheralsX, IPeripherals* _peripheralsY) const
+	bool Memory::saveAssembly(const char* _file, TWord _offset, const TWord _count, bool _skipNops, bool _skipDC, const IPeripherals* _peripheralsX, const IPeripherals* _peripheralsY) const
 	{
 		std::ofstream out(_file, std::ios::trunc);
 
