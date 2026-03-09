@@ -1,8 +1,20 @@
+#include "dsp.h"
 #include "jitconfig.h"
 #include "jitops.h"
 
 namespace dsp56k
 {
+	namespace
+	{
+#ifdef HAVE_X86_64
+		bool dumpMemory(const DSP* _dsp, TWord _pc)
+		{
+			std::stringstream ss;
+			ss << "dsp_dynamicPeripheralAccess_" << HEX(_pc) << ".asm";
+			return _dsp->memory().saveAssembly(ss.str().c_str(), 0, _dsp->memory().sizeP(), true, false, _dsp->getPeriph(0), _dsp->getPeriph(1));
+		}
+#endif
+	}
 	void JitOps::debugDynamicPeripheralAddressing(const JitRegGP& _offset) const
 	{
 #ifdef HAVE_X86_64
@@ -12,6 +24,9 @@ namespace dsp56k
 		const SkipLabel skip(m_block.asm_());
 		m_asm.cmp(r32(_offset), asmjit::Imm(getPeriphStartAddr()));
 		m_asm.jl(skip);
+		m_asm.mov(g_funcArgGPs[0], &m_block.dsp());
+		m_asm.mov(g_funcArgGPs[1], m_pcCurrentOp);
+		m_block.stack().call(reinterpret_cast<const void*>(dumpMemory));
 		m_asm.int3();
 		m_asm.nop(ptr(JitReg64(0), static_cast<int>(m_pcCurrentOp)));
 #endif
