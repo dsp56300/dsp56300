@@ -412,6 +412,8 @@ namespace dsp56k
 		case Esai::M_RX3:	return m_esai.readRX(_addr - Esai::M_RX0);
 		case Esai::M_TSMA:	return m_esai.readTSMA();
 		case Esai::M_TSMB:	return m_esai.readTSMB();
+		case Esai::M_RSMA:	return m_esai.readRSMA();
+		case Esai::M_RSMB:	return m_esai.readRSMB();
 		case Esai::M_PCRC:	return m_portC.getControl();
 		case Esai::M_PDRC:	return m_portC.dspRead();
 		case Esai::M_PRRC:	return m_portC.getDirection();
@@ -607,6 +609,8 @@ namespace dsp56k
 		case Esai::M_TX5:			m_esai.writeTX(_addr - Esai::M_TX0, _val);			return;
 		case Esai::M_TSMA:			m_esai.writeTSMA(_val);								return;
 		case Esai::M_TSMB:			m_esai.writeTSMB(_val);								return;
+		case Esai::M_RSMA:			m_esai.writeRSMA(_val);								return;
+		case Esai::M_RSMB:			m_esai.writeRSMB(_val);								return;
 		case Esai::M_PCRC:			m_portC.setControl(_val);							return;
 		case Esai::M_PDRC:			m_portC.dspWrite(_val);								return;
 		case Esai::M_PRRC:			m_portC.setDirection(_val);							return;
@@ -757,6 +761,8 @@ namespace dsp56k
 		case Esai::M_RX3_1:			return m_esai.readRX(_addr - Esai::M_RX0_1);
 		case Esai::M_TSMA_1:		return m_esai.readTSMA();
 		case Esai::M_TSMB_1:		return m_esai.readTSMB();
+		case Esai::M_RSMA_1:		return m_esai.readRSMA();
+		case Esai::M_RSMB_1:		return m_esai.readRSMB();
 		default:
 			return m_mem[_addr - XIO_Reserved_High_First];
 		}
@@ -780,6 +786,8 @@ namespace dsp56k
 		case Esai::M_TX5_1:		m_esai.writeTX(_addr - Esai::M_TX0_1, _val);		return;
 		case Esai::M_TSMA_1:	m_esai.writeTSMA(_val);								return;
 		case Esai::M_TSMB_1:	m_esai.writeTSMB(_val);								return;
+		case Esai::M_RSMA_1:	m_esai.writeRSMA(_val);								return;
+		case Esai::M_RSMB_1:	m_esai.writeRSMB(_val);								return;
 		default:
 			break;
 		}
