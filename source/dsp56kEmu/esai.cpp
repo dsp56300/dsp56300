@@ -31,8 +31,11 @@ namespace dsp56k
 		if(!tem)
 			return;
 
+		const auto slotActive = isTxSlotActive(m_txSlotCounter);
+
 		// note that this transfers the data in TX that has been written to it before
-		writeSlotToFrame();
+		if(slotActive)
+			writeSlotToFrame();
 
 		if (0 == m_txSlotCounter)
 			m_sr.set(M_TFS);
@@ -54,6 +57,9 @@ namespace dsp56k
 				injectInterrupt(Vba_ESAI_Transmit_Last_Slot);
 		}
 
+		if(!slotActive)
+			return;
+
 		if (m_sr.test(M_TUE) && m_tcr.test(M_TEIE))
 		{
 			injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
@@ -73,21 +79,27 @@ namespace dsp56k
 		if(!rem)
 			return;
 
-		readSlotFromFrame();
+		const auto slotActive = isRxSlotActive(m_rxSlotCounter);
+
+		if(slotActive)
+			readSlotFromFrame();
 
 		if (0 == m_rxSlotCounter)
 			m_sr.set(M_RFS);
 		else
 			m_sr.clear(M_RFS);
 
-		if (m_sr.test(M_ROE) && m_rcr.test(M_REIE))
+		if(slotActive)
 		{
-			injectInterrupt(Vba_ESAI_Receive_Data_With_Exception_Status);
-			m_sr.clear(M_ROE);
-		}
-		else if (m_rcr.test(M_RIE))
-		{
-			injectInterrupt(Vba_ESAI_Receive_Data);
+			if (m_sr.test(M_ROE) && m_rcr.test(M_REIE))
+			{
+				injectInterrupt(Vba_ESAI_Receive_Data_With_Exception_Status);
+				m_sr.clear(M_ROE);
+			}
+			else if (m_rcr.test(M_RIE))
+			{
+				injectInterrupt(Vba_ESAI_Receive_Data);
+			}
 		}
 
 		++m_rxSlotCounter;
@@ -164,12 +176,6 @@ namespace dsp56k
 	void Esai::writeTX(uint32_t _index, TWord _val)
 	{
 		m_tx[_index] = _val;
-//		LOG(HEX(&m_periph.getDSP()) << " ESAI " << g_memAreaNames[m_area] << " write TX " << _index);
-
-//		const auto enabled = outputEnabled(_index);
-
-//		if(enabled && (m_writtenTX & (1<<_index)))
-//			LOG(HEX(&m_periph.getDSP()) << " ESAI " << g_memAreaNames[m_area] << " TX " << _index << " written twice");
 
 		m_writtenTX |= (1<<_index);
 
@@ -327,6 +333,16 @@ namespace dsp56k
 	void Esai::writeTSMB(const TWord _tsmb)
 	{
 		m_tsmb = _tsmb;
+	}
+
+	void Esai::writeRSMA(const TWord _rsma)
+	{
+		m_rsma = _rsma;
+	}
+
+	void Esai::writeRSMB(const TWord _rsmb)
+	{
+		m_rsmb = _rsmb;
 	}
 
 	void Esai::setSymbols(Disassembler& _disasm, EMemArea _area)
