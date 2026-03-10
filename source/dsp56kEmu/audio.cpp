@@ -4,6 +4,8 @@ namespace dsp56k
 {
 	void Audio::terminate()
 	{
+		setCallback([](Audio* ) {  }, 0);
+
 		while(true)
 		{
 			if(!m_audioOutputs.empty())
