@@ -6,6 +6,8 @@ add_library(dsp56kEmu)
 set(SOURCES
 aar.h
 agu.cpp agu.h
+assembler.cpp assembler.h
+assemblertest.cpp assemblertest.h
 audio.cpp audio.h
 debuggerinterface.cpp debuggerinterface.h
 disasm.cpp disasm.h
