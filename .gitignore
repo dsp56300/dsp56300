@@ -5,3 +5,4 @@ bin/*.exe
 *.ilk
 *.pdb
 *.user
+CMakeUserPresets.json

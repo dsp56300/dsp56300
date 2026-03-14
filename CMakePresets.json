@@ -1,0 +1,61 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/temp/cmake_${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
+      "hidden": true
+    },
+    {
+      "name": "default",
+      "inherits": "base"
+    },
+    {
+      "name": "windows-x64",
+      "inherits": "default",
+      "displayName": "Windows default x64 configuration",
+      "architecture": "x64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-arm64",
+      "inherits": "windows-x64",
+      "displayName": "Windows default ARM64 configuration",
+      "architecture": "ARM64"
+    },
+    {
+      "name": "macos",
+      "generator": "Xcode",
+      "inherits": "default",
+      "displayName": "MacOS default configuration",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-x64",
+      "inherits": "default",
+      "configurePreset": "windows-x64"
+    },
+    {
+      "name": "macos",
+      "inherits": "default",
+      "configurePreset": "macos"
+    }
+  ]
+}
