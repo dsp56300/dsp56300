@@ -21,6 +21,7 @@ namespace dsp56k
 		testLoopInstructions();
 		testMiscInstructions();
 		testParallelInstructions();
+		testPeripheralSymbols();
 
 		std::cout << "Assembler tests: " << m_passCount << "/" << m_testCount << " passed";
 		if(m_failCount > 0)
@@ -463,5 +464,188 @@ namespace dsp56k
 		roundTrip(0x202a10);	// add b,a ifeq
 		roundTrip(0x203115);	// cmp b,a ifge.u (canonical JJJ=1)
 		roundTrip(0x20311d);	// cmp a,b ifge.u (canonical JJJ=1)
+	}
+
+	void AssemblerTest::testPeripheralSymbols()
+	{
+		// Test assembling with peripheral symbol names instead of hex addresses
+		Assembler assembler;
+
+		// Register some peripheral symbols (matching what peripherals.cpp does)
+		assembler.addSymbol(Assembler::MemX, 0xFFFFC7, "M_BCR");
+		assembler.addSymbol(Assembler::MemX, 0xFFFFFE, "M_IPRP");
+		assembler.addSymbol(Assembler::MemX, 0xFFFFFF, "M_IPRC");
+		assembler.addSymbol(Assembler::MemX, 0xFFFFF1, "M_PCTL");
+		assembler.addSymbol(Assembler::MemX, 0xFFFFF8, "M_AAR0");
+
+		// Register bit symbols for AAR0
+		assembler.addBitSymbol(Assembler::MemX, 0xFFFFF8, 0, "M_BAT0");
+		assembler.addBitSymbol(Assembler::MemX, 0xFFFFF8, 1, "M_BAT1");
+		assembler.addBitSymbol(Assembler::MemX, 0xFFFFF8, 3, "M_BPEN");
+
+		auto verify = [&](const char* asmText, TWord expectedA, TWord expectedB = 0)
+		{
+			++m_testCount;
+			const auto result = assembler.assemble(asmText);
+			const auto expectedWords = (expectedB != 0) ? 2u : 1u;
+
+			if (!result.success() || result.wordCount != expectedWords || result.word[0] != expectedA || (expectedWords == 2 && result.word[1] != expectedB))
+			{
+				++m_failCount;
+				std::cout << "FAIL (sym): \"" << asmText << "\" -> ";
+				if (!result.success())
+					std::cout << "assemble error " << static_cast<int>(result.error);
+				else
+					std::cout << "0x" << std::hex << result.word[0] << std::dec;
+				std::cout << " (expected 0x" << std::hex << expectedA << std::dec << ")" << std::endl;
+				return;
+			}
+			++m_passCount;
+		};
+
+		// Test movep with peripheral symbols (Movep_Spp: x:<symbol,reg)
+		// M_BCR = 0xFFFFC7, pp = 0xFFFFC7 - 0xFFFFC0 = 7
+		// bclr #$0,x:<<M_BCR → should match bclr #$0,x:<<$ffffc7
+		// For Bclr_pp with bit=0, area=X, pp=7: pattern 0000101010pppppp → 0x0A8007 with bbbbb=0
+		// Actually let me compute: Bclr_pp pattern = "0000101011pppppp0Sbbbbb"
+		// Wait, that doesn't look right. Let me just compare against known hex-based assembly.
+
+		// Instead of manually computing, assemble with hex and compare with symbol:
+		{
+			// movep with M_PCTL symbol: Movep_Spp uses x:<addr format
+			// M_PCTL = 0xFFFFF1, pp = 0xFFFFF1 - 0xFFFFC0 = 0x31
+			// "movep x0,x:<$fffff1" vs "movep x0,x:<M_PCTL"
+			Assembler hexAsm;
+			const auto hexResult = hexAsm.assemble("movep x0,x:<$fffff1");
+			if (hexResult.success())
+				verify("movep x0,x:<M_PCTL", hexResult.word[0], hexResult.wordCount > 1 ? hexResult.word[1] : 0);
+		}
+
+		{
+			// movep with M_BCR symbol: Movep_Spp
+			// M_BCR = 0xFFFFC7, pp = 7
+			Assembler hexAsm;
+			const auto hexResult = hexAsm.assemble("movep x0,x:<$ffffc7");
+			if (hexResult.success())
+				verify("movep x0,x:<M_BCR", hexResult.word[0], hexResult.wordCount > 1 ? hexResult.word[1] : 0);
+		}
+
+		{
+			// movep with M_IPRC symbol via Movep_SXqq (x:<<addr format)
+			// M_IPRC = 0xFFFFFF, qq = 0xFFFFFF - 0xFFFF80 = 0x7F
+			// But qq > 0x3F means this is actually pp range, not qq
+			// M_IPRP = 0xFFFFFE, in pp range
+			Assembler hexAsm;
+			const auto hexResult = hexAsm.assemble("movep x0,x:<$fffffe");
+			if (hexResult.success())
+				verify("movep x0,x:<M_IPRP", hexResult.word[0], hexResult.wordCount > 1 ? hexResult.word[1] : 0);
+		}
+
+		{
+			// bclr with peripheral symbol address: bclr #$0,x:<<$fffff8 → bclr #$0,x:<<M_AAR0
+			// M_AAR0 = 0xFFFFF8, which is pp range (>= 0xFFFFC0)
+			Assembler hexAsm;
+			const auto hexResult = hexAsm.assemble("bclr #$0,x:<<$fffff8");
+			if (hexResult.success())
+				verify("bclr #$0,x:<<M_AAR0", hexResult.word[0], hexResult.wordCount > 1 ? hexResult.word[1] : 0);
+		}
+
+		{
+			// bclr with BOTH peripheral symbol AND bit symbol:
+			// bclr #M_BPEN,x:<<M_AAR0  (bit 3 of AAR0)
+			Assembler hexAsm;
+			const auto hexResult = hexAsm.assemble("bclr #$3,x:<<$fffff8");
+			if (hexResult.success())
+				verify("bclr #M_BPEN,x:<<M_AAR0", hexResult.word[0], hexResult.wordCount > 1 ? hexResult.word[1] : 0);
+		}
+
+		{
+			// bset with bit symbol: bset #M_BAT0,x:<<M_AAR0
+			Assembler hexAsm;
+			const auto hexResult = hexAsm.assemble("bset #$0,x:<<$fffff8");
+			if (hexResult.success())
+				verify("bset #M_BAT0,x:<<M_AAR0", hexResult.word[0], hexResult.wordCount > 1 ? hexResult.word[1] : 0);
+		}
+
+		{
+			// btst with bit symbol: btst #M_BAT1,x:<<M_AAR0
+			Assembler hexAsm;
+			const auto hexResult = hexAsm.assemble("btst #$1,x:<<$fffff8");
+			if (hexResult.success())
+				verify("btst #M_BAT1,x:<<M_AAR0", hexResult.word[0], hexResult.wordCount > 1 ? hexResult.word[1] : 0);
+		}
+
+		// Full round-trip with symbols: disassemble with symbols → assemble with symbols → verify
+		{
+			Opcodes opcodes;
+			Disassembler disasm(opcodes);
+			// Register same symbols on the disassembler
+			disasm.addSymbol(Disassembler::MemX, 0xFFFFF8, "M_AAR0");
+			disasm.addBitMaskSymbol(Disassembler::MemX, 0xFFFFF8, 1 << 3, "M_BPEN");
+
+			// Disassemble a bclr #$3,x:<<$fffff8 opcode
+			// First, get the opcode from hex assembly
+			Assembler hexAsm;
+			const auto hexResult = hexAsm.assemble("bclr #$3,x:<<$fffff8");
+			if (hexResult.success())
+			{
+				// Disassemble with symbols
+				Disassembler::Line line;
+				disasm.disassemble(line, hexResult.word[0], 0, 0, 0, 0);
+				const auto text = Disassembler::formatLine(line, false);
+
+				// The disassembly should now use symbolic names
+				// Assemble it back using our symbol-aware assembler
+				const auto symResult = assembler.assemble(text.c_str());
+				++m_testCount;
+				if (symResult.success() && symResult.word[0] == hexResult.word[0])
+				{
+					++m_passCount;
+				}
+				else
+				{
+					++m_failCount;
+					std::cout << "FAIL (sym round-trip): \"" << text << "\" -> ";
+					if (!symResult.success())
+						std::cout << "assemble error " << static_cast<int>(symResult.error);
+					else
+						std::cout << "0x" << std::hex << symResult.word[0];
+					std::cout << " (expected 0x" << std::hex << hexResult.word[0] << ")" << std::dec << std::endl;
+				}
+			}
+		}
+
+		{
+			// Full round-trip for movep with symbol
+			Opcodes opcodes;
+			Disassembler disasm(opcodes);
+			disasm.addSymbol(Disassembler::MemX, 0xFFFFF1, "M_PCTL");
+
+			Assembler hexAsm;
+			const auto hexResult = hexAsm.assemble("movep x0,x:<$fffff1");
+			if (hexResult.success())
+			{
+				Disassembler::Line line;
+				disasm.disassemble(line, hexResult.word[0], 0, 0, 0, 0);
+				const auto text = Disassembler::formatLine(line, false);
+
+				const auto symResult = assembler.assemble(text.c_str());
+				++m_testCount;
+				if (symResult.success() && symResult.word[0] == hexResult.word[0])
+				{
+					++m_passCount;
+				}
+				else
+				{
+					++m_failCount;
+					std::cout << "FAIL (sym round-trip): \"" << text << "\" -> ";
+					if (!symResult.success())
+						std::cout << "assemble error " << static_cast<int>(symResult.error);
+					else
+						std::cout << "0x" << std::hex << symResult.word[0];
+					std::cout << " (expected 0x" << std::hex << hexResult.word[0] << ")" << std::dec << std::endl;
+				}
+			}
+		}
 	}
 }

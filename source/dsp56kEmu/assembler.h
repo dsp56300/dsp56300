@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -12,6 +13,8 @@
 
 namespace dsp56k
 {
+	class Disassembler;
+
 	enum class AssembleError
 	{
 		OK = 0,
@@ -45,6 +48,14 @@ namespace dsp56k
 		Assembler();
 
 		AssembleResult assemble(const char* _text) const;
+
+		// Symbol management
+		enum SymbolType { MemX, MemY, MemP, MemL, SymbolTypeCount };
+
+		void addSymbol(SymbolType _type, TWord _address, const std::string& _name);
+		void addBitSymbol(SymbolType _type, TWord _address, TWord _bit, const std::string& _name);
+		void addBitMaskSymbol(SymbolType _type, TWord _address, TWord _bitMask, const std::string& _name);
+		void importSymbolsFromDisassembler(const Disassembler& _disasm);
 
 	private:
 		using Tokens = std::vector<std::string>;
@@ -83,6 +94,10 @@ namespace dsp56k
 		static bool parseConditionCode(const std::string& _cc, TWord& _value);
 		static bool parseMemoryArea(const std::string& _area, EMemArea& _result);
 
+		// Symbol resolution
+		bool resolveSymbol(EMemArea _area, const std::string& _name, TWord& _address) const;
+		bool resolveBitSymbol(EMemArea _area, TWord _peripheralAddress, const std::string& _name, TWord& _bit) const;
+
 		// Addressing mode parsing
 		struct AddressingMode
 		{
@@ -108,5 +123,14 @@ namespace dsp56k
 
 		Opcodes m_opcodes;
 		std::unordered_map<std::string, std::vector<Instruction>> m_mnemonics;
+
+		// Symbol tables: name (case-insensitive, stored lowercase) → address
+		std::array<std::unordered_map<std::string, TWord>, SymbolTypeCount> m_symbols;
+		// Bit symbol tables: [symbolType][peripheralAddress] → map<name, bit>
+		struct BitSymbols
+		{
+			std::unordered_map<std::string, TWord> bits; // name → bit number
+		};
+		std::array<std::map<TWord, BitSymbols>, SymbolTypeCount> m_bitSymbols;
 	};
 }

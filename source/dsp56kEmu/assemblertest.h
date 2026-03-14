@@ -23,6 +23,7 @@ namespace dsp56k
 		void testLoopInstructions();
 		void testMiscInstructions();
 		void testParallelInstructions();
+		void testPeripheralSymbols();
 
 		uint32_t m_testCount = 0;
 		uint32_t m_passCount = 0;

@@ -7,6 +7,7 @@
 #include <sstream>
 #include <map>
 
+#include "disasm.h"
 #include "opcodefields.h"
 #include "opcodeinfo.h"
 #include "opcodes.h"
@@ -588,6 +589,91 @@ namespace dsp56k
 	Assembler::Assembler()
 	{
 		buildMnemonicTable();
+	}
+
+	// ============= Symbol management =============
+
+	void Assembler::addSymbol(SymbolType _type, TWord _address, const std::string& _name)
+	{
+		m_symbols[_type][toLower(_name)] = _address;
+	}
+
+	void Assembler::addBitSymbol(SymbolType _type, TWord _address, TWord _bit, const std::string& _name)
+	{
+		m_bitSymbols[_type][_address].bits[toLower(_name)] = _bit;
+	}
+
+	void Assembler::addBitMaskSymbol(SymbolType _type, TWord _address, TWord _bitMask, const std::string& _name)
+	{
+		// Find the bit position from the mask (find lowest set bit)
+		for (TWord b = 0; b < 24; ++b)
+		{
+			if (_bitMask == (1u << b))
+			{
+				addBitSymbol(_type, _address, b, _name);
+				return;
+			}
+		}
+		// If it's a multi-bit mask, store it as-is with a special encoding
+		m_bitSymbols[_type][_address].bits[toLower(_name)] = _bitMask;
+	}
+
+	void Assembler::importSymbolsFromDisassembler(const Disassembler& _disasm)
+	{
+		static constexpr std::pair<Disassembler::SymbolType, SymbolType> typeMap[] =
+		{
+			{Disassembler::MemX, MemX},
+			{Disassembler::MemY, MemY},
+			{Disassembler::MemP, MemP},
+			{Disassembler::MemL, MemL},
+		};
+
+		for (const auto& [disasmType, asmType] : typeMap)
+		{
+			const auto& symbols = _disasm.getSymbols(disasmType);
+			for (const auto& [address, name] : symbols)
+				addSymbol(asmType, address, name);
+		}
+	}
+
+	bool Assembler::resolveSymbol(EMemArea _area, const std::string& _name, TWord& _address) const
+	{
+		SymbolType type;
+		switch (_area)
+		{
+		case MemArea_X: type = MemX; break;
+		case MemArea_Y: type = MemY; break;
+		case MemArea_P: type = MemP; break;
+		default: return false;
+		}
+
+		const auto it = m_symbols[type].find(toLower(_name));
+		if (it == m_symbols[type].end())
+			return false;
+		_address = it->second;
+		return true;
+	}
+
+	bool Assembler::resolveBitSymbol(EMemArea _area, TWord _peripheralAddress, const std::string& _name, TWord& _bit) const
+	{
+		SymbolType type;
+		switch (_area)
+		{
+		case MemArea_X: type = MemX; break;
+		case MemArea_Y: type = MemY; break;
+		case MemArea_P: type = MemP; break;
+		default: return false;
+		}
+
+		const auto itAddr = m_bitSymbols[type].find(_peripheralAddress);
+		if (itAddr == m_bitSymbols[type].end())
+			return false;
+
+		const auto itBit = itAddr->second.bits.find(toLower(_name));
+		if (itBit == itAddr->second.bits.end())
+			return false;
+		_bit = itBit->second;
+		return true;
 	}
 
 	// ============= ALU encoding (parallel instructions, lower 8 bits) =============
@@ -1491,9 +1577,6 @@ namespace dsp56k
 			case Bchg_pp: case Bclr_pp: case Bset_pp: case Btst_pp:
 			{
 				if (ops.size() != 2) continue;
-				TWord b;
-				if (!parseImmediate(ops[0], b)) continue;
-				if (b > 23) continue;
 
 				const auto mem = toLower(ops[1]);
 				if (mem.size() < 4 || mem[1] != ':') continue;
@@ -1504,10 +1587,20 @@ namespace dsp56k
 				if (addrStr.substr(0, 2) != "<<") continue;
 				addrStr = addrStr.substr(2);
 				TWord addr;
-				if (!parseNumber(addrStr, addr)) continue;
+				if (!parseNumber(addrStr, addr) && !resolveSymbol(area, addrStr, addr)) continue;
 				if (addr < 0xFFFFC0) continue;
 				TWord pp = addr - 0xFFFFC0;
 				if (pp > 0x3F) continue;
+
+				// Parse bit number: either #$n or #SymbolName
+				TWord b;
+				if (!parseImmediate(ops[0], b))
+				{
+					auto bitName = ops[0];
+					if (!bitName.empty() && bitName[0] == '#') bitName = bitName.substr(1);
+					if (!resolveBitSymbol(area, addr, bitName, b)) continue;
+				}
+				if (b > 23) continue;
 
 				setFieldValue(word, inst, Field_bbbbb, b);
 				setFieldValue(word, inst, Field_pppppp, pp);
@@ -1522,9 +1615,6 @@ namespace dsp56k
 			case Bchg_qq: case Bclr_qq: case Bset_qq: case Btst_qq:
 			{
 				if (ops.size() != 2) continue;
-				TWord b;
-				if (!parseImmediate(ops[0], b)) continue;
-				if (b > 23) continue;
 
 				const auto mem = toLower(ops[1]);
 				if (mem.size() < 4 || mem[1] != ':') continue;
@@ -1535,9 +1625,19 @@ namespace dsp56k
 				if (addrStr.substr(0, 2) != "<<") continue;
 				addrStr = addrStr.substr(2);
 				TWord addr;
-				if (!parseNumber(addrStr, addr)) continue;
+				if (!parseNumber(addrStr, addr) && !resolveSymbol(area, addrStr, addr)) continue;
 				if (addr < 0xFFFF80 || addr >= 0xFFFFC0) continue;
 				TWord qq = addr - 0xFFFF80;
+
+				// Parse bit number: either #$n or #SymbolName
+				TWord b;
+				if (!parseImmediate(ops[0], b))
+				{
+					auto bitName = ops[0];
+					if (!bitName.empty() && bitName[0] == '#') bitName = bitName.substr(1);
+					if (!resolveBitSymbol(area, addr, bitName, b)) continue;
+				}
+				if (b > 23) continue;
 
 				setFieldValue(word, inst, Field_qqqqqq, qq);
 				setFieldValue(word, inst, Field_bbbbb, b);
@@ -2208,8 +2308,7 @@ namespace dsp56k
 
 				auto addrStr = periphStr.substr(4); // skip "x:<<"
 				TWord addr;
-				if (!parseNumber(addrStr, addr)) continue;
-				if (addr < 0xFFFF80) continue;
+				if (!parseNumber(addrStr, addr) && !resolveSymbol(area, addrStr, addr)) continue;
 				TWord qq = addr - 0xFFFF80;
 				if (qq > 0x3F) continue;
 
@@ -2233,11 +2332,23 @@ namespace dsp56k
 				if (ops.size() != 2) continue;
 
 				int periphIdx = -1;
+				bool doubleChevron = false;
 				for (int i = 0; i < 2; ++i)
 				{
 					auto op = toLower(ops[i]);
-					if (op.size() > 3 && op[1] == ':' && op.substr(2, 1) == "<" && op.substr(2, 2) != "<<")
-						periphIdx = i;
+					if (op.size() > 3 && op[1] == ':')
+					{
+						if (op.substr(2, 2) == "<<")
+						{
+							periphIdx = i;
+							doubleChevron = true;
+						}
+						else if (op[2] == '<')
+						{
+							periphIdx = i;
+							doubleChevron = false;
+						}
+					}
 				}
 				if (periphIdx < 0) continue;
 
@@ -2248,10 +2359,9 @@ namespace dsp56k
 				EMemArea area;
 				if (!parseMemoryArea(std::string(1, periphStr[0]), area)) continue;
 
-				auto addrStr = periphStr.substr(3); // skip "x:<"
+				auto addrStr = periphStr.substr(doubleChevron ? 4 : 3); // skip "x:<<" or "x:<"
 				TWord addr;
-				if (!parseNumber(addrStr, addr)) continue;
-				if (addr < 0xFFFFC0) continue;
+				if (!parseNumber(addrStr, addr) && !resolveSymbol(area, addrStr, addr)) continue;
 				TWord pp = addr - 0xFFFFC0;
 				if (pp > 0x3F) continue;
 
@@ -2294,8 +2404,7 @@ namespace dsp56k
 
 				auto addrStr = periphStr.substr(4);
 				TWord addr;
-				if (!parseNumber(addrStr, addr)) continue;
-				if (addr < 0xFFFF80) continue;
+				if (!parseNumber(addrStr, addr) && !resolveSymbol(periphArea, addrStr, addr)) continue;
 				TWord qq = addr - 0xFFFF80;
 				if (qq > 0x3F) continue;
 
@@ -2359,8 +2468,7 @@ namespace dsp56k
 
 				auto ppAddrStr = periphStr.substr(3);
 				TWord ppAddr;
-				if (!parseNumber(ppAddrStr, ppAddr)) continue;
-				if (ppAddr < 0xFFFFC0) continue;
+				if (!parseNumber(ppAddrStr, ppAddr) && !resolveSymbol(periphArea, ppAddrStr, ppAddr)) continue;
 				TWord pp = ppAddr - 0xFFFFC0;
 				if (pp > 0x3F) continue;
 
