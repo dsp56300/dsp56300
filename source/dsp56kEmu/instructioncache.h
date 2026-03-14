@@ -1,6 +1,7 @@
 #pragma once
 
-#include "dsp56kBase/staticArray.h"
+#include <array>
+
 #include "types.h"
 
 namespace dsp56k
@@ -28,13 +29,13 @@ namespace dsp56k
 		//
 
 		// TAG fields for every sector
-		StaticArray< StaticArray< TWord, eSectorSize >, eNumSectors >	m_memory;
-		StaticArray< StaticArray< bool , eSectorSize >, eNumSectors >	m_validBits;
+		std::array< std::array< TWord, eSectorSize >, eNumSectors >	m_memory;
+		std::array< std::array< bool , eSectorSize >, eNumSectors >	m_validBits;
 
-		StaticArray< TWord     , eNumSectors >							m_tagRegister;
-		StaticArray< bool      , eNumSectors >							m_sectorLocked;
+		std::array< TWord     , eNumSectors >							m_tagRegister;
+		std::array< bool      , eNumSectors >							m_sectorLocked;
 
-		StaticArray< TSectorIdx, eNumSectors >							m_lruStack;	// 0 = MRU / 7 = LRU
+		std::array< TSectorIdx, eNumSectors >							m_lruStack;	// 0 = MRU / 7 = LRU
 
 		// _____________________________________________________________________________
 		// implementation
@@ -81,7 +82,7 @@ namespace dsp56k
 		{
 			const TWord check = _addr & eMaskTAG;
 
-			for( int i=0; i<m_tagRegister.eSize; ++i )
+			for( size_t i=0; i<m_tagRegister.size(); ++i )
 			{
 				if( m_tagRegister[i] == check )
 					return i;

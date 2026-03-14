@@ -147,7 +147,7 @@ namespace dsp56k
 			int64_t	val;
 		};
 
-		StaticArray<SRegState,Reg_COUNT>	m_prevRegStates;
+		std::array<SRegState,Reg_COUNT>	m_prevRegStates;
 
 		TraceMode m_trace = Disabled;
 

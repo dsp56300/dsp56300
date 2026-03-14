@@ -12,7 +12,6 @@ fastmath.h
 logging.cpp logging.h
 ringbuffer.h
 semaphore.h
-staticArray.h
 threadtools.cpp threadtools.h
 trigger.cpp trigger.h
 win8sync.cpp win8sync.h

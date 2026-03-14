@@ -121,7 +121,7 @@ namespace dsp56k
 	//
 	Peripherals56303::Peripherals56303()
 		: IPeripherals(PeripheralType::Peripherals56303)
-		, m_mem(0x0)
+		, m_mem{}
 		, m_dma(*this)
 		, m_essiClock(*this)
 		, m_essi0(*this, 0)
@@ -377,7 +377,7 @@ namespace dsp56k
 
 	Peripherals56362::Peripherals56362(Peripherals56367* _peripherals56367/* = nullptr*/)
 	: IPeripherals(PeripheralType::Peripherals56362)
-	, m_mem(0)
+	, m_mem{}
 	, m_dma(*this)
 	, m_esaiClock(*this)
 	, m_esai(*this, MemArea_X, &m_dma)

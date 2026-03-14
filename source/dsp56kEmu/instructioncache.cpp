@@ -155,7 +155,7 @@ namespace dsp56k
 
 		m_tagRegister[s] = tag;
 
-		for( int i=0; i<m_memory[s].eSize; ++i )
+		for( size_t i=0; i<m_memory[s].size(); ++i )
 		{
 			m_validBits[s][i] = false;
 			m_memory[s][i] = g_initPattern;
