@@ -678,6 +678,7 @@ namespace dsp56k
 
 	void Peripherals56362::reset()
 	{
+		m_esai.reset();
 		m_hdi08.reset();
 	}
 
@@ -796,6 +797,11 @@ namespace dsp56k
 //			LOG("Periph write @ " << std::hex << _addr << ": 0x" << HEX(_val));
 		}
 		m_mem[_addr - XIO_Reserved_High_First] = _val;
+	}
+
+	void Peripherals56367::reset()
+	{
+		m_esai.reset();
 	}
 
 	void Peripherals56367::setSymbols(Disassembler& _disasm) const

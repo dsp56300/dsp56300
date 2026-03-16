@@ -15,6 +15,49 @@ namespace dsp56k
 		m_sr.set(M_TDE);
 	}
 
+	void Esai::reset()
+	{
+		// Reset control registers to power-on defaults
+		m_cr = 0;
+		m_tcr = 0;
+		m_rcr = 0;
+		m_tccr = 0;
+		m_rccr = 0;
+
+		// Reset status register to power-on state (TFS and TDE set)
+		m_sr = 0;
+		m_sr.set(M_TFS);
+		m_sr.set(M_TDE);
+
+		// Reset TX/RX data registers
+		m_tx.fill(0);
+		m_rx.fill(0);
+
+		// Reset frame buffers
+		m_txFrame.clear();
+		m_rxFrame.clear();
+
+		// Reset counters
+		m_writtenTX = 0;
+		m_readRX = 0;
+		m_txSlotCounter = 0;
+		m_txFrameCounter = 0;
+		m_rxSlotCounter = 0;
+		m_rxFrameCounter = 0;
+
+		// Reset slot masks to power-on defaults (all slots enabled)
+		m_tsma = 0xffff;
+		m_tsmb = 0xffff;
+		m_rsma = 0xffff;
+		m_rsmb = 0xffff;
+
+		// Clear audio ring buffers
+		while (!getAudioInputs().empty())
+			getAudioInputs().pop_front();
+		while (!getAudioOutputs().empty())
+			getAudioOutputs().pop_front();
+	}
+
 	void Esai::setDSP(DSP* _dsp)
 	{
 		m_vbaRead = _dsp->registerInterruptFunc([this]

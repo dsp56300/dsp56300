@@ -256,7 +256,7 @@ namespace dsp56k
 
 		uint32_t exec() noexcept { return MaxDelayCycles; }
 
-		void reset() override {}
+		void reset() override;
 
 		Esai& getEsai() { return m_esai; }
 

@@ -265,6 +265,7 @@ namespace dsp56k
 
 		explicit Esai(IPeripherals& _periph, EMemArea _area, Dma* _dma = nullptr);
 
+		void reset();
 		void setDSP(DSP* _dsp);
 
 		void execTX() override;
