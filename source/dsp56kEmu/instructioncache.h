@@ -85,7 +85,7 @@ namespace dsp56k
 			for( size_t i=0; i<m_tagRegister.size(); ++i )
 			{
 				if( m_tagRegister[i] == check )
-					return i;
+					return static_cast<TSectorIdx>(i);
 			}
 			return eSectorInvalid;
 		}
