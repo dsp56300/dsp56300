@@ -282,6 +282,11 @@ namespace dsp56k
 			return false;
 		}
 
+		bool			hasPendingExternalInterrupts	() const
+		{
+			return !m_pendingExternalInterrupts.empty();
+		}
+
 		void			clearOpcodeCache				();
 		void			clearOpcodeCache				(TWord _address);
 
