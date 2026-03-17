@@ -50,12 +50,14 @@ namespace dsp56k
 		m_tsmb = 0xffff;
 		m_rsma = 0xffff;
 		m_rsmb = 0xffff;
-
+		/* commented out because buffering is not part of the emulation, it is something that the software 
+		 * using the ESAI would have to implement if it needs it
 		// Clear audio ring buffers
 		while (!getAudioInputs().empty())
 			getAudioInputs().pop_front();
 		while (!getAudioOutputs().empty())
 			getAudioOutputs().pop_front();
+		*/
 	}
 
 	void Esai::setDSP(DSP* _dsp)
