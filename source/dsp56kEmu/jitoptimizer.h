@@ -50,7 +50,6 @@ namespace dsp56k
 		static bool getRegKey(RegKey& _result, const asmjit::Operand& _op);
 		static int64_t maskToRegSize(const asmjit::Operand& _reg, int64_t _value);
 
-		size_t removeDeadMovs();
 		size_t deadCodeElimination();
 		size_t constantFolding();
 

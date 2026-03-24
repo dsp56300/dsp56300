@@ -24,13 +24,13 @@ namespace dsp56k
 	{
 		size_t total = 0;
 
-		// Run constant folding first, then peephole dead-mov elimination.
-		// Constant folding may create consecutive mov reg,imm to the same register
-		// (e.g. rorx+sar+shr chain folded to three movs — only the last matters).
-		// Iterate until no more changes are made.
+		// Run constant folding then dead code elimination in a loop.
+		// Constant folding creates dead code (e.g. mov reg,reg replaced with
+		// mov reg,imm makes the source's mov dead).  DCE may expose further
+		// folding opportunities.  Iterate until stable.
 		for(;;)
 		{
-			const size_t changed = constantFolding() + removeDeadMovs();
+			const size_t changed = constantFolding() + deadCodeElimination();
 			total += changed;
 			if(changed == 0)
 				break;
@@ -100,112 +100,6 @@ namespace dsp56k
 		return true;
 	}
 
-	// Peephole pass: remove "mov reg, imm" when the same register is immediately
-	// overwritten by the next non-nop instruction (which also writes to reg
-	// without reading it first).  This handles the pattern created by constant
-	// folding where a chain like "rorx r10,r12,24; sar r10,8; shr r10,8" becomes
-	// three consecutive "mov r10, ..." — only the last one matters.
-	size_t JitOptimizer::removeDeadMovs()
-	{
-		const auto arch = asmjit::Environment::host().arch();
-		size_t removed = 0;
-
-		for(auto* node = m_asm.firstNode(); node;)
-		{
-			auto* next = node->next();
-
-			if(!node->isInst() || node->isLabel())
-			{
-				node = next;
-				continue;
-			}
-
-			auto* inst = node->as<asmjit::InstNode>();
-
-#ifdef HAVE_ARM64
-			if(inst->id() != asmjit::a64::Inst::kIdMov && inst->id() != asmjit::a64::Inst::kIdMovz)
-#else
-			if(inst->id() != asmjit::x86::Inst::kIdMov)
-#endif
-			{
-				node = next;
-				continue;
-			}
-
-			// Must be "mov reg, imm" (write-only to reg)
-			if(inst->opCount() != 2 || !inst->op(0).isReg() || !inst->op(1).isImm())
-			{
-				node = next;
-				continue;
-			}
-
-			RegKey key;
-			if(!getRegKey(key, inst->op(0)))
-			{
-				node = next;
-				continue;
-			}
-
-			// Look at the next non-nop instruction
-			auto* nextInst = next;
-			while(nextInst && nextInst->isInst() && nextInst->as<asmjit::InstNode>()->id() == asmjit::x86::Inst::kIdNop)
-				nextInst = nextInst->next();
-
-			if(!nextInst || !nextInst->isInst() || nextInst->isLabel())
-			{
-				node = next;
-				continue;
-			}
-
-			// Check if the next instruction writes to the same register without reading it
-			auto* nextI = nextInst->as<asmjit::InstNode>();
-			asmjit::InstRWInfo rwInfo{};
-			if(asmjit::InstAPI::queryRWInfo(arch, nextI->baseInst(), nextI->operands(), nextI->opCount(), &rwInfo) != asmjit::kErrorOk)
-			{
-				node = next;
-				continue;
-			}
-
-			bool nextWritesSameReg = false;
-			bool nextReadsSameReg = false;
-
-			for(uint32_t i = 0; i < rwInfo.opCount() && i < nextI->opCount(); ++i)
-			{
-				RegKey nk;
-				if(getRegKey(nk, nextI->op(i)) && nk == key)
-				{
-					const auto& opInfo = rwInfo.operand(i);
-					if(opInfo.isWrite() || opInfo.isReadWrite())
-						nextWritesSameReg = true;
-					if(opInfo.isRead() || opInfo.isReadWrite())
-						nextReadsSameReg = true;
-				}
-
-				// Also check memory operands for reads of the register
-				if(nextI->op(i).isMem())
-				{
-					const auto& mem = nextI->op(i).as<asmjit::BaseMem>();
-					if(mem.hasBaseReg() && mem.baseId() == key.id)
-						nextReadsSameReg = true;
-					if(mem.hasIndexReg() && mem.indexId() == key.id)
-						nextReadsSameReg = true;
-				}
-			}
-
-			if(nextWritesSameReg && !nextReadsSameReg)
-			{
-				// The next instruction overwrites this register without reading it.
-				// This mov is dead.
-				m_asm.removeNode(node);
-				++removed;
-			}
-
-			node = next;
-		}
-
-		return removed;
-	}
-
 	// Dead code elimination using backward liveness analysis within basic blocks.
 	// An instruction is dead if it only writes to registers (and/or flags) that are
 	// not in the live set, and has no other side effects.
@@ -223,18 +117,33 @@ namespace dsp56k
 			nodes.push_back(node);
 		// nodes is now in reverse order (last to first) which is what we want for backward analysis
 
-		// Track live registers. At basic block boundaries (labels, branches), we
-		// conservatively assume all registers are live.
+		// Track live registers.  At basic block boundaries we conservatively
+		// mark all physical registers as live.
 		std::set<RegKey> liveRegs;
-		bool allLive = true;  // start conservative at the end of the function
+
+		auto setAllLive = [&]()
+		{
+			// Mark all GP and vector registers as live (conservative).
+			// GP ids 0-15, Vec ids 0-31 covers x86-64 and aarch64.
+			for(uint32_t id = 0; id < 16; ++id)
+				liveRegs.insert({static_cast<uint32_t>(asmjit::RegGroup::kGp), id});
+			for(uint32_t id = 0; id < 32; ++id)
+				liveRegs.insert({static_cast<uint32_t>(asmjit::RegGroup::kVec), id});
+			liveRegs.insert(cpuFlagsKey());
+		};
+
+		setAllLive();  // conservative at end of function
 
 		for(auto* node : nodes)
 		{
-			// At labels and control flow, reset to conservative (all live)
-			if(node->isLabel() || isControlFlow(node))
+			// Labels are just markers — skip them.  Only actual control flow
+			// (branches, calls) requires conservative liveness.
+			if(node->isLabel())
+				continue;
+
+			if(isControlFlow(node))
 			{
-				allLive = true;
-				liveRegs.clear();
+				setAllLive();
 				continue;
 			}
 
@@ -290,9 +199,6 @@ namespace dsp56k
 			}
 
 			// Side-effect-free instruction: check if all written outputs are dead
-			if(allLive)
-				continue;  // conservative: can't eliminate if all regs might be live
-
 			bool anyWrittenLive = false;
 			std::vector<RegKey> writtenKeys;
 
@@ -505,7 +411,7 @@ namespace dsp56k
 					continue;
 				}
 
-				// mov reg, reg -> propagate constant
+				// mov reg, reg -> propagate constant, replace with mov reg, imm if known
 				if(opCount == 2 && inst->op(0).isReg() && inst->op(1).isReg())
 				{
 					RegKey srcKey;
@@ -514,7 +420,15 @@ namespace dsp56k
 					{
 						auto it = constants.find(srcKey);
 						if(it != constants.end())
-							constants[dstKey] = maskToRegSize(inst->op(0), it->second);
+						{
+							const auto value = maskToRegSize(inst->op(0), it->second);
+							constants[dstKey] = value;
+							// Replace mov reg,reg with mov reg,imm — this breaks
+							// the dependency on the source register, enabling
+							// dead code elimination of the source's mov.
+							inst->setOp(1, asmjit::Imm(value));
+							++folded;
+						}
 						else
 							constants.erase(dstKey);
 					}
