@@ -22,7 +22,7 @@ namespace dsp56k
 		dsp.mem.set(MemArea_P, _pc, _op0);
 		dsp.mem.set(MemArea_P, _pc + 1, _op1);
 		dsp.setPC(_pc);
-		dsp.exec();
+		dsp.execInterpreter();
 	}
 
 	void InterpreterUnitTests::testSubr()

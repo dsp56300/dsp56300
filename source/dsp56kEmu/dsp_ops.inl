@@ -410,17 +410,17 @@ namespace dsp56k
 		const auto sss = getFieldValue<Normf, Field_sss>(op);
 		const auto D = getFieldValue<Normf, Field_D>(op);
 
-		const auto s = decode_sss_read<TReg24>(sss);
+		const TWord s = decode_sss_read<TWord>(sss);
 
 		if(!bittest(s, 23))
 		{
 			// ASR
-			alu_asr(D, D, s.var);
+			alu_asr(D, D, static_cast<int>(s));
 		}
 		else
 		{
 			// ASL with negated shift amount (24-bit sign-extended negation)
-			const auto negS = (-signextend<int,24>(s.var)) & 0xffffff;
+			const auto negS = static_cast<int>((-signextend<int,24>(s)) & 0xffffff);
 			alu_asl(D, D, negS);
 		}
 	}

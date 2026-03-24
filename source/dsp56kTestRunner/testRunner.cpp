@@ -19,20 +19,32 @@ int main(int _argc, char* _argv[])
 		return -1;
 	}
 
-	std::cout << "Running Unit Tests..." << std::endl;
+	if (dsp56k::g_jitSupported)
+	{
+		std::cout << "Running JIT Unit Tests..." << std::endl;
+		try
+		{
+			dsp56k::JitUnittests jitTests;
+		}
+		catch(const std::string& _err)
+		{
+			std::cout << "JIT unit test failed: " << _err << std::endl;
+			return -1;
+		}
+		std::cout << "JIT Unit Tests finished." << std::endl;
+	}
+
+	std::cout << "Running Interpreter Unit Tests..." << std::endl;
 	try
 	{
-		if (dsp56k::g_jitSupported)
-			dsp56k::JitUnittests jitTests;
-		else
-			dsp56k::InterpreterUnitTests tests;
+		dsp56k::InterpreterUnitTests interpTests;
 	}
 	catch(const std::string& _err)
 	{
-		std::cout << "Unit tet failed: " << _err << std::endl;
+		std::cout << "Interpreter unit test failed: " << _err << std::endl;
 		return -1;
 	}
-	std::cout << "Unit Tests finished." << std::endl;
+	std::cout << "Interpreter Unit Tests finished." << std::endl;
 
 	if (dsp56k::g_jitSupported)
 	{

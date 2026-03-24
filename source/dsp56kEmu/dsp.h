@@ -177,28 +177,34 @@ namespace dsp56k
 		ASMJIT_FORCE_INLINE void exec() noexcept
 		{
 			if(g_useJIT)
-			{
-				m_interruptFunc(this);
-
-				const auto pc = getPC().toWord();
-				LOGJITPC(pc);
-				m_jitEntries[pc](&reg, pc);
-			}
+				execJit();
 			else
-			{
-				m_interruptFunc(this);
+				execInterpreter();
+		}
+
+		ASMJIT_FORCE_INLINE void execJit() noexcept
+		{
+			m_interruptFunc(this);
+
+			const auto pc = getPC().toWord();
+			LOGJITPC(pc);
+			m_jitEntries[pc](&reg, pc);
+		}
+
+		ASMJIT_FORCE_INLINE void execInterpreter() noexcept
+		{
+			m_interruptFunc(this);
 
 #if DSP56300_DEBUGGER
-				if(m_debugger)
-					m_debugger->onExec(getPC().var);
+			if(m_debugger)
+				m_debugger->onExec(getPC().var);
 #endif
 
-				pcCurrentInstruction = reg.pc.toWord();
+			pcCurrentInstruction = reg.pc.toWord();
 
-				const auto op = fetchPC();
+			const auto op = fetchPC();
 
-				execOp(op);
-			}			
+			execOp(op);
 		}
 
 		template<typename Ta, typename Tb> void execPeriph() noexcept
