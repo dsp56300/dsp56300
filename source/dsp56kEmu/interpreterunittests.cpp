@@ -22,7 +22,12 @@ namespace dsp56k
 		dsp.mem.set(MemArea_P, _pc, _op0);
 		dsp.mem.set(MemArea_P, _pc + 1, _op1);
 		dsp.setPC(_pc);
-		dsp.execInterpreter();
+
+		// Execute only the instruction, bypassing interrupt handling which
+		// is designed for a running DSP, not single-step unit tests.
+		dsp.pcCurrentInstruction = _pc;
+		const auto op = dsp.fetchPC();
+		dsp.execOp(op);
 	}
 
 	void InterpreterUnitTests::testSubr()

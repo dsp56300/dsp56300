@@ -120,6 +120,7 @@ namespace dsp56k
 		{
 			runTest([&]()
 			{
+				dsp.resetHW();
 				dsp.reg.a.var = _a & 0xff'ffffff'ffffff;
 
 				dsp.reg.r[0].var = 0x1;

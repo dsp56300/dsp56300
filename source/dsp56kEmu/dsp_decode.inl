@@ -40,8 +40,8 @@ namespace dsp56k
 		case CCCC_GreaterEqual:		return SRT_N == SRT_V;							// GE			Greater than or equal
 		case CCCC_LessThan:			return SRT_N != SRT_V;							// LT			Less than
 
-		case CCCC_Normalized:		return (SRT_Z + ((!SRT_U) & (!SRT_E))) == 1;	// NR			Normalized
-		case CCCC_NotNormalized:	return (SRT_Z + ((!SRT_U) & !SRT_E)) == 0;		// NN			Not normalized
+		case CCCC_Normalized:		return (SRT_Z | SRT_U | SRT_E) == 0;			// NR			Normalized
+		case CCCC_NotNormalized:	return (SRT_Z | SRT_U | SRT_E) != 0;			// NN			Not normalized
 
 		case CCCC_GreaterThan:		return (SRT_Z + (SRT_N != SRT_V)) == 0;			// GT			Greater than
 		case CCCC_LessEqual:		return (SRT_Z + (SRT_N != SRT_V)) == 1;			// LE			Less than or equal

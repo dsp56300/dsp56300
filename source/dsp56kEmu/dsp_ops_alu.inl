@@ -128,7 +128,13 @@ namespace dsp56k
 		//sr_l_update_by_v();
 		sr_toggle(CCR_C, carry);
 
-		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
+		// Update E, U, N immediately from the comparison result.
+		// Cannot use setCCRDirty here because the accumulator is restored
+		// below and the dirty cache would produce wrong results when
+		// flushed in a subsequent instruction (e.g. tst a; tcc).
+		sr_e_update(d);
+		sr_u_update(d);
+		sr_n_update(d);
 
 		d = oldD;
 	}
