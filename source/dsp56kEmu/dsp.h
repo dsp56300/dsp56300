@@ -39,6 +39,7 @@ namespace dsp56k
 	{
 		friend class InterpreterUnitTests;
 		friend class JitUnittests;
+		friend class JitOptimizerTests;
 		friend class UnitTests;
 		friend class JitDspRegs;
 		friend class JitOps;
