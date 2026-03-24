@@ -9,7 +9,22 @@ namespace dsp56k
 
 	inline void DSP::op_Bchg_ea(const TWord op)
 	{
-		errNotImplemented("BCHG");
+		const EMemArea S = getFieldValueMemArea<Bclr_ea>(op);
+		const TWord bbbbb = getBit<Bclr_qq>(op);
+		const TWord ea = effectiveAddress<Bclr_ea>(op);
+
+		if(isPeripheralAddress(ea))
+		{
+			auto mem = memReadPeriph(S, ea, Bclr_ea);
+			sr_toggle(CCR_C, bittestandchange(mem, bbbbb));
+			memWritePeriph(S, ea, mem);
+		}
+		else
+		{
+			auto mem = memRead(S, ea);
+			sr_toggle(CCR_C, bittestandchange(mem, bbbbb));
+			memWrite(S, ea, mem);
+		}
 	}
 	inline void DSP::op_Bchg_aa(const TWord op)
 	{
@@ -391,7 +406,23 @@ namespace dsp56k
 	}
 	inline void DSP::op_Normf(const TWord op)
 	{
-		errNotImplemented("NORMF");
+		// NORMF S,D — if S[23]==0: ASR S,D; else: ASL -S,D
+		const auto sss = getFieldValue<Normf, Field_sss>(op);
+		const auto D = getFieldValue<Normf, Field_D>(op);
+
+		const auto s = decode_sss_read<TReg24>(sss);
+
+		if(!bittest(s, 23))
+		{
+			// ASR
+			alu_asr(D, D, s.var);
+		}
+		else
+		{
+			// ASL with negated shift amount (24-bit sign-extended negation)
+			const auto negS = (-signextend<int,24>(s.var)) & 0xffffff;
+			alu_asl(D, D, negS);
+		}
 	}
 
 	inline void DSP::op_Pflush(const TWord op)
@@ -428,11 +459,17 @@ namespace dsp56k
 	}
 	inline void DSP::op_Rep_ea(const TWord op)
 	{
-		errNotImplemented("REP");
+		const auto area = getFieldValueMemArea<Rep_ea>(op);
+		const auto ea = effectiveAddress<Rep_ea>(op);
+		const auto loopcount = memRead(area, ea);
+		rep_exec(loopcount);
 	}
 	inline void DSP::op_Rep_aa(const TWord op)
 	{
-		errNotImplemented("REP");
+		const auto area = getFieldValueMemArea<Rep_aa>(op);
+		const auto ea = getFieldValue<Rep_aa, Field_aaaaaa>(op);
+		const auto loopcount = memRead(area, ea);
+		rep_exec(loopcount);
 	}
 	inline void DSP::op_Rep_xxx(const TWord op)
 	{
@@ -460,7 +497,10 @@ namespace dsp56k
 	}
 	inline void DSP::op_Stop(const TWord op)
 	{
-		errNotImplemented("STOP");
+		LOG("STOP instruction at PC " << HEX(pcCurrentInstruction));
+		// STOP halts the processor clock until a hardware reset or external interrupt
+		// For emulation purposes, treat as a wait/halt
+		reg.pc.var = pcCurrentInstruction;
 	}
 	inline void DSP::op_Tcc_S1D1(const TWord op)
 	{

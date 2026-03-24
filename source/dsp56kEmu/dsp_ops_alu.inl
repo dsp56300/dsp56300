@@ -317,7 +317,7 @@ namespace dsp56k
 		d |= shifted;
 
 		sr_toggle(CCRB_N, bitvalue<uint64_t, 47>(shifted));	// Set if bit 47 of the result is set
-		sr_toggle(CCR_Z, shifted == 0);						// Set if bits 47–24 of the result are 0
+		sr_toggle(CCR_Z, shifted == 0);						// Set if bits 47ï¿½24 of the result are 0
 		sr_clear(CCR_V);									// This bit is always cleared
 		sr_toggle(CCRB_C, c);								// Set if bit 47 of the destination operand is set, and cleared otherwise
 	}
@@ -691,7 +691,47 @@ namespace dsp56k
 	}
 	inline void DSP::op_Clb(const TWord op)
 	{
-		errNotImplemented("CLB");
+		const auto S = getFieldValue<Clb, Field_S>(op);
+		const auto D = getFieldValue<Clb, Field_D>(op);
+
+		const TReg56& s = S ? reg.b : reg.a;
+		TReg56& d = D ? reg.b : reg.a;
+
+		// Count leading equal bits (sign bits) in the 56-bit accumulator.
+		// Shift left by 8 to put bit 55 at the MSB of a 64-bit value.
+		const auto shifted = static_cast<int64_t>(s.var << 8);
+
+		int count;
+		if(s.var == 0)
+		{
+			count = 0;
+		}
+		else
+		{
+			// If MSB is 1, invert to count leading ones as leading zeros
+			const auto val = shifted < 0 ? ~shifted : shifted;
+
+			// Count leading zeros (skip the sign bit itself)
+			count = 0;
+			for(int bit = 62; bit >= 0; --bit)
+			{
+				if(val & (static_cast<int64_t>(1) << bit))
+					break;
+				++count;
+			}
+
+			// Result range: -47 to +8 (56 bits, accounting for 8-bit shift)
+			count = count - (64 - 9 - 1);
+		}
+
+		d.var = static_cast<TInt64>(count) << 24;
+
+		// N: Set if bit 23 of result is set
+		sr_toggle(CCR_N, bittest(d, 47));
+		// Z: Set if result is zero
+		sr_toggle(CCR_Z, count == 0);
+		// V: Always cleared
+		sr_clear(CCR_V);
 	}
 	inline void DSP::op_Clr(const TWord op)
 	{
@@ -806,11 +846,15 @@ namespace dsp56k
 	}
 	inline void DSP::op_Eor_xx(const TWord op)
 	{
-		errNotImplemented("EOR");		
+		const auto ab = getFieldValue<Eor_xx, Field_d>(op);
+		const TWord xxxx = getFieldValue<Eor_xx, Field_iiiiii>(op);
+		alu_eor(ab, xxxx);
 	}
 	inline void DSP::op_Eor_xxxx(const TWord op)
 	{
-		errNotImplemented("EOR");
+		const auto ab = getFieldValue<Eor_xxxx, Field_d>(op);
+		const TWord xxxx = immediateDataExt<Eor_xxxx>();
+		alu_eor(ab, xxxx);
 	}
 	inline void DSP::op_Extract_S1S2(const TWord op)
 	{
