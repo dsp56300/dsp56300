@@ -32,6 +32,9 @@ namespace dsp56k
 		// asmjit can validate the generate code, usually not needed
 		bool asmjitDiagnostics = false;
 
+		// enable JIT optimizer (dead code elimination + constant folding)
+		bool enableOptimizer = true;
+
 		// x86-64 only: Will issue int3() = breakpoint interrupt if a memory address is detected that points to peripherals but DPA is disabled
 		bool debugDynamicPeripheralAddressing = false;
 

@@ -74,6 +74,7 @@ jitmem.cpp jitmem.h
 jitops.cpp jitops.h jitops_agu.cpp jitops_alu.cpp jitops_ccr.cpp jitops_decode.cpp jitops_helper.cpp jitops_jmp.cpp jitops_mem.cpp jitops_move.cpp
 jitops_alu.inl jitops_helper.inl jitops_jmp.inl jitops_mem.inl jitops_move.inl
 jitoptimizer.cpp jitoptimizer.h
+jitoptimizertests.cpp jitoptimizertests.h
 jitprofilingsupport.cpp jitprofilingsupport.h
 jitregtracker.cpp jitregtracker.h
 jitregtypes.h

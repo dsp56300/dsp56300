@@ -5,6 +5,7 @@
 #include "jitblockruntimedata.h"
 #include "jitblock.h"
 #include "jitemitter.h"
+#include "jitoptimizer.h"
 #include "jitprofilingsupport.h"
 #include "asmjit/core/jitruntime.h"
 #include "jitblockemitter.h"
@@ -360,6 +361,12 @@ namespace dsp56k
 		}
 
 		m_generatingBlocks.erase(_pc);
+
+		if(m_jit.getConfig().enableOptimizer)
+		{
+			JitOptimizer optimizer(emitter->emitter);
+			optimizer.optimize();
+		}
 
 		emitter->emitter.finalize();
 
