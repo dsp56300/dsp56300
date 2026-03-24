@@ -992,7 +992,6 @@ namespace dsp56k
 			},
 				[&]()
 			{
-				LOG("Expected " << HEX(_b) << ", got "<< HEX(dsp.regs().b.var));
 				verify(dsp.regs().b == _b);
 			});
 		};

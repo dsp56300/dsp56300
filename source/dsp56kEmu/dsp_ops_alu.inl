@@ -128,13 +128,7 @@ namespace dsp56k
 		//sr_l_update_by_v();
 		sr_toggle(CCR_C, carry);
 
-		// Update E, U, N immediately from the comparison result.
-		// Cannot use setCCRDirty here because the accumulator is restored
-		// below and the dirty cache would produce wrong results when
-		// flushed in a subsequent instruction (e.g. tst a; tcc).
-		sr_e_update(d);
-		sr_u_update(d);
-		sr_n_update(d);
+		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 
 		d = oldD;
 	}
@@ -703,36 +697,41 @@ namespace dsp56k
 		const TReg56& s = S ? reg.b : reg.a;
 		TReg56& d = D ? reg.b : reg.a;
 
-		// Count leading equal bits (sign bits) in the 56-bit accumulator.
-		// Shift left by 8 to put bit 55 at the MSB of a 64-bit value.
-		const auto shifted = static_cast<int64_t>(s.var << 8);
-
 		int count;
+
 		if(s.var == 0)
 		{
+			// Special case: source is 0, result is 0
 			count = 0;
 		}
 		else
 		{
-			// If MSB is 1, invert to count leading ones as leading zeros
-			const auto val = shifted < 0 ? ~shifted : shifted;
+			// Shift left by 8 to put bit 55 at MSB of 64-bit value
+			const auto shifted = static_cast<int64_t>(s.var << 8);
 
-			// Count leading zeros (skip the sign bit itself)
-			count = 0;
-			for(int bit = 62; bit >= 0; --bit)
+			// If MSB is 1, invert to count leading ones as leading zeros
+			auto val = static_cast<uint64_t>(shifted < 0 ? ~shifted : shifted);
+
+			// Ensure we get a valid BSR result by setting low byte
+			val |= 0xff;
+
+			// Find highest set bit (equivalent to BSR on x86)
+			int bsr = 0;
+			for(int bit = 63; bit >= 0; --bit)
 			{
-				if(val & (static_cast<int64_t>(1) << bit))
+				if(val & (static_cast<uint64_t>(1) << bit))
+				{
+					bsr = bit;
 					break;
-				++count;
+				}
 			}
 
-			// Result range: -47 to +8 (56 bits, accounting for 8-bit shift)
-			count = count - (64 - 9 - 1);
+			count = bsr - (64 - 9 - 1);  // range: -47 to +8
 		}
 
-		d.var = static_cast<TInt64>(count) << 24;
+		d.var = (static_cast<TInt64>(count) << 24) & 0x00ffffffffffffff;
 
-		// N: Set if bit 23 of result is set
+		// N: Set if bit 47 (= bit 23 of the 24-bit result) is set
 		sr_toggle(CCR_N, bittest(d, 47));
 		// Z: Set if result is zero
 		sr_toggle(CCR_Z, count == 0);
