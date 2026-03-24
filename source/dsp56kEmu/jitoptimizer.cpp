@@ -1,6 +1,12 @@
 #include "jitoptimizer.h"
 
+#include <map>
+#include <set>
+#include <vector>
+
+#if defined(_WIN32) && defined(_DEBUG)
 #include "dsp56kBase/logging.h"
+#endif
 
 #include <asmjit/asmjit.h>
 
@@ -36,8 +42,10 @@ namespace dsp56k
 				break;
 		}
 
+#if defined(_WIN32) && defined(_DEBUG)
 		if(total > 0)
 			LOG("JitOptimizer: " << total << " optimizations applied");
+#endif
 
 		return total;
 	}
@@ -103,7 +111,7 @@ namespace dsp56k
 	// Dead code elimination using backward liveness analysis within basic blocks.
 	// An instruction is dead if it only writes to registers (and/or flags) that are
 	// not in the live set, and has no other side effects.
-	size_t JitOptimizer::deadCodeElimination()
+	size_t JitOptimizer::deadCodeElimination() const
 	{
 		const auto arch = asmjit::Environment::host().arch();
 		size_t removed = 0;

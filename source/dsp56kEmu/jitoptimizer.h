@@ -1,9 +1,5 @@
 #pragma once
 
-#include <map>
-#include <set>
-#include <vector>
-
 #include "jittypes.h"
 
 namespace asmjit
@@ -50,7 +46,7 @@ namespace dsp56k
 		static bool getRegKey(RegKey& _result, const asmjit::Operand& _op);
 		static int64_t maskToRegSize(const asmjit::Operand& _reg, int64_t _value);
 
-		size_t deadCodeElimination();
+		size_t deadCodeElimination() const;
 		size_t constantFolding();
 
 		bool isSideEffectFree(const asmjit::InstNode* _inst, const asmjit::InstRWInfo& _rwInfo) const;
