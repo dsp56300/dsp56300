@@ -372,15 +372,67 @@ namespace dsp56k
 	{
 		// jscc
 		roundTrip(0x0b0000 | (0x0a << 12));	// jscc $0
+
+		// Bra_xxxx (unconditional branch with extension word)
+		roundTrip(0x0d10c0, 0x000050);	// bra >$50
+
+		// Bsr_xxxx (branch to subroutine with extension word)
+		roundTrip(0x0d1080, 0x000050);	// bsr >$50
+
+		// Bcc_xxxx (conditional branch with extension word)
+		roundTrip(0x0d104a, 0x000050);	// beq >$50
+		roundTrip(0x0d1042, 0x000050);	// bne >$50
+		roundTrip(0x0d1043, 0x000050);	// bpl >$50
+		roundTrip(0x0d104b, 0x000050);	// bmi >$50
+
+		// BScc_xxxx (branch to subroutine conditionally)
+		roundTrip(0x0d100a, 0x000050);	// bseq >$50
+		roundTrip(0x0d1002, 0x000050);	// bsne >$50
+
+		// Jclr_S (jump if bit clear, register operand)
+		roundTrip(0x0acc00, 0x000100);	// jclr #$0,a1,$100
+		roundTrip(0x0acc05, 0x000200);	// jclr #$5,a1,$200
+
+		// Jset_S (jump if bit set, register operand)
+		roundTrip(0x0acc20, 0x000100);	// jset #$0,a1,$100
+		roundTrip(0x0acc23, 0x000200);	// jset #$3,a1,$200
+
+		// Jsclr_S (jump to subroutine if bit clear, register)
+		roundTrip(0x0bcc00, 0x000100);	// jsclr #$0,a1,$100
+
+		// Jsset_S (jump to subroutine if bit set, register)
+		roundTrip(0x0bcc20, 0x000100);	// jsset #$0,a1,$100
+
+		// Brclr_S (branch if bit clear, register)
+		roundTrip(0x0ccc80, 0x000050);	// brclr #$0,a1,$50
+		roundTrip(0x0ccc83, 0x000050);	// brclr #$3,a1,$50
+
+		// Brset_S (branch if bit set, register)
+		roundTrip(0x0ccca0, 0x000050);	// brset #$0,a1,$50
+
+		// Bsclr_S (branch to subroutine if bit clear, register)
+		roundTrip(0x0dcc80, 0x000050);	// bsclr #$0,a1,$50
+
+		// Bsset_S (branch to subroutine if bit set, register)
+		roundTrip(0x0dcca0, 0x000050);	// bsset #$0,a1,$50
+
+		// Jclr_aa (jump if bit clear, absolute address)
+		roundTrip(0x0a0283, 0x000100);	// jclr #$3,x:<$2,$100
+
+		// Jset_aa (jump if bit set, absolute address)
+		roundTrip(0x0a02a3, 0x000100);	// jset #$3,x:<$2,$100
 	}
 
 	void AssemblerTest::testLoopInstructions()
 	{
 		// do
 		roundTrip(0x060080, 0x000010);	// do x0,$10
+		roundTrip(0x060083, 0x000003);	// do #$3,$4 (Do_xxx)
 
 		// rep
-		roundTrip(0x0600a0);	// rep x0
+		roundTrip(0x0600a0);	// rep x0 (Rep_S)
+		roundTrip(0x0600a4);	// rep #$4 (Rep_xxx)
+		roundTrip(0x06008a);	// rep #$a
 
 		// enddo
 		roundTrip(0x00008c);	// enddo

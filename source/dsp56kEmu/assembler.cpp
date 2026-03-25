@@ -414,6 +414,16 @@ namespace dsp56k
 
 		auto text = _text;
 
+		// Disassembler labels: int_XXXXXX (PC-relative) or func_XXXXXX (absolute)
+		if (text.size() > 4 && text.substr(0, 4) == "int_")
+		{
+			text = "$" + text.substr(4);
+		}
+		else if (text.size() > 5 && text.substr(0, 5) == "func_")
+		{
+			text = "$" + text.substr(5);
+		}
+
 		// Hex with $ prefix
 		if (text[0] == '$')
 		{
@@ -1680,6 +1690,60 @@ namespace dsp56k
 				return result;
 			}
 
+			// Bit-test-and-jump/branch on register: #n,S,addr
+			case Jclr_S: case Jset_S: case Jsclr_S: case Jsset_S:
+			case Brclr_S: case Brset_S: case Bsclr_S: case Bsset_S:
+			{
+				if (ops.size() != 3) continue;
+				TWord b;
+				if (!parseImmediate(ops[0], b)) continue;
+				if (b > 23) continue;
+				TWord d;
+				if (!parseRegister_dddddd(ops[1], d)) continue;
+				TWord addr;
+				auto addrStr = ops[2];
+				if (!addrStr.empty() && addrStr[0] == '>') addrStr = addrStr.substr(1);
+				if (!parseNumber(addrStr, addr)) continue;
+				setFieldValue(word, inst, Field_bbbbb, b);
+				setFieldValue(word, inst, Field_DDDDDD, d);
+				result.word[0] = word;
+				result.word[1] = addr;
+				result.wordCount = 2;
+				result.error = AssembleError::OK;
+				return result;
+			}
+
+			// Bit-test-and-jump/branch on aa: #n,S:aa,addr
+			case Jclr_aa: case Jset_aa: case Jsclr_aa: case Jsset_aa:
+			case Brclr_aa: case Brset_aa: case Bsclr_aa: case Bsset_aa:
+			{
+				if (ops.size() != 3) continue;
+				TWord b;
+				if (!parseImmediate(ops[0], b)) continue;
+				if (b > 23) continue;
+				const auto mem = toLower(ops[1]);
+				if (mem.size() < 3 || mem[1] != ':') continue;
+				EMemArea area;
+				if (!parseMemoryArea(std::string(1, mem[0]), area)) continue;
+				auto aaStr = mem.substr(2);
+				if (!aaStr.empty() && aaStr[0] == '<') aaStr = aaStr.substr(1);
+				TWord aa;
+				if (!parseNumber(aaStr, aa)) continue;
+				if (aa > 0x3F) continue;
+				TWord addr;
+				auto addrStr = ops[2];
+				if (!addrStr.empty() && addrStr[0] == '>') addrStr = addrStr.substr(1);
+				if (!parseNumber(addrStr, addr)) continue;
+				setFieldValue(word, inst, Field_bbbbb, b);
+				setFieldValue(word, inst, Field_aaaaaa, aa);
+				setFieldValue(word, inst, Field_S, area == MemArea_Y ? 1 : 0);
+				result.word[0] = word;
+				result.word[1] = addr;
+				result.wordCount = 2;
+				result.error = AssembleError::OK;
+				return result;
+			}
+
 			// Extract/Extractu with register: S1,S2,D (sss, s, D)
 			case Extract_S1S2: case Extractu_S1S2:
 			{
@@ -2086,6 +2150,36 @@ namespace dsp56k
 					result.word[1] = am.extWord;
 					result.wordCount = 2;
 				}
+				result.error = AssembleError::OK;
+				return result;
+			}
+
+			// BRA: PC-relative branch with extension word
+			case Bra_xxxx:
+			{
+				if (ops.size() != 1) continue;
+				TWord addr;
+				auto addrStr = ops[0];
+				if (!addrStr.empty() && addrStr[0] == '>') addrStr = addrStr.substr(1);
+				if (!parseNumber(addrStr, addr)) continue;
+				result.word[0] = word;
+				result.word[1] = addr;
+				result.wordCount = 2;
+				result.error = AssembleError::OK;
+				return result;
+			}
+
+			// BSR: PC-relative branch to subroutine with extension word
+			case Bsr_xxxx:
+			{
+				if (ops.size() != 1) continue;
+				TWord addr;
+				auto addrStr = ops[0];
+				if (!addrStr.empty() && addrStr[0] == '>') addrStr = addrStr.substr(1);
+				if (!parseNumber(addrStr, addr)) continue;
+				result.word[0] = word;
+				result.word[1] = addr;
+				result.wordCount = 2;
 				result.error = AssembleError::OK;
 				return result;
 			}
@@ -2737,8 +2831,10 @@ namespace dsp56k
 				case Bcc_xxxx: case BScc_xxxx:
 				{
 					if (operands.empty()) continue;
+					auto addrStr = operands;
+					if (!addrStr.empty() && addrStr[0] == '>') addrStr = addrStr.substr(1);
 					TWord addr;
-					if (!parseNumber(operands, addr)) continue;
+					if (!parseNumber(addrStr, addr)) continue;
 					// PC-relative address stored in extension word
 					result.word[0] = word;
 					result.word[1] = addr;

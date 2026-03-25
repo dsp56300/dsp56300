@@ -1420,7 +1420,7 @@ namespace dsp56k
 				const auto b	= getFieldValue(inst, Field_bbbbb, op);
 				const auto a	= getFieldValue(inst, Field_aaaaaa, op);
 				const auto S	= getFieldValue(inst, Field_S, op);
-				_dst << bit(b, memArea(S), a) << ',' << absAddr(memArea(S), a, false, false) << ',' << funcAbs(opB);
+				_dst << bit(b, memArea(S), a) << ',' << absAddr(memArea(S), a) << ',' << funcAbs(opB);
 			}
 			return 2;
 		case Jclr_pp:
@@ -2020,7 +2020,7 @@ namespace dsp56k
 			{
 				const TWord aa = getFieldValue<Rep_aa, Field_aaaaaa>(op);
 				const auto S = getFieldValueMemArea<Rep_aa>(op);
-				_dst << absAddr(S, aa, false, false);
+				_dst << absAddr(S, aa);
 			}
 			return 1;
 		case Rep_xxx: 
