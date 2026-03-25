@@ -52,6 +52,8 @@ namespace dsp56k
 		bool isSideEffectFree(const asmjit::InstNode* _inst, const asmjit::InstRWInfo& _rwInfo) const;
 		bool isControlFlow(const asmjit::BaseNode* _node) const;
 		bool areFlagsLive(const asmjit::BaseNode* _node) const;
+		static bool writesFlags(const asmjit::InstNode* _inst, const asmjit::InstRWInfo& _rwInfo);
+		static bool readsFlags(const asmjit::InstNode* _inst, const asmjit::InstRWInfo& _rwInfo);
 
 		JitEmitter& m_asm;
 	};

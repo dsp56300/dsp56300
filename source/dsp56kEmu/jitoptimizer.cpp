@@ -98,10 +98,10 @@ namespace dsp56k
 			if(asmjit::InstAPI::queryRWInfo(arch, inst->baseInst(), inst->operands(), inst->opCount(), &rw) != asmjit::kErrorOk)
 				return true;
 
-			if(rw.readFlags() != asmjit::CpuRWFlags::kNone)
+			if(readsFlags(inst, rw))
 				return true;
 
-			if(rw.writeFlags() != asmjit::CpuRWFlags::kNone)
+			if(writesFlags(inst, rw))
 				return false;
 		}
 
@@ -132,8 +132,14 @@ namespace dsp56k
 		auto setAllLive = [&]()
 		{
 			// Mark all GP and vector registers as live (conservative).
-			// GP ids 0-15, Vec ids 0-31 covers x86-64 and aarch64.
-			for(uint32_t id = 0; id < 16; ++id)
+			// x86-64: GP ids 0-15, aarch64: GP ids 0-31 (x0-x30 + sp/xzr at id 31)
+			constexpr uint32_t gpCount =
+#ifdef HAVE_ARM64
+				32;  // include id 31 (sp/xzr) to protect stack pointer modifications
+#else
+				16;
+#endif
+			for(uint32_t id = 0; id < gpCount; ++id)
 				liveRegs.insert({static_cast<uint32_t>(asmjit::RegGroup::kGp), id});
 			for(uint32_t id = 0; id < 32; ++id)
 				liveRegs.insert({static_cast<uint32_t>(asmjit::RegGroup::kVec), id});
@@ -167,16 +173,15 @@ namespace dsp56k
 
 			if(!isSideEffectFree(inst, rwInfo))
 			{
-				// This instruction has side effects; mark all read registers as live
-				for(uint32_t i = 0; i < rwInfo.opCount(); ++i)
+				// This instruction has side effects; conservatively mark all
+				// register operands as live.  We iterate inst->opCount() rather
+				// than rwInfo.opCount() because on ARM64 the RW info may cover
+				// fewer operands than the instruction actually has.
+				for(uint32_t i = 0; i < inst->opCount(); ++i)
 				{
-					const auto& opInfo = rwInfo.operand(i);
-					if(opInfo.isRead() || opInfo.isReadWrite())
-					{
-						RegKey key;
-						if(getRegKey(key, inst->op(i)))
-							liveRegs.insert(key);
-					}
+					RegKey key;
+					if(getRegKey(key, inst->op(i)))
+						liveRegs.insert(key);
 
 					// Handle memory operands: base and index registers are read
 					if(inst->op(i).isMem())
@@ -200,7 +205,7 @@ namespace dsp56k
 				}
 
 				// If instruction reads CPU flags, mark them as live
-				if(rwInfo.readFlags() != asmjit::CpuRWFlags::kNone)
+				if(readsFlags(inst, rwInfo))
 					liveRegs.insert(cpuFlagsKey());
 
 				continue;
@@ -210,23 +215,29 @@ namespace dsp56k
 			bool anyWrittenLive = false;
 			std::vector<RegKey> writtenKeys;
 
-			for(uint32_t i = 0; i < rwInfo.opCount(); ++i)
+			for(uint32_t i = 0; i < inst->opCount(); ++i)
 			{
-				const auto& opInfo = rwInfo.operand(i);
-				if(opInfo.isWrite() || opInfo.isReadWrite())
+				RegKey key;
+				if(!getRegKey(key, inst->op(i)))
+					continue;
+
+				bool isWrite = false;
+				if(i < rwInfo.opCount())
 				{
-					RegKey key;
-					if(getRegKey(key, inst->op(i)))
-					{
-						writtenKeys.push_back(key);
-						if(liveRegs.count(key))
-							anyWrittenLive = true;
-					}
+					const auto& opInfo = rwInfo.operand(i);
+					isWrite = opInfo.isWrite() || opInfo.isReadWrite();
+				}
+
+				if(isWrite)
+				{
+					writtenKeys.push_back(key);
+					if(liveRegs.count(key))
+						anyWrittenLive = true;
 				}
 			}
 
 			// Check if written CPU flags are live
-			if(rwInfo.writeFlags() != asmjit::CpuRWFlags::kNone)
+			if(writesFlags(inst, rwInfo))
 			{
 				if(liveRegs.count(cpuFlagsKey()))
 					anyWrittenLive = true;
@@ -241,24 +252,29 @@ namespace dsp56k
 			}
 
 			// Instruction is not dead. Update liveness:
-			// Written registers become dead (removed from live set) unless also read
-			for(uint32_t i = 0; i < rwInfo.opCount(); ++i)
-			{
-				const auto& opInfo = rwInfo.operand(i);
-				RegKey key;
-				if(!getRegKey(key, inst->op(i)))
-					continue;
-
-				if(opInfo.isWriteOnly())
-					liveRegs.erase(key);
-
-				if(opInfo.isRead() || opInfo.isReadWrite())
-					liveRegs.insert(key);
-			}
-
-			// Handle memory operands: base/index registers are read
+			// Written registers become dead (removed from live set) unless also read.
+			// Use rwInfo for operands it covers, treat extras as reads (conservative).
 			for(uint32_t i = 0; i < inst->opCount(); ++i)
 			{
+				RegKey key;
+				if(getRegKey(key, inst->op(i)))
+				{
+					if(i < rwInfo.opCount())
+					{
+						const auto& opInfo = rwInfo.operand(i);
+						if(opInfo.isWriteOnly())
+							liveRegs.erase(key);
+						if(opInfo.isRead() || opInfo.isReadWrite())
+							liveRegs.insert(key);
+					}
+					else
+					{
+						// rwInfo doesn't cover this operand — conservatively treat as read
+						liveRegs.insert(key);
+					}
+				}
+
+				// Handle memory operands: base/index registers are read
 				if(inst->op(i).isMem())
 				{
 					const auto& mem = inst->op(i).as<asmjit::BaseMem>();
@@ -280,9 +296,9 @@ namespace dsp56k
 			}
 
 			// CPU flags liveness
-			if(rwInfo.writeFlags() != asmjit::CpuRWFlags::kNone)
+			if(writesFlags(inst, rwInfo))
 				liveRegs.erase(cpuFlagsKey());
-			if(rwInfo.readFlags() != asmjit::CpuRWFlags::kNone)
+			if(readsFlags(inst, rwInfo))
 				liveRegs.insert(cpuFlagsKey());
 
 		}
@@ -397,7 +413,7 @@ namespace dsp56k
 				continue;
 			}
 
-			const bool flagsAreLive = (rwInfo.writeFlags() != asmjit::CpuRWFlags::kNone) && areFlagsLive(node);
+			const bool flagsAreLive = writesFlags(inst, rwInfo) && areFlagsLive(node);
 
 			bool didFold = false;
 
@@ -878,6 +894,47 @@ namespace dsp56k
 			return true;
 		// x86 conditional jumps are in a range
 		if(instId >= Inst::kIdJa && instId <= Inst::kIdJz)
+			return true;
+#endif
+
+		return false;
+	}
+
+	bool JitOptimizer::writesFlags(const asmjit::InstNode* _inst, const asmjit::InstRWInfo& _rwInfo)
+	{
+		if(_rwInfo.writeFlags() != asmjit::CpuRWFlags::kNone)
+			return true;
+
+#ifdef HAVE_ARM64
+		// asmjit's queryRWInfo does not report writeFlags for ARM64 flag-setting
+		// instructions (cmp, tst, adds, subs, ands, etc.).  Detect them manually.
+		const auto instId = _inst->id();
+		if(instId == Inst::kIdAdds || instId == Inst::kIdSubs ||
+		   instId == Inst::kIdAnds || instId == Inst::kIdBics ||
+		   instId == Inst::kIdAdcs || instId == Inst::kIdSbcs ||
+		   instId == Inst::kIdCmp  || instId == Inst::kIdCmn  ||
+		   instId == Inst::kIdTst  ||
+		   instId == Inst::kIdCcmp || instId == Inst::kIdCcmn)
+			return true;
+#endif
+
+		return false;
+	}
+
+	bool JitOptimizer::readsFlags(const asmjit::InstNode* _inst, const asmjit::InstRWInfo& _rwInfo)
+	{
+		if(_rwInfo.readFlags() != asmjit::CpuRWFlags::kNone)
+			return true;
+
+#ifdef HAVE_ARM64
+		// asmjit may not report readFlags for ARM64 conditional instructions.
+		const auto instId = _inst->id();
+		if(instId == Inst::kIdCsel  || instId == Inst::kIdCsinc ||
+		   instId == Inst::kIdCsinv || instId == Inst::kIdCsneg ||
+		   instId == Inst::kIdCset  || instId == Inst::kIdCsetm ||
+		   instId == Inst::kIdCinc  || instId == Inst::kIdCinv  ||
+		   instId == Inst::kIdCneg  ||
+		   instId == Inst::kIdCcmp  || instId == Inst::kIdCcmn)
 			return true;
 #endif
 
