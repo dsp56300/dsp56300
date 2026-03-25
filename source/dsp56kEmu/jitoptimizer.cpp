@@ -1,9 +1,5 @@
 #include "jitoptimizer.h"
 
-#include <map>
-#include <set>
-#include <vector>
-
 #if defined(_WIN32) && defined(_DEBUG)
 #include "dsp56kBase/logging.h"
 #endif
@@ -24,6 +20,32 @@ namespace dsp56k
 
 	JitOptimizer::JitOptimizer(JitEmitter& _emitter) : m_asm(_emitter)
 	{
+	}
+
+	uint32_t JitOptimizer::regIndex(uint32_t _group, uint32_t _id)
+	{
+		if(_group == static_cast<uint32_t>(asmjit::RegGroup::kGp))
+			return kGpBase + (_id < 32 ? _id : 31);
+		if(_group == static_cast<uint32_t>(asmjit::RegGroup::kVec))
+			return kVecBase + (_id < 32 ? _id : 31);
+		return kFlagsIdx;
+	}
+
+	uint32_t JitOptimizer::regIndex(const asmjit::Operand& _op, bool& _valid)
+	{
+		if(!_op.isReg())
+		{
+			_valid = false;
+			return 0;
+		}
+		const auto& reg = _op.as<asmjit::BaseReg>();
+		if(!reg.isPhysReg() || (!reg.isGp() && !reg.isVec()))
+		{
+			_valid = false;
+			return 0;
+		}
+		_valid = true;
+		return regIndex(static_cast<uint32_t>(reg.group()), reg.id());
 	}
 
 	size_t JitOptimizer::optimize()
@@ -48,22 +70,6 @@ namespace dsp56k
 #endif
 
 		return total;
-	}
-
-	bool JitOptimizer::getRegKey(RegKey& _result, const asmjit::Operand& _op)
-	{
-		if(!_op.isReg())
-			return false;
-
-		const auto& reg = _op.as<asmjit::BaseReg>();
-		if(!reg.isPhysReg())
-			return false;
-		if(!reg.isGp() && !reg.isVec())
-			return false;
-
-		_result.group = static_cast<uint32_t>(reg.group());
-		_result.id = reg.id();
-		return true;
 	}
 
 	int64_t JitOptimizer::maskToRegSize(const asmjit::Operand& _reg, int64_t _value)
@@ -116,39 +122,29 @@ namespace dsp56k
 		const auto arch = asmjit::Environment::host().arch();
 		size_t removed = 0;
 
-		// Collect nodes into basic blocks separated by labels and control flow.
-		// Process each basic block independently in reverse order.
-
-		// First, gather all nodes into a flat list
-		std::vector<asmjit::BaseNode*> nodes;
-		for(auto* node = m_asm.lastNode(); node; node = node->prev())
-			nodes.push_back(node);
-		// nodes is now in reverse order (last to first) which is what we want for backward analysis
-
-		// Track live registers.  At basic block boundaries we conservatively
-		// mark all physical registers as live.
-		std::set<RegKey> liveRegs;
+		// Track live registers as a bitset — zero heap allocations.
+		RegBits liveRegs;
 
 		auto setAllLive = [&]()
 		{
+			liveRegs.clear();
 			// Mark all GP and vector registers as live (conservative).
-			// x86-64: GP ids 0-15, aarch64: GP ids 0-31 (x0-x30 + sp/xzr at id 31)
-			constexpr uint32_t gpCount =
 #ifdef HAVE_ARM64
-				32;  // include id 31 (sp/xzr) to protect stack pointer modifications
+			constexpr uint32_t gpCount = 32;  // x0-x30 + sp/xzr
 #else
-				16;
+			constexpr uint32_t gpCount = 16;
 #endif
 			for(uint32_t id = 0; id < gpCount; ++id)
-				liveRegs.insert({static_cast<uint32_t>(asmjit::RegGroup::kGp), id});
+				liveRegs.set(kGpBase + id);
 			for(uint32_t id = 0; id < 32; ++id)
-				liveRegs.insert({static_cast<uint32_t>(asmjit::RegGroup::kVec), id});
-			liveRegs.insert(cpuFlagsKey());
+				liveRegs.set(kVecBase + id);
+			liveRegs.set(kFlagsIdx);
 		};
 
 		setAllLive();  // conservative at end of function
 
-		for(auto* node : nodes)
+		// Walk the node list backward directly — no vector copy needed
+		for(auto* node = m_asm.lastNode(); node; node = node->prev())
 		{
 			// Labels are just markers — skip them.  Only actual control flow
 			// (branches, calls) requires conservative liveness.
@@ -174,51 +170,41 @@ namespace dsp56k
 			if(!isSideEffectFree(inst, rwInfo))
 			{
 				// This instruction has side effects; conservatively mark all
-				// register operands as live.  We iterate inst->opCount() rather
-				// than rwInfo.opCount() because on ARM64 the RW info may cover
-				// fewer operands than the instruction actually has.
+				// register operands as live.
 				for(uint32_t i = 0; i < inst->opCount(); ++i)
 				{
-					RegKey key;
-					if(getRegKey(key, inst->op(i)))
-						liveRegs.insert(key);
+					bool valid;
+					const auto idx = regIndex(inst->op(i), valid);
+					if(valid)
+						liveRegs.set(idx);
 
-					// Handle memory operands: base and index registers are read
 					if(inst->op(i).isMem())
 					{
 						const auto& mem = inst->op(i).as<asmjit::BaseMem>();
 						if(mem.hasBaseReg())
-						{
-							RegKey key;
-							key.group = static_cast<uint32_t>(asmjit::RegGroup::kGp);
-							key.id = mem.baseId();
-							liveRegs.insert(key);
-						}
+							liveRegs.set(regIndex(static_cast<uint32_t>(asmjit::RegGroup::kGp), mem.baseId()));
 						if(mem.hasIndexReg())
-						{
-							RegKey key;
-							key.group = static_cast<uint32_t>(asmjit::RegGroup::kGp);
-							key.id = mem.indexId();
-							liveRegs.insert(key);
-						}
+							liveRegs.set(regIndex(static_cast<uint32_t>(asmjit::RegGroup::kGp), mem.indexId()));
 					}
 				}
 
-				// If instruction reads CPU flags, mark them as live
 				if(readsFlags(inst, rwInfo))
-					liveRegs.insert(cpuFlagsKey());
+					liveRegs.set(kFlagsIdx);
 
 				continue;
 			}
 
-			// Side-effect-free instruction: check if all written outputs are dead
+			// Side-effect-free instruction: check if all written outputs are dead.
+			// Use a fixed stack array instead of std::vector (max 6 operands).
 			bool anyWrittenLive = false;
-			std::vector<RegKey> writtenKeys;
+			uint32_t writtenIndices[6];
+			uint32_t writtenCount = 0;
 
 			for(uint32_t i = 0; i < inst->opCount(); ++i)
 			{
-				RegKey key;
-				if(!getRegKey(key, inst->op(i)))
+				bool valid;
+				const auto idx = regIndex(inst->op(i), valid);
+				if(!valid)
 					continue;
 
 				bool isWrite = false;
@@ -230,76 +216,60 @@ namespace dsp56k
 
 				if(isWrite)
 				{
-					writtenKeys.push_back(key);
-					if(liveRegs.count(key))
+					writtenIndices[writtenCount++] = idx;
+					if(liveRegs.test(idx))
 						anyWrittenLive = true;
 				}
 			}
 
-			// Check if written CPU flags are live
 			if(writesFlags(inst, rwInfo))
 			{
-				if(liveRegs.count(cpuFlagsKey()))
+				if(liveRegs.test(kFlagsIdx))
 					anyWrittenLive = true;
 			}
 
-			if(!anyWrittenLive && !writtenKeys.empty())
+			if(!anyWrittenLive && writtenCount > 0)
 			{
-				// All outputs are dead, remove this instruction
 				m_asm.removeNode(node);
 				++removed;
 				continue;
 			}
 
-			// Instruction is not dead. Update liveness:
-			// Written registers become dead (removed from live set) unless also read.
-			// Use rwInfo for operands it covers, treat extras as reads (conservative).
+			// Instruction is not dead. Update liveness.
 			for(uint32_t i = 0; i < inst->opCount(); ++i)
 			{
-				RegKey key;
-				if(getRegKey(key, inst->op(i)))
+				bool valid;
+				const auto idx = regIndex(inst->op(i), valid);
+				if(valid)
 				{
 					if(i < rwInfo.opCount())
 					{
 						const auto& opInfo = rwInfo.operand(i);
 						if(opInfo.isWriteOnly())
-							liveRegs.erase(key);
+							liveRegs.clr(idx);
 						if(opInfo.isRead() || opInfo.isReadWrite())
-							liveRegs.insert(key);
+							liveRegs.set(idx);
 					}
 					else
 					{
-						// rwInfo doesn't cover this operand — conservatively treat as read
-						liveRegs.insert(key);
+						liveRegs.set(idx);
 					}
 				}
 
-				// Handle memory operands: base/index registers are read
 				if(inst->op(i).isMem())
 				{
 					const auto& mem = inst->op(i).as<asmjit::BaseMem>();
 					if(mem.hasBaseReg())
-					{
-						RegKey key;
-						key.group = static_cast<uint32_t>(asmjit::RegGroup::kGp);
-						key.id = mem.baseId();
-						liveRegs.insert(key);
-					}
+						liveRegs.set(regIndex(static_cast<uint32_t>(asmjit::RegGroup::kGp), mem.baseId()));
 					if(mem.hasIndexReg())
-					{
-						RegKey key;
-						key.group = static_cast<uint32_t>(asmjit::RegGroup::kGp);
-						key.id = mem.indexId();
-						liveRegs.insert(key);
-					}
+						liveRegs.set(regIndex(static_cast<uint32_t>(asmjit::RegGroup::kGp), mem.indexId()));
 				}
 			}
 
-			// CPU flags liveness
 			if(writesFlags(inst, rwInfo))
-				liveRegs.erase(cpuFlagsKey());
+				liveRegs.clr(kFlagsIdx);
 			if(readsFlags(inst, rwInfo))
-				liveRegs.insert(cpuFlagsKey());
+				liveRegs.set(kFlagsIdx);
 
 		}
 
@@ -313,8 +283,8 @@ namespace dsp56k
 		const auto arch = asmjit::Environment::host().arch();
 		size_t folded = 0;
 
-		std::map<RegKey, int64_t> constants;
-		std::map<uint32_t, std::map<RegKey, int64_t>> labelConstants;
+		ConstMap constants;
+		LabelConstMap labelConstants;
 
 		for(auto* node = m_asm.firstNode(); node;)
 		{
@@ -334,24 +304,17 @@ namespace dsp56k
 					{
 						if(cfInst->op(i).isLabel())
 						{
-							isConditional = true;  // has a label target = conditional branch
+							isConditional = true;
 							const auto labelId = cfInst->op(i).as<asmjit::Label>().id();
-							// Save current constants for the label target.
-							// If multiple branches target the same label, intersect.
-							auto it = labelConstants.find(labelId);
-							if(it == labelConstants.end())
-								labelConstants[labelId] = constants;
+							auto* existing = labelConstants.find(labelId);
+							if(!existing)
+							{
+								auto& m = labelConstants.insert(labelId);
+								m = constants;
+							}
 							else
 							{
-								// Intersect: keep only constants that match on both paths
-								for(auto ci = it->second.begin(); ci != it->second.end();)
-								{
-									auto fi = constants.find(ci->first);
-									if(fi == constants.end() || fi->second != ci->second)
-										ci = it->second.erase(ci);
-									else
-										++ci;
-								}
+								existing->intersect(constants);
 							}
 						}
 					}
@@ -369,22 +332,13 @@ namespace dsp56k
 			if(node->isLabel())
 			{
 				// At labels: intersect current (fall-through) constants with
-				// the saved branch-path constants.  Only keep constants valid
-				// on ALL paths reaching this label.
+				// the saved branch-path constants.
 				const auto labelId = node->as<asmjit::LabelNode>()->labelId();
-				auto it = labelConstants.find(labelId);
-				if(it != labelConstants.end())
+				auto* saved = labelConstants.find(labelId);
+				if(saved)
 				{
-					// Intersect: keep only constants present in both sets with same value
-					for(auto ci = constants.begin(); ci != constants.end();)
-					{
-						auto fi = it->second.find(ci->first);
-						if(fi == it->second.end() || fi->second != ci->second)
-							ci = constants.erase(ci);
-						else
-							++ci;
-					}
-					labelConstants.erase(it);
+					constants.intersect(*saved);
+					labelConstants.erase(labelId);
 				}
 				else
 				{
@@ -426,11 +380,10 @@ namespace dsp56k
 			{
 				if(opCount == 2 && inst->op(0).isReg() && inst->op(1).isImm())
 				{
-					RegKey key;
-					if(getRegKey(key, inst->op(0)))
-					{
-						constants[key] = maskToRegSize(inst->op(0), inst->op(1).as<asmjit::Imm>().value());
-					}
+					bool valid;
+					const auto idx = regIndex(inst->op(0), valid);
+					if(valid)
+						constants.set(idx, maskToRegSize(inst->op(0), inst->op(1).as<asmjit::Imm>().value()));
 					node = next;
 					continue;
 				}
@@ -438,23 +391,20 @@ namespace dsp56k
 				// mov reg, reg -> propagate constant, replace with mov reg, imm if known
 				if(opCount == 2 && inst->op(0).isReg() && inst->op(1).isReg())
 				{
-					RegKey srcKey;
-					RegKey dstKey;
-					if(getRegKey(dstKey, inst->op(0)) && getRegKey(srcKey, inst->op(1)))
+					bool dstValid, srcValid;
+					const auto dstIdx = regIndex(inst->op(0), dstValid);
+					const auto srcIdx = regIndex(inst->op(1), srcValid);
+					if(dstValid && srcValid)
 					{
-						auto it = constants.find(srcKey);
-						if(it != constants.end())
+						if(constants.has(srcIdx))
 						{
-							const auto value = maskToRegSize(inst->op(0), it->second);
-							constants[dstKey] = value;
-							// Replace mov reg,reg with mov reg,imm — this breaks
-							// the dependency on the source register, enabling
-							// dead code elimination of the source's mov.
+							const auto value = maskToRegSize(inst->op(0), constants.get(srcIdx));
+							constants.set(dstIdx, value);
 							inst->setOp(1, asmjit::Imm(value));
 							++folded;
 						}
 						else
-							constants.erase(dstKey);
+							constants.erase(dstIdx);
 					}
 					node = next;
 					continue;
@@ -476,13 +426,12 @@ namespace dsp56k
 			{
 				if(opCount == 2 && inst->op(0).isReg() && inst->op(1).isImm())
 				{
-					RegKey dstKey;
-					if(getRegKey(dstKey, inst->op(0)))
+					bool valid;
+					const auto dstIdx = regIndex(inst->op(0), valid);
+					if(valid && constants.has(dstIdx))
 					{
-						auto it = constants.find(dstKey);
-						if(it != constants.end())
 						{
-							const auto regVal = it->second;
+							const auto regVal = constants.get(dstIdx);
 							const auto immVal = inst->op(1).as<asmjit::Imm>().value();
 							int64_t result = 0;
 							bool canFold = true;
@@ -516,7 +465,7 @@ namespace dsp56k
 								inst->setId(Inst::kIdMov);
 								inst->setOpCount(2);
 								inst->setOp(1, asmjit::Imm(result));
-								constants[dstKey] = maskToRegSize(inst->op(0), result);
+								constants.set(dstIdx, maskToRegSize(inst->op(0), result));
 								didFold = true;
 								++folded;
 							}
@@ -528,15 +477,14 @@ namespace dsp56k
 				// This handles patterns like:  add dst, src  where both hold known values
 				if(!didFold && opCount == 2 && inst->op(0).isReg() && inst->op(1).isReg())
 				{
-					RegKey dstKey, srcKey;
-					if(getRegKey(dstKey, inst->op(0)) && getRegKey(srcKey, inst->op(1)))
+					bool dstValid, srcValid;
+					const auto dstIdx = regIndex(inst->op(0), dstValid);
+					const auto srcIdx = regIndex(inst->op(1), srcValid);
+					if(dstValid && srcValid && constants.has(dstIdx) && constants.has(srcIdx))
 					{
-						auto itDst = constants.find(dstKey);
-						auto itSrc = constants.find(srcKey);
-						if(itDst != constants.end() && itSrc != constants.end())
 						{
-							const auto dstVal = itDst->second;
-							const auto srcVal = itSrc->second;
+							const auto dstVal = constants.get(dstIdx);
+							const auto srcVal = constants.get(srcIdx);
 							int64_t result = 0;
 							bool canFold = true;
 
@@ -560,7 +508,7 @@ namespace dsp56k
 								inst->setId(Inst::kIdMov);
 								inst->setOpCount(2);
 								inst->setOp(1, asmjit::Imm(result));
-								constants[dstKey] = maskToRegSize(inst->op(0), result);
+								constants.set(dstIdx, maskToRegSize(inst->op(0), result));
 								didFold = true;
 								++folded;
 							}
@@ -572,13 +520,12 @@ namespace dsp56k
 				// x86 three-operand form: op dst, src, imm (e.g. imul)
 				if(!didFold && opCount == 3 && inst->op(0).isReg() && inst->op(1).isReg() && inst->op(2).isImm())
 				{
-					RegKey srcKey;
-					if(getRegKey(srcKey, inst->op(1)))
+					bool srcValid;
+					const auto srcIdx = regIndex(inst->op(1), srcValid);
+					if(srcValid && constants.has(srcIdx))
 					{
-						auto it = constants.find(srcKey);
-						if(it != constants.end())
 						{
-							const auto srcVal = it->second;
+							const auto srcVal = constants.get(srcIdx);
 							const auto immVal = inst->op(2).as<asmjit::Imm>().value();
 							int64_t result = 0;
 							bool canFold = true;
@@ -598,15 +545,16 @@ namespace dsp56k
 
 							if(canFold && !flagsAreLive)
 							{
-								RegKey dstKey;
-								if(getRegKey(dstKey, inst->op(0)))
+								bool dstValid;
+								const auto dstIdx2 = regIndex(inst->op(0), dstValid);
+								if(dstValid)
 								{
 									inst->setId(Inst::kIdMov);
 									inst->setOpCount(2);
 									inst->setOp(0, inst->op(0));
 									inst->setOp(1, asmjit::Imm(result));
 									inst->resetOp(2);
-									constants[dstKey] = maskToRegSize(inst->op(0), result);
+									constants.set(dstIdx2, maskToRegSize(inst->op(0), result));
 									didFold = true;
 									++folded;
 								}
@@ -621,10 +569,12 @@ namespace dsp56k
 			// x86: xor reg, reg -> constant 0
 			if(instId == Inst::kIdXor && opCount == 2 && inst->op(0).isReg() && inst->op(1).isReg())
 			{
-				RegKey k0, k1;
-				if(getRegKey(k0, inst->op(0)) && getRegKey(k1, inst->op(1)) && k0 == k1)
+				bool v0, v1;
+				const auto i0 = regIndex(inst->op(0), v0);
+				const auto i1 = regIndex(inst->op(1), v1);
+				if(v0 && v1 && i0 == i1)
 				{
-					constants[k0] = 0;
+					constants.set(i0, 0);
 					node = next;
 					continue;
 				}
@@ -633,86 +583,68 @@ namespace dsp56k
 			// x86: neg reg -> negate constant
 			if(!flagsAreLive && instId == Inst::kIdNeg && opCount == 1 && inst->op(0).isReg())
 			{
-				RegKey key;
-				if(getRegKey(key, inst->op(0)))
+				bool valid;
+				const auto idx = regIndex(inst->op(0), valid);
+				if(valid && constants.has(idx))
 				{
-					auto it = constants.find(key);
-					if(it != constants.end())
-					{
-						const auto result = -it->second;
-						inst->setId(Inst::kIdMov);
-						inst->setOpCount(2);
-						inst->setOp(1, asmjit::Imm(result));
-						constants[key] = maskToRegSize(inst->op(0), result);
-						++folded;
-						didFold = true;
-					}
+					const auto result = -constants.get(idx);
+					inst->setId(Inst::kIdMov);
+					inst->setOpCount(2);
+					inst->setOp(1, asmjit::Imm(result));
+					constants.set(idx, maskToRegSize(inst->op(0), result));
+					++folded;
+					didFold = true;
 				}
 			}
 
 			// x86: not reg -> bitwise not constant
 			if(!flagsAreLive && instId == Inst::kIdNot && opCount == 1 && inst->op(0).isReg())
 			{
-				RegKey key;
-				if(getRegKey(key, inst->op(0)))
+				bool valid;
+				const auto idx = regIndex(inst->op(0), valid);
+				if(valid && constants.has(idx))
 				{
-					auto it = constants.find(key);
-					if(it != constants.end())
-					{
-						const auto result = ~it->second;
-						inst->setId(Inst::kIdMov);
-						inst->setOpCount(2);
-						inst->setOp(1, asmjit::Imm(result));
-						constants[key] = maskToRegSize(inst->op(0), result);
-						++folded;
-						didFold = true;
-					}
+					const auto result = ~constants.get(idx);
+					inst->setId(Inst::kIdMov);
+					inst->setOpCount(2);
+					inst->setOp(1, asmjit::Imm(result));
+					constants.set(idx, maskToRegSize(inst->op(0), result));
+					++folded;
+					didFold = true;
 				}
 			}
 #else
 			// ARM64: neg reg, reg -> negate constant
 			if(instId == Inst::kIdNeg && opCount == 2 && inst->op(0).isReg() && inst->op(1).isReg())
 			{
-				RegKey srcKey;
-				if(getRegKey(srcKey, inst->op(1)))
+				bool srcValid, dstValid;
+				const auto srcIdx = regIndex(inst->op(1), srcValid);
+				const auto dstIdx = regIndex(inst->op(0), dstValid);
+				if(srcValid && constants.has(srcIdx) && dstValid)
 				{
-					auto it = constants.find(srcKey);
-					if(it != constants.end())
-					{
-						RegKey dstKey;
-						if(getRegKey(dstKey, inst->op(0)))
-						{
-							const auto result = -it->second;
-							inst->setId(Inst::kIdMov);
-							inst->setOp(1, asmjit::Imm(result));
-							constants[dstKey] = maskToRegSize(inst->op(0), result);
-							++folded;
-							didFold = true;
-						}
-					}
+					const auto result = -constants.get(srcIdx);
+					inst->setId(Inst::kIdMov);
+					inst->setOp(1, asmjit::Imm(result));
+					constants.set(dstIdx, maskToRegSize(inst->op(0), result));
+					++folded;
+					didFold = true;
 				}
 			}
 
 			// ARM64: mvn reg, reg -> bitwise not constant
 			if(instId == Inst::kIdMvn && opCount == 2 && inst->op(0).isReg() && inst->op(1).isReg())
 			{
-				RegKey srcKey;
-				if(getRegKey(srcKey, inst->op(1)))
+				bool srcValid, dstValid;
+				const auto srcIdx = regIndex(inst->op(1), srcValid);
+				const auto dstIdx = regIndex(inst->op(0), dstValid);
+				if(srcValid && constants.has(srcIdx) && dstValid)
 				{
-					auto it = constants.find(srcKey);
-					if(it != constants.end())
-					{
-						RegKey dstKey;
-						if(getRegKey(dstKey, inst->op(0)))
-						{
-							const auto result = ~it->second;
-							inst->setId(Inst::kIdMov);
-							inst->setOp(1, asmjit::Imm(result));
-							constants[dstKey] = maskToRegSize(inst->op(0), result);
-							++folded;
-							didFold = true;
-						}
-					}
+					const auto result = ~constants.get(srcIdx);
+					inst->setId(Inst::kIdMov);
+					inst->setOp(1, asmjit::Imm(result));
+					constants.set(dstIdx, maskToRegSize(inst->op(0), result));
+					++folded;
+					didFold = true;
 				}
 			}
 
@@ -724,63 +656,58 @@ namespace dsp56k
 			{
 				if(opCount == 3 && inst->op(0).isReg() && inst->op(1).isReg())
 				{
-					RegKey src1Key;
-					if(getRegKey(src1Key, inst->op(1)))
+					bool src1Valid;
+					const auto src1Idx = regIndex(inst->op(1), src1Valid);
+					if(src1Valid && constants.has(src1Idx))
 					{
-						auto itSrc1 = constants.find(src1Key);
-						if(itSrc1 != constants.end())
-						{
-							const auto src1Val = itSrc1->second;
-							int64_t src2Val = 0;
-							bool src2Known = false;
+						const auto src1Val = constants.get(src1Idx);
+						int64_t src2Val = 0;
+						bool src2Known = false;
 
-							if(inst->op(2).isImm())
+						if(inst->op(2).isImm())
+						{
+							src2Val = inst->op(2).as<asmjit::Imm>().value();
+							src2Known = true;
+						}
+						else if(inst->op(2).isReg())
+						{
+							bool src2Valid;
+							const auto src2Idx = regIndex(inst->op(2), src2Valid);
+							if(src2Valid && constants.has(src2Idx))
 							{
-								src2Val = inst->op(2).as<asmjit::Imm>().value();
+								src2Val = constants.get(src2Idx);
 								src2Known = true;
 							}
-							else if(inst->op(2).isReg())
+						}
+
+						if(src2Known)
+						{
+							int64_t result = 0;
+							bool canFold = true;
+
+							if     (instId == Inst::kIdAdd) result = src1Val + src2Val;
+							else if(instId == Inst::kIdSub) result = src1Val - src2Val;
+							else if(instId == Inst::kIdAnd) result = src1Val & src2Val;
+							else if(instId == Inst::kIdOrr) result = src1Val | src2Val;
+							else if(instId == Inst::kIdEor) result = src1Val ^ src2Val;
+							else if(instId == Inst::kIdLsl) result = src1Val << (src2Val & 63);
+							else if(instId == Inst::kIdLsr) result = static_cast<int64_t>(static_cast<uint64_t>(src1Val) >> (src2Val & 63));
+							else if(instId == Inst::kIdAsr) result = src1Val >> (src2Val & 63);
+							else canFold = false;
+
+							if(canFold && !flagsAreLive)
 							{
-								RegKey src2Key;
-								if(getRegKey(src2Key, inst->op(2)))
+								bool dstValid;
+								const auto dstIdx = regIndex(inst->op(0), dstValid);
+								if(dstValid)
 								{
-									auto itSrc2 = constants.find(src2Key);
-									if(itSrc2 != constants.end())
-									{
-										src2Val = itSrc2->second;
-										src2Known = true;
-									}
-								}
-							}
-
-							if(src2Known)
-							{
-								int64_t result = 0;
-								bool canFold = true;
-
-								if     (instId == Inst::kIdAdd) result = src1Val + src2Val;
-								else if(instId == Inst::kIdSub) result = src1Val - src2Val;
-								else if(instId == Inst::kIdAnd) result = src1Val & src2Val;
-								else if(instId == Inst::kIdOrr) result = src1Val | src2Val;
-								else if(instId == Inst::kIdEor) result = src1Val ^ src2Val;
-								else if(instId == Inst::kIdLsl) result = src1Val << (src2Val & 63);
-								else if(instId == Inst::kIdLsr) result = static_cast<int64_t>(static_cast<uint64_t>(src1Val) >> (src2Val & 63));
-								else if(instId == Inst::kIdAsr) result = src1Val >> (src2Val & 63);
-								else canFold = false;
-
-								if(canFold && !flagsAreLive)
-								{
-									RegKey dstKey;
-									if(getRegKey(dstKey, inst->op(0)))
-									{
-										inst->setId(Inst::kIdMov);
-										inst->setOpCount(2);
-										inst->setOp(1, asmjit::Imm(result));
-										inst->resetOp(2);
-										constants[dstKey] = maskToRegSize(inst->op(0), result);
-										++folded;
-										didFold = true;
-									}
+									inst->setId(Inst::kIdMov);
+									inst->setOpCount(2);
+									inst->setOp(1, asmjit::Imm(result));
+									inst->resetOp(2);
+									constants.set(dstIdx, maskToRegSize(inst->op(0), result));
+									++folded;
+									didFold = true;
 								}
 							}
 						}
@@ -797,9 +724,10 @@ namespace dsp56k
 					const auto& opInfo = rwInfo.operand(i);
 					if(opInfo.isWrite() || opInfo.isReadWrite())
 					{
-						RegKey key;
-						if(getRegKey(key, inst->op(i)))
-							constants.erase(key);
+						bool valid;
+						const auto idx = regIndex(inst->op(i), valid);
+						if(valid)
+							constants.erase(idx);
 					}
 				}
 
