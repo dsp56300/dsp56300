@@ -154,7 +154,7 @@ namespace dsp56k
 
 		m_dspRegs.mask56(aluD);
 
-		ccr_clear(CCR_V);	// TODO: Set if overflow has occurred in the A or B result or the MSB of the destination operand is changed as a result of the instruction’s left shift.
+		ccr_clear(CCR_V);	// TODO: Set if overflow has occurred in the A or B result or the MSB of the destination operand is changed as a result of the instructionï¿½s left shift.
 		ccr_dirty(ab, aluD, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
@@ -279,7 +279,7 @@ namespace dsp56k
 
 		DspValue r(m_block);
 		decode_sss_read(r, sss);
-		m_asm.and_(r.get(), asmjit::Imm(0x3f));	// "In the control register S1: bits 5–0 (LSB) are used as the #ii field, and the rest of the register is ignored." TODO: this is missing in the interpreter!
+		m_asm.and_(r.get(), asmjit::Imm(0x3f));	// "In the control register S1: bits 5ï¿½0 (LSB) are used as the #ii field, and the rest of the register is ignored." TODO: this is missing in the interpreter!
 		const ShiftReg shiftReg(m_block);
 		m_asm.mov(r32(shiftReg), r32(r));
 		r.release();
@@ -310,7 +310,7 @@ namespace dsp56k
 
 		DspValue r(m_block);
 		decode_sss_read(r, sss);
-		m_asm.and_(r.get(), asmjit::Imm(0x3f));	// "In the control register S1: bits 5–0 (LSB) are used as the #ii field, and the rest of the register is ignored." TODO: this is missing in the interpreter!
+		m_asm.and_(r.get(), asmjit::Imm(0x3f));	// "In the control register S1: bits 5ï¿½0 (LSB) are used as the #ii field, and the rest of the register is ignored." TODO: this is missing in the interpreter!
 		const ShiftReg shifter(m_block);
 		m_asm.mov(r32(shifter), r32(r));
 		r.release();
@@ -716,7 +716,10 @@ namespace dsp56k
 
 	void JitOps::op_Eor_xx(TWord op)
 	{
-		errNotImplemented(op);
+		const auto ab = getFieldValue<Eor_xx, Field_d>(op);
+		const auto xxxx = getFieldValue<Eor_xx, Field_iiiiii>(op);
+		DspValue r(m_block, xxxx, DspValue::Immediate24);
+		alu_eor(ab, r);
 	}
 
 	void JitOps::op_Extractu_S1S2(TWord op)
@@ -1148,7 +1151,32 @@ namespace dsp56k
 
 	void JitOps::op_Subr(TWord op)
 	{
-		errNotImplemented(op);
+		// D = D/2 - S (reverse subtract: subtract source from half of destination)
+		const auto ab = getFieldValue<Subr, Field_d>(op);
+
+		AluReg aluD(m_block, ab);
+
+		// D/2: arithmetic shift right by 1, maintaining 56-bit format
+		m_asm.sal(aluD, asmjit::Imm(8));
+		m_asm.sar(aluD, asmjit::Imm(1));
+		m_asm.shr(aluD, asmjit::Imm(8));
+
+		{
+			AluRef aluS(m_block, ab ? 0 : 1, true, false);
+			m_asm.sub(aluD, aluS.get());
+		}
+
+		{
+			const RegScratch aluMax(m_block);
+			m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
+			m_asm.cmp(aluD, aluMax);
+		}
+
+		ccr_update_ifGreater(CCRB_C);
+
+		ccr_dirty(ab, aluD, static_cast<CCRMask>(CCR_E | CCR_U | CCR_N));
+		ccr_n_update_by55(aluD);
+		ccr_s_update(aluD);
 	}
 
 	void JitOps::op_Tcc_S1D1(TWord op)

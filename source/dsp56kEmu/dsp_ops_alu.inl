@@ -1140,7 +1140,16 @@ namespace dsp56k
 	}
 	inline void DSP::op_Mpyr_SD(const TWord op)
 	{
-		errNotImplemented("MPYR");
+		const int sssss		= getFieldValue<Mpyr_SD,Field_sssss>(op);
+		const TWord QQ		= getFieldValue<Mpyr_SD,Field_QQ>(op);
+		const bool ab		= getFieldValue<Mpyr_SD,Field_d>(op);
+		const bool negate	= getFieldValue<Mpyr_SD,Field_k>(op);
+
+		const TReg24 s1 = decode_QQ_read(QQ);
+		const TReg24 s2 = TReg24( decode_sssss(sssss) );
+
+		alu_mpy( ab, s1, s2, negate, false );
+		alu_rnd( ab );
 	}
 	inline void DSP::op_Mpyri(const TWord op)
 	{
@@ -1201,7 +1210,26 @@ namespace dsp56k
 	}
 	inline void DSP::op_Ror(const TWord op)
 	{
-		errNotImplemented("ROR");
+		const auto D = getFieldValue<Ror, Field_d>(op);
+
+		auto& d = D ? reg.b.var : reg.a.var;
+
+		const auto c = bitvalue<uint64_t,24>(d);		// bit 24 = LSB of a1/b1
+		auto shifted = d;
+		reinterpret_cast<uint64_t&>(shifted) >>= 24;	// isolate a1/b1
+		const auto oldBit0 = shifted & 1;
+		shifted >>= 1;									// shift right
+		shifted |= static_cast<TInt64>(sr_val(CCRB_C)) << 23;	// inject old carry into bit 23 (MSB position)
+		shifted &= 0xffffff;
+		shifted <<= 24;									// move back
+
+		d &= 0xff000000ffffff;
+		d |= shifted;
+
+		sr_toggle(CCRB_N, bitvalue<uint64_t, 47>(shifted));
+		sr_toggle(CCR_Z, shifted == 0);
+		sr_clear(CCR_V);
+		sr_toggle(CCRB_C, static_cast<Bit>(oldBit0));
 	}
 	inline void DSP::op_Sbc(const TWord op)
 	{

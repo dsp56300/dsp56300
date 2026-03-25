@@ -133,6 +133,9 @@ namespace dsp56k
 		// do_();
 		// rep();
 
+		// newly implemented
+		eor_xx();
+		ror_();
 		// system
 		rts();
 	}
@@ -3461,8 +3464,36 @@ namespace dsp56k
 
 	void UnitTests::subr()
 	{
-		// subr is only implemented in the interpreter, not in the JIT.
-		// Tested in InterpreterUnitTests::testSubr() instead.
+		// subr b,a: a = a/2 - b
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00600000000000;
+			dsp.regs().b.var = 0x00020000000000;
+			emit("subr b,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x002e0000000000);
+		});
+		// subr a,b: b = b/2 - a
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00100000000000;
+			dsp.regs().b.var = 0x00400000000000;
+			emit("subr a,b");
+		}, [&]()
+		{
+			verify(dsp.regs().b.var == 0x00100000000000);
+		});
+		// subr with zero
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00000000000000;
+			dsp.regs().b.var = 0x00100000000000;
+			emit("subr b,a");
+		}, [&]()
+		{
+			verify(dsp.sr_test(CCR_N));
+		});
 	}
 
 	void UnitTests::mpyi()
@@ -4101,6 +4132,89 @@ namespace dsp56k
 	// ======================================================================
 	// System tests
 	// ======================================================================
+	// Newly implemented instructions
+	// ======================================================================
+
+	void UnitTests::eor_xx()
+	{
+		// eor #$3f,a (short immediate EOR)
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00ff00ff000000;
+			emit("eor #$3f,a");
+		}, [&]()
+		{
+			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00ff00c0000000);
+		});
+		// eor #$3f,b
+		runTest([&]()
+		{
+			dsp.regs().b.var = 0x00000000000000;
+			emit("eor #$3f,b");
+		}, [&]()
+		{
+			verify((dsp.regs().b.var & 0x00ffffff000000) == 0x0000003f000000);
+		});
+		// eor with all bits set
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00ffffff000000;
+			emit("eor #$3f,a");
+		}, [&]()
+		{
+			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00ffffc0000000);
+		});
+	}
+
+	void UnitTests::ror_()
+	{
+		// ror a — rotate right through carry
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00aabbcc000000;
+			dsp.sr_clear(CCR_C);
+			emit("ror a");
+		}, [&]()
+		{
+			// a1 was 0xaabbcc, bit 0 = 0, shifted right, old C (0) injected at bit 23
+			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00555de6000000);
+			verify(!dsp.sr_test(CCR_C));	// old bit 0 was 0
+		});
+		// ror a with carry set
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00aabbcc000000;
+			dsp.sr_set(CCR_C);
+			emit("ror a");
+		}, [&]()
+		{
+			// old C (1) injected at bit 23
+			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00d55de6000000);
+			verify(!dsp.sr_test(CCR_C));	// old bit 0 was 0
+		});
+		// ror a with odd value (bit 0 = 1)
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00000001000000;
+			dsp.sr_clear(CCR_C);
+			emit("ror a");
+		}, [&]()
+		{
+			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00000000000000);
+			verify(dsp.sr_test(CCR_C));		// old bit 0 was 1
+		});
+		// ror b
+		runTest([&]()
+		{
+			dsp.regs().b.var = 0x00800000000000;
+			dsp.sr_clear(CCR_C);
+			emit("ror b");
+		}, [&]()
+		{
+			verify((dsp.regs().b.var & 0x00ffffff000000) == 0x00400000000000);
+			verify(!dsp.sr_test(CCR_C));
+		});
+	}
 
 	void UnitTests::rts()
 	{

@@ -142,6 +142,10 @@ namespace  dsp56k
 		void dor();
 		void rep();
 
+		// newly implemented
+		void eor_xx();
+		void ror_();
+
 		// system
 		void rts();
 

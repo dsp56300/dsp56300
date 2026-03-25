@@ -553,7 +553,7 @@ namespace dsp56k
 			copyBitToCCR(r32(d), 23, CCRB_N);			// Set if bit 47 of the result is set
 
 			m_asm.test_(d.get());
-			ccr_update_ifZero(CCRB_Z);					// Set if bits 47–24 of the result are 0
+			ccr_update_ifZero(CCRB_Z);					// Set if bits 47ï¿½24 of the result are 0
 		}
 
 		ccr_clear(CCR_V);								// Always cleared
@@ -576,7 +576,31 @@ namespace dsp56k
 
 		m_asm.orr(r.get(), r.get(), r32(prevCarry.get()));
 		m_asm.test_(r32(r));
-		ccr_update_ifZero(CCRB_Z);							// Set if bits 47–24 of the result are 0
+		ccr_update_ifZero(CCRB_Z);							// Set if bits 47ï¿½24 of the result are 0
+
+		setALU1(D, r);
+
+		ccr_clear(CCR_V);									// This bit is always cleared
+	}
+
+	void JitOps::op_Ror(TWord op)
+	{
+		const auto D = getFieldValue<Ror, Field_d>(op);
+
+		DspValue r(m_block);
+		getALU1(r, D);
+
+		const RegGP prevCarry(m_block);
+		ccr_getBitValue(prevCarry, CCRB_C);
+
+		copyBitToCCR(r32(r), 0, CCRB_C);				// C = bit 24 of the destination
+
+		m_asm.shr(r.get(), asmjit::Imm(1));
+		m_asm.bfi(r.get(), r32(prevCarry.get()), asmjit::Imm(23), asmjit::Imm(1));
+
+		m_asm.test_(r32(r));
+		ccr_update_ifZero(CCRB_Z);							// Set if bits 47-24 of the result are 0
+		ccr_n_update_by23(r64(r));							// Set if bit 47 of the result is set
 
 		setALU1(D, r);
 
