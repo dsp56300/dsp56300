@@ -137,11 +137,15 @@ namespace dsp56k
 
 			emitter.ret();
 
-			// Apply optimizer
+			// Apply optimizer and verify it actually changed something
+			size_t optimized;
 			{
 				JitOptimizer optimizer(emitter);
-				optimizer.optimize();
+				optimized = optimizer.optimize();
 			}
+
+			if(optimized == 0)
+				throw std::string("Optimizer test '") + _name + "' FAILED: optimizer made 0 changes (expected > 0)";
 
 			emitter.finalize();
 
@@ -301,9 +305,13 @@ namespace dsp56k
 			emitAsm(block, ops, "not a");         // a1 = ~a1
 			emitAsm(block, ops, "and y0,b");     // b1 &= y0
 			emitAsm(block, ops, "or x0,b");      // b1 |= x0
-			emitAsm(block, ops, "lsl a");        // logical shift left a
-			emitAsm(block, ops, "lsr a");        // logical shift right a
-			emitAsm(block, ops, "rol a");        // rotate left
+			emitAsm(block, ops, "lsl a");         // logical shift left a
+			emitAsm(block, ops, "lsr a");         // logical shift right a
+			emitAsm(block, ops, "rol a");         // rotate left
+			// Load constants via long immediate (generates mov reg,imm that the
+			// optimizer can propagate/fold through subsequent operations)
+			emitAsm(block, ops, "move #>$0f0f0f,x0");  // reloads x0 with foldable constant
+			emitAsm(block, ops, "and x0,b");     // optimizer can propagate the constant
 		});
 	}
 
@@ -720,11 +728,15 @@ namespace dsp56k
 			errorHandler.setBlock(&rt);
 			block.emit(rt, nullptr, basePC, cache, volatileP, loopStarts, loopEnds, false);
 
-			// Apply optimizer
+			// Apply optimizer and verify it actually changed something
+			size_t optimized;
 			{
 				JitOptimizer optimizer(emitter);
-				optimizer.optimize();
+				optimized = optimizer.optimize();
 			}
+
+			if(optimized == 0)
+				throw std::string("Optimizer test '") + name + "' FAILED: optimizer made 0 changes (expected > 0)";
 
 			emitter.finalize();
 
