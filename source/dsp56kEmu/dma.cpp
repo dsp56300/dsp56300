@@ -581,6 +581,7 @@ namespace dsp56k
 					--m_dcol;
 				}
 
+				_target &= 0xffffff;
 //				LOG("DMA" << m_index << " address change " << HEX(prev) << " => " << HEX(_target));
 			};
 
