@@ -102,6 +102,45 @@ namespace  dsp56k
 		void movel();
 		void parallel();
 
+		// ALU extended
+		void and_xxxx();
+		void or_xxxx();
+		void sub_xxxx();
+		void cmp_xxxx();
+		void subr();
+		void mpyi();
+		void mpy_su();
+		void tst();
+		void nop();
+
+		// branches
+		void bra();
+		void bcc();
+		void bsr();
+		void bscc();
+		void brclr_brset();
+		void bsclr_bsset();
+
+		// jumps
+		void jmp();
+		void jcc();
+		void jsr();
+		void jclr_jset();
+		void jsclr_jsset();
+
+		// bit manipulation extended
+		void bchg();
+		void bset();
+		void btst();
+
+		// loop control
+		void do_();
+		void dor();
+		void rep();
+
+		// system
+		void rts();
+
 		Peripherals56362 peripheralsX;
 		Peripherals56367 peripheralsY;
 		Memory mem;
