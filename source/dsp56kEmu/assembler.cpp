@@ -1982,6 +1982,142 @@ namespace dsp56k
 				return result;
 			}
 
+			// Movec_ea: move x:(rN),D or move D,x:(rN) — EA to/from control register
+			// Also handles immediate: move #>$aabbcc,lc (MMMRRR_ImmediateData)
+			case Movec_ea:
+			{
+				if (ops.size() != 2) continue;
+				const auto op0 = toLower(ops[0]);
+				const auto op1 = toLower(ops[1]);
+
+				// Determine which side is the PCR register and which is the EA
+				TWord dd;
+				bool op0IsPCR = parseRegister_DDDDD(op0, dd);
+				bool op1IsPCR = parseRegister_DDDDD(op1, dd);
+
+				if (!op0IsPCR && !op1IsPCR) continue;
+
+				// Both PCR → ambiguous for this instruction
+				if (op0IsPCR && op1IsPCR) continue;
+
+				const auto& eaOp = op0IsPCR ? op1 : op0;
+				const auto& pcrOp = op0IsPCR ? op0 : op1;
+				bool write = !op0IsPCR; // W=1 means EA→PCR
+
+				parseRegister_DDDDD(pcrOp, dd);
+
+				// Check for long immediate: #>$xxxx (short immediates handled by Movec_xx)
+				if (eaOp.size() > 2 && eaOp[0] == '#' && eaOp[1] == '>')
+				{
+					if (!write) continue; // immediate can only be source
+					auto immStr = eaOp.substr(2);
+					TWord imm;
+					if (!parseNumber(immStr, imm)) continue;
+
+					setFieldValue(word, inst, Field_DDDDD, dd);
+					setFieldValue(word, inst, Field_MMM, MMMRRR_ImmediateData >> 3);
+					setFieldValue(word, inst, Field_RRR, MMMRRR_ImmediateData & 7);
+					setFieldValue(word, inst, Field_W, 1);
+					setFieldValue(word, inst, Field_S, 0); // X memory space
+					result.word[0] = word;
+					result.word[1] = imm;
+					result.wordCount = 2;
+					result.error = AssembleError::OK;
+					return result;
+				}
+
+				// Parse memory EA: x:(rN), y:(rN), etc.
+				EMemArea area = MemArea_X;
+				auto eaStr = eaOp;
+				if (eaStr.size() > 2 && eaStr[1] == ':')
+				{
+					parseMemoryArea(std::string(1, eaStr[0]), area);
+					eaStr = eaStr.substr(2);
+				}
+
+				bool isLongAddr = false;
+				if (!eaStr.empty() && eaStr[0] == '>')
+				{
+					isLongAddr = true;
+					eaStr = eaStr.substr(1);
+				}
+
+				AddressingMode am;
+				if (!parseAddressingMode(eaStr, am))
+				{
+					// Try parsing as absolute address (only if forced long with > prefix)
+					if (!isLongAddr) continue;
+					TWord addr;
+					if (!parseNumber(eaStr, addr)) continue;
+					am.mmmrrr = MMMRRR_AbsAddr;
+					am.extWord = addr;
+					am.hasExtWord = true;
+				}
+
+				setFieldValue(word, inst, Field_DDDDD, dd);
+				setFieldValue(word, inst, Field_MMM, am.mmmrrr >> 3);
+				setFieldValue(word, inst, Field_RRR, am.mmmrrr & 7);
+				setFieldValue(word, inst, Field_W, write ? 1 : 0);
+				setFieldValue(word, inst, Field_S, area == MemArea_Y ? 1 : 0);
+				result.word[0] = word;
+				result.wordCount = 1;
+				if (am.hasExtWord)
+				{
+					result.word[1] = am.extWord;
+					result.wordCount = 2;
+				}
+				result.error = AssembleError::OK;
+				return result;
+			}
+
+			// Movec_aa: move x:$aa,D or move D,x:$aa — absolute short address to/from control register
+			case Movec_aa:
+			{
+				if (ops.size() != 2) continue;
+				const auto op0 = toLower(ops[0]);
+				const auto op1 = toLower(ops[1]);
+
+				TWord dd;
+				bool op0IsPCR = parseRegister_DDDDD(op0, dd);
+				bool op1IsPCR = parseRegister_DDDDD(op1, dd);
+
+				if (!op0IsPCR && !op1IsPCR) continue;
+				if (op0IsPCR && op1IsPCR) continue;
+
+				const auto& eaOp = op0IsPCR ? op1 : op0;
+				const auto& pcrOp = op0IsPCR ? op0 : op1;
+				bool write = !op0IsPCR; // W=1 means mem→PCR
+
+				parseRegister_DDDDD(pcrOp, dd);
+
+				// Parse memory operand: x:$aa or y:$aa
+				EMemArea area = MemArea_X;
+				auto addrStr = eaOp;
+				if (addrStr.size() > 2 && addrStr[1] == ':')
+				{
+					parseMemoryArea(std::string(1, addrStr[0]), area);
+					addrStr = addrStr.substr(2);
+				}
+				else
+				{
+					continue; // must have memory area prefix
+				}
+
+				TWord addr;
+				if (!parseNumber(addrStr, addr)) continue;
+				if (addr > 0x3F && addr < 0xFFFFC0) continue;
+				addr &= 0x3F;
+
+				setFieldValue(word, inst, Field_DDDDD, dd);
+				setFieldValue(word, inst, Field_aaaaaa, addr);
+				setFieldValue(word, inst, Field_W, write ? 1 : 0);
+				setFieldValue(word, inst, Field_S, area == MemArea_Y ? 1 : 0);
+				result.word[0] = word;
+				result.wordCount = 1;
+				result.error = AssembleError::OK;
+				return result;
+			}
+
 			// Movec_xx: move #xx,D (immediate to control register)
 			case Movec_xx:
 			{
@@ -2256,6 +2392,41 @@ namespace dsp56k
 				return result;
 			}
 
+			// Lra_xxxx: lra >*+$offset,D — load relative address
+			case Lra_xxxx:
+			{
+				if (ops.size() != 2) continue;
+				auto addrStr = toLower(ops[0]);
+				// Format from disassembler: >*+$offset or >*-$offset or >*
+				if (addrStr.empty() || addrStr[0] != '>') continue;
+				addrStr = addrStr.substr(1);
+				if (addrStr.empty() || addrStr[0] != '*') continue;
+				addrStr = addrStr.substr(1);
+
+				TWord offset = 0;
+				if (!addrStr.empty())
+				{
+					bool isNeg = false;
+					if (addrStr[0] == '+') addrStr = addrStr.substr(1);
+					else if (addrStr[0] == '-') { isNeg = true; addrStr = addrStr.substr(1); }
+					else continue;
+					if (!parseNumber(addrStr, offset)) continue;
+					if (isNeg) offset = static_cast<TWord>(-static_cast<int>(offset)) & 0xFFFFFF;
+				}
+
+				// Parse destination register: rN or nN (DDDDDD 5-bit encoding)
+				const auto& regMap = getRegisterMap_DDDDDD();
+				auto regIt = regMap.find(toLower(ops[1]));
+				if (regIt == regMap.end()) continue;
+
+				result.word[0] = word;
+				result.word[1] = offset;
+				result.wordCount = 2;
+				setFieldValue(result.word[0], inst, Field_ddddd, regIt->second);
+				result.error = AssembleError::OK;
+				return result;
+			}
+
 			// Non-parallel Move_xx: #xx,D (8-bit immediate to register)
 			case Move_xx:
 			{
@@ -2515,17 +2686,39 @@ namespace dsp56k
 				}
 				else if (eaLower.size() > 1 && eaLower[0] == '#')
 				{
-					eaStr = eaStr.substr(1);
-					if (!eaStr.empty() && eaStr[0] == '>') eaStr = eaStr.substr(1);
+					// Immediate data: #>$xxxx
+					auto immStr = eaStr.substr(1);
+					if (!immStr.empty() && immStr[0] == '>') immStr = immStr.substr(1);
+					TWord imm;
+					if (!parseNumber(immStr, imm)) continue;
+
+					setFieldValue(word, inst, Field_qqqqqq, qq);
+					setFieldValue(word, inst, Field_MMM, MMMRRR_ImmediateData >> 3);
+					setFieldValue(word, inst, Field_RRR, MMMRRR_ImmediateData & 7);
+					setFieldValue(word, inst, Field_W, 1); // write to peripheral (immediate is always source)
+					setFieldValue(word, inst, Field_S, eaArea == MemArea_Y ? 1 : 0);
+					result.word[0] = word;
+					result.word[1] = imm;
+					result.wordCount = 2;
+					result.error = AssembleError::OK;
+					return result;
 				}
 
 				AddressingMode am;
-				if (!parseAddressingMode(eaStr, am)) continue;
+				if (!parseAddressingMode(eaStr, am))
+				{
+					// Try parsing as absolute address
+					TWord addr;
+					if (!parseNumber(eaStr, addr)) continue;
+					am.mmmrrr = MMMRRR_AbsAddr;
+					am.extWord = addr;
+					am.hasExtWord = true;
+				}
 
 				setFieldValue(word, inst, Field_qqqqqq, qq);
 				setFieldValue(word, inst, Field_MMM, (am.mmmrrr >> 3) & 0x7);
 				setFieldValue(word, inst, Field_RRR, am.mmmrrr & 0x7);
-				setFieldValue(word, inst, Field_W, writeToPeripheral ? 0 : 1);
+				setFieldValue(word, inst, Field_W, writeToPeripheral ? 1 : 0);
 				setFieldValue(word, inst, Field_S, eaArea == MemArea_Y ? 1 : 0);
 				result.word[0] = word;
 				result.wordCount = 1;
@@ -2545,11 +2738,23 @@ namespace dsp56k
 				if (ops.size() != 2) continue;
 
 				int periphIdx = -1;
+				bool doubleChevron = false;
 				for (int i = 0; i < 2; ++i)
 				{
 					auto op = toLower(ops[i]);
-					if (op.size() > 2 && op[1] == ':' && op.substr(2, 1) == "<" && op.substr(2, 2) != "<<")
-						periphIdx = i;
+					if (op.size() > 2 && op[1] == ':')
+					{
+						if (op.substr(2, 2) == "<<")
+						{
+							periphIdx = i;
+							doubleChevron = true;
+						}
+						else if (op[2] == '<')
+						{
+							periphIdx = i;
+							doubleChevron = false;
+						}
+					}
 				}
 				if (periphIdx < 0) continue;
 
@@ -2560,7 +2765,7 @@ namespace dsp56k
 				EMemArea periphArea;
 				if (!parseMemoryArea(std::string(1, periphStr[0]), periphArea)) continue;
 
-				auto ppAddrStr = periphStr.substr(3);
+				auto ppAddrStr = periphStr.substr(doubleChevron ? 4 : 3);
 				TWord ppAddr;
 				if (!parseNumber(ppAddrStr, ppAddr) && !resolveSymbol(periphArea, ppAddrStr, ppAddr)) continue;
 				TWord pp = ppAddr - 0xFFFFC0;
@@ -2569,20 +2774,57 @@ namespace dsp56k
 				// Parse EA
 				auto eaLower = toLower(eaStr);
 				EMemArea eaArea = MemArea_P;
+
+				// Check for immediate: #>$xxxx
+				if (eaLower.size() > 1 && eaLower[0] == '#')
+				{
+					auto immStr = eaStr.substr(1);
+					if (!immStr.empty() && immStr[0] == '>') immStr = immStr.substr(1);
+					TWord imm;
+					if (!parseNumber(immStr, imm)) continue;
+
+					setFieldValue(word, inst, Field_pppppp, pp);
+					setFieldValue(word, inst, Field_MMM, MMMRRR_ImmediateData >> 3);
+					setFieldValue(word, inst, Field_RRR, MMMRRR_ImmediateData & 7);
+					setFieldValue(word, inst, Field_W, 1); // write to peripheral (immediate is always source)
+					setFieldValue(word, inst, Field_s, periphArea == MemArea_Y ? 1 : 0);
+					result.word[0] = word;
+					result.word[1] = imm;
+					result.wordCount = 2;
+					result.error = AssembleError::OK;
+					return result;
+				}
+
 				if (eaLower.size() > 2 && eaLower[1] == ':')
 				{
 					parseMemoryArea(std::string(1, eaLower[0]), eaArea);
 					eaStr = eaStr.substr(2);
 					if (!eaStr.empty() && eaStr[0] == '>') eaStr = eaStr.substr(1);
 				}
+
+				// Movep_ppea: EA must be in X or Y memory (not P)
+				// Movep_eapp: EA must be in P memory
+				if (inst == Movep_ppea && eaArea == MemArea_P) continue;
+				if (inst == Movep_eapp && eaArea != MemArea_P) continue;
+
 				AddressingMode am;
-				if (!parseAddressingMode(eaStr, am)) continue;
+				if (!parseAddressingMode(eaStr, am))
+				{
+					// Try parsing as absolute address
+					TWord addr;
+					if (!parseNumber(eaStr, addr)) continue;
+					am.mmmrrr = MMMRRR_AbsAddr;
+					am.extWord = addr;
+					am.hasExtWord = true;
+				}
 
 				setFieldValue(word, inst, Field_pppppp, pp);
 				setFieldValue(word, inst, Field_MMM, (am.mmmrrr >> 3) & 0x7);
 				setFieldValue(word, inst, Field_RRR, am.mmmrrr & 0x7);
-				setFieldValue(word, inst, Field_W, writeToPeripheral ? 0 : 1);
+				setFieldValue(word, inst, Field_W, writeToPeripheral ? 1 : 0);
 				setFieldValue(word, inst, Field_s, periphArea == MemArea_Y ? 1 : 0);
+				if (inst == Movep_ppea)
+					setFieldValue(word, inst, Field_S, eaArea == MemArea_Y ? 1 : 0);
 				result.word[0] = word;
 				result.wordCount = 1;
 				if (am.hasExtWord)
@@ -2896,7 +3138,7 @@ namespace dsp56k
 					if (!parseAluD(ops[1], d)) continue;
 					TWord jjj;
 					if (!parseRegister_JJJ(ops[0], d != 0, jjj)) continue;
-					// For Tcc, only JJJ >= 4 is allowed (non-parallel)
+					// JJJ < 4 overlaps with parallel move encoding, restrict to safe values
 					if (jjj < 4) continue;
 					setFieldValue(word, inst, Field_JJJ, jjj);
 					setFieldValue(word, inst, Field_d, d);

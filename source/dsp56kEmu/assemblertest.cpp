@@ -516,6 +516,53 @@ namespace dsp56k
 		roundTrip(0x202a10);	// add b,a ifeq
 		roundTrip(0x203115);	// cmp b,a ifge.u (canonical JJJ=1)
 		roundTrip(0x20311d);	// cmp a,b ifge.u (canonical JJJ=1)
+
+		// tfr: JJJ=0 (0x200009) and JJJ=1 (0x200019) both mean "other accumulator",
+		// assembler canonically picks JJJ=1
+		roundTrip(0x200019);	// tfr a,b (JJJ=1, canonical)
+
+		// tcc/tne: JJJ values 0-1 mean "other accumulator" (same as JJJ=1)
+		// Assembler uses JJJ>=4 for non-accumulator sources
+		roundTrip(0x022801);	// tne r0,r1 (Tcc_S2D2)
+		roundTrip(0x022040);	// tne x0,a (Tcc_S1D1, JJJ=4)
+		roundTrip(0x022048);	// tne x0,b (Tcc_S1D1, JJJ=4)
+
+		// mac/mpy with specific QQ encodings
+		roundTrip(0x2000e2);	// mac x0,y1,a
+		roundTrip(0x2000da);	// mac y1,x1,a
+		roundTrip(0x2000d0);	// mac x1,x0,a
+		roundTrip(0x2000a0);	// mpy x0,x1,a
+
+		// extractu
+		roundTrip(0x0c1a8d);	// extractu x0,a,b
+		roundTrip(0x0c1890, 0x008028);	// extractu #$8028,a,a
+		roundTrip(0x0c1890, 0x020000);	// extractu #$20000,a,a
+		roundTrip(0x0c1890, 0x00C028);	// extractu #$c028,a,a
+
+		// movec
+		roundTrip(0x05e03a);	// movec x:(r0),omr
+		roundTrip(0x058339);	// movec x:<$3,sr
+		roundTrip(0x05f43f, 0xaabbcc);	// movec #$aabbcc,lc
+		roundTrip(0x0445aa);	// movec ep,x1
+
+		// movep
+		roundTrip(0x08f485, 0xffeeff);	// movep #>$ffeeff,x:<<$ffffc5
+		roundTrip(0x087045, 0x000023);	// movep x:<<$ffffc5,p:>$23
+		roundTrip(0x07f405, 0x334455);	// movep #>$334455,x:<<$ffff85
+		roundTrip(0x07b48c, 0x556677);	// movep #>$556677,y:<<$ffff8c
+		roundTrip(0x094705);	// movep y:<<$ffffc5,y1
+
+		// parallel XR/YR moves: the Movexr/Moveyr encoding and the regular
+		// Movex+Mover encoding are semantically equivalent. The assembler picks
+		// the regular encoding. Round-trip both the canonical (assembler) encoding
+		// and the Movexy encoding which has no ambiguity.
+		roundTrip(0xbada00);	// movexy: move x:(r2)+,a a,y:(r6)+
+		roundTrip(0xf0ca00);	// movexy: move x:(r2)+n2,x0 y:(r6)+,y0
+		roundTrip(0x56da00);	// move x:(r2)+,a (canonical encoding of movexr pattern)
+		roundTrip(0x56e200);	// move x:(r2),a (canonical encoding of movexr pattern)
+
+		// lra
+		roundTrip(0x044058, 0x00000a);	// lra n0,>*+$a
 	}
 
 	void AssemblerTest::testPeripheralSymbols()
