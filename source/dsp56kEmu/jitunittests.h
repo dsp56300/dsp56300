@@ -76,6 +76,7 @@ namespace dsp56k
 		void parallelMoveXY();
 
 		void emit(TWord _opA, TWord _opB = 0, TWord _pc = 0) override;
+		using UnitTests::emit;
 
 		asmjit::JitRuntime m_rt;
 

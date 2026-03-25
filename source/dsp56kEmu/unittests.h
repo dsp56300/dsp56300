@@ -1,5 +1,6 @@
 #pragma once
 
+#include "assembler.h"
 #include "dsp.h"
 #include "jitops.h"
 #include "memory.h"
@@ -24,6 +25,9 @@ namespace  dsp56k
 
 		virtual void runTest(const std::function<void()>& _build, const std::function<void()>& _verify) = 0;
 		virtual void emit(TWord _opA, TWord _opB = 0, TWord _pc = 0) = 0;
+		void emit(const char* _text, TWord _pc = 0);
+
+		Assembler assembler;
 
 		void runAllTests();
 

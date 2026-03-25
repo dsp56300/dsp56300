@@ -35,8 +35,7 @@ namespace dsp56k
 		dsp.reg.a.var = 0x00600000000000;
 		dsp.reg.b.var = 0x00020000000000;
 
-		// subr b,a
-		emit(0x200006);
+		emit("subr b,a");
 		verify(dsp.reg.a.var == 0x002e0000000000);
 		verify(!dsp.sr_test(CCR_C));
 		verify(!dsp.sr_test(CCR_V));
