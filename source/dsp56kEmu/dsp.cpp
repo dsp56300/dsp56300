@@ -501,7 +501,7 @@ namespace dsp56k
 
 		while(reg.sc.var >= stackCount)
 		{
-			exec();
+			execInterpreter();
 
 			if(reg.pc.var != (reg.la.var+1))
 				continue;
