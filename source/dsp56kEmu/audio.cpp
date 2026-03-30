@@ -8,16 +8,18 @@ namespace dsp56k
 	{
 		if(_useRingBuffers)
 		{
-			m_readRxCallback = [this](RxFrame& _values)
+			m_readRxCallback = [this](uint64_t& _frameIndex, RxFrame& _values)
 			{
 				m_audioInputs.waitNotEmpty();
 				_values = m_audioInputs.pop_front();
+				++_frameIndex;
 			};
 
-			m_writeTxCallback = [this](const TxFrame& _values)
+			m_writeTxCallback = [this](uint64_t& _frameIndex, const TxFrame& _values)
 			{
 				m_audioOutputs.waitNotFull();
 				m_audioOutputs.push_back(_values);
+				++_frameIndex;
 				m_callback(this);
 			};
 		}
@@ -40,11 +42,11 @@ namespace dsp56k
 
 	void Audio::readRXimpl(RxFrame& _values)
 	{
-		m_readRxCallback(_values);
+		m_readRxCallback(m_readFrameIndex, _values);
 	}
 
 	void Audio::writeTXimpl(const TxFrame& _values)
 	{
-		m_writeTxCallback(_values);
+		m_writeTxCallback(m_writeFrameIndex, _values);
 	}
 }

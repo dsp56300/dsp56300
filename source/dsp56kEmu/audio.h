@@ -109,8 +109,11 @@ namespace dsp56k
 		using TxFrame = Frame<TxSlot>;
 		using RxFrame = Frame<RxSlot>;
 
-		using ReadRxCallback = std::function<void(RxFrame&)>;
-		using WriteTxCallback = std::function<void(const TxFrame&)>;
+		// Callbacks receive a frame and a mutable frame index reference.
+		// The frame index is owned by Audio and initialized to 0.
+		// Callbacks are free to read and modify it to track position.
+		using ReadRxCallback = std::function<void(uint64_t&, RxFrame&)>;
+		using WriteTxCallback = std::function<void(uint64_t&, const TxFrame&)>;
 
 		explicit Audio(bool _useRingBuffers = true);
 
@@ -287,5 +290,7 @@ namespace dsp56k
 
 		ReadRxCallback m_readRxCallback;
 		WriteTxCallback m_writeTxCallback;
+		uint64_t m_readFrameIndex = 0;
+		uint64_t m_writeFrameIndex = 0;
 	};
 }
