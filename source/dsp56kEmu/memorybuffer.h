@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mmuhelper.h"
+#include "dsp56kBase/mmuhelper.h"
 #include "types.h"
 
 namespace dsp56k

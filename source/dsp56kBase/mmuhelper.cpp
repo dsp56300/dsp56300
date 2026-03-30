@@ -2,7 +2,7 @@
 
 #ifndef __ANDROID__
 
-#include "dsp56kBase/logging.h"
+#include "logging.h"
 
 #ifdef _WIN32
 #	define NOMINMAX
