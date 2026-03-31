@@ -5,20 +5,22 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
+#include <mutex>
 
-#include "semaphore.h"
+#include "conditionvariable.h"
 
 namespace dsp56k
 {
-	// Multi-producer, single-consumer ring buffer that sums frames.
+	// Multi-producer ring buffer that sums frames from all producers.
 	//
 	// Lock-free producer path: each producer writes to its own lane.
 	// The last producer to arrive does the reduction (summation) and
-	// either calls the completion callback (auto-pop) or notifies the
-	// consumer semaphore.
+	// calls the completion callback.
 	//
-	// No mutexes. No contention between producers on write.
-	template<typename TFrame, uint32_t Capacity, uint32_t MaxProducers = 16>
+	// Backpressure uses a condition variable with a fast-path atomic
+	// check — the mutex is only taken when producers are actually
+	// blocked (buffer full), which is rare in steady-state operation.
+	template<typename TFrame, uint32_t Capacity, uint32_t MaxProducers, typename TReduceFunc>
 	class SharedAudioReducer
 	{
 	public:
@@ -49,7 +51,6 @@ namespace dsp56k
 			return idx;
 		}
 
-		// Lock-free: each producer writes to its own lane, no contention.
 		void addFrame(const uint32_t _index, const TFrame& _frame)
 		{
 			if(m_terminated)
@@ -58,65 +59,58 @@ namespace dsp56k
 			auto& writeCount = m_writeCounts[_index];
 			const auto wc = writeCount.load(std::memory_order_relaxed);
 
-			// Block if Capacity frames ahead of consumer.
-			// Spin-check first (fast path), fall back to semaphore.
-			while(wc - m_readCount.load(std::memory_order_acquire) >= Capacity)
+			// Fast path: no backpressure, skip mutex entirely
+			if(wc - m_readCount.load(std::memory_order_acquire) >= Capacity)
 			{
+				std::unique_lock<std::mutex> lock(m_readMtx);
+				m_readCv.wait(lock, [&]()
+				{
+					return m_terminated || wc - m_readCount.load(std::memory_order_acquire) < Capacity;
+				});
 				if(m_terminated)
 					return;
-				m_readSem.wait();
 			}
 
 			auto& slot = m_data[wrap(wc)];
 
-			// Write to own lane — no lock, no contention
 			slot.lanes[_index] = _frame;
 
-			// ensure lane write is visible before contribution
 			std::atomic_thread_fence(std::memory_order_release);
 
 			writeCount.store(wc + 1, std::memory_order_release);
 
-			// Last producer does the reduction into a local temp
-			if(slot.contributions.fetch_add(1, std::memory_order_acq_rel) + 1 == m_producerCount)
+			const auto contrib = slot.contributions.fetch_add(1, std::memory_order_acq_rel) + 1;
+			if(contrib == m_producerCount)
 			{
-				// Sum all lanes into a temporary (not in-place — other
-				// producers may already be writing to this slot for the
-				// next frame after readCount advances)
 				TFrame result = slot.lanes[0];
 
 				for(uint32_t p = 1; p < m_producerCount; ++p)
-				{
-					const auto& src = slot.lanes[p];
-					const auto srcSize = src.size();
-
-					if(srcSize > result.size())
-						result.resize(srcSize);
-
-					for(uint32_t s = 0; s < srcSize; ++s)
-						for(uint32_t c = 0; c < src[s].size(); ++c)
-							result[s][c] += src[s][c];
-				}
+					m_reduceFunc(result, slot.lanes[p]);
 
 				m_completionCallback(wc, result);
 
-				// Reset and advance AFTER sum+callback so producers
-				// can't overwrite lanes while we're still reading them
 				slot.contributions.store(0, std::memory_order_relaxed);
 				m_readCount.store(wc + 1, std::memory_order_release);
 
-				m_readSem.notifyAll(m_producerCount);
+				{
+					std::lock_guard<std::mutex> lock(m_readMtx);
+				}
+				m_readCv.notify_all();
 			}
 		}
 
 		void terminate()
 		{
 			m_terminated = true;
-			m_readSem.notifyAll(MaxProducers * Capacity);
+			{
+				std::lock_guard<std::mutex> lock(m_readMtx);
+			}
+			m_readCv.notify_all();
 		}
 
 		bool isTerminated() const { return m_terminated; }
 		uint32_t producerCount() const { return m_producerCount; }
+		uint64_t readCount() const { return m_readCount.load(std::memory_order_relaxed); }
 
 	private:
 		static constexpr uint64_t wrap(const uint64_t _count)
@@ -137,10 +131,10 @@ namespace dsp56k
 		bool m_terminated = false;
 		std::array<std::atomic<uint64_t>, MaxProducers> m_writeCounts{};
 
-		// Used as a wakeup signal, not a counter. Producers spin on m_readCount
-		// and fall back to this semaphore when they need to block.
-		Semaphore m_readSem{0};
+		std::mutex m_readMtx;
+		ConditionVariable m_readCv;
 
 		CompletionCallback m_completionCallback;
+		TReduceFunc m_reduceFunc;
 	};
 }

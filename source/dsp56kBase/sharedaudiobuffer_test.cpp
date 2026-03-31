@@ -28,7 +28,10 @@ int main()
 		consumerIds[i] = buffer.addConsumer();
 
 	std::atomic<bool> failed{false};
+	std::atomic<bool> done{false};
 	std::atomic<uint64_t> totalConsumed{0};
+	std::atomic<uint64_t> produced{0};
+	std::array<std::atomic<uint64_t>, ConsumerCount> consumed{};
 
 	// Consumer threads
 	std::vector<std::thread> consumers;
@@ -43,7 +46,6 @@ int main()
 
 			for(uint64_t i = 0; i < TotalFrames; ++i)
 			{
-				// Randomly sleep to create contention
 				if(sleepDist(rng) == 0)
 					std::this_thread::sleep_for(std::chrono::microseconds(1));
 
@@ -57,6 +59,7 @@ int main()
 					return;
 				}
 
+				consumed[c].fetch_add(1, std::memory_order_relaxed);
 				totalConsumed.fetch_add(1, std::memory_order_relaxed);
 			}
 		});
@@ -73,22 +76,69 @@ int main()
 			if(failed.load())
 				return;
 
-			// Randomly sleep to let consumers catch up / drain buffer
 			if(sleepDist(rng) == 0)
 				std::this_thread::sleep_for(std::chrono::microseconds(1));
 
 			TestFrame frame;
 			frame.value = i;
 			buffer.push(frame);
+			produced.fetch_add(1, std::memory_order_relaxed);
+		}
+	});
 
-			if((i & 0xFFFFF) == 0 && i > 0)
-				std::cout << "  Produced " << i << " / " << TotalFrames << std::endl;
+	// Watchdog thread
+	std::thread watchdog([&]
+	{
+		uint64_t lastProduced = 0;
+		std::array<uint64_t, ConsumerCount> lastConsumed{};
+		int stalledSeconds = 0;
+
+		while(!done.load() && !failed.load())
+		{
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+
+			const auto p = produced.load(std::memory_order_relaxed);
+			bool anyProgress = (p != lastProduced);
+
+			std::cerr << "  produced=" << p;
+			for(uint32_t c = 0; c < ConsumerCount; ++c)
+			{
+				const auto cc = consumed[c].load(std::memory_order_relaxed);
+				if(cc != lastConsumed[c])
+					anyProgress = true;
+				std::cerr << " c" << c << "=" << cc;
+				lastConsumed[c] = cc;
+			}
+			std::cerr << " writeSem=" << buffer.writeCount() - buffer.readCount(0);
+			for(uint32_t c = 0; c < ConsumerCount; ++c)
+				std::cerr << " r" << c << "=" << buffer.readCount(c);
+			std::cerr << std::endl;
+
+			lastProduced = p;
+
+			if(!anyProgress)
+			{
+				++stalledSeconds;
+				if(stalledSeconds >= 5)
+				{
+					std::cerr << "DEADLOCK: no progress for 5 seconds" << std::endl;
+					failed.store(true);
+					buffer.terminate();
+					return;
+				}
+			}
+			else
+			{
+				stalledSeconds = 0;
+			}
 		}
 	});
 
 	producer.join();
 	for(auto& t : consumers)
 		t.join();
+	done.store(true);
+	watchdog.join();
 
 	const auto expected = TotalFrames * ConsumerCount;
 	const auto actual = totalConsumed.load();
@@ -97,7 +147,7 @@ int main()
 
 	if(failed.load())
 	{
-		std::cerr << "FAILED: data corruption detected" << std::endl;
+		std::cerr << "FAILED" << std::endl;
 		return 1;
 	}
 

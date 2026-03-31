@@ -43,7 +43,6 @@ namespace dsp56k
 			const auto wc = m_writeCount.load(std::memory_order_relaxed);
 			auto& slot = m_slots[wrap(wc)];
 			slot.frame = _frame;
-			slot.readCount.store(0, std::memory_order_relaxed);
 			m_writeCount.store(wc + 1, std::memory_order_release);
 
 			// Wake all consumers (atomic fast path per consumer)
@@ -67,8 +66,10 @@ namespace dsp56k
 			const TFrame result = slot.frame;
 			m_readCounts[_index].store(rc + 1, std::memory_order_release);
 
-			// If all consumers have read this slot, free it for the producer
-			if(slot.readCount.fetch_add(1, std::memory_order_acq_rel) + 1 == m_consumerCount)
+			// If all consumers have read this slot, free it for the producer.
+			// Uses modular check: readCount accumulates across cycles,
+			// slot is freed every consumerCount increments.
+			if((slot.readCount.fetch_add(1, std::memory_order_acq_rel) + 1) % m_consumerCount == 0)
 				m_writeSem.notify();
 
 			return result;
