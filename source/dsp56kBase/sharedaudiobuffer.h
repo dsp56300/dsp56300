@@ -12,8 +12,8 @@ namespace dsp56k
 	// Single-producer, multi-consumer ring buffer for audio frames.
 	//
 	// Read side: per-consumer SpscSemaphoreWithCount (atomic fast path).
-	// Write side: SpscSemaphoreWithCount with per-slot completion tracking.
-	// A slot is freed when ALL consumers have read it.
+	// Write side: per-slot completion tracking, SpscSemaphoreWithCount
+	// for backpressure. A slot is freed when ALL consumers have read it.
 	template<typename TFrame, uint32_t Capacity, uint32_t MaxConsumers = 16>
 	class SharedAudioBuffer
 	{
@@ -31,7 +31,7 @@ namespace dsp56k
 
 		void push(const TFrame& _frame)
 		{
-			// Block if buffer full (atomic fast path, blocks only when needed)
+			// Block if buffer full (atomic fast path via semaphore)
 			m_writeSem.wait();
 
 			const auto wc = m_writeCount.load(std::memory_order_relaxed);
