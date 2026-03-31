@@ -65,6 +65,9 @@ namespace dsp56k
 			// Write to own lane — no lock, no contention
 			slot.lanes[_index] = _frame;
 
+			// ensure lane write is visible before contribution
+			std::atomic_thread_fence(std::memory_order_release);
+
 			writeCount.store(wc + 1, std::memory_order_release);
 
 			// Last producer does the reduction into a local temp
