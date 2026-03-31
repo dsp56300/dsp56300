@@ -29,14 +29,17 @@ namespace dsp56k
 	{
 		setCallback([](Audio*) {});
 
-		while(true)
+		if (m_useRingBuffers)
 		{
-			if(!m_audioOutputs.empty())
-				m_audioOutputs.pop_front();
-			else if(!m_audioInputs.full())
-				m_audioInputs.push_back({});
-			else
-				break;
+			while(true)
+			{
+				if(!m_audioOutputs.empty())
+					m_audioOutputs.pop_front();
+				else if(!m_audioInputs.full())
+					m_audioInputs.push_back({});
+				else
+					break;			
+			}
 		}
 	}
 

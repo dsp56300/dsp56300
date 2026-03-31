@@ -52,13 +52,20 @@ namespace dsp56k
 		// Lock-free: each producer writes to its own lane, no contention.
 		void addFrame(const uint32_t _index, const TFrame& _frame)
 		{
+			if(m_terminated)
+				return;
+
 			auto& writeCount = m_writeCounts[_index];
 			const auto wc = writeCount.load(std::memory_order_relaxed);
 
 			// Block if Capacity frames ahead of consumer.
 			// Spin-check first (fast path), fall back to semaphore.
 			while(wc - m_readCount.load(std::memory_order_acquire) >= Capacity)
+			{
+				if(m_terminated)
+					return;
 				m_readSem.wait();
+			}
 
 			auto& slot = m_data[wrap(wc)];
 
@@ -105,7 +112,7 @@ namespace dsp56k
 		void terminate()
 		{
 			m_terminated = true;
-			m_readSem.notifyAll(MaxProducers);
+			m_readSem.notifyAll(MaxProducers * Capacity);
 		}
 
 		bool isTerminated() const { return m_terminated; }

@@ -31,8 +31,14 @@ namespace dsp56k
 
 		void push(const TFrame& _frame)
 		{
+			if(m_terminated)
+				return;
+
 			// Block if buffer full (atomic fast path via semaphore)
 			m_writeSem.wait();
+
+			if(m_terminated)
+				return;
 
 			const auto wc = m_writeCount.load(std::memory_order_relaxed);
 			auto& slot = m_slots[wrap(wc)];
@@ -47,6 +53,9 @@ namespace dsp56k
 
 		TFrame pop(const uint32_t _index)
 		{
+			if(m_terminated)
+				return {};
+
 			// Atomic fast path: returns immediately if data available
 			m_readSems[_index].wait();
 
@@ -68,6 +77,9 @@ namespace dsp56k
 		void terminate()
 		{
 			m_terminated = true;
+
+			// Wake any thread currently blocked in a semaphore wait.
+			// Threads check m_terminated before (re-)entering wait.
 			for(uint32_t i = 0; i < m_consumerCount; ++i)
 				m_readSems[i].notify();
 			m_writeSem.notify();
