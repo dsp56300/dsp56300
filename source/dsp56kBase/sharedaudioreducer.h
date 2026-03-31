@@ -3,10 +3,12 @@
 #include <array>
 #include <atomic>
 #include <cassert>
-#include <condition_variable>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <mutex>
+
+#include "semaphore.h"
 
 namespace dsp56k
 {
@@ -16,22 +18,24 @@ namespace dsp56k
 	// addFrame(). When all producers have written to a position, the
 	// summed frame becomes available to the consumer via pop().
 	//
-	// Blocking:
-	//   - pop() blocks if no fully-summed frame is available yet
-	//   - addFrame() blocks if the producer is too far ahead of the consumer
-	//
-	// Each position accumulates TxFrames from all producers. The consumer
-	// receives the sum of all producers' contributions.
+	// Uses atomic counters for the fast path. Per-slot mutex protects
+	// the accumulation. Only blocks via Semaphore when actually full/empty.
 	template<typename TFrame, uint32_t Capacity, uint32_t MaxProducers = 16>
 	class SharedAudioReducer
 	{
 	public:
 		static_assert((Capacity & (Capacity - 1)) == 0, "Capacity must be a power of 2");
 
+		using CompletionCallback = std::function<void(uint64_t, const TFrame&)>;
+
 		SharedAudioReducer() = default;
 
-		// Register a new producer. Returns a producer index used for addFrame().
-		// Must be called before any addFrame/pop. Not thread-safe with addFrame/pop.
+		void setCompletionCallback(CompletionCallback _callback)
+		{
+			m_completionCallback = std::move(_callback);
+		}
+
+		// Register a new producer. Returns a producer index.
 		uint32_t addProducer()
 		{
 			const auto idx = m_producerCount++;
@@ -40,28 +44,19 @@ namespace dsp56k
 			return idx;
 		}
 
-		// Add a frame from producer _index. Accumulates (sums) into the
-		// current write position. Blocks if too far ahead of the consumer.
+		// Add a frame from producer _index. Blocks only if too far ahead.
 		void addFrame(const uint32_t _index, const TFrame& _frame)
 		{
 			auto& writeCount = m_writeCounts[_index];
 			const auto wc = writeCount.load(std::memory_order_relaxed);
 
-			// Block if we're Capacity frames ahead of the consumer
+			// Block if Capacity frames ahead of consumer
 			if(wc - m_readCount.load(std::memory_order_relaxed) >= Capacity)
-			{
-				std::unique_lock lock(m_readMutex);
-				m_readCv.wait(lock, [&]
-				{
-					return m_terminated || wc - m_readCount.load(std::memory_order_relaxed) < Capacity;
-				});
-				if(m_terminated)
-					return;
-			}
+				m_readSem.wait();
 
 			auto& slot = m_data[wrap(wc)];
 
-			// Accumulate this producer's contribution under per-slot lock
+			// Accumulate under per-slot lock
 			{
 				std::lock_guard lock(slot.mutex);
 				if(_frame.size() > slot.frame.size())
@@ -75,49 +70,49 @@ namespace dsp56k
 
 			writeCount.store(wc + 1, std::memory_order_relaxed);
 
-			// If this was the last producer to write to this position,
-			// the summed frame is ready for the consumer
+			// If this was the last producer, the frame is complete
 			if(slot.contributions.fetch_add(1, std::memory_order_acq_rel) + 1 == m_producerCount)
 			{
-				m_writeMutex.lock();
-				m_writeMutex.unlock();
-				m_writeCv.notify_one();
+				if(m_completionCallback)
+				{
+					m_completionCallback(wc, slot.frame);
+
+					// Auto-pop: reset slot and advance read count
+					::memset(&slot.frame, 0, sizeof(slot.frame));
+					slot.frame.resize(0);
+					slot.contributions.store(0, std::memory_order_relaxed);
+					m_readCount.store(wc + 1, std::memory_order_release);
+
+					// Notify producers waiting for space
+					m_readSem.notify();
+				}
+				else
+				{
+					// Notify pop() consumer
+					m_writeSem.notify();
+				}
 			}
 		}
 
-		// Read the next fully-summed frame. Blocks until all producers
-		// have written to this position. Resets the slot for reuse.
+		// Read the next fully-summed frame. Blocks until all producers done.
 		TFrame pop()
 		{
+			m_writeSem.wait();
+
 			const auto rc = m_readCount.load(std::memory_order_relaxed);
-
 			auto& slot = m_data[wrap(rc)];
-
-			// Wait until all producers have contributed
-			if(slot.contributions.load(std::memory_order_acquire) < m_producerCount)
-			{
-				std::unique_lock lock(m_writeMutex);
-				m_writeCv.wait(lock, [&]
-				{
-					return m_terminated || slot.contributions.load(std::memory_order_acquire) >= m_producerCount;
-				});
-				if(m_terminated)
-					return {};
-			}
 
 			const TFrame result = slot.frame;
 
-			// Reset slot for reuse
+			// Reset slot
 			::memset(&slot.frame, 0, sizeof(slot.frame));
 			slot.frame.resize(0);
 			slot.contributions.store(0, std::memory_order_relaxed);
 
-			m_readCount.store(rc + 1, std::memory_order_relaxed);
+			m_readCount.store(rc + 1, std::memory_order_release);
 
-			// Notify producers in case they're blocked waiting for space
-			m_readMutex.lock();
-			m_readMutex.unlock();
-			m_readCv.notify_all();
+			// Notify producers waiting for space
+			m_readSem.notify();
 
 			return result;
 		}
@@ -125,16 +120,11 @@ namespace dsp56k
 		void terminate()
 		{
 			m_terminated = true;
-			m_writeMutex.lock();
-			m_writeMutex.unlock();
-			m_writeCv.notify_one();
-			m_readMutex.lock();
-			m_readMutex.unlock();
-			m_readCv.notify_all();
+			m_writeSem.notify();
+			m_readSem.notify();
 		}
 
 		bool isTerminated() const { return m_terminated; }
-
 		uint32_t producerCount() const { return m_producerCount; }
 
 	private:
@@ -157,12 +147,12 @@ namespace dsp56k
 		bool m_terminated = false;
 		std::array<std::atomic<uint64_t>, MaxProducers> m_writeCounts{};
 
-		// Consumer waits here for all producers to finish a slot
-		std::mutex m_writeMutex;
-		std::condition_variable m_writeCv;
+		// Consumer waits here for completed frames (when no completion callback)
+		SpscSemaphoreWithCount m_writeSem{0};
 
 		// Producers wait here for consumer to free space
-		std::mutex m_readMutex;
-		std::condition_variable m_readCv;
+		SpscSemaphoreWithCount m_readSem{static_cast<int>(Capacity)};
+
+		CompletionCallback m_completionCallback;
 	};
 }

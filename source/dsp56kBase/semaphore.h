@@ -73,7 +73,8 @@ namespace dsp56k
 	class SpscSemaphoreWithCount
 	{
 	public:
-		explicit SpscSemaphoreWithCount(const int _count = 0) : m_count(_count)
+		SpscSemaphoreWithCount() : m_count(0) {}
+		explicit SpscSemaphoreWithCount(const int _count) : m_count(_count)
 		{
 		}
 
