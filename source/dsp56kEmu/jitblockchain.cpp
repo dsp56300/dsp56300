@@ -21,20 +21,29 @@ namespace dsp56k
 		m_logger.reset(new AsmJitLogger());
 		m_errorHandler.reset(new AsmJitErrorHandler());
 
+		// Initialize MmuArrays with the full P memory size for lazy allocation
+		const auto& mem = _jit.dsp().memory();
+		const auto pSize = mem.sizeP();
+
+		m_jitFuncs.init(pSize, &funcCreate);
+		m_jitFuncs.setResizedCallback([this]() { onFuncsResized(); });
+
+		m_jitCache.init(pSize, [](JitCacheEntry* _ptr, size_t _count)
+		{
+			for (size_t i = 0; i < _count; ++i)
+				new (&_ptr[i]) JitCacheEntry();
+		});
+
 		if(_usedFuncSize)
 			ensureFuncSize(_usedFuncSize);
-
-//		const auto& mem = _jit.dsp().memory();
-//		const auto pSize = mem.sizeP();
-
-//		m_jitFuncs.resize(pSize, &funcCreate);
-//		m_jitCache.resize(pSize);
 	}
 
 	JitBlockChain::~JitBlockChain()
 	{
-		for (auto& e : m_jitCache)
+		for (size_t i = 0; i < m_jitCache.size(); ++i)
 		{
+			auto& e = m_jitCache[i];
+
 			if(e.block)
 				destroy(e.block);
 
@@ -436,38 +445,11 @@ namespace dsp56k
 		return false;
 	}
 
-	bool ensureSizeCbk(const size_t _address, const std::function<void(size_t)>& _funcResize)
-	{
-		// use increments of size 0x10000
-		constexpr size_t blockSizeShift = 16;
-		constexpr size_t blockSize = 1 << blockSizeShift;
-
-		const auto neededBlocks = (_address + blockSize) >> blockSizeShift;
-		const auto neededSize = neededBlocks << blockSizeShift;
-//		assert(_address < neededSize);
-
-		_funcResize(neededSize);
-
-		return true;
-	}
-	
 	bool JitBlockChain::ensureSize(const size_t _address)
 	{
-		if(_address < m_jitCache.size() && _address < m_jitFuncs.size())
-			return false;
-
-		return ensureSizeCbk(_address, [this](const size_t _size)
-		{
-			if(m_jitCache.size() < _size)
-			{
-				m_jitCache.resize(_size);
-			}
-			if(m_jitFuncs.size() < _size)
-			{
-				m_jitFuncs.resize(_size, &funcCreate);
-				onFuncsResized();
-			}
-		});
+		const auto a = m_jitCache.ensureBlockForIndex(_address);
+		const auto b = m_jitFuncs.ensureBlockForIndex(_address);
+		return a || b;
 	}
 
 	void JitBlockChain::onFuncsResized() const
@@ -477,24 +459,11 @@ namespace dsp56k
 
 	bool JitBlockChain::ensureCacheSize(const size_t _address)
 	{
-		if(_address < m_jitCache.size())
-			return false;
-
-		return ensureSizeCbk(_address, [this](const size_t _size)
-		{
-			m_jitCache.resize(_size);
-		});
+		return m_jitCache.ensureBlockForIndex(_address);
 	}
 
 	bool JitBlockChain::ensureFuncSize(const size_t _address)
 	{
-		if(_address < m_jitFuncs.size())
-			return false;
-
-		return ensureSizeCbk(_address, [this](const size_t _size)
-		{
-			m_jitFuncs.resize(_size, &funcCreate);
-			onFuncsResized();
-		});
+		return m_jitFuncs.ensureBlockForIndex(_address);
 	}
 }

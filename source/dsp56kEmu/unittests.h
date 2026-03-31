@@ -27,6 +27,15 @@ namespace  dsp56k
 		virtual void emit(TWord _opA, TWord _opB = 0, TWord _pc = 0) = 0;
 		void emit(const char* _text, TWord _pc = 0);
 
+		// Write assembled instruction to P memory (for multi-instruction execution)
+		TWord emitToMemory(const char* _text, TWord _pc);
+		TWord emitToMemory(TWord _opA, TWord _opB, TWord _pc);
+
+		// Run DSP from current PC until _targetPC is reached or _maxCycles exceeded.
+		// Uses execStep() which is overridden by JIT/interpreter test runners.
+		uint32_t execUntil(TWord _targetPC, uint32_t _maxCycles = 10000);
+		virtual void execStep() = 0;
+
 		Assembler assembler;
 
 		void runAllTests();
@@ -137,17 +146,20 @@ namespace  dsp56k
 		void bset();
 		void btst();
 
-		// loop control
-		void do_();
-		void dor();
-		void rep();
-
 		// newly implemented
 		void eor_xx();
 		void ror_();
 
-		// system
-		void rts();
+		// bit-test jump/branch — peripheral addressing modes
+		void jclr_jset_ppqq();
+		void jsclr_jsset_ppqq();
+		void brclr_brset_ppqq();
+
+		// multi-instruction tests
+		void multiInstructionTests();
+		void rep_multi();
+		void do_multi();
+		void jsr_rts();
 
 		Peripherals56362 peripheralsX;
 		Peripherals56367 peripheralsY;

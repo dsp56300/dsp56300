@@ -561,6 +561,24 @@ namespace dsp56k
 		roundTrip(0x56da00);	// move x:(r2)+,a (canonical encoding of movexr pattern)
 		roundTrip(0x56e200);	// move x:(r2),a (canonical encoding of movexr pattern)
 
+		// Jclr/Jset with pp/qq addressing
+		roundTrip(0x0a9083, 0x000100);	// jclr #$3,x:<<$ffffd0,$100 (pp)
+		roundTrip(0x0a90a3, 0x000100);	// jset #$3,x:<<$ffffd0,$100 (pp)
+		roundTrip(0x019083, 0x000100);	// jclr #$3,x:<<$ffff90,$100 (qq)
+		roundTrip(0x0190a3, 0x000100);	// jset #$3,x:<<$ffff90,$100 (qq)
+
+		// Jsclr/Jsset with pp/qq addressing
+		roundTrip(0x0b9083, 0x000100);	// jsclr #$3,x:<<$ffffd0,$100 (pp)
+		roundTrip(0x0b90a3, 0x000100);	// jsset #$3,x:<<$ffffd0,$100 (pp)
+		roundTrip(0x01d083, 0x000100);	// jsclr #$3,x:<<$ffff90,$100 (qq)
+		roundTrip(0x01d0a3, 0x000100);	// jsset #$3,x:<<$ffff90,$100 (qq)
+
+		// Brclr/Brset with pp/qq addressing
+		roundTrip(0x0cd003, 0x000050);	// brclr #$3,x:<<$ffffd0,$50 (pp)
+		roundTrip(0x0cd023, 0x000050);	// brset #$3,x:<<$ffffd0,$50 (pp)
+		roundTrip(0x049003, 0x000050);	// brclr #$3,x:<<$ffff90,$50 (qq)
+		roundTrip(0x049023, 0x000050);	// brset #$3,x:<<$ffff90,$50 (qq)
+
 		// lra
 		roundTrip(0x044058, 0x00000a);	// lra n0,>*+$a
 	}

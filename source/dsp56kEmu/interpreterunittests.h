@@ -15,6 +15,7 @@ namespace dsp56k
 
 		void runTest(const std::function<void()>& _build, const std::function<void()>& _verify) override;
 		void emit(TWord _opA, TWord _opB = 0, TWord _pc = 0) override;
+		void execStep() override { dsp.execInterpreter(); }
 		using UnitTests::emit;
 
 		void execOpcode(uint32_t _op0, uint32_t _op1 = 0, bool _reset=false, TWord _pc = 0);

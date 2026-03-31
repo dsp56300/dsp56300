@@ -10,6 +10,8 @@ conditionvariable.cpp conditionvariable.h
 dspassert.cpp dspassert.h
 fastmath.h
 logging.cpp logging.h
+mmuarray.h
+mmuhelper.cpp mmuhelper.h
 ringbuffer.h
 semaphore.h
 sharedaudiobuffer.h
@@ -33,7 +35,7 @@ endif()
 if(UNIX AND NOT APPLE)
 	set(THREADS_PREFER_PTHREAD_FLAG ON)
 	find_package(Threads REQUIRED)
-	target_link_libraries(dsp56kBase PUBLIC Threads::Threads)
+	target_link_libraries(dsp56kBase PUBLIC Threads::Threads rt)
 endif()
 
 target_include_directories(dsp56kBase PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

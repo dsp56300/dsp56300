@@ -13,6 +13,8 @@
 #include <vector>
 #include <set>
 
+#include "dsp56kBase/mmuarray.h"
+
 namespace asmjit
 {
 	inline namespace ASMJIT_ABI_NAMESPACE
@@ -38,9 +40,9 @@ namespace dsp56k
 		JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData, JitConfig&& _config);
 		~JitBlock();
 
-		static void getInfo(JitBlockInfo& _info, const DSP& _dsp, TWord _pc, const JitConfig& _config, const std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds);
+		static void getInfo(JitBlockInfo& _info, const DSP& _dsp, TWord _pc, const JitConfig& _config, const MmuArray<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds);
 
-		bool emit(JitBlockRuntimeData& _rt, JitBlockChain* _chain, TWord _pc, const std::vector<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds, bool _profilingSupport);
+		bool emit(JitBlockRuntimeData& _rt, JitBlockChain* _chain, TWord _pc, const MmuArray<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds, bool _profilingSupport);
 
 		JitEmitter& asm_() { return m_asm; }
 		DSP& dsp() { return m_dsp; }

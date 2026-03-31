@@ -7,6 +7,8 @@
 #include "jitdspmode.h"
 #include "jittypes.h"
 
+#include "dsp56kBase/mmuarray.h"
+
 namespace dsp56k
 {
 	class AsmJitLogger;
@@ -43,7 +45,7 @@ namespace dsp56k
 			return m_jitCache[_pc].block;
 		}
 
-		const auto& getFuncs() const
+		const MmuArray<TJitFunc>& getFuncs() const
 		{
 			return m_jitFuncs;
 		}
@@ -108,8 +110,8 @@ namespace dsp56k
 		Jit& m_jit;
 		const JitDspMode m_mode;
 
-		std::vector<JitCacheEntry> m_jitCache;
-		std::vector<TJitFunc> m_jitFuncs;
+		MmuArray<JitCacheEntry> m_jitCache;
+		MmuArray<TJitFunc> m_jitFuncs;
 
 		std::map<TWord, JitBlockRuntimeData*> m_generatingBlocks;
 
