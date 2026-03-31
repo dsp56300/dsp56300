@@ -4,9 +4,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstdint>
-#include <cstring>
 #include <functional>
-#include <mutex>
 
 #include "semaphore.h"
 
@@ -14,12 +12,12 @@ namespace dsp56k
 {
 	// Multi-producer, single-consumer ring buffer that sums frames.
 	//
-	// Multiple producers (DSPs) each write one frame per position via
-	// addFrame(). When all producers have written to a position, the
-	// summed frame becomes available to the consumer via pop().
+	// Lock-free producer path: each producer writes to its own lane.
+	// The last producer to arrive does the reduction (summation) and
+	// either calls the completion callback (auto-pop) or notifies the
+	// consumer semaphore.
 	//
-	// Uses atomic counters for the fast path. Per-slot mutex protects
-	// the accumulation. Only blocks via Semaphore when actually full/empty.
+	// No mutexes. No contention between producers on write.
 	template<typename TFrame, uint32_t Capacity, uint32_t MaxProducers = 16>
 	class SharedAudioReducer
 	{
@@ -28,14 +26,21 @@ namespace dsp56k
 
 		using CompletionCallback = std::function<void(uint64_t, const TFrame&)>;
 
-		SharedAudioReducer() = default;
+		SharedAudioReducer()
+		{
+			for(auto& slot : m_data)
+			{
+				slot.contributions.store(0, std::memory_order_relaxed);
+				for(auto& lane : slot.lanes)
+					::memset(&lane, 0, sizeof(lane));
+			}
+		}
 
 		void setCompletionCallback(CompletionCallback _callback)
 		{
 			m_completionCallback = std::move(_callback);
 		}
 
-		// Register a new producer. Returns a producer index.
 		uint32_t addProducer()
 		{
 			const auto idx = m_producerCount++;
@@ -44,84 +49,64 @@ namespace dsp56k
 			return idx;
 		}
 
-		// Add a frame from producer _index. Blocks only if too far ahead.
+		// Lock-free: each producer writes to its own lane, no contention.
 		void addFrame(const uint32_t _index, const TFrame& _frame)
 		{
 			auto& writeCount = m_writeCounts[_index];
 			const auto wc = writeCount.load(std::memory_order_relaxed);
 
-			// Block if Capacity frames ahead of consumer
-			if(wc - m_readCount.load(std::memory_order_relaxed) >= Capacity)
+			// Block if Capacity frames ahead of consumer.
+			// Spin-check first (fast path), fall back to semaphore.
+			while(wc - m_readCount.load(std::memory_order_acquire) >= Capacity)
 				m_readSem.wait();
 
 			auto& slot = m_data[wrap(wc)];
 
-			// Accumulate under per-slot lock
-			{
-				std::lock_guard lock(slot.mutex);
-				if(_frame.size() > slot.frame.size())
-					slot.frame.resize(_frame.size());
-				for(uint32_t s = 0; s < _frame.size(); ++s)
-				{
-					for(uint32_t c = 0; c < _frame[s].size(); ++c)
-						slot.frame[s][c] += _frame[s][c];
-				}
-			}
+			// Write to own lane — no lock, no contention
+			slot.lanes[_index] = _frame;
 
-			writeCount.store(wc + 1, std::memory_order_relaxed);
+			writeCount.store(wc + 1, std::memory_order_release);
 
-			// If this was the last producer, the frame is complete
+			// Last producer does the reduction into a local temp
 			if(slot.contributions.fetch_add(1, std::memory_order_acq_rel) + 1 == m_producerCount)
 			{
-				if(m_completionCallback)
+				// Sum all lanes into a temporary (not in-place — other
+				// producers may already be writing to this slot for the
+				// next frame after readCount advances)
+				TFrame result = slot.lanes[0];
+
+				for(uint32_t p = 1; p < m_producerCount; ++p)
 				{
-					m_completionCallback(wc, slot.frame);
+					const auto& src = slot.lanes[p];
+					const auto srcSize = src.size();
 
-					// Auto-pop: reset slot and advance read count
-					::memset(&slot.frame, 0, sizeof(slot.frame));
-					slot.frame.resize(0);
-					slot.contributions.store(0, std::memory_order_relaxed);
-					m_readCount.store(wc + 1, std::memory_order_release);
+					if(srcSize > result.size())
+						result.resize(srcSize);
 
-					// Notify producers waiting for space
+					for(uint32_t s = 0; s < srcSize; ++s)
+						for(uint32_t c = 0; c < src[s].size(); ++c)
+							result[s][c] += src[s][c];
+				}
+
+				m_completionCallback(wc, result);
+
+				// Reset and advance AFTER sum+callback so producers
+				// can't overwrite lanes while we're still reading them
+				slot.contributions.store(0, std::memory_order_relaxed);
+				m_readCount.store(wc + 1, std::memory_order_release);
+
+				// Wake all blocked producers individually — Semaphore::notify(n)
+				// only calls cv.notify_one() once, so we loop
+				for(uint32_t p = 0; p < m_producerCount; ++p)
 					m_readSem.notify();
-				}
-				else
-				{
-					// Notify pop() consumer
-					m_writeSem.notify();
-				}
 			}
-		}
-
-		// Read the next fully-summed frame. Blocks until all producers done.
-		TFrame pop()
-		{
-			m_writeSem.wait();
-
-			const auto rc = m_readCount.load(std::memory_order_relaxed);
-			auto& slot = m_data[wrap(rc)];
-
-			const TFrame result = slot.frame;
-
-			// Reset slot
-			::memset(&slot.frame, 0, sizeof(slot.frame));
-			slot.frame.resize(0);
-			slot.contributions.store(0, std::memory_order_relaxed);
-
-			m_readCount.store(rc + 1, std::memory_order_release);
-
-			// Notify producers waiting for space
-			m_readSem.notify();
-
-			return result;
 		}
 
 		void terminate()
 		{
 			m_terminated = true;
-			m_writeSem.notify();
-			m_readSem.notify();
+			for(uint32_t p = 0; p < MaxProducers; ++p)
+				m_readSem.notify();
 		}
 
 		bool isTerminated() const { return m_terminated; }
@@ -133,11 +118,10 @@ namespace dsp56k
 			return _count & (Capacity - 1);
 		}
 
-		struct alignas(64) Slot
+		struct Slot
 		{
-			TFrame frame{};
 			std::atomic<uint32_t> contributions{0};
-			std::mutex mutex;
+			std::array<TFrame, MaxProducers> lanes{};
 		};
 
 		std::array<Slot, Capacity> m_data{};
@@ -147,11 +131,9 @@ namespace dsp56k
 		bool m_terminated = false;
 		std::array<std::atomic<uint64_t>, MaxProducers> m_writeCounts{};
 
-		// Consumer waits here for completed frames (when no completion callback)
-		SpscSemaphoreWithCount m_writeSem{0};
-
-		// Producers wait here for consumer to free space
-		SpscSemaphoreWithCount m_readSem{static_cast<int>(Capacity)};
+		// Used as a wakeup signal, not a counter. Producers spin on m_readCount
+		// and fall back to this semaphore when they need to block.
+		Semaphore m_readSem{0};
 
 		CompletionCallback m_completionCallback;
 	};
