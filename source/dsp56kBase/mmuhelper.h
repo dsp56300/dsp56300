@@ -68,6 +68,10 @@ namespace dsp56k
 		void freeAddressRange();
 		void closeBackingStore();
 
+#ifdef _WIN32
+		bool m_usePlaceholders = false;
+#endif
+
 		THandle m_hBackingStore = InvalidHandle;
 
 		uint8_t* m_basePtr = nullptr;

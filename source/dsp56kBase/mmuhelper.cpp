@@ -39,11 +39,64 @@ namespace dsp56k
 
 #ifdef _WIN32
 
+	// ---- Placeholder API (Windows 10 1803+) ----
+	// Loaded at runtime to maintain Win7/8 compatibility.
+	// Eliminates the race condition in the legacy VirtualAlloc/VirtualFree/MapViewOfFileEx path.
+	namespace
+	{
+		struct PlaceholderApi
+		{
+			decltype(&VirtualAlloc2) virtualAlloc2 = nullptr;
+			decltype(&MapViewOfFile3) mapViewOfFile3 = nullptr;
+
+			bool isSupported() const { return virtualAlloc2 != nullptr && mapViewOfFile3 != nullptr; }
+
+			static PlaceholderApi& instance()
+			{
+				static PlaceholderApi api;
+				return api;
+			}
+
+		private:
+			PlaceholderApi()
+			{
+				auto* hModule = GetModuleHandleW(L"kernelbase.dll");
+				if (!hModule)
+					return;
+
+				virtualAlloc2 = reinterpret_cast<decltype(this->virtualAlloc2)>(GetProcAddress(hModule, "VirtualAlloc2"));
+				mapViewOfFile3 = reinterpret_cast<decltype(this->mapViewOfFile3)>(GetProcAddress(hModule, "MapViewOfFile3"));
+
+				if (isSupported())
+					LOG("MmuHelper: Placeholder API available (VirtualAlloc2/MapViewOfFile3)");
+			}
+		};
+	}
+
+	// ---- MmuHelper Windows implementation ----
+
 	uint8_t* MmuHelper::reserveAddressRange(const size_t _byteSize)
 	{
+		auto& api = PlaceholderApi::instance();
+
+		if (api.isSupported())
+		{
+			auto* res = static_cast<uint8_t*>(api.virtualAlloc2(nullptr, nullptr, _byteSize, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0));
+			if (res)
+			{
+				m_basePtr = res;
+				m_basePtrSize = _byteSize;
+				m_usePlaceholders = true;
+				return res;
+			}
+			LOG("MmuHelper: VirtualAlloc2 with placeholder failed, falling back to legacy path");
+		}
+
+		// Legacy path
 		auto* res = static_cast<uint8_t*>(VirtualAlloc(nullptr, _byteSize, MEM_RESERVE, PAGE_READWRITE));
 		m_basePtr = res;
 		m_basePtrSize = _byteSize;
+		m_usePlaceholders = false;
 		return res;
 	}
 
@@ -65,8 +118,12 @@ namespace dsp56k
 			return false;
 		}
 
-		// On Windows, the base pointer must be freed before mapping views at those addresses
-		freeAddressRange();
+		if (!m_usePlaceholders)
+		{
+			// Legacy path: free the reservation so MapViewOfFileEx can use those addresses.
+			// This creates a race window where another thread could claim the address range.
+			freeAddressRange();
+		}
 
 		return true;
 	}
@@ -81,6 +138,25 @@ namespace dsp56k
 
 	void* MmuHelper::mapRegion(const size_t _backingByteOffset, const size_t _byteSize, void* _targetAddr)
 	{
+		if (m_usePlaceholders)
+		{
+			// Split the placeholder at _targetAddr so we can replace just this portion.
+			VirtualFree(_targetAddr, _byteSize, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
+
+			auto& api = PlaceholderApi::instance();
+			auto* p = api.mapViewOfFile3(m_hBackingStore, nullptr, _targetAddr, _backingByteOffset, _byteSize, MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, nullptr, 0);
+			if (p == _targetAddr)
+			{
+				m_mappedRegions.insert(std::make_pair(p, _byteSize));
+				return p;
+			}
+
+			const auto err = GetLastError();
+			LOG("MmuHelper: MapViewOfFile3 failed, err " << err);
+			return nullptr;
+		}
+
+		// Legacy path
 		auto* p = MapViewOfFileEx(m_hBackingStore, FILE_MAP_READ | FILE_MAP_WRITE, 0, static_cast<DWORD>(_backingByteOffset), _byteSize, _targetAddr);
 		if (p == _targetAddr)
 		{
@@ -99,8 +175,17 @@ namespace dsp56k
 		if (it == m_mappedRegions.end())
 			return false;
 
+		const auto size = it->second;
 		const auto res = UnmapViewOfFile(_addr);
 		m_mappedRegions.erase(it);
+
+		if (m_usePlaceholders && res)
+		{
+			// Restore the placeholder so the address range can be remapped later.
+			auto& api = PlaceholderApi::instance();
+			api.virtualAlloc2(nullptr, _addr, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
+		}
+
 		return res != 0;
 	}
 
