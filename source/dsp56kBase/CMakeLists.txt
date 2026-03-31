@@ -10,6 +10,7 @@ conditionvariable.cpp conditionvariable.h
 dspassert.cpp dspassert.h
 fastmath.h
 logging.cpp logging.h
+mmuarray.h
 mmuhelper.cpp mmuhelper.h
 ringbuffer.h
 semaphore.h
