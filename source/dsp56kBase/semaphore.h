@@ -26,6 +26,16 @@ namespace dsp56k
 	        m_cv.notify_one();
 	    }
 
+		void notifyAll(const uint32_t _count)
+		{
+			{
+				Lock lock(m_mutex);
+				m_count += _count;
+			}
+
+			m_cv.notify_all();
+		}
+
 	    void wait(const uint32_t _count = 1)
 		{
 	        Lock lock(m_mutex);

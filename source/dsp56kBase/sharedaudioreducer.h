@@ -95,18 +95,14 @@ namespace dsp56k
 				slot.contributions.store(0, std::memory_order_relaxed);
 				m_readCount.store(wc + 1, std::memory_order_release);
 
-				// Wake all blocked producers individually — Semaphore::notify(n)
-				// only calls cv.notify_one() once, so we loop
-				for(uint32_t p = 0; p < m_producerCount; ++p)
-					m_readSem.notify();
+				m_readSem.notifyAll(m_producerCount);
 			}
 		}
 
 		void terminate()
 		{
 			m_terminated = true;
-			for(uint32_t p = 0; p < MaxProducers; ++p)
-				m_readSem.notify();
+			m_readSem.notifyAll(MaxProducers);
 		}
 
 		bool isTerminated() const { return m_terminated; }
