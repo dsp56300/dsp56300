@@ -14,9 +14,9 @@ namespace dsp56k
 
 	MMU mode (when available):
 	- Reserves the full virtual address range upfront
-	- All blocks initially map to a shared "default page" filled with a default value
+	- All blocks initially map to a shared "default page" filled by the fill function
 	- When ensureBlockForIndex() is called, the block is remapped to private memory
-	  and filled with the default value, ready for writes
+	  and filled with the fill function, ready for writes
 	- The base pointer is stable — never changes after init
 
 	Non-MMU fallback:
@@ -28,6 +28,9 @@ namespace dsp56k
 	class MmuArray
 	{
 	public:
+		// Function that fills a block of T elements
+		using FillFunc = std::function<void(T*, size_t)>;
+
 		// Callback fired when the backing memory is reallocated (non-MMU mode only)
 		using ResizedCallback = std::function<void()>;
 
@@ -41,12 +44,12 @@ namespace dsp56k
 
 		// Initialize the array
 		// _maxSize: maximum number of elements (defines virtual address range in MMU mode)
-		// _defaultValue: value to fill all entries with
+		// _fillFunc: function to fill blocks with default values (called with pointer and count)
 		// _blockSize: number of elements per MMU block (must be power of 2, ignored in non-MMU mode)
 		// Returns true if MMU mode is active, false if using fallback
-		bool init(size_t _maxSize, const T& _defaultValue, size_t _blockSize = 16384)
+		bool init(size_t _maxSize, FillFunc _fillFunc, size_t _blockSize = 16384)
 		{
-			m_defaultValue = _defaultValue;
+			m_fillFunc = std::move(_fillFunc);
 			m_maxSize = _maxSize;
 			m_blockSize = _blockSize;
 
@@ -90,18 +93,24 @@ namespace dsp56k
 			m_ptr = reinterpret_cast<T*>(basePtr);
 			m_size = totalElements;
 
-			// Fill the default block with the default value
-			auto* defaultBlock = m_ptr + m_numBlocks * _blockSize;
-			// The default block is mapped at offset m_defaultBlockOffset, but we already
-			// mapped block 0 to it, so writing through block 0's address fills it
-			for (size_t i = 0; i < _blockSize; ++i)
-				m_ptr[i] = _defaultValue;
+			// Fill the default block via block 0's mapping (all blocks share the same page)
+			m_fillFunc(m_ptr, _blockSize);
 
 			// Track which blocks are private
 			m_blockIsPrivate.resize(m_numBlocks, false);
 			m_useMmu = true;
 
 			return true;
+		}
+
+		// Convenience: initialize with a default value (requires T to be copyable)
+		bool init(size_t _maxSize, const T& _defaultValue, size_t _blockSize = 16384)
+		{
+			return init(_maxSize, [_defaultValue](T* _ptr, size_t _count)
+			{
+				for (size_t i = 0; i < _count; ++i)
+					_ptr[i] = _defaultValue;
+			}, _blockSize);
 		}
 
 		// Access — no bounds check, raw array speed
@@ -189,10 +198,8 @@ namespace dsp56k
 			if (!m_mmu.mapRegion(backingOffset, blockBytes, target))
 				return false;
 
-			// Fill with default value
-			auto* blockStart = m_ptr + blockIdx * m_blockSize;
-			for (size_t i = 0; i < m_blockSize; ++i)
-				blockStart[i] = m_defaultValue;
+			// Fill with default values
+			m_fillFunc(m_ptr + blockIdx * m_blockSize, m_blockSize);
 
 			m_blockIsPrivate[blockIdx] = true;
 			return true;
@@ -203,8 +210,10 @@ namespace dsp56k
 			if (_index < m_size)
 				return false;
 
+			const auto oldSize = m_fallback.size();
 			const auto newSize = _index + 1;
-			m_fallback.resize(newSize, m_defaultValue);
+			m_fallback.resize(newSize);
+			m_fillFunc(m_fallback.data() + oldSize, newSize - oldSize);
 			m_ptr = m_fallback.data();
 			m_size = m_fallback.size();
 
@@ -225,7 +234,7 @@ namespace dsp56k
 
 		std::vector<bool> m_blockIsPrivate;
 		std::vector<T> m_fallback;
-		T m_defaultValue{};
+		FillFunc m_fillFunc;
 
 		ResizedCallback m_resizedCallback;
 	};
