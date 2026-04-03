@@ -109,13 +109,23 @@ namespace dsp56k
 		using TxFrame = Frame<TxSlot>;
 		using RxFrame = Frame<RxSlot>;
 
-		Audio() : m_callback([](Audio*) {}) {}
+		// Callbacks receive a frame and a mutable frame index reference.
+		// The frame index is owned by Audio and initialized to 0.
+		// Callbacks are free to read and modify it to track position.
+		using ReadRxCallback = std::function<void(uint64_t&, RxFrame&)>;
+		using WriteTxCallback = std::function<void(uint64_t&, const TxFrame&)>;
+
+		explicit Audio(bool _useRingBuffers = true);
 
 		void terminate();
 
-		void setCallback(const AudioCallback& _ac, const int _callbackSamples)
+		void setReadRxCallback(ReadRxCallback _callback) { m_readRxCallback = std::move(_callback); }
+		void setWriteTxCallback(WriteTxCallback _callback) { m_writeTxCallback = std::move(_callback); }
+
+		bool hasRingBuffers() const { return m_useRingBuffers; }
+
+		void setCallback(const AudioCallback& _ac)
 		{
-			m_callbackSamples = _callbackSamples;
 			m_callback = _ac ? _ac : [](Audio*) {};
 		}
 
@@ -260,8 +270,6 @@ namespace dsp56k
 
 		AudioCallback m_callback;
 
-		size_t m_callbackSamples = 0;
-
 		static void incFrameSync(uint32_t& _frameSync)
 		{
 			++_frameSync;
@@ -274,8 +282,15 @@ namespace dsp56k
 			FrameSyncChannelRight = 0
 		};
 
+		bool m_useRingBuffers;
+
 		RingBuffer<RxFrame, RingBufferSize, true, false> m_audioInputs;
 		RingBuffer<TxFrame, RingBufferSize, true, false> m_audioOutputs;
 		size_t m_latency = 0;
+
+		ReadRxCallback m_readRxCallback;
+		WriteTxCallback m_writeTxCallback;
+		uint64_t m_readFrameIndex = 0;
+		uint64_t m_writeFrameIndex = 0;
 	};
 }

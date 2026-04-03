@@ -46,6 +46,8 @@ namespace dsp56k
 		m_hsr &= ~0x18;
 		m_hsr |= static_cast<uint32_t>(hf01);
 
+		m_callbackHostStateChanged();
+
 		return m_hsr;
 	}
 
@@ -335,6 +337,9 @@ namespace dsp56k
 		const auto hadTXInterrupt = txInterruptEnabled();
 		const auto hadRXInterrupt = rxInterruptEnabled();
 		m_hcr = _val;
+
+		m_callbackHostStateChanged();
+
 		const auto hasTXInterrupt = txInterruptEnabled();
 		const auto hasRXInterrupt = rxInterruptEnabled();
 

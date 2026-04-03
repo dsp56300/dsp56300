@@ -80,6 +80,7 @@ namespace  dsp56k
 		void div();
 
 		void dmac();
+		void dmacMultiPrecision();
 		void eor();
 		void extractu();
 		void extractu_co();
