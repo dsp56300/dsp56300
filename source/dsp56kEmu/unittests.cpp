@@ -92,6 +92,7 @@ namespace dsp56k
 		dec();
 		div();
 		dmac();
+		dmacMultiPrecision();
 		eor();
 		extractu();
 		extractu_co();
@@ -1363,6 +1364,111 @@ namespace dsp56k
 		}, [&]()
 		{
 			verify(dsp.regs().a.var == 0x00017c6effffff);
+		});
+
+		// dmac uu: both operands unsigned
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00AABBCC112233;
+			dsp.x1(0x100000);
+			dsp.y1(0x200000);
+			emit("dmac uu x1,y1,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x00040000aabbcc);
+		});
+
+		// dmac ss with negate
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00112233000000;
+			dsp.x1(0x000100);
+			dsp.y1(0x000200);
+			emit("dmac ss -x1,y1,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x000000000d2233);
+		});
+	}
+
+	// 48x48-bit multi-precision multiply using mpyuu/dmac/macsu sequence.
+	// Multiplies a 48-bit value (x1:x0) by a 48-bit value (y1:y0) using
+	// four instructions that combine partial products with accumulator shifts.
+	void UnitTests::dmacMultiPrecision()
+	{
+		// Test Case 1: small metric (y1:y0 = $000042:$123456)
+		runTest([&]()
+		{
+			dsp.x0(0x555555);
+			dsp.x1(0x055555);
+			dsp.y0(0x123456);
+			dsp.y1(0x000042);
+			dsp.regs().a.var = 0;
+
+			emit("mpyuu x0,y0,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x000c22e3f3dd1c);
+		});
+
+		runTest([&]()
+		{
+			emit("dmac su x1,y0,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x0000c22e3fffff);
+		});
+
+		runTest([&]()
+		{
+			emit("macsu y1,x0,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x0000c25a3fffd3);
+		});
+
+		runTest([&]()
+		{
+			emit("dmac ss x1,y1,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x00000002c0c22e);
+		});
+
+		// Test Case 2: larger metric (y1:y0 = $001234:$abcdef)
+		runTest([&]()
+		{
+			dsp.x0(0x555555);
+			dsp.x1(0x055555);
+			dsp.y0(0xabcdef);
+			dsp.y1(0x001234);
+			dsp.regs().a.var = 0;
+
+			emit("mpyuu x0,y0,a");
+			emit("dmac su x1,y0,a");
+			emit("macsu y1,x0,a");
+			emit("dmac ss x1,y1,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x000000c231d33f);
+		});
+
+		// Test Case 3: near-max signed metric (y1:y0 = $7fffff:$ffffff)
+		runTest([&]()
+		{
+			dsp.x0(0x555555);
+			dsp.x1(0x055555);
+			dsp.y0(0xffffff);
+			dsp.y1(0x7fffff);
+			dsp.regs().a.var = 0;
+
+			emit("mpyuu x0,y0,a");
+			emit("dmac su x1,y0,a");
+			emit("macsu y1,x0,a");
+			emit("dmac ss x1,y1,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x00055555555554);
 		});
 	}
 

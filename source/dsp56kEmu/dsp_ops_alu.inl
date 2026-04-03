@@ -840,7 +840,6 @@ namespace dsp56k
 		TReg24 s1, s2;
 		decode_QQQQ_read( s1, s2, qqqq );
 
-		// TODO: unit test missing
 		alu_dmac( ab, s1, s2, negate, s1Unsigned, s2Unsigned );
 	}
 	inline void DSP::op_Eor_SD(const TWord op)
