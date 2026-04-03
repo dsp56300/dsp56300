@@ -2688,6 +2688,32 @@ namespace dsp56k
 			verify(dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_Z));
 		});
+
+		// ifcc preserves CCR: clr b ifne must keep Z=0 from prior tst
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00010000000000;
+			dsp.regs().b.var = 0x00AABBCC000000;
+			emit("tst a");
+			emit("clr b ifne");
+		}, [&]()
+		{
+			verify(dsp.regs().b.var == 0);
+			verify(!dsp.sr_test(CCR_Z));
+		});
+
+		// ifcc preserves CCR: condition false, neither dest nor CCR change
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0;
+			dsp.regs().b.var = 0x00112233000000;
+			emit("tst a");
+			emit("clr b ifne");
+		}, [&]()
+		{
+			verify(dsp.regs().b.var == 0x00112233000000);
+			verify(dsp.sr_test(CCR_Z));
+		});
 	}
 
 	void UnitTests::move()
