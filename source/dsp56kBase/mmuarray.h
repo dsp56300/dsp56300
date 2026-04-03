@@ -61,6 +61,12 @@ namespace dsp56k
 			// Calculate number of blocks
 			m_numBlocks = (_maxSize + _blockSize - 1) / _blockSize;
 
+			// On macOS, MAP_FIXED remapping can hit kernel guard pages (DEALLOC_GAP),
+			// causing the process to be killed with EXC_GUARD. Use fallback path.
+#ifdef __APPLE__
+			return initFallback();
+#endif
+
 			// Try MMU path
 			const auto totalElements = m_numBlocks * _blockSize; // round up to full blocks
 			const auto totalBytes = totalElements * sizeof(T);
