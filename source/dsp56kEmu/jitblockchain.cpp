@@ -52,7 +52,8 @@ namespace dsp56k
 				for (const auto& it : *e.singleOpCache)
 					release(it.second);
 
-				e.singleOpCache->clear();
+				delete e.singleOpCache;
+				e.singleOpCache = nullptr;
 			}
 		}
 
