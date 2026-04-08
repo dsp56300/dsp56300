@@ -86,6 +86,7 @@ namespace dsp56k
 	void DmaChannel::setDDR(const TWord _address)
 	{
 		m_ddr = _address;
+		m_ddrWritten = true;
 		LOGDMA("DMA set DDR" << m_index << " = " << HEX(_address));
 	}
 
@@ -107,6 +108,9 @@ namespace dsp56k
 		LOGDMA("DMA set DCR" << m_index << " = " << HEX(_controlRegister));
 
 		if (!bitvalue(m_dcr, De))
+			return;
+
+		if (!m_ddrWritten)
 			return;
 
 		if(bitvalue(m_dcr, D3d))
@@ -244,6 +248,14 @@ namespace dsp56k
 	void DmaChannel::triggerByRequest()
 	{
 		if(!bittest(m_dcr, De))
+			return;
+
+		// Skip transfer if DDR hasn't been written yet. The firmware may
+		// enable DMA (set DE) before configuring DDR. On real hardware,
+		// no trigger fires in that window because the ESAI clock hasn't
+		// started yet. In the emulator, primed ESAI input can trigger
+		// DMA before the destination is configured.
+		if(!m_ddrWritten)
 			return;
 
 		if(execTransfer())

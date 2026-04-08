@@ -160,6 +160,7 @@ namespace dsp56k
 		TWord m_ddr = 0;
 		TWord m_dco = 0;
 		TWord m_dcr = 0;
+		bool m_ddrWritten = false;
 
 		TWord m_dcoh = 0;
 		TWord m_dcom = 0;
