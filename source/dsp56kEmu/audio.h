@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <array>
@@ -287,6 +288,8 @@ namespace dsp56k
 		RingBuffer<RxFrame, RingBufferSize, true, false> m_audioInputs;
 		RingBuffer<TxFrame, RingBufferSize, true, false> m_audioOutputs;
 		size_t m_latency = 0;
+
+		std::atomic<bool> m_terminated{false};
 
 		ReadRxCallback m_readRxCallback;
 		WriteTxCallback m_writeTxCallback;

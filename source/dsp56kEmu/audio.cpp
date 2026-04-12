@@ -27,6 +27,8 @@ namespace dsp56k
 
 	void Audio::terminate()
 	{
+		m_terminated.store(true, std::memory_order_release);
+
 		setCallback([](Audio*) {});
 
 		if (m_useRingBuffers)
@@ -38,18 +40,22 @@ namespace dsp56k
 				else if(!m_audioInputs.full())
 					m_audioInputs.push_back({});
 				else
-					break;			
+					break;
 			}
 		}
 	}
 
 	void Audio::readRXimpl(RxFrame& _values)
 	{
+		if (m_terminated.load(std::memory_order_acquire))
+			return;
 		m_readRxCallback(m_readFrameIndex, _values);
 	}
 
 	void Audio::writeTXimpl(const TxFrame& _values)
 	{
+		if (m_terminated.load(std::memory_order_acquire))
+			return;
 		m_writeTxCallback(m_writeFrameIndex, _values);
 	}
 }
