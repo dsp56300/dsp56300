@@ -12,6 +12,7 @@ fastmath.h
 logging.cpp logging.h
 mmuarray.h
 mmuhelper.cpp mmuhelper.h
+mutex.h
 ringbuffer.h
 semaphore.h
 sharedaudiobuffer.h
