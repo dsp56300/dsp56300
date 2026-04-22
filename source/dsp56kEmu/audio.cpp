@@ -35,9 +35,9 @@ namespace dsp56k
 		{
 			while(true)
 			{
-				if(!m_audioOutputs.empty())
+				if(m_audioOutputs.size() > (m_audioOutputs.capacity()>>1))
 					m_audioOutputs.pop_front();
-				else if(!m_audioInputs.full())
+				else if(m_audioInputs.size() < (m_audioInputs.capacity()>>1))
 					m_audioInputs.push_back({});
 				else
 					break;
