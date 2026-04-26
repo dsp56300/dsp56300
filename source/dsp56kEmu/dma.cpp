@@ -79,22 +79,36 @@ namespace dsp56k
 
 	void DmaChannel::setDSR(const TWord _address)
 	{
+		const bool firstWrite = !m_dsrWritten;
 		m_dsr = _address;
 		m_dsrWritten = true;
 		LOGDMA("DMA set DSR" << m_index << " = " << HEX(_address));
+		if (firstWrite && !m_armed && bitvalue(m_dcr, De))
+			arm();
 	}
 
 	void DmaChannel::setDDR(const TWord _address)
 	{
+		const bool firstWrite = !m_ddrWritten;
 		m_ddr = _address;
 		m_ddrWritten = true;
 		LOGDMA("DMA set DDR" << m_index << " = " << HEX(_address));
+		if (firstWrite && !m_armed && bitvalue(m_dcr, De))
+			arm();
 	}
 
 	void DmaChannel::setDCO(const TWord _count)
 	{
+		if (m_dco == _count)
+			return;
 		m_dco = _count;
 		LOGDMA("DMA set DCO" << m_index << " = " << HEX(_count));
+		// If DCO is set after DCR(DE=1)+DSR+DDR but before we armed, complete arming now.
+		// If already armed, the working counters were initialized from the old DCO value; we
+		// leave them as-is to mirror real hardware (writing DCO mid-transfer doesn't reset
+		// the working counters).
+		if (!m_armed && bitvalue(m_dcr, De))
+			arm();
 	}
 
 	void DmaChannel::setDCR(const TWord _controlRegister)
@@ -102,15 +116,32 @@ namespace dsp56k
 		if(m_dcr == _controlRegister)
 			return;
 
+		// Re-configuration: drop any previous trigger registration and clear the armed flag
+		// so arm() can re-initialize the working counters with the new DCR settings.
 		m_dma.removeTriggerTarget(this);
+		m_armed = false;
 
 		m_dcr = _controlRegister;
 
 		LOGDMA("DMA set DCR" << m_index << " = " << HEX(_controlRegister));
 
+		arm();
+	}
+
+	void DmaChannel::arm()
+	{
+		// If we are already armed (registered as a request trigger target with initialized
+		// working counters), do nothing. setDCR clears m_armed before calling us, so a
+		// re-configuration of DCR will go through the full init path again.
+		if (m_armed)
+			return;
+
 		if (!bitvalue(m_dcr, De))
 			return;
 
+		// Some firmwares (e.g. Waldorf Q DSP B) write DCR with DE=1 BEFORE configuring
+		// DSR/DDR. In that case we cannot complete arming yet — wait for the missing
+		// register to be written. setDSR/setDDR will retry arm() on first write.
 		if (!m_dsrWritten || !m_ddrWritten)
 			return;
 
@@ -137,6 +168,8 @@ namespace dsp56k
 
 		if (!isRequestTrigger())
 		{
+			m_armed = true;
+
 			m_dma.setActiveChannel(m_index);
 
 			if constexpr(!g_delayedDmaTransfer)
@@ -154,43 +187,37 @@ namespace dsp56k
 			}
 			return;
 		}
+
+		const auto tm = getTransferMode();
+		const auto reqSrc = getRequestSource();
+
+		const auto isSupportedTransferMode = tm == TransferMode::WordTriggerRequest || tm == TransferMode::WordTriggerRequestClearDE || tm == TransferMode::LineTriggerRequestClearDE;
+
+		if(!isSupportedTransferMode)
+		{
+			assert(false && "TODO implement transfer mode in execTransfer()");
+			return;
+		}
+
+		if(m_peripherals.getType() == PeripheralType::Peripherals56303)
+		{
+			auto* p303 = static_cast<Peripherals56303*>(&m_peripherals);
+			m_dma.addTriggerTarget(this);
+			m_armed = true;
+			if(checkTrigger(*p303, reqSrc))
+				triggerByRequest();
+		}
+		else if(m_peripherals.getType() == PeripheralType::Peripherals56362)
+		{
+			auto* p362 = static_cast<Peripherals56362*>(&m_peripherals);
+			m_dma.addTriggerTarget(this);
+			m_armed = true;
+			if(checkTrigger(*p362, reqSrc))
+				triggerByRequest();
+		}
 		else
 		{
-			const auto tm = getTransferMode();
-			const auto prio = getPriority();
-			const auto reqSrc = getRequestSource();
-			const auto addrModeSrc = getSourceAddressGenMode();
-			const auto addrModeDst = getDestinationAddressGenMode();
-			const auto srcSpace = getSourceSpace();
-			const auto dstSpace = getDestinationSpace();
-
-			const auto isSupportedTransferMode = tm == TransferMode::WordTriggerRequest || tm == TransferMode::WordTriggerRequestClearDE || tm == TransferMode::LineTriggerRequestClearDE;
-
-			if(isSupportedTransferMode)
-			{
-				if(m_peripherals.getType() == PeripheralType::Peripherals56303)
-				{
-					auto* p303 = static_cast<Peripherals56303*>(&m_peripherals);
-					m_dma.addTriggerTarget(this);
-					if(checkTrigger(*p303, reqSrc))
-						triggerByRequest();
-				}
-				else if(m_peripherals.getType() == PeripheralType::Peripherals56362)
-				{
-					auto* p362 = static_cast<Peripherals56362*>(&m_peripherals);
-					m_dma.addTriggerTarget(this);
-					if(checkTrigger(*p362, reqSrc))
-						triggerByRequest();
-				}
-				else
-				{
-					assert(false && "TODO unknown peripherals, not supported yet");
-				}
-			}
-			else
-			{
-				assert(false && "TODO implement transfer mode in execTransfer()");
-			}
+			assert(false && "TODO unknown peripherals, not supported yet");
 		}
 
 		m_peripherals.setDelayCycles(0);
