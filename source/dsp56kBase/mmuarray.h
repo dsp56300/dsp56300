@@ -61,11 +61,8 @@ namespace dsp56k
 			// Calculate number of blocks
 			m_numBlocks = (_maxSize + _blockSize - 1) / _blockSize;
 
-			// On macOS, MAP_FIXED remapping can hit kernel guard pages (DEALLOC_GAP),
-			// causing the process to be killed with EXC_GUARD. Use fallback path.
-#ifdef __APPLE__
-			return initFallback();
-#endif
+			// macOS now uses the Mach VM API (mach_vm_map with VM_FLAGS_OVERWRITE)
+			// which bypasses the BSD layer's DEALLOC_GAP guard pages.
 
 			// Try MMU path
 			const auto totalElements = m_numBlocks * _blockSize; // round up to full blocks

@@ -33,6 +33,7 @@ namespace dsp56k
 			unmapRegion(addr);
 		}
 
+#ifdef _WIN32
 		// After unmapping, each block is an independent placeholder created
 		// by unmapRegion's VirtualAlloc2 call. VirtualFree(base, 0, MEM_RELEASE)
 		// would only free the first one, leaking blocks 1..N. Coalesce them
@@ -40,6 +41,7 @@ namespace dsp56k
 		// released at once.
 		if (m_usePlaceholders && m_basePtr && m_basePtrSize)
 			VirtualFree(m_basePtr, m_basePtrSize, MEM_RELEASE | MEM_COALESCE_PLACEHOLDERS);
+#endif
 
 		freeAddressRange();
 		closeBackingStore();
@@ -201,7 +203,121 @@ namespace dsp56k
 		return UnmapViewOfFile(_addr) != 0;
 	}
 
-#else // Linux / macOS
+#elif defined(__APPLE__)
+
+	// ---- macOS Mach VM implementation ----
+	// macOS inserts DEALLOC_GAP guard pages when mmap(MAP_FIXED) remaps portions
+	// of an existing mapping, causing EXC_GUARD kills. The Mach VM API operates
+	// below the BSD layer and does not trigger guard pages.
+
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+
+	uint8_t* MmuHelper::reserveAddressRange(const size_t _byteSize)
+	{
+		mach_vm_address_t addr = 0;
+		const auto kr = mach_vm_allocate(mach_task_self(), &addr, _byteSize, VM_FLAGS_ANYWHERE);
+		if (kr != KERN_SUCCESS)
+		{
+			LOG("MmuHelper: mach_vm_allocate reserve failed, kr=" << kr);
+			return nullptr;
+		}
+		m_basePtr = reinterpret_cast<uint8_t*>(addr);
+		m_basePtrSize = _byteSize;
+		return m_basePtr;
+	}
+
+	void MmuHelper::freeAddressRange()
+	{
+		if (m_basePtr == nullptr)
+			return;
+		mach_vm_deallocate(mach_task_self(), reinterpret_cast<mach_vm_address_t>(m_basePtr), m_basePtrSize);
+		m_basePtr = nullptr;
+		m_basePtrSize = 0;
+	}
+
+	bool MmuHelper::createBackingStore(const size_t _byteSize)
+	{
+		// Allocate backing memory and create a named memory entry port from it.
+		// The memory entry allows mapping the same physical pages at multiple
+		// virtual addresses (shared default page pattern).
+		mach_vm_address_t backingAddr = 0;
+		auto kr = mach_vm_allocate(mach_task_self(), &backingAddr, _byteSize, VM_FLAGS_ANYWHERE);
+		if (kr != KERN_SUCCESS)
+		{
+			LOG("MmuHelper: mach_vm_allocate backing failed, kr=" << kr);
+			return false;
+		}
+
+		memory_object_size_t entrySize = _byteSize;
+		mach_port_t entryPort = MACH_PORT_NULL;
+		kr = mach_make_memory_entry_64(mach_task_self(), &entrySize, backingAddr,
+			VM_PROT_READ | VM_PROT_WRITE, &entryPort, MACH_PORT_NULL);
+
+		// Free the original allocation — the memory entry retains the pages
+		mach_vm_deallocate(mach_task_self(), backingAddr, _byteSize);
+
+		if (kr != KERN_SUCCESS || entryPort == MACH_PORT_NULL)
+		{
+			LOG("MmuHelper: mach_make_memory_entry_64 failed, kr=" << kr);
+			return false;
+		}
+
+		m_hBackingStore = static_cast<THandle>(entryPort);
+		return true;
+	}
+
+	void MmuHelper::closeBackingStore()
+	{
+		if (m_hBackingStore == InvalidHandle)
+			return;
+		mach_port_deallocate(mach_task_self(), static_cast<mach_port_t>(m_hBackingStore));
+		m_hBackingStore = InvalidHandle;
+	}
+
+	void* MmuHelper::mapRegion(const size_t _backingByteOffset, const size_t _byteSize, void* _targetAddr)
+	{
+		// Use mach_vm_map with VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE to atomically
+		// replace whatever is at the target address. This bypasses the BSD mmap
+		// layer and does not trigger DEALLOC_GAP guard pages.
+		mach_vm_address_t addr = reinterpret_cast<mach_vm_address_t>(_targetAddr);
+		const auto kr = mach_vm_map(mach_task_self(), &addr, _byteSize, 0,
+			VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE,
+			static_cast<mach_port_t>(m_hBackingStore),
+			_backingByteOffset, FALSE,
+			VM_PROT_READ | VM_PROT_WRITE,
+			VM_PROT_READ | VM_PROT_WRITE,
+			VM_INHERIT_NONE);
+
+		if (kr != KERN_SUCCESS)
+		{
+			LOG("MmuHelper: mach_vm_map failed, kr=" << kr);
+			return nullptr;
+		}
+
+		m_mappedRegions.insert(std::make_pair(_targetAddr, _byteSize));
+		return _targetAddr;
+	}
+
+	bool MmuHelper::unmapRegion(void* _addr)
+	{
+		const auto it = m_mappedRegions.find(_addr);
+		if (it == m_mappedRegions.end())
+			return false;
+
+		const auto size = it->second;
+		m_mappedRegions.erase(it);
+
+		// Deallocate the mapping. The address becomes free, but ensureBlockMmu
+		// immediately calls mapRegion which uses VM_FLAGS_OVERWRITE, so there
+		// is no window for another thread to claim the address (the overwrite
+		// flag atomically replaces whatever is at the target).
+		// For the releaseAll path, freeAddressRange deallocates the entire range.
+		const auto kr = mach_vm_deallocate(mach_task_self(), reinterpret_cast<mach_vm_address_t>(_addr), size);
+		return kr == KERN_SUCCESS;
+	}
+
+#else // Linux
 
 	uint8_t* MmuHelper::reserveAddressRange(const size_t _byteSize)
 	{

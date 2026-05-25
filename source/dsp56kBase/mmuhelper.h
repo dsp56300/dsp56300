@@ -28,6 +28,9 @@ namespace dsp56k
 #ifdef _WIN32
 		using THandle = void*;
 		static constexpr THandle InvalidHandle = nullptr;
+#elif defined(__APPLE__)
+		using THandle = unsigned int;  // mach_port_t
+		static constexpr THandle InvalidHandle = 0;  // MACH_PORT_NULL
 #else
 		using THandle = int;
 		static constexpr THandle InvalidHandle = -1;
