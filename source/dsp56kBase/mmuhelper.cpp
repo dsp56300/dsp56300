@@ -9,6 +9,9 @@
 #	define NOSERVICE
 #	define WIN32_LEAN_AND_MEAN
 #	include <Windows.h>
+#elif defined(__APPLE__)
+#	include <mach/mach.h>
+#	include <mach/mach_vm.h>
 #else
 #	include <fcntl.h>
 #	include <unistd.h>
@@ -209,9 +212,6 @@ namespace dsp56k
 	// macOS inserts DEALLOC_GAP guard pages when mmap(MAP_FIXED) remaps portions
 	// of an existing mapping, causing EXC_GUARD kills. The Mach VM API operates
 	// below the BSD layer and does not trigger guard pages.
-
-#include <mach/mach.h>
-#include <mach/mach_vm.h>
 
 	uint8_t* MmuHelper::reserveAddressRange(const size_t _byteSize)
 	{
