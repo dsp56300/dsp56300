@@ -26,12 +26,20 @@ namespace dsp56k
 
 	void MmuHelper::releaseAll()
 	{
-		// Unmap all mapped regions first
+		// Unmap all mapped regions first, restoring individual placeholders
 		while (!m_mappedRegions.empty())
 		{
 			auto* addr = m_mappedRegions.begin()->first;
 			unmapRegion(addr);
 		}
+
+		// After unmapping, each block is an independent placeholder created
+		// by unmapRegion's VirtualAlloc2 call. VirtualFree(base, 0, MEM_RELEASE)
+		// would only free the first one, leaking blocks 1..N. Coalesce them
+		// back into a single placeholder first so the entire range can be
+		// released at once.
+		if (m_usePlaceholders && m_basePtr && m_basePtrSize)
+			VirtualFree(m_basePtr, m_basePtrSize, MEM_RELEASE | MEM_COALESCE_PLACEHOLDERS);
 
 		freeAddressRange();
 		closeBackingStore();
@@ -48,8 +56,9 @@ namespace dsp56k
 		{
 			decltype(&VirtualAlloc2) virtualAlloc2 = nullptr;
 			decltype(&MapViewOfFile3) mapViewOfFile3 = nullptr;
+			decltype(&UnmapViewOfFile2) unmapViewOfFile2 = nullptr;
 
-			bool isSupported() const { return virtualAlloc2 != nullptr && mapViewOfFile3 != nullptr; }
+			bool isSupported() const { return virtualAlloc2 != nullptr && mapViewOfFile3 != nullptr && unmapViewOfFile2 != nullptr; }
 
 			static PlaceholderApi& instance()
 			{
@@ -66,6 +75,7 @@ namespace dsp56k
 
 				virtualAlloc2 = reinterpret_cast<decltype(this->virtualAlloc2)>(GetProcAddress(hModule, "VirtualAlloc2"));
 				mapViewOfFile3 = reinterpret_cast<decltype(this->mapViewOfFile3)>(GetProcAddress(hModule, "MapViewOfFile3"));
+				unmapViewOfFile2 = reinterpret_cast<decltype(this->unmapViewOfFile2)>(GetProcAddress(hModule, "UnmapViewOfFile2"));
 
 				if (isSupported())
 					LOG("MmuHelper: Placeholder API available (VirtualAlloc2/MapViewOfFile3)");
@@ -175,18 +185,20 @@ namespace dsp56k
 		if (it == m_mappedRegions.end())
 			return false;
 
-		const auto size = it->second;
-		const auto res = UnmapViewOfFile(_addr);
 		m_mappedRegions.erase(it);
 
-		if (m_usePlaceholders && res)
+		if (m_usePlaceholders)
 		{
-			// Restore the placeholder so the address range can be remapped later.
+			// Atomically unmap and restore the placeholder. The previous
+			// two-step approach (UnmapViewOfFile + VirtualAlloc2) left a
+			// window where the address was free and another thread could
+			// claim it, causing MapViewOfFile3 to later fail with
+			// ERROR_INVALID_ADDRESS.
 			auto& api = PlaceholderApi::instance();
-			api.virtualAlloc2(nullptr, _addr, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0);
+			return api.unmapViewOfFile2(GetCurrentProcess(), _addr, MEM_PRESERVE_PLACEHOLDER) != 0;
 		}
 
-		return res != 0;
+		return UnmapViewOfFile(_addr) != 0;
 	}
 
 #else // Linux / macOS
