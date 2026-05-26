@@ -61,8 +61,12 @@ namespace dsp56k
 			// Calculate number of blocks
 			m_numBlocks = (_maxSize + _blockSize - 1) / _blockSize;
 
-			// macOS now uses the Mach VM API (mach_vm_map with VM_FLAGS_OVERWRITE)
-			// which bypasses the BSD layer's DEALLOC_GAP guard pages.
+			// On macOS, remapping sub-regions of an existing allocation triggers
+			// DEALLOC_GAP (EXC_GUARD SIGKILL) regardless of API used (mmap or
+			// mach_vm_map). Use fallback path until a working approach is found.
+#ifdef __APPLE__
+			return initFallback();
+#endif
 
 			// Try MMU path
 			const auto totalElements = m_numBlocks * _blockSize; // round up to full blocks
