@@ -1024,7 +1024,15 @@ namespace dsp56k
 	}
 	inline void DSP::op_Maci_xxxx(const TWord op)
 	{
-		errNotImplemented("MACI");
+		const bool	ab		= getFieldValue<Maci_xxxx,Field_d>(op);
+		const bool	negate	= getFieldValue<Maci_xxxx,Field_k>(op);
+		const TWord qq		= getFieldValue<Maci_xxxx,Field_qq>(op);
+
+		const TReg24 s		= TReg24(immediateDataExt<Maci_xxxx>());
+
+		const TReg24 reg	= decode_qq_read(qq);
+
+		alu_mpy( ab, reg, s, negate, true );
 	}
 	inline void DSP::op_Macsu(const TWord op)
 	{

@@ -159,6 +159,7 @@ namespace dsp56k
 
 		// multiply
 		mpyi();
+		maci_xxxx();
 		mpy_su();
 
 		// newly implemented
@@ -3671,6 +3672,25 @@ namespace dsp56k
 		}, [&]()
 		{
 			verify(dsp.regs().a.var != 0);
+		});
+	}
+
+	void UnitTests::maci_xxxx()
+	{
+		// MACI accumulates s1 * immediate into the destination accumulator.
+		// Q (Waldorf) firmware uses `maci #>$7fdf3b,x0,b` at DSP1 PC=$152
+		// inside the oscillator handler. Without this op the DSP crashes the
+		// first time it reaches voice synthesis.
+		runTest([&]()
+		{
+			dsp.x0(0x400000);                       // x0 = 0.5 (fractional)
+			dsp.regs().b.var = 0x00100000000000;    // seed b with a non-zero value
+			emit(0x0141ca, 0x7fdf3b);               // maci #>$7fdf3b,x0,b
+		}, [&]()
+		{
+			// b must have been updated (multiply-accumulate, not skip).
+			verify(dsp.regs().b.var != 0x00100000000000);
+			verify((dsp.regs().b.var & 0xffffffffffffffULL) != 0);
 		});
 	}
 
