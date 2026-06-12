@@ -671,7 +671,7 @@ namespace dsp56k
 			JitBlock block(emitter, dsp, rtData, std::move(config));
 			JitBlockRuntimeData rt;
 
-			const std::vector<JitCacheEntry> cache;
+			MmuArray<JitCacheEntry> cache; cache.init(1, [](JitCacheEntry* p, size_t n) { for(size_t i=0;i<n;++i) new(&p[i]) JitCacheEntry(); });
 			const std::set<TWord> volatileP;
 			const std::map<TWord, TWord> loopStarts;
 			const std::set<TWord> loopEnds;
@@ -720,7 +720,7 @@ namespace dsp56k
 			JitBlock block(emitter, dsp, rtData, std::move(config));
 			JitBlockRuntimeData rt;
 
-			const std::vector<JitCacheEntry> cache;
+			MmuArray<JitCacheEntry> cache; cache.init(1, [](JitCacheEntry* p, size_t n) { for(size_t i=0;i<n;++i) new(&p[i]) JitCacheEntry(); });
 			const std::set<TWord> volatileP;
 			const std::map<TWord, TWord> loopStarts;
 			const std::set<TWord> loopEnds;

@@ -18,6 +18,38 @@ namespace dsp56k
 		emit(result.word[0], result.wordCount > 1 ? result.word[1] : 0, _pc);
 	}
 
+	TWord UnitTests::emitToMemory(const char* _text, TWord _pc)
+	{
+		const auto result = assembler.assemble(_text);
+		if(!result.success())
+			throw std::string("Assembly failed for: ") + _text;
+		return emitToMemory(result.word[0], result.wordCount > 1 ? result.word[1] : 0, _pc);
+	}
+
+	TWord UnitTests::emitToMemory(TWord _opA, TWord _opB, TWord _pc)
+	{
+		dsp.memWriteP(_pc, _opA);
+		if(_opB)
+			dsp.memWriteP(_pc + 1, _opB);
+		return _opB ? _pc + 2 : _pc + 1;
+	}
+
+	uint32_t UnitTests::execUntil(TWord _targetPC, uint32_t _maxCycles)
+	{
+		for(uint32_t i = 0; i < _maxCycles; ++i)
+		{
+			const auto pc = dsp.getPC().toWord();
+			if(pc == _targetPC)
+				return i;
+			execStep();
+		}
+		std::stringstream ss;
+		ss << "execUntil: target PC $" << std::hex << _targetPC
+		   << " not reached after " << std::dec << _maxCycles
+		   << " cycles (current PC $" << std::hex << dsp.getPC().toWord() << ")";
+		throw ss.str();
+	}
+
 	void UnitTests::runAllTests()
 	{
 		conditionCodes();
@@ -60,6 +92,7 @@ namespace dsp56k
 		dec();
 		div();
 		dmac();
+		dmacMultiPrecision();
 		eor();
 		extractu();
 		extractu_co();
@@ -128,16 +161,17 @@ namespace dsp56k
 		mpyi();
 		mpy_su();
 
-		// loop control — requires multi-instruction looping in JIT blocks
-		// which the single-block test framework may not support
-		// do_();
-		// rep();
-
 		// newly implemented
 		eor_xx();
 		ror_();
-		// system
-		rts();
+
+		// bit-test jump/branch — peripheral addressing modes
+		jclr_jset_ppqq();
+		jsclr_jsset_ppqq();
+		brclr_brset_ppqq();
+
+		// multi-instruction tests
+		multiInstructionTests();
 	}
 
 	void UnitTests::conditionCodes()
@@ -1330,6 +1364,111 @@ namespace dsp56k
 		}, [&]()
 		{
 			verify(dsp.regs().a.var == 0x00017c6effffff);
+		});
+
+		// dmac uu: both operands unsigned
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00AABBCC112233;
+			dsp.x1(0x100000);
+			dsp.y1(0x200000);
+			emit("dmac uu x1,y1,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x00040000aabbcc);
+		});
+
+		// dmac ss with negate
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00112233000000;
+			dsp.x1(0x000100);
+			dsp.y1(0x000200);
+			emit("dmac ss -x1,y1,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x000000000d2233);
+		});
+	}
+
+	// 48x48-bit multi-precision multiply using mpyuu/dmac/macsu sequence.
+	// Multiplies a 48-bit value (x1:x0) by a 48-bit value (y1:y0) using
+	// four instructions that combine partial products with accumulator shifts.
+	void UnitTests::dmacMultiPrecision()
+	{
+		// Test Case 1: small metric (y1:y0 = $000042:$123456)
+		runTest([&]()
+		{
+			dsp.x0(0x555555);
+			dsp.x1(0x055555);
+			dsp.y0(0x123456);
+			dsp.y1(0x000042);
+			dsp.regs().a.var = 0;
+
+			emit("mpyuu x0,y0,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x000c22e3f3dd1c);
+		});
+
+		runTest([&]()
+		{
+			emit("dmac su x1,y0,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x0000c22e3fffff);
+		});
+
+		runTest([&]()
+		{
+			emit("macsu y1,x0,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x0000c25a3fffd3);
+		});
+
+		runTest([&]()
+		{
+			emit("dmac ss x1,y1,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x00000002c0c22e);
+		});
+
+		// Test Case 2: larger metric (y1:y0 = $001234:$abcdef)
+		runTest([&]()
+		{
+			dsp.x0(0x555555);
+			dsp.x1(0x055555);
+			dsp.y0(0xabcdef);
+			dsp.y1(0x001234);
+			dsp.regs().a.var = 0;
+
+			emit("mpyuu x0,y0,a");
+			emit("dmac su x1,y0,a");
+			emit("macsu y1,x0,a");
+			emit("dmac ss x1,y1,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x000000c231d33f);
+		});
+
+		// Test Case 3: near-max signed metric (y1:y0 = $7fffff:$ffffff)
+		runTest([&]()
+		{
+			dsp.x0(0x555555);
+			dsp.x1(0x055555);
+			dsp.y0(0xffffff);
+			dsp.y1(0x7fffff);
+			dsp.regs().a.var = 0;
+
+			emit("mpyuu x0,y0,a");
+			emit("dmac su x1,y0,a");
+			emit("macsu y1,x0,a");
+			emit("dmac ss x1,y1,a");
+		}, [&]()
+		{
+			verify(dsp.regs().a.var == 0x00055555555554);
 		});
 	}
 
@@ -2548,6 +2687,32 @@ namespace dsp56k
 		{
 			verify(dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_Z));
+		});
+
+		// ifcc preserves CCR: clr b ifne must keep Z=0 from prior tst
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0x00010000000000;
+			dsp.regs().b.var = 0x00AABBCC000000;
+			emit("tst a");
+			emit("clr b ifne");
+		}, [&]()
+		{
+			verify(dsp.regs().b.var == 0);
+			verify(!dsp.sr_test(CCR_Z));
+		});
+
+		// ifcc preserves CCR: condition false, neither dest nor CCR change
+		runTest([&]()
+		{
+			dsp.regs().a.var = 0;
+			dsp.regs().b.var = 0x00112233000000;
+			emit("tst a");
+			emit("clr b ifne");
+		}, [&]()
+		{
+			verify(dsp.regs().b.var == 0x00112233000000);
+			verify(dsp.sr_test(CCR_Z));
 		});
 	}
 
@@ -4091,47 +4256,6 @@ namespace dsp56k
 	}
 
 	// ======================================================================
-	// Loop control tests
-	// ======================================================================
-
-	void UnitTests::do_()
-	{
-		// do #3: adds 1 to a three times
-		runTest([&]()
-		{
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0x00000001000000;
-			emit("do #$3,>$3", 0x0);	// do #3,>$3 at PC=0
-			emit("add b,a", 0x2);			// loop body at PC=2
-		}, [&]()
-		{
-			verify(dsp.regs().a.var == 0x00000003000000);
-		});
-	}
-
-	void UnitTests::dor()
-	{
-		// dor: not implemented in JIT (errNotImplemented)
-	}
-
-	void UnitTests::rep()
-	{
-		// rep #4: repeat add b,a four times
-		runTest([&]()
-		{
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0x00000001000000;
-			emit("rep #$4", 0x0);	// rep #4 at PC=0
-			emit("add b,a", 0x1);		// repeated 4 times
-		}, [&]()
-		{
-			verify(dsp.regs().a.var == 0x00000004000000);
-		});
-	}
-
-	// ======================================================================
-	// System tests
-	// ======================================================================
 	// Newly implemented instructions
 	// ======================================================================
 
@@ -4216,8 +4340,308 @@ namespace dsp56k
 		});
 	}
 
-	void UnitTests::rts()
+	void UnitTests::jclr_jset_ppqq()
 	{
-		// Tested indirectly via jsr/bsr tests.
+		// pp addressing: peripheral at $ffffd0
+		// jclr #3,x:<<$ffffd0,$100 — bit 3 clear → taken
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffffd0, 0xfffff7);
+			emit("jclr #$3,x:<<$ffffd0,$100");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x100);
+		});
+		// jset #3,x:<<$ffffd0,$100 — bit 3 set → taken
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffffd0, 0x000008);
+			emit("jset #$3,x:<<$ffffd0,$100");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x100);
+		});
+		// jset — not taken
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffffd0, 0xfffff7);
+			emit("jset #$3,x:<<$ffffd0,$100");
+		}, [&]()
+		{
+			verify(dsp.getPC() != 0x100);
+		});
+
+		// qq addressing: peripheral at $ffff90
+		// jclr #3,x:<<$ffff90,$100 — bit 3 clear → taken
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffff90, 0xfffff7);
+			emit("jclr #$3,x:<<$ffff90,$100");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x100);
+		});
+		// jset #3,x:<<$ffff90,$100 — bit 3 set → taken
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffff90, 0x000008);
+			emit("jset #$3,x:<<$ffff90,$100");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x100);
+		});
+	}
+
+	void UnitTests::jsclr_jsset_ppqq()
+	{
+		// jsclr with pp
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffffd0, 0xfffff7);
+			emit("jsclr #$3,x:<<$ffffd0,$100");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x100);
+		});
+		// jsset with pp
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffffd0, 0x000008);
+			emit("jsset #$3,x:<<$ffffd0,$100");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x100);
+		});
+		// jsclr with qq
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffff90, 0xfffff7);
+			emit("jsclr #$3,x:<<$ffff90,$100");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x100);
+		});
+		// jsset with qq
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffff90, 0x000008);
+			emit("jsset #$3,x:<<$ffff90,$100");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x100);
+		});
+	}
+
+	void UnitTests::brclr_brset_ppqq()
+	{
+		// brclr with pp — taken
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffffd0, 0xfffff7);
+			emit("brclr #$3,x:<<$ffffd0,>$50");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x50);
+		});
+		// brset with pp — taken
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffffd0, 0x000008);
+			emit("brset #$3,x:<<$ffffd0,>$50");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x50);
+		});
+		// brset with pp — not taken
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffffd0, 0xfffff7);
+			emit("brset #$3,x:<<$ffffd0,>$50");
+		}, [&]()
+		{
+			verify(dsp.getPC() != 0x50);
+		});
+		// brclr with qq — taken
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffff90, 0xfffff7);
+			emit("brclr #$3,x:<<$ffff90,>$50");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x50);
+		});
+		// brset with qq — taken
+		runTest([&]()
+		{
+			dsp.setPC(0);
+			dsp.getPeriph(0)->write(0xffff90, 0x000008);
+			emit("brset #$3,x:<<$ffff90,>$50");
+		}, [&]()
+		{
+			verify(dsp.getPC() == 0x50);
+		});
+	}
+
+	// ======================================================================
+	// Multi-instruction tests (use execUntil for full DSP execution)
+	// ======================================================================
+
+	void UnitTests::multiInstructionTests()
+	{
+		rep_multi();
+		do_multi();
+		jsr_rts();
+	}
+
+	void UnitTests::rep_multi()
+	{
+		// Pattern: JSR to subroutine containing rep, RTS back. The JIT compiles
+		// the JSR as one block, the subroutine as another, and exec() returns
+		// at each block boundary (JSR, RTS).
+
+		// rep #4: repeat add b,a four times
+		dsp.resetHW();
+		dsp.regs().a.var = 0;
+		dsp.regs().b.var = 0x00000001000000;
+
+		TWord pc = 0x100;
+		pc = emitToMemory("jsr $200", pc);		// entry: call subroutine
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		pc = 0x200;
+		pc = emitToMemory("rep #$4", pc);		// subroutine: rep #4
+		pc = emitToMemory("add b,a", pc);		// repeated 4 times
+		emitToMemory("rts", pc);				// return
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.regs().a.var == 0x00000004000000);
+
+		// rep x0: repeat with register count
+		dsp.resetHW();
+		dsp.regs().a.var = 0;
+		dsp.regs().b.var = 0x00000001000000;
+		dsp.x0(7);
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $200", pc);
+		emitToMemory("nop", pc);
+
+		pc = 0x200;
+		pc = emitToMemory("rep x0", pc);
+		pc = emitToMemory("add b,a", pc);
+		emitToMemory("rts", pc);
+
+		dsp.setPC(0x100);
+		execUntil(0x101);
+
+		verify(dsp.regs().a.var == 0x00000007000000);
+	}
+
+	void UnitTests::do_multi()
+	{
+		// do #5: loop body adds 1 to a, five times
+		dsp.resetHW();
+		dsp.regs().a.var = 0;
+		dsp.regs().b.var = 0x00000001000000;
+
+		TWord pc = 0x100;
+		pc = emitToMemory("jsr $200", pc);		// entry: call subroutine
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		pc = 0x200;
+		pc = emitToMemory("do #$5,>$204", pc);	// do #5, loop end at $203
+		pc = emitToMemory("add b,a", pc);		// $202: loop body
+		pc = emitToMemory("nop", pc);			// $203: last instruction in loop
+		pc = emitToMemory("rts", pc);			// $204: after loop, return
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.regs().a.var == 0x00000005000000);
+
+		// do with register count
+		dsp.resetHW();
+		dsp.regs().a.var = 0;
+		dsp.regs().b.var = 0x00000001000000;
+		dsp.x0(3);
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $200", pc);
+		emitToMemory("nop", pc);
+
+		pc = 0x200;
+		pc = emitToMemory("do x0,>$204", pc);	// do x0, loop end at $203
+		pc = emitToMemory("add b,a", pc);
+		pc = emitToMemory("nop", pc);			// loop end
+		pc = emitToMemory("rts", pc);			// after loop
+
+		dsp.setPC(0x100);
+		execUntil(0x101);
+
+		verify(dsp.regs().a.var == 0x00000003000000);
+	}
+
+	void UnitTests::jsr_rts()
+	{
+		// jsr to subroutine that adds b to a, then returns
+		dsp.resetHW();
+		dsp.regs().a.var = 0x00100000000000;
+		dsp.regs().b.var = 0x00050000000000;
+
+		TWord pc = 0x100;
+		pc = emitToMemory("jsr $200", pc);		// entry: call subroutine
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		pc = 0x200;
+		pc = emitToMemory("add b,a", pc);		// subroutine body
+		emitToMemory("rts", pc);				// return
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.regs().a.var == 0x00150000000000);
+
+		// jsr + nested jsr + rts + rts
+		dsp.resetHW();
+		dsp.regs().a.var = 0;
+		dsp.regs().b.var = 0x00000001000000;
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $200", pc);		// call outer
+		const auto finalPC = pc;
+		emitToMemory("nop", pc);
+
+		pc = 0x200;
+		pc = emitToMemory("add b,a", pc);		// outer: a += 1
+		pc = emitToMemory("jsr $300", pc);		// call inner
+		pc = emitToMemory("add b,a", pc);		// outer: a += 1 (after inner returns)
+		emitToMemory("rts", pc);				// outer: return
+
+		pc = 0x300;
+		pc = emitToMemory("add b,a", pc);		// inner: a += 1
+		emitToMemory("rts", pc);				// inner: return
+
+		dsp.setPC(0x100);
+		execUntil(finalPC);
+
+		verify(dsp.regs().a.var == 0x00000003000000);	// 3 adds total
 	}
 }

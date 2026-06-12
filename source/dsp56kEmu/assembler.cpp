@@ -1744,6 +1744,74 @@ namespace dsp56k
 				return result;
 			}
 
+			// Bit-test-and-jump/branch on pp: #n,S:<<pp,addr
+			case Jclr_pp: case Jset_pp: case Jsclr_pp: case Jsset_pp:
+			case Brclr_pp: case Brset_pp: case Bsclr_pp: case Bsset_pp:
+			{
+				if (ops.size() != 3) continue;
+				TWord b;
+				if (!parseImmediate(ops[0], b)) continue;
+				if (b > 23) continue;
+				const auto mem = toLower(ops[1]);
+				if (mem.size() < 4 || mem[1] != ':') continue;
+				EMemArea area;
+				if (!parseMemoryArea(std::string(1, mem[0]), area)) continue;
+				auto addrStr = mem.substr(2);
+				if (addrStr.substr(0, 2) != "<<") continue;
+				addrStr = addrStr.substr(2);
+				TWord addr;
+				if (!parseNumber(addrStr, addr) && !resolveSymbol(area, addrStr, addr)) continue;
+				if (addr < 0xFFFFC0) continue;
+				TWord pp = addr - 0xFFFFC0;
+				if (pp > 0x3F) continue;
+				TWord target;
+				auto targetStr = ops[2];
+				if (!targetStr.empty() && targetStr[0] == '>') targetStr = targetStr.substr(1);
+				if (!parseNumber(targetStr, target)) continue;
+				setFieldValue(word, inst, Field_bbbbb, b);
+				setFieldValue(word, inst, Field_pppppp, pp);
+				setFieldValue(word, inst, Field_S, area == MemArea_Y ? 1 : 0);
+				result.word[0] = word;
+				result.word[1] = target;
+				result.wordCount = 2;
+				result.error = AssembleError::OK;
+				return result;
+			}
+
+			// Bit-test-and-jump/branch on qq: #n,S:<<qq,addr
+			case Jclr_qq: case Jset_qq: case Jsclr_qq: case Jsset_qq:
+			case Brclr_qq: case Brset_qq: case Bsclr_qq: case Bsset_qq:
+			{
+				if (ops.size() != 3) continue;
+				TWord b;
+				if (!parseImmediate(ops[0], b)) continue;
+				if (b > 23) continue;
+				const auto mem = toLower(ops[1]);
+				if (mem.size() < 4 || mem[1] != ':') continue;
+				EMemArea area;
+				if (!parseMemoryArea(std::string(1, mem[0]), area)) continue;
+				auto addrStr = mem.substr(2);
+				if (addrStr.substr(0, 2) != "<<") continue;
+				addrStr = addrStr.substr(2);
+				TWord addr;
+				if (!parseNumber(addrStr, addr) && !resolveSymbol(area, addrStr, addr)) continue;
+				if (addr < 0xFFFF80 || addr >= 0xFFFFC0) continue;
+				TWord qq = addr - 0xFFFF80;
+				if (qq > 0x3F) continue;
+				TWord target;
+				auto targetStr = ops[2];
+				if (!targetStr.empty() && targetStr[0] == '>') targetStr = targetStr.substr(1);
+				if (!parseNumber(targetStr, target)) continue;
+				setFieldValue(word, inst, Field_bbbbb, b);
+				setFieldValue(word, inst, Field_qqqqqq, qq);
+				setFieldValue(word, inst, Field_S, area == MemArea_Y ? 1 : 0);
+				result.word[0] = word;
+				result.word[1] = target;
+				result.wordCount = 2;
+				result.error = AssembleError::OK;
+				return result;
+			}
+
 			// Extract/Extractu with register: S1,S2,D (sss, s, D)
 			case Extract_S1S2: case Extractu_S1S2:
 			{

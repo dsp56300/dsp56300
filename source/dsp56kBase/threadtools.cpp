@@ -56,11 +56,35 @@ namespace dsp56k
 		{
 		}
 	}
+
+	// SetThreadDescription is Win10 1607+. Load it dynamically so we stay compatible with Win7.
+	using SetThreadDescriptionFunc = HRESULT (WINAPI*)(HANDLE, PCWSTR);
+	static SetThreadDescriptionFunc getSetThreadDescription()
+	{
+		static const auto s_func = []() -> SetThreadDescriptionFunc
+		{
+			if (const auto kernel32 = GetModuleHandleW(L"kernel32.dll"))
+				return reinterpret_cast<SetThreadDescriptionFunc>(reinterpret_cast<void*>(GetProcAddress(kernel32, "SetThreadDescription")));
+			return nullptr;
+		}();
+		return s_func;
+	}
 #endif
 	void ThreadTools::setCurrentThreadName(const std::string& _name)
 	{
 #ifdef _WIN32
 		SetThreadName(-1, _name.c_str());
+
+		if (const auto setDesc = getSetThreadDescription())
+		{
+			const auto len = MultiByteToWideChar(CP_UTF8, 0, _name.c_str(), -1, nullptr, 0);
+			if (len > 0)
+			{
+				std::wstring wide(static_cast<size_t>(len - 1), L'\0');
+				MultiByteToWideChar(CP_UTF8, 0, _name.c_str(), -1, wide.data(), len);
+				setDesc(GetCurrentThread(), wide.c_str());
+			}
+		}
 #elif defined(__APPLE__)
 		pthread_setname_np(_name.c_str());
 #else

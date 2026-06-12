@@ -61,6 +61,7 @@ namespace dsp56k
 
 		using CallbackTx = std::function<void()>;
 		using CallbackRx = std::function<void()>;
+		using CallbackHostStateChanged = std::function<void()>;
 
 		TWord readStatusRegister();
 
@@ -164,6 +165,14 @@ namespace dsp56k
 				m_callbackRx = [] {};
 		}
 
+		void setHostStateChangedCallback(const CallbackHostStateChanged& _callback)
+		{
+			m_callbackHostStateChanged = _callback;
+
+			if(!m_callbackHostStateChanged)
+				m_callbackHostStateChanged = [] {};
+		}
+
 	private:
 		bool dmaTriggerReceive() const;
 		bool dmaTriggerTransmit() const;
@@ -182,6 +191,7 @@ namespace dsp56k
 		bool m_transmitDataAlwaysEmpty = true;
 		CallbackTx m_callbackTx;
 		CallbackRx m_callbackRx = [] {};
+		CallbackHostStateChanged m_callbackHostStateChanged = [] {};
 		uint32_t m_rxRateLimit;		// minimum number of instructions between two RX interrupts
 		bool m_waitServeRXInterrupt = false;
 		int32_t m_pendingHostFlags01 = -1;

@@ -10,8 +10,13 @@ conditionvariable.cpp conditionvariable.h
 dspassert.cpp dspassert.h
 fastmath.h
 logging.cpp logging.h
+mmuarray.h
+mmuhelper.cpp mmuhelper.h
+mutex.cpp mutex.h
 ringbuffer.h
 semaphore.h
+sharedaudiobuffer.h
+sharedaudioreducer.h
 threadtools.cpp threadtools.h
 trigger.cpp trigger.h
 win8sync.cpp win8sync.h
@@ -31,7 +36,13 @@ endif()
 if(UNIX AND NOT APPLE)
 	set(THREADS_PREFER_PTHREAD_FLAG ON)
 	find_package(Threads REQUIRED)
-	target_link_libraries(dsp56kBase PUBLIC Threads::Threads)
+	target_link_libraries(dsp56kBase PUBLIC Threads::Threads rt)
 endif()
 
 target_include_directories(dsp56kBase PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+add_executable(sharedAudioBufferTest sharedaudiobuffer_test.cpp)
+target_link_libraries(sharedAudioBufferTest PRIVATE dsp56kBase)
+
+add_executable(sharedAudioReducerTest sharedaudioreducer_test.cpp)
+target_link_libraries(sharedAudioReducerTest PRIVATE dsp56kBase)

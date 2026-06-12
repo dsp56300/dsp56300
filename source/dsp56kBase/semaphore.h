@@ -26,6 +26,16 @@ namespace dsp56k
 	        m_cv.notify_one();
 	    }
 
+		void notifyAll(const uint32_t _count)
+		{
+			{
+				Lock lock(m_mutex);
+				m_count += _count;
+			}
+
+			m_cv.notify_all();
+		}
+
 	    void wait(const uint32_t _count = 1)
 		{
 	        Lock lock(m_mutex);
@@ -73,7 +83,8 @@ namespace dsp56k
 	class SpscSemaphoreWithCount
 	{
 	public:
-		explicit SpscSemaphoreWithCount(const int _count = 0) : m_count(_count)
+		SpscSemaphoreWithCount() : m_count(0) {}
+		explicit SpscSemaphoreWithCount(const int _count) : m_count(_count)
 		{
 		}
 
