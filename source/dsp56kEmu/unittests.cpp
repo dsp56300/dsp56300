@@ -1,6 +1,5 @@
 #include "unittests.h"
 
-#include <cstdio>
 
 namespace dsp56k
 {
@@ -2585,9 +2584,6 @@ namespace dsp56k
 				const int64_t vs = (v & 0x800000) ? static_cast<int64_t>(v) - 0x1000000 : static_cast<int64_t>(v);
 				const uint64_t expect = (static_cast<uint64_t>(vs) << 24) & 0xFFFFFFFFFFFFFFULL;	// A1=v, A2=sign, A0=0
 				const uint64_t got = (destB ? dsp.regs().b.var : dsp.regs().a.var) & 0xFFFFFFFFFFFFFFULL;
-				std::printf("### TFR %-22s v=$%06X : got=$%014llX  expect=$%014llX\n",
-					tag, v, static_cast<unsigned long long>(got), static_cast<unsigned long long>(expect));
-				std::fflush(stdout);
 				verify(got == expect);
 			});
 		};
@@ -4457,12 +4453,6 @@ namespace dsp56k
 				const uint64_t expectUnsigned = (static_cast<uint64_t>(y1s * static_cast<int64_t>(x0)) << 1) & 0xFFFFFFFFFFFFFFULL;
 				// what it WOULD be if x0 were wrongly sign-extended:
 				const uint64_t ifSignedX0     = (static_cast<uint64_t>(y1s * x0s)                      << 1) & 0xFFFFFFFFFFFFFFULL;
-				std::printf("### MACSU %-22s y1=$%06X x0=$%06X : a=$%014llX  expectUNSIGNED=$%014llX  (ifSignedX0=$%014llX)\n",
-					tag, y1, x0,
-					static_cast<unsigned long long>(dsp.regs().a.var),
-					static_cast<unsigned long long>(expectUnsigned),
-					static_cast<unsigned long long>(ifSignedX0));
-				std::fflush(stdout);
 				verify(dsp.regs().a.var == expectUnsigned);
 			});
 		};
@@ -4496,10 +4486,6 @@ namespace dsp56k
 				const int64_t s1s = (S1 & 0x800000) ? static_cast<int64_t>(S1) - 0x1000000 : static_cast<int64_t>(S1);
 				const uint64_t expUns = (static_cast<uint64_t>(s1s * static_cast<int64_t>(S2)) << 1) & 0xFFFFFFFFFFFFFFULL;
 				const uint64_t got = destB ? dsp.regs().b.var : dsp.regs().a.var;
-				std::printf("### MACSU-ENC %-10s op=$%06X s1=$%06X s2(uns)=$%06X : %c=$%014llX  exp=$%014llX\n",
-					tag, opcode, S1, S2, destB ? 'b' : 'a',
-					static_cast<unsigned long long>(got), static_cast<unsigned long long>(expUns));
-				std::fflush(stdout);
 				verify(got == expUns);
 			});
 		};
@@ -4555,11 +4541,6 @@ namespace dsp56k
 					{
 						if (reported++ < 6)
 						{
-							std::printf("### RND %-18s %s a=$%014llX -> $%014llX (expect $%014llX)\n",
-								m.tag, twos ? "2sC" : "cnv", static_cast<unsigned long long>(aIn),
-								static_cast<unsigned long long>(dsp.regs().a.var),
-								static_cast<unsigned long long>(expect));
-							std::fflush(stdout);
 						}
 						verify(dsp.regs().a.var == expect);
 					});
@@ -4596,9 +4577,6 @@ namespace dsp56k
 			}, [&]()
 			{
 				const TWord got = dsp.memory().get(MemArea_X, 0x100) & 0xFFFFFF;
-				std::printf("### LIMIT %-20s a=$%014llX sr=$%06X -> x:$100=$%06X (expect $%06X)\n",
-					tag, static_cast<unsigned long long>(aIn), sr, got, expect);
-				std::fflush(stdout);
 				verify(got == expect);
 			});
 		};
@@ -4644,13 +4622,6 @@ namespace dsp56k
 				const int expC = transfer ? 0 : 1;	// C cleared if transfer performed, set otherwise
 				const bool eunzvUnchanged = dsp.sr_test(CCR_V) && dsp.sr_test(CCR_Z) && dsp.sr_test(CCR_N)
 					&& dsp.sr_test(CCR_U) && dsp.sr_test(CCR_E);
-				std::printf("### %-4s %-10s a=$%014llX b=$%014llX -> b=$%014llX(exp $%014llX) C=%d(exp %d) [S=%d L=%d EUNZV_kept=%d]\n",
-					magnitude ? "MAXM" : "MAX", tag,
-					static_cast<unsigned long long>(aIn), static_cast<unsigned long long>(bIn),
-					static_cast<unsigned long long>(dsp.regs().b.var), static_cast<unsigned long long>(expB),
-					dsp.sr_test(CCR_C) ? 1 : 0, expC,
-					dsp.sr_test(CCR_S) ? 1 : 0, dsp.sr_test(CCR_L) ? 1 : 0, eunzvUnchanged ? 1 : 0);
-				std::fflush(stdout);
 				verify(dsp.regs().b.var == expB);					// result transfer
 				verify((dsp.sr_test(CCR_C) ? 1 : 0) == expC);		// C per spec
 				verify(eunzvUnchanged);								// E,U,N,Z,V must be unchanged (spec: —)
@@ -4689,11 +4660,6 @@ namespace dsp56k
 				emit(0x20AE1D);											// max a,b  x1,a
 			}, [&]()
 			{
-				std::printf("### MAX|MOVE %-14s a=$%014llX b=$%014llX -> a=$%014llX(exp $%014llX) b=$%014llX(exp $%014llX)\n",
-					tag, static_cast<unsigned long long>(aIn), static_cast<unsigned long long>(bIn),
-					static_cast<unsigned long long>(dsp.regs().a.var), static_cast<unsigned long long>(expA),
-					static_cast<unsigned long long>(dsp.regs().b.var), static_cast<unsigned long long>(expB));
-				std::fflush(stdout);
 				verify(dsp.regs().a.var == expA);	// the parallel move x1 -> a (the JIT regression)
 				verify(dsp.regs().b.var == expB);	// the ALU max result -> b
 			});
