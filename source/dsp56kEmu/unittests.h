@@ -131,6 +131,7 @@ namespace  dsp56k
 		void limit_transfer_test();
 		void max_ccr();
 		void max_parallel();
+		void ymem_parallel_write();
 		void tst();
 		void nop();
 

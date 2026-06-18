@@ -139,7 +139,7 @@ namespace dsp56k
 		if (!bitvalue(m_dcr, De))
 			return;
 
-		// Some firmwares (e.g. Waldorf Q DSP B) write DCR with DE=1 BEFORE configuring
+		// Some firmwares (e.g. DSP B) write DCR with DE=1 BEFORE configuring
 		// DSR/DDR. In that case we cannot complete arming yet — wait for the missing
 		// register to be written. setDSR/setDDR will retry arm() on first write.
 		if (!m_dsrWritten || !m_ddrWritten)

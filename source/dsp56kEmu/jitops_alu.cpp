@@ -922,7 +922,7 @@ namespace dsp56k
 		// MAX only writes the destination accumulator B; A is a read-only source.
 		// Take A as a read-only temp copy (NOT an AluRef, which defaults to write=true):
 		// a writeback of A here gets latched and, when MAX carries a parallel move into A
-		// (e.g. the Waldorf Q coef builder's `max a,b  x1,a`, $20AE1D), the deferred A
+		// (e.g. the coef builder's `max a,b  x1,a`, $20AE1D), the deferred A
 		// writeback clobbers that move in the parallel-op epilog. See unittest max_parallel().
 		AluReg a(m_block, 0, true);
 		AluReg b(m_block, 1, false);

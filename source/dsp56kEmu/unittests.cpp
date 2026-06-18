@@ -168,6 +168,7 @@ namespace dsp56k
 		limit_transfer_test();
 		max_ccr();
 		max_parallel();
+		ymem_parallel_write();
 
 		// newly implemented
 		eor_xx();
@@ -2565,7 +2566,7 @@ namespace dsp56k
 	void UnitTests::tfr_signextend()
 	{
 		// tfr <reg>,<acc> must SIGN-EXTEND the 24-bit source into the 56-bit
-		// accumulator (A2 = sign byte, A0 = 0). The Waldorf Q 24dB SVF ($26E) carries
+		// accumulator (A2 = sign byte, A0 = 0). The 24dB SVF ($26E) carries
 		// filter coefficients / state through tfr y0,a / tfr y1,b / tfr x0,a / tfr y0,b.
 		// The cutoff coef FC reaches >= 1.0 ($800000, bit23 set) as the envelope opens
 		// past fs/6 = 7350 Hz, so a source with bit23 set MUST become a NEGATIVE
@@ -4396,7 +4397,7 @@ namespace dsp56k
 	void UnitTests::maci_xxxx()
 	{
 		// MACI accumulates s1 * immediate into the destination accumulator.
-		// Q (Waldorf) firmware uses `maci #>$7fdf3b,x0,b` at DSP1 PC=$152
+		// the firmware uses `maci #>$7fdf3b,x0,b` at DSP1 PC=$152
 		// inside the oscillator handler. Without this op the DSP crashes the
 		// first time it reaches voice synthesis.
 		runTest([&]()
@@ -4429,7 +4430,7 @@ namespace dsp56k
 	void UnitTests::macsu_unsigned()
 	{
 		// EXACT question: in `macsu y1,x0,a` (raw opcode $01268C — the integrator
-		// op used by the Waldorf Q 24dB-LP SVF at P:$26E), is the SECOND source x0
+		// op used by the 24dB-LP SVF at P:$26E), is the SECOND source x0
 		// — the filter cutoff coefficient FC, which the firmware drives up to ~1.86
 		// (= $EDEDCA) in UNSIGNED 0.24 format as the cutoff envelope opens — treated
 		// as UNSIGNED? If x0 were sign-extended, every FC >= 1.0 ($800000) would flip
@@ -4642,7 +4643,7 @@ namespace dsp56k
 
 	void UnitTests::max_parallel()
 	{
-		// Regression for the Waldorf Q coef-builder $47b: `max a,b  x1,a` (opcode $20AE1D).
+		// Regression for the coef-builder $47b: `max a,b  x1,a` (opcode $20AE1D).
 		// The parallel move x1->a MUST be applied alongside the ALU max. The JIT's op_Max
 		// took its accumulator via AluRef(...,true) which writes `a` back; in the parallel-op
 		// latch commit that OVERWROTE the x1->a move, leaving `a` unchanged. The interpreter's
@@ -4668,6 +4669,58 @@ namespace dsp56k
 		chk(0xFFF15A00000000ULL, 0x0008A593E88000ULL, 0x03050A, 0x0003050A000000ULL, 0x0008A593E88000ULL, "minq<0 movex1");
 		// a>b — transfer performed (b<-a); the parallel move into A must STILL apply.
 		chk(0x00400000000000ULL, 0x00100000000000ULL, 0x123456, 0x00123456000000ULL, 0x00400000000000ULL, "a>b movex1");
+	}
+
+	void UnitTests::ymem_parallel_write()
+	{
+		// Regression for an FX-DSP silent-output bug: a DSP program's output
+		// writer stored its processed audio to Y:(r1)+ via the two parallel moves
+		// below, but the audio surfaced in X at the same offsets while Y stayed
+		// EMPTY — so the writes were suspected of landing in X (or being dropped),
+		// stranding the output and streaming silence to the output DMA:
+		//   mpy x1,x0,b  a,y:(r1)+   (opcode $5e59a8 — ALU mpy + PARALLEL move a->Y)
+		//   move b,y:(r1)+           (opcode $5f5900 — plain accumulator -> Y)
+		// This verifies the value lands in Y:(r1), X:(r1) is UNTOUCHED, and r1
+		// post-increments. These are GENERIC instructions (accumulator -> Y memory,
+		// with/without a parallel ALU op); runTest executes JIT + interpreter, so a
+		// divergence between them (the suspected JIT bug) fails the test too.
+		constexpr TWord addr = 0x100;
+
+		// $5f5900: move b,y:(r1)+  — plain accumulator B -> Y memory.
+		runTest([&]()
+		{
+			dsp.memory().set(MemArea_X, addr, 0xCCCCCC);	// X sentinel — must stay
+			dsp.memory().set(MemArea_Y, addr, 0x000000);	// Y target — must change
+			dsp.regs().b.var = 0x00123456000000;			// B1 = $123456
+			dsp.regs().r[1].var = addr;
+			dsp.regs().m[1].var = 0xFFFFFF;					// linear addressing
+			emit(0x5f5900);
+		}, [&]()
+		{
+			verify(dsp.memory().get(MemArea_Y, addr) == 0x123456);	// B -> Y (the bug under test)
+			verify(dsp.memory().get(MemArea_X, addr) == 0xCCCCCC);	// X must be untouched
+			verify(dsp.regs().r[1] == addr + 1);					// post-increment
+		});
+
+		// $5e59a8: mpy x1,x0,b  a,y:(r1)+  — ALU mpy with a PARALLEL move A -> Y.
+		// x1=x0=0 so the mpy result is a clean 0, isolating the parallel Y-store.
+		runTest([&]()
+		{
+			dsp.memory().set(MemArea_X, addr, 0xCCCCCC);	// X sentinel — must stay
+			dsp.memory().set(MemArea_Y, addr, 0x000000);	// Y target — must change
+			dsp.regs().a.var = 0x00112233000000;			// A1 = $112233 (move source)
+			dsp.regs().b.var = 0xFFFFFFFFFFFFFF;			// b sentinel (mpy overwrites)
+			dsp.regs().x.var = 0x000000000000;				// x1 = x0 = 0  -> mpy = 0
+			dsp.regs().r[1].var = addr;
+			dsp.regs().m[1].var = 0xFFFFFF;					// linear addressing
+			emit(0x5e59a8);
+		}, [&]()
+		{
+			verify(dsp.memory().get(MemArea_Y, addr) == 0x112233);	// A -> Y (the parallel move, the bug)
+			verify(dsp.memory().get(MemArea_X, addr) == 0xCCCCCC);	// X must be untouched
+			verify(dsp.regs().b.var == 0x00000000000000);			// mpy 0*0 -> b = 0
+			verify(dsp.regs().r[1] == addr + 1);					// post-increment
+		});
 	}
 
 	void UnitTests::tst()
