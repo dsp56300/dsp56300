@@ -13,7 +13,13 @@ namespace dsp56k
 //		m_asm.imul(r32(count), asmjit::Imm(cycles));
 //		m_block.increaseCycleCount(r32(count));
 
-		_dsp->fastForward(_instructions, _instructions);
+		// getRemainingInstructionsFor*FrameSync() deliberately stops 1 cycle short of the target, normally relying on
+		// the caller's next real instruction dispatch to close that final cycle and trigger peripheral processing.
+		// This call site replaces the polling instruction entirely (it's a JIT-detected spinloop-on-self idiom), so
+		// there is no such subsequent real instruction - without closing the gap here and forcing peripheral
+		// processing immediately, this becomes a busy-spin that never converges on its own.
+		_dsp->fastForward(_instructions + 1, _instructions + 1);
+		_dsp->getExecPeripheralsFunc()(_dsp);
 	}
 
 	template<bool ExpectedValue>

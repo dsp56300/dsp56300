@@ -183,14 +183,14 @@ namespace dsp56k
 	bool ThreadTools::setCurrentThreadRealtimeParameters(int _samplerate, int _blocksize)
 	{
 #ifdef __APPLE__
-		bool usePeriod = true;
-		if (_samplerate)
-		{
-			// set some reasonable realtime parameters for audio processing, disable fixed call frequency
-			_samplerate = 44100;
-			_blocksize = 2048;
-			usePeriod = false;
-		}
+		// Without real timing info from the caller (the common case: _samplerate == 0), fall back to
+		// reasonable realtime parameters for audio processing, non-periodic. Note that _samplerate/_blocksize
+		// are always overridden here regardless of the values passed in - dividing by a caller-supplied
+		// _samplerate of 0 below would produce NaN, and casting NaN to uint32_t is undefined behavior.
+		_samplerate = 44100;
+		_blocksize = 2048;
+		constexpr bool usePeriod = false;
+
 	    // Compute the nominal "period" between activations, in microseconds.
 	    // Example: 44100 Hz, 1024 buffer => 23,219 us
 	    double periodUsec = static_cast<double>(_blocksize) * 1'000'000.0 / static_cast<double>(_samplerate);

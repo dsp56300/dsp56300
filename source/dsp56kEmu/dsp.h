@@ -350,6 +350,8 @@ namespace dsp56k
 			m_cycles += _cycles;
 		}
 
+		TInterruptFunc getExecPeripheralsFunc() const noexcept { return m_execPeripheralsFunc; }
+
 	private:
 
 		std::string getSSindent() const;
