@@ -22,6 +22,33 @@ namespace dsp56k
 			initBuffer(m_data);
 		}
 
+		// std::atomic disables the implicit move/copy members. Callers (e.g. BypassBuffer's
+		// std::vector<RingBuffer<...>>) only ever move an instance while it is exclusively owned
+		// by the moving thread (container growth), never concurrently with another thread's
+		// push/pop, so relaxed loads of the counters are sufficient here.
+		RingBuffer(RingBuffer&& _other) noexcept
+			: m_data(std::move(_other.m_data))
+			, m_writeCount(_other.m_writeCount.load(std::memory_order_relaxed))
+			, m_readCount(_other.m_readCount.load(std::memory_order_relaxed))
+			, m_readSem(std::move(_other.m_readSem))
+			, m_writeSem(std::move(_other.m_writeSem))
+		{
+		}
+
+		RingBuffer& operator=(RingBuffer&& _other) noexcept
+		{
+			if (this == &_other)
+				return *this;
+
+			m_data = std::move(_other.m_data);
+			m_writeCount.store(_other.m_writeCount.load(std::memory_order_relaxed), std::memory_order_relaxed);
+			m_readCount.store(_other.m_readCount.load(std::memory_order_relaxed), std::memory_order_relaxed);
+			m_readSem = std::move(_other.m_readSem);
+			m_writeSem = std::move(_other.m_writeSem);
+
+			return *this;
+		}
+
 		constexpr static size_t capacity()	{ return C; }
 		bool empty() const					{ return m_readCount.load(std::memory_order_acquire) == m_writeCount.load(std::memory_order_acquire); }
 		bool full() const					{ return size() >= C; }
