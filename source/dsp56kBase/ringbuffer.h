@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <vector>
 #include <thread>
 
@@ -22,9 +23,9 @@ namespace dsp56k
 		}
 
 		constexpr static size_t capacity()	{ return C; }
-		bool empty() const					{ return m_readCount == m_writeCount; }
+		bool empty() const					{ return m_readCount.load(std::memory_order_acquire) == m_writeCount.load(std::memory_order_acquire); }
 		bool full() const					{ return size() >= C; }
-		size_t size() const					{ return m_writeCount - m_readCount; }
+		size_t size() const					{ return m_writeCount.load(std::memory_order_acquire) - m_readCount.load(std::memory_order_acquire); }
 		size_t remaining() const			{ return (C - size()); }
 
 		void push_back( const T& _val )
@@ -33,24 +34,26 @@ namespace dsp56k
 
 			m_writeSem.wait();
 
-			m_data[wrapCounter(m_writeCount)] = _val;
+			const auto writeIdx = m_writeCount.load(std::memory_order_relaxed);
+			m_data[wrapCounter(writeIdx)] = _val;
 
-			// usage need to be incremented AFTER data has been written, otherwise, reader thread would read incomplete data
-			++m_writeCount;
+			// counter needs to be published (release) AFTER data has been written, so that a reader thread
+			// observing the new count via an acquire load is guaranteed to also see the data
+			m_writeCount.store(writeIdx + 1, std::memory_order_release);
 
 			m_readSem.notify();
 		}
-		
+
 		void push_back( T&& _val )
 		{
 	//		assert( m_usage < C && "ring buffer is already full!" );
 
 			m_writeSem.wait();
 
-			m_data[wrapCounter(m_writeCount)] = std::move(_val);
+			const auto writeIdx = m_writeCount.load(std::memory_order_relaxed);
+			m_data[wrapCounter(writeIdx)] = std::move(_val);
 
-			// usage need to be incremented AFTER data has been written, otherwise, reader thread would read incomplete data
-			++m_writeCount;
+			m_writeCount.store(writeIdx + 1, std::memory_order_release);
 
 			m_readSem.notify();
 		}
@@ -62,10 +65,10 @@ namespace dsp56k
 
 			m_writeSem.wait();
 
-			_fillEntry(m_data[wrapCounter(m_writeCount)]);
+			const auto writeIdx = m_writeCount.load(std::memory_order_relaxed);
+			_fillEntry(m_data[wrapCounter(writeIdx)]);
 
-			// usage need to be incremented AFTER data has been written, otherwise, reader thread would read incomplete data
-			++m_writeCount;
+			m_writeCount.store(writeIdx + 1, std::memory_order_release);
 
 			m_readSem.notify();
 		}
@@ -77,11 +80,11 @@ namespace dsp56k
 
 			m_writeSem.wait(static_cast<uint32_t>(_count));
 
+			const auto writeIdx = m_writeCount.load(std::memory_order_relaxed);
 			for (size_t i=0; i<_count; ++i)
-				_fillEntry(i, m_data[wrapCounter(m_writeCount)]);
+				_fillEntry(i, m_data[wrapCounter(writeIdx)]);
 
-			// usage need to be incremented AFTER data has been written, otherwise, reader thread would read incomplete data
-			m_writeCount += _count;
+			m_writeCount.store(writeIdx + _count, std::memory_order_release);
 
 			m_readSem.notify(static_cast<uint32_t>(_count));
 		}
@@ -91,10 +94,11 @@ namespace dsp56k
 		{
 			m_readSem.wait();
 
-			_readCallback(front());
+			const auto readIdx = m_readCount.load(std::memory_order_relaxed);
+			_readCallback(m_data[wrapCounter(readIdx)]);
 	//		assert( !empty() && "ring buffer is already empty!" );
 
-			++m_readCount;
+			m_readCount.store(readIdx + 1, std::memory_order_release);
 
 			m_writeSem.notify();
 		}
@@ -106,8 +110,9 @@ namespace dsp56k
 
 			for (size_t i=0; i<_count; ++i)
 			{
-				_readCallback(i, front());
-				++m_readCount;
+				const auto readIdx = m_readCount.load(std::memory_order_relaxed);
+				_readCallback(i, m_data[wrapCounter(readIdx)]);
+				m_readCount.store(readIdx + 1, std::memory_order_release);
 			}
 
 			m_writeSem.notify(static_cast<uint32_t>(_count));
@@ -117,10 +122,11 @@ namespace dsp56k
 		{
 			m_readSem.wait();
 
-			T res = std::move(front());
+			const auto readIdx = m_readCount.load(std::memory_order_relaxed);
+			T res = std::move(m_data[wrapCounter(readIdx)]);
 	//		assert( !empty() && "ring buffer is already empty!" );
 
-			++m_readCount;
+			m_readCount.store(readIdx + 1, std::memory_order_release);
 
 			m_writeSem.notify();
 
@@ -139,12 +145,12 @@ namespace dsp56k
 
 		const T& front() const
 		{
-			return m_data[wrapCounter(m_readCount)];
+			return m_data[wrapCounter(m_readCount.load(std::memory_order_acquire))];
 		}
-		
+
 		T& front()
 		{
-			return m_data[wrapCounter(m_readCount)];
+			return m_data[wrapCounter(m_readCount.load(std::memory_order_acquire))];
 		}
 
 		void clear()
@@ -202,8 +208,8 @@ namespace dsp56k
 
 		MemoryBuffer		m_data;
 
-		size_t				m_writeCount;
-		size_t				m_readCount;
+		std::atomic<size_t>	m_writeCount;
+		std::atomic<size_t>	m_readCount;
 
 		typedef std::conditional_t<Lock, SpscSemaphoreWithCount, NopSemaphore> Sem;
 
