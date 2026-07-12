@@ -6,6 +6,8 @@
 
 #include "logging.h"
 
+#include <algorithm>
+
 #ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
 #include "vtuneSdk/include/ittnotify.h"
 #endif
@@ -13,6 +15,7 @@
 #ifdef _WIN32
 #	include <Windows.h>
 #else
+#	include <cerrno>
 #	include <pthread.h>
 #	include <sched.h>
 #	include <sys/resource.h>
@@ -23,6 +26,7 @@
 
 #ifdef __APPLE__
 #	include <mach/mach.h>
+#	include <mach/mach_time.h>
 #endif
 
 namespace dsp56k
@@ -115,51 +119,41 @@ namespace dsp56k
 			return false;
 		}
 #elif defined(__APPLE__)
-		const auto max = sched_get_priority_max(SCHED_OTHER);
-		const auto min = sched_get_priority_min(SCHED_OTHER);
-		const auto normal = (max - min) >> 1;
-		const auto above = (max + normal) >> 1;
-		const auto below = (min + normal) >> 1;
-
-		int prio;
+		// Never call pthread_setschedparam() here. Doing so permanently opts the thread out of the
+		// QOS class system, all subsequent pthread_set_qos_class_self_np() calls fail with EPERM.
+		// QOS is what keeps threads off of the efficiency cores on Apple Silicon.
+		qos_class_t qosClass;
 		switch(_priority)
 		{
-		case ThreadPriority::Lowest:	prio = min; break;
-		case ThreadPriority::Low:		prio = below; break;
-		case ThreadPriority::Normal:	prio = normal; break;
-		case ThreadPriority::High:		prio = above; break;
-		case ThreadPriority::Highest:	prio = max; break;
+		case ThreadPriority::Lowest:	qosClass = QOS_CLASS_BACKGROUND; break;
+		case ThreadPriority::Low:		qosClass = QOS_CLASS_UTILITY; break;
+		case ThreadPriority::Normal:	qosClass = QOS_CLASS_DEFAULT; break;
+		case ThreadPriority::High:		qosClass = QOS_CLASS_USER_INITIATED; break;
+		case ThreadPriority::Highest:	qosClass = QOS_CLASS_USER_INTERACTIVE; break;
 		default: return false;
 		}
 
-		sched_param sch_params;
-		sch_params.sched_priority = prio;
+		const auto result = pthread_set_qos_class_self_np(qosClass, 0);
+		if (result != 0)
+			LOG("Failed to set thread QOS class to " << qosClass << ": " << strerror(result));
 
-		const auto id = pthread_self();
-
-		const auto result = pthread_setschedparam(id, SCHED_OTHER, &sch_params);
-		if(result)
-			LOG("Failed to set thread priority to " << prio << ", error code " << result);
-
+		// Realtime workers additionally get a time constraint policy. This applies conservative
+		// defaults, callers that know the audio block timing refine them via setCurrentThreadRealtimeParameters()
 		if (_priority == ThreadPriority::Highest)
-		{
-			pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
-			setCurrentThreadRealtimeParameters(0, 0);
-		}
-		else if (_priority == ThreadPriority::Low || _priority == ThreadPriority::Lowest)
-		{
-			pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
-		}
+			return setCurrentThreadRealtimeParameters(0, 0) || result == 0;
+
+		return result == 0;
 #else
 		// On Linux we adjust the 'nice' value of the thread
 		int prio;
 		switch (_priority)
 		{
-			case ThreadPriority::Lowest:	prio = 15;
-			case ThreadPriority::Low:		prio = 10;
-			case ThreadPriority::Normal:	prio = 0;
-			case ThreadPriority::High:		prio = -5;
-			case ThreadPriority::Highest:	prio = -10;
+			case ThreadPriority::Lowest:	prio = 15;	break;
+			case ThreadPriority::Low:		prio = 10;	break;
+			case ThreadPriority::Normal:	prio = 0;	break;
+			case ThreadPriority::High:		prio = -5;	break;
+			case ThreadPriority::Highest:	prio = -10;	break;
+			default:						return false;
 		}
 #ifdef PRIO_THREAD
 		const auto result = setpriority(PRIO_THREAD, 0, prio);
@@ -174,7 +168,8 @@ namespace dsp56k
 #endif
 		if (result != 0)
 		{
-			LOG("Failed to set thread priority to " << prio << ", error code " << result);
+			LOG("Failed to set thread priority to " << prio << ": " << strerror(errno));
+			return false;
 		}
 #endif
 		return true;
@@ -184,47 +179,50 @@ namespace dsp56k
 	{
 #ifdef __APPLE__
 		bool usePeriod = true;
-		if (_samplerate)
+
+		if (_samplerate <= 0 || _blocksize <= 0)
 		{
-			// set some reasonable realtime parameters for audio processing, disable fixed call frequency
+			// the audio block timing is not known (yet). Base the values on a typical setup but do
+			// not claim a fixed activation period as we do not know the real one
 			_samplerate = 44100;
 			_blocksize = 2048;
 			usePeriod = false;
 		}
-	    // Compute the nominal "period" between activations, in microseconds.
-	    // Example: 44100 Hz, 1024 buffer => 23,219 us
-	    double periodUsec = static_cast<double>(_blocksize) * 1'000'000.0 / static_cast<double>(_samplerate);
 
-	    // Reasonable assumptions:
-		// computation = 25% - 35% of the period
-	    // constraint = equal to or slightly above the period
-	    // The exact numbers aren't critical, but they should stay consistent.
-	    uint32_t computation = static_cast<uint32_t>(periodUsec * 0.30);
-	    uint32_t constraint  = static_cast<uint32_t>(periodUsec * 1.05);
-	    uint32_t period      = usePeriod ? static_cast<uint32_t>(periodUsec) : 0;
+		const double periodUsec = static_cast<double>(_blocksize) * 1'000'000.0 / static_cast<double>(_samplerate);
 
-	    // Clamp to sane limits
-	    computation = std::max<uint32_t>(computation, 1000); // >= 1 ms
-	    constraint = std::max<uint32_t>(constraint, computation + 1000); // Always > computation
+		// The audio thread wakes us once per block and we may need a large part of the block duration
+		// to produce audio for it. Overstating the computation starves other realtime threads while
+		// understating it causes the kernel to demote us out of the realtime band on overruns.
+		double computationUsec = periodUsec * 0.5;
+		double constraintUsec = periodUsec;
 
-	    // Prepare Mach real-time policy
-	    thread_time_constraint_policy_data_t policy;
-	    policy.period       = period;        // expected activation interval
-	    policy.computation  = computation;   // estimated CPU time
-	    policy.constraint   = constraint;    // must finish before this
-	    policy.preemptible  = TRUE;
+		// clamp to sane limits, the kernel rejects excessive values
+		computationUsec = std::clamp(computationUsec, 250.0, 25'000.0);
+		constraintUsec = std::clamp(constraintUsec, computationUsec + 250.0, 50'000.0);
 
-	    thread_port_t thread = pthread_mach_thread_np(pthread_self());
-	    kern_return_t result = thread_policy_set(thread,
-	                                             THREAD_TIME_CONSTRAINT_POLICY,
-	                                             (thread_policy_t)&policy,
-	                                             THREAD_TIME_CONSTRAINT_POLICY_COUNT);
+		// thread_time_constraint_policy expects mach absolute time units, not microseconds
+		mach_timebase_info_data_t timebase{};
+		mach_timebase_info(&timebase);
+		const double usecToAbs = 1000.0 * static_cast<double>(timebase.denom) / static_cast<double>(timebase.numer);
 
-	    if (result == KERN_SUCCESS)
-	    {
-			LOG("Success setting thread realtime parameters: period=" << period << " us, computation=" << computation << " us, constraint=" << constraint << " us");
-	        return false;
-	    }
+		thread_time_constraint_policy_data_t policy;
+		policy.period      = static_cast<uint32_t>(usePeriod ? periodUsec * usecToAbs : 0.0);
+		policy.computation = static_cast<uint32_t>(computationUsec * usecToAbs);
+		policy.constraint  = static_cast<uint32_t>(constraintUsec * usecToAbs);
+		policy.preemptible = TRUE;
+
+		const thread_port_t thread = pthread_mach_thread_np(pthread_self());
+		const kern_return_t result = thread_policy_set(thread,
+		                                               THREAD_TIME_CONSTRAINT_POLICY,
+		                                               reinterpret_cast<thread_policy_t>(&policy),
+		                                               THREAD_TIME_CONSTRAINT_POLICY_COUNT);
+
+		if (result == KERN_SUCCESS)
+		{
+			LOG("Set thread realtime parameters: period=" << (usePeriod ? periodUsec : 0.0) << " us, computation=" << computationUsec << " us, constraint=" << constraintUsec << " us");
+			return true;
+		}
 		LOG("Failed to set thread realtime parameters, error code " << result);
 #endif
 		return false;
