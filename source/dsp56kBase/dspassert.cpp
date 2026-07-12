@@ -29,17 +29,13 @@ namespace dsp56k
 	void Assert::show( const char* _msg, const char* _func, int _line)
 	{
 #ifdef _WIN32
-		LOG("DSP ASSERT: " << _msg);
 		std::stringstream ss;
-		ss << "@ " << _func << ", line " << _line << ": " << _msg << "\n\nBreak into the debugger?";
+		ss << "DSP 56300 Emulator: ASSERTION FAILED @ " << _func << ", line " << _line << ": " << _msg;
 		const std::string msg(ss.str());
-		const int res = ::MessageBoxA( nullptr, msg.c_str(), "DSP 56300 Emulator: ASSERTION FAILED", MB_YESNOCANCEL );
-		switch( res )
-		{
-			case IDCANCEL:	exit(0);			break;
-			case IDYES:		::DebugBreak();		break;
-			case IDNO:							break;
-		}
+		LOG(msg);
+		OutputDebugStringA((msg + "\n").c_str());
+		fprintf(stderr, "%s\n", msg.c_str());
+		fflush(stderr);
 #else
 		std::stringstream ss;
 		ss << "DSP 56300 Emulator: ASSERTION FAILED @ " << _func << ", line " << _line << ": " << _msg;

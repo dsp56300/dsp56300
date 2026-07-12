@@ -919,7 +919,12 @@ namespace dsp56k
 
 	void JitOps::op_Max(TWord)
 	{
-		AluRef a(m_block, 0, true);
+		// MAX only writes the destination accumulator B; A is a read-only source.
+		// Take A as a read-only temp copy (NOT an AluRef, which defaults to write=true):
+		// a writeback of A here gets latched and, when MAX carries a parallel move into A
+		// (e.g. the coef builder's `max a,b  x1,a`, $20AE1D), the deferred A
+		// writeback clobbers that move in the parallel-op epilog. See unittest max_parallel().
+		AluReg a(m_block, 0, true);
 		AluReg b(m_block, 1, false);
 
 		signextend56to64(a);
@@ -934,7 +939,6 @@ namespace dsp56k
 #endif
 		ccr_update_ifLess(CCRB_C);
 
-		m_dspRegs.mask56(a);
 		m_dspRegs.mask56(b);
 	}
 
@@ -993,6 +997,21 @@ namespace dsp56k
 		decode_qq_read(reg, qq, true);
 
 		alu_mpy(ab, reg, s, negate, false, false, false, false);
+	}
+
+	void JitOps::op_Maci_xxxx(TWord op)
+	{
+		const bool	ab = getFieldValue<Maci_xxxx, Field_d>(op);
+		const bool	negate = getFieldValue<Maci_xxxx, Field_k>(op);
+		const TWord qq = getFieldValue<Maci_xxxx, Field_qq>(op);
+
+		DspValue s(m_block);
+		getOpWordB(s);
+
+		DspValue reg(m_block);
+		decode_qq_read(reg, qq, true);
+
+		alu_mpy(ab, reg, s, negate, true, false, false, false);
 	}
 
 	void JitOps::op_Neg(TWord op)

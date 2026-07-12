@@ -424,6 +424,10 @@ namespace dsp56k
 
 	void JitOps::errNotImplemented(TWord op)
 	{
+		// Print the offending opcode before aborting so the failure can be
+		// triaged from a log without a debugger attached.
+		fprintf(stderr, "*** JIT errNotImplemented: opcode=$%06X\n", op);
+		fflush(stderr);
 		assert(0 && "instruction not implemented");
 	}
 
