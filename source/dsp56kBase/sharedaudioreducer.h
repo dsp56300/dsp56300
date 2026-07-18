@@ -83,9 +83,12 @@ namespace dsp56k
 			const auto contrib = slot.contributions.fetch_add(1, std::memory_order_acq_rel) + 1;
 			if(contrib == m_producerCount)
 			{
-				TFrame result = slot.lanes[0];
+				// Seed with a zeroed accumulator and reduce every lane (including lane 0) so the reduce
+				// function transforms each producer's frame uniformly (0 + Sum == Sum for a plain additive
+				// reduction; required when the reduce function e.g. sign-extends before accumulating).
+				TFrame result{};
 
-				for(uint32_t p = 1; p < m_producerCount; ++p)
+				for(uint32_t p = 0; p < m_producerCount; ++p)
 					m_reduceFunc(result, slot.lanes[p]);
 
 				m_completionCallback(wc, result);
