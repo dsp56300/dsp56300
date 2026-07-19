@@ -105,15 +105,10 @@ namespace dsp56k
 		const TJitFunc*					m_jitEntries = nullptr;
 		CCRCache						ccrCache;
 
-#ifdef HAVE_ARM64
-        // Our lock free ring buffer does not work properly on aarch4 :-O
-        // https://www.arangodb.com/2021/02/cpp-memory-model-migrating-from-x86-to-arm/
-		RingBuffer<TWord, 1024, true>				m_pendingInterrupts;	// TODO: array is way too large
-		RingBuffer<TWord, 32, true>					m_pendingExternalInterrupts;
-#else
-        RingBuffer<TWord, 1024, false>				m_pendingInterrupts;    // TODO: array is way too large
+		// The lock-free ring buffer's counters are now atomic (release/acquire), so it is correct on ARM too -
+		// the old #ifdef HAVE_ARM64 workaround that forced the blocking (Lock=true) variant here is gone.
+		RingBuffer<TWord, 1024, false>				m_pendingInterrupts;	// TODO: array is way too large
 		RingBuffer<TWord, 32, false>				m_pendingExternalInterrupts;
-#endif
 
 		std::vector<std::function<void()>>			m_customInterrupts;
 
