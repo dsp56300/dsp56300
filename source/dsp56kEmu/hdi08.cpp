@@ -36,12 +36,12 @@ namespace dsp56k
 		dsp56k::bitset<TWord, HSR_HRDF>(m_hsr, m_dataRX.empty() ? 0 : 1);
 
 		// Apply pending host flags, if applicable
-		const auto hf01 = m_pendingHostFlags01;
+		const auto hf01 = m_pendingHostFlags01.load(std::memory_order_acquire);
 
 		if(hf01 < 0)
 			return m_hsr;
 
-		m_pendingHostFlags01 = -1;
+		m_pendingHostFlags01.store(-1, std::memory_order_release);
 
 		m_hsr &= ~0x18;
 		m_hsr |= static_cast<uint32_t>(hf01);
@@ -169,7 +169,7 @@ namespace dsp56k
 
 	void HDI08::setHostFlags(const uint8_t _flag0, const uint8_t _flag1)
 	{
-		m_pendingHostFlags01 = -1;
+		m_pendingHostFlags01.store(-1, std::memory_order_release);
 
 		dsp56k::bitset<TWord, HSR_HF0>(m_hsr, _flag0);
 		dsp56k::bitset<TWord, HSR_HF1>(m_hsr, _flag1);
@@ -206,7 +206,7 @@ namespace dsp56k
 
 	void HDI08::reset()
 	{
-		m_hcr = 0;
+		m_hcr.store(0, std::memory_order_relaxed);
 		m_hpcr = 0;
 		m_hsr = 0;
 		bitset<TWord, HSR_HTDE>(m_hsr, 1);
@@ -336,7 +336,7 @@ namespace dsp56k
 
 		const auto hadTXInterrupt = txInterruptEnabled();
 		const auto hadRXInterrupt = rxInterruptEnabled();
-		m_hcr = _val;
+		m_hcr.store(_val, std::memory_order_release);
 
 		m_callbackHostStateChanged();
 

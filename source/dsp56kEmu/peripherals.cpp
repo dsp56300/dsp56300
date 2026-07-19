@@ -112,8 +112,10 @@ namespace dsp56k
 
 	void IPeripherals::setDelayCycles(const uint32_t _delayCycles) noexcept
 	{
-		m_delayCycles = std::min(m_delayCycles, _delayCycles);
-		m_targetClock = m_dsp->getInstructionCounter() + m_delayCycles;
+		// Pacing hint only (advisory); atomic-relaxed so a concurrent DSP-thread read is torn-free, ordering irrelevant.
+		const auto d = std::min(m_delayCycles.load(std::memory_order_relaxed), _delayCycles);
+		m_delayCycles.store(d, std::memory_order_relaxed);
+		m_targetClock.store(m_dsp->getInstructionCounter() + d, std::memory_order_relaxed);
 	}
 
 	// _____________________________________________________________________________

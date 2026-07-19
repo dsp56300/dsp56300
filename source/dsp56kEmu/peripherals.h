@@ -10,6 +10,7 @@
 #include "timers.h"
 #include "types.h"
 #include <array>
+#include <atomic>
 
 namespace dsp56k
 {
@@ -114,19 +115,19 @@ namespace dsp56k
 
 		void resetDelayCycles(const uint64_t _instructionCount, const uint32_t _delayCycles) noexcept
 		{
-			m_delayCycles = _delayCycles;
-			m_targetClock = _instructionCount + _delayCycles;
+			m_delayCycles.store(_delayCycles, std::memory_order_relaxed);
+			m_targetClock.store(_instructionCount + _delayCycles, std::memory_order_relaxed);
 		}
 
-		uint32_t getDelayCycles() const { return m_delayCycles; }
-		auto getTargetClock() const { return m_targetClock; }
+		uint32_t getDelayCycles() const { return m_delayCycles.load(std::memory_order_relaxed); }
+		auto getTargetClock() const { return m_targetClock.load(std::memory_order_relaxed); }
 
 		auto getType() const { return m_type; }
 
 	private:
 		DSP* m_dsp = nullptr;
-		uint32_t m_delayCycles = 0;
-		uint64_t m_targetClock = 0;
+		std::atomic<uint32_t> m_delayCycles{0};		// advisory pacing hint, read cross-thread by DSP exec
+		std::atomic<uint64_t> m_targetClock{0};
 		PeripheralType m_type;
 	};
 

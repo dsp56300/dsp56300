@@ -67,7 +67,8 @@ namespace dsp56k
 
 		TWord readControlRegister() const
 		{
-			return m_hcr;
+			// HF2/HF3 live here and are written by the DSP thread; the UC thread polls this during boot.
+			return m_hcr.load(std::memory_order_acquire);
 		}
 
 		TWord readPortControlRegister() const
@@ -103,12 +104,12 @@ namespace dsp56k
 
 		void setPendingHostFlags01(uint32_t _pendingHostFlags)
 		{
-			m_pendingHostFlags01 = static_cast<int32_t>(_pendingHostFlags);
+			m_pendingHostFlags01.store(static_cast<int32_t>(_pendingHostFlags), std::memory_order_release);
 		}
 
 		bool hasPendingHostFlags01() const
 		{
-			return m_pendingHostFlags01 >= 0;
+			return m_pendingHostFlags01.load(std::memory_order_acquire) >= 0;
 		}
 
 		void setHostFlags(uint8_t _flag0, uint8_t _flag1);
@@ -139,12 +140,12 @@ namespace dsp56k
 
 		bool txInterruptEnabled() const
 		{
-			return dsp56k::bittest<TWord, HCR_HTIE>(m_hcr);
+			return dsp56k::bittest<TWord, HCR_HTIE>(m_hcr.load(std::memory_order_acquire));
 		}
 
 		bool rxInterruptEnabled() const
 		{
-			return dsp56k::bittest<TWord, HCR_HRIE>(m_hcr);
+			return dsp56k::bittest<TWord, HCR_HRIE>(m_hcr.load(std::memory_order_acquire));
 		}
 
 		void setWriteTxCallback(const CallbackTx& _callback)
@@ -179,7 +180,7 @@ namespace dsp56k
 		bool hasDmaReceiveTrigger() const;
 
 		TWord m_hsr = 0;
-		TWord m_hcr = 0;
+		std::atomic<TWord> m_hcr{0};		// HF2/HF3: DSP thread writes, UC thread reads (boot HF3 handshake)
 		TWord m_hpcr = 0;
 		RingBuffer<TWord, 8192, true> m_dataRX;
 		RingBuffer<TWord, 8192, true> m_dataTX;
@@ -194,7 +195,7 @@ namespace dsp56k
 		CallbackHostStateChanged m_callbackHostStateChanged = [] {};
 		uint32_t m_rxRateLimit;		// minimum number of instructions between two RX interrupts
 		bool m_waitServeRXInterrupt = false;
-		int32_t m_pendingHostFlags01 = -1;
+		std::atomic<int32_t> m_pendingHostFlags01{-1};	// pulse latch: UC/queue thread sets, DSP thread reads+clears
 
 		DmaChannel::RequestSource m_dmaReqSourceReceive;
 		DmaChannel::RequestSource m_dmaReqSourceTransmit;
