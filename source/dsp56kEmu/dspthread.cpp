@@ -17,9 +17,10 @@ namespace dsp56k
 	{
 	}
 
-	DSPThread::DSPThread(DSP& _dsp, const char* _name/* = nullptr*/, std::shared_ptr<DebuggerInterface> _debugger/* = {}*/)
+	DSPThread::DSPThread(DSP& _dsp, const char* _name/* = nullptr*/, std::shared_ptr<DebuggerInterface> _debugger/* = {}*/, ThreadPriority _initialPriority/* = ThreadPriority::Highest*/)
 		: m_dsp(_dsp)
 		, m_name(_name ? _name : std::string())
+		, m_initialPriority(_initialPriority)
 		, m_runThread(true)
 		, m_debugger(std::move(_debugger))
 	{
@@ -92,7 +93,7 @@ namespace dsp56k
 
 	void DSPThread::threadFunc()
 	{
-		ThreadTools::setCurrentThreadPriority(ThreadPriority::Highest);
+		ThreadTools::setCurrentThreadPriority(m_initialPriority);
 		ThreadTools::setCurrentThreadName(m_name.empty() ? "DSP" : "DSP " + m_name);
 
 		uint64_t instructions = 0;

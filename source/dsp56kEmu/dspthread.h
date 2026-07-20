@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "debuggerinterface.h"
+#include "dsp56kBase/threadtools.h"
 
 namespace dsp56k
 {
@@ -18,7 +19,10 @@ namespace dsp56k
 		using Guard = std::lock_guard<std::mutex>;
 		using Callback = std::function<void(uint32_t)>;
 
-		explicit DSPThread(DSP& _dsp, const char* _name = nullptr, std::shared_ptr<DebuggerInterface> _debugger = {});
+		// _initialPriority is the priority the worker runs at from thread start. Defaults to Highest (the
+		// realtime band) for steady-state audio; nova passes a lower boot priority and raises to Highest only
+		// once booted, because on macOS a thread that starts Highest cannot later drop off the RT band.
+		explicit DSPThread(DSP& _dsp, const char* _name = nullptr, std::shared_ptr<DebuggerInterface> _debugger = {}, ThreadPriority _initialPriority = ThreadPriority::Highest);
 		~DSPThread();
 		void join();
 		void terminate();
@@ -46,6 +50,7 @@ namespace dsp56k
 
 		DSP& m_dsp;
 		const std::string m_name;
+		const ThreadPriority m_initialPriority;
 
 		std::mutex m_mutex;
 		std::unique_ptr<std::thread> m_thread;
