@@ -46,3 +46,7 @@ target_link_libraries(sharedAudioBufferTest PRIVATE dsp56kBase)
 
 add_executable(sharedAudioReducerTest sharedaudioreducer_test.cpp)
 target_link_libraries(sharedAudioReducerTest PRIVATE dsp56kBase)
+
+add_executable(ringBufferTest ringbuffer_test.cpp)
+target_link_libraries(ringBufferTest PRIVATE dsp56kBase)
+add_test(NAME ringBufferTest COMMAND ringBufferTest)
