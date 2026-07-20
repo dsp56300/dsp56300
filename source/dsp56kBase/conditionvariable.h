@@ -3,6 +3,7 @@
 #include <array>
 #include <condition_variable>
 #include <atomic>
+#include <cstdint>
 
 namespace dsp56k
 {
@@ -63,6 +64,28 @@ namespace dsp56k
 		FuncWait m_funcWait;
 		FuncNotifyOne m_funcNotifyOne;
 		FuncNotifyAll m_funcNotifyAll;
+	};
+#elif defined(__APPLE__)
+	// macOS fast condition variable built on the __ulock futex - the direct counterpart of the Win8
+	// WaitOnAddress path above. std::condition_variable on Darwin turns every notify/wait into a
+	// __psynch_cvsignal / __psynch_cvwait kernel syscall; the ring buffers wake a waiter on every
+	// frame, so at boot a single feeder waking 9 DSP threads one frame at a time collapses into a
+	// syscall storm. This keeps the common (already-signalled) case in userspace like Windows does.
+	class ConditionVariable
+	{
+	public:
+		void notify_all();
+		void notify_one();
+		void wait(std::unique_lock<std::mutex>& _lock);
+
+		template<typename Pred> void wait(std::unique_lock<std::mutex>& _lock, Pred _pred)
+		{
+			while (!_pred())
+				wait(_lock);
+		}
+
+	private:
+		std::atomic<uint32_t> m_seq{0};	// futex word; every notify bumps it, wait blocks while it is unchanged
 	};
 #else
 	using ConditionVariable = std::condition_variable;
