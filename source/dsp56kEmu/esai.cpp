@@ -168,6 +168,18 @@ namespace dsp56k
 		m_rcr = _val;
 		if(rem != getEnabledReceivers())
 		{
+			// A receiver that becomes enabled starts operating at the beginning of the
+			// next frame (56362 manual, RE description), it does not join mid-frame.
+			// Align the slot counter accordingly - without this, the slot a receiver
+			// perceives as slot 0 depends on emulation timing at enable, and multi-DSP
+			// TDM setups ended up with a random slot rotation per boot (audibly:
+			// swapped stereo sides / audio landing in the wrong time slots).
+			if(!rem)
+			{
+				m_rxSlotCounter = 0;
+				m_rxFrame.clear();
+			}
+
 			// Note: cannot cast m_periph directly here because we might be a Y peripheral
 			if(auto* p = dynamic_cast<Peripherals56362*>(m_periph.getDSP().getPeriph(0)))
 				p->getEsaiClock().restartClock();
@@ -183,6 +195,14 @@ namespace dsp56k
 		m_tcr = _val;
 		if(tem != getEnabledTransmitters())
 		{
+			// see writeReceiveControlRegister - transmitters likewise start on the
+			// next frame boundary when enabled
+			if(!tem)
+			{
+				m_txSlotCounter = 0;
+				m_txFrame.clear();
+			}
+
 			// Note: cannot cast m_periph directly here because we might be a Y peripheral
 			if(auto* p = dynamic_cast<Peripherals56362*>(m_periph.getDSP().getPeriph(0)))
 				p->getEsaiClock().restartClock();
