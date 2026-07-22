@@ -102,7 +102,16 @@ namespace dsp56k
 
 	        if (prev < 0)
 	        {
-				for (uint32_t i = 0; i < _count; ++i)
+				// Post exactly one inner credit per waiter in deficit, i.e. min(_count, -prev). Posting
+				// _count regardless mints spurious credits whenever the deficit is smaller than the batch:
+				// they sit in the inner semaphore forever, and a later wait() that goes into deficit consumes
+				// one and returns although nothing was produced - the consumer reads a frame that is not
+				// there and the ring counters desync from the semaphore counts. With the batched ring pushes
+				// (emplace_back(count)/pop_front(count)) racing single-frame pops this intermittently
+				// corrupted frames and permanently wedged the audio pipeline.
+				const auto deficit = -prev;
+				const auto wake = deficit < static_cast<int>(_count) ? deficit : static_cast<int>(_count);
+				for (int i = 0; i < wake; ++i)
 					m_sem.notify();
 	        }
 		}
@@ -121,9 +130,11 @@ namespace dsp56k
 
 			const int prev = m_count.fetch_sub(count, std::memory_order_acquire);
 
-			if (prev  < count)
+			if (prev < count)
 			{
-				for (int i = prev; i < count; ++i)
+				// This call's own deficit is count - max(prev, 0): a negative prev belongs to waits that
+				// already accounted for it themselves (mirror of the notify() clamp above).
+				for (int i = prev > 0 ? prev : 0; i < count; ++i)
 					m_sem.wait();
 			}
 		}

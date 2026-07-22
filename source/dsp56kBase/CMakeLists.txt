@@ -52,3 +52,7 @@ add_test(NAME sharedAudioReducerTest COMMAND sharedAudioReducerTest)
 add_executable(ringBufferTest ringbuffer_test.cpp)
 target_link_libraries(ringBufferTest PRIVATE dsp56kBase)
 add_test(NAME ringBufferTest COMMAND ringBufferTest)
+
+add_executable(semaphoreTest semaphore_test.cpp)
+target_link_libraries(semaphoreTest PRIVATE dsp56kBase)
+add_test(NAME semaphoreTest COMMAND semaphoreTest)
