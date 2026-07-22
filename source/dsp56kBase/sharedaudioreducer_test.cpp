@@ -28,7 +28,7 @@ struct TestFrame
 	void resize(uint32_t s) { slotCount = s; }
 };
 
-static constexpr uint32_t BufferCapacity = 128;
+static constexpr uint32_t BufferCapacity = 16;	// what nova ships with; small enough that backpressure and slot adjacency actually engage
 static constexpr uint32_t ProducerCount = 6;
 static constexpr uint64_t TotalFrames = 50000;
 
@@ -60,8 +60,37 @@ int main()
 
 	const uint64_t expectedIdSum = ProducerCount * (ProducerCount + 1) / 2;
 
+	std::atomic<int> inCallback{0};
+	std::atomic<uint64_t> nextExpectedFrame{0};
+
 	reducer.setCompletionCallback([&](uint64_t _frameIndex, const TestFrame& _frame)
 	{
+		// Assert the CONTRACT, not just the sums. The production completion callbacks pop/push SPSC stage
+		// buffers, so the reducer must run them serialized and in slot order - two overlapping completions
+		// (the last contributor of slot S is still inside the callback while slot S+1 fills up and its last
+		// contributor fires the next one) corrupt that accounting long before any data mismatch would show.
+		// This is exactly the intermittent multi-instance pipeline deadlock; the previous version of this
+		// test could not see it because its callback was concurrency-tolerant arithmetic.
+		if(inCallback.fetch_add(1, std::memory_order_acq_rel) != 0)
+		{
+			std::cerr << "Frame " << _frameIndex << ": CONCURRENT completion callbacks" << std::endl;
+			failed.store(true);
+		}
+
+		const auto expectedIndex = nextExpectedFrame.load(std::memory_order_relaxed);
+		if(_frameIndex != expectedIndex)
+		{
+			std::cerr << "Frame " << _frameIndex << ": OUT-OF-ORDER completion, expected frame "
+			          << expectedIndex << std::endl;
+			failed.store(true);
+		}
+		nextExpectedFrame.store(_frameIndex + 1, std::memory_order_relaxed);
+
+		// Dwell like the real callbacks do (they block on backpressured buffers): the overlap window IS the
+		// callback duration, so a callback returning in nanoseconds hides the race the assert above flags.
+		if((_frameIndex & 63) == 0)
+			std::this_thread::sleep_for(std::chrono::microseconds(50));
+
 		const auto i = _frameIndex;
 
 		const auto expectedFrameSum = i * ProducerCount;
@@ -70,7 +99,6 @@ int main()
 			std::cerr << "Frame " << i << " slot[0][0]: expected " << expectedFrameSum
 			          << " got " << _frame[0][0] << std::endl;
 			failed.store(true);
-			return;
 		}
 
 		if(_frame[0][1] != expectedIdSum)
@@ -78,10 +106,12 @@ int main()
 			std::cerr << "Frame " << i << " slot[0][1]: expected " << expectedIdSum
 			          << " got " << _frame[0][1] << std::endl;
 			failed.store(true);
-			return;
 		}
 
-		consumed.fetch_add(1, std::memory_order_relaxed);
+		if(!failed.load())
+			consumed.fetch_add(1, std::memory_order_relaxed);
+
+		inCallback.fetch_sub(1, std::memory_order_acq_rel);
 	});
 
 	std::vector<std::thread> producers;

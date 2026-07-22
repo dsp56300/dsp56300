@@ -44,8 +44,18 @@ namespace dsp56k
 			m_completionCallback = std::move(_callback);
 		}
 
+		// All producers must be registered before the first addFrame: the completion fires on
+		// contributions == m_producerCount, so a producer arriving while others already run leaves
+		// in-flight slots short of the new count forever - none of them ever completes again.
+		//
+		// Note that completions need no serialization: the completing thread is itself a required
+		// contributor to the next slot, so that slot cannot fill - and cannot complete - until the
+		// callback has returned and the thread has written its own lane. Do not add a lock around the
+		// callback; holding one while it blocks on a stage buffer deadlocks against terminate() at
+		// teardown (learned the hard way).
 		uint32_t addProducer()
 		{
+			assert(m_readCount.load(std::memory_order_relaxed) == 0 && "addProducer after frames were produced");
 			const auto idx = m_producerCount++;
 			assert(idx < MaxProducers);
 			m_writeCounts[idx].store(0, std::memory_order_relaxed);
