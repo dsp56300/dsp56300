@@ -43,9 +43,11 @@ target_include_directories(dsp56kBase PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 add_executable(sharedAudioBufferTest sharedaudiobuffer_test.cpp)
 target_link_libraries(sharedAudioBufferTest PRIVATE dsp56kBase)
+add_test(NAME sharedAudioBufferTest COMMAND sharedAudioBufferTest)
 
 add_executable(sharedAudioReducerTest sharedaudioreducer_test.cpp)
 target_link_libraries(sharedAudioReducerTest PRIVATE dsp56kBase)
+add_test(NAME sharedAudioReducerTest COMMAND sharedAudioReducerTest)
 
 add_executable(ringBufferTest ringbuffer_test.cpp)
 target_link_libraries(ringBufferTest PRIVATE dsp56kBase)
