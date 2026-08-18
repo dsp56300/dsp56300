@@ -13,6 +13,7 @@
 #include "debuggerinterface.h"
 #include "dspconfig.h"
 #include "interrupts.h"
+#include "opcodecycles.h"
 
 #include "dsp_decode.inl"
 
@@ -328,6 +329,9 @@ namespace dsp56k
 		{
 			++m_instructions;
 
+			if constexpr(!g_useJIT)
+				m_cycles += getOpcodeCycles(currentOp);
+
 			if(g_traceSupported && pcCurrentInstruction == currentOp)
 				traceOp();
 		}
@@ -492,6 +496,9 @@ namespace dsp56k
 		
 		sr_set( SR_LF );
 
+		if constexpr(!g_useJIT)
+			m_cycles += getOpcodeCycles(pcCurrentInstruction);
+
 		++m_instructions;
 
 		traceOp();
@@ -548,11 +555,15 @@ namespace dsp56k
 		const auto lcBackup = reg.lc;
 		reg.lc.var = _loopCount;
 
+		if constexpr(!g_useJIT)
+			m_cycles += getOpcodeCycles(pcCurrentInstruction);
+
 		++m_instructions;
 
 		traceOp();
 
 		pcCurrentInstruction = reg.pc.var;
+		const auto repeatedOpPC = pcCurrentInstruction;
 		const auto op = fetchPC();
 
 		--reg.lc.var;
@@ -567,6 +578,8 @@ namespace dsp56k
 			--reg.lc.var;
 			(this->*func)(op);
 			++m_instructions;
+			if constexpr(!g_useJIT)
+				m_cycles += getOpcodeCycles(repeatedOpPC);
 //			traceOp();
 		}
 
@@ -1030,6 +1043,8 @@ namespace dsp56k
 	void DSP::notifyProgramMemWrite(TWord _offset)
 	{
 		m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
+		if constexpr(!g_useJIT)
+			m_opcodeCycleCache[_offset] = 0;
 
 #if DSP56300_DEBUGGER
 		if(m_debugger)
@@ -1273,15 +1288,38 @@ namespace dsp56k
 			injectInterrupt(m_pendingExternalInterrupts.pop_front());
 	}
 
+	uint32_t DSP::calcOpcodeCycles(const TWord _pc) const
+	{
+		TWord opA;
+		TWord opB;
+		mem.getOpcode(_pc, opA, opB);
+		Instruction instA;
+		Instruction instB;
+		m_opcodes.getInstructionTypes(opA, instA, instB);
+		return dsp56k::calcCycles(instA, instB, _pc, opA, mem.getBridgedMemoryAddress(), 1);
+	}
+
+	uint8_t DSP::getOpcodeCycles(const TWord _pc)
+	{
+		auto& cachedCycles = m_opcodeCycleCache[_pc];
+		if(!cachedCycles)
+			cachedCycles = static_cast<uint8_t>(std::min<uint32_t>(255, std::max<uint32_t>(1, calcOpcodeCycles(_pc))));
+		return cachedCycles;
+	}
+
 	void DSP::clearOpcodeCache()
 	{
 		m_opcodeCache.clear();
 		m_opcodeCache.resize(mem.sizeP(), {&DSP::op_ResolveCache});
+		if constexpr(!g_useJIT)
+			m_opcodeCycleCache.assign(mem.sizeP(), 0);
 	}
 
 	void DSP::clearOpcodeCache(const TWord _address)
 	{
 		m_opcodeCache[_address].op = &DSP::op_ResolveCache;
+		if constexpr(!g_useJIT)
+			m_opcodeCycleCache[_address] = 0;
 		m_jit.notifyProgramMemWrite(_address);
 	}
 	

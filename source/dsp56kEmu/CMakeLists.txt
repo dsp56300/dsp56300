@@ -131,6 +131,10 @@ else()
 	target_compile_definitions(dsp56kEmu PUBLIC DSP56300_DEBUGGER=0)
 endif()
 
+if(DSP56K_FORCE_INTERPRETER)
+	target_compile_definitions(dsp56kEmu PUBLIC DSP56K_FORCE_INTERPRETER=1)
+endif()
+
 # This should use ${PROJECT_SOURCE_DIR}/source if the top level of the repo
 # has the top level cmakelists.txt file.
 target_include_directories(dsp56kEmu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
