@@ -162,6 +162,12 @@ namespace dsp56k
 					if(v > 0 && v < 4)
 						return false;
 					break;
+				case Add_SD:
+				case Sub_SD:
+					// The other variant: Table 12-13 assigns JJJ=001..111; 000 is reserved.
+					if(v == 0)
+						return false;
+					break;
 				default:;
 				}
 			}

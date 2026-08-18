@@ -22,6 +22,7 @@ namespace dsp56k
 		testMiscInstructions();
 		testParallelInstructions();
 		testPeripheralSymbols();
+		testReservedAluEncodings();
 
 		std::cout << "Assembler tests: " << m_passCount << "/" << m_testCount << " passed";
 		if(m_failCount > 0)
@@ -80,6 +81,120 @@ namespace dsp56k
 		}
 
 		++m_passCount;
+	}
+
+	void AssemblerTest::expectReserved(uint32_t _opA, uint32_t _opB)
+	{
+		++m_testCount;
+
+		Opcodes opcodes;
+		Disassembler disasm(opcodes);
+
+		Disassembler::Line line;
+		const auto wordCount = disasm.disassemble(line, _opA, _opB, 0, 0, 0);
+
+		// A reserved encoding must be refused outright. A zero return is what makes the
+		// caller emit a single dc word and resume decoding at _opA + 1, so an extension
+		// word belonging to the parallel move is released rather than swallowed.
+		if(wordCount != 0)
+		{
+			++m_failCount;
+			std::cout << "FAIL: reserved 0x" << std::hex << _opA;
+			if(_opB) std::cout << " 0x" << _opB;
+			std::cout << " decoded as \"" << Disassembler::formatLine(line, false)
+			          << "\" (" << std::dec << wordCount << " words), expected dc" << std::endl;
+			return;
+		}
+
+		// The classification surface must agree with the rendered text. These are the
+		// two instructions that carry a Table 12-13 JJJ field, so neither may claim it.
+		Instruction a = Invalid, b = Invalid;
+		opcodes.getInstructionTypes(_opA, a, b);
+
+		if(a == Add_SD || b == Add_SD || a == Sub_SD || b == Sub_SD)
+		{
+			++m_failCount;
+			std::cout << "FAIL: reserved 0x" << std::hex << _opA << std::dec
+			          << " renders as dc but still classifies as Add_SD/Sub_SD ("
+			          << static_cast<int>(a) << "," << static_cast<int>(b) << ")" << std::endl;
+			return;
+		}
+
+		// If an extension word was supplied, the refusal must not have consumed it: it
+		// belongs to the following address and has to decode there on its own. Asserting
+		// only that _opA returns zero does not establish that - the count and the
+		// independent decode are separate properties, and testing one and claiming the
+		// other is how a test comes to assert less than its comment says.
+		if(_opB)
+		{
+			Disassembler::Line next;
+			if(disasm.disassemble(next, _opB, 0, 0, 0, 0) == 0)
+			{
+				++m_failCount;
+				std::cout << "FAIL: reserved 0x" << std::hex << _opA
+				          << "'s extension word 0x" << _opB << std::dec
+				          << " does not decode independently at the next address" << std::endl;
+				return;
+			}
+		}
+
+		++m_passCount;
+	}
+
+	void AssemblerTest::expectDecodes(uint32_t _opA, uint32_t _opB)
+	{
+		++m_testCount;
+
+		Opcodes opcodes;
+		Disassembler disasm(opcodes);
+
+		Disassembler::Line line;
+		if(disasm.disassemble(line, _opA, _opB, 0, 0, 0) == 0)
+		{
+			++m_failCount;
+			std::cout << "FAIL: 0x" << std::hex << _opA;
+			if(_opB) std::cout << " 0x" << _opB;
+			std::cout << std::dec << " expected to decode, got dc" << std::endl;
+			return;
+		}
+
+		++m_passCount;
+	}
+
+	void AssemblerTest::testReservedAluEncodings()
+	{
+		// DSP56300 Family Manual Table 12-13 assigns the parallel-move ADD/SUB source
+		// field JJJ over 001..111. 000 is reserved and has no operand.
+		//
+		// Decoding it as if it were 001 is not merely a cosmetic mis-naming: the text it
+		// produced re-assembled to a DIFFERENT word. Motorola asm56300 6.3.15 turned the
+		// disassembly of 0x102a04 back into 0x102a14, with no errors reported - a silent
+		// round-trip corruption. These cases lock that shut.
+
+		// JJJ=000 with kkk=000: the ADD form.
+		expectReserved(0x200008);
+
+		// JJJ=000 with the two SUB forms.
+		expectReserved(0x200004);
+		expectReserved(0x20000c);
+
+		// The measured corruption case, with a full parallel move attached.
+		expectReserved(0x102a04);
+
+		// A reserved ALU whose parallel move carries an extension word. The extension
+		// must remain independently decodable at the following address rather than being
+		// consumed by the failed instruction.
+		expectReserved(0x16b408, 0x379823);
+
+		// Controls. Every legal neighbour must be unaffected - the first patch attempt at
+		// this fix broke five of six mnemonics because it was validated on two words
+		// instead of against the instruction inventory.
+		expectDecodes(0x200010);	// add b,a     - Table 12-13, JJJ=001
+		expectDecodes(0x3cfb1c);	// sub         - Table 12-13
+		expectDecodes(0x9c1c05);	// cmp         - Table 12-16, where JJJ=000 IS legal
+		expectDecodes(0xd37307);	// cmpm        - Table 12-16
+		expectDecodes(0x200001);	// tfr         - Table 12-16
+		expectDecodes(0x030000);	// Tcc         - Table 12-16
 	}
 
 	void AssemblerTest::testAluInstructions()
