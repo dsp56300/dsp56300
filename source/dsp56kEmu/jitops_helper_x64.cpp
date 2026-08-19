@@ -55,8 +55,12 @@ namespace dsp56k
 
 		AluRef temp(m_block, _aluIndex, true, true);
 
+		if constexpr (g_leftAlignedAlu)
+			m_asm.ror(temp, asmjit::Imm(g_aluBitOffset));	// bring a0 down from bits 31..8
 		m_asm.and_(temp.get(), asmjit::Imm(0xffffffffff000000));
 		m_asm.or_(temp.get(), maskedSource.get());
+		if constexpr (g_leftAlignedAlu)
+			m_asm.rol(temp, asmjit::Imm(g_aluBitOffset));
 	}
 
 	void JitOps::setALU1(const uint32_t _aluIndex, const DspValue& _src) const
@@ -67,10 +71,10 @@ namespace dsp56k
 
 		AluRef temp(m_block, _aluIndex, true, true);;
 
-		m_asm.ror(temp, asmjit::Imm(24));
+		m_asm.ror(temp, asmjit::Imm(24 + g_aluBitOffset));
 		m_asm.and_(temp, asmjit::Imm(0xffffffffff000000));
 		m_asm.or_(temp.get(), maskedSource.get());
-		m_asm.rol(temp, asmjit::Imm(24));
+		m_asm.rol(temp, asmjit::Imm(24 + g_aluBitOffset));
 	}
 
 	void JitOps::setALU2(const uint32_t _aluIndex, const DspValue& _src) const
@@ -81,10 +85,10 @@ namespace dsp56k
 
 		AluRef temp(m_block, _aluIndex);
 
-		m_asm.ror(temp, asmjit::Imm(48));
+		m_asm.ror(temp, asmjit::Imm(48 + g_aluBitOffset));
 		m_asm.and_(temp.get(), asmjit::Imm(0xffffffffffffff00));
 		m_asm.or_(temp.get(), maskedSource.get());
-		m_asm.rol(temp, asmjit::Imm(48));
+		m_asm.rol(temp, asmjit::Imm(48 + g_aluBitOffset));
 	}
 
 	void JitOps::setSSH(const DspValue& _src) const

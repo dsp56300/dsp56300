@@ -1,3 +1,4 @@
+#include "jitdspregpool.h"
 #include "jitdspvalue.h"
 
 #include "jitblock.h"
@@ -290,7 +291,8 @@ namespace dsp56k
 			auto& s = reinterpret_cast<int64_t&>(u);
 			u <<= 40ull;
 			s >>= 8ll;
-			u >>= 8ull;
+			if constexpr (!g_leftAlignedAlu)
+				u >>= 8ull;	// left-aligned wants the value to stay at bits 55..32
 
 			m_block.asm_().mov(_dst, asmjit::Imm(u));
 		}
@@ -306,7 +308,7 @@ namespace dsp56k
 	{
 #ifdef HAVE_ARM64
 		m_block.asm_().sbfx(r32(_dst), r32(_src), asmjit::Imm(0), asmjit::Imm(24));
-		m_block.asm_().lsl(r64(_dst), r64(_dst), asmjit::Imm(24));
+		m_block.asm_().lsl(r64(_dst), r64(_dst), asmjit::Imm(g_leftAlignedAlu ? 32 : 24));
 #else
 		if(r32(_dst) != r32(_src))
 		{
@@ -317,7 +319,8 @@ namespace dsp56k
 			m_block.asm_().shl(r64(_dst), asmjit::Imm(40));
 		}
 		m_block.asm_().sar(r64(_dst), asmjit::Imm(8));
-		m_block.asm_().shr(r64(_dst), asmjit::Imm(8));
+		if constexpr (!g_leftAlignedAlu)
+			m_block.asm_().shr(r64(_dst), asmjit::Imm(8));
 #endif
 	}
 

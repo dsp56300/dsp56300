@@ -659,14 +659,15 @@ namespace dsp56k
 		}, [&]()
 		{
 			int i=0;
-			verify(m_checks[i++] == 0x00000000111111);
-			verify(m_checks[i++] == 0x00000000222222);
-			verify(m_checks[i++] == 0x00111111111111);
-			verify(m_checks[i++] == 0x00222222222222);
-			verify(m_checks[i++] == 0x00111111000000);
-			verify(m_checks[i++] == 0x00222222000000);
-			verify(m_checks[i++] == 0x11111111000000);
-			verify(m_checks[i++] == 0x22222222000000);
+			// these read the raw accumulator, so the expected value follows the current representation
+			verify(m_checks[i++] == aluTestValue(0x00000000111111));
+			verify(m_checks[i++] == aluTestValue(0x00000000222222));
+			verify(m_checks[i++] == aluTestValue(0x00111111111111));
+			verify(m_checks[i++] == aluTestValue(0x00222222222222));
+			verify(m_checks[i++] == aluTestValue(0x00111111000000));
+			verify(m_checks[i++] == aluTestValue(0x00222222000000));
+			verify(m_checks[i++] == aluTestValue(0x11111111000000));
+			verify(m_checks[i++] == aluTestValue(0x22222222000000));
 		});
 
 		runTest([&]()
