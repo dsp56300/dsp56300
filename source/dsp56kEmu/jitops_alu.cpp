@@ -491,6 +491,10 @@ namespace dsp56k
 					m_asm.imul(r64(_s1), asmjit::Imm(i));
 				}
 			}
+			// scale the product into the ALU representation before it meets the accumulator
+			if constexpr (g_leftAlignedAlu)
+				m_asm.shl(r64(_s1), asmjit::Imm(8));
+
 			if (_accumulate)
 			{
 				aluSignextendTo64(d);
@@ -505,6 +509,10 @@ namespace dsp56k
 		{
 			m_asm.imul(r64(_s1), r64(_s2));
 			_s2.release();
+
+			// scale the product into the ALU representation before it meets the accumulator
+			if constexpr (g_leftAlignedAlu)
+				m_asm.shl(r64(_s1), asmjit::Imm(8));
 
 			if(!_accumulate && !_negate)
 			{
@@ -734,6 +742,11 @@ namespace dsp56k
 #endif
 		// fractional multiplication requires one post-shift to be correct
 		m_asm.sal(r64(s1), asmjit::Imm(1));
+
+		// scale the product into the ALU representation. Note the accumulator's own sar by 24 below
+		// already yields the correct left-aligned form, since (d >> 24) << 8 == (d << 8) >> 24.
+		if constexpr (g_leftAlignedAlu)
+			m_asm.sal(r64(s1), asmjit::Imm(8));
 
 		if (negate)
 			m_asm.neg(r64(s1));
