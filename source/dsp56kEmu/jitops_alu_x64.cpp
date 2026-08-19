@@ -552,7 +552,13 @@ namespace dsp56k
 		m_asm.cmovns(r64(sNeg), r64(sPos));
 		m_asm.cmovns(r64(sPos), r64(s));
 
-		aluSignextendTo64(alu);
+		// This iterative algorithm carries state across 24 rounds in the carry bit and the sign bit, so it is
+		// far less error-prone to run it in the right-aligned domain and convert at the boundaries than to
+		// offset every constant inside the loop. Two instructions for a 24-round loop is noise.
+		if constexpr (g_leftAlignedAlu)
+			m_asm.shr(r64(alu), asmjit::Imm(8));
+
+		signextend56to64(r64(alu));
 
 		m_asm.copyBitToReg(carry, m_dspRegs.getSR(JitDspRegs::Read), CCRB_C);
 
@@ -595,6 +601,9 @@ namespace dsp56k
 		// once
 		ccrUpdateVL();
 		loopIteration(true, true);
+
+		if constexpr (g_leftAlignedAlu)
+			m_asm.shl(r64(alu), asmjit::Imm(8));	// back to the ALU representation
 
 		m_dspRegs.mask56(alu);
 	}

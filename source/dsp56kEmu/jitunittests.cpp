@@ -983,7 +983,8 @@ namespace dsp56k
 		{
 			for(size_t i=0; i<24; ++i)
 			{
-				verify(m_checks[i] == expectedValues[i]);
+				// reads the raw accumulator, so the expected value follows the representation
+				verify(m_checks[i] == aluTestValue(expectedValues[i]));
 			}
 		});
 	}
