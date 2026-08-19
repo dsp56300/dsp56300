@@ -459,6 +459,16 @@ namespace dsp56k
 		m_block.mem().mov<sizeof(_src.var)>(_dst, makeDspPtr(_src));
 	}
 
+	void JitDspRegPool::aluShiftLeft8(const JitRegGP& _reg) const
+	{
+		m_block.asm_().shl(r64(_reg), asmjit::Imm(8));
+	}
+
+	void JitDspRegPool::aluShiftRight8(const JitRegGP& _reg) const
+	{
+		m_block.asm_().shr(r64(_reg), asmjit::Imm(8));
+	}
+
 	void JitDspRegPool::movDspReg(const int8_t& _dst, const JitRegGP& _src) const
 	{
 		m_block.mem().mov<sizeof(_dst)>(makeDspPtr(&_dst, sizeof(_dst)), r32(_src));
@@ -647,6 +657,8 @@ namespace dsp56k
 			else
 			{
 				movDspReg(_dst, _alu);
+				if constexpr (g_leftAlignedAlu)
+					aluShiftLeft8(_dst);	// right-aligned in memory -> left-aligned in register
 			}
 		};
 
@@ -805,11 +817,11 @@ namespace dsp56k
 			break;
 		case DspA:
 		case DspAwrite:
-			movDspReg(r.a, _src);
+			storeAlu(r.a, _src);
 			break;
 		case DspB:
 		case DspBwrite:
-			movDspReg(r.b, _src);
+			storeAlu(r.b, _src);
 			break;
 		case DspX:
 			assert(false);
@@ -906,11 +918,11 @@ namespace dsp56k
 			break;
 		case DspA:
 		case DspAwrite:
-			movDspReg(r.a, _src);
+			storeAlu(r.a, _src);
 			break;
 		case DspB:
 		case DspBwrite:
-			movDspReg(r.b, _src);
+			storeAlu(r.b, _src);
 			break;
 		case DspX:
 			movDspReg(r.x, _src);

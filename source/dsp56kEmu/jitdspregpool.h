@@ -20,6 +20,12 @@ namespace asmjit
 
 namespace dsp56k
 {
+	// Phase 1 of the left-aligned ALU work (see LEFT_ALIGNED_ALU.md). When enabled, ALU registers held in
+	// JIT host registers store the 56-bit value in bits 63..8, with bits 7..0 always zero. The DspRegs
+	// memory format stays right-aligned, so the interpreter remains an independent oracle; conversion
+	// happens here at the pool's load/store choke point.
+	static constexpr bool g_leftAlignedAlu = false;
+
 	class DspValue;
 	class JitBlock;
 
@@ -157,6 +163,37 @@ namespace dsp56k
 		}
 
 		void movDspReg(const int8_t& _dst, const JitRegGP& _src) const;
+
+		// defined in the .cpp - JitBlock is incomplete here
+		void aluShiftLeft8(const JitRegGP& _reg) const;
+		void aluShiftRight8(const JitRegGP& _reg) const;
+
+		// Stores an ALU to its right-aligned memory home. With g_leftAlignedAlu the register holds the value
+		// left-aligned, and it may still be live afterwards, so convert around the store rather than in place.
+		template<typename T, unsigned int B>
+		void storeAlu(const RegType<T, B>& _dst, const JitRegGP& _src) const
+		{
+			if constexpr (g_leftAlignedAlu)
+			{
+				aluShiftRight8(_src);
+				movDspReg(_dst, _src);
+				aluShiftLeft8(_src);
+			}
+			else
+			{
+				movDspReg(_dst, _src);
+			}
+		}
+
+		template<typename T, unsigned int B>
+		void storeAlu(const RegType<T, B>& _dst, const SpillReg& _src) const
+		{
+			// A spilled ALU keeps the left-aligned form in its XMM; converting needs a GP temp, which is not
+			// available here. Deliberately unimplemented so it fires the moment the flag is turned on rather
+			// than silently writing a left-aligned value into right-aligned memory.
+			assert((!g_leftAlignedAlu) && "left-aligned ALU: spill-register store path not implemented yet");
+			movDspReg(_dst, _src);
+		}
 
 		template<typename T, unsigned int B>
 		void movDspReg(const JitRegGP& _dst, const RegType<T, B>& _reg) const
