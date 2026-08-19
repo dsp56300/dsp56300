@@ -379,7 +379,8 @@ namespace dsp56k
 		const RegGP t(m_block);
 		const RegGP shifted(m_block);
 		m_asm.mov(shifted, s);
-		m_asm.sal(shifted, 8);
+		if constexpr (!g_leftAlignedAlu)
+			m_asm.sal(shifted, 8);	// count from the MSB; left-aligned it is already there
 
 		// this instruction counts the number of equal bits starting at the MSB
 		// We can only count leading zeroes, so we invert the source if the MSB is a 1
@@ -399,9 +400,9 @@ namespace dsp56k
 		m_asm.cmovz(t,s);
 
 		CcrBatchUpdate ccrBatch(*this, CCR_N, CCR_Z, CCR_V);
-		copyBitToCCR(d, 23, CCRB_N);
+		copyBitToCCR(d, 23 + g_aluBitOffset, CCRB_N);
 
-		m_asm.shl(r64(t), asmjit::Imm(24));
+		m_asm.shl(r64(t), asmjit::Imm(24 + g_aluBitOffset));
 		ccr_update_ifZero(CCRB_Z);
 
 		m_asm.mov(r64(d), r64(t));
