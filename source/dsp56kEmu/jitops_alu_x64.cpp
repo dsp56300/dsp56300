@@ -424,7 +424,7 @@ namespace dsp56k
 		// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
 		{
 			const RegGP r(m_block);
-			m_asm.ror(r, d.get(), 54);
+			m_asm.ror(r, d.get(), 54 + g_aluBitOffset);	// bits 55/54 of the accumulator
 			m_asm.and_(r, asmjit::Imm(0x3));
 		}
 
@@ -436,7 +436,7 @@ namespace dsp56k
 			decode_JJ_read(s, jj);
 
 			m_asm.shl(r64(s), asmjit::Imm(40));
-			m_asm.sar(r64(s), asmjit::Imm(16));
+			m_asm.sar(r64(s), asmjit::Imm(16 - g_aluBitOffset));	// land on the ALU field position
 
 			const RegGP addOrSub(m_block);
 			m_asm.mov(addOrSub, r64(s));
@@ -447,7 +447,7 @@ namespace dsp56k
 				m_asm.mov(sNeg, r64(s));
 				m_asm.neg(sNeg);
 
-				m_asm.bt(addOrSub, asmjit::Imm(55));
+				m_asm.bt(addOrSub, asmjit::Imm(55 + g_aluBitOffset));
 
 				m_asm.cmovnc(r64(s), sNeg);
 			}
@@ -455,13 +455,25 @@ namespace dsp56k
 			m_asm.add(d, d);
 
 			m_asm.bt(m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C));
-			m_asm.adc(d.get().r8(), asmjit::Imm(0));
+			if constexpr (g_leftAlignedAlu)
+			{
+				// the carry enters at the LSB of the 56-bit value, which is bit 8 of the register
+				const RegScratch c(m_block);
+				m_asm.set(asmjit::x86::CondCode::kC, c.get().r8());
+				m_asm.movzx(r32(c.get()), c.get().r8());
+				m_asm.shl(r64(c.get()), asmjit::Imm(8));
+				m_asm.add(d, r64(c.get()));
+			}
+			else
+			{
+				m_asm.adc(d.get().r8(), asmjit::Imm(0));
+			}
 
 			m_asm.add(d, r64(s));
 		}
 
 		// C is set if bit 55 of the result is cleared
-		m_asm.bt(d, asmjit::Imm(55));
+		m_asm.bt(d, asmjit::Imm(55 + g_aluBitOffset));
 		ccr_update_ifNotCarry(CCRB_C);
 
 		m_dspRegs.mask56(d);
