@@ -415,7 +415,7 @@ namespace dsp56k
 #ifdef HAVE_ARM64
 		m_asm.eor(r, r, r64(_v.get()), asmjit::arm::lsl(24));
 #else
-		m_asm.shl(r64(_v.get()), asmjit::Imm(24));
+		m_asm.shl(r64(_v.get()), asmjit::Imm(24 + g_aluBitOffset));
 		m_asm.xor_(r, r64(_v.get()));
 #endif
 		// S L E U N Z V C
@@ -427,7 +427,7 @@ namespace dsp56k
 		m_asm.ubfx(r64(t), r64(r), asmjit::Imm(24), asmjit::Imm(24));
 		m_asm.test_(t);
 #else
-		m_asm.ror(t.get(), r, 24);
+		m_asm.ror(t.get(), r, 24 + g_aluBitOffset);
 		m_asm.test(t, asmjit::Imm(0xffffff));
 #endif
 		ccr_update_ifZero(CCRB_Z);
@@ -593,7 +593,7 @@ namespace dsp56k
 		if(_v.isImm24())
 			_v.toTemp();
 
-		m_asm.shl(r64(_v.get()), asmjit::Imm(24));
+		m_asm.shl(r64(_v.get()), asmjit::Imm(24 + g_aluBitOffset));
 		m_asm.or_(r, r64(_v.get()));
 
 		// S L E U N Z V C
@@ -605,7 +605,7 @@ namespace dsp56k
 		m_asm.ubfx(r64(t), r64(r), asmjit::Imm(24), asmjit::Imm(24));
 		m_asm.test_(t);
 #else
-		m_asm.ror(t.get(), r, 24);
+		m_asm.ror(t.get(), r, 24 + g_aluBitOffset);
 		m_asm.test(t, asmjit::Imm(0xffffff));
 #endif
 		ccr_update_ifZero(CCRB_Z);
