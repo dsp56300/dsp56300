@@ -1,3 +1,4 @@
+#include "jitdspregpool.h"
 #include "jitdspmode.h"
 #include "jitops.h"
 #include "types.h"
@@ -675,7 +676,15 @@ namespace dsp56k
 #else
 				m_asm.rol(r64(r), r32(x), 40);
 				m_asm.sar(r64(r), asmjit::Imm(8));
-				m_asm.shr(r64(r), asmjit::Imm(8));
+				if constexpr (g_leftAlignedAlu)
+				{
+					// x already sits at bits 55..32; y goes to 31..8 rather than 23..0
+					m_asm.shl(r64(y.get()), asmjit::Imm(8));
+				}
+				else
+				{
+					m_asm.shr(r64(r), asmjit::Imm(8));
+				}
 				m_asm.or_(r64(r), r64(y.get()));
 #endif
 			}

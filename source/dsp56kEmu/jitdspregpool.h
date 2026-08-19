@@ -191,12 +191,15 @@ namespace dsp56k
 		template<typename T, unsigned int B>
 		void storeAlu(const RegType<T, B>& _dst, const SpillReg& _src) const
 		{
-			// A spilled ALU keeps the left-aligned form in its XMM; converting needs a GP temp, which is not
-			// available here. Deliberately unimplemented so it fires the moment the flag is turned on rather
-			// than silently writing a left-aligned value into right-aligned memory.
-			assert((!g_leftAlignedAlu) && "left-aligned ALU: spill-register store path not implemented yet");
-			movDspReg(_dst, _src);
+			// A spilled ALU keeps the left-aligned form in its XMM, so it has to come back through a GP
+			// register to be converted before it reaches right-aligned memory.
+			if constexpr (g_leftAlignedAlu)
+				storeAluSpilled(_dst, _src);
+			else
+				movDspReg(_dst, _src);
 		}
+
+		void storeAluSpilled(const TReg56& _dst, const SpillReg& _src) const;
 
 		template<typename T, unsigned int B>
 		void movDspReg(const JitRegGP& _dst, const RegType<T, B>& _reg) const

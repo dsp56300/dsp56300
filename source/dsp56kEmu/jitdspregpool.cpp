@@ -459,6 +459,16 @@ namespace dsp56k
 		m_block.mem().mov<sizeof(_src.var)>(_dst, makeDspPtr(_src));
 	}
 
+	void JitDspRegPool::storeAluSpilled(const TReg56& _dst, const SpillReg& _src) const
+	{
+		// bring the spilled accumulator back into a GP so it can be converted to the right-aligned
+		// memory format. The XMM keeps its left-aligned value, which is what the pool expects.
+		const RegScratch t(m_block);
+		m_block.asm_().movq(r64(t.get()), _src.reg);
+		aluShiftRight8(t.get());
+		movDspReg(_dst, r64(t.get()));
+	}
+
 	void JitDspRegPool::aluShiftLeft8(const JitRegGP& _reg) const
 	{
 		m_block.asm_().shl(r64(_reg), asmjit::Imm(8));
