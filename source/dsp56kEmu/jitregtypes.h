@@ -60,7 +60,8 @@ namespace dsp56k
 	
 	static constexpr JitReg128 g_nonVolatileXMMs[] = {};
 
-	static constexpr JitRegGP g_dspPoolGps[] = { asmjit::x86::rdx, asmjit::x86::r9, asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::r11, asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::rsi, asmjit::x86::rdi };
+	// volatiles first so that simple blocks do not have to push anything on the stack, see static_assert in jit.cpp
+	static constexpr JitRegGP g_dspPoolGps[] = { asmjit::x86::rdx, asmjit::x86::r9, asmjit::x86::r11, asmjit::x86::rsi, asmjit::x86::rdi, asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::r12, asmjit::x86::r13 };
 	
 	static constexpr auto regDspPtr = asmjit::x86::r8;
 #endif

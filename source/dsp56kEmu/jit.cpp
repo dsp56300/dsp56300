@@ -31,6 +31,32 @@ namespace dsp56k
 			return false;
 		}
 
+		// pool registers are handed out front to back, so every volatile must be listed before the first non-volatile
+		template<typename A, typename B> constexpr bool volatilesFirst(const A& _pool, const B& _nonVolatiles)
+		{
+			bool seenNonVolatile = false;
+
+			for (const auto& p : _pool)
+			{
+				bool isNonVolatile = false;
+
+				for (const auto& nv : _nonVolatiles)
+				{
+					if (p.equals(nv))
+					{
+						isNonVolatile = true;
+						break;
+					}
+				}
+
+				if (isNonVolatile)
+					seenNonVolatile = true;
+				else if (seenNonVolatile)
+					return false;
+			}
+			return true;
+		}
+
 		template<typename A, typename B> constexpr bool contains(const A& _a, const B& _b)
 		{
 			for (const auto& a : _a)
@@ -53,6 +79,8 @@ namespace dsp56k
 		static_assert(!contains(g_nonVolatileGPs, *g_regGPTemps.begin()), "first temp must be volatile");
 		static_assert(!contains(g_nonVolatileGPs, regDspPtr), "register for DSP pointer must be volatile");
 		static_assert(!contains(g_nonVolatileGPs, g_dspPoolGps[0]), "first pool reg must be volatile");
+		static_assert(volatilesFirst(g_dspPoolGps, g_nonVolatileGPs), "GP pool registers must list all volatiles before the first non-volatile");
+		static_assert(volatilesFirst(g_dspPoolXmms, g_nonVolatileXMMs), "XMM pool registers must list all volatiles before the first non-volatile");
 	}
 #endif
 	constexpr bool g_traceOps = false;
