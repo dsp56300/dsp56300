@@ -15,6 +15,8 @@ namespace dsp56k
 	{
 		m_dspRegs.getXY(_dst, _xy);
 		signextend48to56(_dst);
+		if constexpr (g_leftAlignedAlu)
+			m_asm.shl(_dst, asmjit::Imm(8));	// the result feeds ALU arithmetic, so match the ALU representation
 	}
 
 	void JitOps::op_Abs(TWord op)

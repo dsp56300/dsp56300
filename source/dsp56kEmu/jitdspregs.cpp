@@ -466,7 +466,7 @@ namespace dsp56k
 #ifdef HAVE_ARM64
 			m_asm.and_(r64(_alu), r64(_alu), Imm(~static_cast<uint64_t>(0xff)));
 #else
-			m_asm.and_(r64(_alu), Imm(0xffffff00));
+			m_asm.and_(r64(_alu), Imm(-0x100));	// signed so the encoding sign-extends to 0xFFFFFFFFFFFFFF00
 #endif
 			return;
 		}

@@ -30,7 +30,7 @@ namespace dsp56k
 		m_asm.and_(r64(_reg), r64(_reg), asmjit::Imm(~static_cast<uint64_t>(0xff)));
 #else
 		// 0xFFFFFF00 as a sign-extended imm32 is 0xFFFFFFFFFFFFFF00, so this is a single instruction
-		m_asm.and_(r64(_reg), asmjit::Imm(0xffffff00));
+		m_asm.and_(r64(_reg), asmjit::Imm(-0x100));	// signed so the encoding sign-extends to 0xFFFFFFFFFFFFFF00
 #endif
 	}
 

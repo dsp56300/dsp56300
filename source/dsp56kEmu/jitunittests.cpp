@@ -1,3 +1,4 @@
+#include <iostream>
 #include "jitdspregpool.h"
 #include "jitunittests.h"
 
