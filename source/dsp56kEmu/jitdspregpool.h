@@ -26,6 +26,9 @@ namespace dsp56k
 	// happens here at the pool's load/store choke point.
 	static constexpr bool g_leftAlignedAlu = true;
 
+	// every accumulator bit position moves up by 8 when the ALU is stored left-aligned
+	static constexpr uint32_t g_aluBitOffset = g_leftAlignedAlu ? 8 : 0;
+
 	class DspValue;
 	class JitBlock;
 

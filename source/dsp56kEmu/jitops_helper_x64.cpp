@@ -9,9 +9,6 @@
 
 namespace dsp56k
 {
-	// accumulator bit positions move up by 8 when the ALU is stored left-aligned
-	static constexpr int g_aluBitOffset = g_leftAlignedAlu ? 8 : 0;
-
 	void JitOps::signed24To56(const JitReg64& _dst, const JitReg64& _src) const
 	{
 		if(_dst == _src)

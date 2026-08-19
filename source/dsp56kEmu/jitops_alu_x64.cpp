@@ -34,7 +34,7 @@ namespace dsp56k
 
 	void JitOps::alu_and(const TWord ab, DspValue& _v)
 	{
-		m_asm.shl(r64(_v), asmjit::Imm(24));
+		m_asm.shl(r64(_v), asmjit::Imm(24 + g_aluBitOffset));
 
 		AluRef alu(m_block, ab);
 
@@ -43,7 +43,8 @@ namespace dsp56k
 
 		{
 			const RegScratch mask(m_block);
-			m_asm.mov(mask, asmjit::Imm(0xff000000ffffff));
+			// ones outside the 24-bit field so AND leaves a0/a2 alone; left-aligned the field moves up by 8
+			m_asm.mov(mask, asmjit::Imm(g_leftAlignedAlu ? 0xff000000ffffff00 : 0xff000000ffffff));
 			m_asm.or_(r64(_v), mask);
 			m_asm.and_(alu, r64(_v));
 		}

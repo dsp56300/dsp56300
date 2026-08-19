@@ -11,8 +11,6 @@
 
 namespace dsp56k
 {
-	// Every accumulator bit position moves up by 8 when the ALU is stored left-aligned.
-	static constexpr uint32_t g_aluBitOffset = g_leftAlignedAlu ? 8 : 0;
 	void JitOps::ccr_clear(CCRMask _mask)
 	{
 		ccr_clearDirty(_mask);
@@ -290,14 +288,14 @@ namespace dsp56k
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
-		copyBitToCCR(_alu, 47, CCRB_N);
+		copyBitToCCR(_alu, 47 + g_aluBitOffset, CCRB_N);
 	}
 
 	void JitOps::ccr_n_update_by23(const JitReg64& _alu)
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
-		copyBitToCCR(_alu, 23, CCRB_N);
+		copyBitToCCR(_alu, 23 + g_aluBitOffset, CCRB_N);
 	}
 
 	void JitOps::ccr_s_update(const JitReg64& _alu)
