@@ -820,6 +820,10 @@ namespace dsp56k
 		m_asm.shr(mask, shiftOperand(width.get()));
 
 		AluReg s(m_block, abSrc, abSrc != abDst);
+
+		// the bit offsets are relative to the 56-bit value, so work right-aligned and convert the result back
+		if constexpr (g_leftAlignedAlu)
+			m_asm.shr(s, asmjit::Imm(8));
 #ifdef HAVE_X86_64
 		if (JitEmitter::hasBMI2())
 		{
@@ -834,6 +838,9 @@ namespace dsp56k
 		}
 
 		m_asm.and_(s, mask);
+
+		if constexpr (g_leftAlignedAlu)
+			m_asm.shl(s, asmjit::Imm(8));
 
 		offset.release();
 
