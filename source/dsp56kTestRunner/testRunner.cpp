@@ -1,5 +1,9 @@
 #include <iostream>
 
+#if defined(_WIN32) && defined(_DEBUG)
+#include <crtdbg.h>
+#endif
+
 #include "dsp56kEmu/dspconfig.h"
 #include "dsp56kEmu/assemblertest.h"
 #include "dsp56kEmu/jitunittests.h"
@@ -8,6 +12,17 @@
 
 int main(int _argc, char* _argv[])
 {
+#if defined(_WIN32) && defined(_DEBUG)
+	// Route failed asserts to stderr instead of a modal dialog. A Debug run that pops a message box blocks
+	// forever under CI or any non-interactive harness, and the failure then looks like a hang rather than a
+	// test failure. Keeps the assert text; the process still aborts, so the exit code stays meaningful.
+	for(const auto reportType : {_CRT_WARN, _CRT_ERROR, _CRT_ASSERT})
+	{
+		_CrtSetReportMode(reportType, _CRTDBG_MODE_FILE);
+		_CrtSetReportFile(reportType, _CRTDBG_FILE_STDERR);
+	}
+#endif
+
 	std::cout << "Running Assembler Tests..." << std::endl;
 	try
 	{
