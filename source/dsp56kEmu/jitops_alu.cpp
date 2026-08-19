@@ -670,7 +670,7 @@ namespace dsp56k
 		convert(r56, TReg24(iiiiii));
 
 		const RegGP v(m_block);
-		m_asm.mov(v, asmjit::Imm(r56.var));
+		m_asm.mov(v, asmjit::Imm(g_leftAlignedAlu ? (r56.var << 8) : r56.var));
 		alu_cmp(D, v, false);
 	}
 
@@ -684,7 +684,7 @@ namespace dsp56k
 		convert(r56, s);
 
 		const RegGP v(m_block);
-		m_asm.mov(v, asmjit::Imm(r56.var));
+		m_asm.mov(v, asmjit::Imm(g_leftAlignedAlu ? (r56.var << 8) : r56.var));
 
 		alu_cmp(D, v, false);
 	}
