@@ -694,7 +694,7 @@ namespace dsp56k
 		const auto ab = getFieldValue<Dec, Field_d>(op);
 		AluRef r(m_block, ab);
 
-		m_asm.shl(r, asmjit::Imm(8));	// shift left by 8 bits to enable using the host carry bit
+		aluExtendTo64(r);	// reach the 64 bit boundary to use the host carry bit (free when left-aligned)
 
 #ifdef HAVE_ARM64
 		m_asm.subs(r, r, asmjit::Imm(0x100));
@@ -704,7 +704,7 @@ namespace dsp56k
 		ccr_update_ifCarry(CCRB_C);
 #endif
 
-		m_asm.shr(r, asmjit::Imm(8));
+		aluRestoreFrom64(r);
 		ccr_clear(CCR_V);				// never set in the simulator, even when wrapping around. Carry is set instead
 
 		ccr_dirty(ab, r, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
@@ -869,7 +869,7 @@ namespace dsp56k
 		const auto ab = getFieldValue<Dec, Field_d>(op);
 		AluRef r(m_block, ab);
 
-		m_asm.shl(r, asmjit::Imm(8));		// shift left by 8 bits to enable using the host carry bit
+		aluExtendTo64(r);		// reach the 64 bit boundary to use the host carry bit (free when left-aligned)
 
 #ifdef HAVE_ARM64
 		m_asm.adds(r, r, asmjit::Imm(0x100));
@@ -878,7 +878,7 @@ namespace dsp56k
 #endif
 		ccr_update_ifCarry(CCRB_C);
 
-		m_asm.shr(r, asmjit::Imm(8));
+		aluRestoreFrom64(r);
 
 		ccr_clear(CCR_V);					// never set in the simulator, even when wrapping around. Carry is set instead
 
