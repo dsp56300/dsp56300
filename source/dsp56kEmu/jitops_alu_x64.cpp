@@ -309,6 +309,11 @@ namespace dsp56k
 		m_asm.mov(r32(offset), r32(_widthOffset.get()));
 		m_asm.and_(offset.get(), asmjit::Imm(0x3f));
 
+		// the offset is relative to the 56-bit value; shifting both the value and the mask by the
+		// aligned offset places the field correctly in either representation
+		if constexpr (g_leftAlignedAlu)
+			m_asm.add(offset.get(), asmjit::Imm(8));
+
 		// uint64_t s = src & mask;
 		const RegGP s(m_block);
 		m_asm.mov(r32(s), r32(_src.get()));
