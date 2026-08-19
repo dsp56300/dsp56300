@@ -188,7 +188,7 @@ namespace dsp56k
 	void JitOps::alu_rnd(TWord ab, const JitReg64& d, const bool _needsSignextend/* = true*/)
 	{
 		if(_needsSignextend)
-			signextend56to64(d);
+			aluSignextendTo64(d);
 
 		const JitDspMode* mode = m_block.getMode();
 
@@ -518,7 +518,7 @@ namespace dsp56k
 		m_asm.cmovns(r64(sNeg), r64(sPos));
 		m_asm.cmovns(r64(sPos), r64(s));
 
-		signextend56to64(alu);
+		aluSignextendTo64(alu);
 
 		m_asm.copyBitToReg(carry, m_dspRegs.getSR(JitDspRegs::Read), CCRB_C);
 
@@ -643,12 +643,12 @@ namespace dsp56k
 		const RegGP oldBit55(m_block);
 		m_asm.copyBitToReg(oldBit55, d, 55);
 
-		signextend56to64(d);
+		aluSignextendTo64(d);
 		m_asm.shl(d, asmjit::Imm(1));
 
 		{
 			const RegGP s(m_block);
-			signextend56to64(s, r64(m_dspRegs.getALU(ab ? 0 : 1)));
+			aluSignextendTo64(s, r64(m_dspRegs.getALU(ab ? 0 : 1)));
 
 			m_asm.sub(d, s);
 		}

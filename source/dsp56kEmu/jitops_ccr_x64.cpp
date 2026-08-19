@@ -4,12 +4,15 @@
 #ifdef HAVE_X86_64
 
 #include "jitdspregs.h"
+#include "jitdspregpool.h"
 #include "jitops.h"
 
 #include "asmjit/core/operand.h"
 
 namespace dsp56k
 {
+	// Every accumulator bit position moves up by 8 when the ALU is stored left-aligned.
+	static constexpr uint32_t g_aluBitOffset = g_leftAlignedAlu ? 8 : 0;
 	void JitOps::ccr_clear(CCRMask _mask)
 	{
 		ccr_clearDirty(_mask);
@@ -164,7 +167,7 @@ namespace dsp56k
 
 		if(mode)
 		{
-			const uint32_t shift = 46 + (mode->testSR(SRB_S0) ? 1 : 0) - (mode->testSR(SRB_S1) ? 1 : 0);
+			const uint32_t shift = 46 + g_aluBitOffset + (mode->testSR(SRB_S0) ? 1 : 0) - (mode->testSR(SRB_S1) ? 1 : 0);
 			const RegScratch r(m_block);
 			m_asm.ror(r, _alu, static_cast<int>(shift));
 			m_asm.test(r32(r), asmjit::Imm(0x3));
@@ -176,7 +179,7 @@ namespace dsp56k
 			const ShiftReg shift64(m_block);
 			const auto shift = shift64.get().r8();
 			sr_getBitValue(shift, SRB_S0);
-			m_asm.add(shift, asmjit::Imm(46));
+			m_asm.add(shift, asmjit::Imm(46 + g_aluBitOffset));
 			{
 				const RegGP s1(m_block);
 				sr_getBitValue(s1, SRB_S1);
@@ -226,7 +229,10 @@ namespace dsp56k
 		auto aluScratch = [this, &_alu]()
 		{
 			RegScratch alu(m_block);
-			m_asm.rol(alu, _alu, 8);
+			if constexpr (g_leftAlignedAlu)
+				m_asm.mov(alu, _alu);	// already left-aligned; the rotate exists only to left-align
+			else
+				m_asm.rol(alu, _alu, 8);
 			return alu;
 		};
 
@@ -277,7 +283,7 @@ namespace dsp56k
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
 		// Left-aligned accumulators put the 56-bit MSB at bit 63 rather than 55.
-		copyBitToCCR(_alu, g_leftAlignedAlu ? 63 : 55, CCRB_N);
+		copyBitToCCR(_alu, 55 + g_aluBitOffset, CCRB_N);
 	}
 
 	void JitOps::ccr_n_update_by47(const JitReg64& _alu)
@@ -305,7 +311,7 @@ namespace dsp56k
 
 		if(mode)
 		{
-			uint32_t bit = 46 + (mode->testSR(SRB_S1) ? 1 : 0) - (mode->testSR(SRB_S0) ? 1 : 0);
+			uint32_t bit = 46 + g_aluBitOffset + (mode->testSR(SRB_S1) ? 1 : 0) - (mode->testSR(SRB_S0) ? 1 : 0);
 
 			const RegGP bit46(m_block);
 			m_asm.copyBitToReg(bit46, _alu, bit);
@@ -320,7 +326,7 @@ namespace dsp56k
 		else
 		{
 			const RegGP bit(m_block);
-			m_asm.mov(bit, asmjit::Imm(46));
+			m_asm.mov(bit, asmjit::Imm(46 + g_aluBitOffset));
 
 			{
 				const RegGP s0s1(m_block);

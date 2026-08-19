@@ -1,3 +1,4 @@
+#include "jitdspregpool.h"
 #include "jitops.h"
 
 #include "jitops_alu.inl"
@@ -131,7 +132,7 @@ namespace dsp56k
 
 		AluReg aluD(m_block, ab);
 
-		signextend56to64(aluD);
+		aluSignextendTo64(aluD);
 
 #ifdef HAVE_ARM64
 		m_asm.lsl(aluD, aluD, asmjit::Imm(1));
@@ -141,7 +142,7 @@ namespace dsp56k
 		{
 			AluReg aluS(m_block, ab ? 0 : 1, true);
 
-			signextend56to64(aluS);
+			aluSignextendTo64(aluS);
 
 #ifdef HAVE_ARM64
 			m_asm.adds(aluD, aluD, aluS.get());
@@ -321,7 +322,9 @@ namespace dsp56k
 	{
 		AluReg d(m_block, ab, true);
 
-		m_asm.sal(d.get(), asmjit::Imm(8));
+		// the accumulator is already left-aligned when g_leftAlignedAlu is on; _v is a plain 56-bit value
+		if constexpr (!g_leftAlignedAlu)
+			m_asm.sal(d.get(), asmjit::Imm(8));
 		m_asm.sal(_v, asmjit::Imm(8));
 
 		if (_magnitude)
@@ -343,7 +346,8 @@ namespace dsp56k
 #endif
 		}
 
-		m_asm.shr(d, asmjit::Imm(8));
+		if constexpr (!g_leftAlignedAlu)
+			m_asm.shr(d, asmjit::Imm(8));
 		m_asm.shr(_v, asmjit::Imm(8));
 
 		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
@@ -407,7 +411,7 @@ namespace dsp56k
 
 		if (_accumulate)
 		{
-			signextend56to64(d);
+			aluSignextendTo64(d);
 			m_asm.add(d, d, r64(_s1), asmjit::arm::lsl(1));		// fractional multiplication requires one post-shift to be correct
 		}
 		else
@@ -437,7 +441,7 @@ namespace dsp56k
 			}
 			if (_accumulate)
 			{
-				signextend56to64(d);
+				aluSignextendTo64(d);
 				m_asm.add(d, r64(_s1));
 			}
 			else
@@ -457,7 +461,7 @@ namespace dsp56k
 			else
 			{
 				if (_accumulate)
-					signextend56to64(d);
+					aluSignextendTo64(d);
 
 				if(_accumulate && !_negate)
 				{
@@ -684,7 +688,7 @@ namespace dsp56k
 
 		AluRef d(m_block, ab);
 
-		signextend56to64(d);
+		aluSignextendTo64(d);
 		m_asm.sar(d, asmjit::Imm(24));
 
 		m_asm.add(d, r64(s1));
@@ -927,8 +931,8 @@ namespace dsp56k
 		AluReg a(m_block, 0, true);
 		AluReg b(m_block, 1, false);
 
-		signextend56to64(a);
-		signextend56to64(b);
+		aluSignextendTo64(a);
+		aluSignextendTo64(b);
 
 		m_asm.cmp(a,b);
 
@@ -947,8 +951,8 @@ namespace dsp56k
 		AluReg a(m_block, 0, true);
 		AluReg b(m_block, 1, true);
 
-		signextend56to64(a);
-		signextend56to64(b);
+		aluSignextendTo64(a);
+		aluSignextendTo64(b);
 
 #ifdef HAVE_ARM64
 		m_asm.negs(a, a);										// negate

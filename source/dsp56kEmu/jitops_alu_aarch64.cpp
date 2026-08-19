@@ -66,7 +66,7 @@ namespace dsp56k
 		if (_abDst != _abSrc)
 			m_dspRegs.getALU(alu.get(), _abSrc);
 
-		signextend56to64(alu);
+		aluSignextendTo64(alu);
 
 		const RegGP oldAlu(m_block);
 		m_asm.mov(oldAlu, alu);
@@ -83,7 +83,7 @@ namespace dsp56k
 		// The easiest way to check this is to shift back and compare if the initial alu value is identical ot the backshifted one
 		{
 			const RegScratch s(m_block);
-			signextend56to64(s, alu);
+			aluSignextendTo64(s, alu);
 			if(_v)
 				m_asm.asr(s, s, _v->get());
 			else
@@ -184,7 +184,7 @@ namespace dsp56k
 	void JitOps::alu_rnd(TWord ab, const JitReg64& d, const bool _needsSignextend/* = true*/)
 	{
 		if(_needsSignextend)
-			signextend56to64(d);
+			aluSignextendTo64(d);
 
 		RegGP rounder(m_block);
 
@@ -495,7 +495,7 @@ namespace dsp56k
 		m_asm.tst(r64(sPos), r64(sPos));
 		m_asm.cneg(r64(sPos), r64(sPos), asmjit::arm::CondCode::kSign);
 
-		signextend56to64(alu);
+		aluSignextendTo64(alu);
 
 		m_asm.ubfx(carry, m_dspRegs.getSR(JitDspRegs::Read), asmjit::Imm(CCRB_C), 1);
 
@@ -617,12 +617,12 @@ namespace dsp56k
 		m_asm.bitTest(d, 55);
 		m_asm.cset(r32(oldBit55), asmjit::arm::CondCode::kNotZero);
 
-		signextend56to64(d);
+		aluSignextendTo64(d);
 		m_asm.shl(d, asmjit::Imm(1));
 
 		{
 			const RegGP s(m_block);
-			signextend56to64(s, r64(m_dspRegs.getALU(ab ? 0 : 1)));
+			aluSignextendTo64(s, r64(m_dspRegs.getALU(ab ? 0 : 1)));
 
 			m_asm.sub(d, s);
 		}

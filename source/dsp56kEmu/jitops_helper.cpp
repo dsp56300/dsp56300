@@ -7,6 +7,20 @@ namespace dsp56k
 	void dspExecDefaultPreventInterrupt(DSP*);
 	void dspExecNop(DSP*);
 
+	void JitOps::aluSignextendTo64(const JitReg64& _dst, const JitReg64& _src) const
+	{
+		// Sign-extends an ACCUMULATOR to 64 bits. Distinct from signextend56to64(), which is the generic
+		// 56-bit helper used on raw values: a left-aligned accumulator is already natively sign-correct,
+		// a raw right-aligned 56-bit value is not.
+		if constexpr (g_leftAlignedAlu)
+		{
+			if(_dst != _src)
+				m_asm.mov(_dst, _src);
+			return;
+		}
+		signextend56to64(_dst, _src);
+	}
+
 	void JitOps::aluClearLowByte(const JitRegGP& _reg) const
 	{
 		// Enforces the left-aligned invariant: the 8 LSBs must never carry information. This is the exact

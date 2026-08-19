@@ -1,4 +1,5 @@
 #include "jitdspregs.h"
+#include "jitdspregpool.h"
 
 #include "jitmem.h"
 #include "jitblock.h"
@@ -458,6 +459,17 @@ namespace dsp56k
 
 	void JitDspRegs::mask56(const JitRegGP& _alu) const
 	{
+		if constexpr (g_leftAlignedAlu)
+		{
+			// Left-aligned: the 56 bits already occupy 63..8. Discarding what falls below the accumulator
+			// means clearing the 8 spare LSBs - the invariant that keeps our resolution equal to the hardware.
+#ifdef HAVE_ARM64
+			m_asm.and_(r64(_alu), r64(_alu), Imm(~static_cast<uint64_t>(0xff)));
+#else
+			m_asm.and_(r64(_alu), Imm(0xffffff00));
+#endif
+			return;
+		}
 #ifdef HAVE_ARM64
 		m_asm.ubfx(r64(_alu), r64(_alu), Imm(0), Imm(56));
 #else

@@ -1,3 +1,4 @@
+#include "jitdspregpool.h"
 #include "jitunittests.h"
 
 #include "jitasmjithelpers.h"
@@ -9,6 +10,16 @@
 
 namespace dsp56k
 {
+	namespace
+	{
+		// The CCR emitters take an accumulator, so the test has to hand them one in whatever representation
+		// the JIT currently uses. Left-aligned puts the 56-bit value in bits 63..8.
+		constexpr uint64_t aluTestValue(const uint64_t _v)
+		{
+			return g_leftAlignedAlu ? (_v << 8) : _v;
+		}
+	}
+
 	static constexpr bool g_useDspMode = true;
 
 	JitUnittests::JitUnittests(bool _logging/* = true*/)
@@ -261,7 +272,7 @@ namespace dsp56k
 		{
 			RegGP r(*block);
 
-			block->asm_().mov(r, asmjit::Imm(m_checks[i]));
+			block->asm_().mov(r, asmjit::Imm(aluTestValue(m_checks[i])));
 			ops->ccr_u_update(r);
 			block->mem().mov(m_checks[i], block->regs().getSR(JitDspRegs::Read));
 		}
@@ -288,7 +299,7 @@ namespace dsp56k
 		{
 			RegGP r(*block);
 
-			block->asm_().mov(r, asmjit::Imm(m_checks[i]));
+			block->asm_().mov(r, asmjit::Imm(aluTestValue(m_checks[i])));
 			ops->ccr_e_update(r);
 			block->mem().mov(m_checks[i], block->regs().getSR(JitDspRegs::Read));
 
@@ -312,7 +323,7 @@ namespace dsp56k
 		{
 			RegGP r(*block);
 
-			block->asm_().mov(r, asmjit::Imm(m_checks[i]));
+			block->asm_().mov(r, asmjit::Imm(aluTestValue(m_checks[i])));
 			ops->ccr_n_update_by55(r);
 			block->mem().mov(m_checks[i], block->regs().getSR(JitDspRegs::Read));
 		}
@@ -337,7 +348,7 @@ namespace dsp56k
 		{
 			RegGP r(*block);
 
-			block->asm_().mov(r, asmjit::Imm(m_checks[i]));
+			block->asm_().mov(r, asmjit::Imm(aluTestValue(m_checks[i])));
 			block->asm_().clr(block->regs().getSR(JitDspRegs::Write));
 			ops->ccr_s_update(r);
 			block->mem().mov(m_checks[i], block->regs().getSR(JitDspRegs::Read));
