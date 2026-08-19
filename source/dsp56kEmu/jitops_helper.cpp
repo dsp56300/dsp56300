@@ -7,6 +7,29 @@ namespace dsp56k
 	void dspExecDefaultPreventInterrupt(DSP*);
 	void dspExecNop(DSP*);
 
+	void JitOps::aluClearLowByte(const JitRegGP& _reg) const
+	{
+		// Enforces the left-aligned invariant: the 8 LSBs must never carry information. This is the exact
+		// counterpart of the `shr alu,8` that the right-aligned code uses to discard shifted-out bits.
+#ifdef HAVE_ARM64
+		m_asm.and_(r64(_reg), r64(_reg), asmjit::Imm(~static_cast<uint64_t>(0xff)));
+#else
+		// 0xFFFFFF00 as a sign-extended imm32 is 0xFFFFFFFFFFFFFF00, so this is a single instruction
+		m_asm.and_(r64(_reg), asmjit::Imm(0xffffff00));
+#endif
+	}
+
+	void JitOps::aluToLeftAligned(const JitRegGP& _reg) const
+	{
+		m_asm.shl(r64(_reg), asmjit::Imm(8));
+	}
+
+	void JitOps::aluFromLeftAligned(const JitRegGP& _reg) const
+	{
+		// logical shift: yields the 56-bit value zero-extended, matching the TReg56 memory format
+		m_asm.shr(r64(_reg), asmjit::Imm(8));
+	}
+
 	void JitOps::signextend56to64(const JitReg64& _dst, const JitReg64& _src) const
 	{
 #ifdef HAVE_ARM64

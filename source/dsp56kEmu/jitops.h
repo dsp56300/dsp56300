@@ -286,6 +286,15 @@ namespace dsp56k
 
 		// helpers
 		void signextend56to64(const JitReg64& _dst, const JitReg64& _src) const;
+
+		// --- left-aligned ALU representation (see LEFT_ALIGNED_ALU.md) ---
+		// A left-aligned accumulator holds the 56-bit value in bits 63..8. INVARIANT: bits 7..0 are always
+		// zero. The DSP56300 has no such bits, so any information reaching them would be resolution the
+		// hardware never had. Every op that can shift a bit down into them must call aluClearLowByte().
+		void aluClearLowByte(const JitRegGP& _reg) const;
+		void aluToLeftAligned(const JitRegGP& _reg) const;   // 56-bit right-aligned -> left-aligned
+		void aluFromLeftAligned(const JitRegGP& _reg) const; // left-aligned -> 56-bit right-aligned
+
 		void signextend56to64(const JitReg64& _reg) const { return signextend56to64(_reg, _reg); }
 
 		void signextend48to64(const JitReg64& _reg) const;
