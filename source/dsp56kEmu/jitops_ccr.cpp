@@ -96,7 +96,7 @@ namespace dsp56k
 	{
 		{
 			const RegScratch signextended(m_block);
-			signextend56to64(signextended, _nonMaskedResult);
+			aluSignextendTo64(signextended, _nonMaskedResult);	// accumulator, not a raw 56-bit value
 			m_asm.cmp(signextended, _nonMaskedResult);
 		}
 
