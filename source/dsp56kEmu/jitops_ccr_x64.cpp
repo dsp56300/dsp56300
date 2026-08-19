@@ -276,7 +276,8 @@ namespace dsp56k
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
-		copyBitToCCR(_alu, 55, CCRB_N);
+		// Left-aligned accumulators put the 56-bit MSB at bit 63 rather than 55.
+		copyBitToCCR(_alu, g_leftAlignedAlu ? 63 : 55, CCRB_N);
 	}
 
 	void JitOps::ccr_n_update_by47(const JitReg64& _alu)

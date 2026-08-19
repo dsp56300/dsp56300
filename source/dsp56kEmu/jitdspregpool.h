@@ -24,7 +24,7 @@ namespace dsp56k
 	// JIT host registers store the 56-bit value in bits 63..8, with bits 7..0 always zero. The DspRegs
 	// memory format stays right-aligned, so the interpreter remains an independent oracle; conversion
 	// happens here at the pool's load/store choke point.
-	static constexpr bool g_leftAlignedAlu = false;
+	static constexpr bool g_leftAlignedAlu = true;
 
 	class DspValue;
 	class JitBlock;
