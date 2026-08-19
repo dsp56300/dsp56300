@@ -876,8 +876,13 @@ namespace dsp56k
 		if (abSrc != abDst)
 			m_dspRegs.getALU(d, abSrc);
 
-		m_asm.shr(d, asmjit::Imm(offset));
+		// the offset is relative to the 56-bit value, so fold the alignment into the shift and put the
+		// result back into the ALU representation afterwards
+		m_asm.shr(d, asmjit::Imm(offset + g_aluBitOffset));
 		m_asm.and_(d, asmjit::Imm(mask));
+
+		if constexpr (g_leftAlignedAlu)
+			m_asm.shl(d, asmjit::Imm(8));
 
 		ccr_clear(CCR_C);
 		ccr_clear(CCR_V);
