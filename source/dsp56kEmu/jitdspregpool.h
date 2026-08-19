@@ -390,6 +390,7 @@ namespace dsp56k
 
 		std::vector<PoolReg> m_availableTemps;
 		std::list<JitReg128> m_usedXmRegs;
+		size_t m_spillXmmCount = 0;
 
 		bool m_isParallelOp = false;
 		bool m_repMode = false;

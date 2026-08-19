@@ -34,6 +34,10 @@ namespace dsp56k
 
 	static constexpr auto regXMMTempA = JitReg128(1);
 
+	// ARM64 keeps 22 volatile spill slots, so withholding the 8 callee-saved ones only removes capacity that
+	// some blocks genuinely need - measured flat overall but a reproducible -4% on one workload. Keep them.
+	static constexpr bool g_spillToNonVolatileXmms = true;
+
 	static constexpr JitReg128 g_dspPoolXmms[] = {                                JitReg128(2) ,  JitReg128(3) , JitReg128(4) , JitReg128(5) , JitReg128(6) , JitReg128(7) ,
 												   JitReg128(16), JitReg128(17),  JitReg128(18),  JitReg128(19), JitReg128(20), JitReg128(21), JitReg128(22), JitReg128(23),
 												   JitReg128(24), JitReg128(25),  JitReg128(26),  JitReg128(27), JitReg128(28), JitReg128(29), JitReg128(30), JitReg128(31),
@@ -65,6 +69,12 @@ namespace dsp56k
 	
 	static constexpr auto regDspPtr = asmjit::x86::r8;
 #endif
+
+	// x86-64 has only 4 volatile spill slots, so blocks reach into the callee-saved XMMs readily and pay for it
+	// twice: once in prolog/epilog save-restore, and again in spill churn the pool would not otherwise do.
+	// Withholding them cuts spill moves by 29% and memory ops by 14%, worth +1.04% MIPS on Windows.
+	// No effect on SysV, where every pool XMM is already volatile.
+	static constexpr bool g_spillToNonVolatileXmms = false;
 
 	static constexpr auto regReturnVal = asmjit::x86::rax;
 
