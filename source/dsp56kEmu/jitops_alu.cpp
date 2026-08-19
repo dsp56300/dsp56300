@@ -205,22 +205,31 @@ namespace dsp56k
 
 		AluReg aluD(m_block, ab);
 
-		m_asm.sal(aluD, asmjit::Imm(8));
+		aluExtendTo64(aluD);
 		m_asm.sar(aluD, asmjit::Imm(1));
-		m_asm.shr(aluD, asmjit::Imm(8));
+		aluRestoreFrom64(aluD);		// discards the bit shifted out, left-aligned or not
 
 		{
 			AluRef aluS(m_block, ab ? 0 : 1, true, false);
 			m_asm.add(aluD, aluS.get());
+
+			// Left-aligned the sum can exceed 64 bits, so the 57th bit is the host carry rather than
+			// something a compare against the 56-bit maximum could still see. Capture it immediately:
+			// leaving the scope may emit a register release and clobber EFLAGS.
+			if constexpr (g_leftAlignedAlu)
+				ccr_update_ifCarry(CCRB_C);
 		}
 
+		if constexpr (!g_leftAlignedAlu)
 		{
-			const RegScratch aluMax(m_block);
-			m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
-			m_asm.cmp(aluD, aluMax);
-		}
+			{
+				const RegScratch aluMax(m_block);
+				m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
+				m_asm.cmp(aluD, aluMax);
+			}
 
-		ccr_update_ifGreater(CCRB_C);
+			ccr_update_ifGreater(CCRB_C);
+		}
 
 		m_dspRegs.mask56(aluD);
 
