@@ -52,6 +52,11 @@ namespace dsp56k
 		TWord getNonBranchChild() const { return m_nonBranchChild; }
 		size_t codeSize() const { return m_codeSize; }
 		const std::set<TWord>& getParents() const { return m_parents; }
+
+		// true if, after this block has run to a ret(), the PC in memory is correct - either because this block stored it,
+		// or because every exit transfers to a child that does. Used to drop dead PC stores, see JitBlock::emit
+		bool establishesPc() const { return m_establishesPc; }
+		void setEstablishesPc(const bool _v) { m_establishesPc = _v; }
 		void clearParents() { m_parents.clear(); }
 
 		TWord getPCFirst() const { return m_info.pc; }
@@ -93,6 +98,7 @@ namespace dsp56k
 		JitBlockInfo m_info;
 
 		std::set<TWord> m_parents;
+		bool m_establishesPc = false;
 		bool m_generating = false;
 		std::vector<InstructionProfilingInfo> m_profilingInfo;
 	};

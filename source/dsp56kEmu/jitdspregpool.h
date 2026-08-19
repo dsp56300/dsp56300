@@ -95,6 +95,9 @@ namespace dsp56k
 		void releaseTemp(PoolReg _reg);
 
 		bool isWritten(PoolReg _reg) const		{ return flagTest(m_writtenDspRegs, _reg); }
+
+		// drops a pending write-back without emitting the store. Only valid if the value is provably dead in memory
+		void discardWritten(const PoolReg _reg)	{ clearWritten(_reg); }
 		bool isLocked(PoolReg _reg) const		{ return flagTest(m_lockedGps, _reg); }
 
 		bool move(PoolReg _dst, PoolReg _src);

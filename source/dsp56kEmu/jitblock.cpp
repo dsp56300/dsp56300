@@ -672,6 +672,24 @@ namespace dsp56k
 			}
 		}
 
+		// The PC in memory is only ever observed after returning to C++. If every exit of this block transfers to a
+		// child, and those children leave a correct PC behind, our own store is dead and can be dropped.
+		// The conditional-child-without-nonBranchChild case falls through to a ret() below, so it does not qualify.
+		// Children are always fully generated blocks (circular references yield nullptr), so this induction terminates,
+		// and a parent is invalidated whenever a child is, so the flag cannot go stale.
+		const auto exitsOnlyToChildren = child ? (!childIsConditional || nonBranchChild != nullptr) : (nonBranchChild != nullptr);
+
+		const auto childrenEstablishPc = exitsOnlyToChildren
+			&& (!child || child->establishesPc())
+			&& (!nonBranchChild || nonBranchChild->establishesPc());
+
+		const auto pcWritten = m_dspRegPool.isWritten(PoolReg::DspPC);
+
+		if(pcWritten && childrenEstablishPc)
+			m_dspRegPool.discardWritten(PoolReg::DspPC);
+
+		_rt.setEstablishesPc(pcWritten || childrenEstablishPc);
+
 		m_dspRegPool.releaseAll();
 
 		pm.end();
