@@ -294,6 +294,10 @@ namespace dsp56k
 		void aluSignextendTo64(const JitReg64& _dst, const JitReg64& _src) const;
 		void aluSignextendTo64(const JitReg64& _reg) const { aluSignextendTo64(_reg, _reg); }
 		void aluClearLowByte(const JitRegGP& _reg) const;
+		// paired: make an accumulator usable as a full 64-bit signed value, then put it back. Both are
+		// no-ops when left-aligned, except that the restore keeps enforcing the low-byte invariant.
+		void aluExtendTo64(const JitRegGP& _reg) const;
+		void aluRestoreFrom64(const JitRegGP& _reg) const;
 		void aluToLeftAligned(const JitRegGP& _reg) const;   // 56-bit right-aligned -> left-aligned
 		void aluFromLeftAligned(const JitRegGP& _reg) const; // left-aligned -> 56-bit right-aligned
 

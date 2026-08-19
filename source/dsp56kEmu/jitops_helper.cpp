@@ -22,6 +22,20 @@ namespace dsp56k
 		signextend56to64(_dst, _src);
 	}
 
+	void JitOps::aluExtendTo64(const JitRegGP& _reg) const
+	{
+		if constexpr (!g_leftAlignedAlu)
+			m_asm.shl(r64(_reg), asmjit::Imm(8));
+	}
+
+	void JitOps::aluRestoreFrom64(const JitRegGP& _reg) const
+	{
+		if constexpr (g_leftAlignedAlu)
+			aluClearLowByte(_reg);	// the right-aligned form discards the low bits via shr; keep discarding them
+		else
+			m_asm.shr(r64(_reg), asmjit::Imm(8));
+	}
+
 	void JitOps::aluClearLowByte(const JitRegGP& _reg) const
 	{
 		// Enforces the left-aligned invariant: the 8 LSBs must never carry information. This is the exact

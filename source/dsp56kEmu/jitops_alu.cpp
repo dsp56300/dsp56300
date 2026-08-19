@@ -25,11 +25,11 @@ namespace dsp56k
 
 		AluRef ra(m_block, ab);							// Load ALU
 
-		m_asm.shl(ra, asmjit::Imm(8));				// extend to 64 bits
+		aluExtendTo64(ra);				// extend to 64 bits
 
 		alu_abs(ra);
 
-		m_asm.shr(ra, asmjit::Imm(8));
+		aluRestoreFrom64(ra);
 
 	//	sr_v_update(d);
 	//	sr_l_update_by_v();
@@ -40,8 +40,25 @@ namespace dsp56k
 	{
 		AluRef alu(m_block, _ab);
 
-		m_asm.add(alu.get(), _v);
-		
+		if constexpr (g_leftAlignedAlu)
+		{
+			// Left-aligned: the carry out of the 56-bit accumulator IS the host carry flag. The batch
+			// update clobbers EFLAGS, so it has to be emitted before the operation rather than after.
+			if(!m_disableCCRUpdates)
+			{
+				CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+				m_asm.add(alu, _v);
+				ccr_update_ifCarry(CCRB_C);
+			}
+			else
+			{
+				m_asm.add(alu, _v);
+			}
+		}
+		else
+		{
+		m_asm.add(alu, _v);
+
 		if(!m_disableCCRUpdates)
 		{
 			CcrBatchUpdate bu(*this, CCR_C, CCR_V);
@@ -49,6 +66,7 @@ namespace dsp56k
 			copyBitToCCR(alu, 56, CCRB_C);
 
 //			ccr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
+		}
 		}
 
 		m_dspRegs.mask56(alu);
@@ -68,6 +86,23 @@ namespace dsp56k
 	{
 		AluRef alu(m_block, _ab);
 
+		if constexpr (g_leftAlignedAlu)
+		{
+			// Left-aligned: the carry out of the 56-bit accumulator IS the host carry flag. The batch
+			// update clobbers EFLAGS, so it has to be emitted before the operation rather than after.
+			if(!m_disableCCRUpdates)
+			{
+				CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+				m_asm.sub(alu, _v);
+				ccr_update_ifCarry(CCRB_C);
+			}
+			else
+			{
+				m_asm.sub(alu, _v);
+			}
+		}
+		else
+		{
 		m_asm.sub(alu, _v);
 
 		if(!m_disableCCRUpdates)
@@ -77,6 +112,7 @@ namespace dsp56k
 			copyBitToCCR(alu, 56, CCRB_C);
 
 //			ccr_clear(CCR_V); batch cleared
+		}
 		}
 
 		m_dspRegs.mask56(alu);
