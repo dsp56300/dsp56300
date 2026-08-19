@@ -20,7 +20,8 @@ namespace dsp56k
 			m_asm.rol(_dst, _src, 40);
 
 		m_asm.sar(_dst, asmjit::Imm(8));
-		m_asm.shr(_dst, asmjit::Imm(8));
+		if constexpr (!g_leftAlignedAlu)
+			m_asm.shr(_dst, asmjit::Imm(8));	// left-aligned wants the value left at bits 55..32
 	}
 
 	void JitOps::getALU0(DspValue& _dst, uint32_t _aluIndex) const

@@ -130,7 +130,7 @@ namespace dsp56k
 
 	void JitOps::unsignedImmediateToAlu(const JitReg64& _r, const uint8_t _i) const
 	{
-		m_asm.mov(_r, asmjit::Imm(static_cast<uint32_t>(_i) << 24));
+		m_asm.mov(_r, asmjit::Imm(static_cast<uint64_t>(_i) << (24 + (g_leftAlignedAlu ? 8 : 0))));
 	}
 
 	void JitOps::op_Add_SD(TWord op)

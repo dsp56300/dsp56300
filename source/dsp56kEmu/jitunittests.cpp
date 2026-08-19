@@ -204,10 +204,11 @@ namespace dsp56k
 
 	void JitUnittests::conversion_verify()
 	{
-		verify(m_checks[0] == 0x0000112233000000);
-		verify(m_checks[1] == 0x00ffffeedd000000);
-		verify(m_checks[2] == 0x00fffedcba000000);
-		verify(m_checks[3] == 0x0000445566000000);
+		// XY*to56 feeds ALU arithmetic, so the result follows the ALU representation
+		verify(m_checks[0] == aluTestValue(0x0000112233000000));
+		verify(m_checks[1] == aluTestValue(0x00ffffeedd000000));
+		verify(m_checks[2] == aluTestValue(0x00fffedcba000000));
+		verify(m_checks[3] == aluTestValue(0x0000445566000000));
 	}
 
 	void JitUnittests::signextend_build()

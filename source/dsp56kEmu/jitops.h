@@ -1,5 +1,6 @@
 #pragma once
 
+#include "jitdspregpool.h"
 #include "jitblock.h"
 #include "jitdspregs.h"
 #include "jitdspvalue.h"
@@ -349,7 +350,9 @@ namespace dsp56k
 #endif
 		constexpr static uint64_t signed24To56(const TWord _src)
 		{
-			return static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 8ull) >> 8ull;
+			const auto v = static_cast<uint64_t>((static_cast<int64_t>(_src) << 40ull) >> 8ull);
+			// left-aligned keeps the value at bits 55..32 instead of shifting it back down
+			return g_leftAlignedAlu ? v : (v >> 8ull);
 		}
 
 		void callDSPFunc(void(* _func)(DSP*, TWord), TWord _arg) const;
