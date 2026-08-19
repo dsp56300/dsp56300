@@ -201,12 +201,17 @@ namespace dsp56k
 
 		if(mode)
 		{
-			uint64_t rounder = 0x800000;
+			// the rounding position is bit 23 of the 56-bit value, which moves up with the representation
+			uint64_t rounder = 0x800000ull << g_aluBitOffset;
 
 			if(mode->testSR(SRB_S1))	rounder >>= 1;
 			if(mode->testSR(SRB_S0))	rounder <<= 1;
 
-			m_asm.add(d, asmjit::Imm(rounder));
+			{
+				const RegGP rounderReg(m_block);
+				m_asm.mov(r64(rounderReg), asmjit::Imm(rounder));
+				m_asm.add(d, r64(rounderReg));
+			}
 			rounder <<= 1;
 
 			// mask = all the bits to the right of, and including the rounding position
@@ -223,9 +228,13 @@ namespace dsp56k
 
 				{
 					const RegScratch aluIfAndWithMaskIsZero(m_block);
+					const RegGP maskReg(m_block);
 					m_asm.mov(aluIfAndWithMaskIsZero, d);
-					m_asm.and_(aluIfAndWithMaskIsZero, asmjit::Imm(rounder));
-					m_asm.test(d, asmjit::Imm(mask));
+					// left-aligned these no longer fit a sign-extendable imm32, so materialise them
+					m_asm.mov(r64(maskReg), asmjit::Imm(rounder));
+					m_asm.and_(aluIfAndWithMaskIsZero, r64(maskReg));
+					m_asm.mov(r64(maskReg), asmjit::Imm(mask));
+					m_asm.test(d, r64(maskReg));
 					m_asm.cmovz(d, aluIfAndWithMaskIsZero.get());
 				}
 			}
@@ -233,13 +242,17 @@ namespace dsp56k
 			// all bits to the right of and including the rounding position are cleared.
 			// _alu.var&=~mask;
 			mask = ~mask;
-			m_asm.and_(d, asmjit::Imm(mask));
+			{
+				const RegGP maskReg(m_block);
+				m_asm.mov(r64(maskReg), asmjit::Imm(mask));
+				m_asm.and_(d, r64(maskReg));
+			}
 		}
 		else
 		{
 			const RegGP rounder(m_block);
 
-			m_asm.mov(r32(rounder), asmjit::Imm(0x800000));
+			m_asm.mov(r64(rounder), asmjit::Imm(0x800000ull << g_aluBitOffset));
 
 			const ShiftReg shifter(m_block);
 			sr_getBitValue(shifter, SRB_S1);
