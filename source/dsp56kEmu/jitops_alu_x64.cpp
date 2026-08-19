@@ -65,8 +65,9 @@ namespace dsp56k
 		if (_abDst != _abSrc)
 			m_dspRegs.getALU(alu.get(), _abSrc);
 
-		// we want to hit the 64 bit boundary to make use of the native carry flag so we pre-shift by 8 bit (56 => 64)
-		m_asm.sal(alu, asmjit::Imm(8));
+		// we want to hit the 64 bit boundary to make use of the native carry flag, which a left-aligned
+		// accumulator already does - otherwise pre-shift by 8 bit (56 => 64)
+		aluExtendTo64(alu);
 
 		const RegGP oldAlu(m_block);
 		m_asm.mov(oldAlu, alu);
@@ -94,7 +95,7 @@ namespace dsp56k
 
 		ccr_update_ifNotZero(CCRB_V);
 		
-		m_asm.shr(alu, asmjit::Imm(8));				// correction for our pre-shift by 8
+		aluRestoreFrom64(alu);						// correction for the pre-shift, and keeps the low byte clear
 
 		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
@@ -107,12 +108,13 @@ namespace dsp56k
 
 		CcrBatchUpdate bu(*this, CCR_C, CCR_V);
 
-		m_asm.sal(alu, asmjit::Imm(8));
+		aluExtendTo64(alu);
 		if(_v)
 			m_asm.sar(alu, _v->get().r8());
 		else
 			m_asm.sar(alu, asmjit::Imm(_immediate));
-		m_asm.shr(alu, asmjit::Imm(8));
+		// discards the bits shifted below the accumulator - the hardware has no resolution there
+		aluRestoreFrom64(alu);
 
 		ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
 		
