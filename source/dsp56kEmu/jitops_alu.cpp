@@ -369,10 +369,13 @@ namespace dsp56k
 	{
 		AluReg d(m_block, ab, true);
 
-		// the accumulator is already left-aligned when g_leftAlignedAlu is on; _v is a plain 56-bit value
+		// Both operands already carry the ALU representation when left-aligned: d is an accumulator and
+		// _v comes from decode_JJJ_read_56, which produces ALU-aligned values.
 		if constexpr (!g_leftAlignedAlu)
+		{
 			m_asm.sal(d.get(), asmjit::Imm(8));
-		m_asm.sal(_v, asmjit::Imm(8));
+			m_asm.sal(_v, asmjit::Imm(8));
+		}
 
 		if (_magnitude)
 		{
@@ -394,8 +397,10 @@ namespace dsp56k
 		}
 
 		if constexpr (!g_leftAlignedAlu)
+		{
 			m_asm.shr(d, asmjit::Imm(8));
-		m_asm.shr(_v, asmjit::Imm(8));
+			m_asm.shr(_v, asmjit::Imm(8));
+		}
 
 		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
