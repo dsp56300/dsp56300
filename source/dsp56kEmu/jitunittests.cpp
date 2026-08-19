@@ -504,15 +504,15 @@ namespace dsp56k
 	{
 		const RegGP temp(*block);
 
-		block->asm_().mov(temp, asmjit::Imm(0x00ff700000555555));
+		block->asm_().mov(temp, asmjit::Imm(aluTestValue(0x00ff700000555555)));
 		ops->transferSaturation24(temp, temp);
 		block->mem().mov(m_checks[0], temp);
 
-		block->asm_().mov(temp, asmjit::Imm(0x00008abbcc555555));
+		block->asm_().mov(temp, asmjit::Imm(aluTestValue(0x00008abbcc555555)));
 		ops->transferSaturation24(temp, temp);
 		block->mem().mov(m_checks[1], temp);
 
-		block->asm_().mov(temp, asmjit::Imm(0x0000334455667788));
+		block->asm_().mov(temp, asmjit::Imm(aluTestValue(0x0000334455667788)));
 		ops->transferSaturation24(temp, temp);
 		block->mem().mov(m_checks[2], temp);
 	}
@@ -530,19 +530,19 @@ namespace dsp56k
 		{
 			const RegGP temp(*block);
 
-			block->asm_().mov(temp, asmjit::Imm(0x00ff700000555555));
+			block->asm_().mov(temp, asmjit::Imm(aluTestValue(0x00ff700000555555)));
 			ops->transferSaturation48(temp, temp);
 			block->mem().mov(m_checks[0], temp);
 
-			block->asm_().mov(temp, asmjit::Imm(0x00008abbcc555555));
+			block->asm_().mov(temp, asmjit::Imm(aluTestValue(0x00008abbcc555555)));
 			ops->transferSaturation48(temp, temp);
 			block->mem().mov(m_checks[1], temp);
 
-			block->asm_().mov(temp, asmjit::Imm(0x0000334455667788));
+			block->asm_().mov(temp, asmjit::Imm(aluTestValue(0x0000334455667788)));
 			ops->transferSaturation48(temp, temp);
 			block->mem().mov(m_checks[2], temp);
 
-			block->asm_().mov(temp, asmjit::Imm(0x00fffefefefefefe));
+			block->asm_().mov(temp, asmjit::Imm(aluTestValue(0x00fffefefefefefe)));
 			ops->transferSaturation48(temp, temp);
 			block->mem().mov(m_checks[3], temp);
 		}, [&]()

@@ -1,3 +1,4 @@
+#include "jitdspregpool.h"
 #include "jittypes.h"
 
 #ifdef HAVE_X86_64
@@ -8,6 +9,9 @@
 
 namespace dsp56k
 {
+	// accumulator bit positions move up by 8 when the ALU is stored left-aligned
+	static constexpr int g_aluBitOffset = g_leftAlignedAlu ? 8 : 0;
+
 	void JitOps::signed24To56(const JitReg64& _dst, const JitReg64& _src) const
 	{
 		if(_dst == _src)
@@ -27,6 +31,8 @@ namespace dsp56k
 			assert(_dst.getBitCount() == 24);
 
 		m_dspRegs.getALU(_dst.get(), _aluIndex);
+		if constexpr (g_leftAlignedAlu)
+			m_asm.shr(r64(_dst.get()), asmjit::Imm(8));	// a0 sits at bits 31..8 when left-aligned
 		m_asm.and_(r32(_dst.get()), asmjit::Imm(0xffffff));
 	}
 
@@ -37,7 +43,7 @@ namespace dsp56k
 		else
 			assert(_dst.getBitCount() == 24);
 
-		m_asm.ror(r64(_dst), r64(m_dspRegs.getALU(_aluIndex)), 24);
+		m_asm.ror(r64(_dst), r64(m_dspRegs.getALU(_aluIndex)), 24 + g_aluBitOffset);
 		m_asm.and_(r32(_dst.get()), asmjit::Imm(0xffffff));
 	}
 
@@ -220,7 +226,7 @@ namespace dsp56k
 
 		if(mode)
 		{
-			int shift = 24;
+			int shift = 24 + g_aluBitOffset;
 			if(mode->testSR(SRB_S1))
 				--shift;
 			if(mode->testSR(SRB_S0))
@@ -239,7 +245,7 @@ namespace dsp56k
 			m_asm.sar(_dst, s0s1.get().r8());
 
 			// non-limited default
-			m_asm.sar(_dst, asmjit::Imm(24));
+			m_asm.sar(_dst, asmjit::Imm(24 + g_aluBitOffset));
 		}
 
 		{
@@ -317,7 +323,12 @@ namespace dsp56k
 		}
 
 		{
-			signextend56to64(_dst);
+			// left-aligned: an arithmetic shift down by 8 yields exactly the sign-extended 56-bit value that
+			// signextend56to64() produces for the right-aligned form, so the limiting below is unchanged
+			if constexpr (g_leftAlignedAlu)
+				m_asm.sar(_dst, asmjit::Imm(8));
+			else
+				signextend56to64(_dst);
 
 			const RegGP tester(m_block);
 			m_asm.mov(r64(tester), r64(_dst));

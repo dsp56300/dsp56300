@@ -1,3 +1,4 @@
+#include "jitdspregpool.h"
 #include "jitconfig.h"
 #include "jitops.h"
 #include "dsp.h"
@@ -387,7 +388,10 @@ namespace dsp56k
 		const auto temp = r64(_dst.get());
 
 		AluRef alu(m_block, _aluIndex, true, false);
-		m_asm.rol(temp, alu, 8);
+		if constexpr (g_leftAlignedAlu)
+			m_asm.mov(temp, r64(alu));	// a2 already sits at the top when left-aligned
+		else
+			m_asm.rol(temp, alu, 8);
 		m_asm.sar(temp, asmjit::Imm(56));
 		m_asm.and_(temp, asmjit::Imm(0xffffff));
 #endif
