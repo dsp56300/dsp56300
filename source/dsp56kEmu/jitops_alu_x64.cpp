@@ -404,6 +404,9 @@ namespace dsp56k
 		// We can only count leading zeroes, so we invert the source if the MSB is a 1
 		m_asm.mov(t, shifted);
 		m_asm.not_(t);
+		// 'not' does not touch the flags, so set them explicitly. Do not rely on whatever ran before:
+		// right-aligned this used to be the 'sal' above, left-aligned there is no shift left to do.
+		m_asm.test_(shifted);
 		m_asm.cmov(asmjit::x86::CondCode::kNotSign, t, shifted);
 
 		// we want to prevent to have a completely empty register as the BSR result will be UB.
@@ -684,7 +687,7 @@ namespace dsp56k
 		AluRef d(m_block, ab ? 1 : 0, true, true);
 
 		const RegGP oldBit55(m_block);
-		m_asm.copyBitToReg(oldBit55, d, 55);
+		m_asm.copyBitToReg(oldBit55, d, 55 + g_aluBitOffset);
 
 		aluSignextendTo64(d);
 		m_asm.shl(d, asmjit::Imm(1));
@@ -699,7 +702,7 @@ namespace dsp56k
 		ccr_dirty(ab ? 1 : 0, d, static_cast<CCRMask>(CCR_E | CCR_U | CCR_N | CCR_Z));
 
 		const RegGP newBit55(m_block);
-		m_asm.copyBitToReg(newBit55, d, 55);
+		m_asm.copyBitToReg(newBit55, d, 55 + g_aluBitOffset);
 
 		m_asm.xor_(oldBit55.get().r8(), newBit55.get().r8());
 		copyBitToCCR(oldBit55, 0, CCRB_V);
