@@ -470,8 +470,11 @@ namespace dsp56k
 			const TWord bitA = 46 + offset;
 			const TWord bitB = 45 + offset;
 
-			if	(	(bitvalue(reg.a,bitA) != bitvalue(reg.a,bitB))
-				|	(bitvalue(reg.b,bitA) != bitvalue(reg.b,bitB)) )
+			const TReg56 a = aluA();
+			const TReg56 b = aluB();
+
+			if	(	(bitvalue(a,bitA) != bitvalue(a,bitB))
+				|	(bitvalue(b,bitA) != bitvalue(b,bitB)) )
 				sr_set( CCR_S );
 		}
 
@@ -494,7 +497,7 @@ namespace dsp56k
 
 			const uint32_t mask = (0x3fe << sr_val_noCache(SRB_S0) >> sr_val_noCache(SRB_S1)) & 0x3ff;
 
-			const uint32_t d2 = _ab.var >> 46;
+			const uint32_t d2 = static_cast<uint32_t>(_ab.var >> (46 + g_aluShift));
 
 			const uint32_t m2 = d2 & mask;
 
@@ -507,8 +510,8 @@ namespace dsp56k
 		{
 			const auto sOffset = sr_val_noCache(SRB_S0) - sr_val_noCache(SRB_S1);
 
-			const auto msb = 47 + sOffset;
-			const auto lsb = 46 + sOffset;
+			const auto msb = 47 + g_aluShift + sOffset;
+			const auto lsb = 46 + g_aluShift + sOffset;
 
 			sr_toggle( CCRB_U, bitvalue(_ab,msb) == bitvalue(_ab,lsb) );
 		}
@@ -517,7 +520,7 @@ namespace dsp56k
 		{
 			// Negative
 			// Set if the MSB of the result is set; otherwise, this bit is cleared.	
-			sr_toggle( CCRB_N, bitvalue<55>(_ab) );
+			sr_toggle( CCRB_N, bitvalue<55 + g_aluShift>(_ab) );
 		}
 
 		void sr_z_update( const TReg56& _ab )
@@ -529,7 +532,7 @@ namespace dsp56k
 		template<typename T>
 		void	sr_c_update_arithmetic( const T& _old, const T& _new )
 		{
-			sr_toggle( CCRB_C, bitvalue<55>(_old) != bitvalue<55>(_new) );
+			sr_toggle( CCRB_C, bitvalue<55 + g_aluShift>(_old) != bitvalue<55 + g_aluShift>(_new) );
 		}
 
 		void sr_l_update_by_v()
@@ -544,12 +547,12 @@ namespace dsp56k
 		{
 			if( sr_test_noCache(SR_SM) )
 			{
-				const unsigned int test=(_result.var>>47)&0x13;
+				const unsigned int test=static_cast<unsigned int>(_result.var>>(47 + g_aluShift))&0x13;
 				if (!(test ^ 0x13) || !(test)) sr_set(CCR_V);
 			}
 			else
 			{
-				sr_toggle( CCR_V, ((_notLimitedResult>>48)^(_result.var>>48))&255);
+				sr_toggle( CCR_V, ((_notLimitedResult>>(48 + g_aluShift))^(_result.var>>(48 + g_aluShift)))&255);
 			}
 		}
 
@@ -606,21 +609,48 @@ namespace dsp56k
 		void	y0				(const TReg8& _val)					{ y0(TReg24(_val.toWord()<<16)); }
 		void	y1				(const TReg8& _val)					{ y1(TReg24(_val.toWord()<<16)); }
 
-		TReg24	a0				() const							{ return loword(reg.a); }
-		TReg24	a1				() const							{ return hiword(reg.a); }
-		TReg8	a2				() const							{ return extword(reg.a); }
+		// a/b are stored left-aligned in memory (see DspRegs::a). These accessors are the ONLY
+		// places that convert - every other user sees the usual right-aligned 56 bit value.
+		static constexpr int g_aluShift = 8;
 
-		void	a0				(const TReg24& _val)				{ loword(reg.a,_val); }
-		void	a1				(const TReg24& _val)				{ hiword(reg.a,_val); }
-		void	a2				(const TReg8& _val)					{ extword(reg.a,_val); }
+		TReg56	aluA			() const							{ return TReg56(static_cast<TReg56::MyType>((reg.a.var >> g_aluShift) & TReg56::bitMask)); }
+		TReg56	aluB			() const							{ return TReg56(static_cast<TReg56::MyType>((reg.b.var >> g_aluShift) & TReg56::bitMask)); }
+		TReg56	getALU			(const bool _b) const				{ return _b ? aluB() : aluA(); }
 
-		TReg24	b0				() const							{ return loword(reg.b); }
-		TReg24	b1				() const							{ return hiword(reg.b); }
-		TReg8	b2				() const							{ return extword(reg.b); }
+		void	setALU			(const bool _b, const TReg56& _v)	{ (_b ? reg.b : reg.a).var = _v.var << g_aluShift; }
 
-		void	b0				(const TReg24& _val)				{ loword(reg.b,_val); }
-		void	b1				(const TReg24& _val)				{ hiword(reg.b,_val); }
-		void	b2				(const TReg8& _val)					{ extword(reg.b,_val); }
+		// Left-aligned domain helpers. The accumulator occupies bits 63..8, so the 56-bit mask and the
+		// sign extension that the right-aligned form needed both change shape:
+		// - masking means clearing the low byte (THE INVARIANT), not truncating to 56 bits
+		// - the value is already sign-correct across all 64 bits, so no sign extension is needed
+		static void		aluMask			(TReg56& _v)					{ _v.var &= ~static_cast<TReg56::MyType>(0xff); }
+		static TReg56::MyType aluSignextend(const TReg56& _v)		{ return _v.var; }
+
+		// builds an ALU operand in the left-aligned domain from a right-aligned source
+		template<typename T> static TReg56 toAluOperand(const T& _src)	{ TReg56 r; convert(r, _src); r.var <<= g_aluShift; return r; }
+
+		// sub-register access straight on the left-aligned register: no round trip through the
+		// right-aligned form, the field positions simply move up by g_aluShift
+		static TReg24	aluField24	(const TReg56& _r, const int _pos)	{ return TReg24(static_cast<int32_t>((_r.var >> (_pos + g_aluShift)) & 0xffffff)); }
+		static void		aluField24	(TReg56& _r, const int _pos, const TReg24& _v)	{ _r.var = (_r.var & ~(TReg56::MyType(0xffffff) << (_pos + g_aluShift))) | (TReg56::MyType(_v.var & 0xffffff) << (_pos + g_aluShift)); }
+		static TReg8	aluField8	(const TReg56& _r)					{ return TReg8(static_cast<uint8_t>((_r.var >> (48 + g_aluShift)) & 0xff)); }
+		static void		aluField8	(TReg56& _r, const TReg8& _v)		{ _r.var = (_r.var & ~(TReg56::MyType(0xff) << (48 + g_aluShift))) | (TReg56::MyType(_v.var & 0xff) << (48 + g_aluShift)); }
+
+		TReg24	a0				() const							{ return aluField24(reg.a, 0); }
+		TReg24	a1				() const							{ return aluField24(reg.a, 24); }
+		TReg8	a2				() const							{ return aluField8(reg.a); }
+
+		void	a0				(const TReg24& _val)				{ aluField24(reg.a, 0, _val); }
+		void	a1				(const TReg24& _val)				{ aluField24(reg.a, 24, _val); }
+		void	a2				(const TReg8& _val)					{ aluField8(reg.a, _val); }
+
+		TReg24	b0				() const							{ return aluField24(reg.b, 0); }
+		TReg24	b1				() const							{ return aluField24(reg.b, 24); }
+		TReg8	b2				() const							{ return aluField8(reg.b); }
+
+		void	b0				(const TReg24& _val)				{ aluField24(reg.b, 0, _val); }
+		void	b1				(const TReg24& _val)				{ aluField24(reg.b, 24, _val); }
+		void	b2				(const TReg8& _val)					{ aluField8(reg.b, _val); }
 
 		void	iprc			(const TWord _value)				{ memWritePeriph(MemArea_X, XIO_IPRC, _value); }
 		void	iprp			(const TWord _value)				{ memWritePeriph(MemArea_X, XIO_IPRP, _value); }
@@ -656,20 +686,21 @@ namespace dsp56k
 
 		void limit_transfer( int& _dst, const TReg56& _src )
 		{
-			const int64_t& test = _src.signextend<int64_t>();
+			// left-aligned the value is already sign-correct in 64 bits, no sign extension needed
+			const int64_t test = _src.var;
 
-			if( test < -140737488355328 )			// ff 800000 000000
+			if( test < (-140737488355328ll << g_aluShift) )	// ff 800000 000000
 			{
 				sr_set( CCR_L );
 				_dst = 0x800000;
 			}
-			else if( test > 140737471578112 )		// 00 7fffff 000000
+			else if( test > (140737471578112ll << g_aluShift) )	// 00 7fffff 000000
 			{
 				sr_set( CCR_L );
 				_dst = 0x7FFFFF;
 			}
 			else
-				_dst = static_cast<int>(_src.var >> 24) & 0xffffff;
+				_dst = static_cast<int>(_src.var >> (24 + g_aluShift)) & 0xffffff;
 			assert( (_dst & 0xff000000) == 0 );
 		}
 
@@ -688,7 +719,7 @@ namespace dsp56k
 			if( !sr_test_noCache(SR_SM) )
 				return;
 
-			const auto v = (bitvalue( _dst, 55 ).bit << 2) | (bitvalue( _dst, 48 ).bit << 1) | bitvalue(_dst,47).bit;
+			const auto v = (bitvalue( _dst, 55 + g_aluShift ).bit << 2) | (bitvalue( _dst, 48 + g_aluShift ).bit << 1) | bitvalue(_dst, 47 + g_aluShift).bit;
 
 			switch( v )
 			{
@@ -696,10 +727,10 @@ namespace dsp56k
 			case 7:	/* do nothing */								break;
 			case 1:
 			case 2:
-			case 3:	_dst.var = 0x007fffffffffff;	sr_set(CCR_V);	break;
+			case 3:	_dst.var = 0x007fffffffffffll << g_aluShift;	sr_set(CCR_V);	break;
 			case 4:
 			case 5:
-			case 6: _dst.var = 0xff800000000000;	sr_set(CCR_V);	break;
+			case 6: _dst.var = static_cast<TReg56::MyType>(0xff800000000000ull << g_aluShift);	sr_set(CCR_V);	break;
 			default: assert( 0 && "impossible" );
 			}
 		}
@@ -714,11 +745,11 @@ namespace dsp56k
 		void	com				( TReg8 _val )						{ byte0(reg.omr,_val); }
 		void	eom				( TReg8 _val )						{ byte1(reg.omr,_val); }
 
-		void	setA			( const TReg24& _src )				{ convert( reg.a, _src ); }
-		void	setB			( const TReg24& _src )				{ convert( reg.b, _src ); }
+		void	setA			( const TReg24& _src )				{ TReg56 t; convert( t, _src ); setALU(false, t); }
+		void	setB			( const TReg24& _src )				{ TReg56 t; convert( t, _src ); setALU(true, t); }
 
-		void	setA			( const TReg56& _src )				{ reg.a = _src; }
-		void	setB			( const TReg56& _src )				{ reg.b = _src; }
+		void	setA			( const TReg56& _src )				{ setALU(false, _src); }
+		void	setB			( const TReg56& _src )				{ setALU(true, _src); }
 
 		void 	set_m			(int which, TWord val);
 		

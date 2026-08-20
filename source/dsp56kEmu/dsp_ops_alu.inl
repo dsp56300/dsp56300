@@ -16,12 +16,12 @@ namespace dsp56k
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
-		d.var &= (TInt64(_val)<<24) | 0xFF000000FFFFFF;
+		d.var &= (TInt64(_val)<<(24 + g_aluShift)) | static_cast<TInt64>(0xFF000000FFFFFF00ull);
 
 		// S L E U N Z V C
 		// v - - - * * * -
-		sr_toggle( CCR_N, bittest( d, 47 ) );
-		sr_toggle( CCR_Z, (d.var & 0xffffff000000) == 0 );
+		sr_toggle( CCR_N, bittest( d, 47 + g_aluShift ) );
+		sr_toggle( CCR_Z, (d.var & (0xffffff000000ull << g_aluShift)) == 0 );
 		sr_clear( CCR_V );
 	}
 
@@ -33,12 +33,12 @@ namespace dsp56k
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
-		d.var |= (TInt64(_val)<<24);
+		d.var |= (TInt64(_val)<<(24 + g_aluShift));
 
 		// S L E U N Z V C
 		// v - - - * * * -
-		sr_toggle( CCR_N, bittest( d, 47 ) );
-		sr_toggle( CCR_Z, (d.var & 0xffffff000000) == 0 );
+		sr_toggle( CCR_N, bittest( d, 47 + g_aluShift ) );
+		sr_toggle( CCR_Z, (d.var & (0xffffff000000ull << g_aluShift)) == 0 );
 		sr_clear( CCR_V );
 	}
 
@@ -49,12 +49,12 @@ namespace dsp56k
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
-		d.var ^= (TInt64(_val)<<24);
+		d.var ^= (TInt64(_val)<<(24 + g_aluShift));
 
 		// S L E U N Z V C
 		// v - - - * * * -
-		sr_toggle( CCR_N, bittest( d, 47 ) );
-		sr_toggle( CCR_Z, (d.var & 0xffffff000000) == 0 );
+		sr_toggle( CCR_N, bittest( d, 47 + g_aluShift ) );
+		sr_toggle( CCR_Z, (d.var & (0xffffff000000ull << g_aluShift)) == 0 );
 		sr_clear( CCR_V );
 	}
 
@@ -71,9 +71,9 @@ namespace dsp56k
 		const uint64_t res = d64 + _val.var;
 
 		d.var = res;
-		d.doMasking();
+		aluMask(d);
 
-		const auto carry = int(res > g_alu_max_56_u);
+		const auto carry = int(res < d64);	// carry out of the accumulator = 64-bit unsigned overflow
 
 		// S L E U N Z V C
 
@@ -107,21 +107,21 @@ namespace dsp56k
 
 		if( _magnitude )
 		{
-			const auto d64Signed = d.signextend<int64_t>();
+			const auto d64Signed = aluSignextend(d);
 			if(d64Signed < 0)
 				d64 = -d64Signed;
 
-			const auto valSigned = _val.signextend<int64_t>();
+			const auto valSigned = aluSignextend(_val);
 			if(valSigned < 0)
 				val = -valSigned;
 		}
 
 		const auto res = static_cast<uint64_t>(d64) - static_cast<uint64_t>(val);
 
-		const auto carry = res > 0xffffffffffffff;
+		const auto carry = val > d64;	// borrow out of the accumulator
 
 		d.var = res;
-		d.doMasking();
+		aluMask(d);
 
 		sr_z_update(d);
 		sr_clear(CCR_V);		// as cmp is identical to sub, the same for the V bit applies (see sub for details)
@@ -140,12 +140,12 @@ namespace dsp56k
 		TReg56& d = ab ? reg.b : reg.a;
 
 		const uint64_t d64 = d.var;
-		const uint64_t res = d64 - _val.var;
+		const uint64_t res = d64 - static_cast<uint64_t>(_val.var);
 
-		const auto carry = res > 0xffffffffffffff;
+		const auto carry = static_cast<uint64_t>(_val.var) > d64;	// borrow out of the accumulator
 
 		d.var = res;
-		d.doMasking();
+		aluMask(d);
 
 		// S L E U N Z V C
 		sr_toggle(CCR_C, carry);
@@ -163,15 +163,16 @@ namespace dsp56k
 	{
 		const TReg56& dSrc = abSrc ? reg.b : reg.a;
 
-		const TInt64 d64 = dSrc.signextend<TInt64>();
+		const TInt64 d64 = aluSignextend(dSrc);
 
-		sr_toggle( CCR_C, _shiftAmount && bittest(d64,_shiftAmount-1) );
+		sr_toggle( CCR_C, _shiftAmount && bittest(d64, _shiftAmount - 1 + g_aluShift) );
 
 		const TInt64 res = d64 >> _shiftAmount;
 
 		TReg56& d = abDst ? reg.b : reg.a;
 
-		d.var = res & 0x00ffffffffffffff;
+		d.var = res;
+		aluMask(d);	// discards the bits shifted below the accumulator
 
 		// S L E U N Z V C
 
@@ -188,22 +189,24 @@ namespace dsp56k
 	{
 		const TReg56& dSrc = abSrc ? reg.b : reg.a;
 
-		const TInt64 d64 = dSrc.signextend<TInt64>();
+		const TInt64 d64 = aluSignextend(dSrc);
 
-		sr_toggle( CCR_C, _shiftAmount && ((d64 & (TInt64(1)<<(56-_shiftAmount))) != 0) );
+		sr_toggle( CCR_C, _shiftAmount && ((d64 & (TInt64(1)<<(56 + g_aluShift - _shiftAmount))) != 0) );
 
 		const TInt64 res = d64 << _shiftAmount;
 
 		TReg56& d = abDst ? reg.b : reg.a;
 
-		d.var = res & 0x00ffffffffffffff;
+		d.var = res;
+		aluMask(d);
 
 		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
 		// What that means for us is that all bits that are shifted out need to be identical to not overflow
 		int64_t overflowMaskI = 0x8000000000000000;
 		overflowMaskI >>= _shiftAmount;
 		uint64_t overflowMaskU = overflowMaskI;
-		overflowMaskU >>= 8;
+		if constexpr (g_aluShift == 0)
+			overflowMaskU >>= 8;	// right-aligned the window has to come down to bit 55
 		const uint64_t v = d64 & overflowMaskU;
 		const bool isOverflow = v != overflowMaskU && v != 0;
 
@@ -268,9 +271,9 @@ namespace dsp56k
 		const TReg56&	s = ab ? reg.a : reg.b;
 
 		const TReg56 old = d;
-		const TInt64 res = (d.signextend<TInt64>() << 1) + s.signextend<TInt64>();
+		const TInt64 res = (aluSignextend(d) << 1) + aluSignextend(s);
 		d.var = res;
-		d.doMasking();
+		aluMask(d);
 
 		sr_z_update(d);
 		sr_clear(CCR_V);		// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
@@ -281,18 +284,19 @@ namespace dsp56k
 
 	void DSP::alu_addr(bool ab)
 	{
-		auto& d			= ab ? reg.b : reg.a;
-		const auto& s	= ab ? reg.a : reg.b;
+		TReg56& d = ab ? reg.b : reg.a;
+		const TReg56& s = ab ? reg.a : reg.b;
 
 		uint64_t res = static_cast<uint64_t>(d.var) >> 1;
-		res |= d.var & (1ll<<55);
+		res |= static_cast<uint64_t>(d.var) & (1ull<<(55 + g_aluShift));
 
+		const uint64_t halved = res;
 		res += static_cast<uint64_t>(s.var);
 
-		const auto carry = res > g_alu_max_56_u;
+		const auto carry = res < halved;	// carry out of the accumulator
 
 		d.var = res;
-		d.doMasking();
+		aluMask(d);
 
 		sr_z_update(d);
 		sr_v_update(res, d);
@@ -305,18 +309,18 @@ namespace dsp56k
 	{
 		auto& d = ab ? reg.b.var : reg.a.var;
 
-		const auto c = bitvalue<uint64_t,47>(d);
+		const auto c = bitvalue<uint64_t,47 + g_aluShift>(d);
 		auto shifted = d;
-		reinterpret_cast<uint64_t&>(shifted) >>= 24;			// cut LSBs
+		reinterpret_cast<uint64_t&>(shifted) >>= (24 + g_aluShift);	// cut LSBs
 		shifted <<= 1;
 		shifted |= sr_val(CCRB_C);
 		shifted &= 0xffffff;
-		shifted <<= 24;			// move back
+		shifted <<= (24 + g_aluShift);			// move back
 		
-		d &= 0xff000000ffffff;
+		d &= static_cast<TInt64>(0xff000000ffffff00ull);
 		d |= shifted;
 
-		sr_toggle(CCRB_N, bitvalue<uint64_t, 47>(shifted));	// Set if bit 47 of the result is set
+		sr_toggle(CCRB_N, bitvalue<uint64_t, 47 + g_aluShift>(shifted));	// Set if bit 47 of the result is set
 		sr_toggle(CCR_Z, shifted == 0);						// Set if bits 47�24 of the result are 0
 		sr_clear(CCR_V);									// This bit is always cleared
 		sr_toggle(CCRB_C, c);								// Set if bit 47 of the destination operand is set, and cleared otherwise
@@ -324,7 +328,7 @@ namespace dsp56k
 
 	void DSP::alu_clr(bool ab)
 	{
-		auto& dst = ab ? reg.b : reg.a;
+		TReg56& dst = ab ? reg.b : reg.a;
 		dst.var = 0;
 
 		sr_clear( static_cast<CCRMask>(CCR_E | CCR_N | CCR_V) );
@@ -356,8 +360,9 @@ namespace dsp56k
 
 		auto res = s1 * s2;
 
-		// fractional multiplication requires one post-shift to be correct
-		res <<= 1;
+		// fractional multiplication requires one post-shift; the same shift scales the product
+		// into the left-aligned ALU domain before it meets the accumulator
+		res <<= (1 + g_aluShift);
 
 		if( _negate )
 			res = -res;
@@ -365,9 +370,10 @@ namespace dsp56k
 		TReg56& d = ab ? reg.b : reg.a;
 
 		if( _accumulate )
-			res += d.signextend<int64_t>();
+			res += aluSignextend(d);
 
-		d.var = res & 0x00ffffffffffffff;
+		d.var = res;
+		aluMask(d);
 
 		// Update SR
 		sr_z_update(d);
@@ -396,8 +402,9 @@ namespace dsp56k
 		else
 			res = _s1.signextend<TInt64>() * TUInt64(_s2.var);
 
-		// fractional multiplication requires one post-shift to be correct
-		res <<= 1;
+		// fractional multiplication requires one post-shift; the same shift scales the product
+		// into the left-aligned ALU domain before it meets the accumulator
+		res <<= (1 + g_aluShift);
 
 		if( _negate )
 			res = -res;
@@ -407,10 +414,10 @@ namespace dsp56k
 		const TReg56 old = d;
 
 		if( _accumulate )
-			res += d.signextend<TInt64>();
+			res += aluSignextend(d);
 
 		d.var = res;
-		d.doMasking();
+		aluMask(d);
 
 		// Update SR
 		sr_z_update( d );
@@ -433,8 +440,9 @@ namespace dsp56k
 		else if( dstUnsigned )				res = TUInt64(_s2.var) * _s1.signextend<TInt64>();
 		else								res = _s2.signextend<TInt64>() * _s1.signextend<TInt64>();
 
-		// fractional multiplication requires one post-shift to be correct
-		res <<= 1;
+		// fractional multiplication requires one post-shift; the same shift scales the product
+		// into the left-aligned ALU domain before it meets the accumulator
+		res <<= (1 + g_aluShift);
 
 		if( _negate )
 			res = -res;
@@ -443,14 +451,14 @@ namespace dsp56k
 
 		const TReg56 old = d;
 
-		TInt64 dShifted = d.signextend<TInt64>() >> 24;
+		TInt64 dShifted = aluSignextend(d) >> 24;
 
 		res += dShifted;
 
 	//	LOG( "DMAC  " << std::hex << old.var << std::hex << " + " << _s1.var << " * " << std::hex << _s2.var << " = " << std::hex << res );
 
 		d.var = res;
-		d.doMasking();
+		aluMask(d);
 
 		// Update SR
 		sr_z_update( d );
@@ -474,8 +482,9 @@ namespace dsp56k
 		else
 			res = _s1.signextend<TInt64>() * TUInt64(_s2.var);
 
-		// fractional multiplication requires one post-shift to be correct
-		res <<= 1;
+		// fractional multiplication requires one post-shift; the same shift scales the product
+		// into the left-aligned ALU domain before it meets the accumulator
+		res <<= (1 + g_aluShift);
 
 		if( _negate )
 			res = -res;
@@ -488,7 +497,7 @@ namespace dsp56k
 
 		d.var = res;
 
-		d.doMasking();
+		aluMask(d);
 
 		// Update SR
 		sr_z_update( d );
@@ -503,9 +512,9 @@ namespace dsp56k
 	//
 	void DSP::alu_rnd(bool ab)
 	{
-		auto& _alu = ab ? reg.b : reg.a;
+		TReg56& _alu = ab ? reg.b : reg.a;
 
-		int64_t rounder = 0x800000;
+		int64_t rounder = 0x800000ll << g_aluShift;	// the rounding position moves up with the ALU
 
 		if		(sr_test_noCache(SR_S1)) rounder>>=1;
 		else if	(sr_test_noCache(SR_S0)) rounder<<=1;
@@ -524,7 +533,7 @@ namespace dsp56k
 
 		const auto res = _alu.var;
 
-		_alu.doMasking();
+		aluMask(_alu);
 
 		sr_z_update(_alu);
 		sr_v_update(res, _alu);
@@ -584,14 +593,13 @@ namespace dsp56k
 		const auto iiiiii	= getFieldValue<Add_xx,Field_iiiiii>(op);
 		const auto ab		= getFieldValue<Add_xx,Field_d>(op);
 
-		alu_add( ab, TReg56(iiiiii) );
+		alu_add( ab, toAluOperand(iiiiii) );
 	}
 	inline void DSP::op_Add_xxxx(const TWord op)
 	{
 		const auto ab = getFieldValue<Add_xxxx,Field_d>(op);
 
-		TReg56 r56;
-		convert( r56, TReg24(immediateDataExt<Add_xxxx>()) );
+		const TReg56 r56 = toAluOperand(TReg24(immediateDataExt<Add_xxxx>()));
 
 		alu_add( ab, r56 );
 	}
@@ -706,8 +714,8 @@ namespace dsp56k
 		}
 		else
 		{
-			// Shift left by 8 to put bit 55 at MSB of 64-bit value
-			const auto shifted = static_cast<int64_t>(s.var << 8);
+			// bit 55 has to sit at the MSB of the 64-bit value; left-aligned it already does
+			const auto shifted = static_cast<int64_t>(s.var << (8 - g_aluShift));
 
 			// If MSB is 1, invert to count leading ones as leading zeros
 			auto val = static_cast<uint64_t>(shifted < 0 ? ~shifted : shifted);
@@ -729,10 +737,11 @@ namespace dsp56k
 			count = bsr - (64 - 9 - 1);  // range: -47 to +8
 		}
 
-		d.var = (static_cast<TInt64>(count) << 24) & 0x00ffffffffffffff;
+		d.var = static_cast<TInt64>(count) << (24 + g_aluShift);
+		aluMask(d);
 
 		// N: Set if bit 47 (= bit 23 of the 24-bit result) is set
-		sr_toggle(CCR_N, bittest(d, 47));
+		sr_toggle(CCR_N, bittest(d, 47 + g_aluShift));
 		// Z: Set if result is zero
 		sr_toggle(CCR_Z, count == 0);
 		// V: Always cleared
@@ -753,8 +762,7 @@ namespace dsp56k
 	{
 		const TWord iiiiii = getFieldValue<Cmp_xxS2,Field_iiiiii>(op);
 		
-		TReg56 r56;
-		convert( r56, TReg24(iiiiii) );
+		const TReg56 r56 = toAluOperand(TReg24(iiiiii));
 
 		alu_cmp( bittest(op,3), r56, false );
 	}
@@ -762,8 +770,7 @@ namespace dsp56k
 	{
 		const TReg24 s( signextend<int,24>( immediateDataExt<Cmp_xxxxS2>() ) );
 
-		TReg56 r56;
-		convert( r56, s );
+		const TReg56 r56 = toAluOperand(s);
 
 		alu_cmp( bittest(op,3), r56, false );
 	}
@@ -780,18 +787,18 @@ namespace dsp56k
 	inline void DSP::op_Dec(const TWord op)
 	{
 		auto ab = getFieldValue<Dec,Field_d>(op);
-		auto& d = ab ? reg.b : reg.a;
+		TReg56& d = ab ? reg.b : reg.a;
 
 		const auto old = d;
-		const auto res = --d.var;
+		const auto res = (d.var -= (TInt64(1) << g_aluShift));
 
-		d.doMasking();
+		aluMask(d);
 
 		sr_z_update(d);
 		sr_v_update(res,d);
 		sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);
-		sr_toggle( CCR_C, bittest(d,47) != bittest(old,47) );
+		sr_toggle( CCR_C, bittest(d, 47 + g_aluShift) != bittest(old, 47 + g_aluShift) );
 		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
@@ -800,25 +807,25 @@ namespace dsp56k
 		const TWord jj	= getFieldValue<Div,Field_JJ>(op);
 		const auto ab	= getFieldValue<Div,Field_d>(op);
 
-		auto& d = ab ? reg.b : reg.a;
+		TReg56& d = ab ? reg.b : reg.a;
 
 		const TReg24 s24 = decode_JJ_read( jj );
 
-		const auto msbOld = bitvalue<55>(d);
+		const auto msbOld = bitvalue<55 + g_aluShift>(d);
 		
 		const auto c = msbOld != bitvalue<23>(s24);
 		
 		d.var <<= 1;
-		d.var |= sr_test_noCache(CCR_C);
+		d.var |= static_cast<TInt64>(sr_test_noCache(CCR_C) ? 1 : 0) << g_aluShift;	// carry enters at the accumulator LSB
 
-		const auto msbNew = bitvalue<55>(d);
+		const auto msbNew = bitvalue<55 + g_aluShift>(d);
 
 		if( c )
-			d.var = ((d.var + (signextend<TInt64,24>(s24.var) << 24) )&0x00ffffffff000000) | (d.var & 0xffffff);
+			d.var = ((d.var + (signextend<TInt64,24>(s24.var) << (24 + g_aluShift)) )&static_cast<TInt64>(0x00ffffffff000000ull << g_aluShift)) | (d.var & (0xffffffll << g_aluShift));
 		else
-			d.var = ((d.var - (signextend<TInt64,24>(s24.var) << 24) )&0x00ffffffff000000) | (d.var & 0xffffff);
+			d.var = ((d.var - (signextend<TInt64,24>(s24.var) << (24 + g_aluShift)) )&static_cast<TInt64>(0x00ffffffff000000ull << g_aluShift)) | (d.var & (0xffffffll << g_aluShift));
 
-		sr_toggle( CCRB_C, !bitvalue<55>(d) );	// Set if bit 55 of the result is cleared.
+		sr_toggle( CCRB_C, !bitvalue<55 + g_aluShift>(d) );	// Set if bit 55 of the result is cleared.
 		sr_toggle( CCRB_V, msbNew != msbOld );	// Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
 
 		if(msbNew != msbOld)
@@ -874,10 +881,10 @@ namespace dsp56k
 		const auto width = (widthOffset >> 12) & 0x3f;
 		const auto offset = widthOffset & 0x3f;
 
-		const auto& dSrc = abSrc ? reg.b : reg.a;
-		auto& dDst = abDst ? reg.b : reg.a;
+		const TReg56& dSrc = abSrc ? reg.b : reg.a;
+		TReg56& dDst = abDst ? reg.b : reg.a;
 		const auto mask = 0xFFFFFFFFFFFFFF >> (56 - width);
-		dDst.var = (dSrc.var >> offset) & mask;
+		dDst.var = static_cast<TInt64>(((static_cast<uint64_t>(dSrc.var) >> (offset + g_aluShift)) & mask) << g_aluShift);
 
 		sr_clear(CCR_C);
 		sr_clear(CCR_V);
@@ -906,19 +913,19 @@ namespace dsp56k
 	inline void DSP::op_Inc(const TWord op)
 	{
 		const auto ab = getFieldValue<Inc,Field_d>(op);
-		auto& d = ab ? reg.b : reg.a;
+		TReg56& d = ab ? reg.b : reg.a;
 
 		const auto old = d;
 
-		const auto res = ++d.var;
+		const auto res = (d.var += (TInt64(1) << g_aluShift));
 
-		d.doMasking();
+		aluMask(d);
 
 		sr_z_update(d);
 		sr_v_update(res,d);
 		sr_l_update_by_v();
 		sr_c_update_arithmetic(old,d);	// TODO: what? C updated two times?!
-		sr_toggle( CCR_C, bittest(d,47) != bittest(old,47) );
+		sr_toggle( CCR_C, bittest(d, 47 + g_aluShift) != bittest(old, 47 + g_aluShift) );
 		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
@@ -926,14 +933,15 @@ namespace dsp56k
 	{
 		const auto width = (widthOffset >> 12) & 0x3f;
 
-		const uint64_t offset = widthOffset & 0x3f;
+		// the offset is relative to the 56-bit value, so it moves up with the ALU
+		const uint64_t offset = (widthOffset & 0x3f) + g_aluShift;
 
 		const auto mask = (1<<width) - 1;
 
 		uint64_t s = src & mask;
 		s <<= offset;
 
-		auto& dReg = abDst ? reg.b : reg.a;
+		TReg56& dReg = abDst ? reg.b : reg.a;
 		auto& d = reinterpret_cast<uint64_t&>(dReg.var);
 
 		d &= ~(static_cast<uint64_t>(mask) << offset);
@@ -1069,12 +1077,12 @@ namespace dsp56k
 	}
 	inline void DSP::op_Max(const TWord op)
 	{
-		const auto a = signextend<int64_t, 56>(reg.a.var);
-		const auto b = signextend<int64_t, 56>(reg.b.var);
+		const auto a = signextend<int64_t, 56>(aluA().var);
+		const auto b = signextend<int64_t, 56>(aluB().var);
 
 		if(a >= b)
 		{
-			reg.b = reg.a;
+			setALU(true, aluA());
 			sr_clear(CCR_C);
 		}
 		else
@@ -1084,12 +1092,12 @@ namespace dsp56k
 	}
 	inline void DSP::op_Maxm(const TWord op)
 	{
-		const auto a = std::abs(signextend<int64_t, 56>(reg.a.var));
-		const auto b = std::abs(signextend<int64_t, 56>(reg.b.var));
+		const auto a = std::abs(signextend<int64_t, 56>(aluA().var));
+		const auto b = std::abs(signextend<int64_t, 56>(aluB().var));
 
 		if(a >= b)
 		{
-			reg.b = reg.a;
+			setALU(true, aluA());
 			sr_clear(CCR_C);
 		}
 		else
@@ -1221,19 +1229,19 @@ namespace dsp56k
 
 		auto& d = D ? reg.b.var : reg.a.var;
 
-		const auto c = bitvalue<uint64_t,24>(d);		// bit 24 = LSB of a1/b1
+		const auto c = bitvalue<uint64_t,24 + g_aluShift>(d);	// bit 24 = LSB of a1/b1
 		auto shifted = d;
-		reinterpret_cast<uint64_t&>(shifted) >>= 24;	// isolate a1/b1
+		reinterpret_cast<uint64_t&>(shifted) >>= (24 + g_aluShift);	// isolate a1/b1
 		const auto oldBit0 = shifted & 1;
 		shifted >>= 1;									// shift right
 		shifted |= static_cast<TInt64>(sr_val(CCRB_C)) << 23;	// inject old carry into bit 23 (MSB position)
 		shifted &= 0xffffff;
-		shifted <<= 24;									// move back
+		shifted <<= (24 + g_aluShift);					// move back
 
-		d &= 0xff000000ffffff;
+		d &= static_cast<TInt64>(0xff000000ffffff00ull);
 		d |= shifted;
 
-		sr_toggle(CCRB_N, bitvalue<uint64_t, 47>(shifted));
+		sr_toggle(CCRB_N, bitvalue<uint64_t, 47 + g_aluShift>(shifted));
 		sr_toggle(CCR_Z, shifted == 0);
 		sr_clear(CCR_V);
 		sr_toggle(CCRB_C, static_cast<Bit>(oldBit0));
@@ -1253,14 +1261,13 @@ namespace dsp56k
 		const auto ab		= getFieldValue<Sub_xx,Field_d>(op);
 		const TWord iiiiii	= getFieldValue<Sub_xx,Field_iiiiii>(op);
 
-		alu_sub( ab, TReg56(iiiiii) );
+		alu_sub( ab, toAluOperand(iiiiii) );
 	}
 	inline void DSP::op_Sub_xxxx(const TWord op)
 	{
 		const auto ab = getFieldValue<Sub_xxxx,Field_d>(op);
 
-		TReg56 r56;
-		convert( r56, TReg24(immediateDataExt<Sub_xxxx>()) );
+		const TReg56 r56 = toAluOperand(TReg24(immediateDataExt<Sub_xxxx>()));
 
 		alu_sub( ab, r56 );
 	}
@@ -1272,11 +1279,11 @@ namespace dsp56k
 		const TReg56&	s = ab ? reg.a : reg.b;
 
 		const TReg56 old = d;
-		const TInt64 res = (d.signextend<TInt64>() << 1) - s.signextend<TInt64>();
+		const TInt64 res = (aluSignextend(d) << 1) - aluSignextend(s);
 		d.var = res;
-		d.doMasking();
+		aluMask(d);
 		// Carry bit note: "The Carry bit (C) is set correctly if the source operand does not overflow as a result of the left shift operation.", we do not care at the moment
-		sr_toggle(CCR_V, bittest(old, 55) != bittest(d, 55));
+		sr_toggle(CCR_V, bittest(old, 55 + g_aluShift) != bittest(d, 55 + g_aluShift));
 		sr_z_update(d);
 		//sr_l_update_by_v();
 		sr_c_update_arithmetic(old, d);
@@ -1290,9 +1297,9 @@ namespace dsp56k
 		const TReg56&	s = ab ? reg.a : reg.b;
 
 		const TReg56 old = d;
-		const TInt64 res = (d.signextend<TInt64>() >> 1) - s.signextend<TInt64>();
+		const TInt64 res = (aluSignextend(d) >> 1) - aluSignextend(s);
 		d.var = res;
-		d.doMasking();
+		aluMask(d);
 		sr_z_update(d);
 		//sr_l_update_by_v();
 		sr_c_update_arithmetic(old, d);

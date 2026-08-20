@@ -95,8 +95,8 @@ namespace dsp56k
 			case 0x0b:	{ TReg8  temp; convertU(temp,_val); b2(temp); }	return true;	// b2
 			case 0x0c:	{ TReg24 temp; convertU(temp,_val); a1(temp); }	return true;	// a1
 			case 0x0d:	{ TReg24 temp; convertU(temp,_val); b1(temp); }	return true;	// b1
-			case 0x0e:	convert(reg.a,_val);							return true;	// a
-			case 0x0f:	convert(reg.b,_val);							return true;	// b
+			case 0x0e:	{ TReg56 t; convert(t,_val); setALU(false,t); }	return true;	// a
+			case 0x0f:	{ TReg56 t; convert(t,_val); setALU(true ,t); }	return true;	// b
 			default:
 				if( (_ddddd & 0x18) == 0x10 )											// r0-r7
 				{
@@ -568,9 +568,10 @@ namespace dsp56k
 		TReg56 res;
 		switch (jjj)
 		{
+		// every caller feeds this straight into an ALU op, so the result is in the left-aligned domain
 		case 0:
 		case 1: res = _b ? reg.b : reg.a;
-			break;
+			return res;
 		case 2: convert(res, reg.x);
 			break;
 		case 3: convert(res, reg.y);
@@ -587,6 +588,7 @@ namespace dsp56k
 			assert(0 && "unreachable, invalid JJJ value");
 			return TReg56(static_cast<TReg56::MyType>(0xbadbadbadbadbadb));
 		}
+		res.var <<= g_aluShift;
 		return res;
 	}
 
@@ -595,7 +597,7 @@ namespace dsp56k
 		switch (jjj)
 		{
 		case 0:
-		case 1: alu = _b ? reg.b : reg.a;
+		case 1: alu = getALU(_b);
 			return;
 		case 2: convert(alu, reg.x);
 			return;
@@ -623,12 +625,12 @@ namespace dsp56k
 		case 2: convert(x, x1());			convert(y, x0());			return;
 		case 3: convert(x, y1());			convert(y, y0());			return;
 		case 4:
-			x = reg.a.var >> 24 & 0xffffff;
-			y = reg.a.var & 0xffffff;
+			x = aluA().var >> 24 & 0xffffff;
+			y = aluA().var & 0xffffff;
 			return;
 		case 5:
-			x = reg.b.var >> 24 & 0xffffff;
-			y = reg.b.var & 0xffffff;
+			x = aluB().var >> 24 & 0xffffff;
+			y = aluB().var & 0xffffff;
 			return;
 		case 6: x = getA<TWord>();			y = getB<TWord>();			return;
 		case 7: x = getB<TWord>();			y = getA<TWord>();			return;
@@ -648,14 +650,14 @@ namespace dsp56k
 			{
 				TReg48 xy;
 				xy.var = static_cast<uint64_t>(x.var) << 24 | y.var;
-				convert(reg.a, xy);
+				TReg56 t; convert(t, xy); setALU(false, t);
 			}
 			return;
 		case 5:
 			{
 				TReg48 xy;
 				xy.var = static_cast<uint64_t>(x.var) << 24 | y.var;
-				convert(reg.b, xy);
+				TReg56 t; convert(t, xy); setALU(true, t);
 			}
 			return;
 		case 6: setA(x);			setB(y);			return;

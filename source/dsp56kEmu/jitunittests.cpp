@@ -559,7 +559,7 @@ namespace dsp56k
 
 	void JitUnittests::testCCCC(const int64_t _value, const int64_t _compareValue, const bool _lt, bool _le, bool _eq, bool _ge, bool _gt, bool _neq)
 	{
-		dsp.regs().a.var = _value;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(_value)));
 		runTest([&]()
 		{
 			const RegGP r(*block);
@@ -629,8 +629,8 @@ namespace dsp56k
 		{
 			m_checks.fill(0);
 
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 
 			int i=0;
 			const RegGP r(*block);
@@ -750,8 +750,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			m_checks.fill(0);
-			dsp.regs().a.var = 0x11112233445566;
-			dsp.regs().b.var = 0xff5566778899aa;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x11112233445566)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xff5566778899aa)));
 
 			int i=0;
 			DspValue r(*block);
@@ -866,8 +866,8 @@ namespace dsp56k
 		dsp.regs().la.var = 0x8899aa;
 		dsp.regs().lc.var = 0x99aabb;
 
-		dsp.regs().a.var = 0x00ffaabbcc112233;
-		dsp.regs().b.var = 0x00ee112233445566;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffaabbcc112233)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00ee112233445566)));
 
 		dsp.regs().x.var = 0x0000aabbccddeeff;
 
@@ -929,8 +929,8 @@ namespace dsp56k
 		verify(r.la.var == 0x899aa0);
 		verify(r.lc.var == 0x9aabb0);
 
-		verify(r.a.var == 0x00f0abbcc0122330);
-		verify(r.b.var == 0x00e1122334455660);
+		verify(dsp.aluA().var == 0x00f0abbcc0122330);
+		verify(dsp.aluB().var == 0x00e1122334455660);
 
 		verify(r.x.var == 0x0000abbcc0deeff0);
 	}
@@ -966,7 +966,7 @@ namespace dsp56k
 		};
 
 		dsp.setSR(dsp.getSR().var & 0xfe);
-		dsp.regs().a.var = 0x00001000000000;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00001000000000)));
 		dsp.regs().y.var =   0x04444410c6f2;
 
 		runTest([&]()
@@ -995,7 +995,7 @@ namespace dsp56k
 			// regular mode for comparison
 
 			dsp.y0(0x218dec);
-			dsp.regs().a.var = 0x00008000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00008000000000)));
 			dsp.setSR(0x0800d4);
 
 			static constexpr uint64_t expectedValues[24] =
@@ -1035,7 +1035,7 @@ namespace dsp56k
 				},
 					[&]()
 				{
-					verify(dsp.regs().a.var == static_cast<int64_t>(expectedValues[i]));
+					verify(dsp.aluA().var == static_cast<int64_t>(expectedValues[i]));
 				});
 			}
 		}
@@ -1043,7 +1043,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.y0(0x218dec);
-			dsp.regs().a.var = 0x00008000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00008000000000)));
 			dsp.setSR(0x0800d4);
 
 			dsp.memory().set(MemArea_P, 0, 0x0618a0);	// rep #<18
@@ -1053,14 +1053,14 @@ namespace dsp56k
 		},
 		[&]()
 		{
-			verify(dsp.regs().a.var == 0xffeadd5401e848);
+			verify(dsp.aluA().var == 0xffeadd5401e848);
 			verify(dsp.getSR().var == 0x0800d4);
 		});
 		{
 			// regular mode for comparison
 
 			dsp.y0(0xde7214);
-			dsp.regs().a.var = 0x00008000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00008000000000)));
 			dsp.setSR(0x0800d4);
 
 			static constexpr uint64_t expectedValues[24] =
@@ -1100,7 +1100,7 @@ namespace dsp56k
 				},
 					[&]()
 				{
-					verify(dsp.regs().a.var == static_cast<int64_t>(expectedValues[i]));
+					verify(dsp.aluA().var == static_cast<int64_t>(expectedValues[i]));
 				});
 			}
 		}
@@ -1108,7 +1108,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.y0(0xde7214);
-			dsp.regs().a.var = 0x00008000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00008000000000)));
 			dsp.setSR(0x0800d4);
 
 			dsp.memory().set(MemArea_P, 0, 0x0618a0);	// rep #<18
@@ -1118,7 +1118,7 @@ namespace dsp56k
 		},
 		[&]()
 		{
-			verify(dsp.regs().a.var == 0xffeadd5401e848);
+			verify(dsp.aluA().var == 0xffeadd5401e848);
 			verify(dsp.getSR().var == 0x0800d4);
 		});
 	}

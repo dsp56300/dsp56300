@@ -509,7 +509,9 @@ namespace dsp56k
 			const TWord JJJ = getFieldValue<Tcc_S1D1,Field_JJJ>(op);
 			const bool ab = getFieldValue<Tcc_S1D1,Field_d>(op);
 
-			decode_JJJ_readwrite( ab ? reg.b : reg.a, JJJ, !ab );
+			TReg56 d = getALU(ab);
+			decode_JJJ_readwrite( d, JJJ, !ab );
+			setALU(ab, d);
 		}
 	}
 	inline void DSP::op_Tcc_S1D1S2D2(const TWord op)
@@ -521,7 +523,9 @@ namespace dsp56k
 			const TWord ttt		= getFieldValue<Tcc_S1D1S2D2,Field_ttt>(op);
 			const bool ab		= getFieldValue<Tcc_S1D1S2D2,Field_d>(op);
 
-			decode_JJJ_readwrite( ab ? reg.b : reg.a, JJJ, !ab );
+			TReg56 d = getALU(ab);
+			decode_JJJ_readwrite( d, JJJ, !ab );
+			setALU(ab, d);
 			reg.r[TTT] = reg.r[ttt];
 		}
 	}

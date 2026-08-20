@@ -345,6 +345,7 @@ namespace dsp56k
 		// simulate latches registers for parallel instructions
 
 		// ALU op can only write to either A or B
+		// these are raw copies of the left-aligned values, comparing and restoring them needs no conversion
 		const auto preAluA = reg.a;
 		const auto preAluB = reg.b;
 
@@ -726,8 +727,8 @@ namespace dsp56k
 	{
 		switch( _reg )
 		{
-		case Reg_A:		_res = reg.a;	return true;
-		case Reg_B:		_res = reg.b;	return true;
+		case Reg_A:		_res = aluA();	return true;
+		case Reg_B:		_res = aluB();	return true;
 		}
 		return false;
 	}
@@ -884,8 +885,8 @@ namespace dsp56k
 	{
 		switch( _reg )
 		{
-		case Reg_A:		reg.a = _val;		return true;
-		case Reg_B:		reg.b = _val;		return true;
+		case Reg_A:		setALU(false, _val);	return true;
+		case Reg_B:		setALU(true , _val);	return true;
 		}
 		assert( 0 && "unknown register" );
 		return false;
@@ -1138,11 +1139,12 @@ namespace dsp56k
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
-		TInt64 d64 = d.signextend<TInt64>();
+		TInt64 d64 = aluSignextend(d);
 
 		d64 = d64 < 0 ? -d64 : d64;
 
-		d.var = d64 & 0xffffffffffffff;
+		d.var = d64;
+		aluMask(d);
 
 		sr_z_update(d);
 	//	sr_v_update(d);
@@ -1152,7 +1154,7 @@ namespace dsp56k
 
 	void DSP::alu_tfr(const bool ab, const TReg56& src)
 	{
-		auto& d = ab ? reg.b : reg.a;
+		TReg56& d = ab ? reg.b : reg.a;
 		d = src;
 	}
 
@@ -1169,10 +1171,11 @@ namespace dsp56k
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
-		auto d64 = d.signextend<TInt64>();
+		auto d64 = aluSignextend(d);
 		d64 = -d64;
 		
-		d.var = d64 & 0x00ffffffffffffff;
+		d.var = d64;
+		aluMask(d);
 
 		sr_z_update(d);
 	//	TODO: how to update v? test in sim		sr_v_update(d);
@@ -1184,12 +1187,12 @@ namespace dsp56k
 	{
 		auto& d = ab ? reg.b.var : reg.a.var;
 
-		const auto masked = ~d & 0x00ffffff000000;
+		const auto masked = ~d & static_cast<TInt64>(0x00ffffff000000ull << g_aluShift);
 
-		d &= 0xff000000ffffff;
+		d &= static_cast<TInt64>(0xff000000ffffff00ull);
 		d |= masked;
 
-		sr_toggle(CCRB_N, bitvalue<uint64_t, 47>(d));	// Set if bit 47 of the result is set
+		sr_toggle(CCRB_N, bitvalue<uint64_t, 47 + g_aluShift>(d));	// Set if bit 47 of the result is set
 		sr_toggle(CCR_Z, masked == 0);					// Set if bits 47�24 of the result are 0
 		sr_clear(CCR_V);								// Always cleared
 		//sr_s_update();								// Changed according to the standard definition

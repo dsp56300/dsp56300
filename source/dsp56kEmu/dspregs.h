@@ -8,7 +8,13 @@ namespace dsp56k
 	{
 		// accumulator
 		TReg48 x,y;						// 48 bit
-		TReg56 a,b;						// 56 bit
+		// 56 bit accumulators, stored LEFT-ALIGNED: the value sits in bits 63..8 and bits 7..0 are
+		// ALWAYS ZERO. The DSP56300 has no bits below the accumulator, so anything reaching them would
+		// be resolution the hardware never had - keeping them clear is a correctness contract, not an
+		// optimisation. The payoff is that the JIT loads and stores these with a plain mov.
+		// Both the JIT and the interpreter work in this representation natively; only DSP::aluA()/aluB()
+		// and DSP::setALU() convert, and they exist purely for readReg/writeReg, the debugger and tests.
+		TReg56 a, b;
 	
 		// ---- AGU ----
 		std::array<TReg24, 8> r;

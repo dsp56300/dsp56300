@@ -459,26 +459,6 @@ namespace dsp56k
 		m_block.mem().mov<sizeof(_src.var)>(_dst, makeDspPtr(_src));
 	}
 
-	void JitDspRegPool::storeAluSpilled(const TReg56& _dst, const SpillReg& _src) const
-	{
-		// bring the spilled accumulator back into a GP so it can be converted to the right-aligned
-		// memory format. The XMM keeps its left-aligned value, which is what the pool expects.
-		const RegScratch t(m_block);
-		m_block.asm_().movq(r64(t.get()), _src.reg);
-		aluShiftRight8(t.get());
-		movDspReg(_dst, r64(t.get()));
-	}
-
-	void JitDspRegPool::aluShiftLeft8(const JitRegGP& _reg) const
-	{
-		m_block.asm_().shl(r64(_reg), asmjit::Imm(8));
-	}
-
-	void JitDspRegPool::aluShiftRight8(const JitRegGP& _reg) const
-	{
-		m_block.asm_().shr(r64(_reg), asmjit::Imm(8));
-	}
-
 	void JitDspRegPool::movDspReg(const int8_t& _dst, const JitRegGP& _src) const
 	{
 		m_block.mem().mov<sizeof(_dst)>(makeDspPtr(&_dst, sizeof(_dst)), r32(_src));
@@ -666,9 +646,8 @@ namespace dsp56k
 			}
 			else
 			{
+				// memory holds the accumulator left-aligned, same as the register, so no conversion
 				movDspReg(_dst, _alu);
-				if constexpr (g_leftAlignedAlu)
-					aluShiftLeft8(_dst);	// right-aligned in memory -> left-aligned in register
 			}
 		};
 
@@ -827,11 +806,11 @@ namespace dsp56k
 			break;
 		case DspA:
 		case DspAwrite:
-			storeAlu(r.a, _src);
+			movDspReg(r.a, _src);
 			break;
 		case DspB:
 		case DspBwrite:
-			storeAlu(r.b, _src);
+			movDspReg(r.b, _src);
 			break;
 		case DspX:
 			assert(false);
@@ -928,11 +907,11 @@ namespace dsp56k
 			break;
 		case DspA:
 		case DspAwrite:
-			storeAlu(r.a, _src);
+			movDspReg(r.a, _src);
 			break;
 		case DspB:
 		case DspBwrite:
-			storeAlu(r.b, _src);
+			movDspReg(r.b, _src);
 			break;
 		case DspX:
 			movDspReg(r.x, _src);

@@ -216,7 +216,7 @@ namespace dsp56k
 			runTest([&]()
 			{
 				dsp.resetHW();
-				dsp.reg.a.var = _a & 0xff'ffffff'ffffff;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(_a & 0xff'ffffff'ffffff)));
 
 				dsp.reg.r[0].var = 0x1;
 				dsp.reg.r[1].var = 0x0;
@@ -513,8 +513,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			init();
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 
 			emit("move #$aaaaaa,x0");
 			emit("move #$dddddd,y1");
@@ -522,8 +522,8 @@ namespace dsp56k
 			emit("add y,b");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00222222aaaaaa);
-			verify(dsp.regs().b.var == 0xffdddddd333333);
+			verify(dsp.aluA().var == 0x00222222aaaaaa);
+			verify(dsp.aluB().var == 0xffdddddd333333);
 		});
 	}
 
@@ -531,15 +531,15 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00ff112233445566;
-			dsp.regs().b.var = 0x0000aabbccddeeff;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ff112233445566)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x0000aabbccddeeff)));
 
 			emit("abs a");
 			emit("abs b");
 		}, [&]()
 		{
-			verify(dsp.regs().a == 0x00EEDDCCBBAA9A);
-			verify(dsp.regs().b == 0x0000aabbccddeeff);
+			verify(dsp.aluA() == 0x00EEDDCCBBAA9A);
+			verify(dsp.aluB() == 0x0000aabbccddeeff);
 		});
 	}
 
@@ -547,14 +547,14 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x0001e000000000;
-			dsp.regs().b.var = 0xfffe2000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0001e000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xfffe2000000000)));
 
 			// add b,a
 			emit("add b,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0);
+			verify(dsp.aluA().var == 0);
 			verify(dsp.sr_test(CCR_C));
 			verify(dsp.sr_test(CCR_Z));
 			verify(!dsp.sr_test(CCR_V));
@@ -564,14 +564,14 @@ namespace dsp56k
 		{
 			runTest([&]()
 			{
-				dsp.reg.a.var = a;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(a)));
 				dsp.reg.y.var = y0;
 
 				// add y0,a
 				emit("add y0,a");
 			}, [&]()
 			{
-				verify(dsp.reg.a.var == expectedResult);
+				verify(dsp.aluA().var == expectedResult);
 			});
 		};
 
@@ -582,14 +582,14 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0x0001e000000000;
-			dsp.reg.b.var = 0xfffe2000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0001e000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xfffe2000000000)));
 
 			// add b,a
 			emit("add b,a");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0);
+			verify(dsp.aluA().var == 0);
 			verify(dsp.sr_test(CCR_C));
 			verify(!dsp.sr_test(CCR_V));
 		});
@@ -599,13 +599,13 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 
 			// add #<32,a
 			emit("add #<$32,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00000032000000);
+			verify(dsp.aluA().var == 0x00000032000000);
 			verify(!dsp.sr_test(CCR_C));
 			verify(!dsp.sr_test(CCR_Z));
 			verify(!dsp.sr_test(CCR_V));
@@ -616,14 +616,14 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.regs().pc.var = 0;
 
 			// add #>32,a, two op add with immediate in extension word
 			emit("add #>$32,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00000032000000);
+			verify(dsp.aluA().var == 0x00000032000000);
 			verify(!dsp.sr_test(CCR_C));
 			verify(!dsp.sr_test(CCR_Z));
 			verify(!dsp.sr_test(CCR_V));
@@ -634,13 +634,13 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x222222;
-			dsp.regs().b.var = 0x333333;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x222222)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x333333)));
 
 			emit("addl a,b");
 		}, [&]()
 		{
-			verify(dsp.regs().b.var == 0x888888);
+			verify(dsp.aluB().var == 0x888888);
 			verify(!dsp.sr_test(CCR_C));
 			verify(!dsp.sr_test(CCR_Z));
 			verify(!dsp.sr_test(CCR_V));
@@ -651,26 +651,26 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x004edffe000000;
-			dsp.regs().b.var = 0xff89fe13000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x004edffe000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xff89fe13000000)));
 			dsp.setSR(0x0800d0);							// (S L) U
 
 			emit("addr b,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x0ffb16e12000000);
+			verify(dsp.aluA().var == 0x0ffb16e12000000);
 			verify(dsp.getSR().var == 0x0800c8);			// (S L) N
 		});
 
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0xffb16e12000000;
-			dsp.reg.b.var = 0xff89fe13000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffb16e12000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xff89fe13000000)));
 			dsp.setSR(0x0800c8);							// (S L) N
 			emit("addr a,b");
 		}, [&]()
 		{
-			verify(dsp.reg.b.var == 0xff766d1b800000);
+			verify(dsp.aluB().var == 0xff766d1b800000);
 			verify(dsp.getSR().var == 0x0800e9);			// (S L) E N C
 		});
 	}
@@ -679,18 +679,18 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xffcccccc112233;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffcccccc112233)));
 			dsp.regs().x.var = 0x777777;
 
-			dsp.regs().b.var = 0xaaaabbcc334455;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xaaaabbcc334455)));
 			dsp.regs().y.var = 0x667788000000;
 
 			emit("and x0,a");
 			emit("and y1,b");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0xff444444112233);
-			verify(dsp.regs().b.var == 0xaa223388334455);
+			verify(dsp.aluA().var == 0xff444444112233);
+			verify(dsp.aluB().var == 0xaa223388334455);
 		});
 	}
 
@@ -721,11 +721,11 @@ namespace dsp56k
 		// asl #1,a,a
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0xaaabcdef123456;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xaaabcdef123456)));
 			emit("asl #$1,a,a");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x55579bde2468ac);
+			verify(dsp.aluA().var == 0x55579bde2468ac);
 		});
 
 		// asl #1,a,a
@@ -734,28 +734,28 @@ namespace dsp56k
 			emit("asr #$1,a,a");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x2aabcdef123456);
+			verify(dsp.aluA().var == 0x2aabcdef123456);
 		});
 
 		// asl b
 		runTest([&]()
 		{
-			dsp.reg.b.var = 0x000599f2204000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x000599f2204000)));
 			emit("asl b");
 		}, [&]()
 		{
-			verify(dsp.reg.b.var == 0x000b33e4408000);
+			verify(dsp.aluB().var == 0x000b33e4408000);
 		});
 
 		// asl #28,a,a
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0xf4;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xf4)));
 			dsp.setSR(0x0800d0);
 			emit("asl #$28,a,a");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x00f40000000000);
+			verify(dsp.aluA().var == 0x00f40000000000);
 			verify(dsp.getSR().var == 0x0800f0);
 		});
 	}
@@ -764,14 +764,14 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xaaabcdef123456;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xaaabcdef123456)));
 			dsp.regs().sr.var = 0;
 
 			emit("asl a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x55579bde2468ac);
+			verify(dsp.aluA().var == 0x55579bde2468ac);
 			verify(!dsp.sr_test_noCache(CCR_Z));
 			verify(dsp.sr_test_noCache(CCR_V));
 			verify(dsp.sr_test_noCache(CCR_C));
@@ -779,13 +779,13 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00400000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00400000000000)));
 			dsp.regs().sr.var = 0;
 			emit("asl a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00800000000000);
+			verify(dsp.aluA().var == 0x00800000000000);
 			verify(!dsp.sr_test_noCache(CCR_Z));
 			verify(!dsp.sr_test_noCache(CCR_V));
 			verify(!dsp.sr_test_noCache(CCR_C));
@@ -796,12 +796,12 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xaaabcdef123456;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xaaabcdef123456)));
 			dsp.regs().sr.var = 0;
 			emit("asl #1,a,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x55579bde2468ac);
+			verify(dsp.aluA().var == 0x55579bde2468ac);
 			verify(!dsp.sr_test_noCache(CCR_Z));
 			verify(dsp.sr_test_noCache(CCR_V));
 			verify(dsp.sr_test_noCache(CCR_C));
@@ -817,15 +817,15 @@ namespace dsp56k
 			dsp.x0(0x4);
 			dsp.y1(0x8);
 
-			dsp.regs().a.var = 0x0011aabbccddeeff;
-			dsp.regs().b.var = 0x00ff112233445566;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0011aabbccddeeff)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00ff112233445566)));
 
 			emit("asl x0,a,a");
 			emit("asl y1,b,b");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x001aabbccddeeff0);
-			verify(dsp.regs().b.var == 0x0011223344556600);
+			verify(dsp.aluA().var == 0x001aabbccddeeff0);
+			verify(dsp.aluB().var == 0x0011223344556600);
 		});
 	}
 
@@ -834,11 +834,11 @@ namespace dsp56k
 		// asr a
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0x000599f2204000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x000599f2204000)));
 			emit("asr a");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x0002ccf9102000);
+			verify(dsp.aluA().var == 0x0002ccf9102000);
 		});
 	}
 
@@ -846,13 +846,13 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x000599f2204000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x000599f2204000)));
 			dsp.regs().sr.var = 0;
 
 			emit("asr a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x0002ccf9102000);
+			verify(dsp.aluA().var == 0x0002ccf9102000);
 		});
 	}
 
@@ -860,22 +860,22 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x000599f2204000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x000599f2204000)));
 			emit("asr #1,a,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x0002ccf9102000);
+			verify(dsp.aluA().var == 0x0002ccf9102000);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xfffffdff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xfffffdff000000)));
 			emit("asr #$15,a,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xffffffffffeff8);
+			verify(dsp.aluA().var == 0xffffffffffeff8);
 		});
 	}
 
@@ -888,15 +888,15 @@ namespace dsp56k
 			dsp.x0(0x4);
 			dsp.y1(0x8);
 
-			dsp.regs().a.var = 0x0011aabbccddeeff;
-			dsp.regs().b.var = 0x00ff112233445566;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0011aabbccddeeff)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00ff112233445566)));
 
 			emit("asr x0,a,a");
 			emit("asr y1,b,b");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00011aabbccddeef);
-			verify(dsp.regs().b.var == 0x00ffff1122334455);
+			verify(dsp.aluA().var == 0x00011aabbccddeef);
+			verify(dsp.aluB().var == 0x00ffff1122334455);
 		});
 
 		runTest([&]()
@@ -904,14 +904,14 @@ namespace dsp56k
 			dsp.regs().y.var = ~0;
 			dsp.y1(0x9);
 
-			dsp.regs().a.var = 0x00000200000000;
-			dsp.regs().b.var = 0x00000007000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000200000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000007000000)));
 
 			emit("asr y1,a,b");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00000200000000);
-			verify(dsp.regs().b.var == 0x00000001000000);
+			verify(dsp.aluA().var == 0x00000200000000);
+			verify(dsp.aluB().var == 0x00000001000000);
 		});
 	}
 
@@ -1026,12 +1026,12 @@ namespace dsp56k
 		// test undocumented feature of bclr #xx,[a,b], it works even though the documentation states otherwise
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0xff'ffffff'ffffff;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xff'ffffff'ffffff)));
 			emit("bclr #$16,b");
 		}, [&]()
 		{
 			verify(dsp.sr_test(CCR_C));
-			verify(dsp.regs().b.var == 0xffbfffff000000);
+			verify(dsp.aluB().var == 0xffbfffff000000);
 		});
 	}
 
@@ -1080,14 +1080,14 @@ namespace dsp56k
 		{
 			runTest([&]()
 			{
-				dsp.regs().a.var = _a;
-				dsp.regs().b.var = 0;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(_a)));
+				dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 
 				emit("clb a,b");
 			},
 				[&]()
 			{
-				verify(dsp.regs().b == _b);
+				verify(dsp.aluB() == _b);
 			});
 		};
 
@@ -1101,7 +1101,7 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0x99aabbccddeeff;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x99aabbccddeeff)));
 			dsp.x0(0);
 			dsp.regs().sr.var = 0x080000;
 
@@ -1109,7 +1109,7 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().b == 0);
+			verify(dsp.aluB() == 0);
 			verify(dsp.x0() == 0x128);
 			verify(dsp.sr_test(CCR_U));
 			verify(dsp.sr_test(CCR_Z));
@@ -1120,12 +1120,12 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xbada55c0deba5e;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xbada55c0deba5e)));
 			emit("clr a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a == 0);
+			verify(dsp.aluA() == 0);
 		});
 	}
 
@@ -1133,7 +1133,7 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.b1(TReg24(0x123456));
 
 			dsp.regs().x.var = 0;
@@ -1152,7 +1152,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.x0(0xf00000);
-			dsp.regs().a.var = 0xfff40000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xfff40000000000)));
 			dsp.setSR(0x0800d8);
 
 			emit("cmp x0,a");
@@ -1165,7 +1165,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setSR(0x080099);
-			dsp.regs().a.var = 0xfffffc6c000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xfffffc6c000000)));
 			emit("cmp #>$aa,a");
 		},
 			[&]()
@@ -1179,7 +1179,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.sr_clear(CCR_C);
-			dsp.regs().b.var = 1;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(1)));
 			dsp.x0(1);
 			emit("cmpm x0,b");
 		},
@@ -1193,12 +1193,12 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 2;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(2)));
 			emit("dec a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 1);
+			verify(dsp.aluA().var == 1);
 			verify(!dsp.sr_test(CCR_Z));
 			verify(!dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_E));
@@ -1207,12 +1207,12 @@ namespace dsp56k
 		});
 		runTest([&]()
 		{
-			dsp.regs().a.var = 1;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(1)));
 			emit("dec a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0);
+			verify(dsp.aluA().var == 0);
 			verify(dsp.sr_test(CCR_Z));
 			verify(!dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_E));
@@ -1221,7 +1221,7 @@ namespace dsp56k
 		});
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			emit("dec a");
 		},
 			[&]()
@@ -1264,7 +1264,7 @@ namespace dsp56k
 				0xfff49706007a12
 			};
 
-			dsp.reg.a.var = 0x00001000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00001000000000)));
 			dsp.reg.y.var = 0x04444410c6f2;
 
 			for (size_t i = 0; i < 24; ++i)
@@ -1275,14 +1275,14 @@ namespace dsp56k
 					emit("div y0,a");
 				}, [&]()
 				{
-					verify(dsp.reg.a.var == expectedValues[i]);
+					verify(dsp.aluA().var == expectedValues[i]);
 				});
 			}
 		}
 
 		{
 			dsp.y0(0x218dec);
-			dsp.reg.a.var = 0x00008000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00008000000000)));
 			dsp.setSR(0x0800d4);
 
 			static constexpr uint64_t expectedValues[24] =
@@ -1321,7 +1321,7 @@ namespace dsp56k
 					emit("div y0,a");
 				}, [&]()
 				{
-					verify(dsp.reg.a.var == expectedValues[i]);
+					verify(dsp.aluA().var == expectedValues[i]);
 				});
 			}
 		}
@@ -1329,13 +1329,13 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.y0(0x218dec);
-			dsp.regs().a.var = 0x00008000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00008000000000)));
 			dsp.setSR(0x0800d4);
 			emit("div y0,a");
 		},
 		[&]()
 		{
-			verify(dsp.regs().a.var == 0xffdf7214000000);
+			verify(dsp.aluA().var == 0xffdf7214000000);
 			verify(dsp.getSR().var == 0x0800d4);		
 		});
 	}
@@ -1344,59 +1344,59 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.x1(0x000020);
 			dsp.y1(0x000020);
 			emit("dmac ss x1,y1,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x800);
+			verify(dsp.aluA().var == 0x800);
 		});
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xfff00000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xfff00000000000)));
 			dsp.x1(0x000020);
 			dsp.y1(0x000020);
 			emit("dmac ss x1,y1,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xfffffffff00800);
+			verify(dsp.aluA().var == 0xfffffffff00800);
 		});
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x005f1bbfa0e440;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x005f1bbfa0e440)));
 			dsp.regs().x.var = 0x015555555555;
 			dsp.regs().y.var = 0x0000008ea9a0;
 			emit("dmac su x1,y0,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00017c6effffff);
+			verify(dsp.aluA().var == 0x00017c6effffff);
 		});
 
 		// dmac uu: both operands unsigned
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00AABBCC112233;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00AABBCC112233)));
 			dsp.x1(0x100000);
 			dsp.y1(0x200000);
 			emit("dmac uu x1,y1,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00040000aabbcc);
+			verify(dsp.aluA().var == 0x00040000aabbcc);
 		});
 
 		// dmac ss with negate
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00112233000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00112233000000)));
 			dsp.x1(0x000100);
 			dsp.y1(0x000200);
 			emit("dmac ss -x1,y1,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x000000000d2233);
+			verify(dsp.aluA().var == 0x000000000d2233);
 		});
 	}
 
@@ -1412,12 +1412,12 @@ namespace dsp56k
 			dsp.x1(0x055555);
 			dsp.y0(0x123456);
 			dsp.y1(0x000042);
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 
 			emit("mpyuu x0,y0,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x000c22e3f3dd1c);
+			verify(dsp.aluA().var == 0x000c22e3f3dd1c);
 		});
 
 		runTest([&]()
@@ -1425,7 +1425,7 @@ namespace dsp56k
 			emit("dmac su x1,y0,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x0000c22e3fffff);
+			verify(dsp.aluA().var == 0x0000c22e3fffff);
 		});
 
 		runTest([&]()
@@ -1433,7 +1433,7 @@ namespace dsp56k
 			emit("macsu y1,x0,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x0000c25a3fffd3);
+			verify(dsp.aluA().var == 0x0000c25a3fffd3);
 		});
 
 		runTest([&]()
@@ -1441,7 +1441,7 @@ namespace dsp56k
 			emit("dmac ss x1,y1,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00000002c0c22e);
+			verify(dsp.aluA().var == 0x00000002c0c22e);
 		});
 
 		// Test Case 2: larger metric (y1:y0 = $001234:$abcdef)
@@ -1451,7 +1451,7 @@ namespace dsp56k
 			dsp.x1(0x055555);
 			dsp.y0(0xabcdef);
 			dsp.y1(0x001234);
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 
 			emit("mpyuu x0,y0,a");
 			emit("dmac su x1,y0,a");
@@ -1459,7 +1459,7 @@ namespace dsp56k
 			emit("dmac ss x1,y1,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x000000c231d33f);
+			verify(dsp.aluA().var == 0x000000c231d33f);
 		});
 
 		// Test Case 3: near-max signed metric (y1:y0 = $7fffff:$ffffff)
@@ -1469,7 +1469,7 @@ namespace dsp56k
 			dsp.x1(0x055555);
 			dsp.y0(0xffffff);
 			dsp.y1(0x7fffff);
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 
 			emit("mpyuu x0,y0,a");
 			emit("dmac su x1,y0,a");
@@ -1477,7 +1477,7 @@ namespace dsp56k
 			emit("dmac ss x1,y1,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00055555555554);
+			verify(dsp.aluA().var == 0x00055555555554);
 		});
 	}
 
@@ -1485,26 +1485,26 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x0f799428000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0f799428000000)));
 			dsp.x0(0x799428);
 
 			emit("eor x0,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x0f000000000000);
+			verify(dsp.aluA().var == 0x0f000000000000);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x0f000428000123;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0f000428000123)));
 			dsp.x0(0x799428);
 
 			emit("eor x0,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x0f799000000123);
+			verify(dsp.aluA().var == 0x0f799000000123);
 		});
 	}
 
@@ -1513,21 +1513,21 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.regs().x.var = 0x4008000000;  // x1 = 0x4008  (width=4, offset=8)
-			dsp.regs().a.var = 0xef00;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xef00)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 
 			// extractu x1,a,b  (width = 0x8, offset = 0x28)
 			emit(0x0c1a8d);	// extractu x0,a,b
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0xf);
+			verify(dsp.aluB().var == 0xf);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0xfff47555000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xfff47555000000)));
 			dsp.setSR(0x0800d9);
 
 			// extractu $8028,b,a
@@ -1535,52 +1535,52 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xf4);
+			verify(dsp.aluA().var == 0xf4);
 			verify(dsp.getSR().var == 0x0800d0);
 		});
 
 		runTest([&]()
 		{
 			dsp.reg.x.var = 0x4008000000;  // x1 = 0x4008  (width=4, offset=8)
-			dsp.reg.a.var = 0xff00;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xff00)));
 
 			// extractu x1,a,b  (width = 0x8, offset = 0x28)
 			emit(0x0c1a8d);	// extractu x0,a,b
 
 		}, [&]()
 		{
-			verify(dsp.reg.b.var == 0xf);
+			verify(dsp.aluB().var == 0xf);
 		});
 
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0;
-			dsp.reg.b.var = 0xfff47555000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xfff47555000000)));
 			dsp.setSR(0x0800d9);
 
 			// extractu $8028,b,a
 			emit(0x0c1890, 0x008028);	// extractu #$8028,a,a
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0xf4);
+			verify(dsp.aluA().var == 0xf4);
 			verify(dsp.getSR().var == 0x0800d0);
 		});
 
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0;
-			dsp.reg.b.var = 0xef123456abcdef;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xef123456abcdef)));
 
 			// extractu #$020000,b,a
 			emit(0x0c1890, 0x020000);	// extractu #$20000,a,a
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x56abcdef);
+			verify(dsp.aluA().var == 0x56abcdef);
 		});
 
 		runTest([&]()
 		{
-			dsp.reg.b.var = 0;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.b1(TReg24(0xAABBCC));
 			dsp.b0(TReg24(0xDDEEFF));
 
@@ -1588,7 +1588,7 @@ namespace dsp56k
 			emit(0x0c1890, 0x020000);	// extractu #$20000,a,a
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x0000CCDDEEFF);
+			verify(dsp.aluA().var == 0x0000CCDDEEFF);
 		});
 	}
 
@@ -1596,13 +1596,13 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.reg.b.var = 0x0444ffff000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x0444ffff000000)));
 
 			// extractu #$C028,b,a  (width = 0xC, offset = 0x28)
 			emit(0x0c1890, 0x00C028);	// extractu #$c028,a,a
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x444);
+			verify(dsp.aluA().var == 0x444);
 		});
 	}
 
@@ -1610,23 +1610,23 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00ffffffffffffff;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffffffffffff)));
 			emit("inc a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0);
+			verify(dsp.aluA().var == 0);
 			verify(dsp.sr_test(static_cast<CCRMask>(CCR_C | CCR_Z)));
 			verify(!dsp.sr_test(static_cast<CCRMask>(CCR_N | CCR_E | CCR_V)));
 		});
 		runTest([&]()
 		{
-			dsp.regs().a.var = 1;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(1)));
 			emit("inc a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 2);
+			verify(dsp.aluA().var == 2);
 			verify(!dsp.sr_test(static_cast<CCRMask>(CCR_Z | CCR_N | CCR_E | CCR_V | CCR_C)));
 		});
 	}
@@ -1636,30 +1636,30 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.x1(0x123456);
-			dsp.regs().a.var = 0x12aabbccddeeff;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x12aabbccddeeff)));
 			emit("insert #$00c008,x1,a	; use 12 bits from x1 and insert into a at bit 8");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x12aabbccd456ff);
+			verify(dsp.aluA().var == 0x12aabbccd456ff);
 		});
 
 		runTest([&]()
 		{
 			dsp.x0(0x010028);						// control reg, 16 bits to position 40
 			dsp.y1(0xabcdef);						// source
-			dsp.regs().a.var = 0x12123456123456;	// dest
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x12123456123456)));	// dest
 			emit("insert x0,y1,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xcdef3456123456);
+			verify(dsp.aluA().var == 0xcdef3456123456);
 		});
 
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0;
-			dsp.reg.b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.a0(TReg24(0xDDEEFF));
 			dsp.b0(TReg24(0xAABBCC));
 			dsp.x1(0x8000);
@@ -1704,46 +1704,46 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xffaabbcc112233;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffaabbcc112233)));
 			emit("lsl a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xff557798112233);
+			verify(dsp.aluA().var == 0xff557798112233);
 			verify(dsp.sr_test(CCR_C));
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xffaabbcc112233;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffaabbcc112233)));
 			emit("lsl #$4,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xffabbcc0112233);
+			verify(dsp.aluA().var == 0xffabbcc0112233);
 			verify(!dsp.sr_test(CCR_C));
 		});
 
 		runTest([&]()
 		{
 			dsp.x1(0x4);
-			dsp.regs().a.var = 0xab112233445566;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xab112233445566)));
 			emit("lsl x1,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xab122330445566);
+			verify(dsp.aluA().var == 0xab122330445566);
 		});
 
 		runTest([&]()
 		{
 			dsp.x1(0x1c);				// more than 24 bits should move in zeroes
-			dsp.regs().a.var = 0xab112233445566;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xab112233445566)));
 			emit("lsl x1,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xab000000445566);
+			verify(dsp.aluA().var == 0xab000000445566);
 		});
 	}
 
@@ -1751,46 +1751,46 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xffaabbcc112233;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffaabbcc112233)));
 			emit("lsr a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xff555de6112233);
+			verify(dsp.aluA().var == 0xff555de6112233);
 			verify(!dsp.sr_test(CCR_C));
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xffaabbcc112233;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffaabbcc112233)));
 			emit("lsr #$4,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xff0aabbc112233);
+			verify(dsp.aluA().var == 0xff0aabbc112233);
 			verify(dsp.sr_test(CCR_C));
 		});
 
 		runTest([&]()
 		{
 			dsp.x1(0x4);
-			dsp.regs().a.var = 0xab112233445566;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xab112233445566)));
 			emit("lsr x1,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xab011223445566);
+			verify(dsp.aluA().var == 0xab011223445566);
 		});
 
 		runTest([&]()
 		{
 			dsp.x1(0x1c);				// more than 24 bits should move in zeroes
-			dsp.regs().a.var = 0xab112233445566;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xab112233445566)));
 			emit("lsr x1,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xab000000445566);
+			verify(dsp.aluA().var == 0xab000000445566);
 		});
 	}
 
@@ -1867,13 +1867,13 @@ namespace dsp56k
 		{
 			dsp.reg.x.var =   0xda7efa5a7efa;
 			dsp.reg.y.var =   0x000000800000;
-			dsp.reg.a.var = 0x005a7efa000000;
-			dsp.reg.b.var = 0x005a7efa000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x005a7efa000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x005a7efa000000)));
 
 			emit(0x2000e2);	// mac x0,y1,a
 		}, [&]()
 		{
-			verify(dsp.reg.a == 0x00800000000000);
+			verify(dsp.aluA() == 0x00800000000000);
 		});
 
 		runTest([&]()
@@ -1881,20 +1881,20 @@ namespace dsp56k
 			emit(0x2000da);	// mac y1,x1,a
 		}, [&]()
 		{
-			verify(dsp.reg.b == 0x00000000000000);
+			verify(dsp.aluB() == 0x00000000000000);
 		});
 
 		runTest([&]()
 		{
 			dsp.y0(0x7fffff);
 			dsp.x0(0x6bb14a);
-			dsp.reg.b.var = 0x00553300000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00553300000000)));
 			dsp.setSR(0x0880d0);
 
 			emit(0x2000da);	// mac y1,x1,a
 		}, [&]()
 		{
-			verify(dsp.reg.b == 0x00c0e449289d6c);
+			verify(dsp.aluB() == 0x00c0e449289d6c);
 			verify(dsp.getSR().var == 0x0880f0);
 		});
 
@@ -1904,14 +1904,14 @@ namespace dsp56k
 			dsp.y1(0xf3aab8);
 			dsp.y0(0x000080);
 			dsp.setSR(0x0800d8);
-			dsp.reg.b.var = 0x0000000c000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x0000000c000000)));
 			dsp.reg.r[5].var = 10;
 			dsp.memory().set(MemArea_X, 10, 0x123456);
 
 			emit(0x46d5bb);	// mac y0,x0,a y:(r5)+,y0 (complex parallel)
 		}, [&]()
 		{
-			verify(dsp.reg.b == 0);
+			verify(dsp.aluB() == 0);
 			verify(dsp.reg.r[5].var == 9);
 			verify(dsp.y0() == 0x123456);
 			verify(dsp.getSR().var == 0x0800d4);
@@ -1924,7 +1924,7 @@ namespace dsp56k
 		{
 			dsp.x0(0x400000);                    // x0 = +0.5 fractional
 			dsp.y0(0x200000);                    // y0 = +0.25 fractional
-			dsp.reg.b.var = 0x00100000000000;    // seed b = +0.125 fractional (matches x0*y0)
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00100000000000)));    // seed b = +0.125 fractional (matches x0*y0)
 			dsp.reg.r[2].var = 0x40;
 			dsp.reg.m[2].var = 0xffffff;
 
@@ -1934,7 +1934,7 @@ namespace dsp56k
 			// Frac product (x0*y0)<<1 = 0.5 * 0.25 = 0.125 = 0x00100000000000.
 			// Negated and added to a seed of +0.125 must cancel exactly to zero.
 			// If the JIT drops or mis-applies the negate flag, b stays at +0.25.
-			verify(dsp.reg.b.var == 0);
+			verify(dsp.aluB().var == 0);
 			verify(dsp.reg.r[2].var == 0x41);
 		});
 
@@ -1945,7 +1945,7 @@ namespace dsp56k
 		{
 			dsp.x0(0x7fffff);                    // x0 ≈ +1.0
 			dsp.y0(0x7fffff);                    // y0 ≈ +1.0
-			dsp.reg.b.var = 0x00000000000000;    // b = 0
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000000000000)));    // b = 0
 			dsp.reg.r[2].var = 0x80;
 			dsp.reg.m[2].var = 0xffffff;
 
@@ -1954,7 +1954,7 @@ namespace dsp56k
 		{
 			// x0*y0 ≈ 1.0 (= 0x00 7FFF FE 00 0002 in 56-bit). Negate and add to 0.
 			// Result must be a NEGATIVE value, not a wrong-sign positive.
-			verify((dsp.reg.b.var & (1ULL << 55)) != 0);	// sign bit set
+			verify((dsp.aluB().var & (1ULL << 55)) != 0);	// sign bit set
 		});
 	}
 
@@ -1963,13 +1963,13 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.x1(0x2);
-			dsp.regs().a.var = 0x100;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x100)));
 
 			emit("mac x1,#$2,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00000000800100);
+			verify(dsp.aluA().var == 0x00000000800100);
 		});
 	}
 
@@ -1979,8 +1979,8 @@ namespace dsp56k
 		{
 			runTest([&]()
 			{
-				dsp.regs().a.var = _a;
-				dsp.regs().b.var = _b;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(_a)));
+				dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(_b)));
 
 				emit("max a,b");
 			},
@@ -1988,14 +1988,14 @@ namespace dsp56k
 			{
 				if(aIsGreaterEqual)
 				{
-					verify(dsp.regs().a.var == _a);
-					verify(dsp.regs().b.var == _a);
+					verify(dsp.aluA().var == _a);
+					verify(dsp.aluB().var == _a);
 					assert(!dsp.sr_test(CCR_C));
 				}
 				else
 				{
-					verify(dsp.regs().a.var == _a);
-					verify(dsp.regs().b.var == _b);
+					verify(dsp.aluA().var == _a);
+					verify(dsp.aluB().var == _b);
 					assert(dsp.sr_test(CCR_C));
 				}
 			});
@@ -2018,8 +2018,8 @@ namespace dsp56k
 
 			runTest([&]()
 			{
-				dsp.regs().a.var = _a;
-				dsp.regs().b.var = _b;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(_a)));
+				dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(_b)));
 
 				emit("maxm a,b");
 			},
@@ -2027,14 +2027,14 @@ namespace dsp56k
 			{
 				if(aIsGreaterEqual)
 				{
-					verify(dsp.regs().a.var == _a);
-					verify(dsp.regs().b.var == _a);
+					verify(dsp.aluA().var == _a);
+					verify(dsp.aluB().var == _a);
 					assert(!dsp.sr_test(CCR_C));
 				}
 				else
 				{
-					verify(dsp.regs().a.var == _a);
-					verify(dsp.regs().b.var == _b);
+					verify(dsp.aluA().var == _a);
+					verify(dsp.aluB().var == _b);
 					assert(dsp.sr_test(CCR_C));
 				}
 			});
@@ -2061,7 +2061,7 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x000800);
+			verify(dsp.aluA().var == 0x000800);
 		});
 
 		runTest([&]()
@@ -2073,7 +2073,7 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x2);
+			verify(dsp.aluA().var == 0x2);
 		});
 
 		auto testMultiply = [this](int x0, int y0, int64_t expectedResult, TWord opcode)
@@ -2087,7 +2087,7 @@ namespace dsp56k
 				emit(opcode);
 			}, [&]()
 			{
-				verify(dsp.reg.a == expectedResult);
+				verify(dsp.aluA() == expectedResult);
 			});
 		};
 
@@ -2098,8 +2098,8 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0x00400000000000;
-			dsp.reg.b.var = 0x0003a400000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00400000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x0003a400000000)));
 			dsp.reg.x.var = 0x00000506c000;
 			dsp.reg.y.var = 0x000400000400;
 			dsp.setSR(0x0800c9);
@@ -2108,7 +2108,7 @@ namespace dsp56k
 			emit(0x2000d0);	// mac x1,x0,a
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x00000036000000);
+			verify(dsp.aluA().var == 0x00000036000000);
 			verify(dsp.getSR().var == 0x0800d1);
 		});
 
@@ -2118,15 +2118,15 @@ namespace dsp56k
 		{
 			dsp.x0(0x020);
 			dsp.x1(0x400);
-			dsp.reg.a.var = 0x12abcdefabdef;
-			dsp.reg.b.var = 0x12abcdefabdef;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x12abcdefabdef)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x12abcdefabdef)));
 
 			emit("mpy x1,#$13,a");
 			emit("mpy x0,#$a,b");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x8000);
-			verify(dsp.reg.b.var == 0x80000);
+			verify(dsp.aluA().var == 0x8000);
+			verify(dsp.aluB().var == 0x80000);
 		});
 	}
 
@@ -2142,7 +2142,7 @@ namespace dsp56k
 			emit("mpyr y0,x0,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x0000b37a000000);
+			verify(dsp.aluA().var == 0x0000b37a000000);
 		});
 	}
 
@@ -2151,13 +2151,13 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.x1(0x2);
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 
 			emit("mpy x1,#$2,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00000000800000);
+			verify(dsp.aluA().var == 0x00000000800000);
 		});
 	}
 
@@ -2165,26 +2165,26 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 1;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(1)));
 
 			emit("neg a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xffffffffffffff);
+			verify(dsp.aluA().var == 0xffffffffffffff);
 			verify(dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_Z));
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xfffffffffffffe;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xfffffffffffffe)));
 
 			emit("neg a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 2);
+			verify(dsp.aluA().var == 2);
 			verify(!dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_Z));
 		});
@@ -2194,8 +2194,8 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00123456789abc;
-			dsp.regs().b.var = 0x00123456789abc;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00123456789abc)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00123456789abc)));
 
 			dsp.x0(4);
 			dsp.y0(-4);
@@ -2205,8 +2205,8 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x000123456789ab);
-			verify(dsp.regs().b.var == 0x0123456789abc0);
+			verify(dsp.aluA().var == 0x000123456789ab);
+			verify(dsp.aluB().var == 0x0123456789abc0);
 		});
 	}
 
@@ -2214,47 +2214,47 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x12555555123456;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x12555555123456)));
 			emit("not a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x12aaaaaa123456);
+			verify(dsp.aluA().var == 0x12aaaaaa123456);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xffd8b38b000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffd8b38b000000)));
 			dsp.setSR(0x0800e8);
 			emit("not a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xff274c74000000);
+			verify(dsp.aluA().var == 0xff274c74000000);
 			verify(dsp.regs().sr.var == 0x0800e0);
 		});
 
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0x12555555123456;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x12555555123456)));
 
 			// not a
 			emit("not a");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x12aaaaaa123456);
+			verify(dsp.aluA().var == 0x12aaaaaa123456);
 		});
 
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0xffd8b38b000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffd8b38b000000)));
 			dsp.setSR(0x0800e8);
 
 			// not a
 			emit("not a");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0xff274c74000000);
+			verify(dsp.aluA().var == 0xff274c74000000);
 			verify(dsp.getSR().var == 0x0800e0);
 		});
 	}
@@ -2263,33 +2263,33 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xbb222222555555;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xbb222222555555)));
 			dsp.x0(0x444444);
 			emit("or x0,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xbb666666555555);
+			verify(dsp.aluA().var == 0xbb666666555555);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xbb222222555555;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xbb222222555555)));
 			emit("or #>$444444,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xbb666666555555);
+			verify(dsp.aluA().var == 0xbb666666555555);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xbb222222555555;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xbb222222555555)));
 			emit("or #$4,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xbb222226555555);
+			verify(dsp.aluA().var == 0xbb222226555555);
 		});
 	}
 
@@ -2320,35 +2320,35 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00222222333333;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00222222333333)));
 
 			emit("rnd a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00222222000000);
+			verify(dsp.aluA().var == 0x00222222000000);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00222222999999;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00222222999999)));
 
 			emit("rnd a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00222223000000);
+			verify(dsp.aluA().var == 0x00222223000000);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0xffff9538000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xffff9538000000)));
 
 			emit("rnd b");
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0xffff9538000000);
+			verify(dsp.aluB().var == 0xffff9538000000);
 			verify(dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_Z));
 			verify(!dsp.sr_test(CCR_V));
@@ -2356,51 +2356,51 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xffffffffffffff;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffffffffffffff)));
 
 			emit("rnd a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0);
+			verify(dsp.aluA().var == 0);
 		});
 
 		// test rnd with scaling mode bits set
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00222222ffffff;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00222222ffffff)));
 			dsp.sr_set(SR_S0);
 			dsp.sr_clear(SR_S1);
 			emit("rnd a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00222222000000);
+			verify(dsp.aluA().var == 0x00222222000000);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00eeeeeebbbbbb;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00eeeeeebbbbbb)));
 			dsp.sr_clear(SR_S0);
 			dsp.sr_set(SR_S1);
 			emit("rnd a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00eeeeee800000);
+			verify(dsp.aluA().var == 0x00eeeeee800000);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00eeeeeebbbbbb;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00eeeeeebbbbbb)));
 			dsp.sr_clear(SR_S0);
 			dsp.sr_clear(SR_S1);
 			emit("rnd a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00eeeeef000000);
+			verify(dsp.aluA().var == 0x00eeeeef000000);
 		});
 	}
 
@@ -2409,39 +2409,39 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.regs().sr.var = 0;
-			dsp.regs().a.var = 0xee112233ffeedd;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xee112233ffeedd)));
 
 			emit("rol a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xee224466ffeedd);
+			verify(dsp.aluA().var == 0xee224466ffeedd);
 			verify(!dsp.sr_test(CCR_C));
 		});
 
 		runTest([&]()
 		{
 			dsp.sr_set(CCR_C);
-			dsp.reg.a.var = 0x12abcdef123456;				// 00010010 10101011 11001101 11101111 00010010 00110100 01010110
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x12abcdef123456)));				// 00010010 10101011 11001101 11101111 00010010 00110100 01010110
 
 			// rol a
 			emit("rol a");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x12579BDF123456);		// 00010010 01010111 10011011 11011111 00010010 00110100 01010110
+			verify(dsp.aluA().var == 0x12579BDF123456);		// 00010010 01010111 10011011 11011111 00010010 00110100 01010110
 			verify(dsp.sr_test(CCR_C) == 1);
 		});
 
 		runTest([&]()
 		{
 			dsp.sr_set(CCR_C);
-			dsp.reg.a.var = 0x12123456abcdef;				// 00010010 00010010 00110100 01010110 10101011 11001101 11101111
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x12123456abcdef)));				// 00010010 00010010 00110100 01010110 10101011 11001101 11101111
 
 			// rol a
 			emit("rol a");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x122468ADABCDEF);		// 00010010 00100100 01101000 10101101 10101011 11001101 11101111
+			verify(dsp.aluA().var == 0x122468ADABCDEF);		// 00010010 00100100 01101000 10101101 10101011 11001101 11101111
 			verify(dsp.sr_test(CCR_C) == 0);
 		});
 	}
@@ -2450,42 +2450,42 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00000000000001;
-			dsp.regs().b.var = 0x00000000000002;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000000000001)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000000000002)));
 
 			emit("sub b,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xffffffffffffff);
+			verify(dsp.aluA().var == 0xffffffffffffff);
 			verify(dsp.sr_test(CCR_C));
 			verify(!dsp.sr_test(CCR_V));
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x80000000000000;
-			dsp.regs().b.var = 0x00000000000001;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x80000000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000000000001)));
 
 			emit("sub b,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x7fffffffffffff);
+			verify(dsp.aluA().var == 0x7fffffffffffff);
 			verify(!dsp.sr_test(CCR_C));
 			verify(!dsp.sr_test(CCR_V));
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.x0(0x800000);
 
 			emit("sub x0,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00800000000000);
+			verify(dsp.aluA().var == 0x00800000000000);
 			verify(dsp.sr_test(CCR_C));
 			verify(!dsp.sr_test(CCR_N));
 		});
@@ -2495,52 +2495,52 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 2;
-			dsp.regs().b.var = 4;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(2)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(4)));
 
 			emit("subl b,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0);
+			verify(dsp.aluA().var == 0);
 			verify(dsp.sr_test(CCR_Z));
 		});
 		runTest([&]()
 		{
-			dsp.regs().a.var = 4;
-			dsp.regs().b.var = 2;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(4)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(2)));
 
 			emit("subl b,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 6);
+			verify(dsp.aluA().var == 6);
 			verify(!dsp.sr_test(CCR_Z));
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 2;
-			dsp.regs().b.var = 4;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(2)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(4)));
 
 			emit("subl a,b");
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 6);
+			verify(dsp.aluB().var == 6);
 			verify(!dsp.sr_test(CCR_Z));
 		});
 
 		runTest([&]()
 		{
-			dsp.reg.a.var = 0x00400000000000;
-			dsp.reg.b.var = 0x00200000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00400000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00200000000000)));
 
 			// subl b,a
 			emit("subl b,a");
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x00600000000000);
+			verify(dsp.aluA().var == 0x00600000000000);
 			verify(!dsp.sr_test(CCR_C));
 			verify(!dsp.sr_test(CCR_V));
 		});
@@ -2553,13 +2553,13 @@ namespace dsp56k
 		// the Tfr instruction (0x200009, JJJ=0 encoding) is tested.
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x11223344556677;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x11223344556677)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			emit(0x200009);	// tfr a,b (56-bit transfer)
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0x11223344556677);
+			verify(dsp.aluB().var == 0x11223344556677);
 		});
 	}
 
@@ -2577,14 +2577,14 @@ namespace dsp56k
 			runTest([&]()
 			{
 				switch (srcReg) { case 0: dsp.x0(v); break; case 1: dsp.x1(v); break; case 2: dsp.y0(v); break; case 3: dsp.y1(v); break; }
-				dsp.regs().a.var = 0x7FFFFFFFFFFFFF;	// poison both accumulators incl. A0/extension
-				dsp.regs().b.var = 0x7FFFFFFFFFFFFF;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x7FFFFFFFFFFFFF)));	// poison both accumulators incl. A0/extension
+				dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x7FFFFFFFFFFFFF)));
 				emit(opcode);
 			}, [&]()
 			{
 				const int64_t vs = (v & 0x800000) ? static_cast<int64_t>(v) - 0x1000000 : static_cast<int64_t>(v);
 				const uint64_t expect = (static_cast<uint64_t>(vs) << 24) & 0xFFFFFFFFFFFFFFULL;	// A1=v, A2=sign, A0=0
-				const uint64_t got = (destB ? dsp.regs().b.var : dsp.regs().a.var) & 0xFFFFFFFFFFFFFFULL;
+				const uint64_t got = (destB ? dsp.aluB().var : dsp.aluA().var) & 0xFFFFFFFFFFFFFFULL;
 				verify(got == expect);
 			});
 		};
@@ -2609,51 +2609,51 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xaa112233445566;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xaa112233445566)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.sr_set(CCR_Z);
 			emit(0x022008);	// tne a,b
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0);
+			verify(dsp.aluB().var == 0);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xbb112233445566;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xbb112233445566)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.sr_clear(CCR_Z);
 			emit(0x022008);	// tne a,b
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0xbb112233445566);
+			verify(dsp.aluB().var == 0xbb112233445566);
 		});
 
 		// Same tests with alternative JJJ=0 encoding
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xaa112233445566;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xaa112233445566)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.sr_set(CCR_Z);
 			emit(0x022008);	// tne a,b (JJJ=0, alternative encoding)
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0);
+			verify(dsp.aluB().var == 0);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xbb112233445566;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xbb112233445566)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.sr_clear(CCR_Z);
 			emit(0x022008);	// tne a,b (JJJ=0, alternative encoding)
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0xbb112233445566);
+			verify(dsp.aluB().var == 0xbb112233445566);
 		});
 
 		// Tcc_S2D2
@@ -2686,8 +2686,8 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xaa112233445566;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xaa112233445566)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.regs().r[0].var = 0xaa1122;
 			dsp.regs().r[1].var = 0x0;
 			dsp.sr_set(CCR_Z);
@@ -2695,14 +2695,14 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0);
+			verify(dsp.aluB().var == 0);
 			verify(dsp.regs().r[1].var == 0);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xbb112233445566;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xbb112233445566)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.regs().r[0].var = 0xbb1122;
 			dsp.regs().r[1].var = 0x0;
 			dsp.sr_clear(CCR_Z);
@@ -2710,7 +2710,7 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0xbb112233445566);
+			verify(dsp.aluB().var == 0xbb112233445566);
 			verify(dsp.regs().r[1].var == 0xbb1122);
 		});
 	}
@@ -2719,8 +2719,8 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 1;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(1)));
 
 			dsp.setSR(0);
 
@@ -2728,13 +2728,13 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0);
+			verify(dsp.aluA().var == 0);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 1;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(1)));
 
 			dsp.setSR(CCR_Z);
 
@@ -2742,13 +2742,13 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 1);
+			verify(dsp.aluA().var == 1);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xffffffff000000;
-			dsp.regs().b.var = 0x0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffffffff000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x0)));
 
 			dsp.setSR(CCR_Z);
 
@@ -2763,8 +2763,8 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x0;
-			dsp.regs().b.var = 0x1;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x1)));
 
 			dsp.setSR(CCR_N);
 
@@ -2780,26 +2780,26 @@ namespace dsp56k
 		// ifcc preserves CCR: clr b ifne must keep Z=0 from prior tst
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00010000000000;
-			dsp.regs().b.var = 0x00AABBCC000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00010000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00AABBCC000000)));
 			emit("tst a");
 			emit("clr b ifne");
 		}, [&]()
 		{
-			verify(dsp.regs().b.var == 0);
+			verify(dsp.aluB().var == 0);
 			verify(!dsp.sr_test(CCR_Z));
 		});
 
 		// ifcc preserves CCR: condition false, neither dest nor CCR change
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0x00112233000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00112233000000)));
 			emit("tst a");
 			emit("clr b ifne");
 		}, [&]()
 		{
-			verify(dsp.regs().b.var == 0x00112233000000);
+			verify(dsp.aluB().var == 0x00112233000000);
 			verify(dsp.sr_test(CCR_Z));
 		});
 	}
@@ -2811,9 +2811,9 @@ namespace dsp56k
 		dsp.reg.x.var = 0;
 
 		// move #$ff,a
-		runTest([&](){ emit("move #$ff,a");		}, [&](){verify(dsp.reg.a == 0x00ffff0000000000);});
+		runTest([&](){ emit("move #$ff,a");		}, [&](){verify(dsp.aluA() == 0x00ffff0000000000);});
 		// move #$0f,a
-		runTest([&](){emit("move #$0f,a");		}, [&](){verify(dsp.reg.a == 0x00000f0000000000);});
+		runTest([&](){emit("move #$0f,a");		}, [&](){verify(dsp.aluA() == 0x00000f0000000000);});
 		// move #$ff,x0
 		runTest([&](){emit("move #$ff,x0");		}, [&](){verify(dsp.x0() == 0xff0000);		verify(dsp.reg.x == 0xff0000);});
 		// move #$ff,r2
@@ -2823,21 +2823,21 @@ namespace dsp56k
 		// move #$345678,a1
 		runTest([&](){emit("move #>$345678,a1");}, [&](){});
 		// move #$abcdef,a0
-		runTest([&](){emit("move #>$abcdef,a0");}, [&](){verify(dsp.reg.a.var == 0x0012345678abcdef);});
+		runTest([&](){emit("move #>$abcdef,a0");}, [&](){verify(dsp.aluA().var == 0x0012345678abcdef);});
 		// move a,b
-		runTest([&](){emit("move a,b");			}, [&](){verify(dsp.reg.b.var == 0x00007fffff000000);});
+		runTest([&](){emit("move a,b");			}, [&](){verify(dsp.aluB().var == 0x00007fffff000000);});
 
 		// memory to register move
 		runTest([&]()
 		{
 			dsp.reg.r[5].var = 10;
 			dsp.memory().set(MemArea_Y, 9, 0x123456);
-			dsp.reg.b.var = 0;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			// move y:-(r5),b)
 			emit("move y:-(r5),b");
 		}, [&]()
 		{
-			verify(dsp.reg.b.var == 0x00123456000000);
+			verify(dsp.aluB().var == 0x00123456000000);
 			verify(dsp.reg.r[5].var == 9);
 		});
 
@@ -2846,7 +2846,7 @@ namespace dsp56k
 		{
 			dsp.memory().set(MemArea_X, 10, 0x123456);
 			dsp.memory().set(MemArea_Y, 5, 0x543210);
-			dsp.reg.a.var = 0x0000babeb00bab;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0000babeb00bab)));
 
 			dsp.reg.r[2].var = 10;
 			dsp.reg.r[6].var = 5;
@@ -2858,7 +2858,7 @@ namespace dsp56k
 			verify(dsp.reg.r[2] == 11);
 			verify(dsp.reg.r[6] == 6);
 
-			verify(dsp.reg.a == 0x00123456000000);
+			verify(dsp.aluA() == 0x00123456000000);
 			verify(dsp.memory().get(MemArea_X, 10) == 0x123456);
 			verify(dsp.memory().get(MemArea_Y, 5 ) == 0xbabe);
 		});
@@ -2866,7 +2866,7 @@ namespace dsp56k
 		// op_Mover
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00112233445566;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00112233445566)));
 			dsp.regs().n[2].var = 0;
 			emit("move a,n2");
 		},		[&]()
@@ -2876,7 +2876,7 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00445566aabbcc;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00445566aabbcc)));
 			dsp.regs().r[0].var = 0;
 			emit("move a,r0");
 		},
@@ -2887,20 +2887,20 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0x44aabbccddeeff;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x44aabbccddeeff)));
 			emit("move b,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x007fffff000000);
-			verify(dsp.regs().b.var == 0x44aabbccddeeff);
+			verify(dsp.aluA().var == 0x007fffff000000);
+			verify(dsp.aluB().var == 0x44aabbccddeeff);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xff000000000000;
-			dsp.regs().b.var = 0x77000000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xff000000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x77000000000000)));
 			emit("move a2,x0");
 			emit("move b2,y0");
 		},
@@ -2912,7 +2912,7 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00223344556677;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00223344556677)));
 			dsp.y1(0xaabbcc);
 			emit("move a,y1");
 		},
@@ -2937,13 +2937,13 @@ namespace dsp56k
 		// op_Movex_ea
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.memory().set(MemArea_X, 0x10, 0x223344);
 			emit("move x:>$10,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00223344000000);
+			verify(dsp.aluA().var == 0x00223344000000);
 		});
 
 		runTest([&]()
@@ -2952,7 +2952,7 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0x0003a800000000);
+			verify(dsp.aluB().var == 0x0003a800000000);
 		});
 
 		runTest([&]()
@@ -2963,12 +2963,12 @@ namespace dsp56k
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0x0011abcd000000);
+			verify(dsp.aluB().var == 0x0011abcd000000);
 		});
 
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0x0011aabb000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x0011aabb000000)));
 			dsp.memory().set(MemArea_X, 0x07, 0);
 			dsp.regs().r[0].var = 0x3;
 			emit("move b,x:(r0+$4)");
@@ -2992,12 +2992,12 @@ namespace dsp56k
 
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			emit("move #$ff,a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xffff0000000000);
+			verify(dsp.aluA().var == 0xffff0000000000);
 		});
 
 		// op_Movey_ea
@@ -3101,38 +3101,38 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.regs().r[3].var = 0x3;
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.memory().set(MemArea_X, 0x7, 0x223344);
 			emit("move x:(r3+$4),a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00223344000000);
+			verify(dsp.aluA().var == 0x00223344000000);
 		});
 
 		runTest([&]()
 		{
 			dsp.regs().r[2].var = 0x14;
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.memory().set(MemArea_X, 0x10, 0x345678);
 			emit("move x:(r2-$4),a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00345678000000);
+			verify(dsp.aluA().var == 0x00345678000000);
 		});
 
 		runTest([&]()
 		{
 			dsp.regs().r[2].var = 0x11;
 			dsp.set_m(2, 0x0f);
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.memory().set(MemArea_X, 0x1d, 0x345678);
 			emit("move x:(r2-$4),a");
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00345678000000);
+			verify(dsp.aluA().var == 0x00345678000000);
 			dsp.set_m(2, 0xffffff);
 		});
 
@@ -3140,7 +3140,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.regs().r[2].var = 0x5;
-			dsp.regs().a.var = 0x00334455667788;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00334455667788)));
 			dsp.memory().set(MemArea_Y, 0x9, 0);
 			emit("move a,y:(r2+$4)");
 		},
@@ -3153,15 +3153,15 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.regs().r[2].var = 0x5;
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0x00223344556677;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00223344556677)));
 			dsp.regs().y.var = 0x111111222222;
 			dsp.memory().set(MemArea_X, 0x5, 0xaabbcc);
 			emit(0x1a9a00);	// move x:(r2)+,a b,y0 (Movexr encoding, equivalent to Movex+Mover)
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xffaabbcc000000);
+			verify(dsp.aluA().var == 0xffaabbcc000000);
 			verify(dsp.regs().y.var == 0x111111223344);
 			verify(dsp.regs().r[2].var == 0x6);
 		});
@@ -3171,27 +3171,27 @@ namespace dsp56k
 			// test dynamic peripheral addressing
 			peripheralsX.write(0xffffc5, 0x00c0de);
 			dsp.regs().r[2].var = 0xffffc5;
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			emit(0x1aa200);	// move x:(r2)+,a b,y0
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00c0de000000);
+			verify(dsp.aluA().var == 0x00c0de000000);
 		});
 
 		// op_Moveyr_ea
 		runTest([&]()
 		{
 			dsp.regs().r[2].var = 0x5;
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0x00223344556677;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00223344556677)));
 			dsp.regs().x.var = 0x111111222222;
 			dsp.memory().set(MemArea_Y, 0x5, 0xddeeff);
 			emit(0x1ada00);	// move b,x0 y:(r2)+,a
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0xffddeeff000000);
+			verify(dsp.aluA().var == 0xffddeeff000000);
 			verify(dsp.regs().x.var == 0x111111223344);
 			verify(dsp.regs().r[2].var == 0x6);
 		});
@@ -3200,14 +3200,14 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.regs().r[1].var = 0x3;
-			dsp.regs().a.var = 0x00223344556677;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00223344556677)));
 			dsp.regs().x.var = 0x111111222222;
 			dsp.memory().set(MemArea_X, 3, 0);
 			emit(0x082100);	// move a,x:(r1) x0,a
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00222222000000);
+			verify(dsp.aluA().var == 0x00222222000000);
 			verify(dsp.memory().get(MemArea_X, 3) == 0x223344);
 		});
 
@@ -3215,14 +3215,14 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.regs().r[6].var = 0x4;
-			dsp.regs().b.var = 0x00334455667788;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00334455667788)));
 			dsp.regs().y.var = 0x444444555555;
 			dsp.memory().set(MemArea_Y, 4, 0);
 			emit(0x09a600);	// move b,y:(r6) y0,b
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0x00555555000000);
+			verify(dsp.aluB().var == 0x00555555000000);
 			verify(dsp.memory().get(MemArea_Y, 4) == 0x334455);
 		});
 
@@ -3400,12 +3400,12 @@ namespace dsp56k
 		runTest([&]()
 		{
 			peripheralsY.write(0xffff86, 0x112233);
-			dsp.regs().b.var = 0;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			emit(0x044f26);	// movep y:<<$ffff86,b
 		},
 			[&]()
 		{
-			verify(dsp.regs().b.var == 0x00112233000000);
+			verify(dsp.aluB().var == 0x00112233000000);
 		});
 
 		// op_Movep_Spp
@@ -3434,13 +3434,13 @@ namespace dsp56k
 			emit(0x4ae000);	// move l:(r0),ab
 		}, [&]()
 		{
-			verify(dsp.reg.a.var == 0x00123456000000);
-			verify(dsp.reg.b.var == 0x00345678000000);
+			verify(dsp.aluA().var == 0x00123456000000);
+			verify(dsp.aluB().var == 0x00345678000000);
 		});
 
 		runTest([&]()
 		{
-			dsp.reg.b.var = 0xaabadbadbadbad;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xaabadbadbadbad)));
 			dsp.memory().set(MemArea_X, 10, 0x123456);
 			dsp.memory().set(MemArea_Y, 10, 0x543210);
 			dsp.reg.r[0].var = 10;
@@ -3449,7 +3449,7 @@ namespace dsp56k
 			emit(0x49e000);	// move l:(r0),b
 		}, [&]()
 		{
-			verify(dsp.reg.b == 0x00123456543210);
+			verify(dsp.aluB() == 0x00123456543210);
 		});
 
 		// op_Movel_ea
@@ -3464,13 +3464,13 @@ namespace dsp56k
 
 			dsp.memory().set(MemArea_X, 0x3, 0x7f0000);
 			dsp.memory().set(MemArea_Y, 0x3, 0x112233);
-			dsp.regs().b.var = 0xffffeeddccbbaa;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xffffeeddccbbaa)));
 
 			emit(0x498300);	// move l:$3,b
 		}, [&]()
 		{
 			verify(dsp.regs().x.var == 0xaabbccddeeff);
-			verify(dsp.regs().b.var == 0x007f0000112233);
+			verify(dsp.aluB().var == 0x007f0000112233);
 			verify(dsp.regs().r[1].var == 0x11);
 		});
 
@@ -3478,8 +3478,8 @@ namespace dsp56k
 		{
 			dsp.regs().x.var = 0xaabbccddeeff;
 			dsp.regs().y.var = 0x112233445566;
-			dsp.regs().a.var = 0x00765432123456;
-			dsp.regs().b.var = 0x00654321fedcba;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00765432123456)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00654321fedcba)));
 			dsp.regs().r[1].var = 0x10;
 			dsp.regs().r[2].var = 0x15;
 			dsp.regs().r[3].var = 0x20;
@@ -3504,16 +3504,16 @@ namespace dsp56k
 		// op_Movel_aa
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.memory().set(MemArea_X, 0x3, 0x123456);
 			dsp.memory().set(MemArea_Y, 0x3, 0x789abc);
 			emit(0x4a8300);	// move l:<$3,ab
 		},
 			[&]()
 		{
-			verify(dsp.regs().a.var == 0x00123456000000);
-			verify(dsp.regs().b.var == 0x00789abc000000);
+			verify(dsp.aluA().var == 0x00123456000000);
+			verify(dsp.aluB().var == 0x00789abc000000);
 		});
 
 		runTest([&]()
@@ -3533,8 +3533,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			// move ab,l:(r3)+ - the exact mixer instruction (opcode 0x4a5b00)
-			dsp.regs().a.var = 0x00112233aabbcc;	// A1=0x112233 (no extension overflow)
-			dsp.regs().b.var = 0x00445566ddeeff;	// B1=0x445566
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00112233aabbcc)));	// A1=0x112233 (no extension overflow)
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00445566ddeeff)));	// B1=0x445566
 			dsp.regs().r[3].var = 0x30;
 			dsp.regs().m[3].var = 0xffffff;
 			dsp.memory().set(MemArea_X, 0x30, 0);	dsp.memory().set(MemArea_Y, 0x30, 0);
@@ -3551,8 +3551,8 @@ namespace dsp56k
 		{
 			// move ab,l:(r3) - no update of r3 (opcode 0x4a6300, MMM=100)
 			// Use positive A1 (bit 23 = 0) so extension=0 is consistent (no saturation).
-			dsp.regs().a.var = 0x00112233000000;
-			dsp.regs().b.var = 0x00445566000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00112233000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00445566000000)));
 			dsp.regs().r[3].var = 0x40;
 			dsp.regs().m[3].var = 0xffffff;
 			dsp.memory().set(MemArea_X, 0x40, 0);	dsp.memory().set(MemArea_Y, 0x40, 0);
@@ -3569,8 +3569,8 @@ namespace dsp56k
 		{
 			// move ab,l:(r3)+n3 - post-increment by Nn (opcode 0x4a4b00, MMM=001)
 			// Negative A1 (bit 23 = 1) requires extension=0xff for sign consistency.
-			dsp.regs().a.var = 0xffaaaaaa000000;
-			dsp.regs().b.var = 0xffbbbbbb000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffaaaaaa000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xffbbbbbb000000)));
 			dsp.regs().r[3].var = 0x50;
 			dsp.regs().n[3].var = 0x05;
 			dsp.regs().m[3].var = 0xffffff;
@@ -3588,8 +3588,8 @@ namespace dsp56k
 		{
 			// move ab,l:(r3)- - post-decrement by 1 (opcode 0x4a5300, MMM=010)
 			// Mix: A negative (extension 0xff), B positive (extension 0).
-			dsp.regs().a.var = 0xffcccccc000000;
-			dsp.regs().b.var = 0x00111111000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xffcccccc000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00111111000000)));
 			dsp.regs().r[3].var = 0x60;
 			dsp.regs().m[3].var = 0xffffff;
 			dsp.memory().set(MemArea_X, 0x60, 0);	dsp.memory().set(MemArea_Y, 0x60, 0);
@@ -3606,8 +3606,8 @@ namespace dsp56k
 		{
 			// move ba,l:(r3)+ - BA pair, swapped (opcode 0x4b5b00, LLL=7)
 			// stores B->x, A->y (opposite of AB)
-			dsp.regs().a.var = 0x00112233000000;
-			dsp.regs().b.var = 0x00445566000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00112233000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00445566000000)));
 			dsp.regs().r[3].var = 0x70;
 			dsp.regs().m[3].var = 0xffffff;
 			dsp.memory().set(MemArea_X, 0x70, 0);	dsp.memory().set(MemArea_Y, 0x70, 0);
@@ -3625,8 +3625,8 @@ namespace dsp56k
 			// move ab,l:(r3)+ with positive saturation: A extension bit set, value > +max
 			// 56-bit A = 0x01_000000_000000 means bit 48 set (positive overflow), so A1
 			// should saturate to 0x7fffff.
-			dsp.regs().a.var = 0x01000000000000;
-			dsp.regs().b.var = 0xff000000000000;	// bit 47 set sign-extended, A1=0x000000 saturates to 0x800000
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x01000000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xff000000000000)));	// bit 47 set sign-extended, A1=0x000000 saturates to 0x800000
 			dsp.regs().r[3].var = 0x80;
 			dsp.regs().m[3].var = 0xffffff;
 			dsp.memory().set(MemArea_X, 0x80, 0);	dsp.memory().set(MemArea_Y, 0x80, 0);
@@ -3645,8 +3645,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.regs().x.var = 0x000000010000;
-			dsp.regs().a.var = 0x006c0000000000;
-			dsp.regs().b.var = 0xbbbbbbbbbbbbbb;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x006c0000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xbbbbbbbbbbbbbb)));
 			dsp.regs().y.var = 0x222222222222;
 
 			emit(0x243c44);	// sub x0,a #$3c,x0
@@ -3654,8 +3654,8 @@ namespace dsp56k
 			[&]()
 		{
 			verify(dsp.x0().var == 0x3c0000);
-			verify(dsp.regs().a.var == 0x006b0000000000);
-			verify(dsp.regs().b.var == 0xbbbbbbbbbbbbbb);
+			verify(dsp.aluA().var == 0x006b0000000000);
+			verify(dsp.aluB().var == 0xbbbbbbbbbbbbbb);
 			verify(dsp.regs().y.var == 0x222222222222);
 		});
 
@@ -3663,8 +3663,8 @@ namespace dsp56k
 		{
 			dsp.regs().x.var = 0x100000080000;
 			dsp.regs().y.var = 0x000000200000;
-			dsp.regs().a.var = 0x0002cdd6000000;
-			dsp.regs().b.var = 0x0002a0a5000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0002cdd6000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x0002a0a5000000)));
 
 			emit(0x210541);	// tfr x0,a a0,x1
 		},
@@ -3672,16 +3672,16 @@ namespace dsp56k
 		{
 			verify(dsp.regs().x.var == 0x000000080000);
 			verify(dsp.regs().y.var == 0x000000200000);
-			verify(dsp.regs().a.var == 0x00080000000000);
-			verify(dsp.regs().b.var == 0x0002a0a5000000);
+			verify(dsp.aluA().var == 0x00080000000000);
+			verify(dsp.aluB().var == 0x0002a0a5000000);
 		});
 
 		runTest([&]()
 		{
 			dsp.regs().x.var = 0x000000003339;
 			dsp.regs().y.var = 0x65a1cb000000;
-			dsp.regs().a.var = 0x00000000000000;
-			dsp.regs().b.var = 0x00196871f4bc6a;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00196871f4bc6a)));
 
 			emit(0x21cf51);	// tfr y0,a a,b
 		},
@@ -3689,16 +3689,16 @@ namespace dsp56k
 		{
 			verify(dsp.regs().x.var == 0x000000003339);
 			verify(dsp.regs().y.var == 0x65a1cb000000);
-			verify(dsp.regs().a.var == 0x00000000000000);
-			verify(dsp.regs().b.var == 0x00000000000000);
+			verify(dsp.aluA().var == 0x00000000000000);
+			verify(dsp.aluB().var == 0x00000000000000);
 		});
 
 		runTest([&]()
 		{
 			dsp.regs().x.var = 0x111111222222;
 			dsp.regs().y.var = 0x333333444444;
-			dsp.regs().a.var = 0x55666666777777;
-			dsp.regs().b.var = 0x88999999aaaaaa;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x55666666777777)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x88999999aaaaaa)));
 
 			emit(0x21ee59);	// tfr y0,b b,a
 		},
@@ -3706,16 +3706,16 @@ namespace dsp56k
 		{
 			verify(dsp.regs().x.var == 0x111111222222);
 			verify(dsp.regs().y.var == 0x333333444444);
-			verify(dsp.regs().a.var == 0xff800000000000);
-			verify(dsp.regs().b.var == 0x00444444000000);
+			verify(dsp.aluA().var == 0xff800000000000);
+			verify(dsp.aluB().var == 0x00444444000000);
 		});
 
 		runTest([&]()
 		{
 			dsp.regs().x.var = 0x111111222222;
 			dsp.regs().y.var = 0x333333444444;
-			dsp.regs().a.var = 0x55666666777777;
-			dsp.regs().b.var = 0x88999999aaaaaa;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x55666666777777)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x88999999aaaaaa)));
 
 			emit(0x210741);	// tfr x0,a a0,y1
 		},
@@ -3723,8 +3723,8 @@ namespace dsp56k
 		{
 			verify(dsp.regs().x.var == 0x111111222222);
 			verify(dsp.regs().y.var == 0x777777444444);
-			verify(dsp.regs().a.var == 0x00222222000000);
-			verify(dsp.regs().b.var == 0x88999999aaaaaa);
+			verify(dsp.aluA().var == 0x00222222000000);
+			verify(dsp.aluB().var == 0x88999999aaaaaa);
 		});
 
 		// mpy x1,y0,b   b,x1
@@ -3739,7 +3739,7 @@ namespace dsp56k
 		{
 			dsp.regs().x.var = 0x100000000000;     // x1 = 0x100000 (= 0.125), x0 = 0
 			dsp.regs().y.var = 0x000000400000;     // y1 = 0,  y0 = 0x400000 (= 0.5)
-			dsp.regs().b.var = 0x00200000000000;   // b2=0, b1=0x200000 (sign-positive), b0=0
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00200000000000)));   // b2=0, b1=0x200000 (sign-positive), b0=0
 
 			emit(0x21e5e8);	// mpy x1,y0,b   b,x1
 		},
@@ -3748,7 +3748,7 @@ namespace dsp56k
 			// mpy uses OLD x1: 0x100000 * 0x400000 << 1 = 0x080000_000000.
 			// If the JIT used NEW x1 (= old b1 from parallel move = 0x200000),
 			// the result would be 0x100000_000000 instead.
-			verify(dsp.regs().b.var == 0x00080000000000);
+			verify(dsp.aluB().var == 0x00080000000000);
 			// Parallel move reads OLD b: limited b1 = 0x200000.
 			// If the JIT read NEW b (the mpy result above), x1 would become 0x080000.
 			verify(dsp.regs().x.var == 0x200000000000);
@@ -3770,8 +3770,8 @@ namespace dsp56k
 		{
 			// Use sign-consistent b: b2=0x00, b1=0x112233 (bit23=0), so storing
 			// b1 to a 24-bit location does not trigger DSP saturation.
-			dsp.regs().a.var   = 0x00112233000000;	// arbitrary, used only by cmp
-			dsp.regs().b.var   = 0x00112233445566;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00112233000000)));	// arbitrary, used only by cmp
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00112233445566)));
 			dsp.regs().x.var   = 0x000000000000;	// x1 = 0 (cmp y1,a uses y1)
 			dsp.regs().y.var   = 0x0DEADB000000;		// y1 = 0x0DEADB, y0 = 0 → y:(r3)
 			dsp.regs().r[7].var = 0xC7;
@@ -3794,7 +3794,7 @@ namespace dsp56k
 			// r3 advances by n3 = 8
 			verify(dsp.regs().r[3].var == 0x408);
 			// b/y unchanged
-			verify(dsp.regs().b.var == 0x00112233445566);
+			verify(dsp.aluB().var == 0x00112233445566);
 			verify(dsp.regs().y.var == 0x0DEADB000000);
 		});
 
@@ -3807,8 +3807,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			// initial b1 = 0x100000 (= 0.125), y0 = 0x080000 (= 0.0625)
-			dsp.regs().a.var   = 0;
-			dsp.regs().b.var   = 0x00100000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00100000000000)));
 			dsp.regs().x.var   = 0;
 			dsp.regs().y.var   = 0x000000080000;	// y0 = 0x080000
 			dsp.regs().r[0].var = 0x36;
@@ -3839,7 +3839,7 @@ namespace dsp56k
 			// $0156: parallel move stores POST-add b1 to x:$C7 → 0x180000
 			//   If the JIT incorrectly stores the old (pre-add) b, we'd get 0x100000 here.
 			verify(dsp.memory().get(MemArea_X, 0xC7) == 0x180000);
-			verify(dsp.regs().b.var == 0x00180000000000);
+			verify(dsp.aluB().var == 0x00180000000000);
 			// y0 was zeroed before $0156, so y:$400 = 0 (matches firmware behaviour).
 			verify(dsp.memory().get(MemArea_Y, 0x400) == 0x000000);
 			// pointers advanced
@@ -3860,8 +3860,8 @@ namespace dsp56k
 			// dispatch: r0 walks the chain table at X:$33+, r3 walks Y:$400+,
 			// r4 starts at the same address as r0, r5 holds a fixed pointer,
 			// r7 starts at the voice-output area $C7.
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			// y1 holds the loop-end counter target (set high so the cmp at $0156
 			// reports "not equal" and the handler would jne to (r1) at $0157).
 			// We don't run $0157 here.
@@ -3954,7 +3954,7 @@ namespace dsp56k
 			//   the difference x:$C7 - x:$36 should equal y0 (saved at $0150 = 0x020000)
 			//
 			// We capture b after running and compute backwards.
-			const auto bFinal = static_cast<uint32_t>((dsp.regs().b.var >> 24) & 0xFFFFFF);
+			const auto bFinal = static_cast<uint32_t>((dsp.aluB().var >> 24) & 0xFFFFFF);
 			// x:$C7 should equal bFinal (POST-add b1, with no saturation since bit23 may need check)
 			verify(dsp.memory().get(MemArea_X, 0xC7) == bFinal);
 			// y:$400 was zeroed by $0156 (y0 was set to 0 at $0155)
@@ -3984,8 +3984,8 @@ namespace dsp56k
 		// optimized away and x:$C7 would not get updated.
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.regs().y.var = 0x012345000000;
 			dsp.regs().x.var = 0;
 
@@ -4052,8 +4052,8 @@ namespace dsp56k
 		// the previous one's expected value. Same setup, same expected x:$C7.
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.regs().y.var = 0x012345000000;
 			dsp.regs().x.var = 0;
 
@@ -4099,7 +4099,7 @@ namespace dsp56k
 			[&]()
 		{
 			// Final state must match the $014D test exactly.
-			const auto bFinal = static_cast<uint32_t>((dsp.regs().b.var >> 24) & 0xFFFFFF);
+			const auto bFinal = static_cast<uint32_t>((dsp.aluB().var >> 24) & 0xFFFFFF);
 			verify(dsp.memory().get(MemArea_X, 0xC7) == bFinal);
 			verify(dsp.memory().get(MemArea_Y, 0x400) == 0);
 			verify(dsp.regs().r[0].var == 0x39);
@@ -4164,8 +4164,8 @@ namespace dsp56k
 			dsp.regs().m[4].var = 0xffffff;
 			dsp.regs().m[7].var = 0xffffff;
 
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.regs().x.var = 0;
 			dsp.regs().y.var = 0;
 
@@ -4241,8 +4241,8 @@ namespace dsp56k
 			// of the chain — it must be a property of the LIVE input values
 			// (e.g., the coefficient table is mostly zero in live, or some inputs
 			// happen to cancel).
-			verify(dsp.regs().a.var == 0x00238000000000);
-			verify(dsp.regs().b.var == 0x0011C000000000);
+			verify(dsp.aluA().var == 0x00238000000000);
+			verify(dsp.aluB().var == 0x0011C000000000);
 			verify(dsp.memory().get(MemArea_X, 0x387) == 0x238000);
 			verify(dsp.memory().get(MemArea_Y, 0x387) == 0x11C000);
 			verify(dsp.regs().r[3].var == 0x388);
@@ -4257,19 +4257,19 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00aabbcc000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00aabbcc000000)));
 			emit("and #>$f0f0f0,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00a0b0c0000000);
+			verify(dsp.aluA().var == 0x00a0b0c0000000);
 		});
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0x00123456000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00123456000000)));
 			emit("and #>$00ff00,b");
 		}, [&]()
 		{
-			verify(dsp.regs().b.var == 0x00003400000000);
+			verify(dsp.aluB().var == 0x00003400000000);
 		});
 	}
 
@@ -4277,19 +4277,19 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00a0b0c0000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00a0b0c0000000)));
 			emit("or #>$0f0f0f,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00afbfcf000000);
+			verify(dsp.aluA().var == 0x00afbfcf000000);
 		});
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0x00123456000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00123456000000)));
 			emit("or #>$ff0000,b");
 		}, [&]()
 		{
-			verify(dsp.regs().b.var == 0x00ff3456000000);
+			verify(dsp.aluB().var == 0x00ff3456000000);
 		});
 	}
 
@@ -4297,19 +4297,19 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00500000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00500000000000)));
 			emit("sub #>$100000,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00400000000000);
+			verify(dsp.aluA().var == 0x00400000000000);
 		});
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0x00200000000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00200000000000)));
 			emit("sub #>$100000,b");
 		}, [&]()
 		{
-			verify(dsp.regs().b.var == 0x00100000000000);
+			verify(dsp.aluB().var == 0x00100000000000);
 		});
 	}
 
@@ -4318,7 +4318,7 @@ namespace dsp56k
 		// a > imm
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00600000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00600000000000)));
 			emit("cmp #>$500000,a");
 		}, [&]()
 		{
@@ -4328,7 +4328,7 @@ namespace dsp56k
 		// a == imm
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00600000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00600000000000)));
 			emit("cmp #>$600000,a");
 		}, [&]()
 		{
@@ -4338,7 +4338,7 @@ namespace dsp56k
 		// a < imm
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00600000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00600000000000)));
 			emit("cmp #>$700000,a");
 		}, [&]()
 		{
@@ -4352,28 +4352,28 @@ namespace dsp56k
 		// subr b,a: a = a/2 - b
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00600000000000;
-			dsp.regs().b.var = 0x00020000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00600000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00020000000000)));
 			emit("subr b,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x002e0000000000);
+			verify(dsp.aluA().var == 0x002e0000000000);
 		});
 		// subr a,b: b = b/2 - a
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00100000000000;
-			dsp.regs().b.var = 0x00400000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00100000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00400000000000)));
 			emit("subr a,b");
 		}, [&]()
 		{
-			verify(dsp.regs().b.var == 0x00100000000000);
+			verify(dsp.aluB().var == 0x00100000000000);
 		});
 		// subr with zero
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00000000000000;
-			dsp.regs().b.var = 0x00100000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00100000000000)));
 			emit("subr b,a");
 		}, [&]()
 		{
@@ -4386,11 +4386,11 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.x0(0x100000);
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			emit("mpyi #>$4,x0,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var != 0);
+			verify(dsp.aluA().var != 0);
 		});
 	}
 
@@ -4403,13 +4403,13 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.x0(0x400000);                       // x0 = 0.5 (fractional)
-			dsp.regs().b.var = 0x00100000000000;    // seed b with a non-zero value
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00100000000000)));    // seed b with a non-zero value
 			emit(0x0141ca, 0x7fdf3b);               // maci #>$7fdf3b,x0,b
 		}, [&]()
 		{
 			// b must have been updated (multiply-accumulate, not skip).
-			verify(dsp.regs().b.var != 0x00100000000000);
-			verify((dsp.regs().b.var & 0xffffffffffffffULL) != 0);
+			verify(dsp.aluB().var != 0x00100000000000);
+			verify((dsp.aluB().var & 0xffffffffffffffULL) != 0);
 		});
 	}
 
@@ -4419,11 +4419,11 @@ namespace dsp56k
 		{
 			dsp.x0(0x400000);
 			dsp.y0(0x100000);
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			emit("mpysu x0,y0,a");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var != 0);
+			verify(dsp.aluA().var != 0);
 		});
 	}
 
@@ -4444,7 +4444,7 @@ namespace dsp56k
 			{
 				dsp.y1(y1);
 				dsp.x0(x0);
-				dsp.regs().a.var = 0;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 				emit(0x01268c);						// macsu y1,x0,a  (the real $26E opcode)
 			}, [&]()
 			{
@@ -4454,7 +4454,7 @@ namespace dsp56k
 				const uint64_t expectUnsigned = (static_cast<uint64_t>(y1s * static_cast<int64_t>(x0)) << 1) & 0xFFFFFFFFFFFFFFULL;
 				// what it WOULD be if x0 were wrongly sign-extended:
 				const uint64_t ifSignedX0     = (static_cast<uint64_t>(y1s * x0s)                      << 1) & 0xFFFFFFFFFFFFFFULL;
-				verify(dsp.regs().a.var == expectUnsigned);
+				verify(dsp.aluA().var == expectUnsigned);
 			});
 		};
 		check(0x400000, 0x400000, "x0=0.5 (<1, control)");		// signed==unsigned: +0.25
@@ -4480,13 +4480,13 @@ namespace dsp56k
 			{
 				dsp.x0(0); dsp.x1(0); dsp.y0(0); dsp.y1(0);
 				setReg(s1, S1); setReg(s2, S2);
-				dsp.regs().a.var = 0; dsp.regs().b.var = 0;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0))); dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 				emit(opcode);
 			}, [&]()
 			{
 				const int64_t s1s = (S1 & 0x800000) ? static_cast<int64_t>(S1) - 0x1000000 : static_cast<int64_t>(S1);
 				const uint64_t expUns = (static_cast<uint64_t>(s1s * static_cast<int64_t>(S2)) << 1) & 0xFFFFFFFFFFFFFFULL;
-				const uint64_t got = destB ? dsp.regs().b.var : dsp.regs().a.var;
+				const uint64_t got = destB ? dsp.aluB().var : dsp.aluA().var;
 				verify(got == expUns);
 			});
 		};
@@ -4536,14 +4536,14 @@ namespace dsp56k
 					runTest([&]()
 					{
 						dsp.setSR(m.sr | rm);
-						dsp.regs().a.var = aIn;
+						dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(aIn)));
 						emit("rnd a");
 					}, [&]()
 					{
 						if (reported++ < 6)
 						{
 						}
-						verify(dsp.regs().a.var == expect);
+						verify(dsp.aluA().var == expect);
 					});
 				}
 			}
@@ -4551,8 +4551,8 @@ namespace dsp56k
 		// Authoritative anchors: Family Manual Fig 3-4 (convergent, no scaling, bit 23).
 		auto anchor = [&](const uint64_t aIn, const uint64_t expect)
 		{
-			runTest([&]() { dsp.setSR(0); dsp.regs().a.var = aIn; emit("rnd a"); },
-				[&]() { verify(dsp.regs().a.var == expect); });
+			runTest([&]() { dsp.setSR(0); dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(aIn))); emit("rnd a"); },
+				[&]() { verify(dsp.aluA().var == expect); });
 		};
 		anchor(0x00002000400000ULL, 0x00002000000000ULL);	// A0 < 1/2          -> round down
 		anchor(0x00002000C00000ULL, 0x00002001000000ULL);	// A0 > 1/2          -> round up
@@ -4571,7 +4571,7 @@ namespace dsp56k
 			runTest([&]()
 			{
 				dsp.setSR(sr);
-				dsp.regs().a.var = aIn;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(aIn)));
 				dsp.memory().set(MemArea_X, 0x100, 0x000000);
 				emit(0x60f400, 0x100);				// move #>$100,r0
 				emit("move a,x:(r0)");				// store accu A via the limiting/scaling path
@@ -4613,8 +4613,8 @@ namespace dsp56k
 			runTest([&]()
 			{
 				dsp.setSR(static_cast<TWord>(CCR_All));	// set ALL ccr bits, so we can see what MAX changes
-				dsp.regs().a.var = aIn;
-				dsp.regs().b.var = bIn;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(aIn)));
+				dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(bIn)));
 				emit(magnitude ? "maxm a,b" : "max a,b");
 			}, [&]()
 			{
@@ -4623,7 +4623,7 @@ namespace dsp56k
 				const int expC = transfer ? 0 : 1;	// C cleared if transfer performed, set otherwise
 				const bool eunzvUnchanged = dsp.sr_test(CCR_V) && dsp.sr_test(CCR_Z) && dsp.sr_test(CCR_N)
 					&& dsp.sr_test(CCR_U) && dsp.sr_test(CCR_E);
-				verify(dsp.regs().b.var == expB);					// result transfer
+				verify(dsp.aluB().var == expB);					// result transfer
 				verify((dsp.sr_test(CCR_C) ? 1 : 0) == expC);		// C per spec
 				verify(eunzvUnchanged);								// E,U,N,Z,V must be unchanged (spec: —)
 			});
@@ -4655,14 +4655,14 @@ namespace dsp56k
 		{
 			runTest([&]()
 			{
-				dsp.regs().a.var = aIn;
-				dsp.regs().b.var = bIn;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(aIn)));
+				dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(bIn)));
 				dsp.regs().x.var = static_cast<uint64_t>(x1In) << 24;	// x1 = hiword(x), x0 = 0
 				emit(0x20AE1D);											// max a,b  x1,a
 			}, [&]()
 			{
-				verify(dsp.regs().a.var == expA);	// the parallel move x1 -> a (the JIT regression)
-				verify(dsp.regs().b.var == expB);	// the ALU max result -> b
+				verify(dsp.aluA().var == expA);	// the parallel move x1 -> a (the JIT regression)
+				verify(dsp.aluB().var == expB);	// the ALU max result -> b
 			});
 		};
 		// a<b — the firmware case: min_q (a, negative) vs formula (b, positive). b kept, move applies.
@@ -4691,7 +4691,7 @@ namespace dsp56k
 		{
 			dsp.memory().set(MemArea_X, addr, 0xCCCCCC);	// X sentinel — must stay
 			dsp.memory().set(MemArea_Y, addr, 0x000000);	// Y target — must change
-			dsp.regs().b.var = 0x00123456000000;			// B1 = $123456
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00123456000000)));			// B1 = $123456
 			dsp.regs().r[1].var = addr;
 			dsp.regs().m[1].var = 0xFFFFFF;					// linear addressing
 			emit(0x5f5900);
@@ -4708,8 +4708,8 @@ namespace dsp56k
 		{
 			dsp.memory().set(MemArea_X, addr, 0xCCCCCC);	// X sentinel — must stay
 			dsp.memory().set(MemArea_Y, addr, 0x000000);	// Y target — must change
-			dsp.regs().a.var = 0x00112233000000;			// A1 = $112233 (move source)
-			dsp.regs().b.var = 0xFFFFFFFFFFFFFF;			// b sentinel (mpy overwrites)
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00112233000000)));			// A1 = $112233 (move source)
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0xFFFFFFFFFFFFFF)));			// b sentinel (mpy overwrites)
 			dsp.regs().x.var = 0x000000000000;				// x1 = x0 = 0  -> mpy = 0
 			dsp.regs().r[1].var = addr;
 			dsp.regs().m[1].var = 0xFFFFFF;					// linear addressing
@@ -4718,7 +4718,7 @@ namespace dsp56k
 		{
 			verify(dsp.memory().get(MemArea_Y, addr) == 0x112233);	// A -> Y (the parallel move, the bug)
 			verify(dsp.memory().get(MemArea_X, addr) == 0xCCCCCC);	// X must be untouched
-			verify(dsp.regs().b.var == 0x00000000000000);			// mpy 0*0 -> b = 0
+			verify(dsp.aluB().var == 0x00000000000000);			// mpy 0*0 -> b = 0
 			verify(dsp.regs().r[1] == addr + 1);					// post-increment
 		});
 	}
@@ -4728,7 +4728,7 @@ namespace dsp56k
 		// positive
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00400000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00400000000000)));
 			emit("tst a");
 		}, [&]()
 		{
@@ -4738,7 +4738,7 @@ namespace dsp56k
 		// zero
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
 			emit("tst a");
 		}, [&]()
 		{
@@ -4748,7 +4748,7 @@ namespace dsp56k
 		// negative
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0xff800000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xff800000000000)));
 			emit("tst a");
 		}, [&]()
 		{
@@ -4758,7 +4758,7 @@ namespace dsp56k
 		// tst b
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0x00123456000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00123456000000)));
 			emit("tst b");
 		}, [&]()
 		{
@@ -4771,11 +4771,11 @@ namespace dsp56k
 	{
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00112233445566;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00112233445566)));
 			emit("nop");
 		}, [&]()
 		{
-			verify(dsp.regs().a.var == 0x00112233445566);
+			verify(dsp.aluA().var == 0x00112233445566);
 		});
 	}
 
@@ -4901,7 +4901,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00fffffe000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00fffffe000000)));
 			emit("brclr #$0,a1,>$50");
 		}, [&]()
 		{
@@ -4911,7 +4911,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00ffffff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
 			emit("brclr #$0,a1,>$50");
 		}, [&]()
 		{
@@ -4921,7 +4921,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00ffffff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
 			emit("brset #$0,a1,>$50");
 		}, [&]()
 		{
@@ -4931,7 +4931,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00fffffe000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00fffffe000000)));
 			emit("brset #$0,a1,>$50");
 		}, [&]()
 		{
@@ -4945,7 +4945,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00fffffe000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00fffffe000000)));
 			emit("bsclr #$0,a1,>$50");
 		}, [&]()
 		{
@@ -4955,7 +4955,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00ffffff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
 			emit("bsset #$0,a1,>$50");
 		}, [&]()
 		{
@@ -5081,7 +5081,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00fffffe000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00fffffe000000)));
 			emit("jclr #$0,a1,$100");
 		}, [&]()
 		{
@@ -5091,7 +5091,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00ffffff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
 			emit("jclr #$0,a1,$100");
 		}, [&]()
 		{
@@ -5101,7 +5101,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00ffffff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
 			emit("jset #$0,a1,$100");
 		}, [&]()
 		{
@@ -5111,7 +5111,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00fffffe000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00fffffe000000)));
 			emit("jset #$0,a1,$100");
 		}, [&]()
 		{
@@ -5145,7 +5145,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00fffffe000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00fffffe000000)));
 			emit("jsclr #$0,a1,$100");
 		}, [&]()
 		{
@@ -5155,7 +5155,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00ffffff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
 			emit("jsclr #$0,a1,$100");
 		}, [&]()
 		{
@@ -5165,7 +5165,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00ffffff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
 			emit("jsset #$0,a1,$100");
 		}, [&]()
 		{
@@ -5175,7 +5175,7 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.regs().a.var = 0x00fffffe000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00fffffe000000)));
 			emit("jsset #$0,a1,$100");
 		}, [&]()
 		{
@@ -5192,20 +5192,20 @@ namespace dsp56k
 		// bchg #0,a1 — toggle bit 0 (0 → 1)
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00fffffe000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00fffffe000000)));
 			emit("bchg #$0,a1");
 		}, [&]()
 		{
-			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00ffffff000000);
+			verify((dsp.aluA().var & 0x00ffffff000000) == 0x00ffffff000000);
 		});
 		// bchg #0,a1 — toggle bit 0 (1 → 0)
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00ffffff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
 			emit("bchg #$0,a1");
 		}, [&]()
 		{
-			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00fffffe000000);
+			verify((dsp.aluA().var & 0x00ffffff000000) == 0x00fffffe000000);
 		});
 		// bchg #3,x:<$2
 		runTest([&]()
@@ -5223,11 +5223,11 @@ namespace dsp56k
 		// bset #4,a1
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00000000000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000000000000)));
 			emit("bset #$4,a1");
 		}, [&]()
 		{
-			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00000010000000);
+			verify((dsp.aluA().var & 0x00ffffff000000) == 0x00000010000000);
 		});
 		// bset #3,x:(r0)
 		runTest([&]()
@@ -5255,7 +5255,7 @@ namespace dsp56k
 		// btst #0,a1 — bit set → C=1
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00ffffff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
 			emit("btst #$0,a1");
 		}, [&]()
 		{
@@ -5264,7 +5264,7 @@ namespace dsp56k
 		// btst #0,a1 — bit clear → C=0
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00fffffe000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00fffffe000000)));
 			emit("btst #$0,a1");
 		}, [&]()
 		{
@@ -5299,29 +5299,29 @@ namespace dsp56k
 		// eor #$3f,a (short immediate EOR)
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00ff00ff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ff00ff000000)));
 			emit("eor #$3f,a");
 		}, [&]()
 		{
-			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00ff00c0000000);
+			verify((dsp.aluA().var & 0x00ffffff000000) == 0x00ff00c0000000);
 		});
 		// eor #$3f,b
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0x00000000000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000000000000)));
 			emit("eor #$3f,b");
 		}, [&]()
 		{
-			verify((dsp.regs().b.var & 0x00ffffff000000) == 0x0000003f000000);
+			verify((dsp.aluB().var & 0x00ffffff000000) == 0x0000003f000000);
 		});
 		// eor with all bits set
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00ffffff000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
 			emit("eor #$3f,a");
 		}, [&]()
 		{
-			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00ffffc0000000);
+			verify((dsp.aluA().var & 0x00ffffff000000) == 0x00ffffc0000000);
 		});
 	}
 
@@ -5330,47 +5330,47 @@ namespace dsp56k
 		// ror a — rotate right through carry
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00aabbcc000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00aabbcc000000)));
 			dsp.sr_clear(CCR_C);
 			emit("ror a");
 		}, [&]()
 		{
 			// a1 was 0xaabbcc, bit 0 = 0, shifted right, old C (0) injected at bit 23
-			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00555de6000000);
+			verify((dsp.aluA().var & 0x00ffffff000000) == 0x00555de6000000);
 			verify(!dsp.sr_test(CCR_C));	// old bit 0 was 0
 		});
 		// ror a with carry set
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00aabbcc000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00aabbcc000000)));
 			dsp.sr_set(CCR_C);
 			emit("ror a");
 		}, [&]()
 		{
 			// old C (1) injected at bit 23
-			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00d55de6000000);
+			verify((dsp.aluA().var & 0x00ffffff000000) == 0x00d55de6000000);
 			verify(!dsp.sr_test(CCR_C));	// old bit 0 was 0
 		});
 		// ror a with odd value (bit 0 = 1)
 		runTest([&]()
 		{
-			dsp.regs().a.var = 0x00000001000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
 			dsp.sr_clear(CCR_C);
 			emit("ror a");
 		}, [&]()
 		{
-			verify((dsp.regs().a.var & 0x00ffffff000000) == 0x00000000000000);
+			verify((dsp.aluA().var & 0x00ffffff000000) == 0x00000000000000);
 			verify(dsp.sr_test(CCR_C));		// old bit 0 was 1
 		});
 		// ror b
 		runTest([&]()
 		{
-			dsp.regs().b.var = 0x00800000000000;
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00800000000000)));
 			dsp.sr_clear(CCR_C);
 			emit("ror b");
 		}, [&]()
 		{
-			verify((dsp.regs().b.var & 0x00ffffff000000) == 0x00400000000000);
+			verify((dsp.aluB().var & 0x00ffffff000000) == 0x00400000000000);
 			verify(!dsp.sr_test(CCR_C));
 		});
 	}
@@ -5549,8 +5549,8 @@ namespace dsp56k
 
 		// rep #4: repeat add b,a four times
 		dsp.resetHW();
-		dsp.regs().a.var = 0;
-		dsp.regs().b.var = 0x00000001000000;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
 
 		TWord pc = 0x100;
 		pc = emitToMemory("jsr $200", pc);		// entry: call subroutine
@@ -5565,12 +5565,12 @@ namespace dsp56k
 		dsp.setPC(0x100);
 		execUntil(returnPC);
 
-		verify(dsp.regs().a.var == 0x00000004000000);
+		verify(dsp.aluA().var == 0x00000004000000);
 
 		// rep x0: repeat with register count
 		dsp.resetHW();
-		dsp.regs().a.var = 0;
-		dsp.regs().b.var = 0x00000001000000;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
 		dsp.x0(7);
 
 		pc = 0x100;
@@ -5585,15 +5585,15 @@ namespace dsp56k
 		dsp.setPC(0x100);
 		execUntil(0x101);
 
-		verify(dsp.regs().a.var == 0x00000007000000);
+		verify(dsp.aluA().var == 0x00000007000000);
 	}
 
 	void UnitTests::do_multi()
 	{
 		// do #5: loop body adds 1 to a, five times
 		dsp.resetHW();
-		dsp.regs().a.var = 0;
-		dsp.regs().b.var = 0x00000001000000;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
 
 		TWord pc = 0x100;
 		pc = emitToMemory("jsr $200", pc);		// entry: call subroutine
@@ -5609,12 +5609,12 @@ namespace dsp56k
 		dsp.setPC(0x100);
 		execUntil(returnPC);
 
-		verify(dsp.regs().a.var == 0x00000005000000);
+		verify(dsp.aluA().var == 0x00000005000000);
 
 		// do with register count
 		dsp.resetHW();
-		dsp.regs().a.var = 0;
-		dsp.regs().b.var = 0x00000001000000;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
 		dsp.x0(3);
 
 		pc = 0x100;
@@ -5630,15 +5630,15 @@ namespace dsp56k
 		dsp.setPC(0x100);
 		execUntil(0x101);
 
-		verify(dsp.regs().a.var == 0x00000003000000);
+		verify(dsp.aluA().var == 0x00000003000000);
 	}
 
 	void UnitTests::jsr_rts()
 	{
 		// jsr to subroutine that adds b to a, then returns
 		dsp.resetHW();
-		dsp.regs().a.var = 0x00100000000000;
-		dsp.regs().b.var = 0x00050000000000;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00100000000000)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00050000000000)));
 
 		TWord pc = 0x100;
 		pc = emitToMemory("jsr $200", pc);		// entry: call subroutine
@@ -5652,12 +5652,12 @@ namespace dsp56k
 		dsp.setPC(0x100);
 		execUntil(returnPC);
 
-		verify(dsp.regs().a.var == 0x00150000000000);
+		verify(dsp.aluA().var == 0x00150000000000);
 
 		// jsr + nested jsr + rts + rts
 		dsp.resetHW();
-		dsp.regs().a.var = 0;
-		dsp.regs().b.var = 0x00000001000000;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
 
 		pc = 0x100;
 		pc = emitToMemory("jsr $200", pc);		// call outer
@@ -5677,6 +5677,6 @@ namespace dsp56k
 		dsp.setPC(0x100);
 		execUntil(finalPC);
 
-		verify(dsp.regs().a.var == 0x00000003000000);	// 3 adds total
+		verify(dsp.aluA().var == 0x00000003000000);	// 3 adds total
 	}
 }

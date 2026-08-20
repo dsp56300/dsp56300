@@ -32,11 +32,11 @@ namespace dsp56k
 
 	void InterpreterUnitTests::testSubr()
 	{
-		dsp.reg.a.var = 0x00600000000000;
-		dsp.reg.b.var = 0x00020000000000;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00600000000000)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00020000000000)));
 
 		emit("subr b,a");
-		verify(dsp.reg.a.var == 0x002e0000000000);
+		verify(dsp.aluA().var == 0x002e0000000000);
 		verify(!dsp.sr_test(CCR_C));
 		verify(!dsp.sr_test(CCR_V));
 	}
@@ -55,7 +55,7 @@ namespace dsp56k
 	void InterpreterUnitTests::testCCCC(const int64_t _value, const int64_t _compareValue, const bool _lt, bool _le, bool _eq, bool _ge, bool _gt, bool _neq)
 	{
 		dsp.resetHW();
-		dsp.reg.a.var = _value;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(_value)));
 		dsp.alu_cmp(false, TReg56(_compareValue), false);
 		char sr[16]{};
 		dsp.sr_debug(sr);

@@ -189,8 +189,8 @@ namespace dsp56k
 	JitOptimizerTests::DspState JitOptimizerTests::captureDspState() const
 	{
 		DspState s{};
-		s.a = dsp.regs().a.var;
-		s.b = dsp.regs().b.var;
+		s.a = dsp.aluA().var;
+		s.b = dsp.aluB().var;
 		s.x0 = dsp.regs().x.var & 0xffffff;
 		s.x1 = (dsp.regs().x.var >> 24) & 0xffffff;
 		s.y0 = dsp.regs().y.var & 0xffffff;
@@ -243,8 +243,8 @@ namespace dsp56k
 		runOptimizedTest("AccumulatorArithmetic", [&]()
 		{
 			dsp.resetHW();
-			dsp.regs().a.var = 0x00'400000'000000;  // 0.5 in accumulator
-			dsp.regs().b.var = 0x00'200000'000000;  // 0.25
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00'400000'000000)));  // 0.5 in accumulator
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00'200000'000000)));  // 0.25
 			dsp.x0(0x100000);  // 0.125
 			dsp.y0(0x600000);  // 0.75
 		}, [&](JitBlock& block, JitOps& ops)
@@ -268,8 +268,8 @@ namespace dsp56k
 		runOptimizedTest("MACOperations", [&]()
 		{
 			dsp.resetHW();
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.x0(0x400000);  // 0.5
 			dsp.x1(0x200000);  // 0.25
 			dsp.y0(0x600000);  // 0.75
@@ -293,8 +293,8 @@ namespace dsp56k
 		runOptimizedTest("BitManipulation", [&]()
 		{
 			dsp.resetHW();
-			dsp.regs().a.var = 0x00'555555'000000;
-			dsp.regs().b.var = 0x00'aaaaaa'000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00'555555'000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00'aaaaaa'000000)));
 			dsp.x0(0x0f0f0f);
 			dsp.y0(0xf0f0f0);
 		}, [&](JitBlock& block, JitOps& ops)
@@ -329,8 +329,8 @@ namespace dsp56k
 			dsp.x1(0x0aa800);  // x^2/6 approximation coefficient
 			dsp.y0(0x008880);  // x^4/120 approximation coefficient
 			dsp.y1(0x400000);  // 0.5 (scaling factor)
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 		}, [&](JitBlock& block, JitOps& ops)
 		{
 			// Polynomial evaluation for sin approximation
@@ -368,8 +368,8 @@ namespace dsp56k
 			// Store additional states in memory
 			mem.set(MemArea_X, 0x10, 0x040000);  // state3
 			mem.set(MemArea_X, 0x11, 0x020000);  // state4
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.regs().r[0].var = 0x10;
 		}, [&](JitBlock& block, JitOps& ops)
 		{
@@ -422,8 +422,8 @@ namespace dsp56k
 			mem.set(MemArea_Y, 0x36, 0x100000);  // h[6]
 			mem.set(MemArea_Y, 0x37, 0x080000);  // h[7]
 
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			// Load first pair of values manually
 			dsp.x0(0x400000);  // x[0]
 			dsp.y0(0x080000);  // h[0]
@@ -477,8 +477,8 @@ namespace dsp56k
 			dsp.x1(0x380000);  // b1 = 0.4375
 			dsp.y1(0x300000);  // x[n-1] = 0.375
 
-			dsp.regs().a.var = 0;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 
 			// Store additional coefficients/state in memory
 			mem.set(MemArea_X, 0x40, 0x100000);  // b2 = 0.125
@@ -520,8 +520,8 @@ namespace dsp56k
 		runOptimizedTest("DivWithImmediate", [&]()
 		{
 			dsp.resetHW();
-			dsp.regs().a.var = 0x00'200000'000000;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00'200000'000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.y1(0);
 		}, [&](JitBlock& block, JitOps& ops)
 		{
@@ -541,8 +541,8 @@ namespace dsp56k
 		runOptimizedTest("NegativeImmediate", [&]()
 		{
 			dsp.resetHW();
-			dsp.regs().a.var = 0x00'400000'000000;
-			dsp.regs().b.var = 0;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00'400000'000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.x0(0x800000);
 			dsp.y0(0xFF0000);
 		}, [&](JitBlock& block, JitOps& ops)
@@ -564,8 +564,8 @@ namespace dsp56k
 		runOptimizedTest("MoveImmAdd", [&]()
 		{
 			dsp.resetHW();
-			dsp.regs().a.var = 0x00'200000'000000;
-			dsp.regs().b.var = 0x00'100000'000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00'200000'000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00'100000'000000)));
 			dsp.y1(0);
 		}, [&](JitBlock& block, JitOps& ops)
 		{
@@ -589,8 +589,8 @@ namespace dsp56k
 			dsp.set_m(1, 0xffffff);  // linear
 			dsp.set_m(2, 0xffffff);  // linear
 
-			dsp.regs().a.var = 0x00'400000'000000;
-			dsp.regs().b.var = 0x00'200000'000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00'400000'000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00'200000'000000)));
 			dsp.x0(0x100000);
 			dsp.y0(0x300000);
 		}, [&](JitBlock& block, JitOps& ops)
@@ -644,8 +644,8 @@ namespace dsp56k
 
 		// Set up DSP state
 		dsp.resetHW();
-		dsp.regs().a.var = 0x00'300000'000000;
-		dsp.regs().b.var = 0x00'100000'000000;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00'300000'000000)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00'100000'000000)));
 		dsp.y1(0);
 		dsp.set_m(0, 0xffffff);
 		// Push a return address on the stack so rts has somewhere to go
@@ -687,8 +687,8 @@ namespace dsp56k
 				throw std::string("JIT failed (no-opt) for '") + name + "'";
 
 			dsp.resetHW();
-			dsp.regs().a.var = 0x00'300000'000000;
-			dsp.regs().b.var = 0x00'100000'000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00'300000'000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00'100000'000000)));
 			dsp.y1(0);
 			dsp.set_m(0, 0xffffff);
 			dsp.regs().sp.var = 0;
@@ -746,8 +746,8 @@ namespace dsp56k
 				throw std::string("JIT failed (with-opt) for '") + name + "'";
 
 			dsp.resetHW();
-			dsp.regs().a.var = 0x00'300000'000000;
-			dsp.regs().b.var = 0x00'100000'000000;
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00'300000'000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00'100000'000000)));
 			dsp.y1(0);
 			dsp.set_m(0, 0xffffff);
 			dsp.regs().sp.var = 0;
