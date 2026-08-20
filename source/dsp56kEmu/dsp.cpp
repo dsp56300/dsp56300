@@ -280,6 +280,8 @@ namespace dsp56k
 
 	void DSP::terminate()
 	{
+		m_terminate.store(true, std::memory_order_relaxed);
+
 		for(size_t i=0; i<perif.size(); ++i)
 			perif[i]->terminate();
 	}
@@ -499,7 +501,9 @@ namespace dsp56k
 		// __________________
 		//
 
-		while(reg.sc.var >= stackCount)
+		// note the terminate check: the interpreter executes a whole DO loop inside this function, it never returns
+		// to DSPThread::threadFunc in between. Without it, a firmware loop that never ends deadlocks the join on shutdown.
+		while(reg.sc.var >= stackCount && !m_terminate.load(std::memory_order_relaxed))
 		{
 			execInterpreter();
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include "disasm.h"
 #include "dspconfig.h"
 #include "dspregs.h"
@@ -91,6 +93,9 @@ namespace dsp56k
 		TWord							pcCurrentInstruction = 0;
 		TWord							m_opWordB = 0;
 		uint32_t						m_currentOpLen = 0;
+
+		// set by terminate(), polled by the interpreter DO loop so that it can be left on shutdown
+		std::atomic<bool>				m_terminate{false};
 
 		TInterruptFunc					m_execPeripheralsFunc;
 
