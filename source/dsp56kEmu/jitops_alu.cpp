@@ -47,7 +47,11 @@ namespace dsp56k
 			if(!m_disableCCRUpdates)
 			{
 				CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+#ifdef HAVE_ARM64
+				m_asm.adds(alu, alu, _v);
+#else
 				m_asm.add(alu, _v);
+#endif
 				ccr_update_ifCarry(CCRB_C);
 			}
 			else
@@ -93,8 +97,13 @@ namespace dsp56k
 			if(!m_disableCCRUpdates)
 			{
 				CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+#ifdef HAVE_ARM64
+				m_asm.subs(alu, alu, _v);
+				ccr_update_ifNotCarry(CCRB_C);	// ARM carry means unsigned >=, inverted vs 56k/x64
+#else
 				m_asm.sub(alu, _v);
 				ccr_update_ifCarry(CCRB_C);
+#endif
 			}
 			else
 			{
@@ -211,7 +220,11 @@ namespace dsp56k
 
 		{
 			AluRef aluS(m_block, ab ? 0 : 1, true, false);
+#ifdef HAVE_ARM64
+			m_asm.adds(aluD, aluD, aluS.get());
+#else
 			m_asm.add(aluD, aluS.get());
+#endif
 
 			// Left-aligned the sum can exceed 64 bits, so the 57th bit is the host carry rather than
 			// something a compare against the 56-bit maximum could still see. Capture it immediately:
@@ -413,7 +426,7 @@ namespace dsp56k
 		if(_v.isImm24())
 			_v.toTemp();
 #ifdef HAVE_ARM64
-		m_asm.eor(r, r, r64(_v.get()), asmjit::arm::lsl(24));
+		m_asm.eor(r, r, r64(_v.get()), asmjit::arm::lsl(24 + g_aluBitOffset));
 #else
 		m_asm.shl(r64(_v.get()), asmjit::Imm(24 + g_aluBitOffset));
 		m_asm.xor_(r, r64(_v.get()));
@@ -424,7 +437,7 @@ namespace dsp56k
 
 		const RegGP t(m_block);
 #ifdef HAVE_ARM64
-		m_asm.ubfx(r64(t), r64(r), asmjit::Imm(24), asmjit::Imm(24));
+		m_asm.ubfx(r64(t), r64(r), asmjit::Imm(24 + g_aluBitOffset), asmjit::Imm(24));
 		m_asm.test_(t);
 #else
 		m_asm.ror(t.get(), r, 24 + g_aluBitOffset);
@@ -464,11 +477,13 @@ namespace dsp56k
 		if (_accumulate)
 		{
 			aluSignextendTo64(d);
-			m_asm.add(d, d, r64(_s1), asmjit::arm::lsl(1));		// fractional multiplication requires one post-shift to be correct
+			// fractional multiplication requires one post-shift; left-aligned the product is scaled here too
+			m_asm.add(d, d, r64(_s1), asmjit::arm::lsl(1 + g_aluBitOffset));
 		}
 		else
 		{
-			m_asm.lsl(d, r64(_s1), asmjit::Imm(1));					// fractional multiplication requires one post-shift to be correct
+			// fractional multiplication requires one post-shift; left-aligned the product is scaled here too
+			m_asm.lsl(d, r64(_s1), asmjit::Imm(1 + g_aluBitOffset));
 		}
 #else
 		if(_s2.isImmediate())
@@ -602,7 +617,7 @@ namespace dsp56k
 
 		const RegGP t(m_block);
 #ifdef HAVE_ARM64
-		m_asm.ubfx(r64(t), r64(r), asmjit::Imm(24), asmjit::Imm(24));
+		m_asm.ubfx(r64(t), r64(r), asmjit::Imm(24 + g_aluBitOffset), asmjit::Imm(24));
 		m_asm.test_(t);
 #else
 		m_asm.ror(t.get(), r, 24 + g_aluBitOffset);

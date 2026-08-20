@@ -129,7 +129,7 @@ namespace dsp56k
 		{
 			// build shift value:
 			// const auto offset = sr_val_noCache(SRB_S0) - sr_val_noCache(SRB_S1);
-			const int32_t shift = 46 + (mode->testSR(SRB_S0) ? 1 : 0) - (mode->testSR(SRB_S1) ? 1 : 0);
+			const int32_t shift = 46 + g_aluBitOffset + (mode->testSR(SRB_S0) ? 1 : 0) - (mode->testSR(SRB_S1) ? 1 : 0);
 			const RegGP r(m_block);
 			m_asm.lsr(r, _alu, asmjit::Imm(shift));
 
@@ -149,7 +149,7 @@ namespace dsp56k
 				m_asm.sub(shift.get(), s1.get());
 			}
 			const RegGP r(m_block);
-			m_asm.lsr(r, _alu, asmjit::Imm(46));
+			m_asm.lsr(r, _alu, asmjit::Imm(46 + g_aluBitOffset));
 			m_asm.shr(r, shift.get());	// FIXME: how can this work? shift might be negative if SRB_S1 is one but SRB_S0 is zero
 
 			shift.release();
@@ -194,7 +194,10 @@ namespace dsp56k
 		auto aluScratch = [this, &_alu]()
 		{
 			RegScratch alu(m_block);
-			m_asm.lsl(alu, _alu, asmjit::Imm(8));
+			if constexpr (g_leftAlignedAlu)
+				m_asm.mov(r64(alu), r64(_alu));	// already left-aligned; the shift exists only to left-align
+			else
+				m_asm.lsl(alu, _alu, asmjit::Imm(8));
 			return alu;
 		};
 
@@ -243,21 +246,21 @@ namespace dsp56k
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
-		copyBitToCCR(_alu, 55, CCRB_N);
+		copyBitToCCR(_alu, 55 + g_aluBitOffset, CCRB_N);
 	}
 
 	void JitOps::ccr_n_update_by47(const JitReg64& _alu)
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
-		copyBitToCCR(_alu, 47, CCRB_N);
+		copyBitToCCR(_alu, 47 + g_aluBitOffset, CCRB_N);
 	}
 
 	void JitOps::ccr_n_update_by23(const JitReg64& _alu)
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
-		copyBitToCCR(_alu, 23, CCRB_N);
+		copyBitToCCR(_alu, 23 + g_aluBitOffset, CCRB_N);
 	}
 
 	void JitOps::ccr_s_update(const JitReg64& _alu)
@@ -270,7 +273,7 @@ namespace dsp56k
 
 		if(mode)
 		{
-			const auto bit = 45 + (mode->testSR(SRB_S1) ? 1 : 0) - (mode->testSR(SRB_S0) ? 1 : 0);
+			const auto bit = 45 + g_aluBitOffset + (mode->testSR(SRB_S1) ? 1 : 0) - (mode->testSR(SRB_S0) ? 1 : 0);
 
 			const RegGP alu(m_block);
 			m_asm.lsr(alu, _alu, asmjit::Imm(bit));
@@ -284,7 +287,7 @@ namespace dsp56k
 			{
 				const RegGP s0s1(m_block);
 				sr_getBitValue(s0s1, SRB_S1);
-				m_asm.add(bit, s0s1.get(), asmjit::Imm(45));
+				m_asm.add(bit, s0s1.get(), asmjit::Imm(45 + g_aluBitOffset));
 
 				sr_getBitValue(s0s1, SRB_S0);
 				m_asm.sub(bit, s0s1.get());

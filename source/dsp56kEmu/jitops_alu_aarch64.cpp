@@ -20,7 +20,8 @@ namespace dsp56k
 		getBlock().dspRegPool().getXY0(r32(_dst), _xy);
 
 		m_asm.sbfiz(_dst, _dst, asmjit::Imm(32), asmjit::Imm(24));
-		m_asm.lsr(_dst, _dst, asmjit::Imm(8));
+		if constexpr (!g_leftAlignedAlu)
+			m_asm.lsr(_dst, _dst, asmjit::Imm(8));	// sbfiz already lands it at the left-aligned position
 	}
 
 	void JitOps::XY1to56(const JitReg64& _dst, int _xy) const
@@ -28,7 +29,8 @@ namespace dsp56k
 		getBlock().dspRegPool().getXY1(r32(_dst), _xy);
 
 		m_asm.sbfiz(_dst, _dst, asmjit::Imm(32), asmjit::Imm(24));
-		m_asm.lsr(_dst, _dst, asmjit::Imm(8));
+		if constexpr (!g_leftAlignedAlu)
+			m_asm.lsr(_dst, _dst, asmjit::Imm(8));	// sbfiz already lands it at the left-aligned position
 	}
 
 	void JitOps::alu_abs(const JitRegGP& _r)
@@ -39,7 +41,7 @@ namespace dsp56k
 	
 	void JitOps::alu_and(const TWord ab, DspValue& _v)
 	{
-		m_asm.shl(r64(_v), asmjit::Imm(24));
+		m_asm.shl(r64(_v), asmjit::Imm(24 + g_aluBitOffset));
 
 		AluRef alu(m_block, ab);
 
@@ -48,8 +50,8 @@ namespace dsp56k
 			m_asm.ands(r, alu.get(), r64(_v));
 			ccr_update_ifZero(CCRB_Z);
 
-			m_asm.lsr(r, r, asmjit::Imm(24));
-			m_asm.bfi(alu, r, asmjit::Imm(24), asmjit::Imm(24));
+			m_asm.lsr(r, r, asmjit::Imm(24 + g_aluBitOffset));
+			m_asm.bfi(alu, r, asmjit::Imm(24 + g_aluBitOffset), asmjit::Imm(24));
 		}
 
 		_v.release();
@@ -106,7 +108,7 @@ namespace dsp56k
 
 		const CcrBatchUpdate bu(*this, CCR_C, CCR_V);
 
-		m_asm.lsl(alu, alu, asmjit::Imm(8));	// make sign-extend possible in our wide registers
+		aluExtendTo64(alu);						// make sign-extend possible in our wide registers
 		if(_v)
 			m_asm.asr(alu, alu, _v->get());
 		else
@@ -114,7 +116,7 @@ namespace dsp56k
 
 		copyBitToCCR(alu, 7, CCRB_C);			// carry is the last bit shifted out, we can grab it at bit pos 7 now as we pre-shifted left by 8
 
-		m_asm.lsr(alu, alu, asmjit::Imm(8));	// correction
+		aluRestoreFrom64(alu);					// discards bits below the accumulator - the hardware has no resolution there
 
 //		ccr_clear(CCR_V);						// cleared by batch update
 
@@ -192,7 +194,7 @@ namespace dsp56k
 
 		if(mode)
 		{
-			uint32_t r = 0x800000;
+			uint64_t r = 0x800000ull << g_aluBitOffset;
 
 			if(mode->testSR(SRB_S1))	r >>= 1;
 			if(mode->testSR(SRB_S0))	r <<= 1;
@@ -201,7 +203,7 @@ namespace dsp56k
 		}
 		else
 		{
-			m_asm.mov(rounder, asmjit::Imm(0x800000));
+			m_asm.mov(rounder, asmjit::Imm(0x800000ull << g_aluBitOffset));
 
 			const ShiftReg shifter(m_block);
 			m_asm.mov(shifter, asmjit::a64::xzr);
@@ -282,6 +284,11 @@ namespace dsp56k
 		m_asm.mov(r32(offset), r32(_widthOffset.get()));
 		m_asm.and_(offset.get(), asmjit::Imm(0x3f));
 
+		// the offset is relative to the 56-bit value; shifting both the value and the mask by the
+		// aligned offset places the field correctly in either representation
+		if constexpr (g_leftAlignedAlu)
+			m_asm.add(offset.get(), asmjit::Imm(g_aluBitOffset));
+
 		// uint64_t s = src & mask;
 		const RegGP s(m_block);
 		m_asm.mov(r32(s), r32(_src.get()));
@@ -351,7 +358,10 @@ namespace dsp56k
 
 		const RegGP t(m_block);
 		const RegGP shifted(m_block);
-		m_asm.lsl(r64(shifted), r64(s), asmjit::Imm(8));
+		if constexpr (g_leftAlignedAlu)
+			m_asm.mov(r64(shifted), r64(s));	// count from the MSB; left-aligned it is already there
+		else
+			m_asm.lsl(r64(shifted), r64(s), asmjit::Imm(8));
 
 		// this instruction counts the number of equal bits starting at the MSB
 		// We only count leading zeroes, so we invert the source if the MSB is a 1
@@ -370,9 +380,9 @@ namespace dsp56k
 		m_asm.csel(r32(t), r32(t), asmjit::a64::regs::wzr, asmjit::arm::CondCode::kNotZero);
 
 		CcrBatchUpdate ccrBatch(*this, CCR_N, CCR_Z, CCR_V);
-		copyBitToCCR(d, 23, CCRB_N);
+		copyBitToCCR(d, 23 + g_aluBitOffset, CCRB_N);
 
-		m_asm.lsl(r64(d), r64(t), asmjit::Imm(24));
+		m_asm.lsl(r64(d), r64(t), asmjit::Imm(24 + g_aluBitOffset));
 		ccr_update_ifZero(CCRB_Z);
 	}
 
@@ -397,7 +407,7 @@ namespace dsp56k
 			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
 
 			m_asm.eor(r, d, d, asmjit::arm::lsr(1));
-			m_asm.ubfx(r, r, asmjit::Imm(54), asmjit::Imm(1));
+			m_asm.ubfx(r, r, asmjit::Imm(54 + g_aluBitOffset), asmjit::Imm(1));
 			m_asm.bfi(sr, r, asmjit::Imm(CCRB_V), asmjit::Imm(1));
 			m_asm.lsl(r, r, asmjit::Imm(CCRB_L));
 			m_asm.orr(sr, sr, r.get());
@@ -410,7 +420,7 @@ namespace dsp56k
 			decode_JJ_read(s, jj);
 
 			m_asm.shl(r64(s), asmjit::Imm(40));
-			m_asm.sar(r64(s), asmjit::Imm(16));
+			m_asm.sar(r64(s), asmjit::Imm(16 - g_aluBitOffset));	// land on the ALU field position
 
 			const RegGP addOrSub(m_block);
 			m_asm.eor(addOrSub, r64(s), d.get());
@@ -418,15 +428,25 @@ namespace dsp56k
 			m_asm.shl(d, asmjit::Imm(1));
 
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), CCRB_C);
-			m_asm.cinc(d, d, asmjit::arm::CondCode::kNotZero);
+			if constexpr (g_leftAlignedAlu)
+			{
+				// the carry enters at the LSB of the 56-bit value, which is bit 8 of the register
+				const RegScratch c(m_block);
+				m_asm.cset(r64(c.get()), asmjit::arm::CondCode::kNotZero);
+				m_asm.add(d, d, r64(c.get()), asmjit::arm::lsl(g_aluBitOffset));
+			}
+			else
+			{
+				m_asm.cinc(d, d, asmjit::arm::CondCode::kNotZero);
+			}
 
 			const RegScratch dLsWord(m_block);
-			m_asm.and_(dLsWord, d.get(), asmjit::Imm(0xffffff));
+			m_asm.and_(dLsWord, d.get(), asmjit::Imm(g_leftAlignedAlu ? 0xffffff00 : 0xffffff));
 
 			const asmjit::Label sub = m_asm.newLabel();
 			const asmjit::Label end = m_asm.newLabel();
 
-			m_asm.bitTest(addOrSub, 55);
+			m_asm.bitTest(addOrSub, 55 + g_aluBitOffset);
 
 			m_asm.jz(sub);
 			m_asm.add(d, r64(s));
@@ -436,12 +456,12 @@ namespace dsp56k
 			m_asm.sub(d, r64(s));
 
 			m_asm.bind(end);
-			m_asm.and_(d, asmjit::Imm(0xffffffffff000000));
+			m_asm.and_(d, asmjit::Imm(g_leftAlignedAlu ? 0xffffffff00000000 : 0xffffffffff000000));
 			m_asm.orr(d, d, dLsWord);
 		}
 
 		// C is set if bit 55 of the result is cleared
-		m_asm.bitTest(d, 55);
+		m_asm.bitTest(d, 55 + g_aluBitOffset);
 		ccr_update_ifZero(CCRB_C);
 
 		m_dspRegs.mask56(d);
@@ -472,7 +492,7 @@ namespace dsp56k
 			const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
 
 			m_asm.eor(r, alu, alu, asmjit::arm::lsr(1));
-			m_asm.ubfx(r, r, asmjit::Imm(54), asmjit::Imm(1));
+			m_asm.ubfx(r, r, asmjit::Imm(54 + g_aluBitOffset), asmjit::Imm(1));
 			m_asm.bfi(sr, r, asmjit::Imm(CCRB_V), asmjit::Imm(1));
 			m_asm.lsl(r, r, asmjit::Imm(CCRB_L));
 			m_asm.orr(sr, sr, r.get());
@@ -490,7 +510,7 @@ namespace dsp56k
 
 		// once
 		m_asm.shl(r64(sPos), asmjit::Imm(40));
-		m_asm.sar(r64(sPos), asmjit::Imm(16));
+		m_asm.sar(r64(sPos), asmjit::Imm(16 - g_aluBitOffset));	// land on the ALU field position
 
 		m_asm.tst(r64(sPos), r64(sPos));
 		m_asm.cneg(r64(sPos), r64(sPos), asmjit::arm::CondCode::kSign);
@@ -505,7 +525,8 @@ namespace dsp56k
 				m_asm.tst(alu, alu);
 			m_asm.cneg(s, r64(sPos), asmjit::arm::CondCode::kNotSign);
 
-			m_asm.add(alu, carry.get(), alu, asmjit::arm::lsl(1));
+			m_asm.add(alu, alu, alu);	// <<= 1
+			m_asm.add(alu, alu, carry.get(), asmjit::arm::lsl(g_aluBitOffset));	// carry enters at the LSB of the 56-bit value
 			m_asm.adds(alu, alu, s.get());
 
 			// C is set if bit 55 of the result is cleared
@@ -614,7 +635,7 @@ namespace dsp56k
 		AluRef d(m_block, ab ? 1 : 0, true, true);
 
 		const RegGP oldBit55(m_block);
-		m_asm.bitTest(d, 55);
+		m_asm.bitTest(d, 55 + g_aluBitOffset);
 		m_asm.cset(r32(oldBit55), asmjit::arm::CondCode::kNotZero);
 
 		aluSignextendTo64(d);
@@ -630,7 +651,7 @@ namespace dsp56k
 		ccr_dirty(ab ? 1 : 0, d, static_cast<CCRMask>(CCR_E | CCR_U | CCR_N | CCR_Z));
 
 		const RegGP newBit55(m_block);
-		m_asm.bitTest(d, 55);
+		m_asm.bitTest(d, 55 + g_aluBitOffset);
 		m_asm.cset(r32(newBit55), asmjit::arm::CondCode::kNotZero);
 
 		m_asm.eor(r32(oldBit55), r32(oldBit55), r32(newBit55));

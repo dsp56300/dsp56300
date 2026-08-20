@@ -18,7 +18,7 @@ namespace dsp56k
 		else
 			assert(_dst.getBitCount() == 24);
 
-		m_asm.ubfx(r64(_dst), r64(m_dspRegs.getALU(_aluIndex)), asmjit::Imm(0), asmjit::Imm(24));
+		m_asm.ubfx(r64(_dst), r64(m_dspRegs.getALU(_aluIndex)), asmjit::Imm(0 + g_aluBitOffset), asmjit::Imm(24));
 	}
 
 	void JitOps::getALU1(DspValue& _dst, uint32_t _aluIndex) const
@@ -28,7 +28,7 @@ namespace dsp56k
 		else
 			assert(_dst.getBitCount() == 24);
 
-		m_asm.ubfx(r64(_dst), r64(m_dspRegs.getALU(_aluIndex)), asmjit::Imm(24), asmjit::Imm(24));
+		m_asm.ubfx(r64(_dst), r64(m_dspRegs.getALU(_aluIndex)), asmjit::Imm(24 + g_aluBitOffset), asmjit::Imm(24));
 	}
 
 	void JitOps::setALU0(const uint32_t _aluIndex, const DspValue& _src) const
@@ -39,11 +39,11 @@ namespace dsp56k
 		{
 			const RegGP t(m_block);
 			m_asm.mov(t, asmjit::Imm(_src.imm24()));
-			m_asm.bfi(d, r64(t), asmjit::Imm(0), asmjit::Imm(24));
+			m_asm.bfi(d, r64(t), asmjit::Imm(0 + g_aluBitOffset), asmjit::Imm(24));
 		}
 		else
 		{
-			m_asm.bfi(d, r64(_src), asmjit::Imm(0), asmjit::Imm(24));
+			m_asm.bfi(d, r64(_src), asmjit::Imm(0 + g_aluBitOffset), asmjit::Imm(24));
 		}
 	}
 
@@ -54,11 +54,11 @@ namespace dsp56k
 		{
 			const RegGP t(m_block);
 			m_asm.mov(t, asmjit::Imm(_src.imm24()));
-			m_asm.bfi(d, r64(t), asmjit::Imm(24), asmjit::Imm(24));
+			m_asm.bfi(d, r64(t), asmjit::Imm(24 + g_aluBitOffset), asmjit::Imm(24));
 		}
 		else
 		{
-			m_asm.bfi(d, r64(_src), asmjit::Imm(24), asmjit::Imm(24));
+			m_asm.bfi(d, r64(_src), asmjit::Imm(24 + g_aluBitOffset), asmjit::Imm(24));
 		}
 	}
 
@@ -69,11 +69,11 @@ namespace dsp56k
 		{
 			const RegGP t(m_block);
 			m_asm.mov(t, asmjit::Imm(_src.imm24()));
-			m_asm.bfi(d, r64(t), asmjit::Imm(48), asmjit::Imm(8));
+			m_asm.bfi(d, r64(t), asmjit::Imm(48 + g_aluBitOffset), asmjit::Imm(8));
 		}
 		else
 		{
-			m_asm.bfi(d, r64(_src), asmjit::Imm(48), asmjit::Imm(8));
+			m_asm.bfi(d, r64(_src), asmjit::Imm(48 + g_aluBitOffset), asmjit::Imm(8));
 		}
 	}
 
@@ -176,7 +176,7 @@ namespace dsp56k
 
 		if(mode)
 		{
-			int shift = 24;
+			int shift = 24 + g_aluBitOffset;
 			if(mode->testSR(SRB_S1))
 				--shift;
 			if(mode->testSR(SRB_S0))
@@ -194,7 +194,7 @@ namespace dsp56k
 			m_asm.cset(shifter, asmjit::arm::CondCode::kNotZero);
 			m_asm.asr(_dst, _dst, shifter.get());
 
-			m_asm.asr(r64(_dst), r64(_dst), asmjit::Imm(24));
+			m_asm.asr(r64(_dst), r64(_dst), asmjit::Imm(24 + g_aluBitOffset));
 		}
 		
 		{
@@ -234,7 +234,11 @@ namespace dsp56k
 
 		const auto* mode = m_block.getMode();
 
-		m_asm.lsl(_dst, _src, asmjit::Imm(8));
+		// the pre-shift only puts bit 55 at bit 63; left-aligned it is already there
+		if constexpr (g_leftAlignedAlu)
+			m_asm.mov(r64(_dst), r64(_src));
+		else
+			m_asm.lsl(_dst, _src, asmjit::Imm(8));
 
 		if(mode)
 		{

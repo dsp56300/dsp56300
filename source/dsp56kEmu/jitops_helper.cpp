@@ -396,7 +396,7 @@ namespace dsp56k
 
 #ifdef HAVE_ARM64
 		AluRef alu(m_block, _aluIndex, true, false);
-		m_asm.sbfx(r64(_dst), r64(alu), asmjit::Imm(48), asmjit::Imm(8));
+		m_asm.sbfx(r64(_dst), r64(alu), asmjit::Imm(48 + g_aluBitOffset), asmjit::Imm(8));
 		m_asm.ubfx(r32(_dst), r32(_dst), asmjit::Imm(0), asmjit::Imm(24));
 #else
 		const auto temp = r64(_dst.get());
