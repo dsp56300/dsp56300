@@ -540,11 +540,33 @@ namespace dsp56k
 				m_asm.cset(carry, asmjit::arm::CondCode::kNotSign);
 		};
 
+		// The sign of the previous ALU decides BOTH which value is added (+|s| or -|s|) and what the
+		// carry into the LSB is (0 or 1), so the whole step is "add one of two loop invariant values,
+		// shifted". Precompute them and a step becomes csel + adds instead of cneg + add + adds.
+		// Only the first step is different: its carry comes from SR, not from a previous step.
+		m_asm.mov(addOrSub, asmjit::Imm(1ull << g_aluBitOffset));
+		m_asm.sub(addOrSub, addOrSub, r64(sPos));
+
+		const auto loopIterationInvariant = [&](const bool _needsTestAlu, const bool _updateCCR)
+		{
+			if (_needsTestAlu)
+				m_asm.tst(alu, alu);
+			m_asm.csel(s, r64(sPos), addOrSub.get(), asmjit::arm::CondCode::kSign);
+			m_asm.adds(alu, s, alu, asmjit::arm::lsl(1));
+
+			if (_updateCCR)
+				ccr_update(CCRB_C, asmjit::arm::CondCode::kNotSign);
+		};
+
 		// loop
 		if (_iterationCount <= 24)
 		{
-			for (TWord i = 0; i < _iterationCount - 1; ++i)
-				loopIteration(i == 0, false);
+			if(_iterationCount > 1)
+			{
+				loopIteration(true, false);							// carry comes from SR
+				for (TWord i = 1; i < _iterationCount - 1; ++i)
+					loopIterationInvariant(false, false);
+			}
 		}
 		else
 		{
@@ -559,7 +581,10 @@ namespace dsp56k
 
 		// once
 		ccrUpdateVL();
-		loopIteration(true, true);
+		if(_iterationCount > 1)
+			loopIterationInvariant(true, true);
+		else
+			loopIteration(true, true);
 
 		m_dspRegs.mask56(alu);
 	}

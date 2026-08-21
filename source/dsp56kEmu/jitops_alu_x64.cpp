@@ -581,11 +581,40 @@ namespace dsp56k
 				m_asm.setns(carry.get().r8());
 		};
 
+		// The sign of the previous ALU decides BOTH which value is added (+|s| or -|s|) and what the carry
+		// into the LSB is (0 or 1), so a step adds one of two loop invariant values. Folding the carry into
+		// sNeg turns a step into mov/cmov/add/add and drops the setns from the dependency chain. Only the
+		// first step is different, its carry comes from SR rather than from a previous step.
+		// lea because it does not touch the flags the next step needs.
+		const auto foldCarryIntoSNeg = [&]()
+		{
+			m_asm.lea(r64(sNeg), ptr(r64(sNeg), static_cast<int32_t>(1)));
+		};
+
+		const auto loopIterationInvariant = [&](const bool _needsTestAlu, const bool _updateCCR)
+		{
+			m_asm.mov(s, r64(sPos));
+			if (_needsTestAlu)
+				m_asm.test(alu, alu);
+			m_asm.cmovns(s, r64(sNeg));
+			m_asm.add(alu, alu);
+			m_asm.add(alu, s.get());
+
+			// C is set if bit 55 of the result is cleared
+			if (_updateCCR)
+				ccr_update(CCRB_C, asmjit::x86::CondCode::kNotSign);
+		};
+
 		// loop
 		if (_iterationCount <= 24)
 		{
-			for(TWord i=0; i<_iterationCount-1; ++i)
-				loopIteration(i==0, false);
+			if(_iterationCount > 1)
+			{
+				loopIteration(true, false);
+				foldCarryIntoSNeg();
+				for(TWord i=1; i<_iterationCount-1; ++i)
+					loopIterationInvariant(false, false);
+			}
 		}
 		else
 		{
@@ -599,11 +628,16 @@ namespace dsp56k
 
 			m_asm.dec(r32(lc));
 			m_asm.jnz(start);
+
+			foldCarryIntoSNeg();
 		}
 
 		// once
 		ccrUpdateVL();
-		loopIteration(true, true);
+		if(_iterationCount > 1)
+			loopIterationInvariant(true, true);
+		else
+			loopIteration(true, true);
 
 		if constexpr (g_leftAlignedAlu)
 			m_asm.shl(r64(alu), asmjit::Imm(8));	// back to the ALU representation
