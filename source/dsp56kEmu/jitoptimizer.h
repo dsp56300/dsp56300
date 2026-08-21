@@ -121,6 +121,7 @@ namespace dsp56k
 
 		size_t deadCodeElimination() const;
 		size_t constantFolding();
+		size_t spillCopyPropagation() const;
 
 		bool isSideEffectFree(const asmjit::InstNode* _inst, const asmjit::InstRWInfo& _rwInfo) const;
 		bool isControlFlow(const asmjit::BaseNode* _node) const;

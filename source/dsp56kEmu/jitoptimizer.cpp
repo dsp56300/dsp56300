@@ -58,7 +58,7 @@ namespace dsp56k
 		// folding opportunities.  Iterate until stable.
 		for(;;)
 		{
-			const size_t changed = constantFolding() + deadCodeElimination();
+			const size_t changed = constantFolding() + spillCopyPropagation() + deadCodeElimination();
 			total += changed;
 			if(changed == 0)
 				break;
@@ -743,6 +743,138 @@ namespace dsp56k
 				if(instId == Inst::kIdCall)
 					constants.clear();
 #endif
+			}
+
+			node = next;
+		}
+
+		return folded;
+	}
+
+	// The register pool frees up a GP by parking its value in a vector register and pulls it back into
+	// some GP when the DSP register is read again. Whenever the source GP still holds that value at the
+	// point of the read - which it does about half the time, the pool releases the GP but nothing has
+	// claimed it yet - the round trip costs two moves and a cross domain latency where one GP move would
+	// do. Rewriting the read to read the GP directly also makes the park itself dead as soon as nothing
+	// else reads the vector register, and the DCE pass that follows removes it.
+	size_t JitOptimizer::spillCopyPropagation() const
+	{
+		size_t folded = 0;
+
+		// vector register id -> id of the GP register that still holds the same value, -1 if unknown
+		int32_t vecSrc[32];
+		bool vecSrcIs64[32]{};
+
+		auto clearAll = [&]()
+		{
+			for (auto& v : vecSrc)
+				v = -1;
+		};
+
+		clearAll();
+
+		for(auto* node = m_asm.firstNode(); node;)
+		{
+			auto* next = node->next();
+
+			// a label may be reached from anywhere, a branch may leave: neither can be tracked through
+			if(node->isLabel() || isControlFlow(node))
+			{
+				clearAll();
+				node = next;
+				continue;
+			}
+
+			if(!node->isInst())
+			{
+				node = next;
+				continue;
+			}
+
+			auto* inst = node->as<asmjit::InstNode>();
+			const auto instId = inst->id();
+
+#ifdef HAVE_ARM64
+			const bool isMoveInst = instId == Inst::kIdFmov_v;
+#else
+			const bool isMoveInst = instId == Inst::kIdMovq || instId == Inst::kIdMovd;
+#endif
+			if(isMoveInst && inst->opCount() == 2 && inst->op(0).isReg() && inst->op(1).isReg())
+			{
+				const auto& dst = inst->op(0).as<asmjit::BaseReg>();
+				const auto& src = inst->op(1).as<asmjit::BaseReg>();
+
+				if(dst.isPhysReg() && src.isPhysReg() && dst.id() < 32 && src.id() < 32)
+				{
+					// GP -> vector: the pool parks a register. Remember where the value came from.
+					if(dst.isVec() && src.isGp())
+					{
+						vecSrc[dst.id()] = static_cast<int32_t>(src.id());
+						vecSrcIs64[dst.id()] = src.size() == 8;
+						node = next;
+						continue;
+					}
+
+					// vector -> GP: the pool reads the parked register back
+					if(dst.isGp() && src.isVec() && vecSrc[src.id()] >= 0)
+					{
+						const auto srcGp = static_cast<uint32_t>(vecSrc[src.id()]);
+
+						// A 32 bit transfer zero extends, so only a transfer that is 64 bit on both ends
+						// may be replaced by a 64 bit move. Everything else stays a 32 bit move, which
+						// zero extends just like the vector round trip it replaces.
+						const bool is64 = vecSrcIs64[src.id()] && dst.size() == 8;
+
+						++folded;
+
+						if(is64 && srcGp == dst.id())
+						{
+							// the value never left the register in the first place
+							m_asm.removeNode(node);
+							node = next;
+							continue;
+						}
+
+						inst->setId(Inst::kIdMov);
+
+						if(is64)
+						{
+							inst->setOp(0, JitReg64(dst.id()));
+							inst->setOp(1, JitReg64(srcGp));
+						}
+						else
+						{
+							inst->setOp(0, JitReg32(dst.id()));
+							inst->setOp(1, JitReg32(srcGp));
+						}
+					}
+				}
+			}
+
+			// whatever the instruction writes invalidates both the parked copies of that GP and, if it
+			// is a vector register, the note about what it holds
+			for(uint32_t i = 0; i < inst->opCount(); ++i)
+			{
+				if(!inst->op(i).isReg())
+					continue;
+
+				const auto& reg = inst->op(i).as<asmjit::BaseReg>();
+
+				if(!reg.isPhysReg() || reg.id() >= 32)
+					continue;
+
+				if(reg.isVec())
+				{
+					vecSrc[reg.id()] = -1;
+				}
+				else if(reg.isGp())
+				{
+					for(auto& v : vecSrc)
+					{
+						if(v == static_cast<int32_t>(reg.id()))
+							v = -1;
+					}
+				}
 			}
 
 			node = next;
