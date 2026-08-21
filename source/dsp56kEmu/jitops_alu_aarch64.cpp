@@ -525,9 +525,13 @@ namespace dsp56k
 				m_asm.tst(alu, alu);
 			m_asm.cneg(s, r64(sPos), asmjit::arm::CondCode::kNotSign);
 
-			m_asm.add(alu, alu, alu);	// <<= 1
-			m_asm.add(alu, alu, carry.get(), asmjit::arm::lsl(g_aluBitOffset));	// carry enters at the LSB of the 56-bit value
-			m_asm.adds(alu, alu, s.get());
+			// One division step is alu = alu*2 + carry + s, and each step depends on the previous one, so
+			// this chain is pure latency - it is what makes the rep/div block the hottest thing in the
+			// Virus C. Fold the shift into the add (ADDS takes a shifted operand) and fold the carry into
+			// s, which is off the alu chain: three dependent adds become one. x64 already does the
+			// equivalent with lea.
+			m_asm.add(s, s, carry.get(), asmjit::arm::lsl(g_aluBitOffset));	// carry enters at the LSB of the 56-bit value
+			m_asm.adds(alu, s, alu, asmjit::arm::lsl(1));
 
 			// C is set if bit 55 of the result is cleared
 			if (_updateCCR)
