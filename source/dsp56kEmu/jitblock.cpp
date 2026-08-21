@@ -242,7 +242,6 @@ namespace dsp56k
 		dspAsm.clear();
 
 		// needed so that the dsp register is available
-		m_asm.mov(regDspPtr, g_funcArgGPs[0]);
 		dspRegPool().makeDspPtr(&m_dsp.getInstructionCounter(), sizeof(uint64_t));
 
 #ifdef HAVE_X86_64
@@ -630,7 +629,7 @@ namespace dsp56k
 
 			// we can keep our PC reg if its volatile. If It's not, it will be destroyed on stack.popAll() below => we need to copy it to a safe place
 			// Also, we need to make sure that our PC reg is not the first function argument because we replace it with the Jit*
-			if(JitStackHelper::isNonVolatile(regPC) || r64(regPC) == g_funcArgGPs[0])
+			if(JitStackHelper::blockMustPreserve(regPC) || r64(regPC) == g_funcArgGPs[0])
 			{
 				scratch.acquire();
 				asm_().mov(r32(scratch), regPC);
@@ -648,7 +647,7 @@ namespace dsp56k
 			// Basically the same rules that we use for the PC reg above apply to LC too:
 			// we can keep our LC reg if its volatile. If It's not, it will be destroyed on stack.popAll() below => we need to copy it to a safe place
 			// Also, we need to make sure that our LC reg is not the first function argument because we replace it with the Jit*
-			if(JitStackHelper::isNonVolatile(regLC) || r64(regLC) == g_funcArgGPs[0])
+			if(JitStackHelper::blockMustPreserve(regLC) || r64(regLC) == g_funcArgGPs[0])
 			{
 				std::vector<RegGP> temps;
 
@@ -656,7 +655,7 @@ namespace dsp56k
 				while(!m_gpPool.empty())
 				{
 					temps.emplace_back(*this);
-					if(JitStackHelper::isNonVolatile(temps.back()))
+					if(JitStackHelper::blockMustPreserve(temps.back()))
 						continue;
 
 					tempLC = std::move(temps.back());
@@ -665,7 +664,7 @@ namespace dsp56k
 				}
 
 				assert(tempLC.isValid());
-				assert(!JitStackHelper::isNonVolatile(tempLC));
+				assert(!JitStackHelper::blockMustPreserve(tempLC));
 
 				asm_().mov(r32(tempLC), regLC);
 				regLC = r32(tempLC);
@@ -707,8 +706,6 @@ namespace dsp56k
 		if(child || nonBranchChild)
 		{
 			lj = profileBegin("jump");
-			// first func arg needs to point to DspRegs*
-			asm_().mov(g_funcArgGPs[0], regDspPtr);
 		}
 
 		if (child)
@@ -869,12 +866,14 @@ namespace dsp56k
 			return getJumpTarget(tempReg, _child);
 		};
 
+		auto temp = initTemp();
+
 		if(_cc == JitCondCode::kMaxValue)
 		{
 #ifdef HAVE_ARM64
-			m_asm.br(initTemp());
+			m_asm.br(temp);
 #else
-			m_asm.jmp(initTemp());
+			m_asm.jmp(temp);
 #endif
 		}
 		else
@@ -885,10 +884,10 @@ namespace dsp56k
 
 #ifdef HAVE_ARM64
 			m_asm.b(cc, l);
-			m_asm.br(initTemp());
+			m_asm.br(temp);
 #else
 			m_asm.j(cc, l);
-			m_asm.jmp(initTemp());
+			m_asm.jmp(temp);
 #endif
 			m_asm.bind(l);
 		}
@@ -896,8 +895,8 @@ namespace dsp56k
 
 	void JitBlock::jumpToOneOf(const JitCondCode _ccTrue, const JitBlockRuntimeData* _childTrue, const JitBlockRuntimeData* _childFalse) const
 	{
-		auto regTrue = getJumpTarget(r64(regDspPtr == r64(g_funcArgGPs[1]) ? r64(g_funcArgGPs[3]) : r64(g_funcArgGPs[1])), _childTrue);
-		auto regFalse = getJumpTarget(r64(regDspPtr == r64(g_funcArgGPs[2]) ? r64(g_funcArgGPs[3]) : r64(g_funcArgGPs[2])), _childFalse);
+		auto regTrue = getJumpTarget(r64(g_funcArgGPs[1]), _childTrue);
+		auto regFalse = getJumpTarget(r64(g_funcArgGPs[2]), _childFalse);
 
 #ifdef HAVE_ARM64
 		m_asm.csel(regFalse, regTrue, regFalse, _ccTrue);

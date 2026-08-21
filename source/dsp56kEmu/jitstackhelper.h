@@ -46,6 +46,15 @@ namespace dsp56k
 		static bool isNonVolatile(const JitRegGP& _gp);
 		static bool isNonVolatile(const JitReg128& _xm);
 
+		// isNonVolatile() answers the ABI question "does a C++ callee preserve this for me", which is what
+		// decides whether we have to push around a call. blockMustPreserve() answers the different question
+		// "does this block have to save it for its caller" - false for everything the trampoline saves once
+		// per batch. Mixing the two costs far more than it saves: a prolog push happens once per block entry,
+		// a push around a call happens every time the block calls into C++.
+		static bool blockMustPreserve(const JitReg& _gp);
+		static bool blockMustPreserve(const JitRegGP& _gp);
+		static bool blockMustPreserve(const JitReg128& _xm);
+
 		void setUsed(const JitReg& _reg);
 		void setUsed(const JitRegGP& _reg);
 		void setUsed(const JitReg128& _reg);

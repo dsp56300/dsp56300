@@ -608,7 +608,7 @@ namespace dsp56k
 			// spilling into slots merely because they exist. makeSpace() then writes the register to its memory home
 			// once instead of shuffling it into an XMM and pulling it back, which measured 29% fewer spill moves and
 			// 14% fewer memory ops per block - the traffic drops rather than moving to memory.
-			if(g_spillToNonVolatileXmms || !JitStackHelper::isNonVolatile(g_dspPoolXmm))
+			if(g_spillToNonVolatileXmms || !JitStackHelper::blockMustPreserve(g_dspPoolXmm))
 			{
 				m_xmList.addHostReg({g_dspPoolXmm, 0});
 				++m_spillXmmCount;

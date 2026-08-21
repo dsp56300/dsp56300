@@ -188,7 +188,9 @@ namespace dsp56k
 
 			const auto pc = getPC().toWord();
 			LOGJITPC(pc);
-			m_jitEntries[pc](&reg, pc);
+			// must go through the trampoline: it establishes regDspPtr, which blocks no longer set up
+			// themselves. A direct call here leaves regDspPtr at whatever the caller happened to have.
+			m_jit.getTrampoline().execOne(&reg, pc, m_jitEntries[pc]);
 		}
 
 		ASMJIT_FORCE_INLINE void execInterpreter() noexcept

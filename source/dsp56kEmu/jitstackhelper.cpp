@@ -168,7 +168,7 @@ namespace dsp56k
 
 		for (const auto& reg : m_usedRegs)
 		{
-			if(!isNonVolatile(reg))
+			if(!blockMustPreserve(reg))
 				continue;
 
 			regsToPush.push_back(reg);
@@ -271,6 +271,35 @@ namespace dsp56k
 		if(_gp.isVec())
 			return isNonVolatile(_gp.as<JitReg128>());
 		return false;
+	}
+
+	bool JitStackHelper::blockMustPreserve(const JitReg& _gp)
+	{
+		if(_gp.isGp())
+			return blockMustPreserve(_gp.as<JitRegGP>());
+		if(_gp.isVec())
+			return blockMustPreserve(_gp.as<JitReg128>());
+		return false;
+	}
+
+	bool JitStackHelper::blockMustPreserve(const JitRegGP& _gp)
+	{
+#ifndef HAVE_ARM64
+		// saved once per batch by the trampoline, so a block neither has to preserve them nor loses
+		// them across its own popAll()
+		for (const auto& gp : g_trampolineSavedGPs)
+		{
+			if(gp.equals(r64(_gp)))
+				return false;
+		}
+#endif
+		return isNonVolatile(_gp);
+	}
+
+	bool JitStackHelper::blockMustPreserve(const JitReg128& _xm)
+	{
+		// the trampoline only takes over GPs, blocks keep saving the vectors they use themselves
+		return isNonVolatile(_xm);
 	}
 
 	bool JitStackHelper::isNonVolatile(const JitRegGP& _gp)

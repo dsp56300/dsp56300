@@ -121,18 +121,26 @@ namespace dsp56k
 				const auto iBegin = m_dsp.getInstructionCounter();
 				const auto cBegin = m_dsp.getCycles();
 
-				for(size_t i=0; i<128; i += 8)
+				if constexpr(g_useJIT)
 				{
-					m_dsp.exec();
-					m_dsp.exec();
-					m_dsp.exec();
-					m_dsp.exec();
-					m_dsp.exec();
-					m_dsp.exec();
-					m_dsp.exec();
-					m_dsp.exec();
+					// the trampoline runs the whole batch: it saves the callee-saved registers that blocks
+					// use once here instead of once per block
+					m_dsp.getJit().getTrampoline().exec(&m_dsp, 128);
 				}
-
+				else
+				{
+					for(size_t i=0; i<128; i += 8)
+					{
+						m_dsp.exec();
+						m_dsp.exec();
+						m_dsp.exec();
+						m_dsp.exec();
+						m_dsp.exec();
+						m_dsp.exec();
+						m_dsp.exec();
+						m_dsp.exec();
+					}
+				}
 				const auto iEnd = m_dsp.getInstructionCounter();
 				const auto cEnd = m_dsp.getCycles();
 

@@ -97,7 +97,7 @@ namespace dsp56k
 				throw std::string("JIT failed (no-opt) for '") + _name + "': " + errString;
 			}
 
-			func(&dsp.regs(), 0);
+			dsp.getJit().getTrampoline().execOne(&dsp.regs(), 0, func);
 			withoutOpt = captureDspState();
 			m_rt.release(&func);
 		}
@@ -157,7 +157,7 @@ namespace dsp56k
 				throw std::string("JIT failed (with-opt) for '") + _name + "': " + errString;
 			}
 
-			func(&dsp.regs(), 0);
+			dsp.getJit().getTrampoline().execOne(&dsp.regs(), 0, func);
 			withOpt = captureDspState();
 			m_rt.release(&func);
 		}
@@ -694,7 +694,7 @@ namespace dsp56k
 			dsp.regs().sp.var = 0;
 			dsp.regs().ss[0].var = (static_cast<uint64_t>(0x200) << 24);
 
-			func(&dsp.regs(), 0);
+			dsp.getJit().getTrampoline().execOne(&dsp.regs(), 0, func);
 			withoutOpt = captureDspState();
 			m_rt.release(&func);
 		}
@@ -753,7 +753,7 @@ namespace dsp56k
 			dsp.regs().sp.var = 0;
 			dsp.regs().ss[0].var = (static_cast<uint64_t>(0x200) << 24);
 
-			func(&dsp.regs(), 0);
+			dsp.getJit().getTrampoline().execOne(&dsp.regs(), 0, func);
 			withOpt = captureDspState();
 			m_rt.release(&func);
 		}

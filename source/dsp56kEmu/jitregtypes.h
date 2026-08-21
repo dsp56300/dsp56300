@@ -21,11 +21,11 @@ namespace dsp56k
 
 	static constexpr JitReg128 g_nonVolatileXMMs[] = {JitReg128(8) , JitReg128(9) ,  JitReg128(10),  JitReg128(11), JitReg128(12), JitReg128(13), JitReg128(14), JitReg128(15)};
 
-	static constexpr JitRegGP g_dspPoolGps[] = { JitReg64(1), JitReg64(2), JitReg64(3), JitReg64(4), JitReg64(5), JitReg64(6), JitReg64(7), JitReg64(8), JitReg64(14), JitReg64(15), JitReg64(16), JitReg64(17)};
+	static constexpr JitRegGP g_dspPoolGps[] = { JitReg64(1), JitReg64(2), JitReg64(3), JitReg64(4), JitReg64(5), JitReg64(6), JitReg64(7), JitReg64(8), JitReg64(9), JitReg64(14), JitReg64(15), JitReg64(16), JitReg64(17)};
 
 	static constexpr auto regReturnVal = JitReg64(0);
 
-	static constexpr auto regDspPtr = JitReg64(9);
+	static constexpr auto regDspPtr = JitReg64(20);
 
 	// compared to X64, we use one additional temp because we do not have a fixed shift register, which leads to one additional temp register
 	static constexpr std::initializer_list<JitReg> g_regGPTemps = { JitReg64(10), JitReg64(11), JitReg64(12), JitReg64(13) };
@@ -37,6 +37,12 @@ namespace dsp56k
 	// ARM64 keeps 22 volatile spill slots, so withholding the 8 callee-saved ones only removes capacity that
 	// some blocks genuinely need - measured flat overall but a reproducible -4% on one workload. Keep them.
 	static constexpr bool g_spillToNonVolatileXmms = true;
+
+	// The trampoline could take the callee-saved vector registers over as well - blocks spill into them
+	// and push the union they might need even on paths that never use them. Measured on Cortex-A76 that
+	// is a loss: -1.0% despite removing 2.2% of all executed instructions, with perf blaming frontend
+	// stalls inside the blocks. The trampoline loop on its own is free there (-0.05%, n=24), so the loop
+	// stays and the vectors are left to the blocks. On Win64 it is a loss too, see g_trampolineSavedGPs.
 
 	static constexpr JitReg128 g_dspPoolXmms[] = {                                JitReg128(2) ,  JitReg128(3) , JitReg128(4) , JitReg128(5) , JitReg128(6) , JitReg128(7) ,
 												   JitReg128(16), JitReg128(17),  JitReg128(18),  JitReg128(19), JitReg128(20), JitReg128(21), JitReg128(22), JitReg128(23),
@@ -51,9 +57,9 @@ namespace dsp56k
 
 	static constexpr JitReg128 g_nonVolatileXMMs[] = { asmjit::x86::xmm6, asmjit::x86::xmm7, asmjit::x86::xmm8, asmjit::x86::xmm9, asmjit::x86::xmm10, asmjit::x86::xmm11, asmjit::x86::xmm12, asmjit::x86::xmm13, asmjit::x86::xmm14, asmjit::x86::xmm15 };
 
-	static constexpr JitRegGP g_dspPoolGps[] = { asmjit::x86::rdx, asmjit::x86::r9, asmjit::x86::r11, asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::rsi, asmjit::x86::rbp, asmjit::x86::rbx, asmjit::x86::rdi};
+	static constexpr JitRegGP g_dspPoolGps[] = { asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r11, asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::rsi, asmjit::x86::rbp, asmjit::x86::rdi};
 
-	static constexpr auto regDspPtr = asmjit::x86::r8;
+	static constexpr auto regDspPtr = asmjit::x86::rbx;
 #else
 	static constexpr JitReg64 g_funcArgGPs[] = { asmjit::x86::rdi, asmjit::x86::rsi, asmjit::x86::rdx, asmjit::x86::rcx, asmjit::x86::r8, asmjit::x86::r9 };
 
@@ -64,10 +70,11 @@ namespace dsp56k
 	
 	static constexpr JitReg128 g_nonVolatileXMMs[] = {};
 
-	// volatiles first so that simple blocks do not have to push anything on the stack, see static_assert in jit.cpp
-	static constexpr JitRegGP g_dspPoolGps[] = { asmjit::x86::rdx, asmjit::x86::r9, asmjit::x86::r11, asmjit::x86::rsi, asmjit::x86::rdi, asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::r12, asmjit::x86::r13 };
+	// their register set (rbx becomes regDspPtr and leaves the pool, r8 joins it) with the
+	// volatiles-first ordering, see static_assert in jit.cpp
+	static constexpr JitRegGP g_dspPoolGps[] = { asmjit::x86::rdx, asmjit::x86::rsi, asmjit::x86::rdi, asmjit::x86::r8, asmjit::x86::r9, asmjit::x86::r11, asmjit::x86::rbp, asmjit::x86::r12, asmjit::x86::r13 };
 	
-	static constexpr auto regDspPtr = asmjit::x86::r8;
+	static constexpr auto regDspPtr = asmjit::x86::rbx;
 #endif
 
 	// x86-64 has only 4 volatile spill slots, so blocks reach into the callee-saved XMMs readily and pay for it
@@ -75,6 +82,20 @@ namespace dsp56k
 	// Withholding them cuts spill moves by 29% and memory ops by 14%, worth +1.04% MIPS on Windows.
 	// No effect on SysV, where every pool XMM is already volatile.
 	static constexpr bool g_spillToNonVolatileXmms = false;
+
+	// Callee-saved GPs that blocks use - either through the pool or as g_regGPTemps scratch. The
+	// trampoline saves these ONCE around a whole batch instead of every block pushing and popping
+	// its own (measured at 9.4% of all emitted host instructions). Blocks may treat them as volatile.
+	// Worth +5.65% on SysV; on Win64 it measures flat (+0.48%, n.s.) and adding the callee-saved XMMs
+	// on top costs -3.4%: with g_spillToNonVolatileXmms off, xmm6-15 are not in the pool at all, so
+	// hoisting them saves no prolog and only buys 10 extra saves per interrupt entry in execOne.
+	// regDspPtr is deliberately NOT here: no block touches it, and the trampoline keeps it live.
+	// EVERY entry into a block must go through JitTrampoline for this to hold.
+#ifdef _MSC_VER
+	static constexpr JitReg64 g_trampolineSavedGPs[] = { asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::rsi, asmjit::x86::rbp, asmjit::x86::rdi, asmjit::x86::r14, asmjit::x86::r15 };
+#else
+	static constexpr JitReg64 g_trampolineSavedGPs[] = { asmjit::x86::rbp, asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::r14, asmjit::x86::r15 };
+#endif
 
 	static constexpr auto regReturnVal = asmjit::x86::rax;
 
