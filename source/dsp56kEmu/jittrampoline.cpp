@@ -81,9 +81,14 @@ namespace dsp56k
 #endif
 		static constexpr uint32_t g_slotDsp = g_shadow;			// DSP*
 		static constexpr uint32_t g_slotCounter = g_shadow + 8;	// loop counter
+		// The two constants below used to be materialised as "mov r64, imm64" INSIDE the loop, ten bytes
+		// each, once per unrolled iteration. The loop body's size is what actually costs here - the work
+		// itself prices at zero - so they live in the frame and are read with a short displacement.
+		static constexpr uint32_t g_slotPeriphFunc = g_shadow + 16;
+		static constexpr uint32_t g_slotClockPtr = g_shadow + 24;
 		// rsp is 8 mod 16 on entry; keep it 0 mod 16 at the call whatever the push count is
 		static constexpr int g_pushCount = static_cast<int>(std::size(g_trampolineSavedGPs)) + 1;
-		static constexpr int g_slotBytes = static_cast<int>(g_shadow) + 16;
+		static constexpr int g_slotBytes = static_cast<int>(g_shadow) + 32;
 		static constexpr uint32_t g_additionalStackSize = static_cast<uint32_t>(g_slotBytes + (((8 - 8*g_pushCount - g_slotBytes) % 16 + 16) % 16));
 		static_assert(((8 - 8*g_pushCount - static_cast<int>(g_additionalStackSize)) % 16) == 0, "rsp must be 16 byte aligned at the call");
 		m_asm.sub(asmjit::x86::regs::rsp, asmjit::Imm(g_additionalStackSize));
@@ -122,6 +127,13 @@ namespace dsp56k
 		m_asm.add(regDspPtr, g_ptrDSP, ptrDspRegs.offset());
 #else
 		m_asm.lea(regDspPtr, ptrDspRegs);
+#endif
+
+#ifdef HAVE_X86_64
+		m_asm.mov(asmjit::x86::rax, asmjit::Imm(periphFunc));
+		m_asm.mov(asmjit::x86::ptr(asmjit::x86::regs::rsp, g_slotPeriphFunc, 8), asmjit::x86::rax);
+		m_asm.mov(asmjit::x86::rax, asmjit::Imm(targetClock));
+		m_asm.mov(asmjit::x86::ptr(asmjit::x86::regs::rsp, g_slotClockPtr, 8), asmjit::x86::rax);
 #endif
 
 		const auto label = m_asm.newNamedLabel("beginExec8times");
@@ -171,19 +183,19 @@ namespace dsp56k
 
 			m_asm.mov(dsp, asmjit::x86::ptr(asmjit::x86::regs::rsp, g_slotDsp, 8));
 			m_asm.mov(g_funcToCall, Jitmem::makeRelativePtr(&m_dsp.getInterruptFunc(), &m_dsp, dsp, 8));
-			m_asm.mov(scratchA, asmjit::Imm(periphFunc));
-			m_asm.cmp(g_funcToCall, scratchA);
+			m_asm.cmp(g_funcToCall, asmjit::x86::ptr(asmjit::x86::regs::rsp, g_slotPeriphFunc, 8));
 			m_asm.jne(lCallInt);
-			m_asm.mov(scratchA, asmjit::Imm(targetClock));
+			m_asm.mov(scratchA, asmjit::x86::ptr(asmjit::x86::regs::rsp, g_slotClockPtr, 8));
 			m_asm.mov(scratchB, asmjit::x86::ptr(scratchA, 0, 8));
 			m_asm.cmp(scratchB, Jitmem::makeRelativePtr(&m_dsp.getInstructionCounter(), &m_dsp, dsp, 8));
 			m_asm.ja(lSkipInt);
 			m_asm.bind(lCallInt);
 			m_asm.mov(g_funcArgGPs[0], dsp);
 			m_asm.call(g_funcToCall);
+			// only the call clobbers it - on the (overwhelmingly common) skip path it is still live
+			m_asm.mov(dsp, asmjit::x86::ptr(asmjit::x86::regs::rsp, g_slotDsp, 8));
 			m_asm.bind(lSkipInt);
 
-			m_asm.mov(dsp, asmjit::x86::ptr(asmjit::x86::regs::rsp, g_slotDsp, 8));
 			m_asm.mov(g_funcToCall, Jitmem::makeRelativePtr(&m_dsp.getJitEntries(), &m_dsp, dsp, 8));
 			m_asm.mov(r32(g_funcArgGPs[1]), Jitmem::makeRelativePtr(&m_dsp.regs().pc.var, &m_dsp, dsp, 4));
 			m_asm.mov(g_funcToCall, Jitmem::makePtr(g_funcToCall, g_funcArgGPs[1], 3, 8));
