@@ -14,6 +14,10 @@ namespace dsp56k
 	constexpr auto g_ptrJitEntries = JitReg64(24);
 	constexpr auto g_ptrPC = JitReg64(25);
 	constexpr auto g_ptrInterruptFunc = JitReg64(26);
+	// hoisted constants for the inlined "is a peripheral due" test
+	constexpr auto g_periphFunc = JitReg64(19);
+	constexpr auto g_ptrTargetClock = JitReg64(21);
+	constexpr auto g_ptrInstructions = JitReg64(27);
 #else
 	constexpr auto g_ptrDSP = asmjit::x86::r12;
 	constexpr auto g_counter = asmjit::x86::r13;
@@ -54,6 +58,9 @@ namespace dsp56k
 		m_asm.push(r64(g_ptrJitEntries));
 		m_asm.push(r64(g_ptrInterruptFunc));
 		m_asm.push(r64(g_ptrPC));
+		m_asm.push(r64(g_periphFunc));
+		m_asm.push(r64(g_ptrTargetClock));
+		m_asm.push(r64(g_ptrInstructions));
 #else
 		// regDspPtr survives the whole loop: no block uses it and C++ callees preserve it. Everything
 		// else we need would be destroyed by a block now, so it lives in our own frame instead.
@@ -97,6 +104,17 @@ namespace dsp56k
 		m_asm.lea_(g_ptrInterruptFunc, argDspPtr, &m_dsp.getInterruptFunc(), &m_dsp);
 		m_asm.lea_(g_ptrPC           , argDspPtr, &m_dsp.regs().pc.var, &m_dsp);
 
+		// Constants for the inlined peripherals test. perif[0] is an IPeripherals* const and
+		// m_execPeripheralsFunc never changes after construction, so both are fixed here.
+		const auto* const periphFunc = reinterpret_cast<const void*>(m_dsp.getExecPeripheralsFunc());
+		const auto* const targetClock = m_dsp.getPeriph(0)->getTargetClockPtr();
+
+#ifdef HAVE_ARM64
+		m_asm.mov(g_periphFunc, asmjit::Imm(periphFunc));
+		m_asm.mov(g_ptrTargetClock, asmjit::Imm(targetClock));
+		m_asm.mov(g_ptrInstructions, asmjit::Imm(&m_dsp.getInstructionCounter()));
+#endif
+
 		const auto ptrDspRegs = Jitmem::makeRelativePtr(&m_dsp.regs(), &m_dsp, argDspPtr, 8);
 		assert(ptrDspRegs.offset());
 
@@ -118,9 +136,24 @@ namespace dsp56k
 			// 2) call JIT func:       (DspRegs*, PC)
 
 #ifdef HAVE_ARM64
+			// The interrupt func is dspExecPeripherals ~99% of the time and that one does nothing but
+			// "if(targetClock > instructions) return". Inlining that test here turns a guaranteed indirect
+			// call per block entry into two loads and a not-taken branch. Must stay exactly equivalent to
+			// DSP::execPeriph().
+			const auto lCallInt = m_asm.newLabel();
+			const auto lSkipInt = m_asm.newLabel();
+
 			m_asm.ldr(g_funcToCall, Jitmem::makePtr(g_ptrInterruptFunc, 8));
+			m_asm.cmp(g_funcToCall, g_periphFunc);
+			m_asm.b(asmjit::arm::CondCode::kNE, lCallInt);
+			m_asm.ldr(r64(g_funcArgGPs[0]), Jitmem::makePtr(g_ptrTargetClock, 8));
+			m_asm.ldr(r64(g_funcArgGPs[1]), Jitmem::makePtr(g_ptrInstructions, 8));
+			m_asm.cmp(r64(g_funcArgGPs[0]), r64(g_funcArgGPs[1]));
+			m_asm.b(asmjit::arm::CondCode::kHI, lSkipInt);
+			m_asm.bind(lCallInt);
 			m_asm.mov(g_funcArgGPs[0], g_ptrDSP);
 			m_asm.blr(g_funcToCall);
+			m_asm.bind(lSkipInt);
 
 			m_asm.ldr(g_funcToCall, Jitmem::makePtr(g_ptrJitEntries, 8));
 			m_asm.ldr(r32(g_funcArgGPs[1]), Jitmem::makePtr(g_ptrPC, 4));
@@ -130,10 +163,25 @@ namespace dsp56k
 #else
 			const auto dsp = asmjit::x86::rax;	// volatile, reloaded after every call
 
+			// see the ARM path above for why this test is inlined
+			const auto lCallInt = m_asm.newLabel();
+			const auto lSkipInt = m_asm.newLabel();
+			const auto scratchA = asmjit::x86::r10;	// volatile in both x64 ABIs, and we are before the call
+			const auto scratchB = asmjit::x86::r11;
+
 			m_asm.mov(dsp, asmjit::x86::ptr(asmjit::x86::regs::rsp, g_slotDsp, 8));
 			m_asm.mov(g_funcToCall, Jitmem::makeRelativePtr(&m_dsp.getInterruptFunc(), &m_dsp, dsp, 8));
+			m_asm.mov(scratchA, asmjit::Imm(periphFunc));
+			m_asm.cmp(g_funcToCall, scratchA);
+			m_asm.jne(lCallInt);
+			m_asm.mov(scratchA, asmjit::Imm(targetClock));
+			m_asm.mov(scratchB, asmjit::x86::ptr(scratchA, 0, 8));
+			m_asm.cmp(scratchB, Jitmem::makeRelativePtr(&m_dsp.getInstructionCounter(), &m_dsp, dsp, 8));
+			m_asm.ja(lSkipInt);
+			m_asm.bind(lCallInt);
 			m_asm.mov(g_funcArgGPs[0], dsp);
 			m_asm.call(g_funcToCall);
+			m_asm.bind(lSkipInt);
 
 			m_asm.mov(dsp, asmjit::x86::ptr(asmjit::x86::regs::rsp, g_slotDsp, 8));
 			m_asm.mov(g_funcToCall, Jitmem::makeRelativePtr(&m_dsp.getJitEntries(), &m_dsp, dsp, 8));
@@ -159,6 +207,9 @@ namespace dsp56k
 		m_asm.pop(asmjit::a64::regs::x30);
 #endif
 #ifdef HAVE_ARM64
+		m_asm.pop(r64(g_ptrInstructions));
+		m_asm.pop(r64(g_ptrTargetClock));
+		m_asm.pop(r64(g_periphFunc));
 		m_asm.pop(r64(g_ptrPC));
 		m_asm.pop(r64(g_ptrInterruptFunc));
 		m_asm.pop(r64(g_ptrJitEntries));

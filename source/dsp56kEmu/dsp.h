@@ -333,6 +333,7 @@ namespace dsp56k
 		const auto&		getJitEntries					() const			{ return m_jitEntries; }
 
 		const auto&		getInterruptFunc				() const			{ return m_interruptFunc; }
+		auto			getExecPeripheralsFunc			() const			{ return m_execPeripheralsFunc; }
 
 		void			terminate						();
 

@@ -122,6 +122,10 @@ namespace dsp56k
 		uint32_t getDelayCycles() const { return m_delayCycles.load(std::memory_order_relaxed); }
 		auto getTargetClock() const { return m_targetClock.load(std::memory_order_relaxed); }
 
+		// the trampoline inlines the "is a peripheral due" test into its exec loop and needs the address of
+		// the counter. A relaxed load of an aligned 64 bit atomic is a plain load, which is what it emits.
+		const uint64_t* getTargetClockPtr() const { return reinterpret_cast<const uint64_t*>(&m_targetClock); }
+
 		auto getType() const { return m_type; }
 
 	private:
