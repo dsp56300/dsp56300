@@ -1,5 +1,7 @@
 #include "jitprofilingsupport.h"
 
+#include <cstdlib>
+
 #include <fstream>
 
 #include "disasm.h"
@@ -74,7 +76,14 @@ namespace dsp56k
 		if(iJIT_IsProfilingActive() != iJIT_NOTHING_RUNNING)
 			return true;
 #endif
-		return false;	// FIXME: Can we determine if we are being profiled with perf? Set to true manually for now if needed
+#ifdef DSP56K_USE_PERF_JIT_PROFILING
+		// perf offers no API to ask whether we are being profiled, so it is opt-in via environment.
+		// With DSP56K_PERF_JIT=1 we write /tmp/perf-<pid>.map, which lets perf symbolize JIT blocks
+		// and the trampoline instead of reporting them all as an anonymous [JIT] region.
+		if(const char* env = std::getenv("DSP56K_PERF_JIT"))
+			return env[0] != 0 && env[0] != '0';
+#endif
+		return false;
 	}
 
 	void JitProfilingSupport::addJitBlock(JitBlockRuntimeData& b)
