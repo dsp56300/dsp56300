@@ -204,7 +204,10 @@ namespace dsp56k
 
 		ccr_update_ifCarry(CCRB_C);
 
-		m_dspRegs.mask56(aluD);
+		// D = 2 * D + S: the shift is to the LEFT, so the spare low byte stays zero, and adding another
+		// accumulator keeps it that way. Contrast op_Addr below, which shifts right and does need the mask.
+		if constexpr (!g_leftAlignedAlu)
+			m_dspRegs.mask56(aluD);
 
 		ccr_clear(CCR_V);	// TODO: Set if overflow has occurred in the A or B result or the MSB of the destination operand is changed as a result of the instruction�s left shift.
 		ccr_dirty(ab, aluD, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
