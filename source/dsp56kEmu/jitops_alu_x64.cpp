@@ -605,6 +605,59 @@ namespace dsp56k
 				ccr_update(CCRB_C, asmjit::x86::CondCode::kNotSign);
 		};
 
+		// A rep/div whose divisor is a power of two and whose dividend is already in range is a shift,
+		// not N dependent steps. Both are runtime properties, so the guard is emitted rather than assumed:
+		// the divisor must be a power of two, and the dividend must satisfy 0 <= alu < divisor. One
+		// unsigned compare covers both halves of the range test, because a negative accumulator is huge
+		// when read unsigned, and it also rejects a zero divisor (which passes the power-of-two test).
+		// In that domain N steps of non-restoring division produce, exactly,
+		//     alu = ((alu << N) mod 2S) - S + (alu >> (log2(2S) - N)) + carry * 2^(N-1)
+		// with V cleared and L untouched. Verified against the interpreter for every divisor 2^0..2^23,
+		// every iteration count 1..24, both carry values, at every piecewise boundary of the domain.
+		const auto fastPathEnd = m_asm.newLabel();
+		const auto hasFastPath = _iterationCount >= 1 && _iterationCount <= 24;
+
+		if (hasFastPath)
+		{
+			const auto slowPath = m_asm.newLabel();
+
+			// s and sNeg are dead on the fast path. s is rcx, which is what the variable shift needs anyway.
+			const auto q = r64(sNeg);
+			const auto t = s.get();
+
+			m_asm.lea(t, ptr(r64(sPos), static_cast<int32_t>(-1)));
+			m_asm.test(t, r64(sPos));					// S & (S-1), zero if S is a power of two or zero
+			m_asm.jnz(slowPath);
+			m_asm.cmp(alu, r64(sPos));
+			m_asm.jae(slowPath);						// unsigned, so this rejects alu < 0 and S == 0 too
+
+			m_asm.bsf(t, r64(sPos));					// log2(S), well defined because S != 0 here
+			if (_iterationCount > 1)
+				m_asm.sub(t, asmjit::Imm(_iterationCount - 1));
+			m_asm.mov(q, alu);
+			m_asm.shr(q, t.r8());						// q = alu >> (log2(2S) - N)
+
+			m_asm.shl(alu, asmjit::Imm(_iterationCount));
+			m_asm.lea(t, ptr(r64(sPos), r64(sPos), 0, static_cast<int32_t>(-1)));
+			m_asm.and_(alu, t);							// (alu << N) mod 2S
+			m_asm.sub(alu, r64(sPos));
+			m_asm.add(alu, q);
+			if (_iterationCount > 1)
+				m_asm.shl(carry.get(), asmjit::Imm(_iterationCount - 1));
+			m_asm.add(alu, carry.get());
+
+			// C is set if bit 55 of the result is cleared. V is always cleared here and L stays untouched,
+			// but both still have to go through the same helpers the slow path uses so that the compile time
+			// CCR dirty/written state is identical on both paths.
+			m_asm.test_(alu);
+			ccr_update(CCRB_C, asmjit::x86::CondCode::kNotSign);
+			ccr_clear(CCR_V);
+			ccr_l_update_by_v();
+
+			m_asm.jmp(fastPathEnd);
+			m_asm.bind(slowPath);
+		}
+
 		// loop
 		if (_iterationCount <= 24)
 		{
@@ -638,6 +691,9 @@ namespace dsp56k
 			loopIterationInvariant(true, true);
 		else
 			loopIteration(true, true);
+
+		if (hasFastPath)
+			m_asm.bind(fastPathEnd);
 
 		if constexpr (g_leftAlignedAlu)
 			m_asm.shl(r64(alu), asmjit::Imm(8));	// back to the ALU representation

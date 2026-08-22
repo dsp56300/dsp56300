@@ -540,6 +540,62 @@ namespace dsp56k
 				m_asm.cset(carry, asmjit::arm::CondCode::kNotSign);
 		};
 
+		// A rep/div whose divisor is a power of two and whose dividend is already in range is a shift,
+		// not N dependent steps. Both are runtime properties, so the guard is emitted rather than assumed:
+		// the divisor must be a power of two, and the dividend must satisfy 0 <= alu < divisor. One
+		// unsigned compare covers both halves of the range test, because a negative accumulator is huge
+		// when read unsigned, and it also rejects a zero divisor (which passes the power-of-two test).
+		// In that domain N steps of non-restoring division produce, exactly,
+		//     alu = ((alu << N) mod 2S) - S + (alu >> (log2(2S) - N)) + carry * 2^(N-1)
+		// with V cleared and L untouched. Verified against the interpreter for every divisor 2^0..2^23,
+		// every iteration count 1..24, both carry values, at every piecewise boundary of the domain.
+		// Everything here lives in the left-aligned domain, so the quotient has to be scaled back up by
+		// g_aluBitOffset while the remainder, which is already a value in that domain, does not.
+		const auto fastPathEnd = m_asm.newLabel();
+		const auto hasFastPath = _iterationCount >= 1 && _iterationCount <= 24;
+
+		if (hasFastPath)
+		{
+			const auto slowPath = m_asm.newLabel();
+
+			// addOrSub is not set up yet and s is only ever used inside a step, so both are free scratch here
+			const auto t = s.get();
+			const auto q = addOrSub.get();
+
+			m_asm.sub(t, r64(sPos), asmjit::Imm(1));
+			m_asm.tst(t, r64(sPos));					// S & (S-1), zero if S is a power of two or zero
+			m_asm.jnz(slowPath);
+			m_asm.cmp(alu, r64(sPos));
+			m_asm.b(asmjit::arm::CondCode::kUnsignedGE, slowPath);	// rejects alu < 0 and S == 0 too
+
+			m_asm.rbit(t, r64(sPos));
+			m_asm.clz(t, t);							// log2(S), well defined because S != 0 here
+			if (_iterationCount > 1)
+				m_asm.sub(t, t, asmjit::Imm(_iterationCount - 1));
+			m_asm.lsr(q, alu, t);						// q = alu >> (log2(2S) - N)
+			m_asm.lsl(q, q, asmjit::Imm(g_aluBitOffset));
+
+			m_asm.lsl(alu, alu, asmjit::Imm(_iterationCount));
+			m_asm.lsl(t, r64(sPos), asmjit::Imm(1));
+			m_asm.sub(t, t, asmjit::Imm(1));
+			m_asm.and_(alu, t);							// (alu << N) mod 2S
+			m_asm.sub(alu, alu, r64(sPos));
+			m_asm.add(alu, alu, q);
+			m_asm.add(alu, alu, carry.get(), asmjit::arm::lsl(_iterationCount - 1 + g_aluBitOffset));
+
+			// C is set if bit 55 of the result is cleared
+			m_asm.tst(alu, alu);
+			ccr_update(CCRB_C, asmjit::arm::CondCode::kNotSign);
+
+			// V is always cleared here and L stays untouched. This is exactly what ccrUpdateVL emits for
+			// V == 0, including its compile time bookkeeping, so both paths leave the CCR state identical.
+			m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~CCR_V));
+			m_ccrDirty = static_cast<CCRMask>(m_ccrDirty & ~(CCR_L | CCR_V));
+
+			m_asm.jmp(fastPathEnd);
+			m_asm.bind(slowPath);
+		}
+
 		// The sign of the previous ALU decides BOTH which value is added (+|s| or -|s|) and what the
 		// carry into the LSB is (0 or 1), so the whole step is "add one of two loop invariant values,
 		// shifted". Precompute them and a step becomes csel + adds instead of cneg + add + adds.
@@ -585,6 +641,9 @@ namespace dsp56k
 			loopIterationInvariant(true, true);
 		else
 			loopIteration(true, true);
+
+		if (hasFastPath)
+			m_asm.bind(fastPathEnd);
 
 		m_dspRegs.mask56(alu);
 	}

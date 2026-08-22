@@ -167,6 +167,7 @@ namespace  dsp56k
 		// multi-instruction tests
 		void multiInstructionTests();
 		void rep_multi();
+		void rep_div_powerOfTwo();
 		void do_multi();
 		void jsr_rts();
 
