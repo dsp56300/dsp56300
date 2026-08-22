@@ -73,7 +73,9 @@ namespace dsp56k
 		}
 		}
 
-		m_dspRegs.mask56(alu);
+		// see alu_mpy: adding two values that are clean by the accumulator invariant stays clean
+		if constexpr (!g_leftAlignedAlu)
+			m_dspRegs.mask56(alu);
 
 		if(!m_disableCCRUpdates)
 			ccr_dirty(_ab, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
@@ -124,7 +126,9 @@ namespace dsp56k
 		}
 		}
 
-		m_dspRegs.mask56(alu);
+		// see alu_mpy: adding two values that are clean by the accumulator invariant stays clean
+		if constexpr (!g_leftAlignedAlu)
+			m_dspRegs.mask56(alu);
 
 		if(!m_disableCCRUpdates)
 			ccr_dirty(_ab, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
@@ -573,8 +577,15 @@ namespace dsp56k
 
 			ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z | vBit));
 
-			if (canOverflow || _negate)
-				m_dspRegs.mask56(d);
+			// Left-aligned, mask56 only clears the low byte - it cannot trim an overflow, because the 56
+			// bits already occupy 63..8. After a multiply that byte is zero by construction: the product
+			// is shifted up by 8, doubling keeps it zero, and the accumulator it is added to is clean by
+			// the same invariant.
+			if constexpr (!g_leftAlignedAlu)
+			{
+				if (canOverflow || _negate)
+					m_dspRegs.mask56(d);
+			}
 		}
 		else
 		{
