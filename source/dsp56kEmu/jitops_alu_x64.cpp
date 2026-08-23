@@ -520,6 +520,11 @@ namespace dsp56k
 			// V: Set if the MSB of the destination operand is changed as a result of the instructions left shift operation.
 			// L: Set if the Overflow bit (V) is set.
 			// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
+			// TODO: L is only derived from the last step here, but the DSP makes it sticky by ORing the
+			// per-step V across all N steps. Reproducing that needs the per-step V accumulated inside the
+			// loop, which costs instructions in the hottest block in the emulator, so it is deliberately
+			// not done. It only differs for a division whose dividend is out of range, see the last case
+			// of rep_div_powerOfTwo.
 			{
 				const RegGP r(m_block);
 				m_asm.ror(r, alu, 54 + g_aluBitOffset);
@@ -616,6 +621,10 @@ namespace dsp56k
 		//     alu = ((alu << N) mod 2S) - S + (alu >> (log2(2S) - N)) + carry * 2^(N-1)
 		// with V cleared and L untouched. Verified against the interpreter for every divisor 2^0..2^23,
 		// every iteration count 1..24, both carry values, at every piecewise boundary of the domain.
+		// TODO: only a power of two divisor is handled. The general case is a real division of
+		// (alu << N) by 2S, which x64 could do with a single div rdx:rax while aarch64 would need a
+		// different approach. Just 1 of the 8 rep/div sites in the Virus C ROM has a power of two
+		// divisor and none of the other 7 show up in a profile, so measure before building it.
 		const auto fastPathEnd = m_asm.newLabel();
 		// Below a handful of iterations the loop is simply cheaper: a step is two cycles of latency,
 		// while the closed form costs about seven regardless of N, so the crossover sits near four. No
