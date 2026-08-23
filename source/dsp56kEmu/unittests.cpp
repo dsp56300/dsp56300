@@ -5566,7 +5566,9 @@ namespace dsp56k
 			{ 0x000400, 0x00000123456789, 0x000001, 12, 0x00000056789a46, 0x000001 },	// fast, carry in set
 			{ 0x000001, 0x00000000abcdef, 0x000000, 12, 0xffffffffdef55e, 0x000000 },	// fast, divisor 2^0
 			{ 0x800000, 0x0000123456789a, 0x000000, 24, 0xffd6789a001234, 0x000000 },	// fast, divisor 2^23, 24 iterations
-			{ 0x000400, 0x0000002aaaaaaa, 0x000000,  1, 0xfffffc55555554, 0x000000 },	// fast, single iteration
+			{ 0x000400, 0x0000002aaaaaaa, 0x000000,  1, 0xfffffc55555554, 0x000000 },	// slow, single iteration, below the fast path minimum
+			{ 0x000400, 0x0000002aaaaaaa, 0x000000,  3, 0xfffffd55555550, 0x000000 },	// slow, three iterations, just below the fast path minimum
+			{ 0x000400, 0x0000002aaaaaaa, 0x000000,  4, 0xfffffeaaaaaaa0, 0x000000 },	// fast, four iterations, exactly at the fast path minimum
 			{ 0x000400, 0x0000002aaaaaaa, 0x000001, 24, 0xfffffeaa855555, 0x000000 },	// fast, 24 iterations with carry in
 			{ 0x001000, 0x00000800000000, 0x000040, 12, 0xfffff000000400, 0x000040 },	// fast, divisor 2^12, L already set
 			{ 0xffffff, 0x00000000800000, 0x000000, 12, 0xffffffff000400, 0x000000 },	// fast, negative divisor normalises to 2^0

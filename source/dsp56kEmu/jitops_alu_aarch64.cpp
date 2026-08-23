@@ -552,7 +552,12 @@ namespace dsp56k
 		// Everything here lives in the left-aligned domain, so the quotient has to be scaled back up by
 		// g_aluBitOffset while the remainder, which is already a value in that domain, does not.
 		const auto fastPathEnd = m_asm.newLabel();
-		const auto hasFastPath = _iterationCount >= 1 && _iterationCount <= 24;
+		// Below a handful of iterations the loop is simply cheaper: a step is two cycles of latency,
+		// while the closed form costs about seven regardless of N, so the crossover sits near four. No
+		// shipped Virus ROM reps a div fewer than 7 times (TI/Snow use 7, 12, 16 and 24, B and C only 12
+		// and 24), so the floor never rejects a real site - it only keeps the guard off code that could
+		// not profit from it.
+		const auto hasFastPath = _iterationCount >= 4 && _iterationCount <= 24;
 
 		if (hasFastPath)
 		{

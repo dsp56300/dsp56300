@@ -615,7 +615,12 @@ namespace dsp56k
 		// with V cleared and L untouched. Verified against the interpreter for every divisor 2^0..2^23,
 		// every iteration count 1..24, both carry values, at every piecewise boundary of the domain.
 		const auto fastPathEnd = m_asm.newLabel();
-		const auto hasFastPath = _iterationCount >= 1 && _iterationCount <= 24;
+		// Below a handful of iterations the loop is simply cheaper: a step is two cycles of latency,
+		// while the closed form costs about seven regardless of N, so the crossover sits near four. No
+		// shipped Virus ROM reps a div fewer than 7 times (TI/Snow use 7, 12, 16 and 24, B and C only 12
+		// and 24), so the floor never rejects a real site - it only keeps the guard off code that could
+		// not profit from it.
+		const auto hasFastPath = _iterationCount >= 4 && _iterationCount <= 24;
 
 		if (hasFastPath)
 		{
