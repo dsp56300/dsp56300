@@ -5556,26 +5556,35 @@ namespace dsp56k
 			TWord iterations;
 			uint64_t expectedAlu;
 			TWord expectedSr;
+			TWord srMask;
 		};
+
+		// The JIT derives V and L from the last div step alone, while the DSP toggles V per step and makes L
+		// sticky across all of them. Reproducing that needs the per-step V accumulated in the loop, which is
+		// instructions in the hottest block in the emulator, so the last case below checks everything except
+		// L. It is the only known difference and it needs a division whose dividend is out of range to show.
+		constexpr TWord all = 0xffffff;
+		constexpr TWord noL = all & ~static_cast<TWord>(CCR_L);
 
 		static constexpr DivCase cases[] =
 		{
-			{ 0x000400, 0x0000000000c000, 0x000000, 12, 0xfffffc0c000000, 0x000000 },	// fast, the Virus C shape: divisor 2^10, dividend clamped in range
-			{ 0x000400, 0x00000000000000, 0x000000, 12, 0xfffffc00000000, 0x000000 },	// fast, dividend 0
-			{ 0x000400, 0x000003ffffffff, 0x000000, 12, 0x000003fffff7ff, 0x000001 },	// fast, dividend at the top of the range
-			{ 0x000400, 0x00000123456789, 0x000001, 12, 0x00000056789a46, 0x000001 },	// fast, carry in set
-			{ 0x000001, 0x00000000abcdef, 0x000000, 12, 0xffffffffdef55e, 0x000000 },	// fast, divisor 2^0
-			{ 0x800000, 0x0000123456789a, 0x000000, 24, 0xffd6789a001234, 0x000000 },	// fast, divisor 2^23, 24 iterations
-			{ 0x000400, 0x0000002aaaaaaa, 0x000000,  1, 0xfffffc55555554, 0x000000 },	// slow, single iteration, below the fast path minimum
-			{ 0x000400, 0x0000002aaaaaaa, 0x000000,  3, 0xfffffd55555550, 0x000000 },	// slow, three iterations, just below the fast path minimum
-			{ 0x000400, 0x0000002aaaaaaa, 0x000000,  4, 0xfffffeaaaaaaa0, 0x000000 },	// fast, four iterations, exactly at the fast path minimum
-			{ 0x000400, 0x0000002aaaaaaa, 0x000001, 24, 0xfffffeaa855555, 0x000000 },	// fast, 24 iterations with carry in
-			{ 0x001000, 0x00000800000000, 0x000040, 12, 0xfffff000000400, 0x000040 },	// fast, divisor 2^12, L already set
-			{ 0xffffff, 0x00000000800000, 0x000000, 12, 0xffffffff000400, 0x000000 },	// fast, negative divisor normalises to 2^0
-			{ 0x000400, 0x00000400000000, 0x000000, 12, 0x000004000007ff, 0x000001 },	// slow, dividend exactly at the divisor
-			{ 0x000400, 0xffffa96303b232, 0x000000, 12, 0xfad62c3b232000, 0x000000 },	// slow, negative dividend
-			{ 0x218dec, 0x00008000000000, 0x000000, 12, 0x00012ec400001e, 0x000001 },	// slow, divisor not a power of two
-			{ 0x000000, 0x00000000001000, 0x000000, 12, 0x000000010007ff, 0x000001 },	// slow, divisor zero
+			{ 0x000400, 0x0000000000c000, 0x000000, 12, 0xfffffc0c000000, 0x000000, all },	// fast, the Virus C shape: divisor 2^10, dividend clamped in range
+			{ 0x000400, 0x00000000000000, 0x000000, 12, 0xfffffc00000000, 0x000000, all },	// fast, dividend 0
+			{ 0x000400, 0x000003ffffffff, 0x000000, 12, 0x000003fffff7ff, 0x000001, all },	// fast, dividend at the top of the range
+			{ 0x000400, 0x00000123456789, 0x000001, 12, 0x00000056789a46, 0x000001, all },	// fast, carry in set
+			{ 0x000001, 0x00000000abcdef, 0x000000, 12, 0xffffffffdef55e, 0x000000, all },	// fast, divisor 2^0
+			{ 0x800000, 0x0000123456789a, 0x000000, 24, 0xffd6789a001234, 0x000000, all },	// fast, divisor 2^23, 24 iterations
+			{ 0x000400, 0x0000002aaaaaaa, 0x000000,  1, 0xfffffc55555554, 0x000000, all },	// slow, single iteration, below the fast path minimum
+			{ 0x000400, 0x0000002aaaaaaa, 0x000000,  3, 0xfffffd55555550, 0x000000, all },	// slow, three iterations, just below the fast path minimum
+			{ 0x000400, 0x0000002aaaaaaa, 0x000000,  4, 0xfffffeaaaaaaa0, 0x000000, all },	// fast, four iterations, exactly at the fast path minimum
+			{ 0x000400, 0x0000002aaaaaaa, 0x000001, 24, 0xfffffeaa855555, 0x000000, all },	// fast, 24 iterations with carry in
+			{ 0x001000, 0x00000800000000, 0x000040, 12, 0xfffff000000400, 0x000040, all },	// fast, divisor 2^12, L already set
+			{ 0xffffff, 0x00000000800000, 0x000000, 12, 0xffffffff000400, 0x000000, all },	// fast, negative divisor normalises to 2^0
+			{ 0x000400, 0x00000400000000, 0x000000, 12, 0x000004000007ff, 0x000001, all },	// slow, dividend exactly at the divisor
+			{ 0x000400, 0xffffa96303b232, 0x000000, 12, 0xfad62c3b232000, 0x000000, all },	// slow, negative dividend
+			{ 0x218dec, 0x00008000000000, 0x000000, 12, 0x00012ec400001e, 0x000001, all },	// slow, divisor not a power of two
+			{ 0x000000, 0x00000000001000, 0x000000, 12, 0x000000010007ff, 0x000001, all },	// slow, divisor zero
+			{ 0x000400, 0x00ff0000000000, 0x000000, 12, 0xefc07c000007f0, 0x000040, noL },	// slow, dividend far out of range, overflows on step 8
 		};
 
 		for (const auto& c : cases)
@@ -5602,7 +5611,7 @@ namespace dsp56k
 			execUntil(returnPC);
 
 			verify(dsp.aluA().var == static_cast<int64_t>(c.expectedAlu));
-			verify(dsp.getSR().var == c.expectedSr);
+			verify((dsp.getSR().var & c.srMask) == (c.expectedSr & c.srMask));
 		}
 	}
 

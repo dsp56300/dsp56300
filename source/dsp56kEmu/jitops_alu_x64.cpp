@@ -522,7 +522,7 @@ namespace dsp56k
 			// What we do is we check if bits 55 and 54 of the ALU are not identical (host parity bit cleared) and set V accordingly.
 			{
 				const RegGP r(m_block);
-				m_asm.ror(r, alu, 54);
+				m_asm.ror(r, alu, 54 + g_aluBitOffset);
 				m_asm.and_(r, asmjit::Imm(0x3));
 			}
 			ccr_update_ifNotParity(CCRB_V);
@@ -544,7 +544,7 @@ namespace dsp56k
 
 		// left shift by 24 and signextend to full 64 bit
 		m_asm.shl(r64(sPos), asmjit::Imm(40));
-		m_asm.sar(r64(sPos), asmjit::Imm(16));
+		m_asm.sar(r64(sPos), asmjit::Imm(16 - g_aluBitOffset));	// land on the ALU field position
 
 		// copy tosNeg and negate
 		m_asm.mov(r64(sNeg), r64(sPos));
@@ -555,15 +555,17 @@ namespace dsp56k
 		m_asm.cmovns(r64(sNeg), r64(sPos));
 		m_asm.cmovns(r64(sPos), r64(s));
 
-		// This iterative algorithm carries state across 24 rounds in the carry bit and the sign bit, so it is
-		// far less error-prone to run it in the right-aligned domain and convert at the boundaries than to
-		// offset every constant inside the loop. Two instructions for a 24-round loop is noise.
-		if constexpr (g_leftAlignedAlu)
-			m_asm.shr(r64(alu), asmjit::Imm(8));
-
-		signextend56to64(r64(alu));
+		// The loop carries its state in the host sign flag and lets the register wrap where the DSP wraps,
+		// so it has to run in the LEFT-aligned domain: there the DSP's bit 55 is bit 63, which is the bit an
+		// add already reports in SF, and the DSP's modulo 2^56 is the register's own modulo 2^64. Converting
+		// to the right-aligned domain instead, which this used to do, reads bit 63 for a sign that lives at
+		// bit 55 and never wraps - indistinguishable while the accumulator stays inside 56 bits, and wrong
+		// for every step after one overflows. aarch64 always did it this way.
+		aluSignextendTo64(alu);
 
 		m_asm.copyBitToReg(carry, m_dspRegs.getSR(JitDspRegs::Read), CCRB_C);
+		if constexpr (g_aluBitOffset)
+			m_asm.shl(carry.get(), asmjit::Imm(g_aluBitOffset));	// the carry enters at the accumulator LSB
 
 		const auto loopIteration = [&](const bool _needsTestAlu, const bool _updateCCR)
 		{
@@ -588,7 +590,7 @@ namespace dsp56k
 		// lea because it does not touch the flags the next step needs.
 		const auto foldCarryIntoSNeg = [&]()
 		{
-			m_asm.lea(r64(sNeg), ptr(r64(sNeg), static_cast<int32_t>(1)));
+			m_asm.lea(r64(sNeg), ptr(r64(sNeg), static_cast<int32_t>(1 << g_aluBitOffset)));
 		};
 
 		const auto loopIterationInvariant = [&](const bool _needsTestAlu, const bool _updateCCR)
@@ -640,7 +642,9 @@ namespace dsp56k
 			if (_iterationCount > 1)
 				m_asm.sub(t, asmjit::Imm(_iterationCount - 1));
 			m_asm.mov(q, alu);
-			m_asm.shr(q, t.r8());						// q = alu >> (log2(2S) - N)
+			m_asm.shr(q, t.r8());						// q = alu >> (log2(2S) - N), unscaled
+			if constexpr (g_aluBitOffset)
+				m_asm.shl(q, asmjit::Imm(g_aluBitOffset));
 
 			m_asm.shl(alu, asmjit::Imm(_iterationCount));
 			m_asm.lea(t, ptr(r64(sPos), r64(sPos), 0, static_cast<int32_t>(-1)));
@@ -683,6 +687,8 @@ namespace dsp56k
 			m_asm.bind(start);
 
 			loopIteration(true, false);
+			if constexpr (g_aluBitOffset)
+				m_asm.shl(carry.get(), asmjit::Imm(g_aluBitOffset));	// setns gives a bare 1
 
 			m_asm.dec(r32(lc));
 			m_asm.jnz(start);
@@ -699,9 +705,6 @@ namespace dsp56k
 
 		if (hasFastPath)
 			m_asm.bind(fastPathEnd);
-
-		if constexpr (g_leftAlignedAlu)
-			m_asm.shl(r64(alu), asmjit::Imm(8));	// back to the ALU representation
 
 		m_dspRegs.mask56(alu);
 	}
