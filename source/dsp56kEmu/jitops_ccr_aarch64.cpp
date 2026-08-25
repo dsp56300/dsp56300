@@ -302,6 +302,12 @@ namespace dsp56k
 		m_asm.bind(exit);
 	}
 
+	void JitOps::ccr_vl_update_ifNotZero()
+	{
+		ccr_update_ifNotZero(CCRB_V);
+		ccr_l_update_by_v();
+	}
+
 	void JitOps::ccr_l_update_by_v()
 	{
 		assert((m_ccrDirty & CCR_V) == 0);

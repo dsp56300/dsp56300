@@ -797,8 +797,7 @@ namespace dsp56k
 		// detect overflow by sign-extending the actual result and comparing VS the non-sign-extended one. We've got overflow if they are different
 		m_asm.cmp(dOld, d.get());
 
-		ccr_update_ifNotZero(CCRB_V);
-		ccr_l_update_by_v();
+		ccr_vl_update_ifNotZero();
 
 		ccr_dirty(ab, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}

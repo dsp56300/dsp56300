@@ -518,6 +518,14 @@ namespace dsp56k
 		void ccr_n_update_by23(const JitReg64& _alu);
 		void ccr_s_update(const JitReg64& _alu);
 		void ccr_l_update_by_v();
+
+		// V is overwritten while L is a sticky OR of V, so where both are written together they can be
+		// produced from a single 0/1 value instead of two independent read-modify-writes of SR.
+		void ccr_vl_update_ifNotZero();
+#ifndef HAVE_ARM64
+		void ccr_vl_update_ifNotParity();
+		void ccr_vl_update(asmjit::x86::CondCode _cc);
+#endif
 		void ccr_v_update(const JitReg64& _nonMaskedResult);
 
 		void ccr_clear(CCRMask _mask);

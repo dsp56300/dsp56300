@@ -449,8 +449,7 @@ namespace dsp56k
 			m_asm.and_(r, asmjit::Imm(0x3));
 		}
 
-		ccr_update_ifNotParity(CCRB_V);
-		ccr_l_update_by_v();
+		ccr_vl_update_ifNotParity();
 
 		{
 			DspValue s(m_block);
@@ -530,8 +529,7 @@ namespace dsp56k
 				m_asm.ror(r, alu, 54 + g_aluBitOffset);
 				m_asm.and_(r, asmjit::Imm(0x3));
 			}
-			ccr_update_ifNotParity(CCRB_V);
-			ccr_l_update_by_v();
+			ccr_vl_update_ifNotParity();
 		};
 
 		DspValue sPos(m_block, UsePooledTemp);
@@ -670,7 +668,7 @@ namespace dsp56k
 			m_asm.test_(alu);
 			ccr_update(CCRB_C, asmjit::x86::CondCode::kNotSign);
 			ccr_clear(CCR_V);
-			ccr_l_update_by_v();
+			ccr_clearDirty(CCR_L);	// V is 0 here, so ORing it into L would only emit a no-op
 
 			m_asm.jmp(fastPathEnd);
 			m_asm.bind(slowPath);

@@ -100,8 +100,7 @@ namespace dsp56k
 			m_asm.cmp(signextended, _nonMaskedResult);
 		}
 
-		ccr_update_ifNotZero(CCRB_V);
-		ccr_l_update_by_v();
+		ccr_vl_update_ifNotZero();
 	}
 
 
