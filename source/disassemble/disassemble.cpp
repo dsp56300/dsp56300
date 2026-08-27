@@ -152,7 +152,7 @@ int main(int _argc, char* _argv[])
 			std::cout << "-s filename      Specify file with additional symbols in format S:abcdef=name, where S = X, Y, L, P or I." << std::endl;
 			std::cout << "-pc aabbcc       Set base address in hex. Defaults to 0 if omitted." << std::endl;
 			std::cout << "le               Specify that the input file is in Little-Endian format. By default, input bytes are treated as being Big-Endian." << std::endl;
-			std::cout << "-skipnops        Omit $000000 (nop) words from the output unless they are branch targets. This is LOSSY: the listing then no longer tiles the input, which severs the fall-through edge into whatever follows a run of nops. Off by default; provided only to reproduce output from before that default changed." << std::endl;
+			std::cout << "-nops            Print $000000 (nop) words instead of omitting them. By default they are skipped, which keeps padded ROM listings readable but is lossy: the listing then no longer tiles the input, so the instruction after a run of nops loses its fall-through predecessor." << std::endl;
 			std::cout << std::endl;
 			std::cout << "Output format:" << std::endl;
 			std::cout << "[address] - [opcode word A] [opcode word B] = [assembly]" << std::endl;
@@ -182,12 +182,12 @@ int main(int _argc, char* _argv[])
 
 		const auto bigEndian = !cmd.contains("le");
 
-		// A $000000 word is a real, executed NOP with a real fall-through edge. Dropping
-		// it makes the listing stop tiling the input: the instruction after a run of nops
-		// loses its only predecessor, so any consumer that walks fall-through edges reports
-		// it as unreachable. Print every word by default; -skipnops restores the old,
-		// lossy rendering for reproducing pre-existing listings.
-		const auto skipNops = cmd.contains("skipnops");
+		// A $000000 word is a real, executed NOP with a real fall-through edge. Omitting it
+		// makes the listing stop tiling the input, so the instruction after a run of nops
+		// loses its only predecessor and reads as unreachable to anything walking those
+		// edges. That matters for analysis; for reading a padded ROM the suppression is
+		// what makes the output legible, so it stays the default and -nops opts in.
+		const auto skipNops = !cmd.contains("nops");
 
 		std::vector<TWord> input;
 		if (!loadInputFile(input, inFile, bigEndian))

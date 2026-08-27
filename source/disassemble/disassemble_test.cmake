@@ -18,27 +18,32 @@ if(NOT default_result EQUAL 0)
 		"Default disassembly failed (${default_result})\n${default_output}${default_error}")
 endif()
 
-if(NOT default_output MATCHES "000001:.*nop")
-	message(FATAL_ERROR "Default output omitted the zero-word NOP:\n${default_output}")
+if(default_output MATCHES "000001:.*nop")
+	message(FATAL_ERROR "Default output retained the zero-word NOP:\n${default_output}")
+endif()
+
+if(NOT default_output MATCHES "000002:")
+	message(FATAL_ERROR
+		"Default output removed or failed to advance to the following word:\n${default_output}")
 endif()
 
 execute_process(
-	COMMAND "${DISASSEMBLER}" -in "${input_file}" -pc 1 -skipnops
-	RESULT_VARIABLE skipped_result
-	OUTPUT_VARIABLE skipped_output
-	ERROR_VARIABLE skipped_error
+	COMMAND "${DISASSEMBLER}" -in "${input_file}" -pc 1 -nops
+	RESULT_VARIABLE nops_result
+	OUTPUT_VARIABLE nops_output
+	ERROR_VARIABLE nops_error
 )
 
-if(NOT skipped_result EQUAL 0)
+if(NOT nops_result EQUAL 0)
 	message(FATAL_ERROR
-		"-skipnops disassembly failed (${skipped_result})\n${skipped_output}${skipped_error}")
+		"-nops disassembly failed (${nops_result})\n${nops_output}${nops_error}")
 endif()
 
-if(skipped_output MATCHES "000001:.*nop")
-	message(FATAL_ERROR "-skipnops retained the zero-word NOP:\n${skipped_output}")
+if(NOT nops_output MATCHES "000001:.*nop")
+	message(FATAL_ERROR "-nops omitted the zero-word NOP:\n${nops_output}")
 endif()
 
-if(NOT skipped_output MATCHES "000002:")
+if(NOT nops_output MATCHES "000002:")
 	message(FATAL_ERROR
-		"-skipnops removed or failed to advance to the following word:\n${skipped_output}")
+		"-nops removed or failed to advance to the following word:\n${nops_output}")
 endif()
