@@ -10,8 +10,57 @@ namespace dsp56k
 	{
 		testCCCC();
 		testSubr();
+		testCycleAccounting();
 		
 		runAllTests();
+	}
+
+	void InterpreterUnitTests::testCycleAccounting()
+	{
+		if constexpr(g_useJIT)
+		{
+			// Normal JIT builds must not pay for the interpreter-only per-PC cache.
+			verify(dsp.m_opcodeCycleCache.empty());
+			return;
+		}
+
+		verify(dsp.m_opcodeCycleCache.size() == dsp.memory().sizeP());
+
+		// A cached instruction cost is used on execution and invalidated by P writes.
+		dsp.resetHW();
+		execOpcode(assembler.assemble("nop").word[0], 0, false, 0x100);
+		verify(dsp.getCycles() == 1);
+		verify(dsp.m_opcodeCycleCache[0x100] == 1);
+
+		const auto andi = assembler.assemble("andi #$33,mr");
+		verify(andi.success());
+		dsp.memWriteP(0x100, andi.word[0]);
+		if(andi.wordCount > 1)
+			dsp.memWriteP(0x101, andi.word[1]);
+		verify(dsp.m_opcodeCycleCache[0x100] == 0);
+		dsp.setPC(0x100);
+		dsp.execInterpreter();
+		verify(dsp.getCycles() == 4);
+		verify(dsp.m_opcodeCycleCache[0x100] == 3);
+
+		// REP executes its own instruction plus the repeated body inside one interpreter step.
+		dsp.resetHW();
+		TWord pc = 0x100;
+		pc = emitToMemory("rep #$4", pc);
+		emitToMemory("nop", pc);
+		dsp.setPC(0x100);
+		dsp.execInterpreter();
+		verify(dsp.getCycles() == 9); // REP (5) + four NOPs (1 each)
+
+		// DO likewise runs its loop body internally rather than returning through execOp per pass.
+		dsp.resetHW();
+		pc = 0x100;
+		pc = emitToMemory("do #$5,>$104", pc);
+		pc = emitToMemory("nop", pc);
+		emitToMemory("nop", pc);
+		dsp.setPC(0x100);
+		dsp.execInterpreter();
+		verify(dsp.getCycles() == 15); // DO (5) + five two-NOP iterations
 	}
 
 	void InterpreterUnitTests::execOpcode(uint32_t _op0, uint32_t _op1, const bool _reset, TWord _pc)

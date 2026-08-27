@@ -127,6 +127,10 @@ namespace dsp56k
 		};
 
 		std::vector<OpcodeCacheEntry>	m_opcodeCache;
+
+		// Per-PC instruction cycle count, filled lazily in interpreter builds. JIT builds leave
+		// this vector empty because they account cycles per compiled block. 0 = not yet computed.
+		std::vector<uint8_t>			m_opcodeCycleCache;
 		
 		InstructionCache				cache;
 
@@ -298,6 +302,11 @@ namespace dsp56k
 
 		void			clearOpcodeCache				();
 		void			clearOpcodeCache				(TWord _address);
+
+		// Cycle count of the instruction at _pc. Delegates to the same shared dsp56k::calcCycles()
+		// that JitOps/JitBlock use, so there is no second implementation that could drift.
+		uint32_t		calcOpcodeCycles				(TWord _pc) const;
+		uint8_t			getOpcodeCycles				(TWord _pc);
 
 		void			dumpRegisters					() const;
 		void			dumpRegisters					(std::stringstream& _ss) const;
