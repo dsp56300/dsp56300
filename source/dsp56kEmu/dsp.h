@@ -710,41 +710,23 @@ namespace dsp56k
 			// left-aligned the value is already sign-correct in 64 bits, no sign extension needed
 			const int64_t test = _src.var;
 
-			if(sr_test_noCache(SR_SA))
-			{
-				// Sixteen-bit Arithmetic mode (FM 3.5.1.2): the scaled and limited 16-bit word goes to bus
-				// bits 15..0, bus bits 23..16 carry its sign extension. Limiting triggers exactly when the
-				// value does not fit into 48 bits, i.e. when EXT is not the sign extension of bit 47.
-				if( test < (-140737488355328ll << g_aluShift) )	// ff 8000 0000 0000
-				{
-					sr_set( CCR_L );
-					_dst = 0xff8000;
-				}
-				else if( test >= (140737488355328ll << g_aluShift) )	// 00 8000 0000 0000
-				{
-					sr_set( CCR_L );
-					_dst = 0x007fff;
-				}
-				else
-				{
-					const auto word = static_cast<uint32_t>(test >> (32 + g_aluShift)) & 0xffff;
-					_dst = static_cast<int>(word | ((word & 0x8000) ? 0xff0000 : 0));
-				}
-				return;
-			}
+			constexpr auto negativeLimit = -(INT64_C(140737488355328) << g_aluShift); // ff 800000 000000
+			constexpr auto positiveLimit = INT64_C(140737471578112) << g_aluShift; // 00 7fffff 000000
 
-			if( test < (-140737488355328ll << g_aluShift) )	// ff 800000 000000
+			if ( test < negativeLimit )
 			{
 				sr_set( CCR_L );
 				_dst = 0x800000;
 			}
-			else if( test > (140737471578112ll << g_aluShift) )	// 00 7fffff 000000
+			else if( test > positiveLimit )
 			{
 				sr_set( CCR_L );
 				_dst = 0x7FFFFF;
 			}
 			else
+			{
 				_dst = static_cast<int>(_src.var >> (24 + g_aluShift)) & 0xffffff;
+			}
 			assert( (_dst & 0xff000000) == 0 );
 		}
 
@@ -846,13 +828,17 @@ namespace dsp56k
 		{
 			scale(_src);
 			const int64_t test = _src.var;
-			if(test < (-140737488355328ll << g_aluShift))
+
+			constexpr auto negativeLimit = -(INT64_C(140737488355328) << g_aluShift);
+			constexpr auto positiveLimit = INT64_C(140737488355328) << g_aluShift;
+
+			if(test < negativeLimit)
 			{
 				sr_set(CCR_L);
 				_x = 0xff8000;
 				_y = 0x000000;
 			}
-			else if(test >= (140737488355328ll << g_aluShift))
+			else if(test >= positiveLimit)
 			{
 				sr_set(CCR_L);
 				_x = 0x007fff;
