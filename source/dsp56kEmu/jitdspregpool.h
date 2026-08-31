@@ -125,7 +125,18 @@ namespace dsp56k
 		bool move(PoolReg _dst, PoolReg _src);
 		bool move(const JitRegGP& _dst, PoolReg _src);
 
-		void setIsParallelOp(bool _isParallelOp);
+		void setIsParallelOp(bool _isParallelOp, RegisterMask _moveRegs = RegisterMask::AB);
+
+		// A parallel op only needs the separate DspAwrite latch for an accumulator the parallel
+		// MOVE actually touches - that latch exists so the move's write wins over the ALU's
+		// write-back (see UnitTests::max_parallel). When the move does not name this accumulator
+		// at all, the ALU can work in place and skip both the extra register and the copy that
+		// seeds it. Gated on read OR write: the latch's exact role for a reading move is not
+		// something the tests pin down, so this stays on the conservative side.
+		bool aluNeedsWriteReg(const TWord _alu) const
+		{
+			return m_isParallelOp && any(m_parallelMoveRegs, _alu ? RegisterMask::B : RegisterMask::A);
+		}
 
 		bool isParallelOp() const
 		{
@@ -415,6 +426,7 @@ namespace dsp56k
 		size_t m_spillXmmCount = 0;
 
 		bool m_isParallelOp = false;
+		RegisterMask m_parallelMoveRegs = RegisterMask::AB;
 		bool m_repMode = false;
 		bool m_dirty = false;
 

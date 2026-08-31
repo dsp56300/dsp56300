@@ -384,12 +384,16 @@ namespace dsp56k
 
 		getRegisters(m_writtenRegs, m_readRegs, _instMove, _op);
 
+		// the MOVE's own footprint, before the ALU's is merged in: it decides which
+		// accumulators actually need the write latch (see JitDspRegPool::aluNeedsWriteReg)
+		const auto moveRegs = m_writtenRegs | m_readRegs;
+
 		RegisterMask written, read;
 		getRegisters(written, read, _instAlu, _op);
 		add(m_writtenRegs, written);
 		add(m_readRegs, read);
 
-		m_block.dspRegPool().setIsParallelOp(true);
+		m_block.dspRegPool().setIsParallelOp(true, moveRegs);
 
 		emitOpProlog();
 	
