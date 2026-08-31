@@ -459,6 +459,17 @@ namespace dsp56k
 	{
 //		assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
 
+		if (_s2.isImmediate())
+		{
+			// The immediate is a SIGNED 24-bit fractional value, but DspValue stores it raw.
+			// The interpreter sign extends it through TReg24; without the same here, every
+			// immediate >= $800000 multiplies as a large positive instead of a negative - on
+			// x64 through imul's constant, on aarch64 through the register smull materialises.
+			// The Virus firmware only uses `maci #>$7fdf3b`, below that threshold, which is why
+			// the two engines agreed until now.
+			_s2.imm() = TReg24(_s2.imm24()).signextend<int64_t>();
+		}
+
 		AluRef d(m_block, ab, _accumulate, true);
 
 #ifdef HAVE_ARM64
@@ -495,7 +506,7 @@ namespace dsp56k
 #else
 		if(_s2.isImmediate())
 		{
-			const int64_t i = static_cast<int64_t>(_s2.imm24()) * 2;
+			const int64_t i = _s2.imm() * 2;	// sign extended above
 
 			if(_negate)
 			{
@@ -503,7 +514,7 @@ namespace dsp56k
 			}
 			else
 			{
-				if (asmjit::Support::isPowerOf2(i))
+				if (i > 0 && asmjit::Support::isPowerOf2(i))
 				{
 					const auto shift = static_cast<uint32_t>(log2(i));
 					m_asm.shl(r64(_s1), asmjit::Imm(shift));

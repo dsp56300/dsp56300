@@ -164,6 +164,8 @@ namespace dsp56k
 		maci_xxxx();
 		mpy_su();
 		macsu_unsigned();
+		mpyMacSignedUnsigned();
+		macr_rounded();
 		rnd_scalingModes();
 		limit_transfer_test();
 		max_ccr();
@@ -4383,15 +4385,36 @@ namespace dsp56k
 
 	void UnitTests::mpyi()
 	{
-		runTest([&]()
+		// The immediate is a SIGNED 24-bit value (the interpreter sign extends it via
+		// TReg24::signextend), so an immediate with bit 23 set is negative. Anything at or
+		// above $800000 is the only regime where that is observable - below it signed and
+		// unsigned agree, which is why the firmware's own `maci #>$7fdf3b` never exposed it.
+		auto check = [&](const char* _op, const TWord _x0, const TWord _imm, const bool _negate)
 		{
-			dsp.x0(0x100000);
-			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
-			emit("mpyi #>$4,x0,a");
-		}, [&]()
-		{
-			verify(dsp.aluA().var != 0);
-		});
+			runTest([&]()
+			{
+				dsp.x0(_x0);
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+				emit(_op);
+			}, [&]()
+			{
+				const int64_t s1 = (_x0  & 0x800000) ? static_cast<int64_t>(_x0)  - 0x1000000 : static_cast<int64_t>(_x0);
+				const int64_t s2 = (_imm & 0x800000) ? static_cast<int64_t>(_imm) - 0x1000000 : static_cast<int64_t>(_imm);
+
+				int64_t res = (s1 * s2) << 1;
+				if (_negate)
+					res = -res;
+
+				verify(dsp.aluA().var == (static_cast<uint64_t>(res) & 0x00FFFFFFFFFFFFFFULL));
+			});
+		};
+
+		check("mpyi #>$4,x0,a",       0x100000, 0x000004, false);	// original case, small positive
+		check("mpyi #>$400000,x0,a",  0x400000, 0x400000, false);	// +0.5 * +0.5
+		check("mpyi #>$c00000,x0,a",  0x400000, 0xc00000, false);	// immediate NEGATIVE (bit 23 set)
+		check("mpyi #>$400000,x0,a",  0xc00000, 0x400000, false);	// operand negative
+		check("mpyi #>$ffffff,x0,a",  0x7fffff, 0xffffff, false);	// immediate = -1 ulp
+		check("mpyi #>$800000,x0,a",  0x400000, 0x800000, false);	// immediate = -1.0 exactly
 	}
 
 	void UnitTests::maci_xxxx()
@@ -4400,17 +4423,83 @@ namespace dsp56k
 		// the firmware uses `maci #>$7fdf3b,x0,b` at DSP1 PC=$152
 		// inside the oscillator handler. Without this op the DSP crashes the
 		// first time it reaches voice synthesis.
-		runTest([&]()
+		auto check = [&](const TWord _x0, const TWord _imm, const uint64_t _seed)
 		{
-			dsp.x0(0x400000);                       // x0 = 0.5 (fractional)
-			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00100000000000)));    // seed b with a non-zero value
-			emit(0x0141ca, 0x7fdf3b);               // maci #>$7fdf3b,x0,b
-		}, [&]()
+			runTest([&]()
+			{
+				dsp.x0(_x0);
+				dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(_seed)));
+				emit(0x0141ca, _imm);				// maci #>$imm,x0,b
+			}, [&]()
+			{
+				const auto sext = [](const TWord _v) -> int64_t
+				{
+					return (_v & 0x800000) ? static_cast<int64_t>(_v) - 0x1000000 : static_cast<int64_t>(_v);
+				};
+				const int64_t res = static_cast<int64_t>(_seed) + ((sext(_x0) * sext(_imm)) << 1);
+				verify(dsp.aluB().var == (static_cast<uint64_t>(res) & 0x00FFFFFFFFFFFFFFULL));
+			});
+		};
+
+		check(0x400000, 0x7fdf3b, 0x00100000000000);	// the real firmware operand
+		check(0x400000, 0x400000, 0x00100000000000);
+		check(0x400000, 0xc00000, 0x00100000000000);	// immediate NEGATIVE (bit 23 set)
+		check(0xc00000, 0x7fdf3b, 0x00100000000000);	// operand negative
+		check(0x400000, 0xffffff, 0x00000000000000);	// immediate = -1 ulp, zero seed
+	}
+
+	void UnitTests::macr_rounded()
+	{
+		// MACR/MPYR are MAC/MPY followed by alu_rnd. Nothing exercised the rounded forms
+		// before, so the rounding half of four instructions (Macr_S1S2, Macr_S, Mpyr_S1S2D,
+		// Macri_xxxx) was unverified. SR is pinned to 0: no scaling, so the rounding position
+		// is bit 23, and convergent rounding (RM clear) rather than two's complement.
+		auto round = [](uint64_t _a)
 		{
-			// b must have been updated (multiply-accumulate, not skip).
-			verify(dsp.aluB().var != 0x00100000000000);
-			verify((dsp.aluB().var & 0xffffffffffffffULL) != 0);
-		});
+			constexpr uint64_t rounder = 0x800000ULL;
+			constexpr uint64_t mask = (rounder << 1) - 1;
+			_a += rounder;
+			if ((_a & mask) == 0)
+				_a &= ~(rounder << 1);			// convergent: force even at the rounding position
+			_a &= ~mask;
+			return _a & 0x00FFFFFFFFFFFFFFULL;
+		};
+
+		auto check = [&](const char* _op, const bool _accumulate, const TWord _s1, const TWord _s2, const uint64_t _seed)
+		{
+			runTest([&]()
+			{
+				dsp.y1(_s1);
+				dsp.y0(_s2);
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(_seed)));
+				dsp.setSR(0);
+				emit(_op);
+			}, [&]()
+			{
+				const auto sext = [](const TWord _v) -> int64_t
+				{
+					return (_v & 0x800000) ? static_cast<int64_t>(_v) - 0x1000000 : static_cast<int64_t>(_v);
+				};
+
+				const int64_t prod = (sext(_s1) * sext(_s2)) << 1;
+				const int64_t sum = _accumulate ? static_cast<int64_t>(_seed) + prod : prod;
+
+				verify(dsp.aluA().var == round(static_cast<uint64_t>(sum) & 0x00FFFFFFFFFFFFFFULL));
+			});
+		};
+
+		// seeds chosen to land on both sides of the rounding position, including the exact
+		// tie ($800000) where convergent rounding differs from round-half-up
+		for (const uint64_t seed : { 0x00000000000000ULL, 0x00000000800000ULL,
+									 0x00000000c00000ULL, 0x00000001800000ULL,
+									 0x00fffffff0000000ULL & 0x00FFFFFFFFFFFFFFULL })
+		{
+			check("mpyr y1,y0,a", false, 0x400000, 0x400000, seed);
+			check("macr y1,y0,a", true , 0x400000, 0x400000, seed);
+			check("macr y1,y0,a", true , 0xc00000, 0x400000, seed);	// negative product
+			check("macr y1,y0,a", true , 0x000020, 0x000020, seed);	// tiny product: rounding dominates
+			check("macr y1,y0,a", true , 0x7fffff, 0x7fffff, seed);
+		}
 	}
 
 	void UnitTests::mpy_su()
@@ -4495,6 +4584,90 @@ namespace dsp56k
 		checkEnc(0x0126a2, "x1,x0,b", 1, 0, true);	// $27a  s1=x1 s2=x0
 		checkEnc(0x0126a4, "x0,y1,b", 0, 3, true);	// $27e  s1=x0 s2=y1
 		checkEnc(0x01268f, "x1,y1,a", 1, 3, false);	// $284  s1=x1 s2=y1
+	}
+
+	void UnitTests::mpyMacSignedUnsigned()
+	{
+		// The full signed/unsigned matrix for the multiplier, because the three modes do
+		// NOT share one code path: ss reaches alu_mpy through alu_multiply, while su and
+		// uu reach it through op_Mpy_su, which decodes its operands differently (s2 is
+		// never sign extended, s1 only in su) and hands alu_mpy a differently scaled
+		// operand. macuu in particular had no coverage at all before this.
+		//
+		// Every operand pair below is checked against a value derived from the ISA
+		// definition rather than a recorded result, and the pairs deliberately straddle
+		// $800000 - below it signed and unsigned agree and the modes are
+		// indistinguishable, so a mode mix-up only shows up above it.
+
+		enum Mode { SS, SU, UU };
+
+		auto sext = [](const TWord _v) -> int64_t
+		{
+			return (_v & 0x800000) ? static_cast<int64_t>(_v) - 0x1000000 : static_cast<int64_t>(_v);
+		};
+
+		// s1 = y1, s2 = y0: the only register pair encodable in BOTH the 3-bit qqq used
+		// by mpy/mac and the 4-bit qqqq used by the su/uu forms (entry 3 in either table)
+		auto check = [&](const char* _op, const Mode _mode, const bool _accumulate, const bool _negate,
+						 const TWord _s1, const TWord _s2, const uint64_t _seed)
+		{
+			runTest([&]()
+			{
+				dsp.y1(_s1);
+				dsp.y0(_s2);
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(_seed)));
+				emit(_op);
+			}, [&]()
+			{
+				const int64_t a = (_mode == UU) ? static_cast<int64_t>(_s1) : sext(_s1);
+				const int64_t b = (_mode == SS) ? sext(_s2) : static_cast<int64_t>(_s2);
+
+				int64_t prod = (a * b) << 1;			// fractional multiply: one post-shift
+				if (_negate)
+					prod = -prod;
+
+				const int64_t seed = static_cast<int64_t>(_seed);
+				const uint64_t expected = static_cast<uint64_t>(_accumulate ? seed + prod : prod) & 0x00FFFFFFFFFFFFFFULL;
+
+				verify(dsp.aluA().var == expected);
+			});
+		};
+
+		constexpr uint64_t seed = 0x00001234560000ULL;	// non-zero, so mac cannot pass as mpy
+
+		// operands: below $800000 (signed==unsigned), at and above it (they diverge), and the extremes
+		constexpr TWord lo = 0x400000, hi = 0xC00000, max = 0x7FFFFF, top = 0xFFFFFF, tiny = 0x000020;
+
+		struct Case { const char* mpy; const char* mac; Mode mode; };
+		const Case cases[] =
+		{
+			{ "mpy y1,y0,a",   "mac y1,y0,a",   SS },
+			{ "mpysu y1,y0,a", "macsu y1,y0,a", SU },
+			{ "mpyuu y1,y0,a", "macuu y1,y0,a", UU },
+		};
+
+		for (const auto& c : cases)
+		{
+			for (const auto s1 : { lo, hi, max, top, tiny })
+			{
+				for (const auto s2 : { lo, hi, max, top, tiny })
+				{
+					check(c.mpy, c.mode, false, false, s1, s2, seed);
+					check(c.mac, c.mode, true , false, s1, s2, seed);
+				}
+			}
+		}
+
+		// negated forms: -s1 flips the sign of the product, and for mac that is a
+		// subtract from the accumulator rather than an add
+		check("mpy -y1,y0,a",   SS, false, true, hi,  lo,  seed);
+		check("mac -y1,y0,a",   SS, true , true, hi,  lo,  seed);
+		check("mpy -y1,y0,a",   SS, false, true, max, top, seed);
+		check("mac -y1,y0,a",   SS, true , true, max, top, seed);
+		check("mpysu -y1,y0,a", SU, false, true, hi,  hi,  seed);
+		check("macsu -y1,y0,a", SU, true , true, hi,  hi,  seed);
+		check("mpyuu -y1,y0,a", UU, false, true, hi,  hi,  seed);
+		check("macuu -y1,y0,a", UU, true , true, hi,  hi,  seed);
 	}
 
 	void UnitTests::rnd_scalingModes()

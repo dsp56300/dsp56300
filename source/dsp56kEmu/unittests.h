@@ -127,6 +127,8 @@ namespace  dsp56k
 		void maci_xxxx();
 		void mpy_su();
 		void macsu_unsigned();
+		void mpyMacSignedUnsigned();
+		void macr_rounded();
 		void rnd_scalingModes();
 		void limit_transfer_test();
 		void max_ccr();
