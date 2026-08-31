@@ -169,6 +169,7 @@ namespace  dsp56k
 		void rep_multi();
 		void rep_div_powerOfTwo();
 		void do_multi();
+		void do_forever();
 		void jsr_rts();
 
 		Peripherals56362 peripheralsX;

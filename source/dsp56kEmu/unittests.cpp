@@ -5707,6 +5707,50 @@ namespace dsp56k
 		verify(dsp.aluA().var == 0x00000003000000);
 	}
 
+	/*	JIT only, called from the JitUnittests constructor rather than runAllTests: the
+		interpreter has no DO FOREVER, op_DoForever and op_DorForever are still
+		errNotImplemented stubs there.
+	*/
+	void UnitTests::do_forever()
+	{
+		/*	DO FOREVER differs from a counted DO in two ways: it never loads the loop counter, and it
+			never ends on one. ENDDO is the way out, and it hands the previous loop flags back.
+
+			The test has to terminate, because the interpreter runs a whole DO loop inside a single
+			step - a loop with no way out would hang rather than fail.
+
+			The assembler cannot reach its own "do forever," path, the special case only runs when
+			the mnemonic "do" is not found and it always is, so the two words are emitted directly.
+			That is the encoding the NL3 firmware uses, $000203 with the loop end address behind it.
+		*/
+		dsp.resetHW();
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
+
+		// a counted DO would overwrite this, and would stop after a single pass
+		dsp.regs().lc.var = 0x123456;
+
+		TWord pc = 0x400;
+		pc = emitToMemory("jsr $500", pc);
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		pc = 0x500;
+		pc = emitToMemory("do forever, >$505", pc);	// $500: do forever, loop end at $504
+		pc = emitToMemory("add b,a", pc);			// $502: the body
+		pc = emitToMemory("enddo", pc);				// $503: leave the loop
+		pc = emitToMemory("nop", pc);				// $504: last instruction in the loop
+		emitToMemory("rts", pc);					// $505: reached once the loop is over
+
+		dsp.setPC(0x400);
+		execUntil(returnPC);
+
+		verify(dsp.aluA().var == 0x00000001000000);
+		verify(dsp.regs().lc.var == 0x123456);
+		verify((dsp.getSR().var & SR_LF) == 0);
+		verify((dsp.getSR().var & SR_FV) == 0);
+	}
+
 	void UnitTests::jsr_rts()
 	{
 		// jsr to subroutine that adds b to a, then returns

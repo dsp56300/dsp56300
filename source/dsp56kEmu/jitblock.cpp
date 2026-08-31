@@ -51,10 +51,25 @@ namespace dsp56k
 
 		_info.pc = _pc;
 
+		/*	Whether a loop is a DO FOREVER is a property of the DO that opened it, so it can be
+			settled here instead of testing SR_FV at runtime on every iteration of every loop. Both
+			forever opcodes are fixed 24 bit words with no operand fields, so comparing the word is
+			exact.
+		*/
+		auto isForeverLoop = [&_dsp](const TWord _doPc)
+		{
+			const auto op = _dsp.memory().get(MemArea_P, _doPc);
+			return op == g_opcodes[DoForever].m_mask1 || op == g_opcodes[DorForever].m_mask1;
+		};
+
 		if(_loopStarts.find(_pc - 2) != _loopStarts.end())
 		{
 			assert(_pc == hiword(_dsp.regs().ss[_dsp.ssIndex()]).toWord());
 			_info.addFlag(JitBlockInfo::Flags::IsLoopBodyBegin);
+
+			// the DO sits immediately in front of the body, which is what the lookup above assumes
+			if(isForeverLoop(_pc - 2))
+				_info.addFlag(JitBlockInfo::Flags::IsLoopForever);
 		}
 		else
 		{
@@ -200,6 +215,24 @@ namespace dsp56k
 			{
 				assert((_pc + numWords) == static_cast<TWord>(_dsp.regs().la.var + 1));
 				terminationReason = JitBlockInfo::TerminationReason::LoopEnd;
+
+				/*	A block can end a loop without beginning it, so the opening DO has to be found
+					through the loop map rather than at a fixed offset. Loop ends are unique, one
+					begin per end, so the first match is the right one.
+				*/
+				if(!_info.hasFlag(JitBlockInfo::Flags::IsLoopForever))
+				{
+					for (const auto& loop : _loopStarts)
+					{
+						if(loop.second != _pc + numWords)
+							continue;
+
+						if(isForeverLoop(loop.first))
+							_info.addFlag(JitBlockInfo::Flags::IsLoopForever);
+						break;
+					}
+				}
+
 				break;
 			}
 
@@ -381,6 +414,7 @@ namespace dsp56k
 		const auto isLoopStart = info.hasFlag(JitBlockInfo::Flags::IsLoopBodyBegin);
 		const auto isLoopEnd = info.terminationReason == JitBlockInfo::TerminationReason::LoopEnd;
 		const auto isLoopBody = isLoopStart && isLoopEnd;
+		const auto isLoopForever = info.hasFlag(JitBlockInfo::Flags::IsLoopForever) != 0;
 
 		bool childIsConditional = false;
 
@@ -462,6 +496,15 @@ namespace dsp56k
 			if (!isLoopBody)
 				return false;
 
+			/*	A DO FOREVER has no loop counter, so there is nothing to bound the in-block jump
+				with - maxDoIterations tests LC and LC never moves. Such a block would spin without
+				ever returning to the dispatcher and interrupts and peripherals would starve, so
+				leave the block every iteration instead. Decided when the block is compiled, so an
+				ordinary counted DO pays nothing for it.
+			*/
+			if (isLoopForever)
+				return false;
+
 			const SkipLabel skip(m_asm);
 
 			if(m_config.maxDoIterations)
@@ -541,9 +584,16 @@ namespace dsp56k
 			m_asm.bitTest(sr, SRB_LF);
 			m_asm.jz(skip);
 
-			m_asm.cmp(lc, asmjit::Imm(1));
-			m_asm.jle(enddo);
-			m_asm.dec(lc);
+			/*	A DO FOREVER never ends on the loop counter - it does not even load one - and is
+				left only by ENDDO. Which kind of loop this is was settled when the block was
+				compiled, so a counted DO emits exactly what it always did.
+			*/
+			if(!isLoopForever)
+			{
+				m_asm.cmp(lc, asmjit::Imm(1));
+				m_asm.jle(enddo);
+				m_asm.dec(lc);
+			}
 
 			if(isLoopBody)
 			{

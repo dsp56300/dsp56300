@@ -431,27 +431,57 @@ namespace dsp56k
 		assert(0 && "instruction not implemented");
 	}
 
+	/*	Open a loop. Shared by DO and DO FOREVER, which differ in exactly two ways: FOREVER does not
+		load the loop counter, because it never counts, and it raises SR_FV alongside SR_LF so that
+		the loop end knows never to terminate on the counter. A null _lc means forever.
+	*/
+	void JitOps::do_start(const DspValue* _lc, const TWord _addr)
+	{
+		{
+			DspValue la(m_block), lc(m_block);
+			m_dspRegs.getLA(la);
+			m_dspRegs.getLC(lc);
+			setSSHSSL(la, lc);
+		}
+
+		m_asm.mov(m_dspRegs.getLA(JitDspRegs::Write), asmjit::Imm(_addr));
+
+		if(_lc)
+		{
+			if(_lc->isImmediate())
+				m_asm.mov(r32(m_dspRegs.getLC(JitDspRegs::Write)), asmjit::Imm(_lc->imm24()));
+			else
+				m_asm.mov(r32(m_dspRegs.getLC(JitDspRegs::Write)), _lc->get());
+		}
+
+		pushPCSR();
+
+		/*	SR_FV describes the loop that is starting, not the one it is nested in. A counted DO
+			inside a DO FOREVER has to clear it, or the loop end would never terminate the inner
+			loop either. A forever loop is about to set it regardless, so it has nothing to clear.
+			Either way the outer loop gets its flag back from the stack in do_end.
+		*/
+		if(_lc)
+		{
+			m_asm.and_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(~SR_FV));
+			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(SR_LF));
+		}
+		else
+		{
+			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(SR_LF | SR_FV));
+		}
+	}
+
+	void JitOps::do_execForever(const TWord _addr)
+	{
+		do_start(nullptr, _addr);
+	}
+
 	void JitOps::do_exec(const DspValue& _lc, TWord _addr)
 	{
 		auto startLoop = [&]()
 		{
-			{
-				DspValue la(m_block), lc(m_block);
-				m_dspRegs.getLA(la);
-				m_dspRegs.getLC(lc);
-				setSSHSSL(la, lc);
-			}
-
-			m_asm.mov(m_dspRegs.getLA(JitDspRegs::Write), asmjit::Imm(_addr));
-
-			if(_lc.isImmediate())
-				m_asm.mov(r32(m_dspRegs.getLC(JitDspRegs::Write)), asmjit::Imm(_lc.imm24()));
-			else
-				m_asm.mov(r32(m_dspRegs.getLC(JitDspRegs::Write)), _lc.get());
-
-			pushPCSR();
-
-			m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite), asmjit::Imm(SR_LF));
+			do_start(&_lc, _addr);
 		};
 
 		if(_lc.isImmediate())
@@ -481,11 +511,13 @@ namespace dsp56k
 	}
 	void JitOps::do_end(const RegGP& r)
 	{
-		// restore previous loop flag
+		// restore the previous loop flags, both of them - a DO FOREVER raised SR_FV as well
 		{
+			constexpr auto loopFlags = SR_LF | SR_FV;
+
 			m_dspRegs.getSS(r64(r.get()));
-			m_asm.and_(r32(r), asmjit::Imm(SR_LF));
-			m_asm.and_(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), asmjit::Imm(~SR_LF));
+			m_asm.and_(r32(r), asmjit::Imm(loopFlags));
+			m_asm.and_(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), asmjit::Imm(~loopFlags));
 			m_asm.or_(r32(m_dspRegs.getSR(JitDspRegs::ReadWrite)), r32(r.get()));
 		}
 
@@ -625,6 +657,17 @@ namespace dsp56k
 		const auto displacement = pcRelativeAddressExt<Dor_S>();
 
 		do_exec( lc, m_pcCurrentOp + displacement);
+	}
+
+	void JitOps::op_DoForever(TWord op)
+	{
+		do_execForever(absAddressExt<DoForever>());
+	}
+
+	void JitOps::op_DorForever(TWord op)
+	{
+		const auto displacement = pcRelativeAddressExt<DorForever>();
+		do_execForever(m_pcCurrentOp + displacement);
 	}
 
 	void JitOps::op_Enddo(TWord op)

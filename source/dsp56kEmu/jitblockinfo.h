@@ -30,6 +30,7 @@ namespace dsp56k
 			WritesSRbeforeRead	= 0x01,
 			ModeChange			= 0x02,
 			IsLoopBodyBegin		= 0x04,
+			IsLoopForever		= 0x08,	// the DO that opened this loop was a DO FOREVER
 		};
 
 		auto hasFlag(const Flags _flag) const
