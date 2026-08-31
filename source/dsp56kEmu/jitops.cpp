@@ -838,12 +838,15 @@ namespace dsp56k
 				m_asm.jnz(skip);
 			}
 
+			// the interrupt control cycle clears the loop flags too, FV as well as LF. On arm64 the
+			// masks stay split one bit at a time, the same reason the others already are
 #ifdef HAVE_ARM64
 			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0)));
 			m_asm.and_(sr, asmjit::Imm(~(SR_SA)));
 			m_asm.and_(sr, asmjit::Imm(~(SR_LF)));
+			m_asm.and_(sr, asmjit::Imm(~(SR_FV)));
 #else
-			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0 | SR_SA | SR_LF)));
+			m_asm.and_(sr, asmjit::Imm(~(SR_S1 | SR_S0 | SR_SA | SR_LF | SR_FV)));
 #endif
 			setDspProcessingMode(DSP::LongInterrupt);
 		}

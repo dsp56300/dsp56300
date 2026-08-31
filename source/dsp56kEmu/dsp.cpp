@@ -254,7 +254,8 @@ namespace dsp56k
 				// 4.The Sixteen-bit Arithmetic (SA) mode bit is cleared.
 				// 5.The IPL is raised to disallow further interrupts of the same or lower levels.
 
-				sr_clear(static_cast<CCRMask>(SR_S1 | SR_S0 | SR_SA | SR_LF));
+				// the interrupt control cycle clears the loop flags too, FV as well as LF
+				sr_clear(static_cast<CCRMask>(SR_S1 | SR_S0 | SR_SA | SR_LF | SR_FV));
 
 				m_processingMode = LongInterrupt;
 				m_interruptFunc = &dspExecNop;
