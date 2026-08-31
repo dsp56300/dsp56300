@@ -29,6 +29,19 @@ namespace dsp56k
 	// every accumulator bit position moves up by 8 when the ALU is stored left-aligned
 	static constexpr uint32_t g_aluBitOffset = g_leftAlignedAlu ? 8 : 0;
 
+	// A multiplier product needs one shift for the fractional multiply plus the left-alignment offset
+	// before it can meet the accumulator.
+	static constexpr uint32_t g_mpyProductShift = 1 + g_aluBitOffset;
+
+	// x64 gets that scale for free by folding it into the operand's sign extension, which already ends
+	// in a shift (see signextend24to64). aarch64 folds it into the accumulate instead - `add d, d, s,
+	// lsl #n` is one instruction either way - so there it must stay out of the operand.
+#ifdef HAVE_ARM64
+	static constexpr uint32_t g_mpyOperandShift = 0;
+#else
+	static constexpr uint32_t g_mpyOperandShift = g_mpyProductShift;
+#endif
+
 	class DspValue;
 	class JitBlock;
 

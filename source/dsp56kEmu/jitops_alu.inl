@@ -108,11 +108,11 @@ namespace dsp56k
 		const auto negate	= getFieldValue<Inst,Field_k>(op);
 
 		DspValue s1(m_block);
-		decode_QQ_read(s1, qq, true);
+		decode_QQ_read(s1, qq, true, g_mpyOperandShift);
 
 		DspValue s2(m_block, DSP::decode_sssss(sssss), DspValue::Immediate24);
 
-		alu_mpy(ab, s1, s2, negate, Accumulate, false, false, Round);
+		alu_mpy(ab, s1, s2, negate, Accumulate, false, false, Round, g_mpyOperandShift);
 	}
 
 	template<Instruction Inst, bool Accumulate> void JitOps::op_Mpy_su(TWord op)
@@ -124,8 +124,14 @@ namespace dsp56k
 
 		DspValue s1(m_block);
 		DspValue s2(m_block);
-		decode_QQQQ_read( s1, !uu, s2, false, qqqq);
 
-		alu_mpy(ab, s1, s2, negate, Accumulate, uu, true, false);
+		// su sign extends s1, so the product scale rides along in that shift for free. uu does
+		// not - s1 is a bare 32 bit mov there - so pre-scaling it would only move the shift
+		// around, and it stays out of the operand.
+		const auto s1Shift = uu ? 0u : g_mpyOperandShift;
+
+		decode_QQQQ_read( s1, !uu, s2, false, qqqq, s1Shift);
+
+		alu_mpy(ab, s1, s2, negate, Accumulate, uu, true, false, s1Shift);
 	}
 }

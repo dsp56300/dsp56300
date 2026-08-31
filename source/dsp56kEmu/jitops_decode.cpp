@@ -498,50 +498,50 @@ namespace dsp56k
 		return DspValue(m_block, PoolReg::DspR0, true, false, rrr);
 	}
 
-	void JitOps::decode_qq_read(DspValue& _dst, TWord _qq, bool _signextend)
+	void JitOps::decode_qq_read(DspValue& _dst, TWord _qq, bool _signextend, const uint32_t _shift)
 	{
 		switch (_qq)
 		{
-		case 0: getX0(_dst, _signextend); break;
-		case 1: getY0(_dst, _signextend); break;
-		case 2: getX1(_dst, _signextend); break;
-		case 3: getY1(_dst, _signextend); break;
+		case 0: getX0(_dst, _signextend, _shift); break;
+		case 1: getY0(_dst, _signextend, _shift); break;
+		case 2: getX1(_dst, _signextend, _shift); break;
+		case 3: getY1(_dst, _signextend, _shift); break;
 		default: assert(0 && "invalid qq value"); break;
 		}
 	}
 
-	void JitOps::decode_QQ_read(DspValue& _dst, TWord _qq, bool _signextend)
+	void JitOps::decode_QQ_read(DspValue& _dst, TWord _qq, bool _signextend, const uint32_t _shift)
 	{
 		switch (_qq)
 		{
-		case 0: getY1(_dst, _signextend);	break;
-		case 1: getX0(_dst, _signextend);	break;
-		case 2: getY0(_dst, _signextend);	break;
-		case 3: getX1(_dst, _signextend);	break;
+		case 0: getY1(_dst, _signextend, _shift);	break;
+		case 1: getX0(_dst, _signextend, _shift);	break;
+		case 2: getY0(_dst, _signextend, _shift);	break;
+		case 3: getX1(_dst, _signextend, _shift);	break;
 		default:	assert(0 && "invalid QQ value");	break;
 		}
 	}
 
-	void JitOps::decode_QQQQ_read(DspValue& _s1, bool _signextendS1, DspValue& _s2, bool _signextendS2, TWord _qqqq) const
+	void JitOps::decode_QQQQ_read(DspValue& _s1, bool _signextendS1, DspValue& _s2, bool _signextendS2, TWord _qqqq, const uint32_t _s1Shift) const
 	{
 		switch (_qqqq)
 		{
-		case 0:  getX0(_s1, _signextendS1);	getX0(_s2, _signextendS2);	return;
-		case 1:  getY0(_s1, _signextendS1);	getY0(_s2, _signextendS2);	return;
-		case 2:  getX1(_s1, _signextendS1);	getX0(_s2, _signextendS2);	return;
-		case 3:  getY1(_s1, _signextendS1);	getY0(_s2, _signextendS2);	return;
-		case 4:  getX0(_s1, _signextendS1);	getY1(_s2, _signextendS2);	return;
-		case 5:  getY0(_s1, _signextendS1);	getX0(_s2, _signextendS2);	return;
-		case 6:  getX1(_s1, _signextendS1);	getY0(_s2, _signextendS2);	return;
-		case 7:  getY1(_s1, _signextendS1);	getX1(_s2, _signextendS2);	return;
-		case 8:  getX1(_s1, _signextendS1);	getX1(_s2, _signextendS2);	return;
-		case 9:  getY1(_s1, _signextendS1);	getY1(_s2, _signextendS2);	return;
-		case 10: getX0(_s1, _signextendS1);	getX1(_s2, _signextendS2);	return;
-		case 11: getY0(_s1, _signextendS1);	getY1(_s2, _signextendS2);	return;
-		case 12: getY1(_s1, _signextendS1);	getX0(_s2, _signextendS2);	return;
-		case 13: getX0(_s1, _signextendS1);	getY0(_s2, _signextendS2);	return;
-		case 14: getY0(_s1, _signextendS1);	getX1(_s2, _signextendS2);	return;
-		case 15: getX1(_s1, _signextendS1);	getY1(_s2, _signextendS2);	return;
+		case 0:  getX0(_s1, _signextendS1, _s1Shift);	getX0(_s2, _signextendS2);	return;
+		case 1:  getY0(_s1, _signextendS1, _s1Shift);	getY0(_s2, _signextendS2);	return;
+		case 2:  getX1(_s1, _signextendS1, _s1Shift);	getX0(_s2, _signextendS2);	return;
+		case 3:  getY1(_s1, _signextendS1, _s1Shift);	getY0(_s2, _signextendS2);	return;
+		case 4:  getX0(_s1, _signextendS1, _s1Shift);	getY1(_s2, _signextendS2);	return;
+		case 5:  getY0(_s1, _signextendS1, _s1Shift);	getX0(_s2, _signextendS2);	return;
+		case 6:  getX1(_s1, _signextendS1, _s1Shift);	getY0(_s2, _signextendS2);	return;
+		case 7:  getY1(_s1, _signextendS1, _s1Shift);	getX1(_s2, _signextendS2);	return;
+		case 8:  getX1(_s1, _signextendS1, _s1Shift);	getX1(_s2, _signextendS2);	return;
+		case 9:  getY1(_s1, _signextendS1, _s1Shift);	getY1(_s2, _signextendS2);	return;
+		case 10: getX0(_s1, _signextendS1, _s1Shift);	getX1(_s2, _signextendS2);	return;
+		case 11: getY0(_s1, _signextendS1, _s1Shift);	getY1(_s2, _signextendS2);	return;
+		case 12: getY1(_s1, _signextendS1, _s1Shift);	getX0(_s2, _signextendS2);	return;
+		case 13: getX0(_s1, _signextendS1, _s1Shift);	getY0(_s2, _signextendS2);	return;
+		case 14: getY0(_s1, _signextendS1, _s1Shift);	getX1(_s2, _signextendS2);	return;
+		case 15: getX1(_s1, _signextendS1, _s1Shift);	getY1(_s2, _signextendS2);	return;
 
 		default: assert(0 && "invalid QQQQ value");				return;
 		}
