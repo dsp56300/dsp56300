@@ -46,6 +46,8 @@ namespace dsp56k
 
 		bool setSpeedPercent(uint32_t _percent = 100);
 
+		auto getClockSource() const			{ return m_clockSource; }
+		auto getCyclesPerSample() const		{ return m_cyclesPerSample; }
 		auto getSpeedInHz() const			{ return m_speedHz; }
 		auto getSpeedPercent() const		{ return m_speedPercent; }
 
@@ -59,7 +61,6 @@ namespace dsp56k
 	protected:
 		auto getDspInstructionCounter() const { return *m_dspInstructionCounter; }
 		auto getLastClock() const { return m_lastClock; }
-		auto getCyclesPerSample() const { return m_cyclesPerSample; }
 		const auto& getEsais() const { return m_esais; }
 		const auto& getPeripherals() const { return m_periph; }
 
