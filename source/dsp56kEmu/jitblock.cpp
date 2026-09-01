@@ -265,6 +265,13 @@ namespace dsp56k
 					can legitimately disagree: ENDDO leaves a loop but execution carries on through the
 					addresses it covered, so a block ending at that address is compiled with the loop already
 					gone. Only check the correspondence when we really are in a loop.
+
+					Still incomplete: do_end restores LF from the stack along with LA/LC, so LF only
+					ends up clear when the loop ENDDO left was the outermost one. An ENDDO inside a
+					nested loop restores LF=1 and the outer LA, and a block ending at the inner loop's
+					end trips this again. The guard narrows the false positive, it does not remove it -
+					the real invariant is that la describes this instant while the registry describes
+					the block, and the two are allowed to disagree.
 				*/
 				assert(!(_dsp.regs().sr.var & SR_LF) || (_pc + numWords) == static_cast<TWord>(_dsp.regs().la.var + 1));
 				terminationReason = JitBlockInfo::TerminationReason::LoopEnd;
