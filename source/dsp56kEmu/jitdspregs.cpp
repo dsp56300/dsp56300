@@ -245,24 +245,24 @@ namespace dsp56k
 
 	void JitDspRegs::setALU(const TWord _alu, const DspValue& _src, const bool _needsMasking) const
 	{
-		const auto r = static_cast<PoolReg>((pool().isParallelOp() ? PoolReg::DspAwrite : PoolReg::DspA) + _alu);
+		const auto r = static_cast<PoolReg>((pool().aluNeedsWriteReg(_alu) ? PoolReg::DspAwrite : PoolReg::DspA) + _alu);
 
 		pool().write(r, _src);
 
 		if(_needsMasking)
 			mask56(pool().get(r, true, true));
 
-		if(pool().isParallelOp() && !pool().isLocked(r))
+		if(pool().aluNeedsWriteReg(_alu) && !pool().isLocked(r))
 			pool().lock(r);
 	}
 
 	void JitDspRegs::clrALU(const TWord _alu) const
 	{
-		const auto r = static_cast<PoolReg>((pool().isParallelOp() ? PoolReg::DspAwrite : PoolReg::DspA) + _alu);
+		const auto r = static_cast<PoolReg>((pool().aluNeedsWriteReg(_alu) ? PoolReg::DspAwrite : PoolReg::DspA) + _alu);
 		const auto alu = pool().get(r, false, true);
 		m_asm.clr(alu);
 
-		if(pool().isParallelOp() && !pool().isLocked(r))
+		if(pool().aluNeedsWriteReg(_alu) && !pool().isLocked(r))
 			pool().lock(r);
 	}
 

@@ -381,9 +381,10 @@ namespace dsp56k
 		return true;
 	}
 
-	void JitDspRegPool::setIsParallelOp(const bool _isParallelOp)
+	void JitDspRegPool::setIsParallelOp(const bool _isParallelOp, const RegisterMask _moveRegs)
 	{
 		m_isParallelOp = _isParallelOp;
+		m_parallelMoveRegs = _moveRegs;
 	}
 
 	bool JitDspRegPool::move(const PoolReg _dst, const PoolReg _src)

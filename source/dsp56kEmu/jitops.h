@@ -311,8 +311,8 @@ namespace dsp56k
 
 		void signextend24to56(const JitReg64& _reg) const;
 
-		static void signextend24to64(JitEmitter& _a, const JitReg64& _dst, const JitReg64& _src);
-		void signextend24to64(const JitReg64& _dst, const JitReg64& _src) const;
+		static void signextend24to64(JitEmitter& _a, const JitReg64& _dst, const JitReg64& _src, uint32_t _shift = 0);
+		void signextend24to64(const JitReg64& _dst, const JitReg64& _src, uint32_t _shift = 0) const;
 		void signextend24to64(const JitReg64& _reg) const { return signextend24to64(_reg, _reg); }
 
 		void signextend24To32(const JitReg32& _reg) const;
@@ -444,15 +444,15 @@ namespace dsp56k
 		void getSR(DspValue& _dst);
 		void setSR(const DspValue& _src);
 
-		void getXY0(DspValue& _dst, uint32_t _aluIndex, bool _signextend) const;
+		void getXY0(DspValue& _dst, uint32_t _aluIndex, bool _signextend, uint32_t _shift = 0) const;
 		void setXY0(uint32_t _xy, const DspValue& _src);
-		void getXY1(DspValue& _dst, uint32_t _aluIndex, bool _signextend) const;
+		void getXY1(DspValue& _dst, uint32_t _aluIndex, bool _signextend, uint32_t _shift = 0) const;
 		void setXY1(uint32_t _xy, const DspValue& _src);
 
-		void getX0(DspValue& _dst, bool _signextend) const { return getXY0(_dst, 0, _signextend); }
-		void getY0(DspValue& _dst, bool _signextend) const { return getXY0(_dst, 1, _signextend); }
-		void getX1(DspValue& _dst, bool _signextend) const { return getXY1(_dst, 0, _signextend); }
-		void getY1(DspValue& _dst, bool _signextend) const { return getXY1(_dst, 1, _signextend); }
+		void getX0(DspValue& _dst, bool _signextend, uint32_t _shift = 0) const { return getXY0(_dst, 0, _signextend, _shift); }
+		void getY0(DspValue& _dst, bool _signextend, uint32_t _shift = 0) const { return getXY0(_dst, 1, _signextend, _shift); }
+		void getX1(DspValue& _dst, bool _signextend, uint32_t _shift = 0) const { return getXY1(_dst, 0, _signextend, _shift); }
+		void getY1(DspValue& _dst, bool _signextend, uint32_t _shift = 0) const { return getXY1(_dst, 1, _signextend, _shift); }
 
 		void getALU0(DspValue& _dst, uint32_t _aluIndex) const;
 		void getALU1(DspValue& _dst, uint32_t _aluIndex) const;
@@ -570,9 +570,9 @@ namespace dsp56k
 		DspValue decode_JJJ_read_56(TWord _jjj, bool _b) const;
 		void decode_JJ_read(DspValue& _dst, TWord jj) const;
 		DspValue decode_RRR_read(TWord _rrr, int _shortDisplacement = 0);
-		void decode_qq_read(DspValue& _dst, TWord _qq, bool _signextend);
-		void decode_QQ_read(DspValue& _dst, TWord _qq, bool _signextend);
-		void decode_QQQQ_read(DspValue& _s1, bool _signextendS1, DspValue& _s2, bool _signextendS2, TWord _qqqq) const;
+		void decode_qq_read(DspValue& _dst, TWord _qq, bool _signextend, uint32_t _shift = 0);
+		void decode_QQ_read(DspValue& _dst, TWord _qq, bool _signextend, uint32_t _shift = 0);
+		void decode_QQQQ_read(DspValue& _s1, bool _signextendS1, DspValue& _s2, bool _signextendS2, TWord _qqqq, uint32_t _s1Shift = 0) const;
 		void decode_qqq_read(DspValue& _dst, TWord _qqq) const;
 		void decode_sss_read(DspValue& _dst, TWord _sss) const;
 		void decode_LLL_read(TWord _lll, DspValue& x, DspValue& y);
@@ -609,7 +609,7 @@ namespace dsp56k
 		void alu_lsl(TWord ab, const DspValue& _shiftAmount);
 		void alu_lsr(TWord ab, const DspValue& _shiftAmount);
 		void alu_eor(TWord ab, DspValue& _v);
-		void alu_mpy(TWord ab, DspValue& _s1, DspValue& _s2, bool _negate, bool _accumulate, bool _s1Unsigned, bool _s2Unsigned, bool _round);
+		void alu_mpy(TWord ab, DspValue& _s1, DspValue& _s2, bool _negate, bool _accumulate, bool _s1Unsigned, bool _s2Unsigned, bool _round, uint32_t _s1Shift = 0);
 		void alu_multiply(TWord op);
 		void alu_or(TWord ab, DspValue& _v);
 		void alu_rnd(TWord ab);

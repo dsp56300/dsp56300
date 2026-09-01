@@ -121,29 +121,40 @@ namespace dsp56k
 #endif
 	}
 
-	void JitOps::signextend24to64(JitEmitter& _a, const JitReg64& _dst, const JitReg64& _src)
+	void JitOps::signextend24to64(JitEmitter& _a, const JitReg64& _dst, const JitReg64& _src, const uint32_t _shift)
 	{
+		// _shift scales the result up by 2^_shift. Both code paths below already end in a
+		// right shift, so the scale is folded into it and costs nothing: the multiplier wants
+		// its operand pre-scaled and would otherwise pay a separate shl for it.
+		assert(_shift < 24 && "shift would push the 24 bit value out of the sign extension");
 #ifdef HAVE_ARM64
 		_a.sbfx(_dst, _src, asmjit::Imm(0), asmjit::Imm(24));
+		if (_shift)
+			_a.lsl(_dst, _dst, asmjit::Imm(_shift));
 #else
 		if (_dst != _src)
 		{
 			if (JitEmitter::hasBMI2())
 			{
+				// The rotate keeps _src's upper bits below the value instead of discarding them,
+				// and a scaled sar retains the lowest _shift of them. 24 bit registers are always
+				// zero extended in their host register - the unsigned read path (getXY0/1 with
+				// _signextend false) is a bare 32 bit mov and would be wrong otherwise - so those
+				// bits are zero and the low bits of the result stay clean.
 				_a.rorx(_dst, _src, asmjit::Imm(64 - 40));
-				_a.sar(_dst, asmjit::Imm(40));
+				_a.sar(_dst, asmjit::Imm(40 - _shift));
 				return;
 			}
 			_a.mov(r32(_dst), r32(_src));
 		}
 		_a.sal(_dst, asmjit::Imm(40));
-		_a.sar(_dst, asmjit::Imm(40));
+		_a.sar(_dst, asmjit::Imm(40 - _shift));
 #endif
 	}
 
-	void JitOps::signextend24to64(const JitReg64& _dst, const JitReg64& _src) const
+	void JitOps::signextend24to64(const JitReg64& _dst, const JitReg64& _src, const uint32_t _shift) const
 	{
-		signextend24to64(m_asm, _dst, _src);
+		signextend24to64(m_asm, _dst, _src, _shift);
 	}
 
 	void JitOps::signextend24To32(const JitReg32& _reg) const
@@ -269,7 +280,7 @@ namespace dsp56k
 		_dst.set(getOpWordB(), DspValue::Immediate24);
 	}
 
-	void JitOps::getXY0(DspValue& _dst, const uint32_t _aluIndex, bool _signextend) const
+	void JitOps::getXY0(DspValue& _dst, const uint32_t _aluIndex, bool _signextend, const uint32_t _shift) const
 	{
 		if (!_dst.isRegValid())
 			_dst.temp(DspValue::Temp24);
@@ -279,12 +290,18 @@ namespace dsp56k
 		const auto src = m_block.dspRegPool().get(_aluIndex ? PoolReg::DspY0 : PoolReg::DspX0, true, false);
 
 		if (_signextend)
-			signextend24to64(r64(_dst), r64(src));
+		{
+			signextend24to64(r64(_dst), r64(src), _shift);
+		}
 		else
+		{
 			m_asm.mov(r32(_dst), r32(src));
+			if (_shift)
+				m_asm.shl(r64(_dst), asmjit::Imm(_shift));
+		}
 	}
 
-	void JitOps::getXY1(DspValue& _dst, const uint32_t _aluIndex, bool _signextend) const
+	void JitOps::getXY1(DspValue& _dst, const uint32_t _aluIndex, bool _signextend, const uint32_t _shift) const
 	{
 		if (!_dst.isRegValid())
 			_dst.temp(DspValue::Temp24);
@@ -294,9 +311,15 @@ namespace dsp56k
 		const auto src = m_block.dspRegPool().get(_aluIndex ? PoolReg::DspY1 : PoolReg::DspX1, true, false);
 
 		if (_signextend)
-			signextend24to64(r64(_dst), r64(src));
+		{
+			signextend24to64(r64(_dst), r64(src), _shift);
+		}
 		else
+		{
 			m_asm.mov(r32(_dst), r32(src));
+			if (_shift)
+				m_asm.shl(r64(_dst), asmjit::Imm(_shift));
+		}
 	}
 
 	void JitOps::setXY0(const uint32_t _xy, const DspValue& _src)

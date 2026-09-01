@@ -79,7 +79,7 @@ namespace dsp56k
 	{
 		auto& p = m_block.dspRegPool();
 
-		if(p.isParallelOp() && m_write)
+		if(p.aluNeedsWriteReg(m_aluIndex) && m_write)
 		{
 			// ALU write registers stay locked
 		}
@@ -116,7 +116,7 @@ namespace dsp56k
 			}
 		};
 
-		if(p.isParallelOp() && m_write)
+		if(p.aluNeedsWriteReg(m_aluIndex) && m_write)
 		{
 			JitRegGP rRead;
 
