@@ -61,8 +61,6 @@ namespace dsp56k
 				{XIO_IPRP, "M_IPRP"},
 				{XIO_IPRC, "M_IPRC"},
 
-				{0xFFFF90, "M_HCKR"},	// SHI Clock Control Register (HCKR)
-				{0xFFFF91, "M_HCSR"},	// SHI Control/Status Register (HCSR)
 			};
 
 			for (const auto& symbol : symbols)
@@ -384,6 +382,7 @@ namespace dsp56k
 	, m_esaiClock(*this)
 	, m_esai(*this, MemArea_X, &m_dma)
 	, m_hdi08(*this)
+	, m_shi(*this)
 	, m_timers(*this, Vba_TIMER0_Compare)
 	, m_disableTimers(false)
 	{
@@ -441,10 +440,12 @@ namespace dsp56k
 		case 0xffffff:
 		case 0xfffffe:
 			return m_mem[_addr - XIO_Reserved_High_First];
-		case 0xFFFF93:			// SHI__HTX
-		case 0xFFFF94:			// SHI__HRX
-//			LOG("Read from " << HEX(_addr));
-			return 0;	//m_mem[_addr - XIO_Reserved_High_First];	// There is nothing connected.
+		case SHI::HCKR:
+		case SHI::HCSR:
+		case SHI::HSAR:
+		case SHI::HTX:
+		case SHI::HRX:
+			return m_shi.read(_addr);
 
 //		case XIO_DSTR:					// DMA status reg
 //			return 0x3f;
@@ -589,12 +590,12 @@ namespace dsp56k
 		case Timers::M_TPLR:		m_timers.writeTPLR	(_val);		return;		// TIMER Prescaler Load Register
 		case Timers::M_TPCR:		m_timers.writeTPCR	(_val);		return;		// TIMER Prescalar Count Register
 		
-		case 0xFFFF91:			// SHI__HCSR
-			return;
-		case 0xFFFF93:			// SHI__HTX
-		case 0xFFFF94:			// SHI__HRX
-//			LOG("Write to " << HEX(_addr) << ": " << HEX(_val));
-//			m_mem[_addr - XIO_Reserved_High_First] = _val;	// Do not write!
+		case SHI::HCKR:
+		case SHI::HCSR:
+		case SHI::HSAR:
+		case SHI::HTX:
+		case SHI::HRX:
+			m_shi.write(_addr, _val);
 			return;
 
 		case Esai::M_SAISR:			m_esai.writestatusRegister(_val);					return;
@@ -682,10 +683,13 @@ namespace dsp56k
 	{
 		m_esai.reset();
 		m_hdi08.reset();
+		m_shi.reset();
 	}
 
 	void Peripherals56362::setSymbols(Disassembler& _disasm) const
 	{
+		SHI::setSymbols(_disasm);
+
 		auto addIR = [&](TWord _addr, const std::string& _symbol)
 		{
 			_disasm.addSymbol(Disassembler::MemP, _addr, "int_" + _symbol);
