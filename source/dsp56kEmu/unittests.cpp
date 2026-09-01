@@ -5731,6 +5731,10 @@ namespace dsp56k
 		rep_multi();
 		rep_div_powerOfTwo();
 		do_multi();
+		callAtVectorAddress();
+		callAfterRepAtVectorAddress();
+		conditionalCallAtVectorAddress();
+		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
 		do_twoWordCallAtLoopEnd();
 		do_callNotAtLoopEnd();
@@ -5855,6 +5859,155 @@ namespace dsp56k
 		execUntil(0x101);
 
 		verify(dsp.aluA().var == 0x00000007000000);
+	}
+
+	void UnitTests::enableDynamicFastInterrupts(const bool _enable)
+	{
+		// a device that also runs ordinary code in the interrupt vector region has to say so, or
+		// the JIT assumes every block down there is servicing a fast interrupt
+		auto config = dsp.getJit().getConfig();
+		config.dynamicFastInterrupts = _enable;
+		dsp.getJit().setConfig(config);
+	}
+
+	/*	A call in the interrupt vector region, in code that was entered as an ordinary subroutine
+		rather than by an interrupt. A real fast interrupt pushes the INTERRUPTED program's PC, which
+		the JIT keeps in the PC register - but ordinary code down there has to push the instruction
+		after the call, exactly as anywhere else. Only the runtime processing mode tells the two
+		apart, which is what dynamicFastInterrupts is for.
+
+		Without it the callee returns onto the call rather than past it and the code loops forever.
+		Covers both widths, one word and two: the manual distinguishes them elsewhere and so did the
+		last bug in this area.
+	*/
+	void UnitTests::callAtVectorAddress()
+	{
+		enableDynamicFastInterrupts(true);
+
+		for(const auto twoWordCall : {false, true})
+		{
+			dsp.resetHW();
+			dsp.regs().r[0] = TReg24(0);
+
+			TWord pc = 0x38;
+			pc = emitToMemory("move (r0)+", pc);					// $38
+			pc = emitToMemory("move (r0)+", pc);					// $39
+			if(twoWordCall)
+				pc = emitToMemory("bsr >$8", pc);				// $3a-$3b, relative to $3a -> $42
+			else
+				pc = emitToMemory("jsr $42", pc);				// $3a, one word
+			emitToMemory("rts", pc);							// after the call
+			emitToMemory("rts", 0x42);							// the callee
+
+			pc = 0x100;
+			pc = emitToMemory("jsr $38", pc);
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			dsp.setPC(0x100);
+			execUntil(returnPC);
+
+			verify(dsp.regs().r[0].var == 2);
+			verify(dsp.regs().sp.var == 0);
+		}
+
+		enableDynamicFastInterrupts(false);
+	}
+
+	// The same, with a REP immediately before the call - the shape the M-One XL boot code has.
+	void UnitTests::callAfterRepAtVectorAddress()
+	{
+		enableDynamicFastInterrupts(true);
+
+		dsp.resetHW();
+		dsp.regs().r[0] = TReg24(0);
+
+		TWord pc = 0x28;
+		pc = emitToMemory("rep #<$6", pc);						// $28
+		pc = emitToMemory("move (r0)+", pc);					// $29, the repeated instruction
+		pc = emitToMemory("bsr >$8", pc);						// $2a-$2b, relative to $2a -> $32
+		emitToMemory("rts", pc);								// $2c
+		emitToMemory("rts", 0x32);
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $28", pc);
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.regs().r[0].var == 6);						// the REP itself was never the problem
+		verify(dsp.regs().sp.var == 0);
+
+		enableDynamicFastInterrupts(false);
+	}
+
+	/*	A conditional call in the vector region. This is a GUARD, not a reproduction: it passes even
+		without the fix, because a conditional branch makes the block prologue pre-write PC = pcNext,
+		which happens to be the very address the call needs to push. So bsset/bsclr/jsset in vector
+		slots were always correct, by accident, and only unconditional calls were broken. Keep the
+		test so that accident cannot quietly stop holding.
+	*/
+	void UnitTests::conditionalCallAtVectorAddress()
+	{
+		enableDynamicFastInterrupts(true);
+
+		dsp.resetHW();
+		dsp.regs().r[0] = TReg24(0);
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000001000000)));	// a1 bit 0 set
+
+		TWord pc = 0x48;
+		pc = emitToMemory("move (r0)+", pc);					// $48
+		pc = emitToMemory("jsset #$0,a1,$52", pc);				// $49-$4a, taken
+		emitToMemory("rts", pc);								// $4b
+		emitToMemory("rts", 0x52);
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $48", pc);
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.regs().r[0].var == 1);
+		verify(dsp.regs().sp.var == 0);
+
+		enableDynamicFastInterrupts(false);
+	}
+
+	/*	A DO loop in the vector region whose body contains a call - the shape the M-One XL boot code
+		has at $54. Puts the loop bookkeeping and the fast interrupt heuristic in the same block.
+	*/
+	void UnitTests::callInsideLoopAtVectorAddress()
+	{
+		enableDynamicFastInterrupts(true);
+
+		dsp.resetHW();
+		dsp.regs().r[0] = TReg24(0);
+
+		TWord pc = 0x54;
+		pc = emitToMemory("do #$3,>$5a", pc);					// $54-$55, LA = $59
+		pc = emitToMemory("bsr >$c", pc);						// $56-$57, relative to $56 -> $62
+		pc = emitToMemory("move (r0)+", pc);					// $58
+		pc = emitToMemory("nop", pc);							// $59, last instruction in the loop
+		emitToMemory("rts", pc);								// $5a
+		emitToMemory("rts", 0x62);
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $54", pc);
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.regs().r[0].var == 3);
+		verify(dsp.regs().sp.var == 0);
+		verify((dsp.regs().sr.var & SR_LF) == 0);
+
+		enableDynamicFastInterrupts(false);
 	}
 
 	void UnitTests::do_callAtLoopEnd()
