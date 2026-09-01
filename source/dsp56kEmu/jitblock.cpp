@@ -62,6 +62,26 @@ namespace dsp56k
 			return op == g_opcodes[DoForever].m_mask1 || op == g_opcodes[DorForever].m_mask1;
 		};
 
+		/*	A block can end a loop without beginning it, so the opening DO has to be found through
+			the loop map rather than at a fixed offset. Loop ends are unique, one begin per end, so
+			the first match is the right one.
+		*/
+		auto markForeverLoopEndingAt = [&](const TWord _loopEnd)
+		{
+			if(_info.hasFlag(JitBlockInfo::Flags::IsLoopForever))
+				return;
+
+			for (const auto& loop : _loopStarts)
+			{
+				if(loop.second != _loopEnd)
+					continue;
+
+				if(isForeverLoop(loop.first))
+					_info.addFlag(JitBlockInfo::Flags::IsLoopForever);
+				break;
+			}
+		};
+
 		if(_loopStarts.find(_pc - 2) != _loopStarts.end())
 		{
 			assert(_pc == hiword(_dsp.regs().ss[_dsp.ssIndex()]).toWord());
@@ -184,6 +204,33 @@ namespace dsp56k
 					terminationReason = JitBlockInfo::TerminationReason::Branch;
 					_info.branchTarget = getBranchTarget(instA, opA, opB, pc);
 					_info.branchIsConditional = hasField(instA, Field_CCCC) || hasField(instA, Field_bbbbb);
+
+					/*	A call or jump can be the loop's last instruction. The loop-end check further
+						down never sees it, because we break here first - so record it now. The block
+						still terminates as a Branch, but emit() has to run the loop bookkeeping
+						BEFORE the branch executes, the way hardware retires the loop at fetch.
+					*/
+					if(_config.supportBranchAtLoopEnd && _loopEnds.find(_pc + numWords) != _loopEnds.end())
+					{
+						// we break out before the loop-end check below, so classify the loop here too
+						markForeverLoopEndingAt(_pc + numWords);
+
+						/*	Unconditional only: a conditional branch gets its fall-through chained
+							directly to the block at pcLast, which bypasses the loop-back we would
+							write into the PC. Such a loop keeps the old, wrong behaviour - say so
+							rather than let the next device that enables this find out by itself.
+						*/
+						if(_info.branchIsConditional)
+						{
+							LOG("Conditional branch at the end of a DO loop at " << HEX(pc) << ", supportBranchAtLoopEnd does not cover this - the loop will run a single iteration and leave LA/LC on the stack");
+							assert(false && "conditional branch at a DO loop end is not supported");
+						}
+						else
+						{
+							_info.addFlag(JitBlockInfo::Flags::BranchAtLoopEnd);
+						}
+					}
+
 					break;
 				}
 				if(flags & OpFlagPopPC)
@@ -221,24 +268,7 @@ namespace dsp56k
 				*/
 				assert(!(_dsp.regs().sr.var & SR_LF) || (_pc + numWords) == static_cast<TWord>(_dsp.regs().la.var + 1));
 				terminationReason = JitBlockInfo::TerminationReason::LoopEnd;
-
-				/*	A block can end a loop without beginning it, so the opening DO has to be found
-					through the loop map rather than at a fixed offset. Loop ends are unique, one
-					begin per end, so the first match is the right one.
-				*/
-				if(!_info.hasFlag(JitBlockInfo::Flags::IsLoopForever))
-				{
-					for (const auto& loop : _loopStarts)
-					{
-						if(loop.second != _pc + numWords)
-							continue;
-
-						if(isForeverLoop(loop.first))
-							_info.addFlag(JitBlockInfo::Flags::IsLoopForever);
-						break;
-					}
-				}
-
+				markForeverLoopEndingAt(_pc + numWords);
 				break;
 			}
 
@@ -375,6 +405,26 @@ namespace dsp56k
 			}
 
 			JitOps ops(*this, _rt, fastInterruptMode);
+
+			/*	A call as the loop's last instruction: hardware retires the loop at fetch, so the
+				return address it pushes is already the loop start (or, on the last iteration, the
+				instruction after the loop). Emit that bookkeeping BEFORE the branch and make its
+				push take the PC register, rather than trying to rewrite the pushed entry after the
+				fact - the call's own frame would be sitting on top of the DO's by then.
+			*/
+			if(info.hasFlag(JitBlockInfo::Flags::BranchAtLoopEnd))
+			{
+				Instruction lastA, lastB;
+				m_dsp.opcodes().getInstructionTypes(opA, lastA, lastB);
+				const auto opLen = Opcodes::getOpcodeLength(opA, lastA, lastB);
+
+				if(pMemSize + opLen == info.memSize)
+				{
+					ops.emitLoopEndBeforeBranch(info.hasFlag(JitBlockInfo::Flags::IsLoopBodyBegin) != 0,
+						info.hasFlag(JitBlockInfo::Flags::IsLoopForever) != 0, _pc, opPC + opLen);
+					ops.setPushPCFromReg(true);
+				}
+			}
 
 			if (m_config.splitOpsByNops)	m_asm.nop();
 			ops.emit(opPC, opA, opB);

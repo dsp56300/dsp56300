@@ -639,6 +639,8 @@ namespace dsp56k
 		void do_execForever(TWord _addr);
 		void do_start(const DspValue* _lc, TWord _addr);
 		void do_end(const RegGP& _temp);
+		void emitLoopEndBeforeBranch(bool _loopStartIsBlockStart, bool _loopIsForever, TWord _blockPc, TWord _pcAfterBranch);
+		void setPushPCFromReg(const bool _v) { m_pushPCFromReg = _v; }
 		void do_end();
 		void rep_exec(TWord _lc);
 		void rep_exec(DspValue& _lc);
@@ -716,6 +718,7 @@ namespace dsp56k
 		std::vector<DspValue> m_repTemps;
 		RegisterMask m_writtenRegs = RegisterMask::None;
 		RegisterMask m_readRegs = RegisterMask::None;
+		bool m_pushPCFromReg = false;
 		FastInterruptMode m_fastInterruptMode;
 		bool m_disableCCRUpdates = false;
 	};

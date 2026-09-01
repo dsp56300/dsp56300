@@ -51,6 +51,25 @@ namespace dsp56k
 		throw ss.str();
 	}
 
+	/*	A loop that was left without being retired keeps LA/LC on the stack and LF set in SR - the
+		quiet failure mode. Check for that, not just for the iteration count.
+	*/
+	void UnitTests::verifyLoopRetired(const uint32_t _expectedR0) const
+	{
+		verify(dsp.regs().r[0].var == _expectedR0);
+		verify(dsp.regs().sp.var == 0);
+		verify((dsp.regs().sr.var & SR_LF) == 0);
+	}
+
+	void UnitTests::enableBranchAtLoopEnd()
+	{
+		// a change of flow at a DO loop end is forbidden by the manual, only some firmware relies
+		// on the silicon allowing it - so the JIT support for it is opt-in
+		auto config = dsp.getJit().getConfig();
+		config.supportBranchAtLoopEnd = true;
+		dsp.getJit().setConfig(config);
+	}
+
 	void UnitTests::runAllTests()
 	{
 		conditionCodes();
@@ -5712,6 +5731,9 @@ namespace dsp56k
 		rep_multi();
 		rep_div_powerOfTwo();
 		do_multi();
+		do_callAtLoopEnd();
+		do_twoWordCallAtLoopEnd();
+		do_callNotAtLoopEnd();
 		jsr_rts();
 	}
 
@@ -5833,6 +5855,105 @@ namespace dsp56k
 		execUntil(0x101);
 
 		verify(dsp.aluA().var == 0x00000007000000);
+	}
+
+	void UnitTests::do_callAtLoopEnd()
+	{
+		/*	A DO loop whose last instruction is a call. The block scanner classifies a block by the
+			first terminating condition it hits, and the branch check runs before the loop-end check
+			- so the call terminated the block as Branch, isLoopEnd stayed false, and the loop
+			epilogue that decrements LC and rewrites the PC was never emitted. The loop ran exactly
+			one iteration.
+
+			Hardware detects the loop end at instruction FETCH: fetching the call already decrements
+			LC and makes the next PC the loop start, so the call pushes that and returns back INTO
+			the loop. Only on the final iteration does the pushed address point past the loop.
+
+			Note the addresses: the JIT keeps its loop registry for the whole DSP, not per block, so
+			a test must not reuse a loop begin or end address of another one.
+		*/
+		dsp.resetHW();
+		dsp.regs().n[4] = TReg24(5);
+		dsp.regs().r[0] = TReg24(0);
+		enableBranchAtLoopEnd();
+
+		TWord pc = 0x100;
+		pc = emitToMemory("jsr $300", pc);		// $100, one word
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);				// $101
+
+		pc = 0x300;
+		pc = emitToMemory("do n4,>$305", pc);	// $300-$301, LA = $304, body $302..$304
+		pc = emitToMemory("move (r0)+", pc);	// $302
+		pc = emitToMemory("nop", pc);			// $303
+		pc = emitToMemory("jsr $310", pc);		// $304: the loop's last word is a call
+		emitToMemory("rts", pc);				// $305: after the loop
+		emitToMemory("rts", 0x310);				// the callee
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verifyLoopRetired(5);
+	}
+
+	void UnitTests::do_callNotAtLoopEnd()
+	{
+		// Guard for the normal path: same shape, but with an instruction after the call, so the
+		// loop end is not a branch. This must keep working unchanged.
+		dsp.resetHW();
+		dsp.regs().n[4] = TReg24(5);
+		dsp.regs().r[0] = TReg24(0);
+		enableBranchAtLoopEnd();
+
+		TWord pc = 0x100;
+		pc = emitToMemory("jsr $320", pc);
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		pc = 0x320;
+		pc = emitToMemory("do n4,>$326", pc);	// $320-$321, LA = $325, body $322..$325
+		pc = emitToMemory("move (r0)+", pc);	// $322
+		pc = emitToMemory("nop", pc);			// $323
+		pc = emitToMemory("jsr $330", pc);		// $324
+		pc = emitToMemory("nop", pc);			// $325: last instruction, not a branch
+		emitToMemory("rts", pc);				// $326
+		emitToMemory("rts", 0x330);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verifyLoopRetired(5);
+	}
+
+	/*	The same, with the call as a TWO-word instruction: it starts at LA-1 and its extension word
+		IS LA. That is the shape the real firmware has, and the manual lists it separately from a
+		one-word call starting at LA - but the reference simulator retires the loop identically for
+		both, so one code path covers them.
+	*/
+	void UnitTests::do_twoWordCallAtLoopEnd()
+	{
+		dsp.resetHW();
+		dsp.regs().n[4] = TReg24(5);
+		dsp.regs().r[0] = TReg24(0);
+		enableBranchAtLoopEnd();
+
+		TWord pc = 0x100;
+		pc = emitToMemory("jsr $340", pc);
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		pc = 0x340;
+		pc = emitToMemory("do n4,>$346", pc);	// $340-$341, LA = $345, body $342..$345
+		pc = emitToMemory("move (r0)+", pc);	// $342
+		pc = emitToMemory("nop", pc);			// $343
+		pc = emitToMemory("bsr >$c", pc);		// $344-$345, relative to $344 -> $350
+		emitToMemory("rts", pc);				// $346: after the loop
+		emitToMemory("rts", 0x350);				// the callee
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verifyLoopRetired(5);
 	}
 
 	void UnitTests::do_multi()

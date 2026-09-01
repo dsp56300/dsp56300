@@ -513,6 +513,70 @@ namespace dsp56k
 		const RegGP r(m_block);
 		do_end(r);
 	}
+
+	/*	A DO loop whose last instruction is a call. Hardware retires the loop at instruction
+		FETCH, so by the time the call pushes its return address the next PC is already decided:
+		the loop start while iterations remain, the instruction after the loop on the last one.
+		Emitting that decision BEFORE the branch reproduces the hardware ordering exactly, and
+		avoids having to reach underneath the call's own stack frame afterwards.
+	*/
+	void JitOps::emitLoopEndBeforeBranch(const bool _loopStartIsBlockStart, const bool _loopIsForever, const TWord _blockPc, const TWord _pcAfterBranch)
+	{
+		const auto lastIteration = m_asm.newLabel();
+		const auto done = m_asm.newLabel();
+
+		auto& pool = m_block.dspRegPool();
+
+		// As in jumpIfLoop: nothing may be allocated inside the branches. A spill emitted on one
+		// path only leaves the register pool describing a state the other path never reaches.
+		const RegGP temp(m_block);
+
+		const auto sr = r32(pool.get(PoolReg::DspSR, true, true));
+		                r32(pool.get(PoolReg::DspLA, true, true));	// unused here, but do_end needs it
+		const auto lc = r32(pool.get(PoolReg::DspLC, true, true));
+
+		pool.lock(PoolReg::DspSR);
+		pool.lock(PoolReg::DspLA);
+		pool.lock(PoolReg::DspLC);
+
+		DSPReg pc(m_block, PoolReg::DspPC, true, true);
+
+		m_asm.mov(r32(pc), asmjit::Imm(_pcAfterBranch));	// default: leave the loop
+
+		m_asm.bitTest(sr, SRB_LF);
+		m_asm.jz(done);										// not inside a loop at all
+
+		// a DO FOREVER has no loop counter and cannot retire here - it only ends via ENDDO or BRKcc
+		if(!_loopIsForever)
+		{
+			m_asm.cmp(lc, asmjit::Imm(1));
+			m_asm.jle(lastIteration);
+			m_asm.dec(lc);
+		}
+
+		if(_loopStartIsBlockStart)
+		{
+			m_asm.mov(r32(pc), asmjit::Imm(_blockPc));
+		}
+		else
+		{
+			const auto ss = r64(pc);
+			m_dspRegs.getSS(ss);							// note: not getSSH, that would move SP
+			m_asm.shr(ss, asmjit::Imm(24));
+		}
+		m_asm.jmp(done);
+
+		m_asm.bind(lastIteration);
+		if(!_loopIsForever)
+			do_end(temp);									// pops LA/LC, restores LF
+
+		m_asm.bind(done);
+
+		pool.unlock(PoolReg::DspSR);
+		pool.unlock(PoolReg::DspLA);
+		pool.unlock(PoolReg::DspLC);
+	}
+
 	void JitOps::do_end(const RegGP& r)
 	{
 		// restore the previous loop flags, both of them - a DO FOREVER raised SR_FV as well

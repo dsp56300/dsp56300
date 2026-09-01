@@ -207,7 +207,10 @@ namespace dsp56k
 	{
 		DspValue pc(m_block);
 
-		if (m_fastInterruptMode != FastInterruptMode::None)
+		// m_pushPCFromReg: a call at a DO loop's end pushes the loop-updated next PC, which
+		// emitLoopEndBeforeBranch() has just computed into the PC register, not the constant
+		// address after the call.
+		if (m_fastInterruptMode != FastInterruptMode::None || m_pushPCFromReg)
 		{
 			pc = m_block.dspRegPool().read(PoolReg::DspPC);
 		}

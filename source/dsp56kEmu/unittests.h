@@ -172,6 +172,11 @@ namespace  dsp56k
 		void rep_div_powerOfTwo();
 		void do_multi();
 		void do_forever();
+		void verifyLoopRetired(uint32_t _expectedR0) const;
+		void enableBranchAtLoopEnd();
+		void do_twoWordCallAtLoopEnd();
+		void do_callAtLoopEnd();
+		void do_callNotAtLoopEnd();
 		void jsr_rts();
 
 		Peripherals56362 peripheralsX;
