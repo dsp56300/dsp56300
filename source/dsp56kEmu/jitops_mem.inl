@@ -18,7 +18,7 @@ namespace dsp56k
 			return Immediate;
 
 		if(mmm == MMM_AbsAddr)
-			return isPeriphAddress(m_opWordB) ? Peripherals : Memory;
+			return isCppHandledAddress(m_opWordB) ? Peripherals : Memory;
 
 		return Dynamic;
 	}

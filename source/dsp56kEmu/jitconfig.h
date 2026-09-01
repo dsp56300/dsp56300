@@ -55,6 +55,12 @@ namespace dsp56k
 		// x86-64 only: Will issue int3() = breakpoint interrupt if a memory address is detected that points to peripherals but DPA is disabled
 		bool debugDynamicPeripheralAddressing = false;
 
+		// Address range on the external bus that is served by DSP::getExternalBusDevice() instead
+		// of by memory, see externalbusdevice.h. Empty by default, which keeps the generated code
+		// bit identical to a build without an external bus device.
+		TWord externalBusBegin = 0;
+		TWord externalBusEnd = 0;		// exclusive
+
 		// retrieves a JitConfig for a specific PC. If null, the global default config is used
 		std::function<std::optional<JitConfig>(TWord)> getBlockConfig;
 	};

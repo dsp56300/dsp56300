@@ -320,6 +320,8 @@ namespace dsp56k
 		void bitreverse24(const JitReg32& x) const;
 
 		bool isPeriphAddress(const TWord _addr) const;
+		bool isExternalBusAddress(TWord _addr) const;
+		bool isCppHandledAddress(TWord _addr) const;	// peripherals or an external bus device, anything that is not plain memory
 		TWord getPeriphStartAddr() const;
 
 		// The main AGU entry point.

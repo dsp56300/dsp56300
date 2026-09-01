@@ -45,6 +45,7 @@ opcodefields.h
 opcodeinfo.h
 opcodetypes.h
 peripherals.cpp peripherals.h
+externalbusdevice.h
 registers.cpp registers.h
 timers.cpp timers.h
 types.cpp types.h

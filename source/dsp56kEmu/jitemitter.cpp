@@ -159,6 +159,11 @@ namespace dsp56k
 		b(asmjit::arm::CondCode::kGT, _label);
 	}
 
+	void JitEmitter::jb(const asmjit::Label& _label)
+	{
+		b(asmjit::arm::CondCode::kUnsignedLT, _label);
+	}
+
 	void JitEmitter::shl(const JitRegGP& _dst, const asmjit::Imm& _imm)
 	{
 		lsl(_dst, _dst, _imm);

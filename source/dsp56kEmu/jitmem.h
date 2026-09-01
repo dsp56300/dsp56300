@@ -120,6 +120,12 @@ namespace dsp56k
 		void writePeriph(EMemArea _area, const TWord& _offset, const DspValue& _value) const;
 		void writePeriph(EMemArea _area, const DspValue& _offset, const DspValue& _value) const;
 
+		// external bus devices, see externalbusdevice.h. No memory area, the external bus has no X/Y distinction
+		bool isExternalBusAddress(TWord _addr) const;
+		void readExternalBus(DspValue& _dst, TWord _offset) const;
+		void writeExternalBus(TWord _offset, const DspValue& _value) const;
+		void writeExternalBus(const DspValue& _offset, const DspValue& _value) const;
+
 		template<size_t ByteSize>
 		void mov(const JitMemPtr& _dst, const DspValue& _src) const;
 
@@ -151,6 +157,7 @@ namespace dsp56k
 		void readPeriph(DspValue& _dst, EMemArea _area, const JitReg32& _offset, Instruction _inst) const;
 
 		void writePeriph(EMemArea _area, const JitReg32& _offset, const DspValue& _value) const;
+		void writeExternalBus(const JitReg32& _offset, const DspValue& _value) const;
 
 		const TWord* getMemAreaHostPtr(EMemArea _area) const;
 

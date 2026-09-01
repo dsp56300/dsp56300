@@ -1185,6 +1185,17 @@ namespace dsp56k
 		return _addr >= getPeriphStartAddr();
 	}
 
+	bool JitOps::isExternalBusAddress(const TWord _addr) const
+	{
+		const auto& config = m_block.getConfig();
+		return _addr >= config.externalBusBegin && _addr < config.externalBusEnd;
+	}
+
+	bool JitOps::isCppHandledAddress(const TWord _addr) const
+	{
+		return isPeriphAddress(_addr) || isExternalBusAddress(_addr);
+	}
+
 	TWord JitOps::getPeriphStartAddr() const
 	{
 		const auto* mode = m_block.getMode();

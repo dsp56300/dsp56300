@@ -89,8 +89,46 @@ namespace dsp56k
 			if(!m_block.getConfig().dynamicPeripheralAddressing)
 			{
 				debugDynamicPeripheralAddressing(r32(_offset));
-				// Disable writing to peripherals with dynamic addressing (such as (r0)+) for now as it is costly but most likely unused
-				m_block.mem().writeDspMemory(_area, _offset, _value);
+
+				const auto& config = m_block.getConfig();
+
+				if(!config.externalBusEnd)
+				{
+					// Disable writing to peripherals with dynamic addressing (such as (r0)+) for now as it is costly but most likely unused
+					m_block.mem().writeDspMemory(_area, _offset, _value);
+				}
+				else
+				{
+					// An external bus device needs to see its writes even when they are addressed
+					// dynamically, a flash chip for example is programmed one byte at a time via
+					// (r0). One unsigned compare of (address - begin) against the size covers both
+					// ends of the window, and it is only emitted for devices that declare one.
+					const auto begin = config.externalBusBegin;
+					const auto size = config.externalBusEnd - begin;
+
+					If(m_block, m_blockRuntimeData, [&](const asmjit::Label& _toFalse)
+					{
+						const RegGP temp(m_block);
+						m_asm.mov(r32(temp), r32(_offset.get()));
+						if(begin)
+							m_asm.sub(r32(temp), asmjit::Imm(begin));
+#ifdef HAVE_ARM64
+						const RegScratch scratch(m_block);
+						m_asm.mov(r32(scratch), asmjit::Imm(size));
+						m_asm.cmp(r32(temp), r32(scratch));
+#else
+						m_asm.cmp(r32(temp), asmjit::Imm(size));
+#endif
+						m_asm.jb(_toFalse);
+					}, [&]()
+					{
+						m_block.mem().writeDspMemory(_area, _offset, _value);
+					}, [&]()
+					{
+						m_block.mem().writeExternalBus(_offset, _value);
+					}, true, false, false
+					);
+				}
 			}
 			else
 			{

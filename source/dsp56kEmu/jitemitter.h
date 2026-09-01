@@ -64,6 +64,7 @@ namespace dsp56k
 		void jmp(const asmjit::Label& _label);
 		void jge(const asmjit::Label& _label);
 		void jg(const asmjit::Label& _label);
+		void jb(const asmjit::Label& _label);		// unsigned
 
 		void shl(const JitRegGP& _dst, const asmjit::Imm& _imm);
 		void shl(const JitRegGP& _dst, const JitRegGP& _shift);

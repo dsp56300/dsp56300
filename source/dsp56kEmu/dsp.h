@@ -30,6 +30,7 @@ namespace dsp56k
 	class AotRuntime;
 	class DebuggerInterface;
 	class DSP;
+	class IExternalBusDevice;
 	
 	using TInstructionFunc = void (DSP::*)(TWord _op);
 	
@@ -89,6 +90,7 @@ namespace dsp56k
 		//
 		Memory&							mem;
 		std::array<IPeripherals* const, 2>	perif;
+		IExternalBusDevice*					m_externalBusDevice = nullptr;
 		
 		TWord							pcCurrentInstruction = 0;
 		TWord							m_opWordB = 0;
@@ -320,6 +322,9 @@ namespace dsp56k
 
 		const Opcodes&	opcodes							() const									{ return m_opcodes; }
 		Disassembler&	disassembler					()											{ return m_disasm; }
+
+		void			setExternalBusDevice			(IExternalBusDevice* _device)					{ m_externalBusDevice = _device; }
+		IExternalBusDevice*	getExternalBusDevice		() const										{ return m_externalBusDevice; }
 
 		const IPeripherals*	getPeriph					(const size_t _index) const						{ return perif[_index]; }
 		IPeripherals*	getPeriph						(const size_t _index)							{ return perif[_index]; }
