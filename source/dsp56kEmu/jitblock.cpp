@@ -213,7 +213,13 @@ namespace dsp56k
 			// always terminate block if loop end has reached
 			if(_loopEnds.find(_pc + numWords) != _loopEnds.end())
 			{
-				assert((_pc + numWords) == static_cast<TWord>(_dsp.regs().la.var + 1));
+				/*	la only describes the loop the DSP is inside right now, while a block is classified by
+					the loop registry, which is what makes the classification position independent. The two
+					can legitimately disagree: ENDDO leaves a loop but execution carries on through the
+					addresses it covered, so a block ending at that address is compiled with the loop already
+					gone. Only check the correspondence when we really are in a loop.
+				*/
+				assert(!(_dsp.regs().sr.var & SR_LF) || (_pc + numWords) == static_cast<TWord>(_dsp.regs().la.var + 1));
 				terminationReason = JitBlockInfo::TerminationReason::LoopEnd;
 
 				/*	A block can end a loop without beginning it, so the opening DO has to be found
