@@ -736,6 +736,59 @@ namespace dsp56k
 		alu_cmp(D, r64(r.get()), true);
 	}
 
+	void JitOps::op_Cmpu_S1S2(TWord op)
+	{
+		const auto D = getFieldValue<Cmpu_S1S2, Field_d>(op);
+		const auto ggg = getFieldValue<Cmpu_S1S2, Field_ggg>(op);
+
+		// ggg only defines 0 (the other accumulator) and 4..7 (x0, y0, x1, y1). Those encodings are
+		// identical to the ones JJJ uses, so the existing decoder covers every valid CMPU operand.
+		assert((ggg == 0 || ggg >= 4) && "invalid ggg value for CMPU");
+
+		// Nothing needs to be flushed first: the batch below clears the dirty flags of every bit CMPU
+		// writes, and CMPU never becomes the last modifying ALU op, so regLastModAlu keeps pointing at
+		// the previous result. E and U therefore stay lazy across the compare and are still evaluated
+		// from that previous result, which is exactly what "unchanged by the instruction" means.
+
+		const auto v = decode_JJJ_read_56(ggg, !D);
+
+		AluReg d(m_block, D, true);		// read only, CMPU does not store a result
+
+		const RegGP s1(m_block);
+		m_asm.mov(r64(s1), r64(v.get()));
+
+		// CMPU compares two 48 bit UNSIGNED operands, the accumulator extension takes no part in it.
+		// Shifting both operands up so that bit 47 lands on bit 63 hands the whole comparison to the
+		// host flags: borrow, zero and sign then all describe the 48 bit result, and the bits below are
+		// zero so they can neither produce a borrow of their own nor disturb the zero test.
+		constexpr auto shift = 16 - g_aluBitOffset;
+
+		m_asm.shl(r64(d), asmjit::Imm(shift));
+		m_asm.shl(r64(s1), asmjit::Imm(shift));
+
+		{
+			// One batch clears C, V, Z and N up front so that each of them can be OR'ed in below. V is
+			// "always cleared" and so needs nothing beyond that clear, and having C pre-cleared is what
+			// lets the carry be folded in with a single adc.
+			CcrBatchUpdate u(*this, static_cast<CCRMask>(CCR_C | CCR_V | CCR_Z | CCR_N));
+
+#ifdef HAVE_ARM64
+			m_asm.subs(r64(d), r64(d), r64(s1));
+			ccr_update_ifNotCarry(CCRB_C);	// on ARM carry means unsigned >=, while it means unsigned < on 56k and intel
+#else
+			m_asm.sub(r64(d), r64(s1));
+			ccr_update_ifCarry(CCRB_C);
+#endif
+
+			m_asm.test_(r64(d));
+			ccr_update_ifZero(CCRB_Z);		// "set if bits 47-0 of the result are 0"
+
+			// back into the ALU domain so that the existing bit 47 helper can be used for N
+			m_asm.shr(r64(d), asmjit::Imm(shift));
+			ccr_n_update_by47(r64(d));
+		}
+	}
+
 	void JitOps::op_Dec(TWord op)
 	{
 		const auto ab = getFieldValue<Dec, Field_d>(op);

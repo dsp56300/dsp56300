@@ -76,6 +76,7 @@ namespace  dsp56k
 		void clr();
 		void cmp();
 		void cmpm();
+		void cmpu();
 		void dec();
 		void div();
 
@@ -169,6 +170,7 @@ namespace  dsp56k
 		// multi-instruction tests
 		void multiInstructionTests();
 		void rep_multi();
+		void cmpu_multi();
 		void rep_div_powerOfTwo();
 		void do_multi();
 		void do_forever();

@@ -133,6 +133,34 @@ namespace dsp56k
 		d = oldD;
 	}
 	// _____________________________________________________________________________
+	// alu_cmpu
+	//
+	void DSP::alu_cmpu( bool ab, const TReg56& _val )
+	{
+		// CMPU compares two 48 bit UNSIGNED operands. The accumulator extension takes no part in the
+		// operation, and a 24 bit source has already been left-aligned and zero-filled by the decoder.
+		// E and U are unchanged by the instruction. Unlike the JIT, which can leave them lazy because it
+		// clears the dirty flags of the bits it writes, updateDirtyCCR() here recomputes E, U AND N in
+		// one go regardless of which of them are actually dirty - so anything left pending would clobber
+		// the N written below. Resolve it now, from the previous instruction's result.
+		updateDirtyCCR();
+
+		const TReg56& d = ab ? reg.b : reg.a;
+
+		constexpr uint64_t mask48 = 0x0000ffffffffffffull;
+
+		const uint64_t s2 = (static_cast<uint64_t>(d.var)    >> g_aluShift) & mask48;
+		const uint64_t s1 = (static_cast<uint64_t>(_val.var) >> g_aluShift) & mask48;
+
+		const uint64_t res = (s2 - s1) & mask48;
+
+		sr_toggle( CCR_Z, res == 0 );
+		sr_toggle( CCRB_N, Bit((res >> 47) & 1) );
+		sr_clear ( CCR_V );			// "always cleared"
+		sr_toggle( CCR_C, s1 > s2 );	// borrow out of bit 47
+	}
+
+	// _____________________________________________________________________________
 	// alu_sub
 	//
 	void DSP::alu_sub( bool ab, const TReg56& _val )
@@ -782,7 +810,12 @@ namespace dsp56k
 	}
 	inline void DSP::op_Cmpu_S1S2(const TWord op)
 	{
-		errNotImplemented("CMPU");
+		const auto D = getFieldValue<Cmpu_S1S2, Field_d>(op);
+		const auto ggg = getFieldValue<Cmpu_S1S2, Field_ggg>(op);
+		// ggg only defines 0 (the other accumulator) and 4..7 (x0, y0, x1, y1). Those encodings are
+		// identical to the ones JJJ uses, so the existing decoder covers every valid CMPU operand.
+		assert((ggg == 0 || ggg >= 4) && "invalid ggg value for CMPU");
+		alu_cmpu(D, decode_JJJ_read_56(ggg, !D));
 	}
 	inline void DSP::op_Dec(const TWord op)
 	{

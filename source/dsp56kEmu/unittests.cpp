@@ -109,6 +109,7 @@ namespace dsp56k
 		clr();
 		cmp();
 		cmpm();
+		cmpu();
 		dec();
 		div();
 		dmac();
@@ -1192,6 +1193,90 @@ namespace dsp56k
 			[&]()
 		{
 			verify(dsp.getSR().var == 0x080098);
+		});
+	}
+
+	void UnitTests::cmpu()
+	{
+		// CMPU compares 48 bit UNSIGNED operands. Identical operands have to report equality - this is
+		// the shape a real firmware tripped over while the instruction was still unimplemented, where
+		// the following BNE was taken even though both accumulators held the same value.
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00dc0000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00dc0000000000)));
+			emit("cmpu a,b");
+		},
+		[&]()
+		{
+			verify(dsp.sr_test(CCR_Z));
+			verify(!dsp.sr_test(CCR_N));
+			verify(!dsp.sr_test(CCR_V));
+			verify(!dsp.sr_test(CCR_C));
+		});
+
+		// "If an accumulator is specified as an operand, the value in the EXP does not affect the
+		// operation" - these two differ only in their extension byte, so they still compare equal.
+		// A signed 56 bit CMP in place of CMPU fails here, because for it the extension is part of
+		// the value.
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xff123456000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00123456000000)));
+			emit("cmpu a,b");
+		},
+		[&]()
+		{
+			verify(dsp.sr_test(CCR_Z));
+			verify(!dsp.sr_test(CCR_C));
+		});
+
+		// Bit 47 of S2 set, S1 small: unsigned, S2 is the larger value, so the compare does not borrow.
+		runTest([&]()
+		{
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00800000000000)));
+			dsp.regs().x.var = 0;
+			dsp.x0(TReg24(0x000001));
+			emit("cmpu x0,b");
+		},
+		[&]()
+		{
+			verify(!dsp.sr_test(CCR_C));
+			verify(!dsp.sr_test(CCR_Z));
+			verify(!dsp.sr_test(CCR_N));	// bit 47 of $7fffff000000 is clear
+		});
+
+		// The borrow in the other direction. N comes from bit 47 of the 48 bit result, so this is the
+		// other case a signed 56 bit CMP gets wrong - it would read the sign from bit 55 and clear N.
+		runTest([&]()
+		{
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
+			dsp.regs().x.var = 0;
+			dsp.x0(TReg24(0x800000));
+			emit("cmpu x0,b");
+		},
+		[&]()
+		{
+			verify(dsp.sr_test(CCR_C));
+			verify(!dsp.sr_test(CCR_Z));
+			verify(dsp.sr_test(CCR_N));	// $800001000000, bit 47 set
+			verify(!dsp.sr_test(CCR_V));
+		});
+
+		// E and U are documented as unchanged, so bits that were already set have to survive.
+		runTest([&]()
+		{
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
+			dsp.regs().x.var = 0;
+			dsp.x0(TReg24(0x000001));
+			dsp.setSR(dsp.getSR().var | CCR_E | CCR_U);
+			emit("cmpu x0,b");
+		},
+		[&]()
+		{
+			verify(dsp.sr_test(CCR_Z));
+			verify(dsp.sr_test(CCR_E));
+			verify(dsp.sr_test(CCR_U));
 		});
 	}
 
@@ -5729,6 +5814,7 @@ namespace dsp56k
 	void UnitTests::multiInstructionTests()
 	{
 		rep_multi();
+		cmpu_multi();
 		rep_div_powerOfTwo();
 		do_multi();
 		callAtVectorAddress();
@@ -5812,6 +5898,51 @@ namespace dsp56k
 			verify(dsp.aluA().var == static_cast<int64_t>(c.expectedAlu));
 			verify((dsp.getSR().var & c.srMask) == (c.expectedSr & c.srMask));
 		}
+	}
+
+	void UnitTests::cmpu_multi()
+	{
+		// E and U are evaluated lazily, so a preceding ALU instruction leaves them pending. CMPU leaves
+		// both unchanged, which means it has to resolve them from THAT instruction and not from its own
+		// compare. Rather than hard coding the expected bits, the reference run executes the add on its
+		// own and the second run appends the compare - the two have to agree on E and U.
+		const auto run = [&](const bool _withCompare, bool& _e, bool& _u)
+		{
+			dsp.resetHW();
+			// after the add the accumulator is $00400000000000, whose bits 47 and 46 differ, so U ends up
+			// CLEAR. The compare that follows produces a zero result, from which U would come out SET -
+			// so if CMPU wrongly became the source for E and U, the two runs disagree.
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.regs().x.var = 0;
+			dsp.x0(TReg24(0x400000));
+
+			TWord pc = 0x100;
+			pc = emitToMemory("jsr $200", pc);
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			pc = 0x200;
+			pc = emitToMemory("add x0,b", pc);
+			if(_withCompare)
+				pc = emitToMemory("cmpu x0,b", pc);
+			emitToMemory("rts", pc);
+
+			dsp.setPC(0x100);
+			execUntil(returnPC);
+
+			// sr_test resolves anything still pending, so these are the final values either way
+			_e = dsp.sr_test(CCR_E) != 0;
+			_u = dsp.sr_test(CCR_U) != 0;
+		};
+
+		bool eAdd = false, uAdd = false;
+		bool eCmpu = false, uCmpu = false;
+
+		run(false, eAdd , uAdd );
+		run(true , eCmpu, uCmpu);
+
+		verify(eAdd == eCmpu);
+		verify(uAdd == uCmpu);
 	}
 
 	void UnitTests::rep_multi()
