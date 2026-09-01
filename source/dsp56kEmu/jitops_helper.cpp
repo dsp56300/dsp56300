@@ -210,9 +210,31 @@ namespace dsp56k
 		// m_pushPCFromReg: a call at a DO loop's end pushes the loop-updated next PC, which
 		// emitLoopEndBeforeBranch() has just computed into the PC register, not the constant
 		// address after the call.
-		if (m_fastInterruptMode != FastInterruptMode::None || m_pushPCFromReg)
+		if (m_pushPCFromReg || m_fastInterruptMode == FastInterruptMode::Static)
 		{
 			pc = m_block.dspRegPool().read(PoolReg::DspPC);
+		}
+		else if (m_fastInterruptMode == FastInterruptMode::Dynamic)
+		{
+			/*	A block below Vba_End is only a fast interrupt if the DSP is actually servicing
+				one, in which case the address to push is the interrupted program's PC and it
+				lives in the register. Dynamic mode exists precisely because a device may also
+				run ordinary code in the vector region, reached by a plain jump or call - and
+				there the return address is the instruction after this one, exactly as anywhere
+				else. Static mode is the device asserting that this cannot happen, so it keeps
+				taking the register unconditionally.
+			*/
+			pc.temp(DspValue::Temp24);
+			m_asm.mov(r32(pc), asmjit::Imm(m_pcCurrentOp + m_opSize));
+		
+			const RegGP processingMode(m_block);
+			getDspProcessingMode(r64(processingMode));
+		
+			const SkipLabel notFastInterrupt(m_asm);
+			m_asm.cmp(processingMode, asmjit::Imm(DSP::ProcessingMode::FastInterrupt));
+			m_asm.jnz(notFastInterrupt);
+		
+			m_asm.mov(r32(pc), r32(m_block.dspRegPool().get(PoolReg::DspPC, true, false)));
 		}
 		else
 		{
