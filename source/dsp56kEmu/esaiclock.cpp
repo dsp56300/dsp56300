@@ -159,8 +159,10 @@ namespace dsp56k
 			if(!m_pctl)
 				return;
 
+			// PCTL field layout, see the DSP56300 family manual figure 6-4: bits 23-20 are PD[3-0],
+			// 19-16 are COD, PEN, PSTP and XTLD, 14-12 are DF[2-0] and 11-0 are MF[11-0].
 			const auto pd = ((m_pctl >> 20) & 15) + 1;
-			const auto df = 1 << ((m_pctl >> 12) & 3);
+			const auto df = 1 << ((m_pctl >> 12) & 7);	// three bits: the LPD divides by 2^0 to 2^7
 			const auto mf = (m_pctl & 0xfff) + 1;
 
 			m_speedHz = static_cast<uint64_t>(m_externalClockFrequency) * static_cast<uint64_t>(mf) / (static_cast<uint64_t>(pd) * static_cast<uint64_t>(df));
