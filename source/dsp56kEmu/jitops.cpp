@@ -1167,6 +1167,20 @@ namespace dsp56k
 		rep_exec(loopcount);
 	}
 
+	void JitOps::op_Rep_ea(TWord op)
+	{
+		DspValue lc(m_block);
+		readMem<Rep_ea>(lc, op);
+		rep_exec(lc);
+	}
+
+	void JitOps::op_Rep_aa(TWord op)
+	{
+		DspValue lc(m_block);
+		readMem<Rep_aa>(lc, op);
+		rep_exec(lc);
+	}
+
 	void JitOps::op_Rep_S(TWord op)
 	{
 		const auto dddddd = getFieldValue<Rep_S,Field_dddddd>(op);

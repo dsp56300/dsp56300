@@ -115,6 +115,7 @@ namespace dsp56k
 		dmac();
 		dmacMultiPrecision();
 		eor();
+		extract();
 		extractu();
 		extractu_co();
 		ifcc();
@@ -147,6 +148,7 @@ namespace dsp56k
 		tcc();
 
 		move();
+		sixteenBitArithmeticMoves();
 		movel();
 		parallel();
 
@@ -194,6 +196,7 @@ namespace dsp56k
 
 		// newly implemented
 		eor_xx();
+		norm();
 		ror_();
 
 		// bit-test jump/branch — peripheral addressing modes
@@ -1614,6 +1617,88 @@ namespace dsp56k
 		});
 	}
 
+	void UnitTests::extract()
+	{
+		runTest([&]()
+		{
+			// width=8, offset=8; the extracted $f4 must sign-extend.
+			dsp.x0(0x008008);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0000000000f400)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
+			emit("extract x0,a,b");
+		}, [&]()
+		{
+			verify(dsp.aluB().var == 0xfffffffffffff4);
+			verify(dsp.sr_test(CCR_N));
+			verify(!dsp.sr_test(CCR_Z));
+		});
+
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000000001200)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
+			emit("extract #>$008008,a,b");
+		}, [&]()
+		{
+			verify(dsp.aluB().var == 0x12);
+			verify(!dsp.sr_test(CCR_N));
+			verify(!dsp.sr_test(CCR_Z));
+		});
+
+		runTest([&]()
+		{
+			// One-bit extraction from the accumulator sign bit must become -1.
+			dsp.x0((1u << 12) | 55u);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x80000000000000)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
+			emit("extract x0,a,b");
+		}, [&]()
+		{
+			verify(dsp.aluB().var == TReg56::bitMask);
+			verify(dsp.sr_test(CCR_N));
+		});
+
+		runTest([&]()
+		{
+			// A zero width produces zero and exercises the JIT's explicit branch.
+			dsp.x0(0);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00123456789abc)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(-1)));
+			emit("extract x0,a,b");
+		}, [&]()
+		{
+			verify(dsp.aluB().var == 0);
+			verify(dsp.sr_test(CCR_Z));
+			verify(!dsp.sr_test(CCR_N));
+		});
+
+		runTest([&]()
+		{
+			// SA mode relocates width to [21:16] and offset to [13:8].
+			dsp.setSR(SR_SA);
+			dsp.x0(0x080800);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xf400)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
+			emit("extract x0,a,b");
+		}, [&]()
+		{
+			verify(dsp.aluB().var == 0xfffffffffffff4);
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
+		});
+
+		runTest([&]()
+		{
+			dsp.setSR(SR_SA);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x1200)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
+			emit("extract #>$080800,a,b");
+		}, [&]()
+		{
+			verify(dsp.aluB().var == 0x12);
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
+		});
+	}
+
 	void UnitTests::extractu()
 	{
 		runTest([&]()
@@ -1696,6 +1781,31 @@ namespace dsp56k
 		{
 			verify(dsp.aluA().var == 0x0000CCDDEEFF);
 		});
+
+		runTest([&]()
+		{
+			dsp.setSR(SR_SA);
+			dsp.x0(0x080800);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xab00)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
+			emit("extractu x0,a,b");
+		}, [&]()
+		{
+			verify(dsp.aluB().var == 0xab);
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
+		});
+
+		runTest([&]()
+		{
+			dsp.setSR(SR_SA);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xcd00)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
+			emit("extractu #>$080800,a,b");
+		}, [&]()
+		{
+			verify(dsp.aluB().var == 0xcd);
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
+		});
 	}
 
 	void UnitTests::extractu_co()
@@ -1774,6 +1884,19 @@ namespace dsp56k
 			[&]()
 		{
 			verify(dsp.a0().var == 0xDDEECC);
+		});
+
+		runTest([&]()
+		{
+			// In SA mode the relocated offset includes the documented +16 bias.
+			dsp.setSR(SR_SA);
+			dsp.x1(0xab);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			emit("insert #>$081000,x1,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0xab0000);
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
 		});
 	}
 
@@ -2907,6 +3030,66 @@ namespace dsp56k
 		{
 			verify(dsp.aluB().var == 0x00112233000000);
 			verify(dsp.sr_test(CCR_Z));
+		});
+	}
+
+	void UnitTests::sixteenBitArithmeticMoves()
+	{
+		runTest([&]()
+		{
+			dsp.setSR(SR_SA);
+			dsp.memory().set(MemArea_Y, 3, 0x001234);
+			emit("move y:$3,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x00123400000000);
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
+		});
+
+		runTest([&]()
+		{
+			dsp.setSR(SR_SA);
+			dsp.memory().set(MemArea_Y, 3, 0x008001);
+			emit("move y:$3,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0xff800100000000);
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
+		});
+
+		runTest([&]()
+		{
+			dsp.setSR(SR_SA);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xff800100000000)));
+			emit("move a,y:$4");
+		}, [&]()
+		{
+			verify(dsp.memory().get(MemArea_Y, 4) == 0xff8001);
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
+		});
+
+		runTest([&]()
+		{
+			dsp.setSR(SR_SA);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00123400000000)));
+			dsp.y0(0x123400);
+			emit("cmp y0,a");
+		}, [&]()
+		{
+			verify(dsp.sr_test(CCR_Z));
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
+		});
+
+		runTest([&]()
+		{
+			dsp.setSR(SR_SA | CCR_Z);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.y0(0x123400);
+			emit("teq y0,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x00123400000000);
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
 		});
 	}
 
@@ -5602,6 +5785,63 @@ namespace dsp56k
 		});
 	}
 
+	void UnitTests::norm()
+	{
+		// No extension, unnormalized, nonzero: shift left and decrement Rn.
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00123456789abc)));
+			dsp.regs().r[3].var = 10;
+			dsp.setSR(CCR_U);
+			emit("norm r3,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x002468acf13578);
+			verify(dsp.regs().r[3].var == 9);
+		});
+
+		// Extension in use: arithmetic shift right and increment Rn.
+		runTest([&]()
+		{
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0x01123456789abc)));
+			dsp.regs().r[4].var = 10;
+			dsp.setSR(CCR_E);
+			emit("norm r4,b");
+		}, [&]()
+		{
+			verify(dsp.aluB().var == 0x00891a2b3c4d5e);
+			verify(dsp.regs().r[4].var == 11);
+		});
+
+		// A normalized operand is a true NOP.
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00400000000000)));
+			dsp.regs().r[5].var = 17;
+			dsp.setSR(0);
+			emit("norm r5,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x00400000000000);
+			verify(dsp.regs().r[5].var == 17);
+			verify(dsp.getSR().var == 0);
+		});
+
+		// Zero also remains unchanged even when U is set.
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.regs().r[6].var = 23;
+			dsp.setSR(static_cast<TWord>(CCR_U | CCR_Z));
+			emit("norm r6,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0);
+			verify(dsp.regs().r[6].var == 23);
+			verify((dsp.getSR().var & (CCR_U | CCR_Z)) == (CCR_U | CCR_Z));
+		});
+	}
+
 	void UnitTests::ror_()
 	{
 		// ror a — rotate right through carry
@@ -5990,6 +6230,24 @@ namespace dsp56k
 		execUntil(0x101);
 
 		verify(dsp.aluA().var == 0x00000007000000);
+
+		// rep x:<$e: repeat count from absolute-short X memory.
+		dsp.resetHW();
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
+		dsp.memory().set(MemArea_X, 0x0e, 3);
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $200", pc);
+		emitToMemory("nop", pc);
+		pc = 0x200;
+		pc = emitToMemory(0x060e20, 0, pc);
+		pc = emitToMemory("add b,a", pc);
+		emitToMemory("rts", pc);
+
+		dsp.setPC(0x100);
+		execUntil(0x101);
+		verify(dsp.aluA().var == 0x00000003000000);
 	}
 
 	void UnitTests::enableDynamicFastInterrupts(const bool _enable)
@@ -6283,6 +6541,51 @@ namespace dsp56k
 		execUntil(0x101);
 
 		verify(dsp.aluA().var == 0x00000003000000);
+
+		// Memory-sourced DO counts must read the value at the effective
+		// address, not use the address itself as the count.
+		dsp.resetHW();
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
+		dsp.memWrite(MemArea_Y, 0x30, 4);
+		dsp.regs().r[6].var = 0x30;
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $200", pc);
+		emitToMemory("nop", pc);
+
+		pc = 0x200;
+		pc = emitToMemory(0x065e40, 0x000203, pc); // do y:(r6)+,>$204
+		pc = emitToMemory("add b,a", pc);
+		pc = emitToMemory("nop", pc);
+		pc = emitToMemory("nop", pc);
+		emitToMemory("rts", pc);
+
+		dsp.setPC(0x100);
+		execUntil(0x101);
+
+		verify(dsp.aluA().var == 0x00000004000000);
+
+		dsp.resetHW();
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
+		dsp.memWrite(MemArea_Y, 0x30, 2);
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $200", pc);
+		emitToMemory("nop", pc);
+
+		pc = 0x200;
+		pc = emitToMemory(0x063040, 0x000203, pc); // do y:>$30,>$204
+		pc = emitToMemory("add b,a", pc);
+		pc = emitToMemory("nop", pc);
+		pc = emitToMemory("nop", pc);
+		emitToMemory("rts", pc);
+
+		dsp.setPC(0x100);
+		execUntil(0x101);
+
+		verify(dsp.aluA().var == 0x00000002000000);
 	}
 
 	/*	JIT only, called from the JitUnittests constructor rather than runAllTests: the

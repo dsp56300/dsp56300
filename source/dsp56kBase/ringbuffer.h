@@ -69,6 +69,28 @@ namespace dsp56k
 			m_readSem.notify();
 		}
 
+		bool try_push_back(const T& _val)
+		{
+			if(!m_writeSem.tryWait())
+				return false;
+
+			m_data[wrapCounter(loadWriteRlx())] = _val;
+			incWriteCount(1);
+			m_readSem.notify();
+			return true;
+		}
+
+		bool try_push_back(T&& _val)
+		{
+			if(!m_writeSem.tryWait())
+				return false;
+
+			m_data[wrapCounter(loadWriteRlx())] = std::move(_val);
+			incWriteCount(1);
+			m_readSem.notify();
+			return true;
+		}
+
 		template<typename TFunc>
 		void emplace_back(const TFunc& _fillEntry)
 		{
@@ -139,6 +161,17 @@ namespace dsp56k
 			m_writeSem.notify();
 
 			return res;
+		}
+
+		bool try_pop_front(T& _result)
+		{
+			if(!m_readSem.tryWait())
+				return false;
+
+			_result = std::move(front());
+			incReadCount(1);
+			m_writeSem.notify();
+			return true;
 		}
 
 		T& operator[](const size_t _i)

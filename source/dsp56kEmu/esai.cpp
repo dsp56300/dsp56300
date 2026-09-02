@@ -206,7 +206,14 @@ namespace dsp56k
 			// Note: cannot cast m_periph directly here because we might be a Y peripheral
 			if(auto* p = dynamic_cast<Peripherals56362*>(m_periph.getDSP().getPeriph(0)))
 				p->getEsaiClock().restartClock();
-			execTX();
+			// An ESAI transmitter using an externally supplied serial clock does
+			// not shift a slot merely because TEM changed.  In that mode the first
+			// transfer occurs on the first external clock/frame boundary.  Calling
+			// execTX here synthesized a transmit interrupt before a board had
+			// supplied any clocks (the VP-9000 bootstrap selects TCKD=0), sending
+			// the DSP through an as-yet-unloaded interrupt vector.
+			if(bittest(m_tccr, M_TCKD))
+				execTX();
 		}
 	}
 

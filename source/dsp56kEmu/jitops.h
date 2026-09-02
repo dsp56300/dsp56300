@@ -148,9 +148,9 @@ namespace dsp56k
 		void op_Enddo(TWord op);
 		void op_Eor_SD(TWord op);
 		void op_Eor_xx(TWord op);
-		void op_Eor_xxxx(TWord op)			{ errNotImplemented(op); }
-		void op_Extract_S1S2(TWord op)		{ errNotImplemented(op); }
-		void op_Extract_CoS2(TWord op)		{ errNotImplemented(op); }
+		void op_Eor_xxxx(TWord op);
+		void op_Extract_S1S2(TWord op);
+		void op_Extract_CoS2(TWord op);
 		void op_Extractu_S1S2(TWord op);
 		void op_Extractu_CoS2(TWord op);
 		template<bool BackupCCR> void op_Ifcc(TWord op);
@@ -244,7 +244,7 @@ namespace dsp56k
 		void op_Mpyri(TWord op)					{ errNotImplemented(op); }
 		void op_Neg(TWord op);
 		void op_Nop(TWord op);
-		void op_Norm(TWord op)					{ errNotImplemented(op); }
+		void op_Norm(TWord op);
 		void op_Normf(TWord op);
 		void op_Not(TWord op);
 		void op_Or_SD(TWord op);
@@ -258,8 +258,8 @@ namespace dsp56k
 		void op_Plockr(TWord op)				{ errNotImplemented(op); }
 		void op_Punlock(TWord op)				{ errNotImplemented(op); }
 		void op_Punlockr(TWord op)				{ errNotImplemented(op); }
-		void op_Rep_ea(TWord op)				{ errNotImplemented(op); }
-		void op_Rep_aa(TWord op)				{ errNotImplemented(op); }
+		void op_Rep_ea(TWord op);
+		void op_Rep_aa(TWord op);
 		void op_Rep_xxx(TWord op);
 		void op_Rep_S(TWord op);
 		void op_Reset(TWord op);
@@ -611,12 +611,14 @@ namespace dsp56k
 		void alu_lsl(TWord ab, const DspValue& _shiftAmount);
 		void alu_lsr(TWord ab, const DspValue& _shiftAmount);
 		void alu_eor(TWord ab, DspValue& _v);
+		void alu_extract(TWord _abDst, TWord _abSrc, DspValue& _widthOffset, bool _signExtend);
 		void alu_mpy(TWord ab, DspValue& _s1, DspValue& _s2, bool _negate, bool _accumulate, bool _s1Unsigned, bool _s2Unsigned, bool _round, uint32_t _s1Shift = 0);
 		void alu_multiply(TWord op);
 		void alu_or(TWord ab, DspValue& _v);
 		void alu_rnd(TWord ab);
 		void alu_rnd(TWord ab, const JitReg64& d, bool _needsSignextend = true);
 		void alu_insert(TWord ab, const DspValue& _src, DspValue& _widthOffset);
+		void decodeBitfieldControl(const DspValue& _control, const JitRegGP& _width, const JitRegGP& _offset);
 		
 		template<Instruction Inst> void bitmod_ea(TWord _op, void(JitOps::*_bitmodFunc)(const DspValue&, TWord));
 		template<Instruction Inst> void bitmod_aa(TWord _op, void(JitOps::*_bitmodFunc)(const DspValue&, TWord));

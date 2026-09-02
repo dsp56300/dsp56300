@@ -1,6 +1,7 @@
 #include "esaiclock.h"
 
 #include <ios>
+#include <limits>
 
 #include "dsp.h"
 #include "dsp56kBase/logging.h"
@@ -16,6 +17,9 @@ namespace dsp56k
 
 	uint32_t EsxiClock::exec() noexcept
 	{
+		if(!m_enabled)
+			return std::numeric_limits<uint32_t>::max();
+
 		const auto diff = *m_dspInstructionCounter - m_lastClock;
 
 		if(diff < m_cyclesPerSample)

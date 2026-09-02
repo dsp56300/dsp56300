@@ -93,6 +93,7 @@ namespace dsp56k
 		IExternalBusDevice*					m_externalBusDevice = nullptr;
 		
 		TWord							pcCurrentInstruction = 0;
+		TWord							m_srCurrentInstruction = 0;
 		TWord							m_opWordB = 0;
 		uint32_t						m_currentOpLen = 0;
 
@@ -179,6 +180,8 @@ namespace dsp56k
 		void 	setPC							( const TReg24& _val )						{ reg.pc = _val; }
 
 		TReg24	getPC							() const									{ return reg.pc; }
+		TWord	getCurrentInstructionPC			() const									{ return pcCurrentInstruction; }
+		TWord	getCurrentInstructionSR			() const									{ return m_srCurrentInstruction; }
 
 		ASMJIT_FORCE_INLINE void exec() noexcept
 		{
@@ -209,6 +212,7 @@ namespace dsp56k
 #endif
 
 			pcCurrentInstruction = reg.pc.toWord();
+			m_srCurrentInstruction = reg.sr.toWord();
 
 			const auto op = fetchPC();
 
@@ -703,6 +707,12 @@ namespace dsp56k
 
 		void limit_transfer( int& _dst, const TReg56& _src )
 		{
+			if(sr_test_noCache(SR_SA))
+			{
+				const auto word = static_cast<uint32_t>(_src.var >> (32 + g_aluShift)) & 0xffff;
+				_dst = static_cast<int>(word | ((word & 0x8000) ? 0xff0000 : 0));
+				return;
+			}
 			// left-aligned the value is already sign-correct in 64 bits, no sign extension needed
 			const int64_t test = _src.var;
 
@@ -762,11 +772,29 @@ namespace dsp56k
 		void	com				( TReg8 _val )						{ byte0(reg.omr,_val); }
 		void	eom				( TReg8 _val )						{ byte1(reg.omr,_val); }
 
-		void	setA			( const TReg24& _src )				{ TReg56 t; convert( t, _src ); setALU(false, t); }
-		void	setB			( const TReg24& _src )				{ TReg56 t; convert( t, _src ); setALU(true, t); }
+		void	setA			( const TReg24& _src )				{ set24ToAlu(false, _src); }
+		void	setB			( const TReg24& _src )				{ set24ToAlu(true, _src); }
 
 		void	setA			( const TReg56& _src )				{ setALU(false, _src); }
 		void	setB			( const TReg56& _src )				{ setALU(true, _src); }
+
+		void set24ToAlu(const bool _ab, const TReg24& _src)
+		{
+			TReg56 value;
+			if(sr_test_noCache(SR_SA))
+			{
+				const auto word = _src.toWord() & 0xffff;
+				// setALU() applies g_aluShift, so construct the unshifted
+				// accumulator representation here: bus bits 15..0 become
+				// accumulator bits 47..32 in 16-bit arithmetic mode.
+				value.var = static_cast<TReg56::MyType>(word) << 32;
+				if(word & 0x8000)
+					value.var |= static_cast<TReg56::MyType>(0xff) << 48;
+			}
+			else
+				convert(value, _src);
+			setALU(_ab, value);
+		}
 
 		void 	set_m			(int which, TWord val);
 		
@@ -830,6 +858,7 @@ namespace dsp56k
 		void	alu_not				(bool ab);
 
 		void	alu_insert			(bool abDst, const TWord src, TWord widthOffset);
+		void	alu_extract		(bool abDst, bool abSrc, TWord widthOffset);
 		void	alu_extractu		(bool abDst, bool abSrc, TWord widthOffset);
 
 		// -- memory

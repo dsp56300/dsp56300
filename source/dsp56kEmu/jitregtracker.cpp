@@ -3,6 +3,8 @@
 #include "jitblock.h"
 #include "jitemitter.h"
 
+#include <stdexcept>
+
 namespace dsp56k
 {
 	DSPRegTemp::DSPRegTemp(JitBlock& _block, const bool _acquire) : m_block(_block)
@@ -313,7 +315,8 @@ namespace dsp56k
 	{
 		if(_weak)
 		{
-			assert(!m_availableRegs.empty() && "no more temporary registers left");
+			if(m_availableRegs.empty())
+				throw std::runtime_error("DSP JIT: no more temporary registers left");
 
 			const auto reg = m_availableRegs.back();
 			m_availableRegs.pop_back();
@@ -321,12 +324,14 @@ namespace dsp56k
 			return reg;
 		}
 
-		assert((!m_availableRegs.empty() || !m_weakRegs.empty()) && "no more temporary registers left");
+		if(m_availableRegs.empty() && m_weakRegs.empty())
+			throw std::runtime_error("DSP JIT: no more temporary registers left");
 
 		if(m_availableRegs.empty() && !m_weakRegs.empty())
 		{
 			m_weakRegs.front()->release();
-			assert(!m_availableRegs.empty());
+			if(m_availableRegs.empty())
+				throw std::runtime_error("DSP JIT: unable to spill a temporary register");
 		}
 		const auto ret = m_availableRegs.back();
 		m_availableRegs.pop_back();

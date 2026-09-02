@@ -138,6 +138,18 @@ namespace dsp56k
 					m_sem.wait();
 			}
 		}
+
+		bool tryWait()
+		{
+			int count = m_count.load(std::memory_order_acquire);
+			while(count > 0)
+			{
+				if(m_count.compare_exchange_weak(count, count - 1,
+					std::memory_order_acquire, std::memory_order_relaxed))
+					return true;
+			}
+			return false;
+		}
 	private:
 		std::atomic<int> m_count;
 		Semaphore m_sem;
@@ -149,5 +161,6 @@ namespace dsp56k
 		explicit NopSemaphore (const uint32_t _count = 0)	{}
 	    void notify(uint32_t _count = 1)					{}
 		void wait(uint32_t _count = 1)						{}
+		bool tryWait()									{return true;}
 	};
 };

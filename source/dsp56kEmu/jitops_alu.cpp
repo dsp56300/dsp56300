@@ -879,61 +879,92 @@ namespace dsp56k
 		alu_eor(ab, r);
 	}
 
-	void JitOps::op_Extractu_S1S2(TWord op)
+	void JitOps::op_Eor_xxxx(TWord op)
 	{
-		const auto sss = getFieldValue<Extractu_S1S2, Field_SSS>(op);
-		const bool abDst = getFieldValue<Extractu_S1S2, Field_D>(op);
-		const bool abSrc = getFieldValue<Extractu_S1S2, Field_s>(op);
+		const auto ab = getFieldValue<Eor_xxxx, Field_d>(op);
 
+		DspValue r(m_block);
+		getOpWordB(r);
+		alu_eor(ab, r);
+	}
+
+	void JitOps::decodeBitfieldControl(const DspValue& _control, const JitRegGP& _width, const JitRegGP& _offset)
+	{
+		_control.copyTo(_width, 24);
+		_control.copyTo(_offset, 24);
+
+		if(m_block.getMode() && m_block.getMode()->testSR(SRB_SA))
+		{
+			m_asm.shr(r32(_width), asmjit::Imm(16));
+			m_asm.shr(r32(_offset), asmjit::Imm(8));
+		}
+		else
+			m_asm.shr(r32(_width), asmjit::Imm(12));
+		m_asm.and_(r32(_width), asmjit::Imm(0x3f));
+		m_asm.and_(r32(_offset), asmjit::Imm(0x3f));
+	}
+
+	void JitOps::alu_extract(const TWord abDst, const TWord abSrc, DspValue& widthOffset, const bool signExtend)
+	{
 		ccr_clear(CCR_C);
 		ccr_clear(CCR_V);
 
-		DspValue widthOffset(m_block);
-		decode_sss_read(widthOffset, sss);
-
-		const ShiftReg width(m_block);
-		m_asm.mov(r32(width), r32(widthOffset));
-		m_asm.shr(r32(width), asmjit::Imm(12));
-		m_asm.and_(r32(width), asmjit::Imm(0x3f));
-
-		RegGP offset(m_block);
-		m_asm.mov(r32(offset), r32(widthOffset));
-		m_asm.and_(r32(offset), asmjit::Imm(0x3f));
-
-		m_asm.neg(width);
-		m_asm.add(width, asmjit::Imm(56));
-
-		const auto& mask = r64(widthOffset);
-		m_asm.mov(mask, asmjit::Imm(g_alu_max_56_u));
-		m_asm.shr(mask, shiftOperand(width.get()));
+		RegGP width(m_block);
+		ShiftReg shift(m_block);
+		decodeBitfieldControl(widthOffset, width.get(), shift.get());
+		widthOffset.release();
 
 		AluReg s(m_block, abSrc, abSrc != abDst);
-
-		// the bit offsets are relative to the 56-bit value, so work right-aligned and convert the result back
 		if constexpr (g_leftAlignedAlu)
 			m_asm.shr(s, asmjit::Imm(8));
+
 #ifdef HAVE_X86_64
 		if (JitEmitter::hasBMI2())
-		{
-			m_asm.shrx(s, s, offset.get());
-		}
+			m_asm.shrx(s, s, shift.get());
 		else
 #endif
-		{
-			const ShiftReg& shift = width;
-			m_asm.mov(shift, offset.get());
 			m_asm.shr(s, shiftOperand(shift.get()));
-		}
 
-		m_asm.and_(s, mask);
+		const auto zeroWidth = m_asm.newLabel();
+		const auto extracted = m_asm.newLabel();
+		m_asm.test_(r32(width));
+		m_asm.jz(zeroWidth);
+		if(signExtend)
+		{
+			// Shift the field's sign bit to the host sign bit and arithmetic-shift it back.
+			m_asm.mov(r32(shift), r32(width));
+			m_asm.neg(r32(shift));
+			m_asm.add(r32(shift), asmjit::Imm(64));
+#ifdef HAVE_ARM64
+			m_asm.shl(s, r64(shift));
+			m_asm.asr(s, s, r64(shift));
+#else
+			m_asm.shl(s, shift.get().r8());
+			m_asm.sar(s, shift.get().r8());
+#endif
+		}
+		else
+		{
+			const RegGP mask(m_block);
+			m_asm.mov(r64(mask), asmjit::Imm(1));
+			m_asm.mov(r32(shift), r32(width));
+			m_asm.shl(r64(mask), shift.get());
+			m_asm.dec(r64(mask));
+			m_asm.and_(s, r64(mask));
+		}
+		m_asm.jmp(extracted);
+		m_asm.bind(zeroWidth);
+		m_asm.xor_(s, s);
+		m_asm.bind(extracted);
+		width.release();
+#ifndef HAVE_X86_64
+		shift.release();
+#endif
 
 		if constexpr (g_leftAlignedAlu)
 			m_asm.shl(s, asmjit::Imm(8));
 
-		offset.release();
-
 		JitReg64 aluD;
-
 		if (abSrc != abDst)
 		{
 			AluRef d(m_block, abDst, false, true);
@@ -941,11 +972,38 @@ namespace dsp56k
 			aluD = d.get();
 		}
 		else
-		{
 			aluD = s.get();
-		}
 
 		ccr_dirty(abDst, aluD, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
+	}
+
+	void JitOps::op_Extract_S1S2(TWord op)
+	{
+		const auto sss = getFieldValue<Extract_S1S2, Field_SSS>(op);
+		const bool abDst = getFieldValue<Extract_S1S2, Field_D>(op);
+		const bool abSrc = getFieldValue<Extract_S1S2, Field_s>(op);
+		DspValue widthOffset(m_block);
+		decode_sss_read(widthOffset, sss);
+		alu_extract(abDst, abSrc, widthOffset, true);
+	}
+
+	void JitOps::op_Extract_CoS2(TWord op)
+	{
+		const bool abDst = getFieldValue<Extract_CoS2, Field_D>(op);
+		const bool abSrc = getFieldValue<Extract_CoS2, Field_s>(op);
+		DspValue widthOffset(m_block, getOpWordB(), DspValue::Immediate24);
+		alu_extract(abDst, abSrc, widthOffset, true);
+	}
+
+	void JitOps::op_Extractu_S1S2(TWord op)
+	{
+		const auto sss = getFieldValue<Extractu_S1S2, Field_SSS>(op);
+		const bool abDst = getFieldValue<Extractu_S1S2, Field_D>(op);
+		const bool abSrc = getFieldValue<Extractu_S1S2, Field_s>(op);
+
+		DspValue widthOffset(m_block);
+		decode_sss_read(widthOffset, sss);
+		alu_extract(abDst, abSrc, widthOffset, false);
 	}
 
 	void JitOps::op_Extractu_CoS2(TWord op)
@@ -953,28 +1011,8 @@ namespace dsp56k
 		const bool abDst = getFieldValue<Extractu_CoS2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extractu_CoS2, Field_s>(op);
 
-		const auto widthOffset = getOpWordB();
-		const auto width = (widthOffset >> 12) & 0x3f;
-		const auto offset = widthOffset & 0x3f;
-
-		const auto mask = g_alu_max_56_u >> (56 - width);
-
-		AluReg d(m_block, abDst, false, abSrc != abDst);
-
-		if (abSrc != abDst)
-			m_dspRegs.getALU(d, abSrc);
-
-		// the offset is relative to the 56-bit value, so fold the alignment into the shift and put the
-		// result back into the ALU representation afterwards
-		m_asm.shr(d, asmjit::Imm(offset + g_aluBitOffset));
-		m_asm.and_(d, asmjit::Imm(mask));
-
-		if constexpr (g_leftAlignedAlu)
-			m_asm.shl(d, asmjit::Imm(8));
-
-		ccr_clear(CCR_C);
-		ccr_clear(CCR_V);
-		ccr_dirty(abDst, d, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
+		DspValue widthOffset(m_block, getOpWordB(), DspValue::Immediate24);
+		alu_extract(abDst, abSrc, widthOffset, false);
 	}
 
 	void JitOps::op_Inc(TWord op)
@@ -1195,6 +1233,46 @@ namespace dsp56k
 		ccr_clear(CCR_V);
 
 		ccr_dirty(D, r, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
+	}
+
+	void JitOps::op_Norm(TWord op)
+	{
+		const auto rrr = getFieldValue<Norm, Field_RRR>(op);
+		const auto D = getFieldValue<Norm, Field_d>(op);
+
+		// NORM branches on the E/U/Z values established before this
+		// instruction.  Flush any lazy flags first, then keep the accumulator
+		// and address register live across all three runtime paths.
+		updateDirtyCCR(static_cast<CCRMask>(CCR_E | CCR_U | CCR_Z));
+		const DspValue sr(m_block, PoolReg::DspSR, true, false);
+		AluRef alu(m_block, D, true, true);
+		alu.get();
+		DspValue r = makeDspValueRegR(m_block, rrr, true, true);
+
+		const auto shiftRight = m_asm.newLabel();
+		const auto done = m_asm.newLabel();
+
+		m_asm.bitTest(r32(sr), CCRB_E);
+		m_asm.jnz(shiftRight);
+		m_asm.bitTest(r32(sr), CCRB_U);
+		m_asm.jz(done);
+		m_asm.bitTest(r32(sr), CCRB_Z);
+		m_asm.jnz(done);
+
+		alu_asl(D, D, nullptr, 1);
+		m_asm.dec(r32(r));
+		m_dspRegs.maskSC1624(r32(r));
+		// Do not defer these flags past the NOP path at the join point.
+		updateDirtyCCR();
+		m_asm.jmp(done);
+
+		m_asm.bind(shiftRight);
+		alu_asr(D, D, nullptr, 1);
+		m_asm.inc(r32(r));
+		m_dspRegs.maskSC1624(r32(r));
+		updateDirtyCCR();
+
+		m_asm.bind(done);
 	}
 
 	void JitOps::op_Nop(TWord op)

@@ -715,6 +715,10 @@ namespace dsp56k
 
 	void JitUnittests::decode_dddddd_read()
 	{
+		// Full-accumulator MOVE results below are the normal 24-bit transfer
+		// contract.  Make the mode explicit now that SA is selected at runtime.
+		dsp.setSR(dsp.getSR().var & ~SR_SA);
+
 		runTest([&]()
 		{
 			m_checks.fill(0);

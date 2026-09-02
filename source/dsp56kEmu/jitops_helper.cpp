@@ -481,13 +481,28 @@ namespace dsp56k
 	{
 		if (!_dst.isRegValid())
 			_dst.temp(DspValue::Temp24);
-		transferSaturation24(r64(_dst.get()), r64(m_dspRegs.getALU(_alu)));
+		if(m_block.getMode() && m_block.getMode()->testSR(SRB_SA))
+		{
+			m_asm.mov(r64(_dst.get()), r64(m_dspRegs.getALU(_alu)));
+			m_asm.sar(r64(_dst.get()), asmjit::Imm(32 + g_aluBitOffset));
+			m_asm.and_(r32(_dst.get()), asmjit::Imm(0x00ffffff));
+		}
+		else
+			transferSaturation24(r64(_dst.get()), r64(m_dspRegs.getALU(_alu)));
 	}
 
 	void JitOps::transfer24ToAlu(TWord _alu, const DspValue& _src) const
 	{
 		AluRef r(m_block, _alu, false, true);
-		_src.convertTo56(r.get());
+		if(m_block.getMode() && m_block.getMode()->testSR(SRB_SA))
+		{
+			_src.copyTo(r32(r.get()), 24);
+			m_block.asm_().shl(r64(r.get()), asmjit::Imm(48));
+			m_block.asm_().sar(r64(r.get()), asmjit::Imm(48));
+			m_block.asm_().shl(r64(r.get()), asmjit::Imm(32 + g_aluBitOffset));
+		}
+		else
+			_src.convertTo56(r.get());
 	}
 
 	void JitOps::callDSPFunc(void(*_func)(DSP*, TWord), const TWord _arg) const

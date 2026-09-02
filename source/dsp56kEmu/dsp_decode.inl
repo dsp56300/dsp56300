@@ -95,8 +95,14 @@ namespace dsp56k
 			case 0x0b:	{ TReg8  temp; convertU(temp,_val); b2(temp); }	return true;	// b2
 			case 0x0c:	{ TReg24 temp; convertU(temp,_val); a1(temp); }	return true;	// a1
 			case 0x0d:	{ TReg24 temp; convertU(temp,_val); b1(temp); }	return true;	// b1
-			case 0x0e:	{ TReg56 t; convert(t,_val); setALU(false,t); }	return true;	// a
-			case 0x0f:	{ TReg56 t; convert(t,_val); setALU(true ,t); }	return true;	// b
+			case 0x0e:
+				if constexpr (std::is_same_v<T, TReg24>) setA(_val);
+				else { TReg56 t; convert(t,_val); setALU(false,t); }
+				return true;	// a
+			case 0x0f:
+				if constexpr (std::is_same_v<T, TReg24>) setB(_val);
+				else { TReg56 t; convert(t,_val); setALU(true,t); }
+				return true;	// b
 			default:
 				if( (_ddddd & 0x18) == 0x10 )											// r0-r7
 				{
@@ -589,6 +595,13 @@ namespace dsp56k
 			return TReg56(static_cast<TReg56::MyType>(0xbadbadbadbadbadb));
 		}
 		res.var <<= g_aluShift;
+		if(sr_test_noCache(SR_SA) && jjj >= 4)
+		{
+			const auto word = static_cast<TWord>(res.var >> (32 + g_aluShift)) & 0xffff;
+			res.var = static_cast<TReg56::MyType>(word) << (32 + g_aluShift);
+			if(word & 0x8000)
+				res.var |= static_cast<TReg56::MyType>(0xff) << (48 + g_aluShift);
+		}
 		return res;
 	}
 
@@ -603,16 +616,19 @@ namespace dsp56k
 			return;
 		case 3: convert(alu, reg.y);
 			return;
-		case 4: convert(alu, x0());
-			return;
-		case 5: convert(alu, y0());
-			return;
-		case 6: convert(alu, x1());
-			return;
-		case 7: convert(alu, y1());
-			return;
+		case 4: convert(alu, x0()); break;
+		case 5: convert(alu, y0()); break;
+		case 6: convert(alu, x1()); break;
+		case 7: convert(alu, y1()); break;
 		default:
 			assert(0 && "unreachable, invalid JJJ value");
+		}
+		if(sr_test_noCache(SR_SA) && jjj >= 4)
+		{
+			const auto word = static_cast<TWord>(alu.var >> 32) & 0xffff;
+			alu.var = static_cast<TReg56::MyType>(word) << 32;
+			if(word & 0x8000)
+				alu.var |= static_cast<TReg56::MyType>(0xff) << 48;
 		}
 	}
 

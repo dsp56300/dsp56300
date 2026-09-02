@@ -83,6 +83,7 @@ namespace  dsp56k
 		void dmac();
 		void dmacMultiPrecision();
 		void eor();
+		void extract();
 		void extractu();
 		void extractu_co();
 		void ifcc();
@@ -115,6 +116,7 @@ namespace  dsp56k
 		void tcc();
 
 		void move();
+		void sixteenBitArithmeticMoves();
 		void movel();
 		void parallel();
 
@@ -160,6 +162,7 @@ namespace  dsp56k
 
 		// newly implemented
 		void eor_xx();
+		void norm();
 		void ror_();
 
 		// bit-test jump/branch — peripheral addressing modes

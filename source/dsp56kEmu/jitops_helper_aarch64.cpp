@@ -144,7 +144,10 @@ namespace dsp56k
 		const RegGP r(m_block);
 		m_block.dspRegPool().movDspReg(r, m_block.dsp().regs().omr);
 		m_asm.bfi(r, _src, asmjit::Imm(8), asmjit::Imm(8));
-		m_block.dspRegPool().movDspReg(m_block.dsp().regs().omr, r);
+		// Store the actual OMR backing field explicitly.  Using the generic
+		// RegType/JitReg overload here selected the wrong SRegs slot on ARM64
+		// under register pressure (PC, eight bytes before OMR).
+		m_block.mem().mov<sizeof(m_block.dsp().regs().omr.var)>(&m_block.dsp().regs().omr.var, r);
 	}
 
 	void JitOps::decSP() const
