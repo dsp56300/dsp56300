@@ -14,6 +14,17 @@ namespace dsp56k
 	void JitOps::XYto56(const JitReg64& _dst, int _xy) const
 	{
 		m_dspRegs.getXY(_dst, _xy);
+		if(isSixteenBitArithmetic())
+		{
+			// X1[23..8] -> bits 47..32, X0[23..8] -> bits 31..16 (FM figure 3-10)
+			const RegGP t(m_block);
+			m_asm.mov(r64(t), _dst);
+			m_asm.and_(r32(t), asmjit::Imm(0xffff00));
+			m_asm.shl(r64(t), asmjit::Imm(8));
+			m_asm.shr(_dst, asmjit::Imm(32));
+			m_asm.shl(_dst, asmjit::Imm(32));
+			m_asm.or_(_dst, r64(t));
+		}
 		signextend48to56(_dst);
 		if constexpr (g_leftAlignedAlu)
 			m_asm.shl(_dst, asmjit::Imm(8));	// the result feeds ALU arithmetic, so match the ALU representation
@@ -948,7 +959,11 @@ namespace dsp56k
 			const RegGP mask(m_block);
 			m_asm.mov(r64(mask), asmjit::Imm(1));
 			m_asm.mov(r32(shift), r32(width));
-			m_asm.shl(r64(mask), shift.get());
+#ifdef HAVE_ARM64
+			m_asm.shl(r64(mask), r64(shift));
+#else
+			m_asm.shl(r64(mask), shift.get().r8());	// x86 shift counts must live in cl
+#endif
 			m_asm.dec(r64(mask));
 			m_asm.and_(s, r64(mask));
 		}
@@ -1249,6 +1264,10 @@ namespace dsp56k
 		alu.get();
 		DspValue r = makeDspValueRegR(m_block, rrr, true, true);
 
+		// NORM leaves the carry bit unchanged (FM 13-146) but the ASL/ASR helpers write it
+		const RegGP savedSR(m_block);
+		m_asm.mov(r32(savedSR), r32(sr));
+
 		const auto shiftRight = m_asm.newLabel();
 		const auto done = m_asm.newLabel();
 
@@ -1260,6 +1279,7 @@ namespace dsp56k
 		m_asm.jnz(done);
 
 		alu_asl(D, D, nullptr, 1);
+		copyBitToCCR(r32(savedSR), CCRB_C, CCRB_C);
 		m_asm.dec(r32(r));
 		m_dspRegs.maskSC1624(r32(r));
 		// Do not defer these flags past the NOP path at the join point.
@@ -1268,6 +1288,7 @@ namespace dsp56k
 
 		m_asm.bind(shiftRight);
 		alu_asr(D, D, nullptr, 1);
+		copyBitToCCR(r32(savedSR), CCRB_C, CCRB_C);
 		m_asm.inc(r32(r));
 		m_dspRegs.maskSC1624(r32(r));
 		updateDirtyCCR();

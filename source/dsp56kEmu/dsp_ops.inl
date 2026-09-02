@@ -412,15 +412,22 @@ namespace dsp56k
 		const bool unnormalized = sr_test_noCache(CCR_U);
 		const bool zero = sr_test_noCache(CCR_Z);
 
+		// NORM leaves the carry bit unchanged (FM 13-146), the shift helpers write it. Rn is 16 bits wide
+		// in Sixteen-bit Compatibility mode.
+		const bool carry = sr_test_noCache(CCR_C) != 0;
+		const int addrMask = sr_test_noCache(SR_SC) ? 0xffff : TReg24::bitMask;
+
 		if(extension)
 		{
 			alu_asr(D, D, 1);
-			reg.r[rrr].var = (reg.r[rrr].var + 1) & TReg24::bitMask;
+			reg.r[rrr].var = (reg.r[rrr].var + 1) & addrMask;
+			sr_toggle(CCR_C, carry);
 		}
 		else if(unnormalized && !zero)
 		{
 			alu_asl(D, D, 1);
-			reg.r[rrr].var = (reg.r[rrr].var - 1) & TReg24::bitMask;
+			reg.r[rrr].var = (reg.r[rrr].var - 1) & addrMask;
+			sr_toggle(CCR_C, carry);
 		}
 	}
 	inline void DSP::op_Normf(const TWord op)

@@ -478,6 +478,16 @@ namespace dsp56k
 		void transferSaturation24(const JitReg64& _dst, const JitReg64& _src);
 		void transferSaturation48(const JitReg64& _dst, const JitReg64& _src);
 
+		// Sixteen-bit Arithmetic mode bus transfers (FM 3.5.1)
+		bool isSixteenBitArithmetic() const;
+		void transferSaturation16(const JitReg64& _dst, const JitReg64& _src);
+		void busToReg16(DspValue& _dst, const DspValue& _src) const;
+		void busToReg16InPlace(DspValue& _value) const;
+		const DspValue& busToRegSA(const DspValue& _src, DspValue& _temp) const;
+		void reg16ToBus(DspValue& _value) const;
+		void sixteenBitLongToAlu(TWord _alu, const DspValue& _x, const DspValue& _y);
+		void aluToSixteenBitLong(TWord _alu, DspValue& _x, DspValue& _y);
+
 		// CCR
 		class CcrBatchUpdate
 		{

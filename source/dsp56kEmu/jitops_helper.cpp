@@ -481,20 +481,103 @@ namespace dsp56k
 	{
 		if (!_dst.isRegValid())
 			_dst.temp(DspValue::Temp24);
-		if(m_block.getMode() && m_block.getMode()->testSR(SRB_SA))
-		{
-			m_asm.mov(r64(_dst.get()), r64(m_dspRegs.getALU(_alu)));
-			m_asm.sar(r64(_dst.get()), asmjit::Imm(32 + g_aluBitOffset));
-			m_asm.and_(r32(_dst.get()), asmjit::Imm(0x00ffffff));
-		}
+		if(isSixteenBitArithmetic())
+			transferSaturation16(r64(_dst.get()), r64(m_dspRegs.getALU(_alu)));
 		else
 			transferSaturation24(r64(_dst.get()), r64(m_dspRegs.getALU(_alu)));
+	}
+
+	bool JitOps::isSixteenBitArithmetic() const
+	{
+		const auto* mode = m_block.getMode();
+		return mode && mode->testSR(SRB_SA);
+	}
+
+	// bus bits 15..0 -> register bits 23..8 (FM table 3-3)
+	void JitOps::busToReg16(DspValue& _dst, const DspValue& _src) const
+	{
+		if(_src.isImmediate())
+		{
+			assert(_src.isImm24());
+			_dst.set(static_cast<TWord>((_src.imm24() & 0xffff) << 8), DspValue::Immediate24);
+			return;
+		}
+		if(!_dst.isRegValid())
+			_dst.temp(DspValue::Temp24);
+		m_asm.mov(r32(_dst), r32(_src.get()));
+		m_asm.shl(r32(_dst), asmjit::Imm(8));
+		m_asm.and_(r32(_dst), asmjit::Imm(0xffff00));
+	}
+
+	// in-place variant for temporaries the caller owns, avoids an additional pool register
+	void JitOps::busToReg16InPlace(DspValue& _value) const
+	{
+		assert(_value.isRegValid() && _value.getBitCount() == 24 && !_value.isImmediate());
+		m_asm.shl(r32(_value), asmjit::Imm(8));
+		m_asm.and_(r32(_value), asmjit::Imm(0xffff00));
+	}
+
+	const DspValue& JitOps::busToRegSA(const DspValue& _src, DspValue& _temp) const
+	{
+		if(!isSixteenBitArithmetic())
+			return _src;
+		busToReg16(_temp, _src);
+		return _temp;
+	}
+
+	// register bits 23..8 -> bus bits 15..0 with zeros above (FM table 3-4)
+	void JitOps::reg16ToBus(DspValue& _value) const
+	{
+		assert(_value.isRegValid() && _value.getBitCount() == 24);
+		m_asm.shr(r32(_value), asmjit::Imm(8));
+		m_asm.and_(r32(_value), asmjit::Imm(0xffff));
+	}
+
+	// X:Y -> full accumulator in 16-bit mode: X[15..0] -> bits 47..32, Y[15..0] -> bits 31..16, EXT sign extended
+	void JitOps::sixteenBitLongToAlu(const TWord _alu, const DspValue& _x, const DspValue& _y)
+	{
+		AluRef r(m_block, _alu, false, true);
+		const RegGP t(m_block);
+
+		m_asm.mov(r64(r), r64(_x.get()));
+		m_asm.shl(r64(r), asmjit::Imm(48));
+		m_asm.sar(r64(r), asmjit::Imm(48));
+		m_asm.shl(r64(r), asmjit::Imm(32 + g_aluBitOffset));
+
+		m_asm.mov(r32(t), r32(_y.get()));
+		m_asm.and_(r32(t), asmjit::Imm(0xffff));
+		m_asm.shl(r64(t), asmjit::Imm(16 + g_aluBitOffset));
+		m_asm.or_(r64(r), r64(t));
+
+		if constexpr (!g_leftAlignedAlu)
+			m_dspRegs.mask56(r);
+	}
+
+	// full accumulator -> X:Y in 16-bit mode: scaled and limited to 32 bits, X gets the 16 MSBs sign extended,
+	// Y the 16 LSBs zero extended. The 48-bit limiter triggers on exactly the same condition (EXT in use).
+	void JitOps::aluToSixteenBitLong(const TWord _alu, DspValue& _x, DspValue& _y)
+	{
+		if(!_x.isRegValid())
+			_x.temp(DspValue::Temp24);
+		if(!_y.isRegValid())
+			_y.temp(DspValue::Temp24);
+
+		transferSaturation48(r64(_y.get()), r64(m_dspRegs.getALU(_alu)));
+
+		m_asm.mov(r64(_x.get()), r64(_y.get()));
+		m_asm.shr(r64(_x.get()), asmjit::Imm(32));
+		m_asm.shl(r64(_x.get()), asmjit::Imm(48));
+		m_asm.sar(r64(_x.get()), asmjit::Imm(48));
+		m_asm.and_(r32(_x.get()), asmjit::Imm(0xffffff));
+
+		m_asm.shr(r64(_y.get()), asmjit::Imm(16));
+		m_asm.and_(r32(_y.get()), asmjit::Imm(0xffff));
 	}
 
 	void JitOps::transfer24ToAlu(TWord _alu, const DspValue& _src) const
 	{
 		AluRef r(m_block, _alu, false, true);
-		if(m_block.getMode() && m_block.getMode()->testSR(SRB_SA))
+		if(isSixteenBitArithmetic())
 		{
 			_src.copyTo(r32(r.get()), 24);
 			m_block.asm_().shl(r64(r.get()), asmjit::Imm(48));

@@ -56,16 +56,17 @@ namespace dsp56k
 		// TODO: can be replaced with the six bit version, numbers are identical anyway
 		switch( _ddddd )
 		{
-		case 0x04:	convert( res, x0() ); 	return res;	// x0
-		case 0x05:	convert( res, x1() ); 	return res;	// x1	
-		case 0x06:	convert( res, y0() ); 	return res;	// y0
-		case 0x07:	convert( res, y1() ); 	return res;	// y1
-		case 0x08:	convert( res, a0() ); 	return res;	// a0
-		case 0x09:	convert( res, b0() ); 	return res;	// b0
+		// bus transfers of the data ALU registers follow the Sixteen-bit Arithmetic mode layout (FM table 3-4)
+		case 0x04:	convert( res, dataRegToBus<T>(x0()) ); 	return res;	// x0
+		case 0x05:	convert( res, dataRegToBus<T>(x1()) ); 	return res;	// x1	
+		case 0x06:	convert( res, dataRegToBus<T>(y0()) ); 	return res;	// y0
+		case 0x07:	convert( res, dataRegToBus<T>(y1()) ); 	return res;	// y1
+		case 0x08:	convert( res, dataRegToBus<T>(a0()) ); 	return res;	// a0
+		case 0x09:	convert( res, dataRegToBus<T>(b0()) ); 	return res;	// b0
 		case 0x0a:	convertS( res, a2() ); 	return res;	// a2
 		case 0x0b:	convertS( res, b2() ); 	return res;	// b2
-		case 0x0c:	convert( res, a1() ); 	return res;	// a1
-		case 0x0d:	convert( res, b1() ); 	return res;	// b1
+		case 0x0c:	convert( res, dataRegToBus<T>(a1()) ); 	return res;	// a1
+		case 0x0d:	convert( res, dataRegToBus<T>(b1()) ); 	return res;	// b1
 		case 0x0e:	return getA<T>();					// a
 		case 0x0f:	return getB<T>();					// b
 		}
@@ -85,16 +86,18 @@ namespace dsp56k
 	{
 		switch( _ddddd )
 		{
-			case 0x04:	x0(_val);										return true;	// x0
-			case 0x05:	x1(_val);										return true;	// x1	
-			case 0x06:	y0(_val);										return true;	// y0
-			case 0x07:	y1(_val);										return true;	// y1
-			case 0x08:	{ TReg24 temp; convertU(temp,_val); a0(temp); }	return true;	// a0
-			case 0x09:	{ TReg24 temp; convertU(temp,_val); b0(temp); }	return true;	// b0
+			// Sixteen-bit Arithmetic mode (FM table 3-3, 3.5.1.3): bus bits 15..0 land in register bits 23..8.
+			// Short immediates keep their fraction placement for X0..Y1 and are integers for A0..B1.
+			case 0x04:	x0(busToDataReg<T>(_val));						return true;	// x0
+			case 0x05:	x1(busToDataReg<T>(_val));						return true;	// x1	
+			case 0x06:	y0(busToDataReg<T>(_val));						return true;	// y0
+			case 0x07:	y1(busToDataReg<T>(_val));						return true;	// y1
+			case 0x08:	{ TReg24 temp; convertU(temp,_val); a0(busToReg(temp)); }	return true;	// a0
+			case 0x09:	{ TReg24 temp; convertU(temp,_val); b0(busToReg(temp)); }	return true;	// b0
 			case 0x0a:	{ TReg8  temp; convertU(temp,_val); a2(temp); }	return true;	// a2
 			case 0x0b:	{ TReg8  temp; convertU(temp,_val); b2(temp); }	return true;	// b2
-			case 0x0c:	{ TReg24 temp; convertU(temp,_val); a1(temp); }	return true;	// a1
-			case 0x0d:	{ TReg24 temp; convertU(temp,_val); b1(temp); }	return true;	// b1
+			case 0x0c:	{ TReg24 temp; convertU(temp,_val); a1(busToReg(temp)); }	return true;	// a1
+			case 0x0d:	{ TReg24 temp; convertU(temp,_val); b1(busToReg(temp)); }	return true;	// b1
 			case 0x0e:
 				if constexpr (std::is_same_v<T, TReg24>) setA(_val);
 				else { TReg56 t; convert(t,_val); setALU(false,t); }
@@ -123,23 +126,23 @@ namespace dsp56k
 		switch( _dddddd & 0x3f )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-		case 0x00:	return x0();
-		case 0x01:	return x1();
-		case 0x02:	return y0();
-		case 0x03:	return y1();
+		case 0x00:	return regToBus(x0());
+		case 0x01:	return regToBus(x1());
+		case 0x02:	return regToBus(y0());
+		case 0x03:	return regToBus(y1());
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	return x0();
-		case 0x05:	return x1();
-		case 0x06:	return y0();
-		case 0x07:	return y1();
+		case 0x04:	return regToBus(x0());
+		case 0x05:	return regToBus(x1());
+		case 0x06:	return regToBus(y0());
+		case 0x07:	return regToBus(y1());
 
 		// 001DDD - 8 accumulators in data ALU
-		case 0x08:	return a0();
-		case 0x09:	return b0();
+		case 0x08:	return regToBus(a0());
+		case 0x09:	return regToBus(b0());
 		case 0x0a:	{ TReg24 res; convertS(res,a2()); return res; }
 		case 0x0b:	{ TReg24 res; convertS(res,b2()); return res; }
-		case 0x0c:	return a1();
-		case 0x0d:	return b1();
+		case 0x0c:	return regToBus(a1());
+		case 0x0d:	return regToBus(b1());
 		case 0x0e:	return getA<TReg24>();
 		case 0x0f:	return getB<TReg24>();
 
@@ -201,18 +204,18 @@ namespace dsp56k
 		switch( _dddddd & 0x3f )
 		{
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	x0(_val);	return;
-		case 0x05:	x1(_val);	return;
-		case 0x06:	y0(_val);	return;
-		case 0x07:	y1(_val);	return;
+		case 0x04:	x0(busToReg(_val));	return;
+		case 0x05:	x1(busToReg(_val));	return;
+		case 0x06:	y0(busToReg(_val));	return;
+		case 0x07:	y1(busToReg(_val));	return;
 
 		// 001DDD - 8 accumulators in data ALU
-		case 0x08:	a0(_val);	return;
-		case 0x09:	b0(_val);	return;
+		case 0x08:	a0(busToReg(_val));	return;
+		case 0x09:	b0(busToReg(_val));	return;
 		case 0x0a:	{ TReg8 temp; convert(temp,_val); a2(temp);	return; }
 		case 0x0b:	{ TReg8 temp; convert(temp,_val); b2(temp);	return; }
-		case 0x0c:	a1(_val);	return;
-		case 0x0d:	b1(_val);	return;
+		case 0x0c:	a1(busToReg(_val));	return;
+		case 0x0d:	b1(busToReg(_val));	return;
 		case 0x0e:	setA(_val);	return;
 		case 0x0f:	setB(_val);	return;
 
@@ -345,8 +348,8 @@ namespace dsp56k
 	{
 		switch(_ee)
 		{
-		case 0:	return x0();
-		case 1:	return x1();
+		case 0:	return regToBus(x0());
+		case 1:	return regToBus(x1());
 		case 2:	return getA<TReg24>();
 		case 3:	return getB<TReg24>();
 		}
@@ -358,8 +361,8 @@ namespace dsp56k
 	{
 		static_assert(ee <= 3, "invalid ee value");
 		
-		if constexpr (ee == 0)	return x0();
-		if constexpr (ee == 1)	return x1();
+		if constexpr (ee == 0)	return regToBus(x0());
+		if constexpr (ee == 1)	return regToBus(x1());
 		if constexpr (ee == 2)	return getA<TReg24>();
 		if constexpr (ee == 3)	return getB<TReg24>();
 		return TReg24(0xbadbad);
@@ -370,8 +373,8 @@ namespace dsp56k
 	{
 		static_assert(ee >= 0 && ee <= 3, "invalid ee value");
 
-		if constexpr (ee == 0)	x0(_value);
-		if constexpr (ee == 1)	x1(_value);
+		if constexpr (ee == 0)	x0(busToReg(_value));
+		if constexpr (ee == 1)	x1(busToReg(_value));
 		if constexpr (ee == 2)	setA(_value);
 		if constexpr (ee == 3)	setB(_value);
 	}
@@ -380,8 +383,8 @@ namespace dsp56k
 	{
 		switch (_ff)
 		{
-		case 0: x0(_value);		return;
-		case 1: x1(_value);		return;
+		case 0: x0(busToReg(_value));		return;
+		case 1: x1(busToReg(_value));		return;
 		case 2: setA(_value);	return;
 		case 3: setB(_value);	return;
 		}
@@ -391,8 +394,8 @@ namespace dsp56k
 	template<TWord ff>
 	TReg24 DSP::decode_ff_read()
 	{
-		if constexpr(ff == 0) return y0();
-		if constexpr(ff == 1) return y1();
+		if constexpr(ff == 0) return regToBus(y0());
+		if constexpr(ff == 1) return regToBus(y1());
 		if constexpr(ff == 2) return getA<TReg24>();
 		if constexpr(ff == 3) return getB<TReg24>();
 		return TReg24(0xbadbad);
@@ -401,8 +404,8 @@ namespace dsp56k
 	template<TWord ff>
 	inline void DSP::decode_ff_write(const TReg24& _value)
 	{
-		if constexpr (ff == 0) y0(_value);
-		if constexpr (ff == 1) y1(_value);
+		if constexpr (ff == 0) y0(busToReg(_value));
+		if constexpr (ff == 1) y1(busToReg(_value));
 		if constexpr (ff == 2) setA(_value);
 		if constexpr (ff == 3) setB(_value);
 	}
@@ -411,8 +414,8 @@ namespace dsp56k
 	{
 		switch (_ff)
 		{
-		case 0: return y0();
-		case 1: return y1();
+		case 0: return regToBus(y0());
+		case 1: return regToBus(y1());
 		case 2: return getA<TReg24>();
 		case 3: return getB<TReg24>();
 		}
@@ -424,8 +427,8 @@ namespace dsp56k
 	{
 		switch (_ff)
 		{
-		case 0: y0(_value);		return;
-		case 1: y1(_value);		return;
+		case 0: y0(busToReg(_value));		return;
+		case 1: y1(busToReg(_value));		return;
 		case 2: setA(_value);	return;
 		case 3: setB(_value);	return;
 		}
@@ -578,9 +581,13 @@ namespace dsp56k
 		case 0:
 		case 1: res = _b ? reg.b : reg.a;
 			return res;
-		case 2: convert(res, reg.x);
+		case 2:
+			if(isSixteenBitArithmetic())	res.var = xyTo56SixteenBit(reg.x);
+			else							convert(res, reg.x);
 			break;
-		case 3: convert(res, reg.y);
+		case 3:
+			if(isSixteenBitArithmetic())	res.var = xyTo56SixteenBit(reg.y);
+			else							convert(res, reg.y);
 			break;
 		case 4: convert(res, x0());
 			break;
@@ -612,9 +619,13 @@ namespace dsp56k
 		case 0:
 		case 1: alu = getALU(_b);
 			return;
-		case 2: convert(alu, reg.x);
+		case 2:
+			if(isSixteenBitArithmetic())	alu.var = xyTo56SixteenBit(reg.x);
+			else							convert(alu, reg.x);
 			return;
-		case 3: convert(alu, reg.y);
+		case 3:
+			if(isSixteenBitArithmetic())	alu.var = xyTo56SixteenBit(reg.y);
+			else							convert(alu, reg.y);
 			return;
 		case 4: convert(alu, x0()); break;
 		case 5: convert(alu, y0()); break;
@@ -636,15 +647,25 @@ namespace dsp56k
 	{
 		switch (_lll)
 		{
-		case 0: convert(x, a1());			convert(y, a0());			return;
-		case 1: convert(x, b1());			convert(y, b0());			return;
-		case 2: convert(x, x1());			convert(y, x0());			return;
-		case 3: convert(x, y1());			convert(y, y0());			return;
+		case 0: convert(x, regToBus(a1()));	convert(y, regToBus(a0()));	return;
+		case 1: convert(x, regToBus(b1()));	convert(y, regToBus(b0()));	return;
+		case 2: convert(x, regToBus(x1()));	convert(y, regToBus(x0()));	return;
+		case 3: convert(x, regToBus(y1()));	convert(y, regToBus(y0()));	return;
 		case 4:
+			if(isSixteenBitArithmetic())
+			{
+				limitTransferSixteenBitLong(reg.a, x, y);
+				return;
+			}
 			x = aluA().var >> 24 & 0xffffff;
 			y = aluA().var & 0xffffff;
 			return;
 		case 5:
+			if(isSixteenBitArithmetic())
+			{
+				limitTransferSixteenBitLong(reg.b, x, y);
+				return;
+			}
 			x = aluB().var >> 24 & 0xffffff;
 			y = aluB().var & 0xffffff;
 			return;
@@ -658,11 +679,18 @@ namespace dsp56k
 	{
 		switch (_lll)
 		{
-		case 0: a1(x);			a0(y);			return;
-		case 1: b1(x);			b0(y);			return;
-		case 2: x1(x);			x0(y);			return;
-		case 3: y1(x);			y0(y);			return;
+		case 0: a1(busToReg(x));	a0(busToReg(y));	return;
+		case 1: b1(busToReg(x));	b0(busToReg(y));	return;
+		case 2: x1(busToReg(x));	x0(busToReg(y));	return;
+		case 3: y1(busToReg(x));	y0(busToReg(y));	return;
 		case 4:
+			if(isSixteenBitArithmetic())
+			{
+				TReg56 t;
+				t.var = sixteenBitLongToAlu(x, y);
+				setALU(false, t);
+				return;
+			}
 			{
 				TReg48 xy;
 				xy.var = static_cast<uint64_t>(x.var) << 24 | y.var;
@@ -670,6 +698,13 @@ namespace dsp56k
 			}
 			return;
 		case 5:
+			if(isSixteenBitArithmetic())
+			{
+				TReg56 t;
+				t.var = sixteenBitLongToAlu(x, y);
+				setALU(true, t);
+				return;
+			}
 			{
 				TReg48 xy;
 				xy.var = static_cast<uint64_t>(x.var) << 24 | y.var;

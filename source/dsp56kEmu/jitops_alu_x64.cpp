@@ -338,16 +338,19 @@ namespace dsp56k
 		if constexpr (g_leftAlignedAlu)
 			m_asm.add(r32(offset), asmjit::Imm(8));
 
+		// x86 variable shift counts must live in cl: the width is consumed, reuse the ShiftReg for the offset
+		m_asm.mov(r32(width), r32(offset));
+
 		// uint64_t s = src & mask;
 		const RegGP s(m_block);
 		m_asm.mov(r32(s), r32(_src.get()));
 		m_asm.and_(r32(s), r32(mask));
 
 		// s <<= offset;
-		m_asm.shl(s.get(), offset.get().r8());
+		m_asm.shl(s.get(), width.get().r8());
 
 		// d &= ~(static_cast<uint64_t>(mask) << offset);
-		m_asm.shl(r64(mask), offset.get().r8());
+		m_asm.shl(r64(mask), width.get().r8());
 		m_asm.not_(r64(mask));
 		m_asm.and_(d.get(), mask);
 
