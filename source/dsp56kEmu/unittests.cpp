@@ -111,6 +111,7 @@ namespace dsp56k
 		cmpm();
 		cmpu();
 		mpyri();
+		merge();
 		unimplementedOpcodeLength();
 		dec();
 		div();
@@ -1364,6 +1365,74 @@ namespace dsp56k
 		// single word instructions must stay at one, or every skip would overshoot
 		verify(opcodes.getOpcodeLength(0x000218) == 1);	// brkcs
 		verify(opcodes.getOpcodeLength(0x000000) == 1);	// nop
+	}
+
+	void UnitTests::merge()
+	{
+		// {S[11-0],D[35-24]} -> D[47-24]. Everything outside that 24 bit field is untouched, which is
+		// what the surrounding $ff bytes below check.
+		runTest([&]()
+		{
+			dsp.regs().x.var = 0;
+			dsp.x1(TReg24(0x000abc));
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xff123456789abc)));
+			emit("merge x1,a");
+		},
+		[&]()
+		{
+			// D[35-24] of $ff123456789abc is $456, so the field becomes $abc456
+			verify(dsp.aluA().var == 0xffabc456789abc);
+			verify(!dsp.sr_test(CCR_Z));
+			verify(dsp.sr_test(CCR_N));		// bit 47 of the result is set
+			verify(!dsp.sr_test(CCR_V));
+		});
+
+		// The source contributes 12 bits, not 8. With only S[7-0] the result would be $0bc456 and
+		// N would be clear, so this is the case that pins the manual's Operation line as the typo.
+		runTest([&]()
+		{
+			dsp.regs().x.var = 0;
+			dsp.x1(TReg24(0x000f00));
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000456000000)));
+			emit("merge x1,a");
+		},
+		[&]()
+		{
+			verify(dsp.aluA().var == 0x00f00456000000);
+			verify(dsp.sr_test(CCR_N));
+		});
+
+		// only bits 11-0 of the source are used, the rest must be ignored
+		runTest([&]()
+		{
+			dsp.regs().x.var = 0;
+			dsp.x1(TReg24(0xfff001));
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000002000000)));
+			emit("merge x1,a");
+		},
+		[&]()
+		{
+			verify(dsp.aluA().var == 0x00001002000000);
+			verify(!dsp.sr_test(CCR_N));
+		});
+
+		// a zero field sets Z, and E/U must survive because MERGE leaves them alone
+		runTest([&]()
+		{
+			dsp.regs().x.var = 0;
+			dsp.x1(TReg24(0));
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000000ffffff)));
+			dsp.setSR(dsp.getSR().var | CCR_E | CCR_U);
+			emit("merge x1,a");
+		},
+		[&]()
+		{
+			verify(dsp.aluA().var == 0x00000000ffffff);	// nothing outside D[47-24] moved
+			verify(dsp.sr_test(CCR_Z));
+			verify(!dsp.sr_test(CCR_N));
+			verify(dsp.sr_test(CCR_E));
+			verify(dsp.sr_test(CCR_U));
+		});
 	}
 
 	void UnitTests::cmpm()

@@ -1176,7 +1176,29 @@ namespace dsp56k
 	}
 	inline void DSP::op_Merge(const TWord op)
 	{
-		errNotImplemented("MERGE");		
+		const auto D   = getFieldValue<Merge, Field_D>(op);
+		const auto sss = getFieldValue<Merge, Field_SSS>(op);
+
+		// {S[11-0],D[35-24]} -> D[47-24], a 24 bit operation that leaves the rest of D alone. The
+		// manual's Operation line says S[7-0], but that only supplies 20 of the 24 bits it then
+		// writes; the Description and the Sixteen-bit note (8 bits of S with 8 of D into a 16 bit
+		// field) both give the half-and-half shape, so S contributes 12.
+		const uint64_t s = decode_sss_read<TWord>(sss) & 0xfff;
+
+		const TReg56 d = getALU(D);
+		const uint64_t merged = (s << 12) | ((d.var >> 24) & 0xfff);
+
+		TReg56 res(d);
+		res.var = (d.var & ~(static_cast<uint64_t>(0xffffff) << 24)) | (merged << 24);
+		setALU(D, res);
+
+		// N, Z and V only. E and U are unchanged, so any pending lazy CCR has to be resolved before
+		// N is written here - see alu_cmpu for the same reasoning.
+		updateDirtyCCR();
+
+		sr_toggle( CCRB_N, Bit((merged >> 23) & 1) );	// bit 47 of the result
+		sr_toggle( CCR_Z, merged == 0 );				// bits 47-24 of the result
+		sr_clear ( CCR_V );								// "always cleared"
 	}
 	inline void DSP::op_Mpy_S1S2D(const TWord op)
 	{

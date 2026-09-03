@@ -203,7 +203,7 @@ namespace dsp56k
 		void op_Macri_xxxx(TWord op)	{ errNotImplemented(op); }
 		void op_Max(TWord op);
 		void op_Maxm(TWord op);
-		void op_Merge(TWord op)			{ errNotImplemented(op); }
+		void op_Merge(TWord op);
 		void op_Move_Nop(TWord op);
 		void op_Move_xx(TWord op);
 		void op_Mover(TWord op);

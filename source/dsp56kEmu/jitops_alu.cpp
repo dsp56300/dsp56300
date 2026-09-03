@@ -1221,6 +1221,54 @@ namespace dsp56k
 		alu_mpy(ab, reg, s, negate, false, false, false, false, g_mpyOperandShift);
 	}
 
+	void JitOps::op_Merge(TWord op)
+	{
+		const auto D   = getFieldValue<Merge, Field_D>(op);
+		const auto sss = getFieldValue<Merge, Field_SSS>(op);
+
+		// {S[11-0],D[35-24]} -> D[47-24], a 24 bit operation that leaves the rest of D alone.
+		DspValue s(m_block);
+		decode_sss_read(s, sss);
+
+		AluRef d(m_block, D);
+
+		const RegGP merged(m_block);
+		m_asm.mov(r32(merged), r32(s));
+		m_asm.and_(r32(merged), asmjit::Imm(0xfff));
+		m_asm.shl(r32(merged), asmjit::Imm(12));
+
+		{
+			const RegGP dMid(m_block);
+			m_asm.mov(r64(dMid), r64(d));
+			m_asm.shr(r64(dMid), asmjit::Imm(24 + g_aluBitOffset));	// ALU bit 24 down to bit 0
+			m_asm.and_(r32(dMid), asmjit::Imm(0xfff));
+			m_asm.or_(r32(merged), r32(dMid));
+		}
+
+		// N, Z and V only. E and U are unchanged, so this must not become the last modifying ALU op -
+		// no ccr_dirty here, exactly as in CMPU.
+		{
+			CcrBatchUpdate u(*this, static_cast<CCRMask>(CCR_N | CCR_Z | CCR_V));
+
+			m_asm.test_(r32(merged));
+			ccr_update_ifZero(CCRB_Z);		// "set if bits 47-24 of the result are 0"
+
+			// write the field into D[47-24] and take N from bit 47 of what landed there
+			{
+				// the complement is materialized directly: aarch64 asmjit has no not_ for general
+				// purpose registers, only the vector form
+				const RegGP mask(m_block);
+				m_asm.mov(r64(mask), asmjit::Imm(~(static_cast<uint64_t>(0xffffff) << (24 + g_aluBitOffset))));
+				m_asm.and_(r64(d), r64(mask));
+			}
+
+			m_asm.shl(r64(merged), asmjit::Imm(24 + g_aluBitOffset));
+			m_asm.or_(r64(d), r64(merged));
+
+			ccr_n_update_by47(r64(d));
+		}
+	}
+
 	void JitOps::op_Mpyri(TWord op)
 	{
 		// MPYRI is MPYI with rounding, which alu_mpy applies itself
