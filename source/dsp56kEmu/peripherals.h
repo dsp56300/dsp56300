@@ -3,6 +3,7 @@
 #include "dma.h"
 #include "esai.h"
 #include "esaiclock.h"
+#include "dax.h"
 #include "shi.h"
 #include "essi.h"
 #include "gpio.h"
@@ -227,6 +228,7 @@ namespace dsp56k
 		Esai& getEsai()					{ return m_esai; }
 		HDI08& getHDI08()				{ return m_hdi08; }
 		SHI& getSHI()					{ return m_shi; }
+		DAX& getDAX()					{ return m_dax; }
 		Dma& getDMA()					{ return m_dma; }
 		EsaiPortC& getPortC()			{ return m_portC; }
 		const Timers& getTimers() const	{ return m_timers; }
@@ -248,6 +250,7 @@ namespace dsp56k
 		Esai m_esai;
 		HDI08 m_hdi08;
 		SHI m_shi;
+		DAX m_dax;
 		Timers m_timers;
 		EsaiPortC m_portC;
 		bool m_disableTimers;

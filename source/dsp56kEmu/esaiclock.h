@@ -57,6 +57,7 @@ namespace dsp56k
 
 		auto getClockSource() const			{ return m_clockSource; }
 		auto getCyclesPerSample() const		{ return m_cyclesPerSample; }
+		auto getExternalClockFrequency() const { return m_externalClockFrequency; }
 		auto getSpeedInHz() const			{ return m_speedHz; }
 		auto getSpeedPercent() const		{ return m_speedPercent; }
 

@@ -383,6 +383,7 @@ namespace dsp56k
 	, m_esai(*this, MemArea_X, &m_dma)
 	, m_hdi08(*this)
 	, m_shi(*this)
+	, m_dax(*this)
 	, m_timers(*this, Vba_TIMER0_Compare)
 	, m_disableTimers(false)
 	{
@@ -446,6 +447,16 @@ namespace dsp56k
 		case SHI::HTX:
 		case SHI::HRX:
 			return m_shi.read(_addr);
+
+		case DAX::XCTR:
+		case DAX::XNADR:
+		case DAX::XADRA:
+		case DAX::XADRB:
+		case DAX::XSTR:
+		case DAX::PDRD:
+		case DAX::PRRD:
+		case DAX::PCRD:
+			return m_dax.read(_addr);
 
 //		case XIO_DSTR:					// DMA status reg
 //			return 0x3f;
@@ -598,6 +609,17 @@ namespace dsp56k
 			m_shi.write(_addr, _val);
 			return;
 
+		case DAX::XCTR:
+		case DAX::XNADR:
+		case DAX::XADRA:
+		case DAX::XADRB:
+		case DAX::XSTR:
+		case DAX::PDRD:
+		case DAX::PRRD:
+		case DAX::PCRD:
+			m_dax.write(_addr, _val);
+			return;
+
 		case Esai::M_SAISR:			m_esai.writestatusRegister(_val);					return;
 		case Esai::M_SAICR:			m_esai.writeControlRegister(_val);					return;
 		case Esai::M_RCR:			m_esai.writeReceiveControlRegister(_val);			return;
@@ -657,8 +679,6 @@ namespace dsp56k
 
 //		case XIO_DSTR: m_dma.setDSTR(_val); return;		// DMA Status Register is read only
 
-		case 0xffffd2:	// DAX audio data register A
-			return;
 		default:
 			break;
 		}
@@ -671,7 +691,13 @@ namespace dsp56k
 
 	uint32_t Peripherals56362::exec() noexcept
 	{
+		// The DAX derives its own frame rate from XCS and these two clocks. ACI is a pin of its own
+		// and a board is free to drive it from something other than EXTAL, so passing EXTAL here is
+		// an assumption, not a fact - a device whose ACI runs at a different frequency has to say so
+		m_dax.setClocks(m_esaiClock.getSpeedInHz(), m_esaiClock.getExternalClockFrequency());
+
 		auto delay = m_esaiClock.exec();
+		delay = std::min(delay, m_dax.exec());
 		delay = std::min(delay, m_hdi08.exec());
 		if (!m_disableTimers)
 			delay = std::min(delay, m_timers.exec());
@@ -684,11 +710,13 @@ namespace dsp56k
 		m_esai.reset();
 		m_hdi08.reset();
 		m_shi.reset();
+		m_dax.reset();
 	}
 
 	void Peripherals56362::setSymbols(Disassembler& _disasm) const
 	{
 		SHI::setSymbols(_disasm);
+		DAX::setSymbols(_disasm);
 
 		auto addIR = [&](TWord _addr, const std::string& _symbol)
 		{
