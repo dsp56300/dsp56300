@@ -4,6 +4,7 @@
 
 #include <iomanip>
 #include <cstring>
+#include <cstdio>
 
 #include "registers.h"
 #include "types.h"
@@ -1411,6 +1412,12 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 
 		const auto str(ss.str());
 		LOG(str);
+
+		// LOG goes to the debugger on Windows, and the assert below is compiled out of release
+		// builds, which would leave an unimplemented instruction silently doing nothing at all.
+		// Say so on stderr regardless of build type, as the JIT side already does.
+		fprintf(stderr, "*** DSP errNotImplemented: %s at PC $%06X\n", _opName, pcCurrentInstruction);
+		fflush(stderr);
 
 		assert(false && "instruction not implemented, see console for details");
 	}
