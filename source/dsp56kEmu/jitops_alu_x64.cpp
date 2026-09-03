@@ -15,12 +15,28 @@ namespace dsp56k
 	void JitOps::XY0to56(const JitReg64& _dst, int _xy) const
 	{
 		const auto src = m_block.dspRegPool().get(_xy ? PoolReg::DspY0 : PoolReg::DspX0, true, false);
-		signed24To56(_dst, r64(src));
+		if(m_block.getMode() && m_block.getMode()->testSR(SRB_SA))
+		{
+			m_asm.mov(_dst, r64(src));
+			m_asm.shl(_dst, asmjit::Imm(40));
+			m_asm.sar(_dst, asmjit::Imm(48));
+			m_asm.shl(_dst, asmjit::Imm(32 + g_aluBitOffset));
+		}
+		else
+			signed24To56(_dst, r64(src));
 	}
 	void JitOps::XY1to56(const JitReg64& _dst, int _xy) const
 	{
 		const auto src = m_block.dspRegPool().get(_xy ? PoolReg::DspY1 : PoolReg::DspX1, true, false);
-		signed24To56(_dst, r64(src));
+		if(m_block.getMode() && m_block.getMode()->testSR(SRB_SA))
+		{
+			m_asm.mov(_dst, r64(src));
+			m_asm.shl(_dst, asmjit::Imm(40));
+			m_asm.sar(_dst, asmjit::Imm(48));
+			m_asm.shl(_dst, asmjit::Imm(32 + g_aluBitOffset));
+		}
+		else
+			signed24To56(_dst, r64(src));
 	}
 
 	void JitOps::alu_abs(const JitRegGP& _r)
@@ -305,11 +321,10 @@ namespace dsp56k
 	{
 		AluRef d(m_block, ab);
 
-		// const auto width = (widthOffset >> 12) & 0x3f;
 		const ShiftReg width(m_block);
-		_widthOffset.copyTo(width.get(), 24);
-		m_asm.shr(width, asmjit::Imm(12));
-		m_asm.and_(width, asmjit::Imm(0x3f));
+		const RegGP offset(m_block);
+		decodeBitfieldControl(_widthOffset, width.get(), offset.get());
+		_widthOffset.release();
 
 		// const auto mask = (1<<width) - 1;
 		const RegGP mask(m_block);
@@ -318,14 +333,13 @@ namespace dsp56k
 		m_asm.dec(mask);
 
 		// const uint64_t offset = widthOffset & 0x3f;
-		const auto& offset = width;
-		m_asm.mov(r32(offset), r32(_widthOffset.get()));
-		m_asm.and_(offset.get(), asmjit::Imm(0x3f));
-
 		// the offset is relative to the 56-bit value; shifting both the value and the mask by the
 		// aligned offset places the field correctly in either representation
 		if constexpr (g_leftAlignedAlu)
-			m_asm.add(offset.get(), asmjit::Imm(8));
+			m_asm.add(r32(offset), asmjit::Imm(8));
+
+		// x86 variable shift counts must live in cl: the width is consumed, reuse the ShiftReg for the offset
+		m_asm.mov(r32(width), r32(offset));
 
 		// uint64_t s = src & mask;
 		const RegGP s(m_block);
@@ -333,10 +347,10 @@ namespace dsp56k
 		m_asm.and_(r32(s), r32(mask));
 
 		// s <<= offset;
-		m_asm.shl(s.get(), offset.get().r8());
+		m_asm.shl(s.get(), width.get().r8());
 
 		// d &= ~(static_cast<uint64_t>(mask) << offset);
-		m_asm.shl(r64(mask), offset.get().r8());
+		m_asm.shl(r64(mask), width.get().r8());
 		m_asm.not_(r64(mask));
 		m_asm.and_(d.get(), mask);
 

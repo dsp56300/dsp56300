@@ -40,6 +40,10 @@ namespace dsp56k
 		mov<ByteSize>(p, _src);
 	}
 
+	// used from other translation units (OMR store in the aarch64 helpers), keep explicit instantiations
+	template void Jitmem::mov<4>(void* _dst, const JitRegGP& _src) const;
+	template void Jitmem::mov<8>(void* _dst, const JitRegGP& _src) const;
+
 	void Jitmem::mov(uint64_t& _dst, const JitRegGP& _src) const
 	{
 		mov<sizeof(_dst)>(&_dst, _src);

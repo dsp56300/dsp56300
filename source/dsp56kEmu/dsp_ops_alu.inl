@@ -902,22 +902,58 @@ namespace dsp56k
 	}
 	inline void DSP::op_Extract_S1S2(const TWord op)
 	{
-		errNotImplemented("EXTRACT");		
+		const auto sss = getFieldValue<Extract_S1S2, Field_SSS>(op);
+		const auto widthOffset = decode_sss_read<TWord>(sss);
+		const bool abDst = getFieldValue<Extract_S1S2, Field_D>(op);
+		const bool abSrc = getFieldValue<Extract_S1S2, Field_s>(op);
+		alu_extract(abDst, abSrc, widthOffset);
 	}
 	inline void DSP::op_Extract_CoS2(const TWord op)
 	{
-		errNotImplemented("EXTRACT");
+		const auto widthOffset = fetchOpWordB();
+		const bool abDst = getFieldValue<Extract_CoS2, Field_D>(op);
+		const bool abSrc = getFieldValue<Extract_CoS2, Field_s>(op);
+		alu_extract(abDst, abSrc, widthOffset);
+	}
+
+	inline void DSP::alu_extract(const bool abDst, const bool abSrc, const TWord widthOffset)
+	{
+		const auto width = (widthOffset >> (sr_test(SR_SA) ? 16 : 12)) & 0x3f;
+		const auto offset = (widthOffset >> (sr_test(SR_SA) ? 8 : 0)) & 0x3f;
+		const TReg56& dSrc = abSrc ? reg.b : reg.a;
+		TReg56& dDst = abDst ? reg.b : reg.a;
+
+		if(!width)
+			dDst.var = 0;
+		else
+		{
+			const auto mask = TReg56::bitMask >> (56 - width);
+			auto field = (static_cast<uint64_t>(dSrc.var) >> (offset + g_aluShift)) & mask;
+			if(field & (uint64_t(1) << (width - 1)))
+				field |= TReg56::bitMask ^ mask;
+			dDst.var = static_cast<TInt64>(field << g_aluShift);
+		}
+
+		sr_clear(CCR_C);
+		sr_clear(CCR_V);
+		sr_z_update(dDst);
+		setCCRDirty(abDst, dDst, CCR_E | CCR_U | CCR_N);
 	}
 
 	inline void DSP::alu_extractu(bool abDst, bool abSrc, const TWord widthOffset)
 	{
-		const auto width = (widthOffset >> 12) & 0x3f;
-		const auto offset = widthOffset & 0x3f;
+		const auto width = (widthOffset >> (sr_test(SR_SA) ? 16 : 12)) & 0x3f;
+		const auto offset = (widthOffset >> (sr_test(SR_SA) ? 8 : 0)) & 0x3f;
 
 		const TReg56& dSrc = abSrc ? reg.b : reg.a;
 		TReg56& dDst = abDst ? reg.b : reg.a;
-		const auto mask = 0xFFFFFFFFFFFFFF >> (56 - width);
-		dDst.var = static_cast<TInt64>(((static_cast<uint64_t>(dSrc.var) >> (offset + g_aluShift)) & mask) << g_aluShift);
+		if(!width)
+			dDst.var = 0;
+		else
+		{
+			const auto mask = TReg56::bitMask >> (56 - width);
+			dDst.var = static_cast<TInt64>(((static_cast<uint64_t>(dSrc.var) >> (offset + g_aluShift)) & mask) << g_aluShift);
+		}
 
 		sr_clear(CCR_C);
 		sr_clear(CCR_V);
@@ -964,12 +1000,12 @@ namespace dsp56k
 
 	inline void DSP::alu_insert(bool abDst, const TWord src, const TWord widthOffset)
 	{
-		const auto width = (widthOffset >> 12) & 0x3f;
+		const auto width = (widthOffset >> (sr_test(SR_SA) ? 16 : 12)) & 0x3f;
 
 		// the offset is relative to the 56-bit value, so it moves up with the ALU
-		const uint64_t offset = (widthOffset & 0x3f) + g_aluShift;
+		const uint64_t offset = ((widthOffset >> (sr_test(SR_SA) ? 8 : 0)) & 0x3f) + g_aluShift;
 
-		const auto mask = (1<<width) - 1;
+		const auto mask = width ? (uint64_t(1) << width) - 1 : 0;
 
 		uint64_t s = src & mask;
 		s <<= offset;

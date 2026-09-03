@@ -205,7 +205,17 @@ namespace dsp56k
 
 			// Note: cannot cast m_periph directly here because we might be a Y peripheral
 			if(auto* p = dynamic_cast<Peripherals56362*>(m_periph.getDSP().getPeriph(0)))
-				p->getEsaiClock().restartClock();
+			{
+				auto& clock = p->getEsaiClock();
+				clock.restartClock();
+				// A board that has not supplied any serial clocks yet (clock disabled by the board
+				// code, see EsxiClock::setEnabled) must not see a synthesized slot transfer: the
+				// transmit interrupt would fire before the firmware has loaded its vectors. Whether
+				// the clock is internal (TCKD=1) or external (TCKD=0) does not matter here, the
+				// emulated clock runs either way.
+				if(!clock.isEnabled())
+					return;
+			}
 			execTX();
 		}
 	}

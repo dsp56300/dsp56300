@@ -93,6 +93,7 @@ namespace dsp56k
 		IExternalBusDevice*					m_externalBusDevice = nullptr;
 		
 		TWord							pcCurrentInstruction = 0;
+		TWord							m_srCurrentInstruction = 0;
 		TWord							m_opWordB = 0;
 		uint32_t						m_currentOpLen = 0;
 
@@ -179,6 +180,8 @@ namespace dsp56k
 		void 	setPC							( const TReg24& _val )						{ reg.pc = _val; }
 
 		TReg24	getPC							() const									{ return reg.pc; }
+		TWord	getCurrentInstructionPC			() const									{ return pcCurrentInstruction; }
+		TWord	getCurrentInstructionSR			() const									{ return m_srCurrentInstruction; }
 
 		ASMJIT_FORCE_INLINE void exec() noexcept
 		{
@@ -209,6 +212,7 @@ namespace dsp56k
 #endif
 
 			pcCurrentInstruction = reg.pc.toWord();
+			m_srCurrentInstruction = reg.sr.toWord();
 
 			const auto op = fetchPC();
 
@@ -706,6 +710,29 @@ namespace dsp56k
 			// left-aligned the value is already sign-correct in 64 bits, no sign extension needed
 			const int64_t test = _src.var;
 
+			if(sr_test_noCache(SR_SA))
+			{
+				// Sixteen-bit Arithmetic mode (FM 3.5.1.2): the scaled and limited 16-bit word goes to bus
+				// bits 15..0, bus bits 23..16 carry its sign extension. Limiting triggers exactly when the
+				// value does not fit into 48 bits, i.e. when EXT is not the sign extension of bit 47.
+				if( test < (-140737488355328ll << g_aluShift) )	// ff 8000 0000 0000
+				{
+					sr_set( CCR_L );
+					_dst = 0xff8000;
+				}
+				else if( test >= (140737488355328ll << g_aluShift) )	// 00 8000 0000 0000
+				{
+					sr_set( CCR_L );
+					_dst = 0x007fff;
+				}
+				else
+				{
+					const auto word = static_cast<uint32_t>(test >> (32 + g_aluShift)) & 0xffff;
+					_dst = static_cast<int>(word | ((word & 0x8000) ? 0xff0000 : 0));
+				}
+				return;
+			}
+
 			if( test < (-140737488355328ll << g_aluShift) )	// ff 800000 000000
 			{
 				sr_set( CCR_L );
@@ -762,11 +789,111 @@ namespace dsp56k
 		void	com				( TReg8 _val )						{ byte0(reg.omr,_val); }
 		void	eom				( TReg8 _val )						{ byte1(reg.omr,_val); }
 
-		void	setA			( const TReg24& _src )				{ TReg56 t; convert( t, _src ); setALU(false, t); }
-		void	setB			( const TReg24& _src )				{ TReg56 t; convert( t, _src ); setALU(true, t); }
+		void	setA			( const TReg24& _src )				{ set24ToAlu(false, _src); }
+		void	setB			( const TReg24& _src )				{ set24ToAlu(true, _src); }
 
 		void	setA			( const TReg56& _src )				{ setALU(false, _src); }
 		void	setB			( const TReg56& _src )				{ setALU(true, _src); }
+
+		bool isSixteenBitArithmetic() const { return sr_test_noCache(SR_SA) != 0; }
+
+		// Sixteen-bit Arithmetic mode data organization (FM figure 3-10): a data ALU register holds its
+		// 16-bit value in bits 23..8 while the buses carry it in bits 15..0.
+		static TWord busToReg16(const TWord _bus)	{ return (_bus & 0xffff) << 8; }
+		static TWord reg16ToBus(const TWord _reg)	{ return (_reg >> 8) & 0xffff; }
+
+		// bus -> register (X0, X1, Y0, Y1, A0, A1, B0, B1), table 3-3
+		TReg24 busToReg(const TReg24& _bus) const
+		{
+			if(isSixteenBitArithmetic())
+				return TReg24(static_cast<int>(busToReg16(_bus.toWord())));
+			return _bus;
+		}
+
+		// register (X0, X1, Y0, Y1, A0, A1, B0, B1) -> bus, table 3-4
+		TReg24 regToBus(const TReg24& _reg) const
+		{
+			if(isSixteenBitArithmetic())
+				return TReg24(static_cast<int>(reg16ToBus(_reg.toWord())));
+			return _reg;
+		}
+
+		// 48-bit ALU operand (X or Y) in 16-bit mode: X1[23..8] -> bits 47..32, X0[23..8] -> bits 31..16
+		static TReg56::MyType xyTo56SixteenBit(const TReg48& _xy)
+		{
+			const auto v = static_cast<uint64_t>(_xy.var);
+			const auto res = (v & 0xffff00000000ull) | ((v & 0xffff00ull) << 8);
+			return static_cast<TReg56::MyType>(res | ((res & 0x800000000000ull) ? 0xff000000000000ull : 0));
+		}
+
+		// template helpers for the ddddd read/write decoders: only 24-bit bus transfers get the 16-bit remap
+		TReg24 busToReg(const TWord _bus) const { return busToReg(TReg24(static_cast<int>(_bus))); }
+
+		template<typename T> TReg24 dataRegToBus(const TReg24& _reg) const
+		{
+			if constexpr (std::is_same_v<T, TReg56>)	return _reg;
+			else										return regToBus(_reg);
+		}
+		template<typename T> auto busToDataReg(const T& _val) const
+		{
+			if constexpr (std::is_same_v<T, TReg8>)		return _val;
+			else										return busToReg(_val);
+		}
+
+		// 48-bit (X:Y) transfer of a full accumulator in 16-bit mode (FM table 3-4): scaled and limited to
+		// 32 bits, X gets the 16 MSBs sign-extended, Y the 16 LSBs zero-extended
+		void limitTransferSixteenBitLong(TReg56 _src, TWord& _x, TWord& _y)
+		{
+			scale(_src);
+			const int64_t test = _src.var;
+			if(test < (-140737488355328ll << g_aluShift))
+			{
+				sr_set(CCR_L);
+				_x = 0xff8000;
+				_y = 0x000000;
+			}
+			else if(test >= (140737488355328ll << g_aluShift))
+			{
+				sr_set(CCR_L);
+				_x = 0x007fff;
+				_y = 0x00ffff;
+			}
+			else
+			{
+				const auto hi = static_cast<TWord>(test >> (32 + g_aluShift)) & 0xffff;
+				_x = hi | ((hi & 0x8000) ? 0xff0000 : 0);
+				_y = static_cast<TWord>(test >> (16 + g_aluShift)) & 0xffff;
+			}
+		}
+
+		// 48-bit (X:Y) transfer into a full accumulator in 16-bit mode (FM table 3-3), unshifted representation
+		static TReg56::MyType sixteenBitLongToAlu(const TReg24& _x, const TReg24& _y)
+		{
+			const auto hi = static_cast<uint64_t>(_x.toWord() & 0xffff);
+			const auto lo = static_cast<uint64_t>(_y.toWord() & 0xffff);
+			auto res = (hi << 32) | (lo << 16);
+			if(hi & 0x8000)
+				res |= 0xff000000000000ull;
+			return static_cast<TReg56::MyType>(res);
+		}
+
+		void set24ToAlu(const bool _ab, const TReg24& _src)
+		{
+			TReg56 value;
+			if(sr_test_noCache(SR_SA))
+			{
+				const auto word = _src.toWord() & 0xffff;
+				// setALU() applies g_aluShift, so construct the unshifted
+				// accumulator representation here: bus bits 15..0 become
+				// accumulator bits 47..32 in 16-bit arithmetic mode.
+				value.var = static_cast<TReg56::MyType>(word) << 32;
+				if(word & 0x8000)
+					value.var |= static_cast<TReg56::MyType>(0xff) << 48;
+			}
+			else
+				convert(value, _src);
+			setALU(_ab, value);
+		}
 
 		void 	set_m			(int which, TWord val);
 		
@@ -830,6 +957,7 @@ namespace dsp56k
 		void	alu_not				(bool ab);
 
 		void	alu_insert			(bool abDst, const TWord src, TWord widthOffset);
+		void	alu_extract		(bool abDst, bool abSrc, TWord widthOffset);
 		void	alu_extractu		(bool abDst, bool abSrc, TWord widthOffset);
 
 		// -- memory

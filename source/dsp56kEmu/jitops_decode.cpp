@@ -8,22 +8,24 @@ namespace dsp56k
 	void JitOps::decode_dddddd_read(DspValue& _dst, const TWord _dddddd)
 	{
 		const auto i = _dddddd & 0x3f;
+		// Sixteen-bit Arithmetic mode: data ALU registers put bits 23..8 on bus bits 15..0 (FM table 3-4)
+		const bool sa = isSixteenBitArithmetic();
 		switch( i )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-		case 0x00:	getXY0(_dst, 0, false);	break;
-		case 0x01:	getXY1(_dst, 0, false);	break;
-		case 0x02:	getXY0(_dst, 1, false);	break;
-		case 0x03:	getXY1(_dst, 1, false);	break;
+		case 0x00:	getXY0(_dst, 0, false);	if(sa) reg16ToBus(_dst);	break;
+		case 0x01:	getXY1(_dst, 0, false);	if(sa) reg16ToBus(_dst);	break;
+		case 0x02:	getXY0(_dst, 1, false);	if(sa) reg16ToBus(_dst);	break;
+		case 0x03:	getXY1(_dst, 1, false);	if(sa) reg16ToBus(_dst);	break;
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	getXY0(_dst, 0, false);	break;
-		case 0x05:	getXY1(_dst, 0, false);	break;
-		case 0x06:	getXY0(_dst, 1, false);	break;
-		case 0x07:	getXY1(_dst, 1, false);	break;
+		case 0x04:	getXY0(_dst, 0, false);	if(sa) reg16ToBus(_dst);	break;
+		case 0x05:	getXY1(_dst, 0, false);	if(sa) reg16ToBus(_dst);	break;
+		case 0x06:	getXY0(_dst, 1, false);	if(sa) reg16ToBus(_dst);	break;
+		case 0x07:	getXY1(_dst, 1, false);	if(sa) reg16ToBus(_dst);	break;
 
 		// 001DDD - 8 accumulators in data ALU
-		case 0x08:	getALU0(_dst, 0);	break;
-		case 0x09:	getALU0(_dst, 1);	break;
+		case 0x08:	getALU0(_dst, 0);	if(sa) reg16ToBus(_dst);	break;
+		case 0x09:	getALU0(_dst, 1);	if(sa) reg16ToBus(_dst);	break;
 		case 0x0a:
 		case 0x0b:
 			{
@@ -31,8 +33,8 @@ namespace dsp56k
 				getALU2signed(_dst, aluIndex);
 			}
 			break;
-		case 0x0c:	getALU1(_dst, 0);	break;
-		case 0x0d:	getALU1(_dst, 1);	break;
+		case 0x0c:	getALU1(_dst, 0);	if(sa) reg16ToBus(_dst);	break;
+		case 0x0d:	getALU1(_dst, 1);	if(sa) reg16ToBus(_dst);	break;
 		case 0x0e:	transferAluTo24(_dst, 0);	break;
 		case 0x0f:	transferAluTo24(_dst, 1);	break;
 
@@ -113,27 +115,43 @@ namespace dsp56k
 			return _s;
 		};
 
+		// Sixteen-bit Arithmetic mode (FM table 3-3, 3.5.1.3): bus bits 15..0 land in register bits 23..8.
+		// Short immediates keep their fraction placement for X0..Y1 and are integers for A0..B1.
+		const bool sa = isSixteenBitArithmetic();
+		DspValue saTemp(m_block, false, true);	// scratch register, this path is register-pressure critical
+		const auto busToReg = [&](const DspValue& _s) -> const DspValue&
+		{
+			if(!sa)
+				return _s;
+			busToReg16(saTemp, _s);
+			return saTemp;
+		};
+		const auto busToRegXY = [&](const DspValue& _s) -> const DspValue&
+		{
+			return _sourceIs8Bit ? _s : busToReg(_s);
+		};
+
 		const auto i = _dddddd & 0x3f;
 		switch( i )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-		case 0x00:	setXY0(0, signedFraction(_src));	break;
-		case 0x01:	setXY1(0, signedFraction(_src));	break;
-		case 0x02:	setXY0(1, signedFraction(_src));	break;
-		case 0x03:	setXY1(1, signedFraction(_src));	break;
+		case 0x00:	setXY0(0, busToRegXY(signedFraction(_src)));	break;
+		case 0x01:	setXY1(0, busToRegXY(signedFraction(_src)));	break;
+		case 0x02:	setXY0(1, busToRegXY(signedFraction(_src)));	break;
+		case 0x03:	setXY1(1, busToRegXY(signedFraction(_src)));	break;
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	setXY0(0, signedFraction(_src));	break;
-		case 0x05:	setXY1(0, signedFraction(_src));	break;
-		case 0x06:	setXY0(1, signedFraction(_src));	break;
-		case 0x07:	setXY1(1, signedFraction(_src));	break;
+		case 0x04:	setXY0(0, busToRegXY(signedFraction(_src)));	break;
+		case 0x05:	setXY1(0, busToRegXY(signedFraction(_src)));	break;
+		case 0x06:	setXY0(1, busToRegXY(signedFraction(_src)));	break;
+		case 0x07:	setXY1(1, busToRegXY(signedFraction(_src)));	break;
 
 		// 001DDD - 8 accumulators in data ALU
-		case 0x08:	setALU0(0, unsigned24(_src));	break;
-		case 0x09:	setALU0(1, unsigned24(_src));	break;
+		case 0x08:	setALU0(0, busToReg(unsigned24(_src)));	break;
+		case 0x09:	setALU0(1, busToReg(unsigned24(_src)));	break;
 		case 0x0a:	setALU2(0, unsigned24(_src));	break;
 		case 0x0b:	setALU2(1, unsigned24(_src));	break;
-		case 0x0c:	setALU1(0, unsigned24(_src));	break;
-		case 0x0d:	setALU1(1, unsigned24(_src));	break;
+		case 0x0c:	setALU1(0, busToReg(unsigned24(_src)));	break;
+		case 0x0d:	setALU1(1, busToReg(unsigned24(_src)));	break;
 		case 0x0e:	transfer24ToAlu(0, signedFraction(_src));	break;	
 		case 0x0f:	transfer24ToAlu(1, signedFraction(_src));	break;
 
@@ -206,18 +224,26 @@ namespace dsp56k
 			return makeRef(_reg);
 		};
 
+		// no direct references in Sixteen-bit Arithmetic mode either, bus transfers of these need the 16-bit remap
+		auto makeRefNonSA = [&](const PoolReg _reg) -> DspValue
+		{
+			if(isSixteenBitArithmetic())
+				return DspValue(m_block);
+			return makeRef(_reg);
+		};
+
 		switch( i )
 		{
 		// 0000DD - 4 registers in data ALU - NOT DOCUMENTED but the motorola disasm claims it works, for example for the lua instruction
-		case 0x00:	return makeRef(PoolReg::DspX0);
-		case 0x01:	return makeRef(PoolReg::DspX1);
-		case 0x02:	return makeRef(PoolReg::DspY0);
-		case 0x03:	return makeRef(PoolReg::DspY1);
+		case 0x00:	return makeRefNonSA(PoolReg::DspX0);
+		case 0x01:	return makeRefNonSA(PoolReg::DspX1);
+		case 0x02:	return makeRefNonSA(PoolReg::DspY0);
+		case 0x03:	return makeRefNonSA(PoolReg::DspY1);
 		// 0001DD - 4 registers in data ALU
-		case 0x04:	return makeRef(PoolReg::DspX0);
-		case 0x05:	return makeRef(PoolReg::DspX1);
-		case 0x06:	return makeRef(PoolReg::DspY0);
-		case 0x07:	return makeRef(PoolReg::DspY1);
+		case 0x04:	return makeRefNonSA(PoolReg::DspX0);
+		case 0x05:	return makeRefNonSA(PoolReg::DspX1);
+		case 0x06:	return makeRefNonSA(PoolReg::DspY0);
+		case 0x07:	return makeRefNonSA(PoolReg::DspY1);
 
 		// 001DDD - 8 accumulators in data ALU
 		case 0x08:
@@ -334,10 +360,11 @@ namespace dsp56k
 	
 	void JitOps::decode_ee_read(DspValue& _dst, const TWord _ee)
 	{
+		const bool sa = isSixteenBitArithmetic();
 		switch (_ee)
 		{
-		case 0: getX0(_dst, false); break;
-		case 1: getX1(_dst, false); break;
+		case 0: getX0(_dst, false); if(sa) reg16ToBus(_dst); break;
+		case 1: getX1(_dst, false); if(sa) reg16ToBus(_dst); break;
 		case 2: transferAluTo24(_dst, 0); break;
 		case 3: transferAluTo24(_dst, 1); break;
 		default: assert(0 && "invalid ee value");
@@ -346,10 +373,11 @@ namespace dsp56k
 
 	void JitOps::decode_ee_write(const TWord _ee, const DspValue& _value)
 	{
+		DspValue saTemp(m_block, false, true);	// scratch register, parallel moves are register-pressure critical
 		switch (_ee)
 		{
-		case 0: setXY0(0, _value); return;
-		case 1: setXY1(0, _value); return;
+		case 0: setXY0(0, busToRegSA(_value, saTemp)); return;
+		case 1: setXY1(0, busToRegSA(_value, saTemp)); return;
 		case 2: transfer24ToAlu(0, _value);	return;
 		case 3: transfer24ToAlu(1, _value);	return;
 		}
@@ -358,6 +386,8 @@ namespace dsp56k
 
 	DspValue JitOps::decode_ee_ref(const TWord _ee, bool _read, bool _write)
 	{
+		if(isSixteenBitArithmetic())
+			return DspValue(getBlock());	// bus transfers need the 16-bit remap
 		switch (_ee)
 		{
 		case 0: return DspValue(getBlock(), PoolReg::DspX0, _read, _write);
@@ -368,10 +398,11 @@ namespace dsp56k
 
 	void JitOps::decode_ff_read(DspValue& _dst, TWord _ff)
 	{
+		const bool sa = isSixteenBitArithmetic();
 		switch (_ff)
 		{
-		case 0: getY0(_dst, false); break;
-		case 1: getY1(_dst, false); break;
+		case 0: getY0(_dst, false); if(sa) reg16ToBus(_dst); break;
+		case 1: getY1(_dst, false); if(sa) reg16ToBus(_dst); break;
 		case 2: transferAluTo24(_dst, 0); break;
 		case 3: transferAluTo24(_dst, 1); break;
 		default:
@@ -382,10 +413,11 @@ namespace dsp56k
 
 	void JitOps::decode_ff_write(const TWord _ff, const DspValue& _value)
 	{
+		DspValue saTemp(m_block, false, true);	// scratch register, parallel moves are register-pressure critical
 		switch (_ff)
 		{
-		case 0: setXY0(1, _value); break;
-		case 1: setXY1(1, _value); break;
+		case 0: setXY0(1, busToRegSA(_value, saTemp)); break;
+		case 1: setXY1(1, busToRegSA(_value, saTemp)); break;
 		case 2: transfer24ToAlu(0, _value); break;
 		case 3: transfer24ToAlu(1, _value); break;
 		default: assert(false && "invalid ff value"); break;
@@ -394,6 +426,8 @@ namespace dsp56k
 
 	DspValue JitOps::decode_ff_ref(const TWord _ff, bool _read, bool _write)
 	{
+		if(isSixteenBitArithmetic())
+			return DspValue(getBlock());	// bus transfers need the 16-bit remap
 		switch (_ff)
 		{
 		case 0: return DspValue(getBlock(), PoolReg::DspY0, _read, _write);
@@ -584,6 +618,9 @@ namespace dsp56k
 		x.temp(DspValue::Temp24);
 		y.temp(DspValue::Temp24);
 
+		// Sixteen-bit Arithmetic mode (FM table 3-4)
+		const bool sa = isSixteenBitArithmetic();
+
 		switch (_lll)
 		{
 		case 0:												// A10
@@ -596,16 +633,28 @@ namespace dsp56k
 				m_asm.ubfx(r64(y), r64(a), asmjit::Imm(0 + g_aluBitOffset), asmjit::Imm(24));
 #else
 				m_dspRegs.getALU(r64(y), alu);
+				if constexpr (g_leftAlignedAlu)
+					m_asm.shr(r64(y), asmjit::Imm(g_aluBitOffset));	// right-align, A1/A0 are then at bits 47..24 / 23..0
 				m_asm.ror(r64(x), r64(y), 24);
 				m_asm.and_(r32(x), asmjit::Imm(0xffffff));
 				m_asm.and_(r32(y), asmjit::Imm(0xffffff));
 #endif
+				if(sa)
+				{
+					reg16ToBus(x);
+					reg16ToBus(y);
+				}
 			}
 			break;
 		case 4:												// A
 		case 5:												// B
 			{
 				const auto alu = _lll - 4;
+				if(sa)
+				{
+					aluToSixteenBitLong(alu, x, y);
+					break;
+				}
 				transferSaturation48(r64(y), r64(m_dspRegs.getALU(alu)));
 //				m_asm.mov(r64(y), r64(m_dspRegs.getALU(alu)));
 #ifdef HAVE_ARM64
@@ -625,6 +674,11 @@ namespace dsp56k
 
 				m_block.dspRegPool().getXY0(r32(y), xy);
 				m_block.dspRegPool().getXY1(r32(x), xy);
+				if(sa)
+				{
+					reg16ToBus(x);
+					reg16ToBus(y);
+				}
 			}
 			break;
 		case 6:												// AB
@@ -643,6 +697,15 @@ namespace dsp56k
 
 	void JitOps::decode_LLL_write(TWord _lll, DspValue&& x, DspValue&& y)
 	{
+		// Sixteen-bit Arithmetic mode (FM table 3-3). x and y are temporaries owned by the caller (the
+		// direct register references are disabled in this mode), remap them in place to save registers.
+		const bool sa = isSixteenBitArithmetic();
+		if(sa && _lll < 4)
+		{
+			busToReg16InPlace(x);
+			busToReg16InPlace(y);
+		}
+
 		switch (_lll)
 		{
 		case 0:												// A10
@@ -654,11 +717,13 @@ namespace dsp56k
 				m_asm.bfi(r64(r), r64(x), asmjit::Imm(24 + g_aluBitOffset), asmjit::Imm(24));
 				m_asm.bfi(r64(r), r64(y), asmjit::Imm(0 + g_aluBitOffset), asmjit::Imm(24));
 #else
-				m_asm.shr(r, asmjit::Imm(48));	// clear 48 LSBs
+				m_asm.shr(r, asmjit::Imm(48 + g_aluBitOffset));	// keep EXT only
 				m_asm.shl(r, asmjit::Imm(24));
 				m_asm.or_(r, r64(x.get()));
 				m_asm.shl(r, asmjit::Imm(24));
 				m_asm.or_(r, r64(y.get()));
+				if constexpr (g_leftAlignedAlu)
+					m_asm.shl(r, asmjit::Imm(g_aluBitOffset));		// back to the ALU representation
 #endif
 			}
 			break;
@@ -666,6 +731,12 @@ namespace dsp56k
 		case 5:												// B
 			{
 				const auto alu = _lll & 3;
+
+				if(sa)
+				{
+					sixteenBitLongToAlu(alu, x, y);
+					break;
+				}
 
 				AluRef r(m_block, alu, false, true);
 
@@ -714,6 +785,8 @@ namespace dsp56k
 
 	std::pair<DspValue, DspValue> JitOps::decode_LLL_ref(const TWord _lll, const bool _read, const bool _write) const
 	{
+		if(isSixteenBitArithmetic())
+			return {DspValue(m_block), DspValue(m_block)};	// bus transfers need the 16-bit remap
 		switch(_lll)
 		{
 		case 2:		return {DspValue(m_block, DspX1, _read, _write), DspValue(m_block, DspX0, _read, _write)};

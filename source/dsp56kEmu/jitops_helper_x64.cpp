@@ -273,6 +273,61 @@ namespace dsp56k
 			m_asm.and_(r32(_dst), asmjit::Imm(0x00ffffff));
 		}
 	}
+	void JitOps::transferSaturation16(const JitReg64& _dst, const JitReg64& _src)
+	{
+		// Sixteen-bit Arithmetic mode (FM 3.5.1.2): scaling, limiting to 16 bits, the limited word on bus
+		// bits 15..0 with its sign extension on bits 23..16
+		const auto* mode = m_block.getMode();
+
+		if(_dst != _src)
+			m_asm.mov(r64(_dst), r64(_src));
+
+		if(mode)
+		{
+			int shift = 32 + g_aluBitOffset;
+			if(mode->testSR(SRB_S1))
+				--shift;
+			if(mode->testSR(SRB_S0))
+				++shift;
+			m_asm.sar(_dst, asmjit::Imm(shift));
+		}
+		else
+		{
+			const ShiftReg s0s1(m_block);
+
+			sr_getBitValue(s0s1, SRB_S1);
+			m_asm.shl(_dst, s0s1.get().r8());
+
+			sr_getBitValue(s0s1, SRB_S0);
+			m_asm.sar(_dst, s0s1.get().r8());
+
+			m_asm.sar(_dst, asmjit::Imm(32 + g_aluBitOffset));
+		}
+
+		{
+			const RegGP tester(m_block);
+			m_asm.mov(r32(tester), r32(_dst));
+
+			{
+				const RegScratch minmax(m_block);
+
+				// lower limit
+				m_asm.mov(r32(minmax), 0xffff8000);
+				m_asm.cmp(r32(tester), r32(minmax));
+				m_asm.cmovl(r32(_dst), r32(minmax));
+
+				// upper limit
+				m_asm.not_(r32(minmax)); // = 0x00007fff
+				m_asm.cmp(r32(tester), r32(minmax));
+				m_asm.cmovg(r32(_dst), r32(minmax));
+			}
+
+			m_asm.cmp(r32(tester), r32(_dst));
+			ccr_update_ifNotZero(CCRB_L);
+			m_asm.and_(r32(_dst), asmjit::Imm(0x00ffffff));
+		}
+	}
+
 	void JitOps::transferSaturation48(const JitReg64& _dst, const JitReg64& _src)
 	{
 		// scaling

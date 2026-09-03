@@ -1,4 +1,5 @@
 #include "jitops.h"
+#include "jitdspmode.h"
 
 #include "jitops_move.inl"
 
@@ -558,6 +559,14 @@ namespace dsp56k
 
 	void JitOps::copy24ToDDDDDD(const TWord _dddddd, const bool _usePooledTemp, const std::function<void(DspValue&)>& _readCallback, bool _readReg)
 	{
+		const auto registerIndex = _dddddd & 0x3f;
+		if(registerIndex == 0x0e || registerIndex == 0x0f)
+		{
+			DspValue source(m_block, _usePooledTemp);
+			_readCallback(source);
+			transfer24ToAlu(registerIndex - 0x0e, source);
+			return;
+		}
 		DspValue writeRef = decode_dddddd_ref(_dddddd, _readReg, true);
 
 		if(writeRef.isRegValid() && writeRef.getBitCount() == 56)
