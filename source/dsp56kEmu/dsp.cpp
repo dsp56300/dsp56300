@@ -1419,6 +1419,13 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 		fprintf(stderr, "*** DSP errNotImplemented: %s at PC $%06X\n", _opName, pcCurrentInstruction);
 		fflush(stderr);
 
+		// A two word instruction leaves its extension word unconsumed: the dispatcher advanced PC by
+		// one and only the missing implementation would have fetched the second word. Without this
+		// the PC lands ON the immediate and executes it as an instruction - one observed case decoded
+		// as a MOVEP into a peripheral - so skipping the whole instruction is the least wrong thing
+		// we can do in a release build, where the assert below is gone.
+		setPC(pcCurrentInstruction + m_opcodes.getOpcodeLength(memRead(MemArea_P, pcCurrentInstruction)));
+
 		assert(false && "instruction not implemented, see console for details");
 	}
 

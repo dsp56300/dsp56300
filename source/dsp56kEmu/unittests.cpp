@@ -111,6 +111,7 @@ namespace dsp56k
 		cmpm();
 		cmpu();
 		mpyri();
+		unimplementedOpcodeLength();
 		dec();
 		div();
 		dmac();
@@ -1343,6 +1344,26 @@ namespace dsp56k
 		const auto negMpyri = run("mpyri -#$654321,x0,a");
 		const auto negMpyi  = run("mpyi -#$654321,x0,a");
 		verify(negMpyri != negMpyi);
+	}
+
+	void UnitTests::unimplementedOpcodeLength()
+	{
+		// errNotImplemented skips the whole instruction rather than a single word, so that the
+		// extension word of an unimplemented two word instruction is not executed as an instruction of
+		// its own. The skip itself cannot be exercised here - it asserts in a debug build - so this
+		// pins the length lookup that it depends on.
+		const auto& opcodes = dsp.opcodes();
+
+		// EXTRACT #CO,S2,D, the case that was observed executing its own immediate as a MOVEP
+		verify(opcodes.getOpcodeLength(0x0c1800) == 2);
+
+		// MPYRI and MPYI both carry a 24 bit immediate extension word
+		verify(opcodes.getOpcodeLength(0x0141c1) == 2);
+		verify(opcodes.getOpcodeLength(0x0141c0) == 2);
+
+		// single word instructions must stay at one, or every skip would overshoot
+		verify(opcodes.getOpcodeLength(0x000218) == 1);	// brkcs
+		verify(opcodes.getOpcodeLength(0x000000) == 1);	// nop
 	}
 
 	void UnitTests::cmpm()

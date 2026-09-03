@@ -432,6 +432,11 @@ namespace dsp56k
 		// triaged from a log without a debugger attached.
 		fprintf(stderr, "*** JIT errNotImplemented: opcode=$%06X\n", op);
 		fflush(stderr);
+
+		// The block advances by m_opSize, which stays 1 unless the implementation fetches the
+		// extension word. For an unimplemented two word instruction that leaves the immediate to be
+		// compiled as the next instruction, so skip the real length instead.
+		m_opSize = m_opcodes.getOpcodeLength(op);
 		assert(0 && "instruction not implemented");
 	}
 
