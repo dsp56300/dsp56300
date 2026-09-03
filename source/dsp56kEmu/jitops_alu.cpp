@@ -1226,6 +1226,52 @@ namespace dsp56k
 		const auto D   = getFieldValue<Merge, Field_D>(op);
 		const auto sss = getFieldValue<Merge, Field_SSS>(op);
 
+		// Sixteen-bit Arithmetic mode halves the operation: bits 15-8 of the source join bits 39-32 of
+		// the destination and the 16 bit result goes to bits 47-32. Writing an accumulator in SA mode
+		// also clears the least significant byte of each half (manual 3.4 note 2, and the reference
+		// simulator agrees: merge x1,a with x1=$abcdef a=$ff112233445566 gives $ffcd2200445500).
+		// The block is compiled for a known mode, so this is decided once at emit time.
+		if(isSixteenBitArithmetic())
+		{
+			DspValue s(m_block);
+			decode_sss_read(s, sss);
+
+			AluRef d(m_block, D);
+
+			const RegGP merged(m_block);
+			m_asm.mov(r32(merged), r32(s));
+			m_asm.shr(r32(merged), asmjit::Imm(8));
+			m_asm.and_(r32(merged), asmjit::Imm(0xff));
+			m_asm.shl(r32(merged), asmjit::Imm(8));
+
+			{
+				const RegGP dMid(m_block);
+				m_asm.mov(r64(dMid), r64(d));
+				m_asm.shr(r64(dMid), asmjit::Imm(32 + g_aluBitOffset));
+				m_asm.and_(r32(dMid), asmjit::Imm(0xff));
+				m_asm.or_(r32(merged), r32(dMid));
+			}
+
+			{
+				CcrBatchUpdate u(*this, static_cast<CCRMask>(CCR_N | CCR_Z | CCR_V));
+
+				m_asm.test_(r32(merged));
+				ccr_update_ifZero(CCRB_Z);
+
+				{
+					const RegGP mask(m_block);
+					m_asm.mov(r64(mask), asmjit::Imm(~((static_cast<uint64_t>(0xffff) << (32 + g_aluBitOffset)) | (static_cast<uint64_t>(0xff) << (24 + g_aluBitOffset)) | (static_cast<uint64_t>(0xff) << g_aluBitOffset))));
+					m_asm.and_(r64(d), r64(mask));
+				}
+
+				m_asm.shl(r64(merged), asmjit::Imm(32 + g_aluBitOffset));
+				m_asm.or_(r64(d), r64(merged));
+
+				ccr_n_update_by47(r64(d));
+			}
+			return;
+		}
+
 		// {S[11-0],D[35-24]} -> D[47-24], a 24 bit operation that leaves the rest of D alone.
 		DspValue s(m_block);
 		decode_sss_read(s, sss);

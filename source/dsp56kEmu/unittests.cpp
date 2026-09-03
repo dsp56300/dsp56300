@@ -161,6 +161,7 @@ namespace dsp56k
 
 		move();
 		sixteenBitArithmeticMoves();
+		mergeSixteenBit();
 		movel();
 		parallel();
 
@@ -1441,6 +1442,43 @@ namespace dsp56k
 			verify(!dsp.sr_test(CCR_N));
 			verify(dsp.sr_test(CCR_E));
 			verify(dsp.sr_test(CCR_U));
+		});
+	}
+
+	void UnitTests::mergeSixteenBit()
+	{
+		// MERGE in Sixteen-bit Arithmetic mode: bits 15-8 of the source join bits 39-32 of the
+		// destination and the 16 bit result lands in bits 47-32 (manual 3.4, MERGE note 2). Writing an
+		// accumulator in SA mode additionally clears the least significant byte of each half, which the
+		// manual warns about in section 3.4 note 2. Both parts measured on the reference simulator.
+		runTest([&]()
+		{
+			dsp.regs().x.var = 0;
+			dsp.x1(TReg24(0xabcdef));
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xff112233445566)));
+			dsp.setSR(0xc20300);		// SA on
+			emit("merge x1,a");
+		},
+		[&]()
+		{
+			// $cd from x1 bits 15-8, $22 from a bits 39-32, and the two low bytes cleared
+			verify(dsp.aluA().var == 0xffcd2200445500);
+			verify(!dsp.sr_test(CCR_Z));
+			verify(dsp.sr_test(CCR_N));		// bit 47 of the result is set
+			dsp.setSR(dsp.getSR().var & ~SR_SA);
+		});
+
+		// the same instruction outside SA mode is the 24 bit form, unchanged
+		runTest([&]()
+		{
+			dsp.regs().x.var = 0;
+			dsp.x1(TReg24(0xabcdef));
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xff112233445566)));
+			emit("merge x1,a");
+		},
+		[&]()
+		{
+			verify(dsp.aluA().var == 0xffdef233445566);
 		});
 	}
 

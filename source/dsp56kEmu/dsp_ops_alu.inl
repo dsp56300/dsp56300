@@ -1183,21 +1183,38 @@ namespace dsp56k
 		// manual's Operation line says S[7-0], but that only supplies 20 of the 24 bits it then
 		// writes; the Description and the Sixteen-bit note (8 bits of S with 8 of D into a 16 bit
 		// field) both give the half-and-half shape, so S contributes 12.
-		const uint64_t s = decode_sss_read<TWord>(sss) & 0xfff;
-
 		const TReg56 d = getALU(D);
-		const uint64_t merged = (s << 12) | ((d.var >> 24) & 0xfff);
+		const uint64_t src = decode_sss_read<TWord>(sss);
 
 		TReg56 res(d);
-		res.var = (d.var & ~(static_cast<uint64_t>(0xffffff) << 24)) | (merged << 24);
+		uint64_t merged;
+
+		if(isSixteenBitArithmetic())
+		{
+			// Sixteen-bit Arithmetic mode halves everything: bits 15-8 of the source join bits 39-32 of
+			// the destination and the 16 bit result goes to bits 47-32. Writing an accumulator in SA
+			// mode also clears the least significant byte of each half - the manual warns about exactly
+			// this in section 3.4 note 2, and the reference simulator does it:
+			//   merge x1,a  x1=$abcdef a=$ff112233445566 -> $ffcd2200445500
+			merged = (((src >> 8) & 0xff) << 8) | ((d.var >> 32) & 0xff);
+			res.var = (d.var & ~(static_cast<uint64_t>(0xffff) << 32)) | (merged << 32);
+			res.var &= ~((static_cast<uint64_t>(0xff) << 24) | static_cast<uint64_t>(0xff));
+		}
+		else
+		{
+			merged = ((src & 0xfff) << 12) | ((d.var >> 24) & 0xfff);
+			res.var = (d.var & ~(static_cast<uint64_t>(0xffffff) << 24)) | (merged << 24);
+		}
+
 		setALU(D, res);
 
 		// N, Z and V only. E and U are unchanged, so any pending lazy CCR has to be resolved before
 		// N is written here - see alu_cmpu for the same reasoning.
 		updateDirtyCCR();
 
-		sr_toggle( CCRB_N, Bit((merged >> 23) & 1) );	// bit 47 of the result
-		sr_toggle( CCR_Z, merged == 0 );				// bits 47-24 of the result
+		const auto msb = isSixteenBitArithmetic() ? 15 : 23;
+		sr_toggle( CCRB_N, Bit((merged >> msb) & 1) );	// bit 47 of the result
+		sr_toggle( CCR_Z, merged == 0 );
 		sr_clear ( CCR_V );								// "always cleared"
 	}
 	inline void DSP::op_Mpy_S1S2D(const TWord op)

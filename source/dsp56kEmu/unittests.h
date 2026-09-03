@@ -131,6 +131,7 @@ namespace  dsp56k
 
 		void move();
 		void sixteenBitArithmeticMoves();
+		void mergeSixteenBit();
 		void movel();
 		void parallel();
 
