@@ -911,6 +911,17 @@ namespace dsp56k
 		m_dspRegs.setPC(_absAddr);
 	}
 
+#ifndef NDEBUG
+	void callDSPFastInterruptViolation(DSP*, const TWord _pc)
+	{
+		LOG("A JSR at " << HEX(_pc) << " below Vba_End escalated to a long interrupt outside interrupt "
+			"servicing. The device has dynamicFastInterrupts disabled, which declares that no ordinary "
+			"code lives in the vector region - this JSR breaks that promise. LF, SA and the scaling bits "
+			"are being cleared with no RTI to restore them, and the damage will surface far from here.");
+		assert(false && "ordinary code in the vector region with dynamicFastInterrupts disabled");
+	}
+#endif
+
 	void JitOps::jsr(const DspValue& _absAddr)
 	{
 		pushPCSR();
@@ -931,6 +942,27 @@ namespace dsp56k
 				m_asm.cmp(processingMode, DSP::ProcessingMode::FastInterrupt);
 				m_asm.jnz(skip);
 			}
+
+#ifndef NDEBUG
+			// Static mode reaches here on the address alone, because the device has declared that no
+			// ordinary code lives below Vba_End. That declaration is what makes skipping the runtime
+			// check safe, so it is worth catching a device that breaks it: hardware only performs this
+			// escalation for a JSR the interrupt controller inserted, never for ordinary code that
+			// merely lives at a vector address (measured on the reference simulator with VBA relocated
+			// so the vectors sit at an addressable location). Debug builds only - in release this stays
+			// exactly as costly as it was, which is the whole point of the Static path.
+			else if(m_fastInterruptMode == FastInterruptMode::Static)
+			{
+				const SkipLabel ok(m_asm);
+				{
+					const RegGP processingMode(m_block);
+					getDspProcessingMode(r64(processingMode));
+					m_asm.cmp(processingMode, DSP::ProcessingMode::FastInterrupt);
+					m_asm.jz(ok);
+				}
+				callDSPFunc(&callDSPFastInterruptViolation, m_pcCurrentOp);
+			}
+#endif
 
 			// the interrupt control cycle clears the loop flags too, FV as well as LF. On arm64 the
 			// masks stay split one bit at a time, the same reason the others already are
