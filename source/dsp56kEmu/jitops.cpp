@@ -743,6 +743,27 @@ namespace dsp56k
 		do_end();
 	}
 
+	void JitOps::op_BRKcc(TWord op)
+	{
+		// Exit the current DO loop early:
+		//   LA + 1 -> PC; SSL(LF,FV) -> SR; SP-1 -> SP; SSH -> LA; SSL -> LC; SP-1 -> SP
+		checkCondition<BRKcc>(op, [&]()
+		{
+			// LA has to be read here, before do_end() restores it from the stack
+			{
+				DspValue la(m_block);
+				m_dspRegs.getLA(la);
+
+				DspValue pc(m_block, PoolReg::DspPC, false, true);
+				m_asm.mov(r32(pc), r32(la));
+				m_asm.add(r32(pc), asmjit::Imm(1));
+			}
+
+			// do_end() restores LF and FV together here, which is what BRKcc wants
+			do_end();
+		}, true);
+	}
+
 	template<bool BackupCCR> void JitOps::op_Ifcc(const TWord op)
 	{
 		// preload all registers that the alu op needs to ensure nothing is loaded/unloaded within the if block

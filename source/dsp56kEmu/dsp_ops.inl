@@ -123,7 +123,20 @@ namespace dsp56k
 
 	inline void DSP::op_BRKcc(const TWord op)
 	{
-		errNotImplemented("BRKcc");
+		if( !checkCondition<BRKcc>(op) )
+			return;
+
+		// Exit the current DO loop early. The manual gives this as
+		//   LA + 1 -> PC; SSL(LF,FV) -> SR; SP-1 -> SP; SSH -> LA; SSL -> LC; SP-1 -> SP
+		// PC has to be taken from the CURRENT LA, before do_end() restores LA from the stack.
+		setPC(reg.la.var + 1);
+
+		// BRKcc restores the DO FOREVER flag as well as the loop flag, where ENDDO restores only
+		// LF - so this bit cannot move into do_end(), which ENDDO shares. ssl() does not pop, so
+		// it still refers to the same stack entry do_end() reads LF from.
+		sr_toggle( SR_FV, (ssl().var & SR_FV) != 0 );
+
+		do_end();
 	}
 
 	inline void DSP::op_Bset_ea(const TWord op)

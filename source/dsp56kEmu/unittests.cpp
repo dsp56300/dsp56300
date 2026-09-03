@@ -110,6 +110,7 @@ namespace dsp56k
 		cmp();
 		cmpm();
 		cmpu();
+		mpyri();
 		dec();
 		div();
 		dmac();
@@ -1278,6 +1279,67 @@ namespace dsp56k
 			verify(dsp.sr_test(CCR_E));
 			verify(dsp.sr_test(CCR_U));
 		});
+	}
+
+	void UnitTests::mpyri()
+	{
+		// MPYRI is MPYI plus the rounding step. Rather than hand computing the rounded product, the
+		// reference runs MPYI followed by an explicit RND and the two have to agree - and MPYRI has to
+		// DIFFER from a bare MPYI, otherwise the test would also pass if the rounding never happened.
+		const auto run = [&](const char* _code)
+		{
+			dsp.resetHW();
+			dsp.regs().x.var = 0;
+			dsp.x0(TReg24(0x123456));
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+
+			TWord pc = 0x100;
+			pc = emitToMemory("jsr $200", pc);
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			pc = 0x200;
+			pc = emitToMemory(_code, pc);
+			emitToMemory("rts", pc);
+
+			dsp.setPC(0x100);
+			execUntil(returnPC);
+			return dsp.aluA().var;
+		};
+
+		const auto mpyiThenRnd = [&]()
+		{
+			dsp.resetHW();
+			dsp.regs().x.var = 0;
+			dsp.x0(TReg24(0x123456));
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+
+			TWord pc = 0x100;
+			pc = emitToMemory("jsr $200", pc);
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			pc = 0x200;
+			pc = emitToMemory("mpyi #$654321,x0,a", pc);
+			pc = emitToMemory("rnd a", pc);
+			emitToMemory("rts", pc);
+
+			dsp.setPC(0x100);
+			execUntil(returnPC);
+			return dsp.aluA().var;
+		};
+
+		const auto resultMpyri = run("mpyri #$654321,x0,a");
+		const auto resultMpyi  = run("mpyi #$654321,x0,a");
+		const auto resultRef   = mpyiThenRnd();
+
+		verify(resultMpyri == resultRef);	// MPYRI == MPYI + RND
+		verify(resultMpyri != resultMpyi);	// and the rounding actually changed something
+
+		// the negated form has to round too
+		const auto negMpyri = run("mpyri -#$654321,x0,a");
+		const auto negMpyi  = run("mpyi -#$654321,x0,a");
+		verify(negMpyri != negMpyi);
 	}
 
 	void UnitTests::cmpm()
@@ -5815,6 +5877,7 @@ namespace dsp56k
 	{
 		rep_multi();
 		cmpu_multi();
+		brkcc_multi();
 		rep_div_powerOfTwo();
 		do_multi();
 		callAtVectorAddress();
@@ -5943,6 +6006,48 @@ namespace dsp56k
 
 		verify(eAdd == eCmpu);
 		verify(uAdd == uCmpu);
+	}
+
+	void UnitTests::brkcc_multi()
+	{
+		// BRKcc exits the current DO loop early: LA+1 -> PC, then LF/FV, LA and LC come back off the
+		// stack. The compare sits BEFORE the add so that the add's own effect on the CCR cannot
+		// change the condition from one iteration to the next.
+		//
+		// carry set   -> break on the first check, the body never runs, a stays 0
+		// carry clear -> no break, the body runs all five times, a ends at 5
+		//
+		// An unimplemented BRKcc is a no-op, so it would produce 5 in BOTH cases.
+		const auto run = [&](const bool _carry)
+		{
+			dsp.resetHW();
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
+
+			TWord pc = 0x100;
+			pc = emitToMemory("jsr $200", pc);
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			pc = 0x200;
+			pc = emitToMemory("do #$5,>$204", pc);	// $200/$201, loop end at $203
+			pc = emitToMemory("brkcs", pc);			// $202
+			pc = emitToMemory("add b,a", pc);		// $203, last instruction of the loop
+			emitToMemory("rts", pc);				// $204, after the loop
+
+			dsp.setPC(0x100);
+			dsp.sr_toggle(CCR_C, _carry);
+			execUntil(returnPC);
+
+			return dsp.aluA().var;
+		};
+
+		verify(run(true) == 0);							// broke out before the first add
+		verify(run(false) == 0x00000005000000);		// ran to completion
+
+		// Reaching the rts at all means the loop stack was unwound correctly - execUntil would have
+		// thrown on a stale entry - and the loop flag must not still be set afterwards.
+		verify(!dsp.sr_test(SR_LF));
 	}
 
 	void UnitTests::rep_multi()

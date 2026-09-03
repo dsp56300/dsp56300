@@ -1168,6 +1168,22 @@ namespace dsp56k
 		alu_mpy(ab, reg, s, negate, false, false, false, false, g_mpyOperandShift);
 	}
 
+	void JitOps::op_Mpyri(TWord op)
+	{
+		// MPYRI is MPYI with rounding, which alu_mpy applies itself
+		const bool	ab = getFieldValue<Mpyri, Field_d>(op);
+		const bool	negate = getFieldValue<Mpyri, Field_k>(op);
+		const TWord qq = getFieldValue<Mpyri, Field_qq>(op);
+
+		DspValue s(m_block);
+		getOpWordB(s);
+
+		DspValue reg(m_block);
+		decode_qq_read(reg, qq, true, g_mpyOperandShift);
+
+		alu_mpy(ab, reg, s, negate, false, false, false, true, g_mpyOperandShift);
+	}
+
 	void JitOps::op_Maci_xxxx(TWord op)
 	{
 		const bool	ab = getFieldValue<Maci_xxxx, Field_d>(op);

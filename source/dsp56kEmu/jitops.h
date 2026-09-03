@@ -90,7 +90,7 @@ namespace dsp56k
 		void op_Brclr_pp(TWord op);
 		void op_Brclr_qq(TWord op);
 		void op_Brclr_S(TWord op);
-		void op_BRKcc(TWord op)			{ errNotImplemented(op); }
+		void op_BRKcc(TWord op);
 		void op_Brset_ea(TWord op);
 		void op_Brset_aa(TWord op);
 		void op_Brset_pp(TWord op);
@@ -241,7 +241,7 @@ namespace dsp56k
 		template<Instruction Inst, bool Accumulate> void op_Mpy_su(TWord op);
 		void op_Mpyi(TWord op);
 		void op_Mpyr_S1S2D(TWord op)			{ alu_multiply(op); }
-		void op_Mpyri(TWord op)					{ errNotImplemented(op); }
+		void op_Mpyri(TWord op);
 		void op_Neg(TWord op);
 		void op_Nop(TWord op);
 		void op_Norm(TWord op)					{ errNotImplemented(op); }
