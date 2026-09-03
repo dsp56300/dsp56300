@@ -152,8 +152,8 @@ namespace dsp56k
 		case 0x0b:	setALU2(1, unsigned24(_src));	break;
 		case 0x0c:	setALU1(0, busToReg(unsigned24(_src)));	break;
 		case 0x0d:	setALU1(1, busToReg(unsigned24(_src)));	break;
-		case 0x0e:	transfer24ToAlu(0, signedFraction(_src));	break;	
-		case 0x0f:	transfer24ToAlu(1, signedFraction(_src));	break;
+		case 0x0e:	transfer24ToAlu(0, signedFraction(_src), _sourceIs8Bit);	break;	
+		case 0x0f:	transfer24ToAlu(1, signedFraction(_src), _sourceIs8Bit);	break;
 
 		// 010TTT - 8 address registers in AGU
 		case 0x10:	m_dspRegs.setR(0, unsigned24(_src)); break;

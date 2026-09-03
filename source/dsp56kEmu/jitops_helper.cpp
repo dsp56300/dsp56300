@@ -574,10 +574,15 @@ namespace dsp56k
 		m_asm.and_(r32(_y.get()), asmjit::Imm(0xffff));
 	}
 
-	void JitOps::transfer24ToAlu(TWord _alu, const DspValue& _src) const
+	void JitOps::transfer24ToAlu(TWord _alu, const DspValue& _src, const bool _sourceIs8Bit) const
 	{
 		AluRef r(m_block, _alu, false, true);
-		if(isSixteenBitArithmetic())
+
+		// The SA remap below is for a value arriving from a BUS, whose data sits in the 16 LSBs. A
+		// short immediate is not that: it has already been widened to a 24 bit signed fraction, and
+		// the manual (3.4.1.3) stores it in bits 47-40 in both modes. Running it through the bus
+		// remap would take its 16 LSBs, which are zero, so "move #$34,a" in SA mode loaded 0.
+		if(isSixteenBitArithmetic() && !_sourceIs8Bit)
 		{
 			_src.copyTo(r32(r.get()), 24);
 			m_block.asm_().shl(r64(r.get()), asmjit::Imm(48));

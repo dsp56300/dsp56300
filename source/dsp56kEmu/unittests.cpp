@@ -3590,6 +3590,88 @@ namespace dsp56k
 			verify(dsp.aluA().var == 0x00123456780000);
 			dsp.setSR(dsp.getSR().var & ~SR_SA);
 		});
+
+		// ------------------------------------------------------------------------------------
+		// Full coverage of the manual's move tables, every value measured on the reference simulator
+		// ------------------------------------------------------------------------------------
+
+		// Sixteen-bit Arithmetic mode (SR_SA) remaps how the data ALU sees the 24 bit buses: 16 bit
+		// data is right aligned in the 24 bit word, and the accumulator becomes an 8 bit EXT with a
+		// 16 bit MSP and a 16 bit LSP. Family manual section 3.4, tables 3-3 and 3-4 and section
+		// 3.4.1.3 for the short immediate forms.
+		//
+		// EVERY expected value below was measured on the Freescale reference simulator, which
+		// implements SA, by setting the registers up with SA off, executing the instruction with SA
+		// on, then switching SA off again to read the raw 24 bit register contents back - in SA mode
+		// the simulator both displays and accepts register values in the 16 bit right aligned view,
+		// so reading them directly there would not say what the register actually holds.
+
+		const auto run = [&](const char* _code, const std::function<void()>& _verify)
+		{
+			runTest([&]()
+			{
+				dsp.memWrite(MemArea_X, 0x100, 0x123456);
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xff112233445566)));
+				dsp.regs().x.var = 0;
+				dsp.x1(TReg24(0xabcdef));
+				dsp.x0(TReg24(0x123abc));
+				dsp.setSR(0xc20300);		// SA on
+				emit(_code);
+			}, [&]()
+			{
+				_verify();
+				dsp.setSR(dsp.getSR().var & ~SR_SA);
+			});
+		};
+
+		// bus -> full accumulator: 16 LSBs to bits 32-47, bits 8-23 cleared, EXT sign extended
+		run("move x:>$100,a", [&](){ verify(dsp.aluA().var == 0x00345600000000); });
+
+		// bus -> register: 16 LSBs into the 16 MSBs of the destination
+		run("move x:>$100,x0", [&](){ verify(dsp.x0().var == 0x345600); verify(dsp.aluA().var == 0xff112233445566); });
+
+		// bus -> partial accumulator, rest of the accumulator untouched
+		run("move x:>$100,a0", [&](){ verify(dsp.aluA().var == 0xff112233345600); });
+
+		// bus -> partial accumulator
+		run("move x:>$100,a1", [&](){ verify(dsp.aluA().var == 0xff345600445566); });
+
+		// bus -> EXT: the eight LSBs of the bus only
+		run("move x:>$100,a2", [&](){ verify(dsp.aluA().var == 0x56112233445566); });
+
+		// full accumulator -> bus: scaled AND limited, sign extension in the eight MSBs. $ff112233445566 has an EXT inconsistent with its MSP, so limiting clamps it to the most negative 16 bit value
+		run("move a,x:>$100", [&](){ verify(dsp.memRead(MemArea_X, 0x100) == 0xff8000); });
+
+		// partial accumulator -> bus: 16 MSBs of the source, eight zeros above, no scaling or limiting
+		run("move a1,x:>$100", [&](){ verify(dsp.memRead(MemArea_X, 0x100) == 0x001122); });
+
+		// EXT -> bus: eight LSBs are the source, the next 16 bits are the sign extension of bit 7
+		run("move a2,x:>$100", [&](){ verify(dsp.memRead(MemArea_X, 0x100) == 0xffffff); });
+
+		// register -> bus: 16 MSBs of the source, eight zeros above
+		run("move x0,x:>$100", [&](){ verify(dsp.memRead(MemArea_X, 0x100) == 0x00123a); });
+
+		// short immediate to an accumulator is a SIGNED FRACTION, stored in bits 47-40
+		run("move #$34,a", [&](){ verify(dsp.aluA().var == 0x00340000000000); });
+
+		// and being signed, $80 sign extends into the EXT
+		run("move #$80,a", [&](){ verify(dsp.aluA().var == 0xff800000000000); });
+
+		// short immediate to a PARTIAL accumulator is an UNSIGNED INTEGER, stored in bits 15-8
+		run("move #$34,a1", [&](){ verify(dsp.aluA().var == 0xff003400445566); });
+
+		// unsigned, so $80 does not sign extend - this is what separates the two immediate forms
+		run("move #$80,a1", [&](){ verify(dsp.aluA().var == 0xff008000445566); });
+
+		// short immediate to EXT goes to bits 7-0
+		run("move #$34,a2", [&](){ verify(dsp.aluA().var == 0x34112233445566); });
+
+		// short immediate to a register is a signed fraction, stored in bits 23-16
+		run("move #$34,x0", [&](){ verify(dsp.x0().var == 0x340000); });
+
+		// signed fraction again
+		run("move #$80,x0", [&](){ verify(dsp.x0().var == 0x800000); });
+
 	}
 
 	void UnitTests::move()

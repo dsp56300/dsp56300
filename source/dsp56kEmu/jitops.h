@@ -474,7 +474,7 @@ namespace dsp56k
 		void incSP() const;
 
 		void transferAluTo24(DspValue& _dst, TWord _alu);
-		void transfer24ToAlu(TWord _alu, const DspValue& _src) const;
+		void transfer24ToAlu(TWord _alu, const DspValue& _src, bool _sourceIs8Bit = false) const;
 		void transferSaturation24(const JitReg64& _dst, const JitReg64& _src);
 		void transferSaturation48(const JitReg64& _dst, const JitReg64& _src);
 
