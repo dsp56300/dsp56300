@@ -11,6 +11,13 @@ namespace dsp56k
 	{
 	}
 
+	std::string UnitTests::testPeriphAddrStr()
+	{
+		std::stringstream ss;
+		ss << '$' << std::hex << g_testPeriphAddr;
+		return ss.str();
+	}
+
 	void UnitTests::emit(const char* _text, TWord _pc)
 	{
 		const auto result = assembler.assemble(_text);
@@ -1015,14 +1022,14 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.getPeriph(0)->write(0xffff90, 0x334455);
-			dsp.getPeriph(0)->write(0xffffd0, 0x556677);
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0x556677);
 
 			emit("bclr #$2,x:<<$ffff90	- bclr_qq");
-			emit("bclr #$4,x:<<$ffffd0 - bclr_pp");
+			emit(("bclr #$4,x:<<" + testPeriphAddrStr() + " - bclr_pp").c_str());
 		}, [&]()
 		{
 			const auto a = dsp.getPeriph(0)->read(0xffff90, Bclr_qq);
-			const auto b = dsp.getPeriph(0)->read(0xffffd0, Bclr_pp);
+			const auto b = dsp.getPeriph(0)->read(g_testPeriphAddr, Bclr_pp);
 			verify(a == 0x334451);	// bit 2 cleared
 			verify(b == 0x556667);	// bit 4 cleared
 		});
@@ -6397,23 +6404,23 @@ namespace dsp56k
 
 	void UnitTests::jclr_jset_ppqq()
 	{
-		// pp addressing: peripheral at $ffffd0
-		// jclr #3,x:<<$ffffd0,$100 — bit 3 clear → taken
+		// pp addressing, using the scratch peripheral address
+		// jclr #3 on the scratch peripheral — bit 3 clear → taken
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.getPeriph(0)->write(0xffffd0, 0xfffff7);
-			emit("jclr #$3,x:<<$ffffd0,$100");
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0xfffff7);
+			emit(("jclr #$3,x:<<" + testPeriphAddrStr() + ",$100").c_str());
 		}, [&]()
 		{
 			verify(dsp.getPC() == 0x100);
 		});
-		// jset #3,x:<<$ffffd0,$100 — bit 3 set → taken
+		// jset #3 on the scratch peripheral — bit 3 set → taken
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.getPeriph(0)->write(0xffffd0, 0x000008);
-			emit("jset #$3,x:<<$ffffd0,$100");
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0x000008);
+			emit(("jset #$3,x:<<" + testPeriphAddrStr() + ",$100").c_str());
 		}, [&]()
 		{
 			verify(dsp.getPC() == 0x100);
@@ -6422,8 +6429,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.getPeriph(0)->write(0xffffd0, 0xfffff7);
-			emit("jset #$3,x:<<$ffffd0,$100");
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0xfffff7);
+			emit(("jset #$3,x:<<" + testPeriphAddrStr() + ",$100").c_str());
 		}, [&]()
 		{
 			verify(dsp.getPC() != 0x100);
@@ -6458,8 +6465,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.getPeriph(0)->write(0xffffd0, 0xfffff7);
-			emit("jsclr #$3,x:<<$ffffd0,$100");
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0xfffff7);
+			emit(("jsclr #$3,x:<<" + testPeriphAddrStr() + ",$100").c_str());
 		}, [&]()
 		{
 			verify(dsp.getPC() == 0x100);
@@ -6468,8 +6475,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.getPeriph(0)->write(0xffffd0, 0x000008);
-			emit("jsset #$3,x:<<$ffffd0,$100");
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0x000008);
+			emit(("jsset #$3,x:<<" + testPeriphAddrStr() + ",$100").c_str());
 		}, [&]()
 		{
 			verify(dsp.getPC() == 0x100);
@@ -6502,8 +6509,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.getPeriph(0)->write(0xffffd0, 0xfffff7);
-			emit("brclr #$3,x:<<$ffffd0,>$50");
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0xfffff7);
+			emit(("brclr #$3,x:<<" + testPeriphAddrStr() + ",>$50").c_str());
 		}, [&]()
 		{
 			verify(dsp.getPC() == 0x50);
@@ -6512,8 +6519,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.getPeriph(0)->write(0xffffd0, 0x000008);
-			emit("brset #$3,x:<<$ffffd0,>$50");
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0x000008);
+			emit(("brset #$3,x:<<" + testPeriphAddrStr() + ",>$50").c_str());
 		}, [&]()
 		{
 			verify(dsp.getPC() == 0x50);
@@ -6522,8 +6529,8 @@ namespace dsp56k
 		runTest([&]()
 		{
 			dsp.setPC(0);
-			dsp.getPeriph(0)->write(0xffffd0, 0xfffff7);
-			emit("brset #$3,x:<<$ffffd0,>$50");
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0xfffff7);
+			emit(("brset #$3,x:<<" + testPeriphAddrStr() + ",>$50").c_str());
 		}, [&]()
 		{
 			verify(dsp.getPC() != 0x50);
