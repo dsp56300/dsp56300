@@ -1,5 +1,6 @@
 #include "dspthread.h"
 
+#include <cassert>
 #include <chrono>
 #include <iostream>
 
@@ -32,10 +33,31 @@ namespace dsp56k
 
 		setCallback(defaultCallback);
 
+#ifdef _WIN32
 		m_thread.reset(new std::thread([this]
 		{
 			threadFunc();
 		}));
+#else
+		// The JIT compiles on this thread and emits nested child blocks recursively, which takes about 20 KB of
+		// stack per level; a Virus TI firmware reached 27 levels. A std::thread gets the platform default, which
+		// is only 512 KB on macOS, so the DSP thread overflowed into its guard page there. Ask for the 8 MB that
+		// Linux hands out by default.
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+		pthread_attr_setstacksize(&attr, 8 * 1024 * 1024);
+
+		const auto result = pthread_create(&m_thread, &attr, [](void* _this) -> void*
+		{
+			static_cast<DSPThread*>(_this)->threadFunc();
+			return nullptr;
+		}, this);
+
+		pthread_attr_destroy(&attr);
+
+		m_threadStarted = result == 0;
+		assert(m_threadStarted && "failed to create DSP thread");
+#endif
 	}
 
 	DSPThread::~DSPThread()
@@ -45,16 +67,26 @@ namespace dsp56k
 
 	void DSPThread::join()
 	{
+#ifdef _WIN32
 		if(!m_thread)
 			return;
+#else
+		if(!m_threadStarted)
+			return;
+#endif
 
 		if(m_debugger)
 			detachDebugger(m_debugger.get());
 
 		terminate();
 
+#ifdef _WIN32
 		m_thread->join();
 		m_thread.reset();
+#else
+		pthread_join(m_thread, nullptr);
+		m_threadStarted = false;
+#endif
 
 		m_debugger.reset();
 	}

@@ -6,6 +6,10 @@
 #include <string>
 #include <thread>
 
+#ifndef _WIN32
+#include <pthread.h>
+#endif
+
 #include "debuggerinterface.h"
 #include "dsp56kBase/threadtools.h"
 
@@ -53,7 +57,13 @@ namespace dsp56k
 		const ThreadPriority m_initialPriority;
 
 		std::mutex m_mutex;
+#ifdef _WIN32
 		std::unique_ptr<std::thread> m_thread;
+#else
+		// pthread instead of std::thread so the stack size can be set, see the constructor
+		pthread_t m_thread = {};
+		bool m_threadStarted = false;
+#endif
 
 		bool m_runThread;
 
