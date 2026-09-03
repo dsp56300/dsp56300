@@ -120,6 +120,7 @@ namespace dsp56k
 		mpyri();
 		merge();
 		enddo();
+		bitmodOnSR();
 		unimplementedOpcodeLength();
 		dec();
 		div();
@@ -1483,6 +1484,41 @@ namespace dsp56k
 			verify(!dsp.sr_test(SR_LF));
 			verify(!dsp.sr_test(SR_FV));
 		});
+	}
+
+	void UnitTests::bitmodOnSR()
+	{
+		// BSET/BCLR/BCHG normally write C from the tested bit. When the destination is SR that write
+		// does not survive: the modified SR is written back wholesale, bit 0 included, so the bit
+		// operation behaves as a plain read-modify-write of SR. All eight cases below were measured on
+		// the Freescale reference simulator - note in particular that bchg/bclr of a SET bit 3 leave C
+		// clear rather than setting it from the old bit.
+		const auto run = [&](const char* _code, const TWord _srIn)
+		{
+			TWord result = 0;
+			runTest([&]()
+			{
+				dsp.setSR(_srIn);
+				emit(_code);
+			},
+			[&]()
+			{
+				dsp.sr_test(CCR_C);		// force any lazy evaluation before reading the raw value
+				result = dsp.getSR().var;
+			});
+			return result;
+		};
+
+		verify(run("bchg #$3,sr", 0xc00308) == 0xc00300);	// N toggled off, C NOT set from the old bit
+		verify(run("bchg #$3,sr", 0xc00300) == 0xc00308);	// N toggled on
+		verify(run("bclr #$3,sr", 0xc00308) == 0xc00300);	// N cleared, C still clear
+		verify(run("bset #$3,sr", 0xc00300) == 0xc00308);	// N set
+
+		// bit 0 is C itself, where the bit operation and the C write would collide - the bit wins
+		verify(run("bchg #$0,sr", 0xc00301) == 0xc00300);
+		verify(run("bchg #$0,sr", 0xc00300) == 0xc00301);
+		verify(run("bclr #$0,sr", 0xc00301) == 0xc00300);
+		verify(run("bset #$0,sr", 0xc00300) == 0xc00301);
 	}
 
 	void UnitTests::cmpm()
@@ -6566,6 +6602,7 @@ namespace dsp56k
 		rep_multi();
 		cmpu_multi();
 		brkcc_multi();
+		bitmodOnSR_deferredCCR();
 		rep_div_powerOfTwo();
 		do_multi();
 		callAtVectorAddress();
@@ -6736,6 +6773,42 @@ namespace dsp56k
 		// Reaching the rts at all means the loop stack was unwound correctly - execUntil would have
 		// thrown on a stale entry - and the loop flag must not still be set afterwards.
 		verify(!dsp.sr_test(SR_LF));
+	}
+
+	void UnitTests::bitmodOnSR_deferredCCR()
+	{
+		// The JIT evaluates condition codes lazily, so an ALU result can still be pending when a bit
+		// operation on SR runs. Modifying SR through a plain register reference used to change the bit
+		// while that update was outstanding, and the update then overwrote it - so this toggle of N
+		// silently did nothing. Interpreter path was never affected; this only fails under the JIT.
+		//
+		// The idiom is real: a softfloat compare in TC M-One XL firmware inverts N in front of a
+		// conditional branch to reverse the sense of a comparison for negative operands.
+		const auto run = [&](const bool _withToggle)
+		{
+			dsp.resetHW();
+
+			TWord pc = 0x100;
+			pc = emitToMemory("jsr $200", pc);
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			pc = 0x200;
+			pc = emitToMemory("move #>$6,b", pc);
+			pc = emitToMemory("move #>$9,x0", pc);
+			pc = emitToMemory("cmp x0,b", pc);		// 6 - 9, N set and left deferred
+			if(_withToggle)
+				pc = emitToMemory("bchg #$3,sr", pc);
+			emitToMemory("rts", pc);
+
+			dsp.setPC(0x100);
+			execUntil(returnPC);
+
+			return dsp.sr_test(CCR_N) != 0;
+		};
+
+		verify(run(false));		// the compare on its own leaves N set
+		verify(!run(true));		// and the toggle has to clear it
 	}
 
 	void UnitTests::rep_multi()

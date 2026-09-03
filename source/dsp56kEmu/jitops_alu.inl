@@ -89,6 +89,32 @@ namespace dsp56k
 			return;
 		}
 
+		// SR needs its own read-modify-write, for two independent reasons. Its condition codes are
+		// evaluated lazily, and only decode_dddddd_read/_write (getSR/setSR) flush a pending update
+		// and declare the register written - through a plain reference the pending update overwrote
+		// the bit again, so a "bchg #$3,sr" in front of a bge silently did nothing.
+		//
+		// The copy is not redundant: getSR hands back a REFERENCE to the pooled SR, so modifying it
+		// in place would let the C write these instructions perform - C takes the tested bit - stand.
+		// On hardware it does not: the modified value is written back wholesale, bit 0 included, so
+		// C ends up as bit 0 of the result. Measured on the reference simulator, e.g.
+		// bchg #$3,sr on $c00308 gives $c00300 and not $c00301.
+		if(dddddd == 0x39)
+		{
+			DspValue d(m_block);
+			d.temp(DspValue::Temp24);
+			{
+				DspValue sr(m_block);
+				decode_dddddd_read(sr, dddddd);
+				m_asm.mov(r32(d), r32(sr));
+			}
+
+			(this->*_bitmodFunc)(d, bit);
+
+			decode_dddddd_write(dddddd, d);
+			return;
+		}
+
 		auto dRead = decode_dddddd_ref(dddddd, true, false);
 		if(!dRead.isRegValid())
 			decode_dddddd_read(dRead, dddddd);

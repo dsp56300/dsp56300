@@ -89,6 +89,7 @@ namespace  dsp56k
 		void mpyri();
 		void merge();
 		void enddo();
+		void bitmodOnSR();
 		void unimplementedOpcodeLength();
 		void dec();
 		void div();
@@ -188,6 +189,7 @@ namespace  dsp56k
 		void rep_multi();
 		void cmpu_multi();
 		void brkcc_multi();
+		void bitmodOnSR_deferredCCR();
 		void rep_div_powerOfTwo();
 		void do_multi();
 		void do_forever();
