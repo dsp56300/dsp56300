@@ -542,8 +542,12 @@ namespace dsp56k
 	//
 	bool DSP::do_end()
 	{
-		// restore previous loop flag
+		// Restore the previous loop flags - BOTH of them. The manual's ENDDO operation line says
+		// SSL(LF) only, but the hardware restores the DO FOREVER flag as well: measured on the
+		// reference simulator, a stacked $018000 sets both and a stacked $000000 clears both, so it
+		// copies the two bits rather than or-ing them in. The JIT's do_end() always did this.
 		sr_toggle( SR_LF, (ssl().var & SR_LF) != 0 );
+		sr_toggle( SR_FV, (ssl().var & SR_FV) != 0 );
 
 		// decrement SP twice, restoring old loop settings
 		decSP();

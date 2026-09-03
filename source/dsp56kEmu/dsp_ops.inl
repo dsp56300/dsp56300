@@ -131,11 +131,7 @@ namespace dsp56k
 		// PC has to be taken from the CURRENT LA, before do_end() restores LA from the stack.
 		setPC(reg.la.var + 1);
 
-		// BRKcc restores the DO FOREVER flag as well as the loop flag, where ENDDO restores only
-		// LF - so this bit cannot move into do_end(), which ENDDO shares. ssl() does not pop, so
-		// it still refers to the same stack entry do_end() reads LF from.
-		sr_toggle( SR_FV, (ssl().var & SR_FV) != 0 );
-
+		// LF and FV both come back off the stack in do_end(), which is what BRKcc wants too
 		do_end();
 	}
 

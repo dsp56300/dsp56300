@@ -79,6 +79,7 @@ namespace  dsp56k
 		void cmpu();
 		void mpyri();
 		void merge();
+		void enddo();
 		void unimplementedOpcodeLength();
 		void dec();
 		void div();

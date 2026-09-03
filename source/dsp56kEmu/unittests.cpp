@@ -112,6 +112,7 @@ namespace dsp56k
 		cmpu();
 		mpyri();
 		merge();
+		enddo();
 		unimplementedOpcodeLength();
 		dec();
 		div();
@@ -1432,6 +1433,48 @@ namespace dsp56k
 			verify(!dsp.sr_test(CCR_N));
 			verify(dsp.sr_test(CCR_E));
 			verify(dsp.sr_test(CCR_U));
+		});
+	}
+
+	void UnitTests::enddo()
+	{
+		// ENDDO restores the loop flags from the stacked SR. The manual's operation line says SSL(LF)
+		// only, but the hardware restores FV too, and it COPIES both bits rather than or-ing them in.
+		// Both cases below were measured on the Freescale reference simulator first.
+		const auto setupStack = [&](const TWord _stackedSR, const TWord _currentSR)
+		{
+			dsp.reg.sp.var = 2;
+			hiword(dsp.reg.ss[2], TReg24(0x000200));		// pushed PC
+			loword(dsp.reg.ss[2], TReg24(static_cast<int>(_stackedSR)));
+			hiword(dsp.reg.ss[1], TReg24(0x000123));		// pushed LA
+			loword(dsp.reg.ss[1], TReg24(0x000005));		// pushed LC
+			dsp.setSR(_currentSR);
+		};
+
+		// stacked $018000, current has neither: both come back set
+		runTest([&]()
+		{
+			setupStack(0x018000, 0xc00300);
+			emit("enddo");
+		},
+		[&]()
+		{
+			verify(dsp.sr_test(SR_LF));
+			verify(dsp.sr_test(SR_FV));		// the bit the manual does not mention
+			verify(dsp.reg.la.var == 0x000123);
+			verify(dsp.reg.lc.var == 0x000005);
+		});
+
+		// stacked $000000, current has both: both are CLEARED, so it is a copy and not an or
+		runTest([&]()
+		{
+			setupStack(0x000000, 0xc18300);
+			emit("enddo");
+		},
+		[&]()
+		{
+			verify(!dsp.sr_test(SR_LF));
+			verify(!dsp.sr_test(SR_FV));
 		});
 	}
 
