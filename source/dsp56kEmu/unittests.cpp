@@ -1,4 +1,5 @@
 #include "unittests.h"
+#include "unittests_sa_bitfield.h"
 
 
 namespace dsp56k
@@ -133,6 +134,7 @@ namespace dsp56k
 		ifcc();
 		inc();
 		insert();
+		saBitfield();
 		jscc();
 		lra();
 		lsl();
@@ -1948,31 +1950,6 @@ namespace dsp56k
 			verify(!dsp.sr_test(CCR_N));
 		});
 
-		runTest([&]()
-		{
-			// SA mode relocates width to [21:16] and offset to [13:8].
-			dsp.setSR(SR_SA);
-			dsp.x0(0x080800);
-			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xf400)));
-			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
-			emit("extract x0,a,b");
-		}, [&]()
-		{
-			verify(dsp.aluB().var == 0xfffffffffffff4);
-			dsp.setSR(dsp.getSR().var & ~SR_SA);
-		});
-
-		runTest([&]()
-		{
-			dsp.setSR(SR_SA);
-			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x1200)));
-			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
-			emit("extract #>$080800,a,b");
-		}, [&]()
-		{
-			verify(dsp.aluB().var == 0x12);
-			dsp.setSR(dsp.getSR().var & ~SR_SA);
-		});
 	}
 
 	void UnitTests::extractu()
@@ -2058,30 +2035,6 @@ namespace dsp56k
 			verify(dsp.aluA().var == 0x0000CCDDEEFF);
 		});
 
-		runTest([&]()
-		{
-			dsp.setSR(SR_SA);
-			dsp.x0(0x080800);
-			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xab00)));
-			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
-			emit("extractu x0,a,b");
-		}, [&]()
-		{
-			verify(dsp.aluB().var == 0xab);
-			dsp.setSR(dsp.getSR().var & ~SR_SA);
-		});
-
-		runTest([&]()
-		{
-			dsp.setSR(SR_SA);
-			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xcd00)));
-			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
-			emit("extractu #>$080800,a,b");
-		}, [&]()
-		{
-			verify(dsp.aluB().var == 0xcd);
-			dsp.setSR(dsp.getSR().var & ~SR_SA);
-		});
 	}
 
 	void UnitTests::extractu_co()
@@ -2162,18 +2115,6 @@ namespace dsp56k
 			verify(dsp.a0().var == 0xDDEECC);
 		});
 
-		runTest([&]()
-		{
-			// In SA mode the relocated offset includes the documented +16 bias.
-			dsp.setSR(SR_SA);
-			dsp.x1(0xab);
-			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
-			emit("insert #>$081000,x1,a");
-		}, [&]()
-		{
-			verify(dsp.aluA().var == 0xab0000);
-			dsp.setSR(dsp.getSR().var & ~SR_SA);
-		});
 	}
 
 	void UnitTests::jscc()
@@ -7423,5 +7364,35 @@ namespace dsp56k
 		execUntil(finalPC);
 
 		verify(dsp.aluA().var == 0x00000003000000);	// 3 adds total
+	}
+
+	// Sixteen-bit Arithmetic mode EXTRACT/EXTRACTU/INSERT, both control word forms. Every expectation
+	// in g_saBitfieldCases was captured from the Freescale reference simulator rather than written by
+	// hand - a hand-written table only proves the two engines agree with each other, which is exactly
+	// how a wrong model survived here before. Regenerate with scripts/saBitfieldTruth.py.
+	void UnitTests::saBitfield()
+	{
+		for (const auto& c : g_saBitfieldCases)
+		{
+			runTest([&]()
+			{
+				dsp.setSR(0xc20300);		// SA on, matching the harness the truth was captured with
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(c.a)));
+				dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
+				dsp.x1(TReg24(static_cast<int>(c.x1)));
+				dsp.x0(TReg24(static_cast<int>(c.x0)));
+				emit(c.opA, c.opB);
+			},
+			[&]()
+			{
+				const auto res = static_cast<uint64_t>(c.dstIsB ? dsp.aluB().var : dsp.aluA().var);
+				verify(res == c.result);
+
+				for (const auto bit : {CCR_C, CCR_V, CCR_Z, CCR_N, CCR_U, CCR_E})
+					verify((dsp.sr_test(bit) != 0) == ((c.ccr & bit) != 0));
+			});
+		}
+
+		dsp.setSR(dsp.getSR().var & ~SR_SA);
 	}
 }

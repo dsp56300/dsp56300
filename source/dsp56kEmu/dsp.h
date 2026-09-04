@@ -797,6 +797,86 @@ namespace dsp56k
 
 		bool isSixteenBitArithmetic() const { return sr_test_noCache(SR_SA) != 0; }
 
+		// Sixteen-bit Arithmetic mode data organization (FM figure 3-10): the accumulator is an 8 bit
+		// EXT (bits 55-48) plus a 16 bit MSP (47-32) and a 16 bit LSP (23-8). EXTRACT, EXTRACTU and
+		// INSERT operate on the 40 bit EXT:MSP:LSP value rather than on the raw 56 bit register, and a
+		// write through this path clears the least significant byte of each half. Every rule below is a
+		// fit to the complete control word space captured from the reference simulator, all 48856 cases
+		// - see doc/sixteenBitArithmetic.md and the generated unittests_sa_bitfield.h.
+		// Entry point the JIT calls out to for the Sixteen-bit Arithmetic form of EXTRACT/EXTRACTU/
+		// INSERT instead of inlining it. SA is a rare mode, and sharing the interpreter's implementation
+		// is what keeps the two engines identical by construction rather than by test.
+	public:
+		void saBitfield(TWord _control, TWord _packed);
+	private:
+
+		static constexpr uint64_t g_sa40Mask = 0xffffffffffull;
+
+		static uint64_t saTo40(const TReg56& _acc)
+		{
+			const auto v = static_cast<uint64_t>(_acc.var) >> g_aluShift;
+			return (((v >> 48) & 0xff) << 32) | (((v >> 32) & 0xffff) << 16) | ((v >> 8) & 0xffff);
+		}
+
+		static TInt64 saFrom40(const uint64_t _v)
+		{
+			const uint64_t v = (((_v >> 32) & 0xff) << 48) | (((_v >> 16) & 0xffff) << 32) | ((_v & 0xffff) << 8);
+			return static_cast<TInt64>(v << g_aluShift);
+		}
+
+		// The control word carries a width and an offset. A control REGISTER is read like any other
+		// register in SA mode, so it holds that word in bits 23-8 and its fields sit 8 higher than an
+		// immediate's - simulator: register $081000 and immediate $000810 give the identical result,
+		// while register $000810 is a width of zero and does nothing.
+		void saBitfieldControl(const TWord _control, const bool _controlIsRegister, TWord& _width, TWord& _offset) const
+		{
+			const auto sa = isSixteenBitArithmetic();
+			_width  = (_control >> (sa ? (_controlIsRegister ? 16 : 8) : 12)) & 0x3f;
+			_offset = (_control >> (sa && _controlIsRegister ? 8 : 0)) & 0x3f;
+		}
+
+		// EXTRACT/EXTRACTU: a 6 bit width, an offset that addresses the 40 bit value directly and reads
+		// zero from bit 40 up. The source is signed - EXT is its sign extension - so the field picks up
+		// the sign above bit 39. A width beyond the 40 bit datapath yields no EXT at all.
+		static uint64_t saExtract40(const TReg56& _src, const TWord _width, const TWord _offset, const bool _signed)
+		{
+			const auto width = _width & 0x3f;
+			if(!width || _offset >= 40)
+				return 0;
+
+			const uint64_t mask = (1ull << width) - 1;
+			const auto v = static_cast<TInt64>(saTo40(_src) << 24) >> 24;	// sign extend from bit 39
+			auto field = static_cast<uint64_t>(v >> _offset) & mask;
+
+			if(_signed && (field >> (width - 1)) & 1)
+				field |= ~mask;
+
+			if(width > 40)
+				field &= 0xffffffffull;
+
+			return field & g_sa40Mask;
+		}
+
+		// INSERT: a 5 bit width clamped to the 16 bits a source register can supply, and an offset that
+		// carries a bias of 16. A field below the bias inserts nothing, one running off the top is simply
+		// truncated. The source is read through the SA convention, its 16 bit value living in bits 23-8.
+		static uint64_t saInsert40(const TReg56& _dst, const TWord _src, const TWord _width, const TWord _offset)
+		{
+			auto v = saTo40(_dst);
+
+			const auto width = std::min<TWord>(_width & 0x1f, 16);
+			const auto offset = static_cast<int32_t>(_offset) - 16;
+
+			if(width && offset >= 0)
+			{
+				const uint64_t mask = (1ull << width) - 1;
+				const uint64_t s = (_src >> 8) & 0xffff;
+				v = (v & ~((mask << offset) & g_sa40Mask)) | ((s & mask) << offset);
+			}
+			return v & g_sa40Mask;
+		}
+
+
 		// Sixteen-bit Arithmetic mode data organization (FM figure 3-10): a data ALU register holds its
 		// 16-bit value in bits 23..8 while the buses carry it in bits 15..0.
 		static TWord busToReg16(const TWord _bus)	{ return (_bus & 0xffff) << 8; }
@@ -956,9 +1036,9 @@ namespace dsp56k
 
 		void	alu_not				(bool ab);
 
-		void	alu_insert			(bool abDst, const TWord src, TWord widthOffset);
-		void	alu_extract		(bool abDst, bool abSrc, TWord widthOffset);
-		void	alu_extractu		(bool abDst, bool abSrc, TWord widthOffset);
+		void	alu_insert			(bool abDst, const TWord src, TWord widthOffset, bool controlIsRegister);
+		void	alu_extract		(bool abDst, bool abSrc, TWord widthOffset, bool controlIsRegister);
+		void	alu_extractu		(bool abDst, bool abSrc, TWord widthOffset, bool controlIsRegister);
 
 		// -- memory
 

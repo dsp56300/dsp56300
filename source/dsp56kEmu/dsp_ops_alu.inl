@@ -906,24 +906,26 @@ namespace dsp56k
 		const auto widthOffset = decode_sss_read<TWord>(sss);
 		const bool abDst = getFieldValue<Extract_S1S2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extract_S1S2, Field_s>(op);
-		alu_extract(abDst, abSrc, widthOffset);
+		alu_extract(abDst, abSrc, widthOffset, true);
 	}
 	inline void DSP::op_Extract_CoS2(const TWord op)
 	{
 		const auto widthOffset = fetchOpWordB();
 		const bool abDst = getFieldValue<Extract_CoS2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extract_CoS2, Field_s>(op);
-		alu_extract(abDst, abSrc, widthOffset);
+		alu_extract(abDst, abSrc, widthOffset, false);
 	}
 
-	inline void DSP::alu_extract(const bool abDst, const bool abSrc, const TWord widthOffset)
+	inline void DSP::alu_extract(const bool abDst, const bool abSrc, const TWord widthOffset, const bool controlIsRegister)
 	{
-		const auto width = (widthOffset >> (sr_test(SR_SA) ? 16 : 12)) & 0x3f;
-		const auto offset = (widthOffset >> (sr_test(SR_SA) ? 8 : 0)) & 0x3f;
+		TWord width, offset;
+		saBitfieldControl(widthOffset, controlIsRegister, width, offset);
 		const TReg56& dSrc = abSrc ? reg.b : reg.a;
 		TReg56& dDst = abDst ? reg.b : reg.a;
 
-		if(!width)
+		if(isSixteenBitArithmetic())
+			dDst.var = saFrom40(saExtract40(dSrc, width, offset, true));
+		else if(!width)
 			dDst.var = 0;
 		else
 		{
@@ -940,14 +942,16 @@ namespace dsp56k
 		setCCRDirty(abDst, dDst, CCR_E | CCR_U | CCR_N);
 	}
 
-	inline void DSP::alu_extractu(bool abDst, bool abSrc, const TWord widthOffset)
+	inline void DSP::alu_extractu(bool abDst, bool abSrc, const TWord widthOffset, const bool controlIsRegister)
 	{
-		const auto width = (widthOffset >> (sr_test(SR_SA) ? 16 : 12)) & 0x3f;
-		const auto offset = (widthOffset >> (sr_test(SR_SA) ? 8 : 0)) & 0x3f;
+		TWord width, offset;
+		saBitfieldControl(widthOffset, controlIsRegister, width, offset);
 
 		const TReg56& dSrc = abSrc ? reg.b : reg.a;
 		TReg56& dDst = abDst ? reg.b : reg.a;
-		if(!width)
+		if(isSixteenBitArithmetic())
+			dDst.var = saFrom40(saExtract40(dSrc, width, offset, false));
+		else if(!width)
 			dDst.var = 0;
 		else
 		{
@@ -968,7 +972,7 @@ namespace dsp56k
 		const bool abDst = getFieldValue<Extractu_S1S2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extractu_S1S2, Field_s>(op);
 
-		alu_extractu(abDst, abSrc, widthOffset);
+		alu_extractu(abDst, abSrc, widthOffset, true);
 	}
 	inline void DSP::op_Extractu_CoS2(const TWord op)
 	{
@@ -977,7 +981,7 @@ namespace dsp56k
 		const bool abDst = getFieldValue<Extractu_CoS2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extractu_CoS2, Field_s>(op);
 
-		alu_extractu(abDst, abSrc, width_offset);
+		alu_extractu(abDst, abSrc, width_offset, false);
 	}
 	inline void DSP::op_Inc(const TWord op)
 	{
@@ -998,23 +1002,49 @@ namespace dsp56k
 		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 
-	inline void DSP::alu_insert(bool abDst, const TWord src, const TWord widthOffset)
+	// _packed: kind at 1-0, controlIsRegister at 2, D at 3, S at 4, qqq at 7-5, sss at 10-8.
+	// The control register and the insert source are read here rather than passed in, because the JIT
+	// has flushed its register pool before the call and this side holds the authoritative values.
+	void DSP::saBitfield(const TWord _control, const TWord _packed)
 	{
-		const auto width = (widthOffset >> (sr_test(SR_SA) ? 16 : 12)) & 0x3f;
+		const auto controlIsRegister = ((_packed >> 2) & 1) != 0;
+		const bool abDst = ((_packed >> 3) & 1) != 0;
+		const bool abSrc = ((_packed >> 4) & 1) != 0;
+		const auto control = controlIsRegister ? decode_sss_read<TWord>((_packed >> 8) & 7) : _control;
 
-		// the offset is relative to the 56-bit value, so it moves up with the ALU
-		const uint64_t offset = ((widthOffset >> (sr_test(SR_SA) ? 8 : 0)) & 0x3f) + g_aluShift;
+		switch(_packed & 3)
+		{
+		case 0:		alu_extract (abDst, abSrc, control, controlIsRegister);	break;
+		case 1:		alu_extractu(abDst, abSrc, control, controlIsRegister);	break;
+		default:	alu_insert  (abDst, decode_qqq_read((_packed >> 5) & 7).toWord(), control, controlIsRegister);	break;
+		}
+	}
 
-		const auto mask = width ? (uint64_t(1) << width) - 1 : 0;
-
-		uint64_t s = src & mask;
-		s <<= offset;
+	inline void DSP::alu_insert(bool abDst, const TWord src, const TWord widthOffset, const bool controlIsRegister)
+	{
+		TWord widthField, offsetField;
+		saBitfieldControl(widthOffset, controlIsRegister, widthField, offsetField);
 
 		TReg56& dReg = abDst ? reg.b : reg.a;
-		auto& d = reinterpret_cast<uint64_t&>(dReg.var);
 
-		d &= ~(static_cast<uint64_t>(mask) << offset);
-		d |= s;
+		if(isSixteenBitArithmetic())
+		{
+			dReg.var = saFrom40(saInsert40(dReg, src, widthField, offsetField));
+		}
+		else
+		{
+			// the offset is relative to the 56-bit value, so it moves up with the ALU
+			const uint64_t offset = offsetField + g_aluShift;
+			const auto mask = widthField ? (uint64_t(1) << widthField) - 1 : 0;
+
+			uint64_t s = src & mask;
+			s <<= offset;
+
+			auto& d = reinterpret_cast<uint64_t&>(dReg.var);
+
+			d &= ~(static_cast<uint64_t>(mask) << offset);
+			d |= s;
+		}
 
 		sr_clear(CCR_C);
 		sr_clear(CCR_V);
@@ -1031,7 +1061,7 @@ namespace dsp56k
 		const auto src = decode_qqq_read(qqq);
 		const auto co = decode_sss_read<TWord>(sss);
 
-		alu_insert(D, src.toWord(), co);
+		alu_insert(D, src.toWord(), co, true);
 	}
 	inline void DSP::op_Insert_CoS2(const TWord op)
 	{
@@ -1040,7 +1070,7 @@ namespace dsp56k
 
 		const auto src = decode_qqq_read(qqq);
 
-		alu_insert(D, src.toWord(), fetchOpWordB());
+		alu_insert(D, src.toWord(), fetchOpWordB(), false);
 	}
 
 	inline void DSP::op_Lsl_D(const TWord op)

@@ -103,6 +103,7 @@ namespace  dsp56k
 		void ifcc();
 		void inc();
 		void insert();
+		void saBitfield();
 		void jscc();
 		void lra();
 		void lsl();

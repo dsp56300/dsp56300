@@ -992,11 +992,33 @@ namespace dsp56k
 		ccr_dirty(abDst, aluD, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
+	void callDSPSaBitfield(DSP* _dsp, const TWord _control, const TWord _packed)
+	{
+		_dsp->saBitfield(_control, _packed);
+	}
+
+	// In Sixteen-bit Arithmetic mode the bitfield instructions call out to the interpreter rather than
+	// being inlined. The mode is rare, the semantics are involved - a 40 bit EXT:MSP:LSP view, two
+	// different control word layouts and two different width fields - and sharing one implementation is
+	// what stops the two engines from drifting apart. The block is compiled for a known mode, so the
+	// branch itself costs nothing at runtime.
+	bool JitOps::saBitfield(const TWord _packed, const TWord _control)
+	{
+		if(!isSixteenBitArithmetic())
+			return false;
+
+		m_block.dspRegPool().releaseAll();	// the callee reads and writes the DSP object directly
+		callDSPFunc(&callDSPSaBitfield, _control, _packed);
+		return true;
+	}
+
 	void JitOps::op_Extract_S1S2(TWord op)
 	{
 		const auto sss = getFieldValue<Extract_S1S2, Field_SSS>(op);
 		const bool abDst = getFieldValue<Extract_S1S2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extract_S1S2, Field_s>(op);
+		if(saBitfield(0 | (1 << 2) | (static_cast<TWord>(abDst) << 3) | (static_cast<TWord>(abSrc) << 4) | (sss << 8), 0))
+			return;
 		DspValue widthOffset(m_block);
 		decode_sss_read(widthOffset, sss);
 		alu_extract(abDst, abSrc, widthOffset, true);
@@ -1006,7 +1028,10 @@ namespace dsp56k
 	{
 		const bool abDst = getFieldValue<Extract_CoS2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extract_CoS2, Field_s>(op);
-		DspValue widthOffset(m_block, getOpWordB(), DspValue::Immediate24);
+		const auto control = getOpWordB();	// exactly once, it advances the operand word count
+		if(saBitfield(0 | (0 << 2) | (static_cast<TWord>(abDst) << 3) | (static_cast<TWord>(abSrc) << 4), control))
+			return;
+		DspValue widthOffset(m_block, control, DspValue::Immediate24);
 		alu_extract(abDst, abSrc, widthOffset, true);
 	}
 
@@ -1016,6 +1041,8 @@ namespace dsp56k
 		const bool abDst = getFieldValue<Extractu_S1S2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extractu_S1S2, Field_s>(op);
 
+		if(saBitfield(1 | (1 << 2) | (static_cast<TWord>(abDst) << 3) | (static_cast<TWord>(abSrc) << 4) | (sss << 8), 0))
+			return;
 		DspValue widthOffset(m_block);
 		decode_sss_read(widthOffset, sss);
 		alu_extract(abDst, abSrc, widthOffset, false);
@@ -1026,7 +1053,10 @@ namespace dsp56k
 		const bool abDst = getFieldValue<Extractu_CoS2, Field_D>(op);
 		const bool abSrc = getFieldValue<Extractu_CoS2, Field_s>(op);
 
-		DspValue widthOffset(m_block, getOpWordB(), DspValue::Immediate24);
+		const auto control = getOpWordB();	// exactly once, it advances the operand word count
+		if(saBitfield(1 | (0 << 2) | (static_cast<TWord>(abDst) << 3) | (static_cast<TWord>(abSrc) << 4), control))
+			return;
+		DspValue widthOffset(m_block, control, DspValue::Immediate24);
 		alu_extract(abDst, abSrc, widthOffset, false);
 	}
 
@@ -1057,6 +1087,8 @@ namespace dsp56k
 		const auto qqq = getFieldValue<Insert_S1S2, Field_qqq>(op);
 		const auto sss = getFieldValue<Insert_S1S2, Field_SSS>(op);
 
+		if(saBitfield(2 | (1 << 2) | (static_cast<TWord>(D) << 3) | (qqq << 5) | (sss << 8), 0))
+			return;
 		DspValue src(m_block, UsePooledTemp);
 		DspValue co(m_block);
 
@@ -1071,11 +1103,13 @@ namespace dsp56k
 		const auto D   = getFieldValue<Insert_CoS2, Field_D>(op);
 		const auto qqq = getFieldValue<Insert_CoS2, Field_qqq>(op);
 
+		const auto control = getOpWordB();	// exactly once, it advances the operand word count
+		if(saBitfield(2 | (0 << 2) | (static_cast<TWord>(D) << 3) | (qqq << 5), control))
+			return;
 		DspValue src(m_block, UsePooledTemp);
-		DspValue co(m_block);
+		DspValue co(m_block, control, DspValue::Immediate24);
 
 		decode_qqq_read(src, qqq);
-		getOpWordB(co);
 
 		alu_insert(D, src, co);
 	}
