@@ -561,7 +561,7 @@ namespace dsp56k
 		const auto* format = formats[mmm];
 		if(!format)
 			return "?";
-		sprintf(temp, format, r, r);
+		snprintf(temp, sizeof(temp), format, r, r);
 		return temp;
 	}
 
@@ -608,7 +608,7 @@ namespace dsp56k
 				const auto* format = formats[mmm];
 				if(!format)
 					return {};
-				sprintf(temp, format, r, r);
+				snprintf(temp, sizeof(temp), format, r, r);
 			}
 			return area + temp;
 		}
@@ -699,9 +699,9 @@ namespace dsp56k
 		const auto displacement = signextend<int,24>(shortDisplacement);
 		char temp[16] = "(r0)";
 		if(displacement >= 0)
-			sprintf(temp, "(r%d+%s)", _r, hex(displacement).c_str());
+			snprintf(temp, sizeof(temp), "(r%d+%s)", _r, hex(displacement).c_str());
 		else
-			sprintf(temp, "(r%d-%s)", _r, hex(-displacement).c_str());
+			snprintf(temp, sizeof(temp), "(r%d-%s)", _r, hex(-displacement).c_str());
 		return temp;
 	}
 

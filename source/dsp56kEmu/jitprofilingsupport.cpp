@@ -103,7 +103,7 @@ namespace dsp56k
 		}
 
 		char methodName[64];
-		sprintf(methodName, "%06x-%06x_%x", b.getPCFirst(), b.getPCFirst() + b.getPMemSize() - 1, uid);
+		snprintf(methodName, sizeof(methodName), "%06x-%06x_%x", b.getPCFirst(), b.getPCFirst() + b.getPMemSize() - 1, uid);
 
 		if (b.getInfo().terminationReason == JitBlockInfo::TerminationReason::LoopEnd)
 			strcat(methodName, "_L");

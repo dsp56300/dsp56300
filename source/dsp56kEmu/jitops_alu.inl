@@ -43,6 +43,12 @@ namespace dsp56k
 				writeMemOrPeriph(area, ea, regMem);
 			}
 			break;
+
+        // Immediate is normalized to Memory or Peripherals above.
+        // Keep this unreachable case so the switch remains exhaustive.
+        case Immediate:
+			assert(false);
+			break;
 		}
 	}
 	

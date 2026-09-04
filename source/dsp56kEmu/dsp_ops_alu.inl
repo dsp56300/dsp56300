@@ -1379,7 +1379,7 @@ namespace dsp56k
 		const auto c = bitvalue<uint64_t,24 + g_aluShift>(d);	// bit 24 = LSB of a1/b1
 		auto shifted = d;
 		reinterpret_cast<uint64_t&>(shifted) >>= (24 + g_aluShift);	// isolate a1/b1
-		const auto oldBit0 = shifted & 1;
+		const auto oldBit0 = static_cast<uint32_t>(shifted & 1);
 		shifted >>= 1;									// shift right
 		shifted |= static_cast<TInt64>(sr_val(CCRB_C)) << 23;	// inject old carry into bit 23 (MSB position)
 		shifted &= 0xffffff;
