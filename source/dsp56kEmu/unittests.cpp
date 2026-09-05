@@ -881,7 +881,34 @@ namespace dsp56k
 		{
 			verify(dsp.aluA().var == 0x0002ccf9102000);
 		});
-	}
+	
+		// C is the last bit shifted out. The x64 back end took the host carry after aluRestoreFrom64,
+		// whose AND had already cleared it, so every ASR reported C=0. Simulator, asr a:
+		//     a $..01 -> sr $000315   a $..02 -> sr $000310   a $..03 -> sr $000311
+		{
+			struct Case { uint64_t a; bool carry; };
+			static constexpr Case cases[] =
+			{
+				{ 0x00000000000001ull, true }, { 0x00000000000002ull, false },
+				{ 0x00000000000003ull, true }, { 0x0000ff00123457ull, true  },
+			};
+
+			for (const auto& c : cases)
+			{
+				runTest([&]()
+				{
+					dsp.setSR(0x000300);
+					dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(c.a)));
+					emit("asr a");
+				},
+				[&]()
+				{
+					verify(static_cast<uint64_t>(dsp.aluA().var) == (c.a >> 1));
+					verify((dsp.sr_test(CCR_C) != 0) == c.carry);
+				});
+			}
+		}
+}
 
 	void UnitTests::asr_D()
 	{
@@ -7490,4 +7517,5 @@ namespace dsp56k
 
 		verify(tcf(0));
 	}
+
 }

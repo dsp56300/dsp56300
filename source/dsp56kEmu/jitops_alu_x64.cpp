@@ -130,11 +130,16 @@ namespace dsp56k
 			m_asm.sar(alu, _v->get().r8());
 		else
 			m_asm.sar(alu, asmjit::Imm(_immediate));
+		// C is the last bit shifted out of the ACCUMULATOR, which the host carry flag is not: sar sets
+		// it from bit 0 of the left-aligned 64 bit register, and that is padding, so C came out zero
+		// for every ASR. aluExtendTo64 pre-shifted left by 8, so after shifting right by n the bit we
+		// want has landed on bit 7 whatever n was. Same thing AArch64 does, and it has to happen
+		// before the restore below, whose AND would clear the flag anyway.
+		if(_updateCarry)
+			copyBitToCCR(alu, 7, CCRB_C);
+
 		// discards the bits shifted below the accumulator - the hardware has no resolution there
 		aluRestoreFrom64(alu);
-
-		if(_updateCarry)
-			ccr_update_ifCarry(CCRB_C);					// copy the host carry flag to the DSP carry flag
 		
 //		ccr_clear(CCR_V);							// cleared by batch update
 
