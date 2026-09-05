@@ -109,7 +109,9 @@ namespace dsp56k
 			m_asm.cmp(oldAlu, s);
 		}
 
-		ccr_update_ifNotZero(CCRB_V);
+		// V and L together: L is set on overflow too (FM 13-104), which the interpreter and the
+		// simulator do and the JIT did not. The combined helper writes both bits with one OR.
+		ccr_vl_update_ifNotZero();
 		
 		aluRestoreFrom64(alu);						// correction for the pre-shift, and keeps the low byte clear
 
