@@ -381,7 +381,8 @@ namespace dsp56k
 
 	void Memory::memTranslateAddress(EMemArea& _area, const TWord& _addr) const
 	{
-		if(m_mmuBuffer->isValid())
+		// m_mmuBuffer is null if the host MMU could not be used, do not dereference it
+		if(hasMmuSupport())
 			return;
 
 //		if(_addr >= m_bridgedMemoryAddress)
