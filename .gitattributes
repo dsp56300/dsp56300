@@ -1,0 +1,20 @@
+# Line endings.
+#
+# Every text blob in this repository is LF. The submodule checkout has no core.autocrlf of its
+# own, so it falls through to the user's global setting - and where that is false, git performs
+# no conversion at all. An editor that writes CRLF then turns a one-line change into a
+# whole-file rewrite, which hides the actual edit in review. This has happened repeatedly.
+#
+# Declaring the attribute here fixes it for everyone regardless of their own git configuration,
+# including CI, and costs nothing: the content is already LF, so nothing is renormalized.
+#
+# Scoped to our own code. asmjit, wxWidgets and vtuneSdk are vendored, carry their own
+# conventions and are CRLF in the working tree - leave them exactly as they are.
+
+source/dsp56kBase/**        text=auto eol=lf
+source/dsp56kEmu/**         text=auto eol=lf
+source/dsp56kTestRunner/**  text=auto eol=lf
+source/dsp56kDebugger/**    text=auto eol=lf
+source/disassemble/**       text=auto eol=lf
+scripts/**                  text=auto eol=lf
+doc/**                      text=auto eol=lf
