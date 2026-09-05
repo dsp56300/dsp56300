@@ -611,8 +611,8 @@ namespace dsp56k
 
 		void alu_and(TWord ab, DspValue& _v);
 
-		void alu_asl(TWord _abSrc, TWord _abDst, const ShiftReg* _v, TWord _bits = 0);
-		void alu_asr(TWord _abSrc, TWord _abDst, const ShiftReg* _v, TWord _immediate = 0);
+		void alu_asl(TWord _abSrc, TWord _abDst, const ShiftReg* _v, TWord _bits = 0, bool _updateCarry = true);
+		void alu_asr(TWord _abSrc, TWord _abDst, const ShiftReg* _v, TWord _immediate = 0, bool _updateCarry = true);
 
 		void alu_bclr(const DspValue& _dst, TWord _bit);
 		void alu_bset(const DspValue& _dst, TWord _bit);

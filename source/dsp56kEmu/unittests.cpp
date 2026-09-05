@@ -2655,7 +2655,50 @@ namespace dsp56k
 			verify(dsp.aluA().var == 0x000123456789ab);
 			verify(dsp.aluB().var == 0x0123456789abc0);
 		});
-	}
+	
+		// Ground truth captured from the reference simulator with a = $0000ff00123456. The shift count in
+		// S is signed: S[23] set means shift left by -S.
+		//
+		//     y0 $000000 -> $0000ff00123456 sr $000310     y0 $ffffff -> $0001fe002468ac sr $000310
+		//     y0 $000001 -> $00007f80091a2b sr $000310     y0 $fffffc -> $000ff001234560 sr $000310
+		//     y0 $000004 -> $00000ff0012345 sr $000310     y0 $ffffe9 -> $80091a2b000000 sr $00037a
+		//     y0 $000017 -> $0000000001fe00 sr $000310     y0 $ffffc1 -> $00000000000000 sr $000356
+		//     y0 $00003f -> $00000000000000 sr $000314
+		//
+		// Only the accumulator is asserted. The CCR is not faithful for this instruction yet: hardware
+		// leaves C untouched where both engines write it, and neither sets L on the ASL overflow that
+		// $ffffe9 and $ffffc1 produce - sr $37a and $356 both carry it. Pre-existing, tracked separately;
+		// the values above are what to fix them against.
+		{
+			struct Case { TWord shift; uint64_t result; TWord ccr; };
+			static constexpr Case cases[] =
+			{
+				{ 0x000000, 0x0000ff00123456ull, 0x10 }, { 0x000001, 0x00007f80091a2bull, 0x10 },
+				{ 0x000004, 0x00000ff0012345ull, 0x10 }, { 0x000017, 0x0000000001fe00ull, 0x10 },
+				{ 0x00003f, 0x00000000000000ull, 0x14 }, { 0xffffff, 0x0001fe002468acull, 0x10 },
+				{ 0xfffffc, 0x000ff001234560ull, 0x10 }, { 0xffffe9, 0x80091a2b000000ull, 0x7a },
+				{ 0xffffc1, 0x00000000000000ull, 0x56 },
+			};
+
+			for (const auto& c : cases)
+			{
+				runTest([&]()
+				{
+					dsp.setSR(0x000300);
+					dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x0000ff00123456ull)));
+					dsp.y0(TReg24(static_cast<int>(c.shift)));
+					emit("normf y0,a");
+				},
+				[&]()
+				{
+					verify(static_cast<uint64_t>(dsp.aluA().var) == c.result);
+
+					for (const auto bit : {CCR_C, CCR_V, CCR_Z, CCR_N, CCR_U, CCR_E, CCR_L})
+						verify((dsp.sr_test(bit) != 0) == ((c.ccr & bit) != 0));
+				});
+			}
+		}
+}
 
 	void UnitTests::not_()
 	{

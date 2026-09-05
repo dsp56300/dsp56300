@@ -72,7 +72,7 @@ namespace dsp56k
 		ccr_clear(CCR_V);
 	}
 
-	void JitOps::alu_asl(const TWord _abSrc, const TWord _abDst, const ShiftReg* _v, TWord _immediate/* = 0*/)
+	void JitOps::alu_asl(const TWord _abSrc, const TWord _abDst, const ShiftReg* _v, TWord _immediate/* = 0*/, const bool _updateCarry/* = true*/)
 	{
 		AluRef alu(m_block, _abDst, _abDst == _abSrc, true);
 		if (_abDst != _abSrc)
@@ -89,7 +89,8 @@ namespace dsp56k
 			m_asm.lsl(alu, alu, asmjit::Imm(_immediate));
 
 		// carry is the last bit shifted out so in our case its 56
-		copyBitToCCR(alu, 56, CCRB_C);
+		if(_updateCarry)
+			copyBitToCCR(alu, 56, CCRB_C);
 
 		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
 		// The easiest way to check this is to shift back and compare if the initial alu value is identical ot the backshifted one
@@ -103,8 +104,6 @@ namespace dsp56k
 			m_asm.cmp(s, oldAlu.get());
 		}
 
-		// V and L together: L is set on overflow too (FM 13-104), which the interpreter and the
-		// simulator do and the JIT did not. The combined helper writes both bits with one OR.
 		ccr_vl_update_ifNotZero();
 
 		m_dspRegs.mask56(alu);
@@ -112,13 +111,13 @@ namespace dsp56k
 		ccr_dirty(_abDst, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 	
-	void JitOps::alu_asr(const TWord _abSrc, const TWord _abDst, const ShiftReg* _v, TWord _immediate/* = 0*/)
+	void JitOps::alu_asr(const TWord _abSrc, const TWord _abDst, const ShiftReg* _v, TWord _immediate/* = 0*/, const bool _updateCarry/* = true*/)
 	{
 		AluRef alu(m_block, _abDst, _abDst == _abSrc, true);
 		if (_abDst != _abSrc)
 			m_dspRegs.getALU(alu.get(), _abSrc);
 
-		const CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+		const CcrBatchUpdate bu(*this, _updateCarry ? static_cast<CCRMask>(CCR_C | CCR_V) : CCR_V);
 
 		aluExtendTo64(alu);						// make sign-extend possible in our wide registers
 		if(_v)
@@ -126,7 +125,8 @@ namespace dsp56k
 		else
 			m_asm.asr(alu, alu, asmjit::Imm(_immediate));
 
-		copyBitToCCR(alu, 7, CCRB_C);			// carry is the last bit shifted out, we can grab it at bit pos 7 now as we pre-shifted left by 8
+		if(_updateCarry)
+			copyBitToCCR(alu, 7, CCRB_C);			// carry is the last bit shifted out, we can grab it at bit pos 7 now as we pre-shifted left by 8
 
 		aluRestoreFrom64(alu);					// discards bits below the accumulator - the hardware has no resolution there
 

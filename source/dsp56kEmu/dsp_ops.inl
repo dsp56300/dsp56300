@@ -447,6 +447,10 @@ namespace dsp56k
 
 		const TWord s = decode_sss_read<TWord>(sss);
 
+		// NORMF leaves C unchanged (FM 13-147, and the simulator keeps a set C set) but the ASR/ASL
+		// helpers below compute it, so put it back afterwards.
+		const auto carry = sr_test(CCR_C);
+
 		if(!bittest(s, 23))
 		{
 			// ASR
@@ -458,6 +462,8 @@ namespace dsp56k
 			const auto negS = static_cast<int>((-signextend<int,24>(s)) & 0xffffff);
 			alu_asl(D, D, negS);
 		}
+
+		sr_toggle(CCR_C, carry != 0);
 	}
 
 	inline void DSP::op_Pflush(const TWord op)

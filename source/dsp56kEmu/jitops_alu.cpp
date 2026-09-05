@@ -1472,6 +1472,8 @@ namespace dsp56k
 		m_asm.mov(r32(shifter), r32(src));
 		src.release();	// dead from here, and this op is at the limit of the register pool
 
+		// NORMF leaves C alone (FM 13-147), so it passes _updateCarry false rather than having the
+		// caller save and restore the bit - a spare register is exactly what op_Normf does not have.
 		const auto asl = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
 
@@ -1479,7 +1481,7 @@ namespace dsp56k
 		m_asm.jnz(asl);
 
 		// ASR
-		alu_asr(D, D, &shifter);
+		alu_asr(D, D, &shifter, 0, false);
 		m_asm.jmp(end);
 
 		// ASL
@@ -1487,7 +1489,7 @@ namespace dsp56k
 		m_asm.shl(r32(shifter), asmjit::Imm(8));
 		m_asm.neg(shifter);
 		m_asm.shr(r32(shifter), asmjit::Imm(8));
-		alu_asl(D,D, &shifter);
+		alu_asl(D,D, &shifter, 0, false);
 
 		m_asm.bind(end);
 	}
