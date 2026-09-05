@@ -25,15 +25,37 @@ namespace dsp56k
 
 		m_lastClock = clock;
 
-//		m_prescalerClock ^= 1;
-//		m_tpcr -= m_prescalerClock;
+		// The prescaler is a 21 bit counter clocked by the prescaler input, reloaded from TPLR when
+		// it reaches zero. Its output is one tick per TPLR+1 input clocks, and that output is what
+		// clocks a timer with PCE set - a timer without PCE runs straight off the input instead.
+		// Ignoring PCE and clocking everything off the input makes a prescaled timer run TPLR+1
+		// times too fast, so its compare flag is set permanently rather than periodically.
+		//
+		// The counter only runs while at least one timer is both enabled and using its output, as
+		// the comment at the top of this function already says. While nothing uses it the counter
+		// holds, so an idle stretch cannot bank a remainder that makes the first tick after it early.
+		bool prescalerEnabled = false;
 
-		if(m_tpcr == 0)
-			m_tpcr = m_tplr & 0xfffff;
+		for (const auto& t : m_timers)
+			prescalerEnabled |= t.m_tcsr.test(Timer::M_TE) && t.m_tcsr.test(Timer::M_PCE);
 
-		execTimer(m_timers[0], 0, diffDiv2);
-		execTimer(m_timers[1], 1, diffDiv2);
-		execTimer(m_timers[2], 2, diffDiv2);
+		uint32_t prescaled = 0;
+
+		if(prescalerEnabled)
+		{
+			const uint32_t reload = (m_tplr & 0x1fffff) + 1;
+			const uint64_t input = static_cast<uint64_t>(m_prescalerRemainder) + diffDiv2;
+
+			prescaled = static_cast<uint32_t>(input / reload);
+			m_prescalerRemainder = static_cast<uint32_t>(input % reload);
+
+			// the counter counts down from the preload value, so what is left of it is the reload
+			// minus however much of the current period has elapsed
+			m_tpcr = reload - 1 - m_prescalerRemainder;
+		}
+
+		for(uint32_t i=0; i<3; ++i)
+			execTimer(m_timers[i], i, m_timers[i].m_tcsr.test(Timer::M_PCE) ? prescaled : diffDiv2);
 
 		if(diff > m_timerupdateInterval<<1)
 			return 0;
@@ -43,6 +65,11 @@ namespace dsp56k
 	void Timers::execTimer(Timer& _t, const uint32_t _index, uint32_t _cycles) const
 	{
 		if (!_t.m_tcsr.test(Timer::M_TE))
+			return;
+
+		// a prescaled timer sees no clock at all on most calls, and no clock means no compare - the
+		// flag below must not be re-raised just because the counter still stands above TCPR
+		if (!_cycles)
 			return;
 
 		_t.m_tcr += _cycles;
@@ -136,8 +163,10 @@ namespace dsp56k
 
 	void Timers::writeTPCR(TWord _val)
 	{
-		m_tpcr = _val;
-		LOG("Write Timer TPCR " << ": " << HEX(_val));
+		// "The TPCR is a 24-bit read-only register that reflects the current value in the prescaler
+		// counter", DSP56362 UM p201. A write has no effect - and now that exec() derives the count
+		// from the prescaler remainder, storing one here would be overwritten on the next call anyway
+		LOG("Write Timer TPCR " << ": " << HEX(_val) << ", ignored, the register is read only");
 	}
 
 	void Timers::setDSP(const DSP* _dsp)

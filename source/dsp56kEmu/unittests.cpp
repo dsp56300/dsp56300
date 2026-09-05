@@ -135,6 +135,7 @@ namespace dsp56k
 		inc();
 		insert();
 		saBitfield();
+		timerPrescaler();
 		jscc();
 		lra();
 		lsl();
@@ -7394,5 +7395,56 @@ namespace dsp56k
 		}
 
 		dsp.setSR(dsp.getSR().var & ~SR_SA);
+	}
+
+	// The triple timer's prescaler divides by TPLR+1 - the 56362 manual is explicit: "If PL[20:0] = N,
+	// then the prescaler counts N + 1 source clock cycles before generating a prescaler clock pulse" -
+	// and it is that output, not the prescaler input, which clocks a timer with PCE set. Clocking a
+	// prescaled timer off the input instead makes it run TPLR+1 times too fast, so its compare flag
+	// sits permanently set instead of ticking. A timer without PCE keeps running off the input.
+	void UnitTests::timerPrescaler()
+	{
+		constexpr TWord g_reload = 1000;			// TPLR+1
+		constexpr TWord g_compare = 10;
+
+		const auto tcf = [&](const int _index)
+		{
+			return (peripheralsX.getTimers().readTCSR(_index) & (1 << Timer::M_TCF)) != 0;
+		};
+
+		const auto runInstructions = [&](const uint32_t _count)
+		{
+			for (uint32_t i = 0; i < _count; ++i)
+				execStep();
+		};
+
+		dsp.memWritePeriph(MemArea_X, Timers::M_TPLR, g_reload - 1);
+
+		// timer 0 prescaled, timer 1 straight off the prescaler input
+		dsp.memWritePeriph(MemArea_X, Timers::M_TCPR0, g_compare);
+		dsp.memWritePeriph(MemArea_X, Timers::M_TLR0, 0);
+		dsp.memWritePeriph(MemArea_X, Timers::M_TCPR1, g_compare);
+		dsp.memWritePeriph(MemArea_X, Timers::M_TLR1, 0);
+
+		// a two instruction loop to burn time in - earlier tests have left opcodes lying around in
+		// P memory, so running from an arbitrary address is not the field of NOPs it looks like
+		dsp.memWriteP(0x100, 0x000000);				// nop
+		emitToMemory("jmp $100", 0x101);
+		dsp.setPC(0x100);
+		dsp.memWritePeriph(MemArea_X, Timers::M_TCSR0, (1 << Timer::M_TE) | (1 << Timer::M_PCE));
+		dsp.memWritePeriph(MemArea_X, Timers::M_TCSR1, (1 << Timer::M_TE));
+
+		// Enough input clocks for the unprescaled timer to compare many times over, but only a couple
+		// of prescaler output ticks - far short of the compare value. Without the prescaler both
+		// timers fire here, which is the bug.
+		runInstructions(4096);
+
+		verify(tcf(1));								// unprescaled: long past its compare
+		verify(!tcf(0));							// prescaled: must not have got there yet
+
+		// ... and now give it enough prescaler ticks to actually reach the compare value
+		runInstructions(g_reload * g_compare * 4);
+
+		verify(tcf(0));
 	}
 }

@@ -166,6 +166,10 @@ namespace dsp56k
 		TWord m_tplr = 0;							// Timer Prescaler Load
 		TWord m_tpcr = 0;							// Timer Prescaler Count
 
+		// prescaler input clocks that did not make up a whole prescaler output tick yet, carried
+		// into the next exec so a long TPLR period is not lost to truncation every time round
+		uint32_t m_prescalerRemainder = 0;
+
 		uint64_t m_lastClock = 0;
 		std::array<Timer,3> m_timers;
 	};

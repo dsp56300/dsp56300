@@ -104,6 +104,7 @@ namespace  dsp56k
 		void inc();
 		void insert();
 		void saBitfield();
+		void timerPrescaler();
 		void jscc();
 		void lra();
 		void lsl();
