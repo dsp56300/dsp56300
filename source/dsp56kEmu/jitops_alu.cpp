@@ -1454,6 +1454,14 @@ namespace dsp56k
 		const auto sss = getFieldValue(Normf, Field_sss, op);
 		const auto D = getFieldValue(Normf, Field_D, op);
 
+		// Both arms below go through the CCR helpers, which fetch SR from the register pool. The pool is
+		// compile-time state: a load or spill emitted inside the first arm is taken as done in the second
+		// arm too, although that path never executes it, and whatever got spilled there (an address register,
+		// typically) comes back stale after the join. Pin SR and the accumulator before branching and flush
+		// the deferred CCR bits so that both arms start from the same pool and dirty state, as op_Norm does.
+		updateDirtyCCR();
+		const DSPReg sr(m_block, PoolReg::DspSR, true, true);
+
 		AluRef alu(m_block, D, true, true);
 		alu.get();	// force to lock already now
 
@@ -1462,6 +1470,7 @@ namespace dsp56k
 
 		const ShiftReg shifter(m_block);
 		m_asm.mov(r32(shifter), r32(src));
+		src.release();	// dead from here, and this op is at the limit of the register pool
 
 		const auto asl = m_asm.newLabel();
 		const auto end = m_asm.newLabel();
