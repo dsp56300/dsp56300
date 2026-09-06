@@ -59,6 +59,10 @@ namespace dsp56k
 			branchIsConditional = false;
 			loopBegin = g_invalidAddress;
 			loopEnd = g_invalidAddress;
+
+			ccrRead = 0;
+			ccrWrite = 0;
+			ccrOverwrite = 0;
 		}
 
 		TerminationReason terminationReason = TerminationReason::None;
