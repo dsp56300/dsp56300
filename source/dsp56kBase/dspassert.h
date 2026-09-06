@@ -17,6 +17,8 @@ namespace dsp56k
 #define assert( expr )			do { if( !(expr) ) dsp56k::Assert::show( #expr, __func__, __LINE__ ); } while(0)
 #define assertf( expr, msg )	do { if( !(expr) ) dsp56k::Assert::show( msg, __func__, __LINE__ ); } while(0)
 #else
-#define assert( expr )			do {} while(0)
-#define assertf( expr, msg )	do {} while(0)
+// Match the standard disabled assertion expression. Inline functions can see
+// either header; an empty loop gives those definitions different PGO hashes.
+#define assert( expr )			((void)0)
+#define assertf( expr, msg )	((void)0)
 #endif
