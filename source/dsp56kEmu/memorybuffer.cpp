@@ -75,7 +75,7 @@ namespace dsp56k
 		// we add a block above the external memory that every invalid DSP address will point into
 		constexpr auto totalAddressRange = 3 * totalDspAreaByteSize;
 
-		auto* basePtr = reinterpret_cast<TWord*>(m_mmu.reserveAddressRange(totalAddressRange * sizeof(TWord)));
+		auto* basePtr = reinterpret_cast<TWord*>(m_mmu.reserveAddressRange(totalAddressRange));
 
 		if(!basePtr)
 			return;
