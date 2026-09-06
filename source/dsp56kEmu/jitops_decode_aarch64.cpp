@@ -122,7 +122,12 @@ namespace dsp56k
 			}
 		case CCCC_LessEqual:								// LE			Less than or equal
 			{
-				// (SRB_Z + (SRB_N != SRB_V)) == 1
+				// (SRB_Z + (SRB_N != SRB_V)) != 0 - the inverse of GT above.
+				//
+				// NOT == 1: the sum is 2 when Z is set AND N differs from V, which is exactly what an ASL
+				// that overflows to zero produces. Comparing against 1 made LE false there while GT was
+				// also false, so the two stopped being complements and this back end skipped conditional
+				// work that the simulator and x64 both perform.
 				const RegGP r(m_block);
 				const RegGP dst(m_block);
 
@@ -131,9 +136,8 @@ namespace dsp56k
 
 				m_asm.eor(dst, dst, r.get());
 				ccr_getBitValue(r, CCRB_Z);
-				m_asm.add(dst, dst, r.get());
-				m_asm.cmp(dst, asmjit::Imm(1));
-				return asmjit::arm::CondCode::kZero;
+				m_asm.adds(dst, dst, r.get());
+				return asmjit::arm::CondCode::kNotZero;
 			}
 		default:
 			assert(0 && "invalid CCCC value");
