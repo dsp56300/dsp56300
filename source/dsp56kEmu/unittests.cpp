@@ -295,16 +295,22 @@ namespace dsp56k
 		run(0xff'800000'000000, {CCCC_Minus, CCCC_Normalized});
 		run(0x00'400000'000000, {CCCC_Plus, CCCC_Normalized});
 
-		// NR is Z | (!U & !E), not (Z|U|E) == 0: a zero accumulator is normalized however U and E read.
-		// The whole CCR space is cheap to cover here and it is the only way to pin the rule down, because
-		// an accumulator value can only reach a handful of the 256 states. Reference: sim56300, jnr with
-		// SR preloaded across $00..$ff, which branches in 160 states. Requiring all three bits clear
-		// branches in 32 and disagrees in exactly the 128 states that have Z set.
+		// The whole CCR space, for the conditions that combine several bits. It is the only way to pin
+		// these rules down: an accumulator value can only reach a handful of the 256 states, so tst
+		// alone cannot tell a correct rule from one that happens to agree on the reachable ones. Both
+		// references are sim56300 with SR preloaded across $00..$ff.
+		//
+		// NR is Z | (!U & !E), not (Z|U|E) == 0 - a zero accumulator is normalized however U and E
+		// read. jnr branches in 160 states; requiring all three bits clear branches in 32 and
+		// disagrees in exactly the 128 that have Z set.
+		//
+		// LE is Z | (N ^ V) and GT its exact complement. jle branches in 192 states, jgt in 64.
 		for (TWord ccr = 0; ccr < 256; ++ccr)
 		{
 			const bool normalized = (ccr & CCR_Z) != 0 || (ccr & (CCR_U | CCR_E)) == 0;
+			const bool lessEqual = (ccr & CCR_Z) != 0 || ((ccr & CCR_N) != 0) != ((ccr & CCR_V) != 0);
 
-			for (const ConditionCode cc : {CCCC_Normalized, CCCC_NotNormalized})
+			for (const ConditionCode cc : {CCCC_Normalized, CCCC_NotNormalized, CCCC_LessEqual, CCCC_GreaterThan})
 			{
 				runTest([&]()
 				{
@@ -317,7 +323,14 @@ namespace dsp56k
 					emit(0x020801 | (cc << 12));	// tcc r0,r1
 				}, [&]()
 				{
-					const bool expected = cc == CCCC_Normalized ? normalized : !normalized;
+					bool expected = false;
+					switch (cc)
+					{
+					case CCCC_Normalized:		expected = normalized;	break;
+					case CCCC_NotNormalized:	expected = !normalized;	break;
+					case CCCC_LessEqual:		expected = lessEqual;	break;
+					default:					expected = !lessEqual;	break;
+					}
 					verify(dsp.regs().r[1] == (expected ? 1 : 0));
 				});
 			}

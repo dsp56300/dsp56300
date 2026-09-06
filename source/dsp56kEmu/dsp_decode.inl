@@ -46,8 +46,12 @@ namespace dsp56k
 		case CCCC_Normalized:		return SRT_Z != 0 || (SRT_U | SRT_E) == 0;		// NR			Normalized
 		case CCCC_NotNormalized:	return SRT_Z == 0 && (SRT_U | SRT_E) != 0;		// NN			Not normalized
 
-		case CCCC_GreaterThan:		return (SRT_Z + (SRT_N != SRT_V)) == 0;			// GT			Greater than
-		case CCCC_LessEqual:		return (SRT_Z + (SRT_N != SRT_V)) == 1;			// LE			Less than or equal
+		// LE is Z | (N ^ V), the exact complement of GT. Summing the two terms and comparing against 1
+		// is not that: the sum is 2 when Z is set and N differs from V, so LE came out false in those
+		// 64 of the 256 CCR values and stopped being GT's complement. Simulator: jle branches in 192
+		// states, jgt in the other 64.
+		case CCCC_GreaterThan:		return SRT_Z == 0 && SRT_N == SRT_V;			// GT			Greater than
+		case CCCC_LessEqual:		return SRT_Z != 0 || SRT_N != SRT_V;			// LE			Less than or equal
 		}
 		assert( 0 && "unreachable" );
 		return false;
