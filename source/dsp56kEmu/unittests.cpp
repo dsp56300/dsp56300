@@ -7636,6 +7636,47 @@ namespace dsp56k
 		{
 			verify(dsp.regs().r[4].var == 0x101);
 		});
+
+		// The remaining updating addressing modes, all on the not-taken path, plus the pc-relative form.
+		// The bug was in the shared bitTestMemory, so these cover the same fix through different decoders
+		// rather than a different defect.
+
+		// post-decrement, X memory, jset: jset jumps when the bit is SET, so a clear bit is not taken
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.regs().r[2].var = 0x100;
+			dsp.memWrite(MemArea_X, 0x100, 0x000000);
+			emit(0x0a52a0, 0x000200);		// jset #$0,x:(r2)-,$200
+		}, [&]()
+		{
+			verify(dsp.regs().r[2].var == 0xff);
+		});
+
+		// indexed by Nn: r4 must advance by n4, not by one
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.regs().r[4].var = 0x100;
+			dsp.regs().n[4].var = 0x5;
+			dsp.memWrite(MemArea_Y, 0x100, 0x000001);
+			emit(0x0a4cc0, 0x000200);		// jclr #$0,y:(r4)+n4,$200
+		}, [&]()
+		{
+			verify(dsp.regs().r[4].var == 0x105);
+		});
+
+		// brclr: the pc-relative branch form goes through the same helper
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.regs().r[4].var = 0x100;
+			dsp.memWrite(MemArea_Y, 0x100, 0x000001);
+			emit(0x0c9c40, 0x000100);		// brclr #$0,y:(r4)+,+$100
+		}, [&]()
+		{
+			verify(dsp.regs().r[4].var == 0x101);
+		});
 	}
 
 	// SUBR was never ported to the left-aligned ALU: it halved D with the right-aligned recipe
