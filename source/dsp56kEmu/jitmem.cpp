@@ -542,6 +542,16 @@ namespace dsp56k
 
 	void Jitmem::writeDspMemory(const JitRegGP& _offset, const DspValue& _srcX, const DspValue& _srcY) const
 	{
+		// The parallel X:Y write did not honour memoryWritesCallCpp, so it wrote straight to the memory
+		// buffer. Dual moves are the bulk of DSP56300 code, so a debug build asking for writes to go through
+		// C++ silently missed almost all of them. Route both halves through the single-area path, which does.
+		if(m_block.getConfig().memoryWritesCallCpp || g_debugMemoryWrites)
+		{
+			writeDspMemory(MemArea_X, _offset, _srcX);
+			writeDspMemory(MemArea_Y, _offset, _srcY);
+			return;
+		}
+
 		const SkipLabel skip(m_block.asm_());
 
 		if(!hasMmuSupport())
@@ -562,6 +572,15 @@ namespace dsp56k
 	{
 		if (_offset >= m_block.dsp().memory().sizeXY())
 			return noRef();
+
+		// Same gap as the register-offset parallel write above: honour memoryWritesCallCpp here too.
+		if(m_block.getConfig().memoryWritesCallCpp || g_debugMemoryWrites)
+		{
+			writeDspMemory(MemArea_X, _offset, _srcX);
+			if(_offset < m_block.dsp().memory().getBridgedMemoryAddress())
+				writeDspMemory(MemArea_Y, _offset, _srcY);
+			return noRef();
+		}
 
 		auto p = getMemAreaPtr(MemArea_X, _offset, noRef(), false);
 		writeDspMemory(p, _srcX);
