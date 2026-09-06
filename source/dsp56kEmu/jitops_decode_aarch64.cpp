@@ -81,30 +81,27 @@ namespace dsp56k
 				return asmjit::arm::CondCode::kNotZero;
 			}
 		case CCCC_Normalized:								// NR			Normalized
-			{
-				// (SRB_Z + ((!SRB_U) | (!SRB_E))) == 1
-				const RegGP dst(m_block);
-				const RegGP r(m_block);
-				ccr_getBitValue(dst, CCRB_U);
-				ccr_getBitValue(r, CCRB_E);
-				m_asm.orr(dst, dst, r);
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.orr(dst, dst, r);
-				m_asm.tst(dst, dst);
-				return asmjit::arm::CondCode::kZero;
-			}
 		case CCCC_NotNormalized:							// NN			Not normalized
 			{
-				// (SRB_Z + ((!SRB_U) | !SRB_E)) == 0
-				const RegGP dst(m_block);
-				const RegGP r(m_block);
-				ccr_getBitValue(dst, CCRB_U);
-				ccr_getBitValue(r, CCRB_E);
-				m_asm.orr(dst, dst, r);
-				ccr_getBitValue(r, CCRB_Z);
-				m_asm.orr(dst, dst, r);
-				m_asm.tst(dst, dst);
-				return asmjit::arm::CondCode::kNotZero;
+				// NR is Z | (!U & !E). Requiring Z, U and E to all be clear is a different function: it
+				// answered "not normalized" for every state with Z set, 128 of the 256 CCR values, measured
+				// against the simulator, which takes jnr in 160 states where this took it in 32. A zero
+				// accumulator is normalized by definition.
+				//
+				// Test Z first and drop SR to zero when it is set, so the second test only ever sees U and E
+				// in the states where they still matter. Three instructions and one pool register, against
+				// the six and two of the bit-by-bit version this replaces.
+				m_ccrRead |= static_cast<CCRMask>(CCR_Z | CCR_U | CCR_E);
+				updateDirtyCCR(static_cast<CCRMask>(CCR_Z | CCR_U | CCR_E));
+
+				const RegGP t(m_block);
+				const auto sr = r32(m_dspRegs.getSR(JitDspRegs::Read));
+
+				m_asm.tst(sr, asmjit::Imm(CCR_Z));
+				m_asm.csel(r32(t), asmjit::a64::regs::wzr, sr, asmjit::arm::CondCode::kNotZero);
+				m_asm.tst(r32(t), asmjit::Imm(CCR_U | CCR_E));
+
+				return cccc == CCCC_Normalized ? asmjit::arm::CondCode::kZero : asmjit::arm::CondCode::kNotZero;
 			}
 		case CCCC_GreaterThan:								// GT			Greater than
 			{

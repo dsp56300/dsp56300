@@ -72,16 +72,32 @@ namespace dsp56k
 			ccrMaskTest(static_cast<CCRMask>(CCR_N | CCR_V));
 			return asmjit::x86::CondCode::kNP;
 		case CCCC_Normalized:										// NR			Normalized
-			{
-				// Z + (!U & !E) == 1
-				ccrMaskTest(static_cast<CCRMask>(CCR_Z | CCR_U | CCR_E));
-				return asmjit::x86::CondCode::kZero;
-			}
 		case CCCC_NotNormalized:									// NN			Not normalized
 			{
-				// Z + (!U & !E) == 0
-				ccrMaskTest(static_cast<CCRMask>(CCR_Z | CCR_U | CCR_E));
-				return asmjit::x86::CondCode::kNotZero;
+				// NR is Z | (!U & !E). Testing Z|U|E for zero is a different function: it demands Z clear
+				// as well, so every state with Z set answered "not normalized" - 128 of the 256 CCR
+				// values, measured against the simulator, which takes jnr in 160 states where this took
+				// it in 32. A zero accumulator is normalized by definition.
+				//
+				// Build a mask that is all ones when Z is CLEAR and zero when it is set, so U and E stop
+				// mattering the moment Z is set, then test as before. Scaling the isolated Z bit up to
+				// U|E and inverting it does that without a branch and without a second register.
+				m_ccrRead |= static_cast<CCRMask>(CCR_Z | CCR_U | CCR_E);
+				updateDirtyCCR(static_cast<CCRMask>(CCR_Z | CCR_U | CCR_E));
+
+				// RegScratch, not RegGP, for the same reason as GT/LE below: this runs inside other ops and
+				// a pool register can evict one the caller still holds.
+				const RegScratch t(m_block);
+				const auto sr = m_dspRegs.getSR(JitDspRegs::Read).r32();
+
+				m_asm.mov(r32(t), sr);
+				m_asm.and_(r32(t), asmjit::Imm(CCR_Z));
+				m_asm.imul(r32(t), r32(t), asmjit::Imm((CCR_U | CCR_E) / CCR_Z));	// 0, or U|E when Z is set
+				m_asm.not_(r32(t));
+				m_asm.and_(r32(t), sr);
+				m_asm.test(r32(t), asmjit::Imm(CCR_U | CCR_E));
+
+				return cccc == CCCC_Normalized ? asmjit::x86::CondCode::kZero : asmjit::x86::CondCode::kNotZero;
 			}
 		case CCCC_GreaterThan:										// GT			Greater than
 		case CCCC_LessEqual:										// LE			Less than or equal

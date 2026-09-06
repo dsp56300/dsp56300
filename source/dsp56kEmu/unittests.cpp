@@ -282,7 +282,7 @@ namespace dsp56k
 		run(+1, {CCCC_Plus, CCCC_GreaterEqual, CCCC_GreaterThan, CCCC_NotEqual, CCCC_CarryClear, CCCC_ExtensionClear});
 		run(-1, {CCCC_Minus, CCCC_LessEqual, CCCC_LessThan, CCCC_NotEqual, CCCC_CarryClear, CCCC_ExtensionClear});
 
-		run(0, {CCCC_Equal, CCCC_LessEqual, CCCC_GreaterEqual, CCCC_CarryClear, CCCC_ExtensionClear, CCCC_NotNormalized});
+		run(0, {CCCC_Equal, CCCC_LessEqual, CCCC_GreaterEqual, CCCC_CarryClear, CCCC_ExtensionClear, CCCC_Normalized});
 
 		run(0xff'ffffff'ffffff, {CCCC_Minus, CCCC_ExtensionClear});
 		run(0xff'800000'000000, {CCCC_Minus, CCCC_ExtensionClear});
@@ -291,9 +291,37 @@ namespace dsp56k
 		run(0x00'800000'000000, {CCCC_Plus, CCCC_ExtensionSet});
 
 		run(0x00'c00000'000000, {CCCC_Plus, CCCC_NotNormalized});
-		run(0x00'000000'000000, {CCCC_Plus, CCCC_NotNormalized});
+		run(0x00'000000'000000, {CCCC_Plus, CCCC_Normalized});
 		run(0xff'800000'000000, {CCCC_Minus, CCCC_Normalized});
 		run(0x00'400000'000000, {CCCC_Plus, CCCC_Normalized});
+
+		// NR is Z | (!U & !E), not (Z|U|E) == 0: a zero accumulator is normalized however U and E read.
+		// The whole CCR space is cheap to cover here and it is the only way to pin the rule down, because
+		// an accumulator value can only reach a handful of the 256 states. Reference: sim56300, jnr with
+		// SR preloaded across $00..$ff, which branches in 160 states. Requiring all three bits clear
+		// branches in 32 and disagrees in exactly the 128 states that have Z set.
+		for (TWord ccr = 0; ccr < 256; ++ccr)
+		{
+			const bool normalized = (ccr & CCR_Z) != 0 || (ccr & (CCR_U | CCR_E)) == 0;
+
+			for (const ConditionCode cc : {CCCC_Normalized, CCCC_NotNormalized})
+			{
+				runTest([&]()
+				{
+					dsp.resetHW();
+					dsp.setSR(0x000300 | ccr);
+
+					dsp.reg.r[0].var = 0x1;
+					dsp.reg.r[1].var = 0x0;
+
+					emit(0x020801 | (cc << 12));	// tcc r0,r1
+				}, [&]()
+				{
+					const bool expected = cc == CCCC_Normalized ? normalized : !normalized;
+					verify(dsp.regs().r[1] == (expected ? 1 : 0));
+				});
+			}
+		}
 	}
 
 	void UnitTests::aguModulo()
