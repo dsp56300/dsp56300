@@ -88,9 +88,39 @@ namespace dsp56k
 		else
 			m_asm.lsl(alu, alu, asmjit::Imm(_immediate));
 
-		// carry is the last bit shifted out so in our case its 56
+		// C is the last bit shifted out of the accumulator. Reading it back out of the SHIFTED value at
+		// a fixed bit only works while the accumulator sits in bits 55..0 - left-aligned its bit 55 is
+		// at register bit 63, so a left shift pushes it out of the register altogether and bit 56 is a
+		// different bit entirely. Take it from the value BEFORE the shift instead: shifting left by n,
+		// the last bit to leave is bit (56 + g_aluBitOffset - n). x64 gets this for free from the host
+		// carry, which is why only this back end was wrong.
 		if(_updateCarry)
-			copyBitToCCR(alu, 56, CCRB_C);
+		{
+			constexpr auto msb = 56 + g_aluBitOffset;
+
+			// A shift of zero shifts nothing out, so C is cleared - the interpreter spells this out as
+			// (_shiftAmount && bittest(...)). It has to be handled explicitly here because bit msb-0 is
+			// bit 64, which does not exist, and a variable shift by 64 is masked back to 0 by the
+			// hardware and would read the wrong bit instead.
+			if(_v)
+			{
+				const RegGP c(m_block);
+				m_asm.mov(r32(c), asmjit::Imm(msb));
+				m_asm.sub(r32(c), r32(c), r32(_v->get()));
+				m_asm.lsr(r64(c), r64(oldAlu), r64(c));
+				m_asm.cmp(r32(_v->get()), asmjit::Imm(0));
+				m_asm.csel(r64(c), asmjit::a64::regs::xzr, r64(c), asmjit::arm::CondCode::kZero);
+				copyBitToCCR(r64(c), 0, CCRB_C);
+			}
+			else if(_immediate)
+			{
+				copyBitToCCR(oldAlu, msb - _immediate, CCRB_C);
+			}
+			else
+			{
+				ccr_clear(CCR_C);
+			}
+		}
 
 		// Overflow: Set if Bit 55 is changed any time during the shift operation, cleared otherwise.
 		// The easiest way to check this is to shift back and compare if the initial alu value is identical ot the backshifted one
