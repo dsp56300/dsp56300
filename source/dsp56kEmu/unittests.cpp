@@ -6745,6 +6745,7 @@ namespace dsp56k
 		do_twoWordCallAtLoopEnd();
 		do_callNotAtLoopEnd();
 		jsr_rts();
+		ccrBackendParity();
 	}
 
 	void UnitTests::rep_div_powerOfTwo()
@@ -7518,4 +7519,40 @@ namespace dsp56k
 		verify(tcf(0));
 	}
 
+
+	// Condition codes that both JIT back ends got wrong, all values captured from the reference
+	// simulator. Each case failed on at least one back end before the fixes and they disagreed with
+	// each other, which is what makes them worth pinning: the two back ends must stay bit identical.
+	void UnitTests::ccrBackendParity()
+	{
+		// ASL: C is the last bit shifted out. AArch64 read it out of the shifted value at a fixed bit,
+		// which is the wrong bit once the accumulator is left aligned.
+		//   sim: a $00ffffffffffff -> sr $000330   a $7fffffffffffff -> sr $00035a
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00ffffffffffffull)));
+			emit("asl a");
+		}, [&]()
+		{
+			verify(static_cast<uint64_t>(dsp.aluA().var) == 0x01fffffffffffeull);
+			verify(!dsp.sr_test(CCR_C));
+		});
+
+		// ROR takes N from bit 23 of the rotated A1. Both back ends added the ALU bit offset to that and
+		// so read bit 31 of a 24 bit value, leaving N permanently clear. x64 also read Z from flags that
+		// the N update had already destroyed.  sim: a 0 with C set -> sr $000308, a $00800000000000
+		runTest([&]()
+		{
+			dsp.setSR(0x000301);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			emit("ror a");
+		}, [&]()
+		{
+			verify(static_cast<uint64_t>(dsp.aluA().var) == 0x00800000000000ull);
+			verify(dsp.sr_test(CCR_N));
+			verify(!dsp.sr_test(CCR_Z));
+			verify(!dsp.sr_test(CCR_C));
+		});
+	}
 }

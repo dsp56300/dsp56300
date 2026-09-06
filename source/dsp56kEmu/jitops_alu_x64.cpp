@@ -799,8 +799,11 @@ namespace dsp56k
 		m_asm.shl(r32(prevCarry), asmjit::Imm(23));
 		m_asm.or_(r.get(), r32(prevCarry));						// inject old carry into bit 47 position
 
-		ccr_n_update_by23(r64(r));								// Set if bit 47 of the result is set
+		// Z first and from an explicit test: ccr_n_update_by23 emits a bit copy that clobbers the host
+		// flags, so reading ZF after it picked up whatever that left behind.
+		m_asm.test_(r32(r));
 		ccr_update_ifZero(CCRB_Z);								// Set if bits 47-24 of the result are 0
+		ccr_n_update_by23(r64(r));								// Set if bit 47 of the result is set
 		setALU1(D, r);
 
 		ccr_clear(CCR_V);										// This bit is always cleared
