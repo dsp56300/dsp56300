@@ -209,6 +209,7 @@ namespace  dsp56k
 		void jsr_rts();
 		void ccrBackendParity();
 		void bitTestMemoryEaUpdate();
+		void subr_leftAligned();
 
 		Peripherals56362 peripheralsX;
 		Peripherals56367 peripheralsY;

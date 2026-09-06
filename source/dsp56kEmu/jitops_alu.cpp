@@ -1593,32 +1593,40 @@ namespace dsp56k
 
 	void JitOps::op_Subr(TWord op)
 	{
-		// D = D/2 - S (reverse subtract: subtract source from half of destination)
+		// D = D/2 - S. Mirrors the interpreter op_Subr: arithmetic halve of D keeping the 56-bit
+		// format, subtract S, then Z and C explicitly with E/U/N deferred. C is the accumulator MSB
+		// (bit 55) changing, as the interpreter's sr_c_update_arithmetic does. V, L and S are untouched.
 		const auto ab = getFieldValue<Subr, Field_d>(op);
 
 		AluReg aluD(m_block, ab);
 
-		// D/2: arithmetic shift right by 1, maintaining 56-bit format
-		m_asm.sal(aluD, asmjit::Imm(8));
+		// keep the pre-op value: C is set when accumulator bit 55 changes between old and new
+		const RegGP oldD(m_block);
+		m_asm.mov(oldD.get(), aluD.get());
+
+		// D/2, arithmetic, keeping the left-aligned 56-bit layout (same idiom as op_Addr). The old
+		// sal 8 / sar 1 / shr 8 was the right-aligned recipe: on the left-aligned ALU it discarded the
+		// extension byte and took the sign from bit 47 instead of bit 55.
+		aluExtendTo64(aluD);
 		m_asm.sar(aluD, asmjit::Imm(1));
-		m_asm.shr(aluD, asmjit::Imm(8));
+		aluRestoreFrom64(aluD);
 
 		{
 			AluRef aluS(m_block, ab ? 0 : 1, true, false);
 			m_asm.sub(aluD, aluS.get());
 		}
 
-		{
-			const RegScratch aluMax(m_block);
-			m_asm.mov(aluMax, asmjit::Imm(g_alu_max_56_u));
-			m_asm.cmp(aluD, aluMax);
-		}
+		m_dspRegs.mask56(aluD);
 
-		ccr_update_ifGreater(CCRB_C);
+		// Z first, from an explicit test, before any bit-copy clobbers the host flags.
+		m_asm.test_(aluD);
+		ccr_update_ifZero(CCRB_Z);
+
+		// C = accumulator bit 55 changed. oldD XOR new leaves the change at bit 55.
+		m_asm.xor_(oldD.get(), aluD.get());
+		copyBitToCCR(oldD.get(), 55 + g_aluBitOffset, CCRB_C);
 
 		ccr_dirty(ab, aluD, static_cast<CCRMask>(CCR_E | CCR_U | CCR_N));
-		ccr_n_update_by55(aluD);
-		ccr_s_update(aluD);
 	}
 
 	void JitOps::op_Tcc_S1D1(TWord op)

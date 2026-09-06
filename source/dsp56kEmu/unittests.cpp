@@ -6747,6 +6747,7 @@ namespace dsp56k
 		jsr_rts();
 		ccrBackendParity();
 		bitTestMemoryEaUpdate();
+		subr_leftAligned();
 	}
 
 	void UnitTests::rep_div_powerOfTwo()
@@ -7593,5 +7594,40 @@ namespace dsp56k
 		{
 			verify(dsp.regs().r[4].var == 0x101);
 		});
+	}
+
+	// SUBR was never ported to the left-aligned ALU: it halved D with the right-aligned recipe
+	// (sal 8 / sar 1 / shr 8), which discards the extension byte and takes the sign from bit 47
+	// instead of bit 55, compared C against a right-aligned constant, and never wrote Z at all.
+	// Values from the reference simulator, subr b,a:
+	//   a $7fffffffffffff b $000000000001     -> a $3ffffffffffffe sr $000330
+	//   a $80000000000000 b $00ffffffffffff   -> a $bf000000000001 sr $000338
+	//   a $c0000000000000 b $40000000000000   -> a $a0000000000000 sr $000338
+	void UnitTests::subr_leftAligned()
+	{
+		struct Case { uint64_t a, b, result; TWord ccr; };
+		static constexpr Case cases[] =
+		{
+			{ 0x7fffffffffffffull, 0x00000000000001ull, 0x3ffffffffffffeull, 0x30 },
+			{ 0x80000000000000ull, 0x00ffffffffffffull, 0xbf000000000001ull, 0x38 },
+			{ 0xc0000000000000ull, 0x40000000000000ull, 0xa0000000000000ull, 0x38 },
+		};
+
+		for (const auto& c : cases)
+		{
+			runTest([&]()
+			{
+				dsp.setSR(0x000300);
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(c.a)));
+				dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(c.b)));
+				emit("subr b,a");
+			},
+			[&]()
+			{
+				verify(static_cast<uint64_t>(dsp.aluA().var) == c.result);
+				for (const auto bit : {CCR_C, CCR_V, CCR_Z, CCR_N, CCR_U, CCR_E})
+					verify((dsp.sr_test(bit) != 0) == ((c.ccr & bit) != 0));
+			});
+		}
 	}
 }
