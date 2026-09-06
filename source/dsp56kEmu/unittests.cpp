@@ -6746,6 +6746,7 @@ namespace dsp56k
 		do_callNotAtLoopEnd();
 		jsr_rts();
 		ccrBackendParity();
+		bitTestMemoryEaUpdate();
 	}
 
 	void UnitTests::rep_div_powerOfTwo()
@@ -7553,6 +7554,44 @@ namespace dsp56k
 			verify(dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_Z));
 			verify(!dsp.sr_test(CCR_C));
+		});
+	}
+
+	// A bit-test jump whose operand uses an effective address WITH update - (Rn)+, (Rn)-, (Rn)+Nn -
+	// must apply the update on BOTH paths. The JIT applied it only when the jump was taken: the
+	// address register increment happens inside the condition lambda of If(), and the register pool
+	// flush that stores it sits after the true branch, so the not-taken path kept the old Rn while
+	// the pool believed the value had been written. The interpreter was always right.
+	//
+	// Found while root-causing the Supernova II mono/legato click: the firmware falls through a
+	// jclr #$0,y:(r4)+ every legato note and a stale r4 skewed every following Y pointer by one word.
+	//
+	// Simulator, r4 $000100 and y:$100 bit 0 SET so the jump is not taken:
+	//   jclr #$0,y:(r4)+,$200  ->  r4 $000101, pc $102
+	void UnitTests::bitTestMemoryEaUpdate()
+	{
+		// not taken: the bit is set, jclr jumps only when clear
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.regs().r[4].var = 0x100;
+			dsp.memWrite(MemArea_Y, 0x100, 0x000001);
+			emit(0x0a5cc0, 0x000200);		// jclr #$0,y:(r4)+,$200
+		}, [&]()
+		{
+			verify(dsp.regs().r[4].var == 0x101);
+		});
+
+		// taken: the bit is clear. The update has to happen here too, and did before the fix.
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.regs().r[4].var = 0x100;
+			dsp.memWrite(MemArea_Y, 0x100, 0x000000);
+			emit(0x0a5cc0, 0x000200);
+		}, [&]()
+		{
+			verify(dsp.regs().r[4].var == 0x101);
 		});
 	}
 }

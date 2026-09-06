@@ -32,6 +32,13 @@ namespace dsp56k
 		DspValue r(m_block);
 		readMem<Inst>(r, _op);
 
+		// An effective address with update has just incremented Rn in the pool and marked it written.
+		// This runs inside the condition lambda of If(), whose next releaseNonLocked() sits after the
+		// true branch - so on the not-taken path the store was never executed and Rn kept its old
+		// value, while the pool believed it was clean. Flush here, before the conditional jump, so
+		// both paths see the update. r is a temporary and survives.
+		m_block.dspRegPool().releaseNonLocked();
+
 		bitTest<Inst>(_op, r, _bitValue, _skip);
 	}
 	template <Instruction Inst, std::enable_if_t<hasFieldT<Inst, Field_bbbbb>()>*> JitCondCode JitOps::bitTest(TWord op, DspValue& _value, const ExpectedBitValue _bitValue) const

@@ -208,6 +208,7 @@ namespace  dsp56k
 		void do_callNotAtLoopEnd();
 		void jsr_rts();
 		void ccrBackendParity();
+		void bitTestMemoryEaUpdate();
 
 		Peripherals56362 peripheralsX;
 		Peripherals56367 peripheralsY;
