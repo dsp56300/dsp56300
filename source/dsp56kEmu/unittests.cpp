@@ -6748,6 +6748,7 @@ namespace dsp56k
 		ccrBackendParity();
 		bitTestMemoryEaUpdate();
 		subr_leftAligned();
+		ccrCrossBlockConsumer();
 	}
 
 	void UnitTests::rep_div_powerOfTwo()
@@ -7628,6 +7629,54 @@ namespace dsp56k
 				for (const auto bit : {CCR_C, CCR_V, CCR_Z, CCR_N, CCR_U, CCR_E})
 					verify((dsp.sr_test(bit) != 0) == ((c.ccr & bit) != 0));
 			});
+		}
+	}
+
+	// Cross-block lazy-CCR regression. A GT/LE consumer must record its SR read so the previous
+	// block still materialises the flags it left dirty; if it does not, the consumer reads stale
+	// Z/N across the block edge. Block A = [add x0,a ; jmp B] with a=1,x0=1 -> result 2, so
+	// Z=N=V=0 and GT is true, LE is false. B = [consumer ; sub y0,a ; jmp park]; sub overwrites
+	// Z/N. Each consumer runs twice with a different stale CCR preload; A overwrites Z/N, so the
+	// preload MUST be invisible to the result.
+	//
+	// IMPORTANT: this is cross-BLOCK, so it depends on JIT block/chain state. dsp.resetHW() does
+	// NOT clear the JIT cache (Jit::resetHW only checks mode changes), so reusing the same P
+	// addresses across cases makes the outcome depend on whatever a previous test left cached -
+	// the result then varies with test placement. Destroy all blocks up front AND give every case
+	// its own P addresses, so the test is deterministic wherever it runs.
+	void UnitTests::ccrCrossBlockConsumer()
+	{
+		TWord baseA = 0x400, baseB = 0x900;
+
+		auto runOne = [&](const char* consumer, TWord staleCcr) -> uint64_t
+		{
+			dsp.getJit().destroyAllBlocks();
+			dsp.resetHW();
+			dsp.setSR(0x000300 | staleCcr);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000000000001ull)));	// a = 1
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00050000000000ull)));	// b = sentinel
+			dsp.x0(TReg24(0x000001));
+			dsp.y0(TReg24(0x004000));
+
+			const TWord a = baseA, b = baseB; baseA += 0x20; baseB += 0x20;
+			TWord pc = a;
+			pc = emitToMemory("add x0,a", pc);
+			{ char j[32]; snprintf(j, sizeof(j), "jmp $%x", b); emitToMemory(j, pc); }
+			pc = b;
+			pc = emitToMemory(consumer, pc);
+			pc = emitToMemory("sub y0,a", pc);
+			{ char park[32]; snprintf(park, sizeof(park), "jmp $%x", pc); emitToMemory(park, pc); }
+
+			dsp.setPC(a);
+			execUntil(pc);
+			return static_cast<uint64_t>(dsp.aluB().var);
+		};
+
+		for (const char* consumer : { "tgt x0,b", "tle x0,b", "add x0,b ifgt", "add x0,b ifle" })
+		{
+			const uint64_t r0 = runOne(consumer, 0x00);	// stale bits clear
+			const uint64_t r1 = runOne(consumer, 0x04);	// stale Z set - must not survive A
+			verify(r0 == r1);
 		}
 	}
 }

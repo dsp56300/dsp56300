@@ -210,6 +210,7 @@ namespace  dsp56k
 		void ccrBackendParity();
 		void bitTestMemoryEaUpdate();
 		void subr_leftAligned();
+		void ccrCrossBlockConsumer();
 
 		Peripherals56362 peripheralsX;
 		Peripherals56367 peripheralsY;
