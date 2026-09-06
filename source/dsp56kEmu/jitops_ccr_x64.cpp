@@ -295,7 +295,12 @@ namespace dsp56k
 	{
 		// Negative
 		// Set if the MSB of the result is set; otherwise, this bit is cleared.
-		copyBitToCCR(_alu, 23 + g_aluBitOffset, CCRB_N);
+		//
+		// No g_aluBitOffset here: the only callers are ROL and ROR, and they pass the plain 24 bit
+		// A1/B1 from getALU1(), not a left-aligned accumulator. Adding the offset read bit 31 of a
+		// 24 bit value, so N came out clear on both back ends - the interpreter and the simulator
+		// set it from bit 23.
+		copyBitToCCR(_alu, 23, CCRB_N);
 	}
 
 	void JitOps::ccr_s_update(const JitReg64& _alu)
