@@ -82,6 +82,8 @@ namespace dsp56k
 						discard(DspBwrite);
 					}
 					break;
+				default:
+					break;
 				}
 			}
 		}
@@ -487,6 +489,8 @@ namespace dsp56k
 		case DspY1:
 			if (isWritten(_reg))
 				return false;
+		default:
+			break;
 		}
 		return true;
 	}
@@ -746,6 +750,17 @@ namespace dsp56k
 		case DspLA: 
 			movDspReg(_dst, r.la);
 			break;
+		case DspRegInvalid:
+		case TempA:
+		case TempB:
+		case TempC:
+		case TempD:
+		case TempE:
+		case TempF:
+		case TempG:
+		case TempH:
+		case DspCount:
+			break;
 		}
 	}
 
@@ -845,6 +860,17 @@ namespace dsp56k
 		case DspLA: 
 			movDspReg(r.la, _src);
 			break;
+		case DspRegInvalid:
+		case TempA:
+		case TempB:
+		case TempC:
+		case TempD:
+		case TempE:
+		case TempF:
+		case TempG:
+		case TempH:
+		case DspCount:
+			break;
 		}
 	}
 
@@ -937,8 +963,19 @@ namespace dsp56k
 		case DspLC: 
 			movDspReg(r.lc, _src);
 			break;
-		case DspLA: 
+		case DspLA:
 			movDspReg(r.la, _src);
+			break;
+		case DspRegInvalid:
+		case TempA:
+		case TempB:
+		case TempC:
+		case TempD:
+		case TempE:
+		case TempF:
+		case TempG:
+		case TempH:
+		case DspCount:
 			break;
 		}
 	}

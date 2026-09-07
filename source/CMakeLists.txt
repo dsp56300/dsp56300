@@ -3,7 +3,20 @@ set(ASMJIT_STATIC TRUE)
 option(DSP56300_DEBUGGER "Build wxWidgets based debugger" OFF)
 option(DSP56K_FORCE_INTERPRETER "Disable the JIT and use the interpreter" OFF)
 
+# AsmJit supplies its own /W4 warning level. Temporarily remove the parent
+# project's /W3 so MSVC does not report warning D9025 for every AsmJit source.
+if(MSVC)
+	set(DSP56300_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	string(REPLACE " /W3" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endif()
+
 add_subdirectory(asmjit)
+
+if(MSVC)
+	set(CMAKE_CXX_FLAGS "${DSP56300_CXX_FLAGS}")
+	unset(DSP56300_CXX_FLAGS)
+endif()
+
 add_subdirectory(dsp56kBase)
 add_subdirectory(dsp56kEmu)
 add_subdirectory(dsp56kTestRunner)

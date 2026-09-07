@@ -296,7 +296,7 @@ namespace dsp56k
 		auto putVal = [&](TWord v)
 		{
 			char temp[16];
-			sprintf(temp, "%06x", v);
+			snprintf(temp, sizeof(temp), "%06x", v);
 			return std::string(temp);
 		};
 
