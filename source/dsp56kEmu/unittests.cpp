@@ -414,6 +414,56 @@ namespace dsp56k
 		{
 			verify(dsp.regs().r[0] == 0x0ba601);
 		});
+
+		// A modulo buffer based at address 0: stepping below the base must wrap
+		// to the top of the buffer (issue #5). Pre-decrement, -n and a negative
+		// +n are the three ways the interpreter could underflow the unsigned r.
+		runTest([&]()
+		{
+			dsp.set_m(2, 0x00003f);
+			dsp.regs().r[2].var = 0x000000;
+
+			emit("move x:-(r2),x0");
+		}, [&]()
+		{
+			verify(dsp.regs().r[2] == 0x00003f);
+		});
+
+		runTest([&]()
+		{
+			dsp.set_m(2, 0x00003f);
+			dsp.regs().r[2].var = 0x000000;
+			dsp.regs().n[2].var = 0x000001;
+
+			emit("move (r2)-n2");
+		}, [&]()
+		{
+			verify(dsp.regs().r[2] == 0x00003f);
+		});
+
+		runTest([&]()
+		{
+			dsp.set_m(2, 0x00003f);
+			dsp.regs().r[2].var = 0x000000;
+
+			emit("move (r2)-");
+		}, [&]()
+		{
+			verify(dsp.regs().r[2] == 0x00003f);
+		});
+
+		runTest([&]()
+		{
+			// a delay line based at 0, read pointer stepping back past the base
+			dsp.set_m(0, 0x001fff);
+			dsp.regs().r[0].var = 0x000005;
+			dsp.regs().n[0].var = 0xfffff0;
+
+			emit("move (r0)+n0");
+		}, [&]()
+		{
+			verify(dsp.regs().r[0] == 0x001ff5);
+		});
 	}
 
 	void UnitTests::aguMultiWrapModulo()
