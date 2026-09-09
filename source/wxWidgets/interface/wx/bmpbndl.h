@@ -51,9 +51,15 @@
 
     The code shown above will use 32 pixel bitmap in normal DPI, 64 pixel
     bitmap in "high DPI", i.e. pixel-doubling or 200% resolution, and 48 pixel
-    bitmap in 150% resolution. For all the other resolutions, the best matching
-    bitmap will be created dynamically from the best available match, e.g. for
-    175% resolution, 64 pixel bitmap will be rescaled to 56 pixels.
+    bitmap in 150% resolution. For all the other resolutions, the bitmap with
+    the "best" matching size will be used, where "best" is deemed to be the
+    bitmap with the closest size if it can be used without scaling (so that in
+    this example the 64px bitmap will be used at 175% resolution because it
+    typically looks much better than either downscaling it or upscaling the
+    48px bitmap to 56px) or, if there is no bitmap with close enough size, a
+    bitmap upscaled by an integer scaling factor is used. Note that custom
+    bitmap bundles can use a different algorithm for selecting the best match
+    by overriding wxBitmapBundleImpl::GetPreferredBitmapSizeAtScale().
 
     Of course, this code relies on actually having the resources with the
     corresponding names (i.e. @c open_NxN) in MSW .rc file or Mac application
@@ -256,12 +262,14 @@ public:
 
         @param data This data may, or not, have the XML document preamble, i.e.
             it can start either with @c "<?xml" processing instruction or
-            directly with @c svg tag. Notice that two overloads of this
-            function, taking const and non-const data, are provided: as the
-            current implementation modifies the data while parsing, using the
-            non-const variant is more efficient, as it avoids making copy of
-            the data, but the data is consumed by it and can't be reused any
-            more.
+            directly with @c svg tag. For NUL-terminated string, two overloads
+            of this function, taking const and non-const data, are provided: as
+            the current implementation modifies the data while parsing, using
+            the non-const variant is more efficient, as it avoids making copy
+            of the data, but the data is consumed by it and can't be reused any
+            more. For non-NUL-terminated data, the third overload, taking an
+            extra parameter explicitly specifying the length of the input data,
+            @e must be used.
         @param sizeDef The default size to return from GetDefaultSize() for
             this bundle. As SVG images usually don't have any natural
             default size, it should be provided when creating the bundle.
@@ -270,6 +278,10 @@ public:
 
     /// @overload
     static wxBitmapBundle FromSVG(const char* data, const wxSize& sizeDef);
+
+    /// @overload
+    static wxBitmapBundle FromSVG(const wxByte* data, size_t len, const wxSize& sizeDef);
+
 
     /**
         Create a bundle from the SVG image loaded from the given file.

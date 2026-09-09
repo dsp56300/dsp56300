@@ -385,6 +385,7 @@ bool wxRibbonToolBar::DeleteToolByPos(size_t pos)
             }
             return true;
         }
+        pos -= tool_count+1;
     }
     return false;
 }
@@ -425,6 +426,7 @@ wxRibbonToolBarToolBase* wxRibbonToolBar::GetToolByPos(size_t pos)const
         {
             return NULL;
         }
+        pos -= tool_count+1;
     }
     return NULL;
 }
@@ -530,7 +532,7 @@ wxRect wxRibbonToolBar::GetToolRect(int tool_id)const
 {
     size_t group_count = m_groups.GetCount();
     size_t g, t;
-    int pos = 0;
+
     for(g = 0; g < group_count; ++g)
     {
         wxRibbonToolBarToolGroup* group = m_groups.Item(g);
@@ -542,9 +544,7 @@ wxRect wxRibbonToolBar::GetToolRect(int tool_id)const
             {
                 return wxRect(group->position + tool->position, tool->size);
             }
-            ++pos;
         }
-        ++pos; // Increment pos for group separator.
     }
     return wxRect();
 }

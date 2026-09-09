@@ -146,12 +146,9 @@ bool wxApp::DoIdle()
         gs_focusChange = 0;
     }
 
-    bool needMore;
-    do {
-        ProcessPendingEvents();
+    ProcessPendingEvents();
+    const bool needMore = ProcessIdle();
 
-        needMore = ProcessIdle();
-    } while (needMore && gtk_events_pending() == 0);
     gdk_threads_leave();
 
 #if wxUSE_THREADS
@@ -278,6 +275,9 @@ LogFilterByMessage::~LogFilterByMessage()
 /* static */
 void wxApp::GTKSuppressDiagnostics(int flags)
 {
+    // Allow Install() to actually do something.
+    GTKAllowDiagnosticsControl();
+
     static wxGTKImpl::LogFilterByLevel s_logFilter;
     s_logFilter.SetLevelToIgnore(flags);
     s_logFilter.Install();

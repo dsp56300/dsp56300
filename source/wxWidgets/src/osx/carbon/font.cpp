@@ -258,10 +258,13 @@ wxFontRefData::wxFontRefData(const wxFontInfo& info)
 {
     m_info.Init();
 
+    wxFontFamily family = info.GetFamily();
+    if (family == wxFONTFAMILY_DEFAULT)
+        family = wxFONTFAMILY_SWISS;
+    SetFamily(family);
+
     if ( info.HasFaceName() )
         SetFaceName(info.GetFaceName());
-    else
-        SetFamily(info.GetFamily());
 
     m_info.SetSizeOrDefault(info.GetFractionalPointSize());
     SetNumericWeight(info.GetNumericWeight());
@@ -346,7 +349,7 @@ void wxFontRefData::Alloc()
         CachedFontEntry& entryNoSize = fontcache[lookupnameNoSize];
         if ( entryNoSize.used )
         {
-            m_ctFont = CTFontCreateCopyWithAttributes(entryNoSize.font, m_info.GetPointSize(), NULL, NULL);
+            m_ctFont = CTFontCreateCopyWithAttributes(entryNoSize.font, m_info.GetFractionalPointSize(), NULL, NULL);
             m_ctFontAttributes = entryNoSize.fontAttributes.CreateCopy();
             m_ctFontAttributes.SetValue(kCTFontAttributeName,m_ctFont.get());
             m_cgFont = CTFontCopyGraphicsFont(m_ctFont, NULL);
@@ -363,7 +366,7 @@ void wxFontRefData::Alloc()
             if ( m_info.GetStyle() != wxFONTSTYLE_NORMAL && m_info.GetCTSlant(m_info.GetCTFontDescriptor()) < 0.01 )
                 remainingTransform = &kSlantTransform;
 
-            wxCFRef<CTFontRef> font = CTFontCreateWithFontDescriptor(m_info.GetCTFontDescriptor(), m_info.GetPointSize(), remainingTransform);
+            wxCFRef<CTFontRef> font = CTFontCreateWithFontDescriptor(m_info.GetCTFontDescriptor(), m_info.GetFractionalPointSize(), remainingTransform);
 
             // emulate weigth if necessary
             int difference = m_info.GetNumericWeight() - CTWeightToWX(wxNativeFontInfo::GetCTWeight(font));
@@ -384,8 +387,17 @@ void wxFontRefData::Alloc()
                 }
             }
 
-            m_info = wxNativeFontInfo();
+            // Preserve the fields not represented by CTFont.
+            const bool wasUnderlined = m_info.GetUnderlined();
+            const bool wasStrikethrough = m_info.GetStrikethrough();
+
             m_info.InitFromFont(m_ctFont);
+
+            // Restore them as they were reset by InitFromFont().
+            if ( wasUnderlined )
+                m_info.SetUnderlined(wasUnderlined);
+            if ( wasStrikethrough )
+                m_info.SetStrikethrough(wasStrikethrough);
 
             entryWithSize.font = m_ctFont;
             entryWithSize.cgFont = m_cgFont;
@@ -718,7 +730,7 @@ wxSize wxFont::GetPixelSize() const
     wxDouble width, height = 0;
     dc->GetTextExtent(wxT("g"), &width, &height, NULL, NULL);
     delete dc;
-    return wxSize((int)width, (int)height);
+    return wxSize(wxRound(width), wxRound(height));
 #else
     return wxFontBase::GetPixelSize();
 #endif
@@ -880,9 +892,10 @@ void wxNativeFontInfo::InitFromFontDescriptor(CTFontDescriptorRef desc)
 
     // determine approximate family
 
-    CTFontSymbolicTraits symbolicTraits;
+    CTFontSymbolicTraits symbolicTraits = 0;
     wxCFDictionaryRef traits((CFDictionaryRef)CTFontDescriptorCopyAttribute(desc, kCTFontTraitsAttribute));
-    traits.GetValue(kCTFontSymbolicTrait).GetValue((int32_t*)&symbolicTraits, 0);
+    if (traits)
+        traits.GetValue(kCTFontSymbolicTrait).GetValue((int32_t*)&symbolicTraits, 0);
 
     if (symbolicTraits & kCTFontMonoSpaceTrait)
         m_family = wxFONTFAMILY_TELETYPE;
@@ -1019,6 +1032,8 @@ CGFloat wxNativeFontInfo::GetCTWeight(CTFontDescriptorRef descr)
 {
     CGFloat weight;
     CFTypeRef fonttraitstype = CTFontDescriptorCopyAttribute(descr, kCTFontTraitsAttribute);
+    if (!fonttraitstype)
+        return CGFloat(0.0);
     wxCFDictionaryRef traits((CFDictionaryRef)fonttraitstype);
     traits.GetValue(kCTFontWeightTrait).GetValue(&weight, CGFloat(0.0));
     return weight;
@@ -1028,6 +1043,8 @@ CGFloat wxNativeFontInfo::GetCTwidth(CTFontDescriptorRef descr)
 {
     CGFloat weight;
     CFTypeRef fonttraitstype = CTFontDescriptorCopyAttribute(descr, kCTFontTraitsAttribute);
+    if (!fonttraitstype)
+        return CGFloat(0.0);
     wxCFDictionaryRef traits((CFDictionaryRef)fonttraitstype);
     traits.GetValue(kCTFontWidthTrait).GetValue(&weight, CGFloat(0.0));
     return weight;
@@ -1037,6 +1054,8 @@ CGFloat wxNativeFontInfo::GetCTSlant(CTFontDescriptorRef descr)
 {
     CGFloat slant;
     CFTypeRef fonttraitstype = CTFontDescriptorCopyAttribute(descr, kCTFontTraitsAttribute);
+    if (!fonttraitstype)
+        return CGFloat(0.0);
     wxCFDictionaryRef traits((CFDictionaryRef)fonttraitstype);
     traits.GetValue(kCTFontSlantTrait).GetValue(&slant, CGFloat(0.0));
     return slant;

@@ -23,7 +23,6 @@
     #include "wx/app.h"
     #include "wx/filefn.h"
     #include "wx/log.h"
-    #include "wx/intl.h"
     #include "wx/module.h"
 #endif
 
@@ -51,9 +50,7 @@
     #endif // wxCrtSetDbgFlag
 #endif // __WINDOWS__
 
-#if wxUSE_UNICODE && defined(__WXOSX__)
-    #include <locale.h>
-#endif
+#include "wx/private/localeset.h"
 
 // ----------------------------------------------------------------------------
 // private classes
@@ -228,17 +225,9 @@ static void FreeConvertedArgs()
 // initialization which is always done (not customizable) before wxApp creation
 static bool DoCommonPreInit()
 {
-#if wxUSE_UNICODE && defined(__WXOSX__)
-    // In OS X and iOS, wchar_t CRT functions convert to char* and fail under
-    // some locales. The safest fix is to set LC_CTYPE to UTF-8 to ensure that
-    // they can handle any input.
-    //
-    // Note that this must be done for any app, Cocoa or console, whether or
-    // not it uses wxLocale.
-    //
-    // See https://stackoverflow.com/questions/11713745/why-does-the-printf-family-of-functions-care-about-locale
-    setlocale(LC_CTYPE, "UTF-8");
-#endif // wxUSE_UNICODE && defined(__WXOSX__)
+    // This is necessary even for the default locale, see comments in this
+    // function.
+    wxEnsureLocaleIsCompatibleWithCRT();
 
 #if wxUSE_LOG
     // Reset logging in case we were cleaned up and are being reinitialized.
@@ -436,7 +425,12 @@ static void DoCommonPostCleanup()
 #endif // wxUSE_LOG
 }
 
-void wxEntryCleanup()
+// for MSW the real wxEntryCleanup() is defined in msw/main.cpp
+#ifndef __WINDOWS__
+    #define wxEntryCleanupReal wxEntryCleanup
+#endif // !__WINDOWS__
+
+void wxEntryCleanupReal()
 {
     DoCommonPreCleanup();
 
@@ -487,7 +481,7 @@ int wxEntryReal(int& argc, wxChar **argv)
         if ( !wxTheApp->CallOnInit() )
         {
             // don't call OnExit() if OnInit() failed
-            return -1;
+            return wxTheApp->GetErrorExitCode();
         }
 
         // ensure that OnExit() is called if OnInit() had succeeded

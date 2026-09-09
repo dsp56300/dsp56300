@@ -173,17 +173,6 @@
 
     See also @ref overview_windowstyles.
 
-    @b Win32 @b notes:
-
-    wxTreeCtrl class uses the standard common treeview control under Win32
-    implemented in the system library comctl32.dll. Some versions of this
-    library are known to have bugs with handling the tree control colours: the
-    usual symptom is that the expanded items leave black (or otherwise
-    incorrectly coloured) background behind them, especially for the controls
-    using non-default background colour. The recommended solution is to upgrade
-    the comctl32.dll to a newer version: see
-    http://www.microsoft.com/downloads/details.aspx?familyid=cb2cf3a2-8025-4e8f-8511-9b476a8d35d2
-
     @library{wxcore}
     @category{ctrl}
     @appearance{treectrl}
@@ -349,13 +338,23 @@ public:
     virtual void DeleteChildren(const wxTreeItemId& item);
 
     /**
-        Starts editing the label of the given @a item. This function generates a
-        @c EVT_TREE_BEGIN_LABEL_EDIT event which can be vetoed so that no text
-        control will appear for in-place editing.
+        Starts editing the label of the given @a item.
 
-        If the user changed the label (i.e. s/he does not press ESC or leave the
-        text control without changes, a @c EVT_TREE_END_LABEL_EDIT event will be
-        sent which can be vetoed as well.
+        This function generates a @c EVT_TREE_BEGIN_LABEL_EDIT event which can
+        be vetoed to prevent the editing from starting.
+
+        If it does start, a text control, which can be retrieved using
+        GetEditControl(), allowing the user to edit the label interactively is
+        shown. In wxMSW, this text control is created using @a textCtrlClass,
+        however this parameter is currently ignored in the other ports where a
+        plain wxTextCtrl is always used.
+
+        When the editing ends, @c EVT_TREE_END_LABEL_EDIT event is sent and
+        this event can be vetoed as well to prevent the label from changing.
+        Note that this event is sent both when the user accepts (e.g. by
+        pressing Enter) or cancels (e.g. by pressing Escape) and its handler
+        can use wxTreeEvent::IsEditCancelled() to distinguish between these
+        situations.
 
         @see EndEditLabel(), wxTreeEvent
     */

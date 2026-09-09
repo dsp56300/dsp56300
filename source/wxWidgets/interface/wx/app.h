@@ -393,7 +393,8 @@ public:
         OnInit().
 
         Return @true to continue processing, @false to exit the application
-        immediately.
+        immediately. In the latter case, you may want to call SetErrorExitCode()
+        to set the process exit code to use when the application terminates.
     */
     virtual bool OnInit();
 
@@ -762,6 +763,29 @@ public:
     void SetCLocale();
 
     /**
+        Sets the error code to use in case of exit on error.
+
+        This function is mostly useful to customize the error code returned by
+        the application when it exits due to OnInit() returning @false and can
+        be called from OnInit() itself or other virtual functions called from
+        it, for example OnCmdLineError().
+
+        By default, the exit code depends on the compiler being used, e.g. it
+        is @c 255 with typical Unix compilers (gcc, clang) and @c 127 with
+        MSVC, so it is recommended to call this function to set a consistent
+        exit code, e.g. @c 2 which is a de facto standard exit code if command
+        line parsing fails.
+
+        SetErrorExitCode() can be overridden by the application to perform
+        additional actions, but the overridden version should call the base
+        class version to update the value returned by GetErrorExitCode() and
+        actually used when exiting the application.
+
+        @since 3.2.7
+     */
+    void SetErrorExitCode(int code);
+
+    /**
         Number of command line arguments (after environment-specific processing).
     */
     int argc;
@@ -936,7 +960,7 @@ public:
         Works like SafeYield() with @e onlyIfNeeded == @true except that
         it allows the caller to specify a mask of events to be processed.
 
-        See wxAppConsole::YieldFor for more info.
+        See wxEventLoopBase::YieldFor() for more info.
     */
     virtual bool SafeYieldFor(wxWindow *win, long eventsToProcess);
 
@@ -1211,6 +1235,24 @@ public:
 #define wxDECLARE_APP( className )
 
 /**
+    This macro and tells wxWidgets which application class should be used.
+
+    Unlike the more usual wxIMPLEMENT_APP() macro, this macro does not define
+    the entry point of the application, i.e. doesn't define @c main() or
+    @c WinMain() function, so you need to implement it separately when using
+    it.
+
+    The @a className passed to this macro must be a name of a default
+    constructible class deriving from wxApp that will be instantiated by
+    wxWidgets during its initialization.
+
+    Note that this macro requires a final semicolon.
+
+    @header{wx/app.h}
+ */
+#define wxIMPLEMENT_APP_NO_MAIN( className )
+
+/**
     This macro defines the application entry point and tells wxWidgets which
     application class should be used.
 
@@ -1219,8 +1261,9 @@ public:
     typical GUI application it's simpler and more convenient to use this macro
     to do both together.
 
-    The @a className passed to this macro must be a name of the class deriving
-    from wxApp.
+    The @a className passed to this macro must be a name of a default
+    constructible class deriving from wxApp that will be instantiated by
+    wxWidgets during its initialization.
 
     Note that this macro requires a final semicolon.
 

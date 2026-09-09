@@ -615,12 +615,12 @@ BOOL CALLBACK wxEnumFindByPidProc(HWND hwnd, LPARAM lParam)
     return TRUE;
 }
 
-int wxKillAllChildren(long pid, wxSignal sig, wxKillError *krc);
+int wxKillAllChildren(long pid, wxSignal sig, wxKillError *krc, int flags);
 
 int wxKill(long pid, wxSignal sig, wxKillError *krc, int flags)
 {
     if (flags & wxKILL_CHILDREN)
-        wxKillAllChildren(pid, sig, krc);
+        wxKillAllChildren(pid, sig, krc, flags);
 
     // get the process handle to operate on
     DWORD dwAccess = PROCESS_QUERY_INFORMATION | SYNCHRONIZE;
@@ -800,7 +800,7 @@ bool wxMSWActivatePID(long pid)
 }
 
 // By John Skiff
-int wxKillAllChildren(long pid, wxSignal sig, wxKillError *krc)
+int wxKillAllChildren(long pid, wxSignal sig, wxKillError *krc, int flags)
 {
     if (krc)
         *krc = wxKILL_OK;
@@ -830,7 +830,7 @@ int wxKillAllChildren(long pid, wxSignal sig, wxKillError *krc)
 
     do {
         if (pe.th32ParentProcessID == (DWORD) pid) {
-            if (wxKill(pe.th32ProcessID, sig, krc))
+            if (wxKill(pe.th32ProcessID, sig, krc, flags))
                 return -1;
         }
     } while (::Process32Next (hProcessSnap, &pe));
@@ -1097,8 +1097,18 @@ int wxIsWindowsServer()
     return -1;
 }
 
+static const int WINDOWS_SERVER2016_BUILD = 14393;
+static const int WINDOWS_SERVER2019_BUILD = 17763;
+static const int WINDOWS_SERVER2022_BUILD = 20348;
+static const int WINDOWS_SERVER2025_BUILD = 26100;
+
+// Windows 11 uses the same version as Windows 10 but its build numbers start
+// from 22000, which provides a way to test for it.
+static const int FIRST_WINDOWS11_BUILD = 22000;
+
 } // anonymous namespace
 
+// When adding a new version, update also the table in wxGetOsVersion() docs.
 wxString wxGetOsDescription()
 {
     wxString str;
@@ -1160,20 +1170,37 @@ wxString wxGetOsDescription()
                     break;
 
                 case 10:
-                    if (info.dwBuildNumber >= 22000)
-                        str = wxIsWindowsServer() == 1
-                            ? "Windows Server 2022"
-                            : "Windows 11";
+                    if ( wxIsWindowsServer() == 1 )
+                    {
+                        switch ( info.dwBuildNumber )
+                        {
+                            case WINDOWS_SERVER2016_BUILD:
+                                str = "Windows Server 2016";
+                                break;
+                            case WINDOWS_SERVER2019_BUILD:
+                                str = "Windows Server 2019";
+                                break;
+                            case WINDOWS_SERVER2022_BUILD:
+                                str = "Windows Server 2022";
+                                break;
+                            case WINDOWS_SERVER2025_BUILD:
+                                str = "Windows Server 2025";
+                                break;
+                        }
+                    }
                     else
-                        str = wxIsWindowsServer() == 1
-                                ? "Windows Server 2016"
-                                : "Windows 10";
+                    {
+                        str = info.dwBuildNumber >= FIRST_WINDOWS11_BUILD
+                            ? "Windows 11"
+                            : "Windows 10";
+                    }
                     break;
             }
 
             if ( str.empty() )
             {
-                str.Printf("Windows %lu.%lu",
+                str.Printf("Windows %s%lu.%lu",
+                           wxIsWindowsServer() == 1 ? "Server " : "",
                            info.dwMajorVersion,
                            info.dwMinorVersion);
             }
@@ -1273,8 +1300,9 @@ bool wxCheckOsVersion(int majorVsn, int minorVsn, int microVsn)
 wxWinVersion wxGetWinVersion()
 {
     int verMaj,
-        verMin;
-    switch ( wxGetOsVersion(&verMaj, &verMin) )
+        verMin,
+        build;
+    switch ( wxGetOsVersion(&verMaj, &verMin, &build) )
     {
         case wxOS_WINDOWS_NT:
             switch ( verMaj )
@@ -1309,7 +1337,8 @@ wxWinVersion wxGetWinVersion()
                     break;
 
                 case 10:
-                    return wxWinVersion_10;
+                    return build >= FIRST_WINDOWS11_BUILD ? wxWinVersion_11
+                                                          : wxWinVersion_10;
             }
             break;
         default:

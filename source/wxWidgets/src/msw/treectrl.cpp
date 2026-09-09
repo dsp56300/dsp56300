@@ -790,6 +790,15 @@ bool wxTreeCtrl::Create(wxWindow *parent,
         EnableSystemThemeByDefault();
     }
 
+    // When using non-standard DPI, we need to scale the default indent with
+    // the DPI scaling factor as Windows doesn't do it and the "+" buttons
+    // would be displayed too small if the tree is used without images.
+    if ( GetDPIScaleFactor() > 1.0 )
+        SetIndent(FromDIP(GetIndent()));
+
+    // And ensure we adjust it again if the DPI changes in the future.
+    Bind(wxEVT_DPI_CHANGED, &wxTreeCtrl::OnDPIChanged, this);
+
     return true;
 }
 
@@ -913,10 +922,33 @@ void wxTreeCtrl::SetIndent(unsigned int indent)
 
 void wxTreeCtrl::SetAnyImageList(wxImageList *imageList, int which)
 {
+    int indent = GetIndent();
+
+    HIMAGELIST oldImgList = TreeView_GetImageList(GetHwnd(), which);
+    if ( oldImgList != NULL )
+    {
+        int oldWidth = 0, oldHeight = 0;
+        if ( ImageList_GetIconSize(oldImgList, &oldWidth, &oldHeight) )
+        {
+            int diff = oldWidth - FromDIP(16);
+            if ( diff < 0 )
+                indent -= diff;
+        }
+    }
+
     // no error return
     (void) TreeView_SetImageList(GetHwnd(),
                                  imageList ? imageList->GetHIMAGELIST() : 0,
                                  which);
+
+    wxImageList* newImgList = GetImageList();
+    if ( newImgList != NULL )
+    {
+        int diff = newImgList->GetSize().GetWidth() - FromDIP(16);
+        if ( diff < 0 )
+            indent += diff;
+    }
+    SetIndent(indent);
 }
 
 void wxTreeCtrl::SetImageList(wxImageList *imageList)
@@ -1547,15 +1579,9 @@ wxTreeItemId wxTreeCtrl::DoInsertAfter(const wxTreeItemId& parent,
     tvIns.item.lParam = (LPARAM)param;
     tvIns.item.mask = mask;
 
-    // apparently some Windows versions (2000 and XP are reported to do this)
-    // sometimes don't refresh the tree after adding the first child and so we
-    // need this to make the "[+]" appear
-    //
-    // don't use this hack below for the children of hidden root nor for modern
-    // MSW versions as it would just unnecessarily slow down the item insertion
-    // at best
+    // Without this, the tree doesn't show a "+" button when we add the first
+    // child, at least after removing the children previously (see #23718).
     const bool refreshFirstChild =
-        (wxGetWinVersion() < wxWinVersion_Vista) &&
             !IsHiddenRoot(parent) &&
                 !TreeView_GetChild(GetHwnd(), HITEM(parent));
 
@@ -2013,7 +2039,18 @@ void wxTreeCtrl::EnsureVisible(const wxTreeItemId& item)
 
 void wxTreeCtrl::ScrollTo(const wxTreeItemId& item)
 {
-    if ( !TreeView_SelectSetFirstVisible(GetHwnd(), HITEM(item)) )
+    HTREEITEM htItem = HITEM(item);
+
+    if ( IsHiddenRoot(item) )
+    {
+        // Calling TreeView_SelectSetFirstVisible() with the invisible root
+        // item would simply crash (#23534), so don't do this. However also
+        // don't just assert and return as this works in the generic version,
+        // so do the same thing as it does here, and scroll to the top item.
+        htItem = TreeView_GetChild(GetHwnd(), htItem);
+    }
+
+    if ( !TreeView_SelectSetFirstVisible(GetHwnd(), htItem) )
     {
         wxLogLastError(wxT("TreeView_SelectSetFirstVisible"));
     }
@@ -2279,6 +2316,14 @@ void wxTreeCtrl::MSWUpdateFontOnDPIChange(const wxSize& newDPI)
         if ( it->second->HasFont() )
             SetItemFont(it->first, it->second->GetFont());
     }
+}
+
+void wxTreeCtrl::OnDPIChanged(wxDPIChangedEvent& event)
+{
+    // Adjust the indent to the new DPI scaling factor as Windows doesn't do it.
+    SetIndent(event.ScaleX(GetIndent()));
+
+    event.Skip();
 }
 
 bool wxTreeCtrl::MSWIsOnItem(unsigned flags) const

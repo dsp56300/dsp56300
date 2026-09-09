@@ -78,6 +78,19 @@ void wxBell()
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
     wxUnusedVar(notification);
+
+    // we must make sure, that there still is an event on the event queue
+    // otherwise stopping the event queue will not advance, because quitting only
+    // gets processed AFTER the handling of the current event
+    // see https://developer.apple.com/documentation/appkit/nsapplication/stop(_:)?language=objc
+    NSEvent *event = [NSEvent otherEventWithType:NSApplicationDefined
+                                location:NSMakePoint(0.0, 0.0)
+                           modifierFlags:0
+                               timestamp:0
+                            windowNumber:0
+                                 context:nil
+                                 subtype:0 data1:0 data2:0];
+    [NSApp postEvent:event atStart:FALSE];
     [NSApp stop:nil];
     wxTheApp->OSXOnDidFinishLaunching();
 
@@ -110,8 +123,14 @@ void wxBell()
             activate = true;
         }
 
-        if ( activate )
-            [NSApp activateIgnoringOtherApps: YES];
+        if ( activate ) {
+            if ( [NSApp activationPolicy] == NSApplicationActivationPolicyAccessory ) {
+                [[NSRunningApplication currentApplication] activateWithOptions: NSApplicationActivateIgnoringOtherApps];
+            }
+            else {
+                [NSApp activateIgnoringOtherApps: YES];
+            }
+        }
     }
 }
 
@@ -271,6 +290,13 @@ void wxBell()
     wxUnusedVar(notification);
     if ( wxTheApp )
         wxTheApp->SetActive( false , NULL ) ;
+}
+
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app
+{
+    // Just avoid the warning about not returning true from here: as we don't
+    // customize state restoration anyhow, we can let the system do its thing.
+    return YES;
 }
 
 @end
