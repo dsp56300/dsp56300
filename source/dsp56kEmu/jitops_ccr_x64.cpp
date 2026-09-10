@@ -358,6 +358,15 @@ namespace dsp56k
 
 	void JitOps::ccr_vl_update(const asmjit::x86::CondCode _cc)
 	{
+		// Materialise the condition BEFORE clearing V. ccr_clear emits an AND on SR, and AND writes
+		// ZF/SF/PF, so a set() placed after it reads the flags of that AND instead of the arithmetic
+		// it is supposed to describe. op_Div and op_Rep_Div call in here with no CcrBatchUpdate in
+		// scope, which is the case that takes the clearing path: they compare accumulator bits 55/54
+		// via parity, and V then came out of the parity of the SR byte. ccr_update(_bit, _cc) above
+		// already orders it this way; this is the same rule.
+		const RegScratch r(m_block);
+		m_asm.set(_cc, r.get().r8());
+
 		// V has to be cleared first because it is overwritten; L must NOT be, it is sticky.
 		if(m_ccr_update_clear)
 			ccr_clear(CCR_V);
@@ -367,8 +376,6 @@ namespace dsp56k
 
 		// 0/1 -> 0x00/0xFF -> 0x00/(CCR_V|CCR_L), so one OR writes both bits. The per-bit path needs
 		// set+shl+or for V and then rol+and+or to copy V into L, six instructions instead of four.
-		const RegScratch r(m_block);
-		m_asm.set(_cc, r.get().r8());
 		m_asm.neg(r.get().r8());
 		m_asm.and_(r.get().r8(), asmjit::Imm(CCR_V | CCR_L));
 		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite).r8(), r.get().r8());

@@ -81,6 +81,7 @@ namespace dsp56k
 	void UnitTests::runAllTests()
 	{
 		conditionCodes();
+		ccrGroundTruth();
 		aguModulo();
 		aguMultiWrapModulo();
 		aguBitreverse();
@@ -7760,5 +7761,186 @@ namespace dsp56k
 			const uint64_t r1 = runOne(consumer, 0x04);	// stale Z set - must not survive A
 			verify(r0 == r1);
 		}
+	}
+
+	// Every expectation below was read out of the Freescale sim56300 reference simulator
+	// (device 56362), not from the manual and not from the other execution engine. A test
+	// that only makes the JIT and the interpreter agree cannot catch a defect they share,
+	// which is exactly how the DIV, NEG and scaling-mode flags below stayed broken. SR is
+	// compared as its low byte so only the CCR is asserted, never the unrelated upper bits.
+	void UnitTests::ccrGroundTruth()
+	{
+		constexpr auto ccr = [](const TWord _sr) { return _sr & 0xff; };
+
+		// ---- DIV: V is set when bits 55 and 54 of the destination differ, and L follows V.
+		// sim: sr=$000300 a=$40000000000000 x0=$40d249 -> a=$7fbf2db7000000 sr=$000343
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x40000000000000)));
+			dsp.x0(0x40d249);
+			emit("div x0,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x7fbf2db7000000);
+			verify(ccr(dsp.getSR().var) == 0x43);		// C | V | L
+		});
+
+		// sim: sr=$000300 a=$00000000000000 x0=$40d249 -> a=$ffbf2db7000000 sr=$000300
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000000000000)));
+			dsp.x0(0x40d249);
+			emit("div x0,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0xffbf2db7000000);
+			verify(ccr(dsp.getSR().var) == 0x00);
+		});
+
+		// sim: sr=$000300 a=$c0000000000000 x0=$40d249 -> a=$8040d249000000 sr=$000300
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xc0000000000000)));
+			dsp.x0(0x40d249);
+			emit("div x0,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x8040d249000000);
+			verify(ccr(dsp.getSR().var) == 0x00);
+		});
+
+		// ---- NEG: negating the 56 bit minimum is the one input that overflows.
+		// sim: sr=$000300 a=$80000000000000 -> a=$80000000000000 sr=$00037a
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x80000000000000)));
+			emit("neg a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x80000000000000);
+			verify(ccr(dsp.getSR().var) == 0x7a);		// V | N | U | E | L
+		});
+
+		// sim: sr=$000300 a=$00000000000001 -> a=$ffffffffffffff sr=$000318
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000000000001)));
+			emit("neg a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0xffffffffffffff);
+			verify(ccr(dsp.getSR().var) == 0x18);		// N | U
+		});
+
+		// ---- E in Scale Up mode (S1=1, S0=0): the integer portion is bits 55..46, so bit 55
+		// takes part. Both values below have bits 54..46 all-equal and bit 55 different, which
+		// is precisely the case a mask that drops bit 55 gets wrong.
+		// sim: sr=$000b00 a=$80000000000000 tst a -> sr=$000b38
+		runTest([&]()
+		{
+			dsp.setSR(0x000b00);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x80000000000000)));
+			emit("tst a");
+		}, [&]()
+		{
+			verify(ccr(dsp.getSR().var) == 0x38);		// N | U | E
+		});
+
+		// sim: sr=$000b00 a=$7fc00000000000 tst a -> sr=$000b20
+		runTest([&]()
+		{
+			dsp.setSR(0x000b00);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x7fc00000000000)));
+			emit("tst a");
+		}, [&]()
+		{
+			verify(ccr(dsp.getSR().var) == 0x20);		// E
+		});
+
+		// control: the same accumulator with no scaling, where the mask is already right.
+		// sim: sr=$000300 a=$80000000000000 tst a -> sr=$000338
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x80000000000000)));
+			emit("tst a");
+		}, [&]()
+		{
+			verify(ccr(dsp.getSR().var) == 0x38);		// N | U | E
+		});
+
+		// ---- A logical op after an arithmetic one. The logical result defines N from bit 47
+		// and Z from A1 alone; a deferred arithmetic N (bit 55) must not come back afterwards.
+		// sim: sr=$000300 a=$ff800000000000 x0=0, "tst a" then "and x0,a"
+		//      -> a=$ff000000000000 sr=$000304
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xff800000000000)));
+			dsp.x0(0x000000);
+			emit("tst a");
+			emit("and x0,a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0xff000000000000);
+			verify(ccr(dsp.getSR().var) == 0x04);		// Z only, N clear
+		});
+
+		// sim: sr=$000300 a=$80000000000000 b=0, "tst a" then "clr b" -> sr=$000314
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x80000000000000)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0x00000000000000)));
+			emit("tst a");
+			emit("clr b");
+		}, [&]()
+		{
+			verify(ccr(dsp.getSR().var) == 0x14);		// Z | U, and E/N from B not A
+		});
+
+		// sim: sr=$000300 a=0, "tst a" then "not a" -> a=$00ffffff000000 sr=$000318
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000000000000)));
+			emit("tst a");
+			emit("not a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x00ffffff000000);
+			verify(ccr(dsp.getSR().var) == 0x18);		// N | U
+		});
+
+		// ---- ASL V and the sticky L that follows it. Already correct, kept as a guard because
+		// the shared V/L helper below the DIV cases is the same one this path uses.
+		// sim: sr=$000300 a=$40000000000000 asl a -> a=$80000000000000 sr=$00037a
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x40000000000000)));
+			emit("asl a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x80000000000000);
+			verify(ccr(dsp.getSR().var) == 0x7a);		// V | N | U | E | L
+		});
+
+		// sim: sr=$000300 a=$00400000000000 asl a -> a=$00800000000000 sr=$000320
+		runTest([&]()
+		{
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00400000000000)));
+			emit("asl a");
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x00800000000000);
+			verify(ccr(dsp.getSR().var) == 0x20);		// E, V clear
+		});
 	}
 }

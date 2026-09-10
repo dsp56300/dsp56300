@@ -463,14 +463,17 @@ namespace dsp56k
 
 		// -- status register management
 
-		void 	sr_set					( CCRMask _bits )					{ reg.sr.var |= _bits;	}
+		// Writing a CCR bit explicitly makes it clean: a deferred update must not come back later
+		// and overwrite it. Only the CCRMask/CCRBit overloads do this - SRMask values all start at
+		// 0x400, above every CCR bit, so they can never name one.
+		void 	sr_set					( CCRMask _bits )					{ reg.sr.var |= _bits;	ccrCache.dirty &= ~static_cast<uint32_t>(_bits); }
 		void 	sr_set					( SRMask _bits )					{ reg.sr.var |= _bits;	}
-		void 	sr_clear				( CCRMask _bits )					{ reg.sr.var &= ~_bits; }
+		void 	sr_clear				( CCRMask _bits )					{ reg.sr.var &= ~_bits; ccrCache.dirty &= ~static_cast<uint32_t>(_bits); }
 		void 	sr_clear				( SRMask _bits )					{ reg.sr.var &= ~_bits; }
 
 		void 	sr_toggle				( CCRMask _bits, bool _set )		{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
 		void 	sr_toggle				( SRMask _bits, bool _set )			{ if( _set ) { sr_set(_bits); } else { sr_clear(_bits); } }
-		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, static_cast<int32_t>(_bit), _value); }
+		void 	sr_toggle				( CCRBit _bit, Bit _value )			{ bitset<int32_t>(reg.sr.var, static_cast<int32_t>(_bit), _value); ccrCache.dirty &= ~(1u << static_cast<uint32_t>(_bit)); }
 
 	public:
 		int 	sr_test					( CCRMask _bits ) const				{ updateDirtyCCR(); return sr_test_noCache(_bits); }
@@ -516,7 +519,12 @@ namespace dsp56k
 			1	0	Scale Up	Bits 55,54..............47,46
 			*/
 
-			const uint32_t mask = (0x3fe << sr_val_noCache(SRB_S0) >> sr_val_noCache(SRB_S1)) & 0x3ff;
+			// The integer portion always ends at bit 55, only its low end moves with the scaling
+			// mode, so build the mask from that low bit. Shifting 0x3fe right for Scale Up dropped
+			// bit 55 and reported E=0 where the hardware sets it (sim56300: sr=$000b00, tst a with
+			// a=$80000000000000 -> E set, and likewise for a=$7fc00000000000).
+			const auto lowBit = 1 + sr_val_noCache(SRB_S0) - sr_val_noCache(SRB_S1);
+			const uint32_t mask = 0x3ff & ~((1u << lowBit) - 1u);
 
 			const uint32_t d2 = static_cast<uint32_t>(_ab.var >> (46 + g_aluShift));
 

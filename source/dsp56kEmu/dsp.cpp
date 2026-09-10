@@ -427,12 +427,13 @@ namespace dsp56k
 
 		auto& dsp = const_cast<DSP&>(*this);
 
+		const auto dirty = ccrCache.dirty;
 		dsp.ccrCache.dirty = 0;
-		
-//		dsp.sr_s_update();
-		dsp.sr_e_update(ccrCache.alu);
-		dsp.sr_u_update(ccrCache.alu);
-		dsp.sr_n_update(ccrCache.alu);
+
+//		if(dirty & CCR_S)	dsp.sr_s_update();
+		if(dirty & CCR_E)	dsp.sr_e_update(ccrCache.alu);
+		if(dirty & CCR_U)	dsp.sr_u_update(ccrCache.alu);
+		if(dirty & CCR_N)	dsp.sr_n_update(ccrCache.alu);
 	}
 
 	void DSP::sr_debug(char* _dst) const
@@ -1191,14 +1192,18 @@ namespace dsp56k
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
-		auto d64 = aluSignextend(d);
-		d64 = -d64;
-		
-		d.var = d64;
+		// The 56 bit minimum negates to itself, which is the only overflow NEG has; sim56300 gives
+		// sr=$00037a for a=$80000000000000 (V and the sticky L set) and leaves both clear for every
+		// other input. Unsigned arithmetic also defines that wraparound - negating the left-aligned
+		// minimum as a signed 64 bit value is UB, which is what this did.
+		constexpr auto minimum = static_cast<uint64_t>(1) << (55 + g_aluShift);
+		const auto value = static_cast<uint64_t>(d.var);
+
+		d.var = static_cast<TReg56::MyType>(static_cast<uint64_t>(0) - value);
 		aluMask(d);
 
 		sr_z_update(d);
-	//	TODO: how to update v? test in sim		sr_v_update(d);
+		sr_toggle(CCR_V, value == minimum);
 		sr_l_update_by_v();
 		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
 	}

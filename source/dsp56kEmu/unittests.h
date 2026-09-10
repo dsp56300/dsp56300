@@ -93,6 +93,7 @@ namespace  dsp56k
 		void unimplementedOpcodeLength();
 		void dec();
 		void div();
+		void ccrGroundTruth();
 
 		void dmac();
 		void dmacMultiPrecision();
