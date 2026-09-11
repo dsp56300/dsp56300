@@ -148,9 +148,14 @@ namespace dsp56k
 
 				m_asm.sub(shift.get(), s1.get());
 			}
+
+			// Add the base before shifting. S0 - S1 is -1 in Scale Up, and shifting by that on its own
+			// shifts by 63 - register shift amounts are taken modulo 64 - which left zero behind and set
+			// U regardless of the accumulator. The static mode path above folds the base in the same way.
+			m_asm.add(r64(shift.get()), r64(shift.get()), asmjit::Imm(46 + g_aluBitOffset));
+
 			const RegGP r(m_block);
-			m_asm.lsr(r, _alu, asmjit::Imm(46 + g_aluBitOffset));
-			m_asm.shr(r, shift.get());	// FIXME: how can this work? shift might be negative if SRB_S1 is one but SRB_S0 is zero
+			m_asm.lsr(r64(r), r64(_alu), r64(shift.get()));
 
 			shift.release();
 
