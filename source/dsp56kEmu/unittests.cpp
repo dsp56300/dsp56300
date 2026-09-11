@@ -6814,6 +6814,7 @@ namespace dsp56k
 		callAfterRepAtVectorAddress();
 		repAtVolatileAddress();
 		repTwoWordInstruction();
+		adcSbcCarryChain();
 		conditionalCallAtVectorAddress();
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
@@ -7231,6 +7232,65 @@ namespace dsp56k
 
 			verify(dsp.aluA().var == static_cast<uint64_t>(count) << 24);
 			verify(dsp.aluB().var == 1);						// the instruction behind the extension word ran
+		}
+	}
+
+	/*	The carry out of ASL feeding ADC and SBC as the last instruction of a DO loop, the shift-and-add shape of a
+		C runtime's long division. Six rounds of asl b / asl a / adc x,b and of asl b / asl a / sbc y,b, results
+		from sim56300.
+	*/
+	void UnitTests::adcSbcCarryChain()
+	{
+		struct Chain
+		{
+			TWord op;
+			uint64_t a;
+			uint64_t b;
+			uint64_t x;
+			uint64_t y;
+			uint64_t aAfter;
+			uint64_t bAfter;
+		};
+
+		static constexpr Chain chains[] =
+		{
+			{ 0x200029, 0x00f23456789abc, 0x00000000000000, 0x000000800001, 0x000000000000, 0x3c8d159e26af00, 0x0000001f80003f },	// adc x,b
+			{ 0x20003d, 0xffedcba9876543, 0x00000000000100, 0x000000000000, 0x000000000003, 0xfb72ea61d950c0, 0x00000000003f04 },	// sbc y,b
+		};
+
+		TWord base = 0x300;
+
+		for(const auto& c : chains)
+		{
+			dsp.resetHW();
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(c.a)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(c.b)));
+			dsp.x1(static_cast<TWord>(c.x >> 24));
+			dsp.x0(static_cast<TWord>(c.x & 0xffffff));
+			dsp.y1(static_cast<TWord>(c.y >> 24));
+			dsp.y0(static_cast<TWord>(c.y & 0xffffff));
+
+			TWord pc = base;
+			pc = emitToMemory(0x060680, base + 4, pc);			// do #6, last instruction at base + 4
+			pc = emitToMemory("asl b", pc);
+			pc = emitToMemory("asl a", pc);
+			pc = emitToMemory(c.op, 0, pc);
+			emitToMemory("rts", pc);
+
+			const auto start = base + 0x20;
+			pc = emitToMemory(0x0d0000 | base, 0, start);		// jsr base
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			dsp.setPC(start);
+			execUntil(returnPC);
+
+			verify(static_cast<uint64_t>(dsp.aluA().var) == c.aAfter);
+			verify(static_cast<uint64_t>(dsp.aluB().var) == c.bAfter);
+			verify((dsp.getSR().var & 0xff) == 0x10);
+
+			base += 0x40;
 		}
 	}
 
@@ -8137,6 +8197,81 @@ namespace dsp56k
 				const auto result = static_cast<uint64_t>(c.resultInB ? dsp.aluB().var : dsp.aluA().var);
 				const auto flags = ccr(dsp.getSR().var);
 				if(result != c.result || flags != c.ccr)
+					report(c.name, result, flags, c.result, c.ccr);
+			});
+		}
+
+		// ---- ADC and SBC: D + S + C and D - S - C, S being X or Y sign extended to 56 bits. C, V and L describe the
+		// whole three term operation, so min + -1 + 1, which only overflows half way, leaves V clear. Z is the standard
+		// one. In a parallel move the arithmetic sees X or Y as they were before the move writes them.
+		struct CarryCase
+		{
+			const char* name;
+			TWord sr;
+			uint64_t a;
+			uint64_t b;
+			uint64_t x;
+			uint64_t y;
+			TWord opA;
+			bool resultInB;
+			uint64_t result;
+			TWord ccr;
+			uint64_t xAfter = ~0ull;	// ~0: unchanged
+			uint64_t yAfter = ~0ull;
+		};
+
+		static constexpr CarryCase carryCases[] =
+		{
+			{ "adc x,a control", 0x000300, 0x00000000000001, 0x00000000000000, 0x000000000001, 0x000000000000, 0x200021, false, 0x00000000000002, 0x10 },
+			{ "adc x,a carry in", 0x000301, 0x00000000000001, 0x00000000000000, 0x000000000001, 0x000000000000, 0x200021, false, 0x00000000000003, 0x10 },
+			{ "adc x,a carry in wraps to zero", 0x000301, 0xffffffffffffff, 0x00000000000000, 0x000000000000, 0x000000000000, 0x200021, false, 0x00000000000000, 0x15 },
+			{ "adc x,a carry in overflows", 0x000301, 0x7fffffffffffff, 0x00000000000000, 0x000000000000, 0x000000000000, 0x200021, false, 0x80000000000000, 0x7a },
+			{ "adc x,a min + -1 + carry", 0x000301, 0x80000000000000, 0x00000000000000, 0xffffffffffff, 0x000000000000, 0x200021, false, 0x80000000000000, 0x39 },
+			{ "adc x,a max + -1 + carry", 0x000301, 0x7fffffffffffff, 0x00000000000000, 0xffffffffffff, 0x000000000000, 0x200021, false, 0x7fffffffffffff, 0x31 },
+			{ "adc x,a max + max + carry", 0x000301, 0x7fffffffffffff, 0x00000000000000, 0x7fffffffffff, 0x000000000000, 0x200021, false, 0x807fffffffffff, 0x6a },
+			{ "adc x,a zero, Z clear before", 0x000300, 0x00000000000000, 0x00000000000000, 0x000000000000, 0x000000000000, 0x200021, false, 0x00000000000000, 0x14 },
+			{ "adc x,a nonzero, Z set before", 0x000305, 0x00000000000000, 0x00000000000000, 0x000000000000, 0x000000000000, 0x200021, false, 0x00000000000001, 0x10 },
+			{ "adc x,a sign-extends X", 0x000300, 0x00000000000001, 0x00000000000000, 0x800000000000, 0x000000000000, 0x200021, false, 0xff800000000001, 0x08 },
+			{ "adc x,b", 0x000301, 0x00000000000000, 0x00000010000000, 0x000005000000, 0x000007000000, 0x200029, true, 0x00000015000001, 0x10 },
+			{ "adc y,a", 0x000301, 0x00000001000000, 0x00000000000000, 0x000005000000, 0x000007000000, 0x200031, false, 0x00000008000001, 0x10 },
+			{ "adc y,b", 0x000300, 0x00000000000000, 0x00000003000000, 0x000005000000, 0x000007000000, 0x200039, true, 0x0000000a000000, 0x10 },
+			{ "sbc x,a control", 0x000300, 0x00000000000003, 0x00000000000000, 0x000000000001, 0x000000000000, 0x200025, false, 0x00000000000002, 0x10 },
+			{ "sbc x,a borrow in", 0x000301, 0x00000000000003, 0x00000000000000, 0x000000000001, 0x000000000000, 0x200025, false, 0x00000000000001, 0x10 },
+			{ "sbc x,a borrow in wraps", 0x000301, 0x00000000000000, 0x00000000000000, 0x000000000000, 0x000000000000, 0x200025, false, 0xffffffffffffff, 0x19 },
+			{ "sbc x,a borrow in overflows", 0x000301, 0x80000000000000, 0x00000000000000, 0x000000000000, 0x000000000000, 0x200025, false, 0x7fffffffffffff, 0x72 },
+			{ "sbc x,a max - -1 - borrow", 0x000301, 0x7fffffffffffff, 0x00000000000000, 0xffffffffffff, 0x000000000000, 0x200025, false, 0x7fffffffffffff, 0x31 },
+			{ "sbc x,a min - -1 - borrow", 0x000301, 0x80000000000000, 0x00000000000000, 0xffffffffffff, 0x000000000000, 0x200025, false, 0x80000000000000, 0x39 },
+			{ "sbc x,a to zero, Z clear before", 0x000301, 0x00000000000001, 0x00000000000000, 0x000000000000, 0x000000000000, 0x200025, false, 0x00000000000000, 0x14 },
+			{ "sbc x,a nonzero, Z set before", 0x000304, 0x00000000000001, 0x00000000000000, 0x000000000000, 0x000000000000, 0x200025, false, 0x00000000000001, 0x10 },
+			{ "sbc x,a sign-extends X", 0x000300, 0x00000000000000, 0x00000000000000, 0x800000000000, 0x000000000000, 0x200025, false, 0x00800000000000, 0x21 },
+			{ "sbc x,b", 0x000301, 0x00000000000000, 0x00000010000000, 0x000005000000, 0x000007000000, 0x20002d, true, 0x0000000affffff, 0x10 },
+			{ "sbc y,a", 0x000301, 0x00000010000000, 0x00000000000000, 0x000005000000, 0x000007000000, 0x200035, false, 0x00000008ffffff, 0x10 },
+			{ "sbc y,b", 0x000300, 0x00000000000000, 0x00000010000000, 0x000005000000, 0x000007000000, 0x20003d, true, 0x00000009000000, 0x10 },
+			{ "adc x,a b,x0", 0x000301, 0x00000000000010, 0x00000123000000, 0x000000000005, 0x000000000000, 0x21e421, false, 0x00000000000016, 0x10, 0x000000000123, 0x000000000000 },
+			{ "sbc y,b a,y1", 0x000301, 0x00000456000000, 0x00000010000000, 0x000000000000, 0x000001000000, 0x21c73d, true, 0x0000000effffff, 0x10, 0x000000000000, 0x000456000000 },
+		};
+
+		for(const auto& c : carryCases)
+		{
+			runTest([&]()
+			{
+				dsp.setSR(c.sr);
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(c.a)));
+				dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(c.b)));
+				dsp.x1(static_cast<TWord>(c.x >> 24));
+				dsp.x0(static_cast<TWord>(c.x & 0xffffff));
+				dsp.y1(static_cast<TWord>(c.y >> 24));
+				dsp.y0(static_cast<TWord>(c.y & 0xffffff));
+				emit(c.opA);
+			}, [&]()
+			{
+				const auto result = static_cast<uint64_t>(c.resultInB ? dsp.aluB().var : dsp.aluA().var);
+				const auto flags = ccr(dsp.getSR().var);
+				const auto x = static_cast<uint64_t>(dsp.x1().var) << 24 | dsp.x0().var;
+				const auto y = static_cast<uint64_t>(dsp.y1().var) << 24 | dsp.y0().var;
+				const auto xAfter = c.xAfter == ~0ull ? c.x : c.xAfter;
+				const auto yAfter = c.yAfter == ~0ull ? c.y : c.yAfter;
+				if(result != c.result || flags != c.ccr || x != xAfter || y != yAfter)
 					report(c.name, result, flags, c.result, c.ccr);
 			});
 		}

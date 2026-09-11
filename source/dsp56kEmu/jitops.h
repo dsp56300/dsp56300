@@ -53,7 +53,7 @@ namespace dsp56k
 		uint32_t calcCycles(TWord _pc) const;
 
 		void op_Abs(TWord op);
-		void op_ADC(TWord op)			{ errNotImplemented(op); }
+		void op_ADC(TWord op);
 		void op_Add_SD(TWord op);
 		void op_Add_xx(TWord op);
 		void op_Add_xxxx(TWord op);
@@ -268,7 +268,7 @@ namespace dsp56k
 		void op_Ror(TWord op);
 		void op_Rti(TWord op);
 		void op_Rts(TWord op);
-		void op_Sbc(TWord op)					{ errNotImplemented(op); }
+		void op_Sbc(TWord op);
 		void op_Stop(TWord op);
 		void op_Sub_SD(TWord op);
 		void op_Sub_xx(TWord op);
@@ -617,6 +617,8 @@ namespace dsp56k
 
 		void alu_sub(TWord _ab, const JitReg64& _v);
 		void alu_sub(TWord _ab, uint8_t _v);
+
+		void alu_adcSbc(TWord _ab, TWord _j, bool _subtract);
 
 		void alu_and(TWord ab, DspValue& _v);
 

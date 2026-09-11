@@ -61,22 +61,24 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// alu_add
 	//
-	void DSP::alu_add( bool ab, const TReg56& _val )
+	void DSP::alu_add( bool ab, const TReg56& _val, const bool _carryIn )
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
 		const TReg56 old = d;
 
 		const uint64_t d64 = d.var;
-		const uint64_t res = d64 + _val.var;
+		const uint64_t sum = d64 + _val.var;
+		const uint64_t res = sum + (static_cast<uint64_t>(_carryIn) << g_aluShift);	// ADC adds C at the accumulator's LSB
 
 		d.var = res;
 		aluMask(d);
 
-		const auto carry = int(res < d64);	// carry out of the accumulator = 64-bit unsigned overflow
+		const auto carry = int(sum < d64 || res < sum);	// carry out of the accumulator = 64-bit unsigned overflow
 
 		// V: the sign of the result differs from the signs of both operands, which left-aligned is signed overflow
-		// of the 64 bit sum. sim56300 sets V and L for add b,a with a=$7fffffffffffff and b=1.
+		// of the 64 bit sum. sim56300 sets V and L for add b,a with a=$7fffffffffffff and b=1. A carry in keeps the
+		// rule: it can only push two operands of the same sign out of range, and min + -1 + 1 leaves V clear.
 		constexpr auto signBit = static_cast<uint64_t>(1) << (55 + g_aluShift);
 		const bool overflow = ((res ^ d64) & (res ^ static_cast<uint64_t>(_val.var)) & signBit) != 0;
 
@@ -174,19 +176,21 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// alu_sub
 	//
-	void DSP::alu_sub( bool ab, const TReg56& _val )
+	void DSP::alu_sub( bool ab, const TReg56& _val, const bool _carryIn )
 	{
 		TReg56& d = ab ? reg.b : reg.a;
 
 		const uint64_t d64 = d.var;
-		const uint64_t res = d64 - static_cast<uint64_t>(_val.var);
+		const uint64_t diff = d64 - static_cast<uint64_t>(_val.var);
+		const uint64_t borrowIn = static_cast<uint64_t>(_carryIn) << g_aluShift;	// SBC subtracts C at the accumulator's LSB
+		const uint64_t res = diff - borrowIn;
 
-		const auto carry = static_cast<uint64_t>(_val.var) > d64;	// borrow out of the accumulator
+		const auto carry = static_cast<uint64_t>(_val.var) > d64 || borrowIn > diff;	// borrow out of the accumulator
 
 		d.var = res;
 		aluMask(d);
 
-		// V: the operands differ in sign and the result does not share the sign of the minuend
+		// V: the operands differ in sign and the result does not share the sign of the minuend, with or without a borrow in
 		constexpr auto signBit = static_cast<uint64_t>(1) << (55 + g_aluShift);
 		const bool overflow = ((d64 ^ static_cast<uint64_t>(_val.var)) & (d64 ^ res) & signBit) != 0;
 
@@ -636,7 +640,9 @@ namespace dsp56k
 
 	inline void DSP::op_ADC(const TWord op)
 	{
-		errNotImplemented("ADC");
+		const auto D = getFieldValue<ADC, Field_d>(op);
+		const auto J = getFieldValue<ADC, Field_J>(op);
+		alu_add(D, decode_JJJ_read_56(J + 2, !D), sr_test(CCR_C) != 0);	// JJJ 2 and 3 are X and Y
 	}
 	inline void DSP::op_Add_SD(const TWord op)
 	{
@@ -1423,7 +1429,9 @@ namespace dsp56k
 	}
 	inline void DSP::op_Sbc(const TWord op)
 	{
-		errNotImplemented("SBC");
+		const auto D = getFieldValue<Sbc, Field_d>(op);
+		const auto J = getFieldValue<Sbc, Field_J>(op);
+		alu_sub(D, decode_JJJ_read_56(J + 2, !D), sr_test(CCR_C) != 0);	// JJJ 2 and 3 are X and Y
 	}
 	inline void DSP::op_Sub_SD(const TWord op)
 	{

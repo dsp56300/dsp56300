@@ -713,7 +713,6 @@ namespace dsp56k
 		case Or_xxxx:
 			readwritef(Field_d);
 			break;
-		case ADC:
 		case Addl:
 		case Addr:
 		case Subl:
@@ -1081,6 +1080,7 @@ namespace dsp56k
 		case Ror:
 			readwritef(Field_d);
 			break;
+		case ADC:
 		case Sbc:
 			readf(Field_J);
 			readwritef(Field_d);

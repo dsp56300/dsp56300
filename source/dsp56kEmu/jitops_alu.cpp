@@ -197,6 +197,73 @@ namespace dsp56k
 		alu_add(D, r64(v.get()));
 	}
 
+	void JitOps::op_ADC(TWord op)
+	{
+		alu_adcSbc(getFieldValue<ADC, Field_d>(op), getFieldValue<ADC, Field_J>(op), false);
+	}
+
+	void JitOps::op_Sbc(TWord op)
+	{
+		alu_adcSbc(getFieldValue<Sbc, Field_d>(op), getFieldValue<Sbc, Field_J>(op), true);
+	}
+
+	void JitOps::alu_adcSbc(const TWord _ab, const TWord _j, const bool _subtract)
+	{
+		// ADC: D + S + C -> D, SBC: D - S - C -> D, S being X or Y. C, V and L describe the whole three term
+		// operation, which is what the host's own add and subtract with carry produce, so they are taken as for
+		// ADD and SUB. The host carry enters at bit 0 though, below the left-aligned accumulator. Those low bits
+		// are zero in both operands: a subtraction borrows through them as it is, an addition carries through
+		// them once they are all ones in the source. Either way they end up all ones or all zeros and are cleared.
+		const auto v = decode_JJJ_read_56(_j + 2, !_ab);	// JJJ 2 and 3 are X and Y
+
+		const RegGP carry(m_block);
+		ccr_getBitValue(carry, CCRB_C);						// before the batch below clears it
+
+		AluRef alu(m_block, _ab);
+
+		CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+
+		constexpr auto belowAccumulator = (static_cast<uint64_t>(1) << g_aluBitOffset) - 1;
+
+#ifdef HAVE_ARM64
+		if(_subtract)
+			m_asm.eor(r32(carry), r32(carry), asmjit::Imm(1));		// ARM subtracts the inverted carry
+		else
+			m_asm.orr(r64(v.get()), r64(v.get()), asmjit::Imm(belowAccumulator));
+
+		m_asm.cmp(r32(carry), asmjit::Imm(1));						// host C = carry
+
+		if(_subtract)
+		{
+			m_asm.sbcs(alu, alu, r64(v.get()));
+			ccr_update_ifNotCarry(CCRB_C);	// ARM carry means unsigned >=, inverted vs 56k/x64
+		}
+		else
+		{
+			m_asm.adcs(alu, alu, r64(v.get()));
+			ccr_update_ifCarry(CCRB_C);
+		}
+		ccr_vl_update_ifOverflow();
+
+		m_asm.and_(alu, alu, asmjit::Imm(~belowAccumulator));
+#else
+		if(!_subtract)
+			m_asm.or_(r64(v.get()).r8(), asmjit::Imm(belowAccumulator));
+
+		m_asm.bt(r32(carry), asmjit::Imm(0));						// host CF = carry
+
+		if(_subtract)
+			m_asm.sbb(alu, r64(v.get()));
+		else
+			m_asm.adc(alu, r64(v.get()));
+		ccr_c_update_vl_ifOverflow();
+
+		m_asm.and_(alu, asmjit::Imm(~belowAccumulator));
+#endif
+
+		ccr_dirty(_ab, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
+	}
+
 	void JitOps::op_Add_xx(TWord op)
 	{
 		const auto iiiiii = getFieldValue<Add_xx, Field_iiiiii>(op);

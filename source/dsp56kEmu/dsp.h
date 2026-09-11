@@ -1037,10 +1037,10 @@ namespace dsp56k
 		void	alu_and				( bool ab, TWord   _val );
 		void	alu_or				( bool ab, TWord   _val );
 		void	alu_eor				( bool ab, TWord   _val );
-		void	alu_add				( bool ab, const TReg56& _val );
+		void	alu_add				( bool ab, const TReg56& _val, bool _carryIn = false );
 		void	alu_cmp				( bool ab, const TReg56& _val, bool _magnitude );
 		void	alu_cmpu			( bool ab, const TReg56& _val );
-		void	alu_sub				( bool ab, const TReg56& _val );
+		void	alu_sub				( bool ab, const TReg56& _val, bool _carryIn = false );
 		void	alu_asr				( bool abDst, bool abSrc, int _shiftAmount );
 		void	alu_asl				( bool abDst, bool abSrc, int _shiftAmount );
 
