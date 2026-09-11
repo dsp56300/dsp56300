@@ -307,6 +307,10 @@ namespace dsp56k
 		}
 		else
 		{
+			// down to a sign-extended 56 bit value first, then scale: scaling the left-aligned register made Scale Up
+			// push bit 55 out of the host word before the limiter saw it
+			m_asm.asr(_dst, _dst, asmjit::Imm(8));
+
 			const ShiftReg shifter(m_block);
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S1);
 			m_asm.cset(shifter, asmjit::arm::CondCode::kNotZero);
@@ -315,8 +319,6 @@ namespace dsp56k
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S0);
 			m_asm.cset(shifter, asmjit::arm::CondCode::kNotZero);
 			m_asm.asr(_dst, _dst, shifter.get());
-
-			m_asm.asr(_dst, _dst, asmjit::Imm(8));
 		}
 		
 		{

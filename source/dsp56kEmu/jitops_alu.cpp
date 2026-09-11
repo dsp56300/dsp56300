@@ -42,8 +42,8 @@ namespace dsp56k
 
 		aluRestoreFrom64(ra);
 
-	//	sr_v_update(d);
-	//	sr_l_update_by_v();
+		// the minimum has no positive counterpart and stays the minimum, which is ABS's only overflow
+		ccr_vl_update_ifEqual(ra, static_cast<uint64_t>(1) << (55 + g_aluBitOffset));
 		ccr_dirty(ab, ra, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
@@ -58,12 +58,15 @@ namespace dsp56k
 			if(!m_disableCCRUpdates)
 			{
 				CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+				// signed overflow of the 56 bit result is signed overflow of the host word when left-aligned
 #ifdef HAVE_ARM64
 				m_asm.adds(alu, alu, _v);
+				ccr_update_ifCarry(CCRB_C);
+				ccr_vl_update_ifOverflow();
 #else
 				m_asm.add(alu, _v);
+				ccr_c_update_vl_ifOverflow();
 #endif
-				ccr_update_ifCarry(CCRB_C);
 			}
 			else
 			{
@@ -72,6 +75,9 @@ namespace dsp56k
 		}
 		else
 		{
+		const RegGP overflow(m_block);
+		m_asm.mov(overflow, alu);
+
 		m_asm.add(alu, _v);
 
 		if(!m_disableCCRUpdates)
@@ -80,7 +86,17 @@ namespace dsp56k
 
 			copyBitToCCR(alu, 56, CCRB_C);
 
-//			ccr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
+			// V: the sign of the result differs from the signs of both operands
+			{
+				const RegGP operand(m_block);
+				m_asm.mov(operand, _v);
+				m_asm.xor_(operand, alu.get());
+				m_asm.xor_(overflow, alu.get());
+				m_asm.and_(overflow, operand.get());
+			}
+			m_asm.shr(overflow, asmjit::Imm(55));
+			m_asm.and_(overflow, asmjit::Imm(1));
+			ccr_vl_update(overflow);
 		}
 		}
 
@@ -110,12 +126,14 @@ namespace dsp56k
 			if(!m_disableCCRUpdates)
 			{
 				CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+				// signed overflow of the 56 bit result is signed overflow of the host word when left-aligned
 #ifdef HAVE_ARM64
 				m_asm.subs(alu, alu, _v);
 				ccr_update_ifNotCarry(CCRB_C);	// ARM carry means unsigned >=, inverted vs 56k/x64
+				ccr_vl_update_ifOverflow();
 #else
 				m_asm.sub(alu, _v);
-				ccr_update_ifCarry(CCRB_C);
+				ccr_c_update_vl_ifOverflow();
 #endif
 			}
 			else
@@ -125,6 +143,9 @@ namespace dsp56k
 		}
 		else
 		{
+		const RegGP overflow(m_block);
+		m_asm.mov(overflow, alu);
+
 		m_asm.sub(alu, _v);
 
 		if(!m_disableCCRUpdates)
@@ -133,7 +154,17 @@ namespace dsp56k
 
 			copyBitToCCR(alu, 56, CCRB_C);
 
-//			ccr_clear(CCR_V); batch cleared
+			// V: the operands differ in sign and the result does not share the sign of the minuend
+			{
+				const RegGP operand(m_block);
+				m_asm.mov(operand, overflow.get());
+				m_asm.xor_(operand, _v);
+				m_asm.xor_(overflow, alu.get());
+				m_asm.and_(overflow, operand.get());
+			}
+			m_asm.shr(overflow, asmjit::Imm(55));
+			m_asm.and_(overflow, asmjit::Imm(1));
+			ccr_vl_update(overflow);
 		}
 		}
 
@@ -192,14 +223,26 @@ namespace dsp56k
 
 		const auto ab = getFieldValue<Addl, Field_d>(op);
 
+		// C and V are both written below. Clearing them up front is also what lets x64 fold the carry in
+		// with a single adc.
+		CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+
 		AluReg aluD(m_block, ab);
 
 		aluSignextendTo64(aluD);
 
+		// V is set when either stage overflows: the doubling, when bit 55 changes, or the addition. C comes from
+		// the addition alone, sim56300 leaves it clear when the doubling pushes out a set bit 55. As for the
+		// carry, the host flags describe the 56 bit value because the accumulator is left-aligned.
+		const RegGP overflow(m_block);
+
 #ifdef HAVE_ARM64
+		m_asm.eor(r64(overflow), r64(aluD.get()), r64(aluD.get()), asmjit::arm::lsl(1));	// bit 63 = bit 63 ^ bit 62
+		m_asm.lsr(r64(overflow), r64(overflow), asmjit::Imm(63));
 		m_asm.lsl(aluD, aluD, asmjit::Imm(1));
 #else
 		m_asm.sal(aluD, asmjit::Imm(1));
+		m_asm.set(asmjit::x86::CondCode::kOverflow, overflow.get().r8());		// a one bit SAL sets OF to bit 63 ^ bit 62
 #endif
 		{
 			AluReg aluS(m_block, ab ? 0 : 1, true);
@@ -213,14 +256,29 @@ namespace dsp56k
 #endif
 		}
 
+#ifdef HAVE_ARM64
 		ccr_update_ifCarry(CCRB_C);
+		{
+			const RegScratch addOverflow(m_block);
+			m_asm.cset(addOverflow, asmjit::arm::CondCode::kVS);
+			m_asm.orr(r64(overflow), r64(overflow), r64(addOverflow));
+		}
+#else
+		{
+			// OF of the addition before the carry, which the batch folds in with an adc that rewrites OF
+			const RegScratch addOverflow(m_block);
+			m_asm.set(asmjit::x86::CondCode::kOverflow, addOverflow.get().r8());
+			ccr_update_ifCarry(CCRB_C);
+			m_asm.or_(overflow.get().r8(), addOverflow.get().r8());
+		}
+#endif
+		ccr_vl_update(overflow);
 
 		// D = 2 * D + S: the shift is to the LEFT, so the spare low byte stays zero, and adding another
 		// accumulator keeps it that way. Contrast op_Addr below, which shifts right and does need the mask.
 		if constexpr (!g_leftAlignedAlu)
 			m_dspRegs.mask56(aluD);
 
-		ccr_clear(CCR_V);	// TODO: Set if overflow has occurred in the A or B result or the MSB of the destination operand is changed as a result of the instruction�s left shift.
 		ccr_dirty(ab, aluD, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
 
@@ -414,16 +472,22 @@ namespace dsp56k
 			alu_abs(_v);
 		}
 
-		// C and V are both cleared. Only C is updated as V is cleared always
+		// C comes from the borrow. V is a signed overflow of the 56 bit difference, which with both operands in
+		// ALU alignment is signed overflow of the host word. CMPM compares magnitudes and leaves V clear.
 		{
 			CcrBatchUpdate u(*this, static_cast<CCRMask>(CCR_C | CCR_V));
 
 #ifdef HAVE_ARM64
 			m_asm.subs(d, d, _v);
 			ccr_update_ifNotCarry(CCRB_C);		// we, THAT is unexpected: On ARM, carry means unsigned >= while it means unsigned < on 56k and intel
+			if(!_magnitude)
+				ccr_vl_update_ifOverflow();
 #else
 			m_asm.sub(d, _v);
-			ccr_update_ifCarry(CCRB_C);
+			if(_magnitude)
+				ccr_update_ifCarry(CCRB_C);
+			else
+				ccr_c_update_vl_ifOverflow();
 #endif
 		}
 
@@ -803,20 +867,26 @@ namespace dsp56k
 	void JitOps::op_Dec(TWord op)
 	{
 		const auto ab = getFieldValue<Dec, Field_d>(op);
+
+		// C and V are written below. Clearing both up front folds the carry in with an adc and leaves V and L to be
+		// set out of line on the rare overflow.
+		CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+
 		AluRef r(m_block, ab);
 
 		aluExtendTo64(r);	// reach the 64 bit boundary to use the host carry bit (free when left-aligned)
 
+		// DEC overflows only by wrapping the minimum round to the maximum, which is signed overflow of the host word
 #ifdef HAVE_ARM64
 		m_asm.subs(r, r, asmjit::Imm(0x100));
 		ccr_update_ifNotCarry(CCRB_C);
+		ccr_vl_update_ifOverflow();
 #else
 		m_asm.sub(r, asmjit::Imm(0x100));
-		ccr_update_ifCarry(CCRB_C);
+		ccr_c_update_vl_ifOverflow();
 #endif
 
 		aluRestoreFrom64(r);
-		ccr_clear(CCR_V);				// never set in the simulator, even when wrapping around. Carry is set instead
 
 		ccr_dirty(ab, r, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
@@ -1063,20 +1133,26 @@ namespace dsp56k
 	void JitOps::op_Inc(TWord op)
 	{
 		const auto ab = getFieldValue<Dec, Field_d>(op);
+
+		// C and V are written below. Clearing both up front folds the carry in with an adc and leaves V and L to be
+		// set out of line on the rare overflow.
+		CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+
 		AluRef r(m_block, ab);
 
 		aluExtendTo64(r);		// reach the 64 bit boundary to use the host carry bit (free when left-aligned)
 
+		// INC overflows only by wrapping the maximum round to the minimum, which is signed overflow of the host word
 #ifdef HAVE_ARM64
 		m_asm.adds(r, r, asmjit::Imm(0x100));
+		ccr_update_ifCarry(CCRB_C);
+		ccr_vl_update_ifOverflow();
 #else
 		m_asm.add(r, asmjit::Imm(0x100));
+		ccr_c_update_vl_ifOverflow();
 #endif
-		ccr_update_ifCarry(CCRB_C);
 
 		aluRestoreFrom64(r);
-
-		ccr_clear(CCR_V);					// never set in the simulator, even when wrapping around. Carry is set instead
 
 		ccr_dirty(ab, r, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}
@@ -1391,13 +1467,7 @@ namespace dsp56k
 
 		// The 56 bit minimum is the only input that overflows: it negates to itself. Comparing the
 		// result against it works for either accumulator alignment, and V was simply cleared here.
-		{
-			const RegScratch minimum(m_block);
-			m_asm.mov(minimum, asmjit::Imm(static_cast<uint64_t>(1) << (55 + g_aluBitOffset)));
-			m_asm.cmp(r, minimum);
-		}
-		ccr_update_ifZero(CCRB_V);
-		ccr_l_update_by_v();
+		ccr_vl_update_ifEqual(r, static_cast<uint64_t>(1) << (55 + g_aluBitOffset));
 
 		ccr_dirty(D, r, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
 	}

@@ -10,6 +10,7 @@
 #include "jittypes.h"
 #include "jitconfig.h"
 
+#include <functional>
 #include <vector>
 #include <set>
 
@@ -98,6 +99,11 @@ namespace dsp56k
 
 		void reset(JitConfig&& _config);
 
+		// Code for rare paths, reached through a branch and jumping back by itself. It is emitted once the block has
+		// ended with an unconditional exit, so the common path falls straight through without a taken branch.
+		void addColdCode(std::function<void()>&& _code) { m_coldCode.push_back(std::move(_code)); }
+		void emitColdCode();
+
 	private:
 		class JitBlockGenerating
 		{
@@ -123,6 +129,7 @@ namespace dsp56k
 		JitDspRegs m_dspRegs;
 		JitDspRegPool m_dspRegPool;
 		Jitmem m_mem;
+		std::vector<std::function<void()>> m_coldCode;
 
 		JitConfig m_config;
 		JitBlockChain* m_chain = nullptr;

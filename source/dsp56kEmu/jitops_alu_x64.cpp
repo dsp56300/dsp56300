@@ -166,22 +166,27 @@ namespace dsp56k
 
 	void JitOps::alu_lsl(TWord ab, const DspValue& _shiftAmount)
 	{
-		CcrBatchUpdate bu(*this, static_cast<CCRMask>(CCR_N | CCR_C | CCR_V));
+		// Z is written below, so it belongs in the batch: in a batch a flag is only OR'ed in, and a Z left
+		// over from an earlier instruction would survive a non-zero result.
+		CcrBatchUpdate bu(*this, static_cast<CCRMask>(CCR_N | CCR_Z | CCR_C | CCR_V));
 		DspValue d(m_block);
 		getALU1(d, ab);
+
+		// Shift the 64 bit register by the real count and read the carry at bit 24, where the last bit shifted
+		// out of the 24 bit value lands. Adding 8 to reach the host carry only works for the immediate on a 32
+		// bit register: the register count shifted all 64 bits, so the carry came from bit 56 - n, always zero.
 		if(_shiftAmount.isImm24())
 		{
-			m_asm.shl(r32(d.get()), _shiftAmount.imm24() + 8); // + 8 to use native carry flag
+			m_asm.shl(r64(d.get()), _shiftAmount.imm24());
 		}
 		else
 		{
 			ShiftReg s(m_block);
 			m_asm.mov(r32(s), r32(_shiftAmount.get()));
-			m_asm.add(r32(s), asmjit::Imm(8));	// + 8 to use native carry flag
 			m_asm.shl(r64(d.get()), s.get().r8());
 		}
-		ccr_update_ifCarry(CCRB_C);
-		m_asm.shr(r32(d.get()), 8);				// revert shift by 8
+		copyBitToCCR(d.get(), 24, CCRB_C);		// clear for a count of zero as well
+		m_asm.and_(r32(d.get()), asmjit::Imm(0xffffff));
 		ccr_update_ifZero(CCRB_Z);
 		copyBitToCCR(d.get(), 23, CCRB_N);
 //		ccr_clear(CCR_V);	already cleared above
@@ -190,7 +195,7 @@ namespace dsp56k
 
 	void JitOps::alu_lsr(TWord ab, const DspValue& _shiftAmount)
 	{
-		CcrBatchUpdate bu(*this, static_cast<CCRMask>(CCR_N | CCR_C | CCR_V));
+		CcrBatchUpdate bu(*this, static_cast<CCRMask>(CCR_N | CCR_Z | CCR_C | CCR_V));	// Z too: a batch only ORs flags in
 		DspValue d(m_block);
 		getALU1(d, ab);
 		if(_shiftAmount.isImm24())
@@ -441,13 +446,15 @@ namespace dsp56k
 		m_asm.test_(s);
 		m_asm.cmovz(t,s);
 
-		CcrBatchUpdate ccrBatch(*this, CCR_N, CCR_Z, CCR_V);
-		copyBitToCCR(d, 23 + g_aluBitOffset, CCRB_N);
-
 		m_asm.shl(r64(t), asmjit::Imm(24 + g_aluBitOffset));
-		ccr_update_ifZero(CCRB_Z);
-
 		m_asm.mov(r64(d), r64(t));
+
+		// N and Z describe the count just installed. The destination need not have been loaded, and nothing here
+		// set the host flags for the result, so take both from it explicitly.
+		CcrBatchUpdate ccrBatch(*this, CCR_N, CCR_Z, CCR_V);
+		copyBitToCCR(d, 47 + g_aluBitOffset, CCRB_N);
+		m_asm.test_(r64(d));
+		ccr_update_ifZero(CCRB_Z);
 	}
 
 	void JitOps::op_Div(TWord op)
@@ -775,6 +782,7 @@ namespace dsp56k
 		ccr_n_update_by23(r64(r));								// Set if bit 47 of the result is set
 
 		m_asm.or_(r.get(), r32(prevCarry));						// Set if bits 47�24 of the result are 0
+		m_asm.and_(r.get(), asmjit::Imm(0xffffff));						// drop the bit rotated out of bit 23 before testing Z
 		ccr_update_ifZero(CCRB_Z);
 		setALU1(D, r);
 

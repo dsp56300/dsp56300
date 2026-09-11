@@ -148,4 +148,19 @@ namespace dsp56k
 		m_ops.m_ccrDirty = static_cast<CCRMask>(m_ops.m_ccrDirty & ~_mask);
 		m_ops.m_ccr_update_clear = false;
 	}
+
+	void JitOps::ccr_vl_update_ifEqual(const JitRegGP& _value, const uint64_t _limit)
+	{
+		// NEG, ABS, INC and DEC can each overflow into exactly one result, so comparing the result with it is
+		// the whole overflow test. V takes the outcome and the sticky L follows it.
+		const RegScratch limit(m_block);
+		m_asm.mov(limit, asmjit::Imm(_limit));
+		m_asm.cmp(_value, limit);
+#ifdef HAVE_ARM64
+		m_asm.cset(limit, asmjit::arm::CondCode::kZero);
+#else
+		m_asm.set(asmjit::x86::CondCode::kZero, limit.get().r8());
+#endif
+		ccr_vl_update(limit);
+	}
 }

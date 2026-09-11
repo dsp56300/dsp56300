@@ -536,9 +536,18 @@ namespace dsp56k
 		// V is overwritten while L is a sticky OR of V, so where both are written together they can be
 		// produced from a single 0/1 value instead of two independent read-modify-writes of SR.
 		void ccr_vl_update_ifNotZero();
+		void ccr_vl_update(const JitRegGP& _zeroOrOne);
+		void ccr_vl_update_ifEqual(const JitRegGP& _value, uint64_t _limit);
 #ifndef HAVE_ARM64
 		void ccr_vl_update_ifNotParity();
 		void ccr_vl_update(asmjit::x86::CondCode _cc);
+		// Inside a CcrBatchUpdate that cleared C and V: C from the host carry, V and the sticky L from the host overflow.
+		// Overflow is rare, so V and L are set out of line behind a branch that is normally not taken.
+		void ccr_c_update_vl_ifOverflow();
+#else
+		// Inside a CcrBatchUpdate that cleared V: V and the sticky L from the host overflow, set out of line behind a
+		// branch that is normally not taken.
+		void ccr_vl_update_ifOverflow();
 #endif
 		void ccr_v_update(const JitReg64& _nonMaskedResult);
 

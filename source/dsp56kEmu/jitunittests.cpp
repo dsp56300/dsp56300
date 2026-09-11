@@ -146,6 +146,12 @@ namespace dsp56k
 			o.updateDirtyCCR();
 
 			pusher.end();
+
+			// out-of-line code for rare paths, which a real block emits after its exit: jump over it here
+			const auto afterColdCode = m_asm.newLabel();
+			m_asm.jmp(afterColdCode);
+			b.emitColdCode();
+			m_asm.bind(afterColdCode);
 		}
 
 		m_asm.ret();

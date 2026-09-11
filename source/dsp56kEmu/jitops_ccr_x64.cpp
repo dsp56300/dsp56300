@@ -366,7 +366,11 @@ namespace dsp56k
 		// already orders it this way; this is the same rule.
 		const RegScratch r(m_block);
 		m_asm.set(_cc, r.get().r8());
+		ccr_vl_update(r);
+	}
 
+	void JitOps::ccr_vl_update(const JitRegGP& _zeroOrOne)
+	{
 		// V has to be cleared first because it is overwritten; L must NOT be, it is sticky.
 		if(m_ccr_update_clear)
 			ccr_clear(CCR_V);
@@ -376,9 +380,35 @@ namespace dsp56k
 
 		// 0/1 -> 0x00/0xFF -> 0x00/(CCR_V|CCR_L), so one OR writes both bits. The per-bit path needs
 		// set+shl+or for V and then rol+and+or to copy V into L, six instructions instead of four.
-		m_asm.neg(r.get().r8());
-		m_asm.and_(r.get().r8(), asmjit::Imm(CCR_V | CCR_L));
-		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite).r8(), r.get().r8());
+		// Only the low byte takes part, so a register written by setcc is enough.
+		m_asm.neg(_zeroOrOne.r8());
+		m_asm.and_(_zeroOrOne.r8(), asmjit::Imm(CCR_V | CCR_L));
+		m_asm.or_(m_dspRegs.getSR(JitDspRegs::ReadWrite).r8(), _zeroOrOne.r8());
+	}
+
+	void JitOps::ccr_c_update_vl_ifOverflow()
+	{
+		// The batch cleared C and V up front, so the carry is folded in with an adc and V and L only ever need setting.
+		assert(!m_ccr_update_clear && "needs a CcrBatchUpdate that clears C and V");
+
+		ccr_clearDirty(static_cast<CCRMask>(CCR_C | CCR_V | CCR_L));
+
+		const auto sr = r32(m_dspRegs.getSR(JitDspRegs::ReadWrite));
+		const auto overflow = m_asm.newLabel();
+		const auto done = m_asm.newLabel();
+
+		// The adc rewrites OF, so branch on it first; the out-of-line path folds the carry in as well.
+		m_asm.jo(overflow);
+		m_asm.adc(sr, asmjit::Imm(0));
+		m_asm.bind(done);
+
+		m_block.addColdCode([a = &m_asm, sr, overflow, done]()
+		{
+			a->bind(overflow);
+			a->adc(sr, asmjit::Imm(0));
+			a->or_(sr.r8(), asmjit::Imm(CCR_V | CCR_L));
+			a->jmp(done);
+		});
 	}
 
 	void JitOps::ccr_vl_update_ifNotZero()	{ ccr_vl_update(asmjit::x86::CondCode::kNotZero); }

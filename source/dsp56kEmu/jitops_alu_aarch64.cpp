@@ -416,10 +416,13 @@ namespace dsp56k
 		m_asm.test_(s);
 		m_asm.csel(r32(t), r32(t), asmjit::a64::regs::wzr, asmjit::arm::CondCode::kNotZero);
 
-		CcrBatchUpdate ccrBatch(*this, CCR_N, CCR_Z, CCR_V);
-		copyBitToCCR(d, 23 + g_aluBitOffset, CCRB_N);
-
 		m_asm.lsl(r64(d), r64(t), asmjit::Imm(24 + g_aluBitOffset));
+
+		// N and Z describe the count just installed. The destination need not have been loaded, and LSL does
+		// not set NZCV, so take both from the result explicitly.
+		CcrBatchUpdate ccrBatch(*this, CCR_N, CCR_Z, CCR_V);
+		copyBitToCCR(d, 47 + g_aluBitOffset, CCRB_N);
+		m_asm.test_(r64(d));
 		ccr_update_ifZero(CCRB_Z);
 	}
 
@@ -735,6 +738,7 @@ namespace dsp56k
 		ccr_n_update_by23(r64(r));						// Set if bit 47 of the result is set
 
 		m_asm.orr(r.get(), r.get(), r32(prevCarry.get()));
+		m_asm.and_(r.get(), r.get(), asmjit::Imm(0xffffff));	// drop the bit rotated out of bit 23 before testing Z
 		m_asm.test_(r32(r));
 		ccr_update_ifZero(CCRB_Z);							// Set if bits 47�24 of the result are 0
 

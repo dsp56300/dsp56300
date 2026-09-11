@@ -664,8 +664,7 @@ namespace dsp56k
 				limitTransferSixteenBitLong(reg.a, x, y);
 				return;
 			}
-			x = aluA().var >> 24 & 0xffffff;
-			y = aluA().var & 0xffffff;
+			limitTransferLong(reg.a, x, y);
 			return;
 		case 5:
 			if(isSixteenBitArithmetic())
@@ -673,8 +672,7 @@ namespace dsp56k
 				limitTransferSixteenBitLong(reg.b, x, y);
 				return;
 			}
-			x = aluB().var >> 24 & 0xffffff;
-			y = aluB().var & 0xffffff;
+			limitTransferLong(reg.b, x, y);
 			return;
 		case 6: x = getA<TWord>();			y = getB<TWord>();			return;
 		case 7: x = getB<TWord>();			y = getA<TWord>();			return;

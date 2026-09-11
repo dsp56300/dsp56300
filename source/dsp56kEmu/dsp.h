@@ -928,6 +928,36 @@ namespace dsp56k
 			else										return busToReg(_val);
 		}
 
+		// MOVE A,L / B,L: the whole accumulator scaled and limited to 48 bits. The value is brought down to a
+		// sign-extended 56 bit integer before scaling, so that Scale Up cannot push bit 55 out of the host word and
+		// flip the sign of the limit.
+		void limitTransferLong(const TReg56& _src, TWord& _x, TWord& _y)
+		{
+			int64_t value = static_cast<int64_t>(static_cast<uint64_t>(_src.var) << (8 - g_aluShift)) >> 8;
+
+			if(sr_test_noCache(SR_S1))
+				value *= 2;
+			else if(sr_test_noCache(SR_S0))
+				value >>= 1;
+
+			constexpr int64_t maximum = 0x00007fffffffffffll;
+			constexpr int64_t minimum = -0x0000800000000000ll;
+
+			if(value > maximum)
+			{
+				sr_set(CCR_L);
+				value = maximum;
+			}
+			else if(value < minimum)
+			{
+				sr_set(CCR_L);
+				value = minimum;
+			}
+
+			_x = static_cast<TWord>(value >> 24) & 0xffffff;
+			_y = static_cast<TWord>(value) & 0xffffff;
+		}
+
 		// 48-bit (X:Y) transfer of a full accumulator in 16-bit mode (FM table 3-4): scaled and limited to
 		// 32 bits, X gets the 16 MSBs sign-extended, Y the 16 LSBs zero-extended
 		void limitTransferSixteenBitLong(TReg56 _src, TWord& _x, TWord& _y)

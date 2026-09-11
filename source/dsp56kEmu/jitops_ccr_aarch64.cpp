@@ -318,6 +318,43 @@ namespace dsp56k
 		ccr_l_update_by_v();
 	}
 
+	void JitOps::ccr_vl_update(const JitRegGP& _zeroOrOne)
+	{
+		// V is overwritten and L is a sticky OR of it, so the same 0/1 value writes both: a BFI for V and an
+		// ORR for L. Neither touches NZCV.
+		ccr_update(_zeroOrOne, CCRB_V);
+
+		m_ccrWritten |= CCR_L;
+		ccr_clearDirty(CCR_L);
+
+		const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
+		m_asm.orr(sr, sr, _zeroOrOne, asmjit::arm::lsl(CCRB_L));
+	}
+
+	void JitOps::ccr_vl_update_ifOverflow()
+	{
+		// The batch cleared V up front, so V and L only ever need setting.
+		assert(!m_ccr_update_clear && "needs a CcrBatchUpdate that clears V");
+
+		m_ccrWritten |= static_cast<CCRMask>(CCR_V | CCR_L);
+		ccr_clearDirty(static_cast<CCRMask>(CCR_V | CCR_L));
+
+		const auto sr = m_dspRegs.getSR(JitDspRegs::ReadWrite);
+		const auto overflow = m_asm.newLabel();
+		const auto done = m_asm.newLabel();
+
+		m_asm.b(asmjit::arm::CondCode::kVS, overflow);
+		m_asm.bind(done);
+
+		m_block.addColdCode([a = &m_asm, sr, overflow, done]()
+		{
+			a->bind(overflow);
+			a->orr(sr, sr, asmjit::Imm(CCR_V));
+			a->orr(sr, sr, asmjit::Imm(CCR_L));
+			a->jmp(done);
+		});
+	}
+
 	void JitOps::ccr_l_update_by_v()
 	{
 		assert((m_ccrDirty & CCR_V) == 0);

@@ -3032,7 +3032,7 @@ namespace dsp56k
 		{
 			verify(dsp.aluA().var == 0x7fffffffffffff);
 			verify(!dsp.sr_test(CCR_C));
-			verify(!dsp.sr_test(CCR_V));
+			verify(dsp.sr_test(CCR_V));		// the minimum minus one overflows: sim56300 gives sr=$000372, V and L set
 		});
 
 		runTest([&]()
@@ -7942,5 +7942,206 @@ namespace dsp56k
 			verify(dsp.aluA().var == 0x00800000000000);
 			verify(ccr(dsp.getSR().var) == 0x20);		// E, V clear
 		});
+
+		// ==== Second wave. Every expectation below is sim56300, device 56362, SA off, and the instruction
+		// words come from the simulator's own assembler so the tables do not depend on ours. Mismatches are
+		// collected and reported together instead of stopping at the first, so one run shows every case
+		// that is wrong on the engine under test.
+		std::string failures;
+
+		const auto report = [&](const char* _name, uint64_t _got, TWord _gotCcr, uint64_t _expected, TWord _expectedCcr)
+		{
+			char line[200];
+			snprintf(line, sizeof(line), "\n  %s: got $%014llx ccr $%02x, expected $%014llx ccr $%02x",
+				_name, static_cast<unsigned long long>(_got), _gotCcr, static_cast<unsigned long long>(_expected), _expectedCcr);
+			failures += line;
+		};
+
+		// ---- Single instructions. ADD, SUB and CMP set V on a signed overflow of the 56 bit result and L follows
+		// V; CMPM does not. INC, DEC and ABS overflow at the range limits and carry at the wraps. ADDL overflows
+		// in either stage but takes C from the add alone. ROL, LSL and LSR test Z on the 24 bits that remain,
+		// and a stale Z must not survive them. CLB derives N and Z from the count it installs.
+		struct CcrCase
+		{
+			const char* name;
+			TWord sr;
+			uint64_t a;
+			uint64_t b;
+			TWord x0;
+			TWord opA;
+			TWord opB;
+			bool resultInB;
+			uint64_t result;
+			TWord ccr;
+		};
+
+		static constexpr CcrCase cases[] =
+		{
+			{ "add b,a max + 1", 0x000300, 0x7fffffffffffff, 0x00000000000001, 0x000000, 0x200010, 0x000000, false, 0x80000000000000, 0x7a },
+			{ "add b,a min + min", 0x000300, 0x80000000000000, 0x80000000000000, 0x000000, 0x200010, 0x000000, false, 0x00000000000000, 0x57 },
+			{ "add b,a control", 0x000300, 0x00000000000001, 0x00000000000001, 0x000000, 0x200010, 0x000000, false, 0x00000000000002, 0x10 },
+			{ "add x0,a overflow", 0x000300, 0x7fffffff000000, 0x00000000000000, 0x000001, 0x200040, 0x000000, false, 0x80000000000000, 0x7a },
+			{ "add #<1,a overflow", 0x000300, 0x7fffffff000000, 0x00000000000000, 0x000000, 0x014180, 0x000000, false, 0x80000000000000, 0x7a },
+			{ "add #>1,a overflow", 0x000300, 0x7fffffff000000, 0x00000000000000, 0x000000, 0x0140c0, 0x000001, false, 0x80000000000000, 0x7a },
+			{ "sub b,a min - 1", 0x000300, 0x80000000000000, 0x00000000000001, 0x000000, 0x200014, 0x000000, false, 0x7fffffffffffff, 0x72 },
+			{ "sub b,a max - min", 0x000300, 0x7fffffffffffff, 0x80000000000000, 0x000000, 0x200014, 0x000000, false, 0xffffffffffffff, 0x5b },
+			{ "sub x0,a overflow", 0x000300, 0x80000000000000, 0x00000000000000, 0x000001, 0x200044, 0x000000, false, 0x7fffffff000000, 0x72 },
+			{ "sub #<1,a overflow", 0x000300, 0x80000000000000, 0x00000000000000, 0x000000, 0x014184, 0x000000, false, 0x7fffffff000000, 0x72 },
+			{ "sub #>1,a overflow", 0x000300, 0x80000000000000, 0x00000000000000, 0x000000, 0x0140c4, 0x000001, false, 0x7fffffff000000, 0x72 },
+			{ "cmp b,a min - 1", 0x000300, 0x80000000000000, 0x00000000000001, 0x000000, 0x200005, 0x000000, false, 0x80000000000000, 0x72 },
+			{ "cmp b,a max - min", 0x000300, 0x7fffffffffffff, 0x80000000000000, 0x000000, 0x200005, 0x000000, false, 0x7fffffffffffff, 0x5b },
+			{ "cmp b,a control", 0x000300, 0x00000000000002, 0x00000000000001, 0x000000, 0x200005, 0x000000, false, 0x00000000000002, 0x10 },
+			{ "cmp x0,a overflow", 0x000300, 0x80000000000000, 0x00000000000000, 0x000001, 0x200045, 0x000000, false, 0x80000000000000, 0x72 },
+			{ "cmp #<1,a overflow", 0x000300, 0x80000000000000, 0x00000000000000, 0x000000, 0x014185, 0x000000, false, 0x80000000000000, 0x72 },
+			{ "cmp #>1,a overflow", 0x000300, 0x80000000000000, 0x00000000000000, 0x000000, 0x0140c5, 0x000001, false, 0x80000000000000, 0x72 },
+			{ "cmpm b,a min vs 1", 0x000300, 0x80000000000000, 0x00000000000001, 0x000000, 0x200007, 0x000000, false, 0x80000000000000, 0x30 },
+			{ "cmpm b,a min vs min", 0x000300, 0x80000000000000, 0x80000000000000, 0x000000, 0x200007, 0x000000, false, 0x80000000000000, 0x14 },
+			{ "inc a max", 0x000300, 0x7fffffffffffff, 0x00000000000000, 0x000000, 0x000008, 0x000000, false, 0x80000000000000, 0x7a },
+			{ "inc a minus one", 0x000300, 0xffffffffffffff, 0x00000000000000, 0x000000, 0x000008, 0x000000, false, 0x00000000000000, 0x15 },
+			{ "dec a min", 0x000300, 0x80000000000000, 0x00000000000000, 0x000000, 0x00000a, 0x000000, false, 0x7fffffffffffff, 0x72 },
+			{ "dec a zero", 0x000300, 0x00000000000000, 0x00000000000000, 0x000000, 0x00000a, 0x000000, false, 0xffffffffffffff, 0x19 },
+			{ "abs a min", 0x000300, 0x80000000000000, 0x00000000000000, 0x000000, 0x200026, 0x000000, false, 0x80000000000000, 0x7a },
+			{ "addl b,a shift overflow", 0x000300, 0x40000000000000, 0x00000000000000, 0x000000, 0x200012, 0x000000, false, 0x80000000000000, 0x7a },
+			{ "addl b,a add overflow", 0x000300, 0x3fffffffffffff, 0x00000000000002, 0x000000, 0x200012, 0x000000, false, 0x80000000000000, 0x7a },
+			{ "addl b,a min shifted out", 0x000300, 0x80000000000000, 0x00000000000000, 0x000000, 0x200012, 0x000000, false, 0x00000000000000, 0x56 },
+			{ "addl b,a minus one", 0x000300, 0xffffffffffffff, 0x00000000000001, 0x000000, 0x200012, 0x000000, false, 0xffffffffffffff, 0x18 },
+			{ "addl b,a control", 0x000300, 0x00000000000001, 0x00000000000001, 0x000000, 0x200012, 0x000000, false, 0x00000000000003, 0x10 },
+			{ "rol a C=0 into zero", 0x000300, 0x00800000000000, 0x00000000000000, 0x000000, 0x200037, 0x000000, false, 0x00000000000000, 0x05 },
+			{ "rol a C=1", 0x000301, 0x00800000000000, 0x00000000000000, 0x000000, 0x200037, 0x000000, false, 0x00000001000000, 0x01 },
+			{ "ror a EXT bit 0 stays out", 0x000300, 0x01000000000000, 0x00000000000000, 0x000000, 0x200027, 0x000000, false, 0x01000000000000, 0x04 },
+			{ "ror a EXT bit 0, C=1", 0x000301, 0x01000001000000, 0x00000000000000, 0x000000, 0x200027, 0x000000, false, 0x01800000000000, 0x09 },
+			{ "lsl x0,a count 1", 0x000300, 0x00800001000000, 0x00000000000000, 0x000001, 0x0c1e18, 0x000000, false, 0x00000002000000, 0x01 },
+			{ "lsl #1,a", 0x000300, 0x00800001000000, 0x00000000000000, 0x000000, 0x0c1e82, 0x000000, false, 0x00000002000000, 0x01 },
+			{ "lsl x0,a count 0", 0x000301, 0x00800001000000, 0x00000000000000, 0x000000, 0x0c1e18, 0x000000, false, 0x00800001000000, 0x08 },
+			{ "lsl x0,a count 23", 0x000300, 0x00000001000000, 0x00000000000000, 0x000017, 0x0c1e18, 0x000000, false, 0x00800000000000, 0x08 },
+			{ "lsl x0,a count 24", 0x000300, 0x00000001000000, 0x00000000000000, 0x000018, 0x0c1e18, 0x000000, false, 0x00000000000000, 0x05 },
+			{ "lsl #1,a Z preset", 0x000304, 0x00000001000000, 0x00000000000000, 0x000000, 0x0c1e82, 0x000000, false, 0x00000002000000, 0x00 },
+			{ "lsr #1,a Z preset", 0x000304, 0x00000002000000, 0x00000000000000, 0x000000, 0x0c1ec2, 0x000000, false, 0x00000001000000, 0x00 },
+			{ "lsl x0,a Z preset", 0x000304, 0x00000001000000, 0x00000000000000, 0x000001, 0x0c1e18, 0x000000, false, 0x00000002000000, 0x00 },
+			{ "lsr x0,a Z preset", 0x000304, 0x00000002000000, 0x00000000000000, 0x000001, 0x0c1e38, 0x000000, false, 0x00000001000000, 0x00 },
+			{ "clb a,b of 1", 0x000300, 0x00000000000001, 0x00000000000000, 0x000000, 0x0c1e01, 0x000000, true, 0xffffffd2000000, 0x08 },
+			{ "clb a,b of 0x40...", 0x000300, 0x40000000000000, 0xff000000000000, 0x000000, 0x0c1e01, 0x000000, true, 0x00000008000000, 0x00 },
+			{ "clb a,b of 0", 0x000300, 0x00000000000000, 0xff000000000000, 0x000000, 0x0c1e01, 0x000000, true, 0x00000000000000, 0x04 },
+			{ "clb a,b of -1", 0x000300, 0xffffffffffffff, 0x00000000000000, 0x000000, 0x0c1e01, 0x000000, true, 0xffffffd1000000, 0x08 },
+		};
+
+		for(const auto& c : cases)
+		{
+			runTest([&]()
+			{
+				dsp.setSR(c.sr);
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(c.a)));
+				dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(c.b)));
+				dsp.x0(c.x0);
+				emit(c.opA, c.opB);
+			}, [&]()
+			{
+				const auto result = static_cast<uint64_t>(c.resultInB ? dsp.aluB().var : dsp.aluA().var);
+				const auto flags = ccr(dsp.getSR().var);
+				if(result != c.result || flags != c.ccr)
+					report(c.name, result, flags, c.result, c.ccr);
+			});
+		}
+
+		// ---- Bit-test jumps on SR straight after an instruction whose flags are still deferred. Reading SR
+		// materialises them, and both the taken and the fall-through path have to see the result. Blocks may be
+		// linked straight through a landing, so the PC alone cannot tell the paths apart: each landing writes its
+		// own marker to r0, a move that leaves the CCR alone, and then parks on a jump to itself.
+		struct JumpCase
+		{
+			const char* name;
+			uint64_t a;
+			uint64_t b;
+			TWord opA;
+			TWord opB;
+			TWord marker;
+			TWord ccr;
+		};
+
+		static constexpr JumpCase jumps[] =
+		{
+			{ "add b,a then jclr #3,sr: N set, falls through",  0x7fffffffffffff, 0x00000000000001, 0x0af903, 0x000380, 0x03, 0x7a },
+			{ "add b,a then jset #3,sr: N set, taken",          0x7fffffffffffff, 0x00000000000001, 0x0af923, 0x000380, 0x80, 0x7a },
+			{ "add b,a then jset #2,sr: Z set, taken",          0x00000000000001, 0xffffffffffffff, 0x0af922, 0x000380, 0x80, 0x15 },
+			{ "add b,a then brclr #3,sr: N set, falls through", 0x7fffffffffffff, 0x00000000000001, 0x0cf983, 0x00007f, 0x03, 0x7a },
+		};
+
+		for(const auto& j : jumps)
+		{
+			dsp.resetHW();
+			dsp.setSR(0x000300);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(j.a)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(j.b)));
+			dsp.regs().r[0].var = 0;
+
+			emitToMemory(0x200010, 0, 0x300);			// add b,a
+			emitToMemory(j.opA, j.opB, 0x301);
+			emitToMemory(0x300300, 0, 0x303);			// move #$03,r0: fall-through marker
+			emitToMemory(0x0c03c0, 0, 0x304);			// jmp $3c0
+			emitToMemory(0x308000, 0, 0x380);			// move #$80,r0: taken marker
+			emitToMemory(0x0c03c0, 0, 0x381);			// jmp $3c0
+			emitToMemory(0x0c03c0, 0, 0x3c0);			// jmp $3c0: park
+
+			dsp.setPC(0x300);
+			try
+			{
+				execUntil(0x3c0, 64);
+			}
+			catch(const std::string&)
+			{
+				// never parked, which the PC check below reports
+			}
+
+			const auto pc = dsp.getPC().toWord();
+			const auto marker = dsp.regs().r[0].var;
+			const auto flags = ccr(dsp.getSR().var);
+			if(pc != 0x3c0)
+				report(j.name, pc, flags, 0x3c0, j.ccr);
+			else if(marker != j.marker || flags != j.ccr)
+				report(j.name, marker, flags, j.marker, j.ccr);
+		}
+
+		// ---- MOVE A,L: the 48 bit transfer scales, then limits. In Scale Up the sign of the limit comes from
+		// bit 55, not from the bit that scaling moves into its place. Only the high word and L are checked:
+		// the simulator writes $000000 as the low word of a positive limit, which is left as an open
+		// question rather than asserted here.
+		struct LongMoveCase
+		{
+			const char* name;
+			TWord sr;
+			uint64_t a;
+			TWord high;
+			bool limited;
+		};
+
+		static constexpr LongMoveCase longMoves[] =
+		{
+			{ "move a,l:$20 scale up, bit 54 set", 0x000b00, 0x40000000000000, 0x7fffff, true },
+			{ "move a,l:$20 scale up, bit 55 set", 0x000b00, 0xbfffffffffffff, 0x800000, true },
+			{ "move a,l:$20 no scaling", 0x000300, 0x40000000000000, 0x7fffff, true },
+			{ "move a,l:$20 scale up, in range", 0x000b00, 0x00200000000000, 0x400000, false },
+			{ "move a,l:$20 scale down, in range", 0x000700, 0x00400000000000, 0x200000, false },
+		};
+
+		for(const auto& m : longMoves)
+		{
+			runTest([&]()
+			{
+				dsp.setSR(m.sr);
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(m.a)));
+				dsp.memWrite(MemArea_X, 0x20, 0);
+				dsp.memWrite(MemArea_X, 0x21, 0);
+				emit(0x482000);				// move a,l:$20
+			}, [&]()
+			{
+				const auto high = dsp.memRead(MemArea_X, 0x20);
+				const bool limited = (dsp.getSR().var & CCR_L) != 0;
+				if(high != m.high || limited != m.limited)
+					report(m.name, high, limited ? CCR_L : 0, m.high, m.limited ? CCR_L : 0);
+			});
+		}
+
+		if(!failures.empty())
+			throw std::string("ccrGroundTruth mismatches:") + failures;
 	}
 }

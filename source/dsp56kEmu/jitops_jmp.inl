@@ -145,11 +145,15 @@ namespace dsp56k
 
 		const auto dddddd = getFieldValue<Inst,Field_DDDDDD>(op);
 
+		// Read the operand before If(), as braIfBitTestDDDDDD does. Reading SR materialises deferred flags, and
+		// doing that inside the condition, after If() has released the register pool, made a bit test of SR
+		// straight after an ALU operation go the wrong way.
+		DspValue r(m_block);
+		decode_dddddd_read(r, dddddd);
+
 		DSPReg pc(m_block, PoolReg::DspPC, true, true);
 		If(m_block, m_blockRuntimeData, [&](const auto& _toFalse)
 		{
-			DspValue r(m_block);
-			decode_dddddd_read(r, dddddd);
 			bitTest<Inst>(op, r, BitValue, _toFalse);
 		}, [&]()
 		{
