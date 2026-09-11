@@ -162,7 +162,11 @@ namespace dsp56k
 		const uint64_t res = (s2 - s1) & mask48;
 
 		sr_toggle( CCR_Z, res == 0 );
-		sr_toggle( CCRB_N, Bit((res >> 47) & 1) );
+		// N is not the sign of the difference. sim56300 sets it together with C, from the unsigned borrow,
+		// which is what lets the signed branches after a CMPU (blt, bge, ble) act as unsigned ones:
+		// $000001 against $ffffff gives N and C although bit 47 of the difference is clear, and $900000
+		// against $000001 gives neither although it is set.
+		sr_toggle( CCRB_N, Bit(s1 > s2) );
 		sr_clear ( CCR_V );			// "always cleared"
 		sr_toggle( CCR_C, s1 > s2 );	// borrow out of bit 47
 	}

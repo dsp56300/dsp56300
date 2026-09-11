@@ -858,9 +858,11 @@ namespace dsp56k
 			m_asm.test_(r64(d));
 			ccr_update_ifZero(CCRB_Z);		// "set if bits 47-0 of the result are 0"
 
-			// back into the ALU domain so that the existing bit 47 helper can be used for N
-			m_asm.shr(r64(d), asmjit::Imm(shift));
-			ccr_n_update_by47(r64(d));
+			// N is not the sign of the difference: sim56300 sets it together with C, from the unsigned
+			// borrow, which is what lets the signed branches after a CMPU (blt, bge, ble) act as unsigned
+			// ones. $000001 against $ffffff gives N and C with bit 47 of the difference clear. C is in the
+			// status register by now, so N is a copy of it.
+			copyBitToCCR(m_dspRegs.getSR(JitDspRegs::Read), CCRB_C, CCRB_N);
 		}
 	}
 

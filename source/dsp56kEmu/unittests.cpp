@@ -1334,8 +1334,8 @@ namespace dsp56k
 			verify(!dsp.sr_test(CCR_N));	// bit 47 of $7fffff000000 is clear
 		});
 
-		// The borrow in the other direction. N comes from bit 47 of the 48 bit result, so this is the
-		// other case a signed 56 bit CMP gets wrong - it would read the sign from bit 55 and clear N.
+		// The borrow in the other direction, which sets N along with C - a signed 56 bit CMP would read
+		// the sign from bit 55 and clear N.
 		runTest([&]()
 		{
 			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
@@ -1347,8 +1347,39 @@ namespace dsp56k
 		{
 			verify(dsp.sr_test(CCR_C));
 			verify(!dsp.sr_test(CCR_Z));
-			verify(dsp.sr_test(CCR_N));	// $800001000000, bit 47 set
+			verify(dsp.sr_test(CCR_N));
 			verify(!dsp.sr_test(CCR_V));
+		});
+
+		// N follows the unsigned borrow, not bit 47 of the difference - the two cases where they disagree,
+		// both from sim56300. Firmware relies on this: it follows CMPU with blt/bge/ble, and with N taken
+		// from bit 47 a wait loop comparing a 24 bit sample counter stalled for half the counter's range.
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00ffffff000000)));
+			emit("cmpu b,a");
+		},
+		[&]()
+		{
+			verify(dsp.sr_test(CCR_C));
+			verify(dsp.sr_test(CCR_N));		// difference $000002000000, bit 47 clear
+			verify(!dsp.sr_test(CCR_V));
+			verify(!dsp.sr_test(CCR_Z));
+		});
+
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00900000000000)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
+			emit("cmpu b,a");
+		},
+		[&]()
+		{
+			verify(!dsp.sr_test(CCR_C));
+			verify(!dsp.sr_test(CCR_N));	// difference $8fffff000000, bit 47 set
+			verify(!dsp.sr_test(CCR_V));
+			verify(!dsp.sr_test(CCR_Z));
 		});
 
 		// E and U are documented as unchanged, so bits that were already set have to survive.
