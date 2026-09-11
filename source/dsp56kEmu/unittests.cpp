@@ -6781,6 +6781,7 @@ namespace dsp56k
 		do_multi();
 		callAtVectorAddress();
 		callAfterRepAtVectorAddress();
+		repAtVolatileAddress();
 		conditionalCallAtVectorAddress();
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
@@ -7134,6 +7135,37 @@ namespace dsp56k
 		verify(dsp.regs().sp.var == 0);
 
 		enableDynamicFastInterrupts(false);
+	}
+
+	/*	A REP at a volatile P address. JitOps::rep_exec emits the repeated instruction together with the REP,
+		but the block scan took them one at a time, and a volatile address ends a block after one instruction.
+		The block then held the REP alone: it ran the repeated instruction and continued AT it, so it ran once
+		more. Firmware that loads code into a slot it has already run from hits exactly this.
+	*/
+	void UnitTests::repAtVolatileAddress()
+	{
+		dsp.resetHW();
+		dsp.regs().r[0] = TReg24(0);
+
+		TWord pc = 0x200;
+		pc = emitToMemory("rep #<$1", pc);						// $200
+		pc = emitToMemory("move (r0)+", pc);					// $201, the repeated instruction
+		emitToMemory("rts", pc);								// $202
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $200", pc);						// runs it once and leaves a block at $200
+		pc = emitToMemory("move #>$200,r6", pc);
+		pc = emitToMemory("move #>$0602a0,b", pc);				// rep #<$2
+		pc = emitToMemory("move b,p:(r6)", pc);					// writing over a block makes $200 volatile
+		pc = emitToMemory("jsr $200", pc);
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.memory().get(MemArea_P, 0x200) == 0x0602a0);	// the rewrite really landed
+		verify(dsp.regs().r[0].var == 3);						// once, then twice - not three times
 	}
 
 	/*	A conditional call in the vector region. This is a GUARD, not a reproduction: it passes even

@@ -67,6 +67,7 @@ namespace dsp56k
 		rep_div();
 
 		parallelMoveXY();
+		parallelAluMoveSameAccumulator();
 	}
 
 	JitUnittests::~JitUnittests()
@@ -1151,6 +1152,24 @@ namespace dsp56k
 		{
 			dsp.set_m(0, 0xffffff);
 			dsp.set_m(4, 0xffffff);
+		});
+	}
+
+	/*	lsr a  #$0,a0 ($280023): the ALU half shifts A1, the move half clears A0, and both land - sim56300
+		turns a1=$000002 a0=$000001 into a1=$000001 a0=$000000. The move used to take the write latch the
+		ALU had already written and seed it again from the unshifted accumulator, losing the shift.
+		JIT only: the interpreter's exec_parallel lets a changed ALU result replace the whole accumulator
+		and leaves a0=$000001 here.
+	*/
+	void JitUnittests::parallelAluMoveSameAccumulator()
+	{
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00000002000001)));
+			emit(0x280023);
+		}, [&]()
+		{
+			verify(dsp.aluA().var == 0x00000001000000);
 		});
 	}
 

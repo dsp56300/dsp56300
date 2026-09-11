@@ -124,15 +124,45 @@ namespace dsp56k
 
 			opcodes.getInstructionTypes(opA, instA, instB);
 
+			const auto flags = Opcodes::getFlags(instA, instB);
+
 			auto written = RegisterMask::None;
 			auto read = RegisterMask::None;
 
 			Opcodes::getRegisters(written, read, opA, instA, instB);
 
+			/*	JitOps::rep_exec emits the repeated instruction as part of the REP and continues after both,
+				so the two have to be scanned as one. Scanned separately, anything that ends a block between
+				them - code that already exists at the repeated instruction, a volatile P address, a loop end -
+				leaves the block one word short: it runs the REP with its instruction and then continues AT
+				the repeated instruction, which runs a second time.
+			*/
+			TWord repeatedLength = 0;
+			TWord repeatedCycles = 0;
+
+			if(flags & (OpFlagRepDynamic | OpFlagRepImmediate))
+			{
+				const auto pcRepeated = pc + Opcodes::getOpcodeLength(opA, instA, instB);
+
+				TWord repA, repB;
+				_dsp.memory().getOpcode(pcRepeated, repA, repB);
+
+				Instruction repInstA, repInstB;
+				opcodes.getInstructionTypes(repA, repInstA, repInstB);
+
+				auto repWritten = RegisterMask::None;
+				auto repRead = RegisterMask::None;
+				Opcodes::getRegisters(repWritten, repRead, repA, repInstA, repInstB);
+
+				written |= repWritten;
+				read |= repRead;
+
+				repeatedLength = Opcodes::getOpcodeLength(repA, repInstA, repInstB);
+				repeatedCycles = calcCycles(repInstA, repInstB, pcRepeated, repA, _dsp.memory().getBridgedMemoryAddress(), 1);
+			}
+
 			const auto writtenM = (written & RegisterMask::M);
 			const auto readM = read & RegisterMask::M;
-
-			const auto flags = Opcodes::getFlags(instA, instB);
 
 			// a jsr in a fast interrupt modifies the MR because it disables scaling mode bits, loop flag and sixteen-bit arithmetic mode
 			if(isFastInterrupt && (written & RegisterMask::SSL) != RegisterMask::None)
@@ -168,7 +198,7 @@ namespace dsp56k
 
 			// for a volatile P address, if you have some code, break now. if not, generate this one op, and then return.
 			if (_volatileP.find(pc) != _volatileP.end() || 
-				(_volatileP.find(pc+1) != _volatileP.end() && Opcodes::getOpcodeLength(opA, instA, instB) == 2))
+				(_volatileP.find(pc+1) != _volatileP.end() && (Opcodes::getOpcodeLength(opA, instA, instB) == 2 || repeatedLength)))
 			{
 				terminationReason = JitBlockInfo::TerminationReason::VolatileP;
 				if (numInstructions)
@@ -193,6 +223,13 @@ namespace dsp56k
 			numWords += Opcodes::getOpcodeLength(opA, instA, instB);
 			++numInstructions;
 			numCycles += calcCycles(instA, instB, pc, opA, _dsp.memory().getBridgedMemoryAddress(), 1);
+
+			if(repeatedLength)
+			{
+				numWords += repeatedLength;
+				++numInstructions;
+				numCycles += repeatedCycles;
+			}
 
 			if(getLoopEndAddr(_info.loopEnd, instA, pc, opB))
 				_info.loopBegin = pc;
