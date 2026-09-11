@@ -580,6 +580,10 @@ namespace dsp56k
 		--reg.lc.var;
 		execOp(op);
 
+		// A two-word instruction moves PC past its extension word every time it runs, but it is fetched only
+		// once. sim56300 continues behind the first pass, however often it repeats.
+		const auto pcNext = reg.pc;
+
 		const auto& opCache = m_opcodeCache[pcCurrentInstruction];
 
 		const auto& func = opCache.op;
@@ -594,6 +598,7 @@ namespace dsp56k
 //			traceOp();
 		}
 
+		reg.pc = pcNext;
 		reg.lc = lcBackup;
 
 		return true;

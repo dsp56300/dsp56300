@@ -204,6 +204,7 @@ namespace  dsp56k
 		void callAtVectorAddress();
 		void callAfterRepAtVectorAddress();
 		void repAtVolatileAddress();
+		void repTwoWordInstruction();
 		void conditionalCallAtVectorAddress();
 		void callInsideLoopAtVectorAddress();
 		void do_callAtLoopEnd();

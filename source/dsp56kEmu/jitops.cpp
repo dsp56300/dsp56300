@@ -1214,8 +1214,8 @@ namespace dsp56k
 		// restore previous LC
 		m_asm.movd(r32(m_dspRegs.getLC(JitDspRegs::Write)), lcBackup);
 
-		// op size is the sum of the rep plus the child op
-		assert(m_opSize == 1 && "repeated instruction needs to be a single word instruction");
+		// op size is the sum of the rep plus the child op. The manual only allows a single-word child, but sim56300
+		// repeats a two-word one with its one extension word and continues behind both words, which this does too.
 		m_opSize += opSize;
 	}
 

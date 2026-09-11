@@ -6782,6 +6782,7 @@ namespace dsp56k
 		callAtVectorAddress();
 		callAfterRepAtVectorAddress();
 		repAtVolatileAddress();
+		repTwoWordInstruction();
 		conditionalCallAtVectorAddress();
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
@@ -7166,6 +7167,40 @@ namespace dsp56k
 
 		verify(dsp.memory().get(MemArea_P, 0x200) == 0x0602a0);	// the rewrite really landed
 		verify(dsp.regs().r[0].var == 3);						// once, then twice - not three times
+	}
+
+	/*	REP followed by a two-word instruction. The manual only allows single-word instructions, but sim56300
+		repeats a two-word one without complaint: every repetition uses the one extension word, LC is restored,
+		and execution continues behind both words. rep #2 / add #>$1,a leaves a=$000002 and runs the inc b behind it.
+	*/
+	void UnitTests::repTwoWordInstruction()
+	{
+		for(TWord count = 2; count <= 3; ++count)
+		{
+			dsp.resetHW();
+			dsp.setALU(false, TReg56(0));
+			dsp.setALU(true, TReg56(0));
+
+			// separate addresses per count, so no block from the previous round is reused
+			TWord pc = 0x200 + (count << 4);
+			const auto sub = pc;
+			pc = emitToMemory(0x0600a0 | (count << 8), 0, pc);	// rep #count
+			pc = emitToMemory(0x0140c0, 0x000001, pc);			// add #>$1,a, the repeated instruction
+			pc = emitToMemory("inc b", pc);
+			emitToMemory("rts", pc);
+
+			pc = 0x100 + (count << 4);
+			const auto start = pc;
+			pc = emitToMemory(0x0d0000 | sub, 0, pc);			// jsr sub
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			dsp.setPC(start);
+			execUntil(returnPC);
+
+			verify(dsp.aluA().var == static_cast<uint64_t>(count) << 24);
+			verify(dsp.aluB().var == 1);						// the instruction behind the extension word ran
+		}
 	}
 
 	/*	A conditional call in the vector region. This is a GUARD, not a reproduction: it passes even
