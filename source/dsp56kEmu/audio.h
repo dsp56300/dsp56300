@@ -4,6 +4,8 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
+#include <memory>
+#include <vector>
 #include <array>
 #include <cstring> // memcpy
 
@@ -125,9 +127,18 @@ namespace dsp56k
 
 		bool hasRingBuffers() const { return m_useRingBuffers; }
 
+		// The DSP thread calls the current callback from writeTXimpl while the host thread swaps it
+		// here (boot hand-off, terminate()). Assigning the std::function in place let the DSP thread
+		// observe it mid-swap and throw bad_function_call, which nothing catches on a DSP thread, so
+		// the process aborted. Publish an immutable new callback with one atomic store instead and
+		// keep the replaced ones alive - setCallback is a boot/teardown operation, a handful of calls
+		// per instance, and only ever from the host/UC thread.
 		void setCallback(const AudioCallback& _ac)
 		{
-			m_callback = _ac ? _ac : [](Audio*) {};
+			auto cb = std::make_unique<AudioCallback>(_ac ? _ac : AudioCallback([](Audio*) {}));
+			auto* const c = cb.get();
+			m_callbacks.emplace_back(std::move(cb));
+			m_callback.store(c, std::memory_order_release);
 		}
 
 		void writeEmptyAudioIn(const size_t _len)
@@ -269,7 +280,8 @@ namespace dsp56k
 		void readRXimpl(RxFrame& _values);
 		void writeTXimpl(const TxFrame& _values);
 
-		AudioCallback m_callback;
+		std::atomic<const AudioCallback*> m_callback;
+		std::vector<std::unique_ptr<AudioCallback>> m_callbacks;	// owns every callback ever set, see setCallback
 
 		static void incFrameSync(uint32_t& _frameSync)
 		{

@@ -3,9 +3,11 @@
 namespace dsp56k
 {
 	Audio::Audio(const bool _useRingBuffers/* = true*/)
-		: m_callback([](Audio*) {})
+		: m_callback(nullptr)
 		, m_useRingBuffers(_useRingBuffers)
 	{
+		setCallback({});
+
 		if(_useRingBuffers)
 		{
 			m_readRxCallback = [this](uint64_t& _frameIndex, RxFrame& _values)
@@ -20,7 +22,7 @@ namespace dsp56k
 				m_audioOutputs.waitNotFull();
 				m_audioOutputs.push_back(_values);
 				++_frameIndex;
-				m_callback(this);
+				(*m_callback.load(std::memory_order_acquire))(this);
 			};
 		}
 	}
