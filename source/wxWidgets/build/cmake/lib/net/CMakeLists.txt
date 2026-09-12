@@ -7,6 +7,12 @@
 # Licence:     wxWindows licence
 #############################################################################
 
+# wxNet should be built if either wxUSE_SOCKETS or wxUSE_WEBREQUEST is on.
+if(NOT wxUSE_SOCKETS AND NOT wxUSE_WEBREQUEST)
+    wx_append_install_headers(NET_CMN_HDR)
+    return()
+endif()
+
 wx_append_sources(NET_FILES NET_CMN)
 
 if(WIN32)
@@ -31,5 +37,5 @@ endif()
 
 if (wxUSE_WEBREQUEST_CURL)
     wx_lib_include_directories(wxnet ${CURL_INCLUDE_DIRS})
-    wx_lib_link_libraries(wxnet PRIVATE ${CURL_LIBRARIES})
+    wx_lib_link_libraries(wxnet PUBLIC ${CURL_LIBRARIES})
 endif()

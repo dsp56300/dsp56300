@@ -555,12 +555,20 @@ public:
 
     /**
         Gets information about this column.
+
         See SetItem() for more information.
 
         @beginWxPerlOnly
         In wxPerl this method takes only the @a col parameter and
         returns a @c Wx::ListItem (or @c undef).
         @endWxPerlOnly
+
+        @param col The column index. It must be valid, i.e. positive or 0 and
+            strictly less than GetColumnCount(). The function asserts if this
+            is not the case.
+        @param item Output parameter filled with the information about the
+            column on successful return.
+        @return Always @true if the column index is valid.
     */
     bool GetColumn(int col, wxListItem& item) const;
 
@@ -884,9 +892,10 @@ public:
 
         If @a ptrSubItem is not @NULL and the wxListCtrl is in the report
         mode the subitem (or column) number will also be provided.
-        This feature is only available in version 2.7.0 or higher and is currently only
-        implemented under wxMSW and requires at least comctl32.dll of version 4.70 on
-        the host system or the value stored in @a ptrSubItem will be always -1.
+        This feature is available since version 3.2.7 in the generic control;
+        in earlier versions the value stored in @a ptrSubItem will be always -1.
+        Under wxMSW, the feature is available since version 2.7.0, and requires
+        at least comctl32.dll of version 4.70 on the host system.
         To compile this feature into wxWidgets library you need to have access to
         commctrl.h of version 4.70 that is provided by Microsoft.
 
@@ -1379,6 +1388,8 @@ public:
 
         Always returns false if checkboxes support hadn't been enabled.
 
+        For a control with @c wxLC_VIRTUAL style, this uses OnGetItemIsChecked().
+
         @param item Item (zero-based) index.
 
         @since 3.1.0
@@ -1390,6 +1401,10 @@ public:
 
         This method only works if checkboxes support had been successfully
         enabled using EnableCheckBoxes().
+
+        For a control with @c wxLC_VIRTUAL style, this will only generate the
+        @c EVT_LIST_ITEM_CHECKED and @c EVT_LIST_ITEM_UNCHECKED events. See
+        OnGetItemIsChecked() for information on how to update the checkbox state.
 
         @param item Item (zero-based) index.
         @param check If @true, check the item, otherwise uncheck.

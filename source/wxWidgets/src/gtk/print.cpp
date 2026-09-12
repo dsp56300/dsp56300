@@ -702,6 +702,11 @@ int wxGtkPrintDialog::ShowModal()
     gtk_print_operation_set_default_page_setup (printOp, pgSetup);
     g_object_unref(pgSetup);
 
+    // By default the origin of the Cairo context is in the upper left
+    // corner of the printable area, but wx convention is to have it in
+    // the upper left corner of the paper, so change this.
+    gtk_print_operation_set_use_full_page(printOp, TRUE);
+
     // Show the dialog if needed.
     GError* gError = NULL;
     GtkPrintOperationResult response = gtk_print_operation_run
@@ -949,7 +954,6 @@ bool wxGtkPrinter::Print(wxWindow *parent, wxPrintout *printout, bool prompt )
     int fromPage, toPage;
     int minPage, maxPage;
     printout->GetPageInfo(&minPage, &maxPage, &fromPage, &toPage);
-    m_printDialogData.SetAllPages(true);
 
     if (minPage < 1) minPage = 1;
     if (maxPage < 1) maxPage = 9999;
@@ -969,9 +973,6 @@ bool wxGtkPrinter::Print(wxWindow *parent, wxPrintout *printout, bool prompt )
         if (toPage > maxPage) toPage = maxPage;
         else if (toPage < minPage) toPage = minPage;
     }
-
-    if (((minPage != fromPage) && fromPage != 0) || ((maxPage != toPage) && toPage != 0)) m_printDialogData.SetAllPages(false);
-
 
     wxPrintData printdata = GetPrintDialogData().GetPrintData();
     wxGtkPrintNativeData *native = (wxGtkPrintNativeData*) printdata.GetNativeData();
@@ -2197,15 +2198,6 @@ void wxGtkPrinterDCImpl::StartPage()
     // to not affect _gtk_print_context_rotate_according_to_orientation() which
     // is used in GTK+ itself and wouldn't work correctly if we applied these
     // transformations before it is called.
-
-    // By default the origin of the Cairo context is in the upper left
-    // corner of the printable area. We need to translate it so that it
-    // is in the upper left corner of the paper (without margins)
-    GtkPageSetup *setup = gtk_print_context_get_page_setup( m_gpc );
-    gdouble ml, mt;
-    ml = gtk_page_setup_get_left_margin (setup, GTK_UNIT_POINTS);
-    mt = gtk_page_setup_get_top_margin (setup, GTK_UNIT_POINTS);
-    cairo_translate(m_cairo, -ml, -mt);
 
 #if wxCAIRO_SCALE
     cairo_scale( m_cairo, 72.0 / (double)m_resolution, 72.0 / (double)m_resolution );

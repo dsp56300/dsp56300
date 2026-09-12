@@ -238,7 +238,7 @@ public:
 
         @since 3.1.6
     */
-    void SetIncrement(int value);
+    void SetIncrement(int inc);
 };
 
 /**
@@ -252,6 +252,18 @@ public:
            The user can use arrow keys to change the value.
     @style{wxSP_WRAP}
            The value wraps at the minimum and maximum.
+    @style{wxTE_PROCESS_ENTER}
+        Indicates that the control should generate @c wxEVT_TEXT_ENTER
+        events. Using this style will prevent the user from using the Enter key
+        for dialog navigation (e.g. activating the default button in the
+        dialog) under MSW.
+    @style{wxALIGN_LEFT}
+        Same as wxTE_LEFT for wxTextCtrl: the text is left aligned (this is the
+        default).
+    @style{wxALIGN_CENTRE_HORIZONTAL}
+        Same as wxTE_CENTRE for wxTextCtrl: the text is centered.
+    @style{wxALIGN_RIGHT}
+        Same as wxTE_RIGHT for wxTextCtrl: the text is right aligned.
     @endStyleTable
 
     @beginEventEmissionTable{wxSpinDoubleEvent}

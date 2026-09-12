@@ -27,6 +27,9 @@
 
 #include "wx/thread.h"
 #include "wx/except.h"
+#include "wx/scopeguard.h"
+
+#include "wx/private/threadinfo.h"
 
 #ifndef WX_PRECOMP
     #include "wx/app.h"
@@ -515,13 +518,10 @@ wxCondError wxConditionInternal::Wait()
 
 wxCondError wxConditionInternal::WaitTimeout(unsigned long milliseconds)
 {
-    wxLongLong curtime = wxGetUTCTimeMillis();
+    wxLongLong_t curtime = wxGetUTCTimeMillis().GetValue();
     curtime += milliseconds;
-    wxLongLong temp = curtime / 1000;
-    int sec = temp.GetLo();
-    temp *= 1000;
-    temp = curtime - temp;
-    int millis = temp.GetLo();
+    const wxLongLong_t sec = curtime / 1000;
+    const int millis = curtime - sec * 1000;
 
     timespec tspec;
 
@@ -855,6 +855,11 @@ void *wxPthreadStart(void *ptr)
 
 void *wxThreadInternal::PthreadStart(wxThread *thread)
 {
+    // Ensure that we clean up thread-specific data before exiting the thread
+    // and do it as late as possible as wxLog calls can recreate it and may
+    // happen until the very end.
+    wxON_BLOCK_EXIT0(wxThreadSpecificInfo::ThreadCleanUp);
+
     wxThreadInternal *pthread = thread->m_internal;
 
     wxLogTrace(TRACE_THREADS, wxT("Thread %p started."), THR_ID(pthread));
@@ -900,7 +905,7 @@ void *wxThreadInternal::PthreadStart(wxThread *thread)
 
         wxTRY
         {
-            pthread->m_exitcode = thread->CallEntry();
+            pthread->m_exitcode = thread->Entry();
 
             wxLogTrace(TRACE_THREADS,
                        wxT("Thread %p Entry() returned %lu."),

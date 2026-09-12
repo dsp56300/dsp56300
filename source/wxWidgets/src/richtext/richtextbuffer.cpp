@@ -3345,7 +3345,6 @@ bool wxRichTextParagraphLayoutBox::DeleteRange(const wxRichTextRange& range)
 /// Get any text in this object for the given range
 wxString wxRichTextParagraphLayoutBox::GetTextForRange(const wxRichTextRange& range) const
 {
-    int lineCount = 0;
     wxString text;
     wxRichTextObjectList::compatibility_iterator node = m_children.GetFirst();
     while (node)
@@ -3365,8 +3364,6 @@ wxString wxRichTextParagraphLayoutBox::GetTextForRange(const wxRichTextRange& ra
 
             if ((childRange.GetEnd() == child->GetRange().GetEnd()) && node->GetNext())
                 text += wxT("\n");
-
-            lineCount ++;
         }
         node = node->GetNext();
     }
@@ -4902,7 +4899,9 @@ bool wxRichTextParagraph::Draw(wxDC& dc, wxRichTextDrawingContext& context, cons
             // Loop through objects until we get to the one within range
             wxRichTextObjectList::compatibility_iterator node2 = m_children.GetFirst();
 
+#if wxRICHTEXT_USE_OPTIMIZED_LINE_DRAWING && wxRICHTEXT_USE_PARTIAL_TEXT_EXTENTS
             int i = 0;
+#endif
             while (node2)
             {
                 wxRichTextObject* child = node2->GetData();
@@ -4939,7 +4938,9 @@ bool wxRichTextParagraph::Draw(wxDC& dc, wxRichTextDrawingContext& context, cons
                     child->Draw(dc, context, objectRange, selection, childRect, maxDescent, style);
 
                     objectPosition.x += objectSize.x;
+#if wxRICHTEXT_USE_OPTIMIZED_LINE_DRAWING && wxRICHTEXT_USE_PARTIAL_TEXT_EXTENTS
                     i ++;
+#endif
                 }
                 else if (child->GetRange().GetStart() > lineRange.GetEnd())
                     // Can break out of inner loop now since we've passed this line's range
@@ -10120,7 +10121,6 @@ bool wxRichTextTable::Draw(wxDC& dc, wxRichTextDrawingContext& context, const wx
                     wxRichTextCell* cell = GetCell(row, col);
                     if (cell && cell->IsShown() && !cell->GetRange().IsOutside(range))
                     {
-                        wxRect childRect(cell->GetPosition(), cell->GetCachedSize());
                         wxRichTextAttr attr(cell->GetAttributes());
                         cell->AdjustAttributes(attr, context);
                         if (row != 0)
@@ -10398,8 +10398,6 @@ bool wxRichTextTable::Layout(wxDC& dc, wxRichTextDrawingContext& context, const 
     wxArrayInt spanningWidths, spanningWidthsSpanLengths;
     spanningWidths.Add(0, m_colCount);
     spanningWidthsSpanLengths.Add(0, m_colCount);
-
-    wxSize tableSize(tableWidth, 0);
 
     int i, j, k;
 
@@ -12786,7 +12784,6 @@ bool wxRichTextImage::Draw(wxDC& dc, wxRichTextDrawingContext& context, const wx
 
     DrawBoxAttributes(dc, GetBuffer(), attr, wxRect(position, GetCachedSize()));
 
-    wxSize imageSize(m_imageCache.GetWidth(), m_imageCache.GetHeight());
     wxRect marginRect, borderRect, contentRect, paddingRect, outlineRect;
     marginRect = wxRect(position, GetCachedSize()); // outer rectangle, will calculate contentRect
     GetBoxRects(dc, GetBuffer(), attr, marginRect, borderRect, contentRect, paddingRect, outlineRect);

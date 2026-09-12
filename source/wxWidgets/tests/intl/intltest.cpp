@@ -18,7 +18,9 @@
 #endif // WX_PRECOMP
 
 #include "wx/intl.h"
+#include "wx/translation.h"
 #include "wx/uilocale.h"
+#include "wx/scopeguard.h"
 
 #include "wx/private/glibc.h"
 
@@ -188,6 +190,10 @@ void IntlTestCase::DateTimeFmtFrench()
     static const char *FRENCH_DATE_FMT = "%d.%m.%Y";
     static const char *FRENCH_LONG_DATE_FMT = "%a %e %b %Y";
     static const char *FRENCH_DATE_TIME_FMT = "%a %e %b %X %Y";
+#elif defined(__CYGWIN__)
+    static const char *FRENCH_DATE_FMT = "%d/%m/%Y";
+    static const char *FRENCH_LONG_DATE_FMT = "%a %e %b %Y";
+    static const char *FRENCH_DATE_TIME_FMT = "%a %e %b %Y %H:%M:%S";
 #else
     static const char *FRENCH_DATE_FMT = "%d/%m/%Y";
     static const char *FRENCH_LONG_DATE_FMT = "%A %d %B %Y";
@@ -208,6 +214,8 @@ void IntlTestCase::DateTimeFmtFrench()
     // its middle, so test it piece-wise and hope it doesn't change too much.
     CHECK( fmtDT.StartsWith("%A %d %B %Y") );
     CHECK( fmtDT.EndsWith("%H:%M:%S") );
+
+    wxUnusedVar(FRENCH_DATE_TIME_FMT);
 #else
     // Some glic versions have " %Z" at the end of the locale and some don't.
     // The test is still useful if we just ignore this difference.
@@ -233,17 +241,162 @@ void IntlTestCase::IsAvailable()
     CPPUNIT_ASSERT_EQUAL( origLocale, setlocale(LC_ALL, NULL) );
 }
 
+TEST_CASE("wxTranslations::AddCatalog", "[translations]")
+{
+    // We currently have translations for British English, French and Japanese
+    // in this test directory, check that loading those succeeds but loading
+    // others doesn't.
+    wxFileTranslationsLoader::AddCatalogLookupPathPrefix("./intl");
+
+    const wxString domain("internat");
+
+    wxTranslations trans;
+
+    SECTION("All")
+    {
+        wxArrayString available = trans.GetAvailableTranslations(domain);
+        REQUIRE( available.size() == 3 );
+
+        available.Sort();
+        CHECK( available[0] == "en_GB" );
+        CHECK( available[1] == "fr" );
+        CHECK( available[2] == "ja" );
+    }
+
+    SECTION("French")
+    {
+        trans.SetLanguage(wxLANGUAGE_FRENCH);
+        CHECK( trans.AddAvailableCatalog(domain) );
+    }
+
+    SECTION("Italian")
+    {
+        trans.SetLanguage(wxLANGUAGE_ITALIAN);
+        CHECK_FALSE( trans.AddAvailableCatalog(domain) );
+    }
+
+    // And loading catalog using the same language as message IDs should
+    // "succeed" too, even if there is no such file, as in this case the
+    // message IDs themselves can be used directly.
+    SECTION("Untranslated")
+    {
+        trans.SetLanguage(wxLANGUAGE_GERMAN);
+        CHECK( trans.AddCatalog(domain, wxLANGUAGE_GERMAN) );
+
+        // Using a different region should still work.
+        CHECK( trans.AddCatalog(domain, wxLANGUAGE_GERMAN_SWISS) );
+
+        // But using a completely different language should not.
+        CHECK_FALSE( trans.AddCatalog(domain, wxLANGUAGE_DUTCH) );
+    }
+}
+
+static void put32(unsigned char* p, wxUint32 v)
+{
+    p[0] = (unsigned char)(v & 0xff);
+    p[1] = (unsigned char)((v >> 8) & 0xff);
+    p[2] = (unsigned char)((v >> 16) & 0xff);
+    p[3] = (unsigned char)((v >> 24) & 0xff);
+}
+
+TEST_CASE("wxTranslations::CorruptCatalog", "[translations]")
+{
+    // Build a minimal MO catalog with two strings whose second translated
+    // entry declares a length of 0xffffffff. Adding this to the (valid) string
+    // offset wraps around in 32-bit arithmetic and used to defeat the bounds
+    // check in StringAtOfs(), letting FillHash() read past the end of the data.
+    //
+    // The catalog is 64 bytes; the backing array has one extra byte because
+    // wxCharTypeBuffer copies len+1 bytes (it assumes a trailing NUL).
+    const size_t moLen = 64;
+    unsigned char mo[moLen + 1];
+    memset(mo, 0, sizeof(mo));
+
+    put32(mo +  0, 0x950412de); // magic
+    put32(mo +  8, 2);          // number of strings
+    put32(mo + 12, 28);         // offset of original strings table
+    put32(mo + 16, 44);         // offset of translated strings table
+    // original strings table
+    put32(mo + 28, 0);  put32(mo + 32, 60); // ""
+    put32(mo + 36, 1);  put32(mo + 40, 61); // "x"
+    // translated strings table
+    put32(mo + 44, 0);          put32(mo + 48, 60); // ""
+    put32(mo + 52, 0xffffffff); put32(mo + 56, 63); // bogus length
+    mo[61] = 'x';
+    mo[63] = 'A'; // unterminated string at the very end of the buffer
+
+    wxCharTypeBuffer<char> data(reinterpret_cast<const char*>(mo), moLen);
+    wxMsgCatalog* const cat = wxMsgCatalog::CreateFromData(data, "corrupt");
+    CHECK( cat == NULL );
+    delete cat;
+}
+
+TEST_CASE("wxTranslations::GetBestTranslation", "[translations]")
+{
+    wxFileTranslationsLoader::AddCatalogLookupPathPrefix("./intl");
+
+    const wxString domain("internat");
+
+    wxTranslations trans;
+    wxON_BLOCK_EXIT1( wxUnsetEnv, "WXLANGUAGE" );
+
+    SECTION("ChooseLanguage")
+    {
+        // Simple case.
+        wxSetEnv("WXLANGUAGE", "fr:en");
+        CHECK( trans.GetBestTranslation(domain) == "fr" );
+        CHECK( trans.GetBestAvailableTranslation(domain) == "fr" );
+
+        // Choose 2nd language _and_ its base form.
+        wxSetEnv("WXLANGUAGE", "cs:fr_CA:en");
+        CHECK( trans.GetBestTranslation(domain) == "fr" );
+        CHECK( trans.GetBestAvailableTranslation(domain) == "fr" );
+    }
+
+    SECTION("EnglishHandling")
+    {
+        // Check that existing en_GB file isn't used for msgid language.
+        wxSetEnv("WXLANGUAGE", "en_US");
+
+        CHECK( trans.GetBestTranslation(domain) == "en" );
+        // GetBestAvailableTranslation() will wrongly return "en_GB", don't test that.
+
+        wxSetEnv("WXLANGUAGE", "es:en");
+        CHECK( trans.GetBestTranslation(domain) == "en" );
+        // GetBestAvailableTranslation() will wrongly return "en_GB", don't test that.
+
+        // And that it is used when it should be
+        wxSetEnv("WXLANGUAGE", "en_GB");
+        CHECK( trans.GetBestTranslation(domain) == "en_GB" );
+        CHECK( trans.GetBestAvailableTranslation(domain) == "en_GB" );
+    }
+
+    SECTION("DontSkipMsgidLanguage")
+    {
+        // Check that msgid language will be used if it's the best match.
+        wxSetEnv("WXLANGUAGE", "cs:en:fr");
+        CHECK( trans.GetBestTranslation(domain) == "en" );
+
+        // ...But won't be used if there's a suitable translation file.
+        wxSetEnv("WXLANGUAGE", "fr:en:cs");
+        CHECK( trans.GetBestTranslation(domain) == "fr" );
+        CHECK( trans.GetBestAvailableTranslation(domain) == "fr" );
+    }
+}
+
 // The test may fail in ANSI builds because of unsupported encoding, but we
 // don't really care about this build anyhow, so just skip it there.
 #if wxUSE_UNICODE
 
 TEST_CASE("wxLocale::Default", "[locale]")
 {
-    CHECK( wxLocale::IsAvailable(wxLANGUAGE_DEFAULT) );
+    const int langDef = wxUILocale::GetSystemLanguage();
+    INFO("System language: " << wxUILocale::GetLanguageName(langDef));
+    CHECK( wxLocale::IsAvailable(langDef) );
 
     wxLocale loc;
 
-    REQUIRE( loc.Init(wxLANGUAGE_DEFAULT, wxLOCALE_DONT_LOAD_DEFAULT) );
+    REQUIRE( loc.Init(langDef, wxLOCALE_DONT_LOAD_DEFAULT) );
 }
 
 #endif // wxUSE_UNICODE
@@ -371,6 +524,11 @@ static void CheckTag(const wxString& tag)
     CHECK( wxLocaleIdent::FromTag(tag).GetTag() == tag );
 }
 
+static wxString TagToPOSIX(const char* tag)
+{
+    return wxLocaleIdent::FromTag(tag).GetTag(wxLOCALE_TAGTYPE_POSIX);
+}
+
 TEST_CASE("wxLocaleIdent::FromTag", "[uilocale][localeident]")
 {
     CheckTag("");
@@ -380,6 +538,8 @@ TEST_CASE("wxLocaleIdent::FromTag", "[uilocale][localeident]")
     CheckTag("English");
     CheckTag("English_United States");
     CheckTag("English_United States.utf8");
+
+    CHECK( TagToPOSIX("zh-Hans-CN") == "zh_CN" );
 }
 
 // Yet another helper for the test below.
@@ -417,6 +577,11 @@ TEST_CASE("wxUILocale::FindLanguageInfo", "[uilocale]")
     CheckFindLanguage("English_United States.utf8", "en_US");
     // Test tag that includes an explicit script
     CheckFindLanguage("sr-Latn-RS", "sr_RS@latin");
+
+    // Test mixed locales: we should still detect the language correctly, even
+    // if we don't recognize the full locale.
+    CheckFindLanguage("en_FR", "en");
+    CheckFindLanguage("fr_DE", "fr");
 }
 
 // Test which can be used to check if the given locale tag is supported.
@@ -432,7 +597,88 @@ TEST_CASE("wxUILocale::FromTag", "[.]")
     REQUIRE( !locId.IsEmpty() );
 
     const wxUILocale loc(locId);
-    WARN("Locale \"" << tag << "\" supported: " << loc.IsSupported() );
+    WARN("Locale \"" << tag << "\":\n"
+         "language:\t" << locId.GetLanguage() << "\n"
+         "region:\t" << locId.GetRegion() << "\n"
+         "script:\t" << locId.GetScript() << "\n"
+         "charset:\t" << locId.GetCharset() << "\n"
+         "modifier:\t" << locId.GetModifier() << "\n"
+         "extension:\t" << locId.GetExtension() << "\n"
+         "sort order:\t" << locId.GetSortorder() << "\n"
+         "supported:\t" << (loc.IsSupported() ? "yes" : "no"));
+}
+
+namespace
+{
+
+const wxString GetLangName(int lang)
+{
+    switch ( lang )
+    {
+        case wxLANGUAGE_DEFAULT:
+            return "DEFAULT";
+
+        case wxLANGUAGE_UNKNOWN:
+            return "UNKNOWN";
+
+        default:
+            return wxUILocale::GetLanguageName(lang);
+    }
+}
+
+wxString GetLocaleDesc(const char* when)
+{
+    const wxUILocale& curloc = wxUILocale::GetCurrent();
+    const wxLocaleIdent locid = curloc.GetLocaleId();
+
+    // Make the output slightly more readable.
+    wxString decsep = curloc.GetInfo(wxLOCALE_DECIMAL_POINT);
+    if ( decsep == "." )
+        decsep = "point";
+    else if ( decsep == "," )
+        decsep = "comma";
+    else
+        decsep = wxString::Format("UNKNOWN (%s)", decsep);
+
+    return wxString::Format("%s\ncurrent locale:\t%s "
+                            "(decimal separator: %s, date format=%s)",
+                            when,
+                            locid.IsEmpty() ? wxString("NONE") : locid.GetTag(),
+                            decsep,
+                            curloc.GetInfo(wxLOCALE_SHORT_DATE_FMT));
+}
+
+} // anonymous namespace
+
+// Test to show information about the system locale and the effects of various
+// ways to change the current locale.
+TEST_CASE("wxUILocale::ShowSystem", "[.]")
+{
+    WARN("System locale identifier:\t"
+            << wxUILocale::GetSystemLocaleId().GetTag() << "\n"
+         "System locale as language:\t"
+            << GetLangName(wxUILocale::GetSystemLocale()) << "\n"
+         "System language identifier:\t"
+            << GetLangName(wxUILocale::GetSystemLanguage()));
+
+    WARN(GetLocaleDesc("Before calling any locale functions"));
+
+    wxLocale locDef;
+    CHECK( locDef.Init(wxLANGUAGE_DEFAULT, wxLOCALE_DONT_LOAD_DEFAULT) );
+    WARN(GetLocaleDesc("After wxLocale::Init(wxLANGUAGE_DEFAULT)"));
+
+    CHECK( wxUILocale::UseDefault() );
+    WARN(GetLocaleDesc("After wxUILocale::UseDefault()"));
+
+    wxString preferredLangsStr;
+    const wxVector<wxString> preferredLangs = wxUILocale::GetPreferredUILanguages();
+    for (size_t n = 0; n < preferredLangs.size(); ++n)
+    {
+        if ( !preferredLangsStr.empty() )
+            preferredLangsStr += ", ";
+        preferredLangsStr += preferredLangs[n];
+    }
+    WARN("Preferred UI languages:\n" << preferredLangsStr);
 }
 
 #endif // wxUSE_INTL
