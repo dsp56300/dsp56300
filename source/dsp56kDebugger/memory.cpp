@@ -198,7 +198,12 @@ namespace dsp56kDebugger
 
 	void Memory::evGotoAddress(dsp56k::TWord _addr)
 	{
-		if(isFocused())
+		// Note: isFocused() alone is not reliable here, because this event
+		// is fired right after the modal "Go to Address" dialog closes, at
+		// which point focus may not have been restored to this control yet
+		// (timing/platform-dependent). isLastFocused() tracks which editor
+		// had focus last, independent of that dialog's own focus handling.
+		if(isFocused() || isLastFocused())
 		{
 			const auto line = _addr / m_columnCount;
 			GotoLine(static_cast<int>(line));
@@ -232,7 +237,7 @@ namespace dsp56kDebugger
 		refresh();
 	}
 
-	wxBEGIN_EVENT_TABLE(Memory, wxStyledTextCtrl)
+	wxBEGIN_EVENT_TABLE(Memory, StyledTextCtrl)
 		EVT_LEFT_DOWN(Memory::onLeftMouseDown)
 	wxEND_EVENT_TABLE()
 }

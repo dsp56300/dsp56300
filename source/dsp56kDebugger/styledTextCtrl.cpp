@@ -6,6 +6,8 @@ namespace dsp56kDebugger
 {
 	const wxFont g_font(12, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false);
 
+	StyledTextCtrl* StyledTextCtrl::s_lastFocused = nullptr;
+
 	StyledTextCtrl::StyledTextCtrl(wxWindow* _parent, wxStandardID _id, const wxPoint& _pos, const wxSize& _size) : wxStyledTextCtrl(_parent, _id, _pos, _size)
 	{
 		SetFont(g_font);
@@ -17,6 +19,17 @@ namespace dsp56kDebugger
 	bool StyledTextCtrl::isFocused() const
 	{
 		return m_focused || this->GetSTCFocus();
+	}
+
+	bool StyledTextCtrl::isLastFocused() const
+	{
+		return s_lastFocused == this;
+	}
+
+	void StyledTextCtrl::setAsDefaultFocus()
+	{
+		if(!s_lastFocused)
+			s_lastFocused = this;
 	}
 
 	void StyledTextCtrl::setLineCount(uint32_t _count)
@@ -206,6 +219,7 @@ namespace dsp56kDebugger
 	void StyledTextCtrl::onSetFocus(wxFocusEvent&)
 	{
 		m_focused = true;
+		s_lastFocused = this;
 		LOG("Focus Gained");
 	}
 
