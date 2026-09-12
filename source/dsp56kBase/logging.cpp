@@ -4,7 +4,10 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <chrono>
+#include <condition_variable>
 #include <cstring>
+#include <memory>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -55,6 +58,30 @@ namespace Logging
 	std::vector<std::string> g_pendingLogs;
 	std::mutex g_logMutex;
 	using Guard = std::lock_guard<std::mutex>;
+
+	std::condition_variable g_logCv;
+	bool g_loggerStop = false;
+
+	// The logger thread ran until the process ended, and destroying a joinable std::thread at static
+	// destruction calls std::terminate - so every process that wrote a single line to the log file
+	// aborted on exit. Stop and join it here instead. Declared after g_logger so it is destroyed
+	// before it, while the mutex and the condition variable are both still alive.
+	struct LoggerStopper
+	{
+		~LoggerStopper()
+		{
+			{
+				Guard g(g_logMutex);
+				g_loggerStop = true;
+			}
+			g_logCv.notify_all();
+
+			if(g_logger && g_logger->joinable())
+				g_logger->join();
+		}
+	};
+
+	LoggerStopper g_loggerStopper;
 	
 	void g_logToFile( const std::string& _s )
 	{
@@ -75,6 +102,8 @@ namespace Logging
 			g_pendingLogs.push_back(_s);
 		}
 
+		g_logCv.notify_all();
+
 		if(!g_logger)
 		{
 			g_logger.reset(new std::thread([]()
@@ -83,16 +112,17 @@ namespace Logging
 
 				if(o.is_open())
 				{
-					while(true)
+					bool stop = false;
+
+					while(!stop)
 					{
 						std::vector<std::string> pendingLogs;
-						{							
-							Guard g(g_logMutex);
+						{
+							std::unique_lock<std::mutex> lock(g_logMutex);
+							g_logCv.wait_for(lock, std::chrono::milliseconds(500), []{ return g_loggerStop || !g_pendingLogs.empty(); });
 							std::swap(g_pendingLogs, pendingLogs);
+							stop = g_loggerStop;
 						}
-
-						if(pendingLogs.empty())
-							std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 						for(const auto& log : pendingLogs)
 							o << log << '\n';
