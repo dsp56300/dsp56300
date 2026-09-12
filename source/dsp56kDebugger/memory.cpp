@@ -4,6 +4,18 @@
 
 namespace dsp56kDebugger
 {
+	namespace
+	{
+		// Indicator used to visually highlight the currently selected
+		// address in Memory::selectAddress(). An indicator is used instead
+		// of the primary selection because IndicatorFillRange() neither
+		// moves the caret nor scrolls the view, unlike SetSelection() -
+		// this matters because selectAddress() is called unconditionally
+		// on every periodic refresh (see update()) and must not fight the
+		// user's own keyboard/scrollbar navigation.
+		constexpr int g_selectedAddressIndicator = 0;
+	}
+
 	Memory::Memory(Debugger& _debugger, wxWindow* _parent, dsp56k::EMemArea _area)
 		: StyledTextCtrl(_parent, wxID_ANY, wxDefaultPosition, wxSize(700,600))
 		, DebuggerListener(_debugger)
@@ -15,6 +27,11 @@ namespace dsp56kDebugger
 		StyleSetBackground(1, *wxRED);
 
 		SetSelBackground(true, wxColour(255,230,150));
+
+		IndicatorSetStyle(g_selectedAddressIndicator, wxSTC_INDIC_ROUNDBOX);
+		IndicatorSetForeground(g_selectedAddressIndicator, wxColour(255,230,150));
+		IndicatorSetAlpha(g_selectedAddressIndicator, 255);
+		IndicatorSetUnder(g_selectedAddressIndicator, true);
 
 		initialize();
 
@@ -101,7 +118,28 @@ namespace dsp56kDebugger
 	{
 		int start, end;
 		addressToPositions(start, end, _addr);
-		SetSelection(start, end);
+
+		// Highlight via an indicator rather than the primary selection.
+		// SetSelection() would move the actual text caret and scroll the
+		// view to reveal it - both are undesired here since update() calls
+		// selectAddress() unconditionally on every periodic refresh just to
+		// keep the highlight in sync with m_selectedAddr, which must not
+		// fight the user's own keyboard/scrollbar navigation. Explicit
+		// "jump to this address" navigation (e.g. evFocusMemAddress(),
+		// evGotoAddress()) still moves the caret/view via GotoLine(), it
+		// just no longer happens implicitly as a side effect of this
+		// highlight.
+		if(m_selectedIndicatorEnd > m_selectedIndicatorStart)
+		{
+			SetIndicatorCurrent(g_selectedAddressIndicator);
+			IndicatorClearRange(m_selectedIndicatorStart, m_selectedIndicatorEnd - m_selectedIndicatorStart);
+		}
+
+		SetIndicatorCurrent(g_selectedAddressIndicator);
+		IndicatorFillRange(start, end - start);
+
+		m_selectedIndicatorStart = start;
+		m_selectedIndicatorEnd = end;
 	}
 
 	void Memory::update(int _line, int _count)

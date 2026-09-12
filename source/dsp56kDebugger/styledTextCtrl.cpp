@@ -58,6 +58,15 @@ namespace dsp56kDebugger
 
 		const auto prevLine = GetCurrentLine();
 
+		// Remove()/InsertText() below can move the caret and, more
+		// importantly, can make Scintilla scroll the view to keep the
+		// (possibly relocated) caret visible. This function is called
+		// periodically to refresh content that may have changed underneath
+		// the user (e.g. memory/registers while the DSP is running), so it
+		// must not fight the user's own scrolling. Remember the current
+		// scroll position and caret line and restore both afterwards.
+		const auto firstVisibleLine = GetFirstVisibleLine();
+
 		const auto count = lastDifferent - firstDifferent + 1;
 
 		const int posStart = firstDifferent > 0 ? GetLineEndPosition(firstDifferent-1) + 1 : 0;
@@ -79,6 +88,8 @@ namespace dsp56kDebugger
 		const auto newLine = GetCurrentLine();
 		if(newLine != prevLine)
 			GotoLine(prevLine);
+
+		SetFirstVisibleLine(firstVisibleLine);
 	}
 
 	void StyledTextCtrl::addMarker(int _line, int _marker)
