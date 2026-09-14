@@ -38,12 +38,22 @@ namespace dsp56k
 	{
 	}
 
+	void JitTrampoline::initCodeHolder(asmjit::CodeHolder& _codeHolder)
+	{
+		_codeHolder.init(m_runtime.environment());
+
+		// The logger sends every emitted instruction through OutputDebugString, which waits for an attached debugger
+		// or debug output reader. We are generated in the Jit constructor, so only the JitConfig default reaches this.
+		if (m_dsp.getJit().getConfig().asmjitDiagnostics)
+			_codeHolder.setLogger(&m_logger);
+
+		_codeHolder.setErrorHandler(&m_errorHandler);
+	}
+
 	void JitTrampoline::generateExecLoopFunc()
 	{
 		asmjit::CodeHolder codeHolder;
-		codeHolder.init(m_runtime.environment());
-		codeHolder.setLogger(&m_logger);
-		codeHolder.setErrorHandler(&m_errorHandler);
+		initCodeHolder(codeHolder);
 
 		JitEmitter m_asm(&codeHolder);
 
@@ -245,9 +255,7 @@ namespace dsp56k
 	void JitTrampoline::generateExecOneFunc()
 	{
 		asmjit::CodeHolder codeHolder;
-		codeHolder.init(m_runtime.environment());
-		codeHolder.setLogger(&m_logger);
-		codeHolder.setErrorHandler(&m_errorHandler);
+		initCodeHolder(codeHolder);
 
 		JitEmitter m_asm(&codeHolder);
 
