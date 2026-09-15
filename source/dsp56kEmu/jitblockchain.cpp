@@ -340,6 +340,22 @@ namespace dsp56k
 
 	JitBlockRuntimeData* JitBlockChain::emit(TWord _pc)
 	{
+		/*	Without dynamicFastInterrupts, every block below Vba_End is compiled as a fast interrupt: two words at most and
+			no PC update, the interrupted program's PC is restored by the caller. Blocks are compiled on first execution and
+			an interrupt sets the processing mode before its vector runs, so a vector block compiled in any other mode is
+			ordinary code in the vector region, reached by a jump or call. It would never advance the PC and the DSP spins
+			on it without any other symptom, so say so.
+		*/
+#ifndef NDEBUG
+		if(_pc < Vba_End && !m_jit.getConfig().dynamicFastInterrupts && m_jit.dsp().getProcessingMode() != DSP::FastInterrupt)
+		{
+			LOG("Ordinary code runs in the interrupt vector region at " << HEX(_pc) << " but JitConfig::dynamicFastInterrupts is "
+				"disabled. The JIT compiles it as fast interrupt code that does not advance the PC and the DSP will hang there. "
+				"Enable dynamicFastInterrupts for this device.");
+			assert(false && "ordinary code in the vector region with dynamicFastInterrupts disabled");
+		}
+#endif
+
 		auto* emitter = m_jit.acquireEmitter(_pc);
 
 //		m_logger->addFlags(asmjit::FormatFlags::kHexImms | /*asmjit::FormatFlags::kHexOffsets |*/ asmjit::FormatFlags::kMachineCode);
