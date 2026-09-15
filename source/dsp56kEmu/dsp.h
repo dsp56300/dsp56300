@@ -398,7 +398,7 @@ namespace dsp56k
 		
 		bool	exec_parallel					(const TInstructionFunc& _instMove, const TInstructionFunc& _instAlu, TWord _op);
 
-		bool	do_exec							( TWord _loopcount, TWord _addr );
+		bool	do_exec							( TWord _loopcount, TWord _addr, bool _forever = false );
 		bool	do_end							();
 
 		bool	rep_exec						(TWord _loopCount);

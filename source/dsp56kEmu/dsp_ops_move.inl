@@ -371,16 +371,27 @@ namespace dsp56k
 
 		const TWord ea		= effectiveAddress<Movep_ppea>(op);
 
+		// The ea side may address a peripheral as well, the Nord Modular kernel loads DMA offset
+		// registers with "movep x:<<M_HORX,x:(r0)" and r0 pointing at DOR0. Route those accesses
+		// to the peripherals like the JIT does (readMemOrPeriph / writeMemOrPeriph).
 		if( write )
 		{
 			// TODO: remove the if here, use helper templates instead
 			if( mmmrrr == MMMRRR_ImmediateData )
 				memWritePeriphFFFFC0( s, pp, ea );
+			else if( isPeripheralAddress(ea) )
+				memWritePeriphFFFFC0( s, pp, memReadPeriph( S, ea, Movep_ppea ) );
 			else
 				memWritePeriphFFFFC0( s, pp, memRead( S, ea ) );
 		}
 		else
-			memWrite( S, ea, memReadPeriphFFFFC0( s, pp, Movep_ppea) );
+		{
+			const auto v = memReadPeriphFFFFC0( s, pp, Movep_ppea);
+			if( isPeripheralAddress(ea) )
+				memWritePeriph( S, ea, v );
+			else
+				memWrite( S, ea, v );
+		}
 	}
 	inline void DSP::op_Movep_Xqqea(const TWord op)
 	{

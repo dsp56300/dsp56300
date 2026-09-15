@@ -281,7 +281,8 @@ namespace dsp56k
 	}
 	inline void DSP::op_DoForever(const TWord op)
 	{
-		errNotImplemented("DO FOREVER");
+		const auto addr = absAddressExt<DoForever>();
+		do_exec(0, addr, true);
 	}
 	inline void DSP::op_Dor_ea(const TWord op)
 	{
@@ -311,7 +312,8 @@ namespace dsp56k
 	}
 	inline void DSP::op_DorForever(const TWord op)
 	{
-		errNotImplemented("DOR FOREVER");		
+		const auto displacement = pcRelativeAddressExt<DorForever>();
+		do_exec(0, pcCurrentInstruction + displacement, true);
 	}
 	inline void DSP::op_Enddo(const TWord op)
 	{

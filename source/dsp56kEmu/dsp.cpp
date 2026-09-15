@@ -206,6 +206,7 @@ namespace dsp56k
 			LOGJITPC(vba);
 			const auto pc = getPC();
 			m_jit.getTrampoline().execOne(&reg, vba, m_jitEntries[vba]);
+
 			if(m_processingMode != LongInterrupt)
 			{
 				m_processingMode = DefaultPreventInterrupt;
@@ -474,11 +475,11 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// exec_do
 	//
-	bool DSP::do_exec( TWord _loopcount, TWord _addr )
+	bool DSP::do_exec( TWord _loopcount, TWord _addr, const bool _forever )
 	{
 	//	LOG( "DO BEGIN: " << (int)sc.var << ", loop flag = " << sr_test(SR_LF) );
 
-		if( !_loopcount )
+		if( !_forever && !_loopcount )
 		{
 			if( sr_test_noCache( SR_SC ) )
 				_loopcount = 65536;
@@ -493,13 +494,24 @@ namespace dsp56k
 		ssl(reg.lc);
 
 		reg.la.var = _addr;
-		reg.lc.var = _loopcount;
+
+		// DO FOREVER leaves LC alone, it never counts
+		if(!_forever)
+			reg.lc.var = _loopcount;
 
 		pushPCSR();
 
 		const auto stackCount = reg.sc.var;
-		
-		sr_set( SR_LF );
+
+		// SR_FV describes the loop that is starting: a counted DO nested in a DO FOREVER has to clear
+		// it or its loop end would never terminate either. do_end() restores both flags from the stack.
+		if(_forever)
+			sr_set( static_cast<CCRMask>(SR_LF | SR_FV) );
+		else
+		{
+			sr_clear( SR_FV );
+			sr_set( SR_LF );
+		}
 
 		if constexpr(!g_useJIT)
 			m_cycles += getOpcodeCycles(pcCurrentInstruction);
@@ -520,8 +532,23 @@ namespace dsp56k
 			if(reg.pc.var != (reg.la.var+1))
 				continue;
 
+			// The loop only ends when execution falls off its last instruction. Hardware decides that
+			// at the fetch of the word at LA, so a jump that merely lands at LA+1 does not count. The
+			// Nord Modular kernel has its IRQD handler right behind an idle DO FOREVER loop: the
+			// interrupt's JSR arrives at LA+1 and was taken for a loop end, which "returned" through
+			// the interrupt's stack frame and left the DSP in long-interrupt mode for good.
+			if(reg.pc.var != pcCurrentInstruction + m_currentOpLen)
+				continue;
+
 			if(!sr_test_noCache(SR_LF))
 				break;
+
+			// a forever loop never terminates on the counter, only ENDDO / BRKcc leave it
+			if(sr_test_noCache(SR_FV))
+			{
+				setPC(hiword(reg.ss[ssIndex()]));
+				continue;
+			}
 
 			if( reg.lc.var <= 1 )
 			{
