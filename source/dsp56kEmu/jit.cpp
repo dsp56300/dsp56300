@@ -333,12 +333,16 @@ namespace dsp56k
 		if (pMemWriteAddr == g_pcInvalid)
 			return;
 
-		for (const auto& it : m_chains)
+		// see JitConfig::trackVolatilePMemory
+		if (m_config.trackVolatilePMemory)
 		{
-			if (it.second->getBlock(pMemWriteAddr))
+			for (const auto& it : m_chains)
 			{
-				m_volatileP.insert(pMemWriteAddr);
-				break;
+				if (it.second->getBlock(pMemWriteAddr))
+				{
+					m_volatileP.insert(pMemWriteAddr);
+					break;
+				}
 			}
 		}
 

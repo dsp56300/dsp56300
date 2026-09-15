@@ -46,6 +46,21 @@ namespace dsp56k
 		// needs to be true if there is code that executes code in interrupt regions as regular jumps
 		bool dynamicFastInterrupts = false;
 
+		/*	Remember every P address that running code has written to while a JIT block covered it.
+
+			Such an address is marked volatile for the rest of the session: no block is built across
+			it any more, so the code around it runs as single instruction blocks. That suits firmware
+			that patches a few words of its own code again and again, which is what the Virus does and
+			what this was designed for.
+
+			It does not suit firmware that loads whole routines into P memory as a normal part of
+			operation. Every load marks everything it wrote, the set only ever grows, and the loaded
+			code - often the per sample path - gets slower with each load and never recovers. Turn it
+			off for such a device. The block at a written address is thrown away and rebuilt either
+			way, so this only decides whether the address is treated as volatile from then on.
+		*/
+		bool trackVolatilePMemory = true;
+
 		// asmjit can validate the generate code, usually not needed
 		bool asmjitDiagnostics = false;
 
