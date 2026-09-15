@@ -2245,6 +2245,44 @@ namespace dsp56k
 		{
 			verify(dsp.regs().n[0].var == 0x2a);
 		});
+
+		// LRA Rn,D: PC + Rn, PC being the address of the LRA. Results from sim56300, which also leaves SR alone.
+		struct LraCase { TWord pc; TWord op; TWord rn; TWord rnValue; };
+		static constexpr LraCase lraCases[] =
+		{
+			{ 0x200, 0x04c104, 1, 0x000010 },	// lra r1,x0
+			{ 0x201, 0x04c21b, 2, 0xfffff0 },	// lra r2,n3, wraps at 24 bits
+			{ 0x202, 0x04c30e, 3, 0x000005 },	// lra r3,a
+			{ 0x203, 0x04c40d, 4, 0x800000 },	// lra r4,b1
+		};
+
+		for(size_t i=0; i<std::size(lraCases); ++i)
+		{
+			const auto& c = lraCases[i];
+
+			runTest([&]()
+			{
+				dsp.setSR(0x0003ab);
+				dsp.x0(TWord(0));
+				dsp.regs().n[3].var = 0;
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+				dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0x00ffffffabcdef)));
+				dsp.regs().r[c.rn].var = c.rnValue;
+				emit(c.op, 0, c.pc);
+			},
+				[&]()
+			{
+				verify(dsp.getSR().var == 0x0003ab);
+				switch(i)
+				{
+				case 0: verify(dsp.x0().var == 0x000210); break;
+				case 1: verify(dsp.regs().n[3].var == 0x0001f1); break;
+				case 2: verify(dsp.aluA().var == 0x00000207000000); break;
+				case 3: verify(dsp.aluB().var == 0x00800203abcdef); break;
+				default: break;
+				}
+			});
+		}
 	}
 
 	void UnitTests::lsl()
@@ -6929,6 +6967,9 @@ namespace dsp56k
 		adcSbcCarryChain();
 		movemShortWritesCode();
 		movepWritesCode();
+		do_forever();
+		dorShortAddress();
+		trapContinues();
 		conditionalCallAtVectorAddress();
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
@@ -7469,6 +7510,92 @@ namespace dsp56k
 		verify(dsp.regs().sp.var == 0);
 	}
 
+	/*	DOR X:aa and DOR Y:aa take the loop count from the word stored at the short address. sim56300: a count of 3 runs
+		the two instruction body three times, 2 twice, 0 skips the loop, and the loop is retired every time.
+	*/
+	void UnitTests::dorShortAddress()
+	{
+		struct Case
+		{
+			TWord op;
+			EMemArea area;
+			TWord address;
+			TWord count;
+		};
+
+		static constexpr Case cases[] =
+		{
+			{ 0x061010, MemArea_X, 0x10, 3 },		// dor x:<$10
+			{ 0x061150, MemArea_Y, 0x11, 2 },		// dor y:<$11
+			{ 0x061010, MemArea_X, 0x10, 0 },
+		};
+
+		for(const auto& c : cases)
+		{
+			dsp.resetHW();
+			dsp.regs().r[0].var = 0;
+			dsp.regs().r[1].var = 0;
+			dsp.memory().set(c.area, c.address, c.count);
+
+			TWord pc = 0x300;
+			pc = emitToMemory(c.op, 0x000003, pc);				// $300: dor, last instruction of the loop at $303
+			pc = emitToMemory("move (r0)+", pc);				// $302
+			pc = emitToMemory("move (r1)+", pc);				// $303
+			emitToMemory("rts", pc);							// $304
+
+			pc = 0x100;
+			pc = emitToMemory("jsr $300", pc);
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			dsp.setPC(0x100);
+			execUntil(returnPC);
+
+			verify(dsp.regs().r[0].var == c.count);
+			verify(dsp.regs().r[1].var == c.count);
+			verify(dsp.regs().sp.var == 0);
+			verify((dsp.getSR().var & SR_LF) == 0);
+		}
+	}
+
+	/*	TRAP, TRAPcc and ILLEGAL stop in an attached debugger and otherwise carry on with the next instruction. Nothing
+		they do may disturb the registers or the CCR, whichever way the condition of TRAPcc goes.
+	*/
+	void UnitTests::trapContinues()
+	{
+		dsp.resetHW();
+		dsp.setSR(0x000300);								// C clear: trapcc is taken, trapcs is not
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00123456789abc)));
+		dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0x00fedcba987654)));
+		dsp.regs().r[0].var = 0;
+
+		TWord pc = 0x600;
+		pc = emitToMemory("move (r0)+", pc);
+		pc = emitToMemory(0x000006, 0, pc);					// trap
+		pc = emitToMemory("move (r0)+", pc);
+		pc = emitToMemory(0x000010, 0, pc);					// trapcc, taken
+		pc = emitToMemory("move (r0)+", pc);
+		pc = emitToMemory(0x000018, 0, pc);					// trapcs, not taken
+		pc = emitToMemory("move (r0)+", pc);
+		pc = emitToMemory(0x000005, 0, pc);					// illegal
+		pc = emitToMemory("move (r0)+", pc);
+		emitToMemory("rts", pc);
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $600", pc);
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.regs().r[0].var == 5);
+		verify(dsp.aluA().var == 0x00123456789abc);
+		verify(dsp.aluB().var == 0x00fedcba987654);
+		verify((dsp.getSR().var & 0xff) == 0);
+		verify(dsp.regs().sp.var == 0);
+	}
+
 	/*	A conditional call in the vector region. This is a GUARD, not a reproduction: it passes even
 		without the fix, because a conditional branch makes the block prologue pre-write PC = pcNext,
 		which happens to be the very address the call needs to push. So bsset/bsclr/jsset in vector
@@ -7725,10 +7852,6 @@ namespace dsp56k
 		verify(dsp.aluA().var == 0x00000002000000);
 	}
 
-	/*	JIT only, called from the JitUnittests constructor rather than runAllTests: the
-		interpreter has no DO FOREVER, op_DoForever and op_DorForever are still
-		errNotImplemented stubs there.
-	*/
 	void UnitTests::do_forever()
 	{
 		/*	DO FOREVER differs from a counted DO in two ways: it never loads the loop counter, and it
@@ -7740,33 +7863,40 @@ namespace dsp56k
 			The assembler cannot reach its own "do forever," path, the special case only runs when
 			the mnemonic "do" is not found and it always is, so the two words are emitted directly.
 			That is the encoding the NL3 firmware uses, $000203 with the loop end address behind it.
+			DOR FOREVER is $000202 with the loop end relative to itself, sim56300's assembler agrees.
 		*/
-		dsp.resetHW();
-		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
-		dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
+		for(const auto dor : {false, true})
+		{
+			dsp.resetHW();
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0x00000001000000)));
 
-		// a counted DO would overwrite this, and would stop after a single pass
-		dsp.regs().lc.var = 0x123456;
+			// a counted DO would overwrite this, and would stop after a single pass
+			dsp.regs().lc.var = 0x123456;
 
-		TWord pc = 0x400;
-		pc = emitToMemory("jsr $500", pc);
-		const auto returnPC = pc;
-		emitToMemory("nop", pc);
+			TWord pc = 0x400;
+			pc = emitToMemory("jsr $500", pc);
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
 
-		pc = 0x500;
-		pc = emitToMemory("do forever, >$505", pc);	// $500: do forever, loop end at $504
-		pc = emitToMemory("add b,a", pc);			// $502: the body
-		pc = emitToMemory("enddo", pc);				// $503: leave the loop
-		pc = emitToMemory("nop", pc);				// $504: last instruction in the loop
-		emitToMemory("rts", pc);					// $505: reached once the loop is over
+			pc = 0x500;
+			if(dor)
+				pc = emitToMemory(0x000202, 0x000004, pc);		// $500: dor forever, loop end at $500 + 4
+			else
+				pc = emitToMemory(0x000203, 0x000504, pc);		// $500: do forever, loop end at $504
+			pc = emitToMemory("add b,a", pc);			// $502: the body
+			pc = emitToMemory("enddo", pc);				// $503: leave the loop
+			pc = emitToMemory("nop", pc);				// $504: last instruction in the loop
+			emitToMemory("rts", pc);					// $505: reached once the loop is over
 
-		dsp.setPC(0x400);
-		execUntil(returnPC);
+			dsp.setPC(0x400);
+			execUntil(returnPC);
 
-		verify(dsp.aluA().var == 0x00000001000000);
-		verify(dsp.regs().lc.var == 0x123456);
-		verify((dsp.getSR().var & SR_LF) == 0);
-		verify((dsp.getSR().var & SR_FV) == 0);
+			verify(dsp.aluA().var == 0x00000001000000);
+			verify(dsp.regs().lc.var == 0x123456);
+			verify((dsp.getSR().var & SR_LF) == 0);
+			verify((dsp.getSR().var & SR_FV) == 0);
+		}
 	}
 
 	void UnitTests::jsr_rts()
@@ -8447,6 +8577,54 @@ namespace dsp56k
 				const auto xAfter = c.xAfter == ~0ull ? c.x : c.xAfter;
 				const auto yAfter = c.yAfter == ~0ull ? c.y : c.yAfter;
 				if(result != c.result || flags != c.ccr || x != xAfter || y != yAfter)
+					report(c.name, result, flags, c.result, c.ccr);
+			});
+		}
+
+		// ---- MACRI: D +/- #xxxx * S, then rounded like RND, with S, L and C untouched. Results from sim56300,
+		// including convergent rounding of an exact half in both directions.
+		struct MacriCase
+		{
+			const char* name;
+			TWord sr;
+			uint64_t a;
+			uint64_t b;
+			TWord x0;
+			TWord x1;
+			TWord y1;
+			TWord opA;
+			TWord opB;
+			bool resultInB;
+			uint64_t result;
+			TWord ccr;
+		};
+
+		static constexpr MacriCase macriCases[] =
+		{
+			{ "macri #$400000,x0,a", 0x000300, 0x00100000000000, 0x00000000000000, 0x400000, 0x000000, 0x000000, 0x0141c3, 0x400000, false, 0x00300000000000, 0x10 },
+			{ "macri -#$400000,y1,b rounds a half up to even", 0x000300, 0x00000000000000, 0x00000000800000, 0x000000, 0x000000, 0x123456, 0x0141ff, 0x400000, true, 0xfff6e5d6000000, 0x18 },
+			{ "macri #$7fffff,x1,a into the extension", 0x000300, 0x7f000000000000, 0x00000000000000, 0x000000, 0x7fffff, 0x000000, 0x0141e3, 0x7fffff, false, 0x7f7ffffe000000, 0x20 },
+			{ "macri rounds $000001800000 up to even", 0x000300, 0x00000001800000, 0x00000000000000, 0x000000, 0x000000, 0x000000, 0x0141c3, 0x000001, false, 0x00000002000000, 0x10 },
+			{ "macri rounds $000002800000 down to even", 0x000300, 0x00000002800000, 0x00000000000000, 0x000000, 0x000000, 0x000000, 0x0141c3, 0x000001, false, 0x00000002000000, 0x10 },
+			{ "macri keeps S, L and C", 0x0003ff, 0x00000000000000, 0x00000000000000, 0x000000, 0x000000, 0x000000, 0x0141c3, 0x000001, false, 0x00000000000000, 0xd5 },
+		};
+
+		for(const auto& c : macriCases)
+		{
+			runTest([&]()
+			{
+				dsp.setSR(c.sr);
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(c.a)));
+				dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(c.b)));
+				dsp.x0(c.x0);
+				dsp.x1(c.x1);
+				dsp.y1(c.y1);
+				emit(c.opA, c.opB);
+			}, [&]()
+			{
+				const auto result = static_cast<uint64_t>(c.resultInB ? dsp.aluB().var : dsp.aluA().var);
+				const auto flags = ccr(dsp.getSR().var);
+				if(result != c.result || flags != c.ccr)
 					report(c.name, result, flags, c.result, c.ccr);
 			});
 		}

@@ -1167,17 +1167,23 @@ namespace dsp56k
 
 		alu_mac( ab, s1, s2, negate, false );		
 	}
-	inline void DSP::op_Maci_xxxx(const TWord op)
+	template <Instruction Inst> void DSP::alu_mpyImmediate(const TWord op, const bool _accumulate, const bool _round)
 	{
-		const bool	ab		= getFieldValue<Maci_xxxx,Field_d>(op);
-		const bool	negate	= getFieldValue<Maci_xxxx,Field_k>(op);
-		const TWord qq		= getFieldValue<Maci_xxxx,Field_qq>(op);
+		const bool	ab		= getFieldValue<Inst,Field_d>(op);
+		const bool	negate	= getFieldValue<Inst,Field_k>(op);
+		const TWord qq		= getFieldValue<Inst,Field_qq>(op);
 
-		const TReg24 s		= TReg24(immediateDataExt<Maci_xxxx>());
-
+		const TReg24 s		= TReg24(immediateDataExt<Inst>());
 		const TReg24 reg	= decode_qq_read(qq);
 
-		alu_mpy( ab, reg, s, negate, true );
+		alu_mpy( ab, reg, s, negate, _accumulate );
+
+		if(_round)
+			alu_rnd( ab );
+	}
+	inline void DSP::op_Maci_xxxx(const TWord op)
+	{
+		alu_mpyImmediate<Maci_xxxx>(op, true, false);
 	}
 	inline void DSP::op_Macsu(const TWord op)
 	{
@@ -1210,7 +1216,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Macri_xxxx(const TWord op)
 	{
-		errNotImplemented("MACRI");		
+		alu_mpyImmediate<Macri_xxxx>(op, true, true);
 	}
 	inline void DSP::op_Max(const TWord op)
 	{
@@ -1315,15 +1321,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_Mpyi(const TWord op)
 	{
-		const bool	ab		= getFieldValue<Mpyi,Field_d>(op);
-		const bool	negate	= getFieldValue<Mpyi,Field_k>(op);
-		const TWord qq		= getFieldValue<Mpyi,Field_qq>(op);
-
-		const TReg24 s		= TReg24(immediateDataExt<Mpyi>());
-
-		const TReg24 reg	= decode_qq_read(qq);
-
-		alu_mpy( ab, reg, s, negate, false );
+		alu_mpyImmediate<Mpyi>(op, false, false);
 	}
 	inline void DSP::op_Mpyr_S1S2D(const TWord op)
 	{
@@ -1345,15 +1343,7 @@ namespace dsp56k
 	inline void DSP::op_Mpyri(const TWord op)
 	{
 		// MPYRI is MPYI plus the rounding step, exactly as MPYR relates to MPY
-		const bool	ab		= getFieldValue<Mpyri,Field_d>(op);
-		const bool	negate	= getFieldValue<Mpyri,Field_k>(op);
-		const TWord	qq		= getFieldValue<Mpyri,Field_qq>(op);
-
-		const TReg24 s		= TReg24(immediateDataExt<Mpyri>());
-		const TReg24 reg	= decode_qq_read(qq);
-
-		alu_mpy( ab, reg, s, negate, false );
-		alu_rnd( ab );
+		alu_mpyImmediate<Mpyri>(op, false, true);
 	}
 	inline void DSP::op_Neg(const TWord op)
 	{

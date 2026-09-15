@@ -281,7 +281,7 @@ namespace dsp56k
 	}
 	inline void DSP::op_DoForever(const TWord op)
 	{
-		errNotImplemented("DO FOREVER");
+		do_execForever(absAddressExt<DoForever>());
 	}
 	inline void DSP::op_Dor_ea(const TWord op)
 	{
@@ -291,8 +291,9 @@ namespace dsp56k
 	}
 	inline void DSP::op_Dor_aa(const TWord op)
 	{
-		const auto loopCount = effectiveAddress<Do_aa>(op);
-		const auto displacement = pcRelativeAddressExt<Dor_ea>();
+		// the loop count is the word stored at the short address, not the address itself
+		const auto loopCount = readMem<Dor_aa>(op);
+		const auto displacement = pcRelativeAddressExt<Dor_aa>();
 		do_exec(loopCount, pcCurrentInstruction + displacement);
 	}
 	inline void DSP::op_Dor_xxx(const TWord op)
@@ -311,7 +312,8 @@ namespace dsp56k
 	}
 	inline void DSP::op_DorForever(const TWord op)
 	{
-		errNotImplemented("DOR FOREVER");		
+		const auto displacement = pcRelativeAddressExt<DorForever>();
+		do_execForever(pcCurrentInstruction + displacement);
 	}
 	inline void DSP::op_Enddo(const TWord op)
 	{
@@ -343,12 +345,15 @@ namespace dsp56k
 	}
 	inline void DSP::op_Illegal(const TWord op)
 	{
-		errNotImplemented("ILLEGAL");
+		op_Trap(op);
 	}
 
-	inline void DSP::op_Lra_Rn(const TWord op)
+	inline void DSP::op_Lra_Rn(const TWord op)	// 0000010011000RRR000ddddd
 	{
-		errNotImplemented("LRA");
+		// PC is the address of the LRA itself, the sum wraps at 24 bits and the CCR is unchanged
+		const TWord rrr = getFieldValue<Lra_Rn, Field_RRR>(op);
+		const TWord ddddd = getFieldValue<Lra_Rn, Field_ddddd>(op);
+		decode_ddddd_write(ddddd, TReg24((pcCurrentInstruction + reg.r[rrr].var) & 0xffffff));
 	}
 	inline void DSP::op_Lra_xxxx(const TWord op)	// 0000010001oooooo010ddddd
 	{
@@ -581,12 +586,14 @@ namespace dsp56k
 	}
 	inline void DSP::op_Trap(const TWord op)
 	{
-		errNotImplemented("TRAP");		
+		// TRAP, TRAPcc and ILLEGAL raise an interrupt on hardware. No emulated firmware relies on that, so they stop in
+		// an attached debugger instead and otherwise carry on with the next instruction.
+		nativeDebugBreak();
 	}
 	inline void DSP::op_Trapcc(const TWord op)
 	{
 		if(checkCondition<Trapcc>(op))
-			errNotImplemented("TRAPcc");
+			op_Trap(op);
 	}
 	inline void DSP::op_ResolveCache(const TWord op)
 	{

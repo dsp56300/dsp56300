@@ -141,7 +141,7 @@ namespace dsp56k
 		void op_Do_S(TWord op);
 		void op_DoForever(TWord op);
 		void op_Dor_ea(TWord op);
-		void op_Dor_aa(TWord op)			{ errNotImplemented(op); }
+		void op_Dor_aa(TWord op);
 		void op_Dor_xxx(TWord op);
 		void op_Dor_S(TWord op);
 		void op_DorForever(TWord op);
@@ -154,7 +154,7 @@ namespace dsp56k
 		void op_Extractu_S1S2(TWord op);
 		void op_Extractu_CoS2(TWord op);
 		template<bool BackupCCR> void op_Ifcc(TWord op);
-		void op_Illegal(TWord op)			{ errNotImplemented(op); }
+		void op_Illegal(TWord op);
 		void op_Inc(TWord op);
 		void op_Insert_S1S2(TWord op);
 		void op_Insert_CoS2(TWord op);
@@ -186,7 +186,7 @@ namespace dsp56k
 		void op_Jsset_pp(TWord op);
 		void op_Jsset_qq(TWord op);
 		void op_Jsset_S(TWord op);
-		void op_Lra_Rn(TWord op)		{ errNotImplemented(op); }
+		void op_Lra_Rn(TWord op);
 		void op_Lra_xxxx(TWord op);
 		void op_Lsl_D(TWord op);
 		void op_Lsl_ii(TWord op);
@@ -200,7 +200,7 @@ namespace dsp56k
 		template<Instruction Inst, bool Accumulate, bool Round> void op_Mac_S(TWord op);
 		void op_Maci_xxxx(TWord op);
 		void op_Macr_S1S2(TWord op)		{ alu_multiply(op); }
-		void op_Macri_xxxx(TWord op)	{ errNotImplemented(op); }
+		void op_Macri_xxxx(TWord op);
 		void op_Max(TWord op);
 		void op_Maxm(TWord op);
 		void op_Merge(TWord op);
@@ -279,8 +279,8 @@ namespace dsp56k
 		void op_Tcc_S1D1S2D2(TWord op);
 		void op_Tcc_S2D2(TWord op);
 		void op_Tfr(TWord op);
-		void op_Trap(TWord op)					{ errNotImplemented(op); }
-		void op_Trapcc(TWord op)				{ errNotImplemented(op); }
+		void op_Trap(TWord op);
+		void op_Trapcc(TWord op);
 		void op_Tst(TWord op);
 		void op_Vsl(TWord op)					{ errNotImplemented(op); }
 		void op_Wait(TWord op);
@@ -428,6 +428,9 @@ namespace dsp56k
 
 		// MOVE(M), shared by the effective address and the absolute short address forms
 		template <Instruction Inst> void movem(TWord op);
+
+		// MPYI, MPYRI, MACI and MACRI: a register times the immediate extension word, accumulated and/or rounded
+		template <Instruction Inst> void mpyImmediate(TWord op, bool _accumulate, bool _round);
 
 		void debugDynamicPeripheralAddressing(const JitRegGP& _offset) const;
 		void readMemOrPeriph(DspValue& _dst, EMemArea _area, const DspValue& _offset, Instruction _inst) const;

@@ -655,6 +655,33 @@ namespace dsp56k
 		}, false);
 	}
 
+	void callNativeDebugBreak(DSP* const, const TWord)
+	{
+		nativeDebugBreak();
+	}
+
+	// TRAP, TRAPcc and ILLEGAL raise an interrupt on hardware. No emulated firmware relies on that, so they stop in an
+	// attached debugger instead, with every register stored where it can see them, and otherwise carry on.
+	void JitOps::op_Trap(TWord op)
+	{
+		m_block.dspRegPool().debugStoreAll();
+
+		callDSPFunc(&callNativeDebugBreak, op);
+	}
+
+	void JitOps::op_Trapcc(TWord op)
+	{
+		checkCondition<Trapcc>(op, [&]()
+		{
+			op_Trap(op);
+		}, false);
+	}
+
+	void JitOps::op_Illegal(TWord op)
+	{
+		op_Trap(op);
+	}
+
 	void JitOps::op_Wait(TWord op)
 	{
 		// TODO use this for idle processng
@@ -708,6 +735,14 @@ namespace dsp56k
 		DspValue lc(m_block);
 		readMem<Dor_ea>(lc, op);
 		const auto displacement = pcRelativeAddressExt<Dor_xxx>();
+		do_exec(lc, m_pcCurrentOp + displacement);
+	}
+
+	void JitOps::op_Dor_aa(TWord op)
+	{
+		DspValue lc(m_block);
+		readMem<Dor_aa>(lc, op);
+		const auto displacement = pcRelativeAddressExt<Dor_aa>();
 		do_exec(lc, m_pcCurrentOp + displacement);
 	}
 

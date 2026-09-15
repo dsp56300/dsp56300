@@ -489,16 +489,33 @@ namespace dsp56k
 			}
 		}
 
+		return do_start(&_loopcount, _addr);
+	}
+
+	bool DSP::do_execForever(const TWord _addr)
+	{
+		return do_start(nullptr, _addr);
+	}
+
+	/*	Open a loop and run it. Shared by DO and DO FOREVER, as in the JIT: FOREVER does not load the loop counter, and
+		it raises SR_FV along with SR_LF so that its loop end never terminates on the counter - ENDDO or BRKcc leave it.
+		SR_FV describes the loop being opened, so a counted DO nested in a DO FOREVER clears it; do_end restores the
+		outer loop's flags from the stack.
+	*/
+	bool DSP::do_start(const TWord* _loopcount, const TWord _addr)
+	{
 		ssh(reg.la);
 		ssl(reg.lc);
 
 		reg.la.var = _addr;
-		reg.lc.var = _loopcount;
+		if(_loopcount)
+			reg.lc.var = *_loopcount;
 
 		pushPCSR();
 
 		const auto stackCount = reg.sc.var;
-		
+
+		sr_toggle( SR_FV, _loopcount == nullptr );
 		sr_set( SR_LF );
 
 		if constexpr(!g_useJIT)
@@ -523,16 +540,20 @@ namespace dsp56k
 			if(!sr_test_noCache(SR_LF))
 				break;
 
-			if( reg.lc.var <= 1 )
+			if(!sr_test_noCache(SR_FV))
 			{
-				// restore PC to point to the next instruction after the last instruction of the loop
-				setPC(reg.la.var+1);
+				if( reg.lc.var <= 1 )
+				{
+					// restore PC to point to the next instruction after the last instruction of the loop
+					setPC(reg.la.var+1);
 
-				do_end();
-				break;
+					do_end();
+					break;
+				}
+
+				--reg.lc.var;
 			}
 
-			--reg.lc.var;
 			setPC(hiword(reg.ss[ssIndex()]));
 		}
 		return true;

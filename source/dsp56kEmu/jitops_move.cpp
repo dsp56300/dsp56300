@@ -14,6 +14,26 @@ namespace dsp56k
 		decode_dddddd_write(ddddd, r);
 	}
 
+	void JitOps::op_Lra_Rn(TWord op)
+	{
+		// PC + Rn -> D, PC being the address of the LRA itself. The sum wraps at 24 bits and the CCR is unchanged.
+		const auto rrr = getFieldValue<Lra_Rn, Field_RRR>(op);
+		const auto ddddd = getFieldValue<Lra_Rn, Field_ddddd>(op);
+
+		DspValue r(m_block);
+		m_dspRegs.getR(r, rrr);
+		r.toTemp();
+
+		{
+			const RegGP pc(m_block);
+			m_asm.mov(r32(pc), asmjit::Imm(m_pcCurrentOp));
+			m_asm.add(r32(r), r32(pc));
+		}
+		m_asm.and_(r32(r), asmjit::Imm(0xffffff));
+
+		decode_dddddd_write(ddddd, r);
+	}
+
 	void JitOps::op_Move_Nop(TWord op)
 	{
 	}

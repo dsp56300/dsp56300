@@ -27,9 +27,6 @@ namespace dsp56k
 	: m_checks({})
 	, m_logging(_logging)
 	{
-		// DO FOREVER is implemented in the JIT only, so its test lives here and not in runAllTests
-		do_forever();
-
 		runTest(&JitUnittests::conversion_build, &JitUnittests::conversion_verify);
 		runTest(&JitUnittests::signextend_build, &JitUnittests::signextend_verify);
 

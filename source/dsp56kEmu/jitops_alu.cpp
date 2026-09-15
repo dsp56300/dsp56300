@@ -1385,11 +1385,11 @@ namespace dsp56k
 		m_dspRegs.mask56(refB);
 	}
 
-	void JitOps::op_Mpyi(TWord op)
+	template <Instruction Inst> void JitOps::mpyImmediate(const TWord op, const bool _accumulate, const bool _round)
 	{
-		const bool	ab = getFieldValue<Mpyi, Field_d>(op);
-		const bool	negate = getFieldValue<Mpyi, Field_k>(op);
-		const TWord qq = getFieldValue<Mpyi, Field_qq>(op);
+		const bool	ab = getFieldValue<Inst, Field_d>(op);
+		const bool	negate = getFieldValue<Inst, Field_k>(op);
+		const TWord qq = getFieldValue<Inst, Field_qq>(op);
 
 		DspValue s(m_block);
 		getOpWordB(s);
@@ -1397,7 +1397,12 @@ namespace dsp56k
 		DspValue reg(m_block);
 		decode_qq_read(reg, qq, true, g_mpyOperandShift);
 
-		alu_mpy(ab, reg, s, negate, false, false, false, false, g_mpyOperandShift);
+		alu_mpy(ab, reg, s, negate, _accumulate, false, false, _round, g_mpyOperandShift);
+	}
+
+	void JitOps::op_Mpyi(TWord op)
+	{
+		mpyImmediate<Mpyi>(op, false, false);
 	}
 
 	void JitOps::op_Merge(TWord op)
@@ -1497,32 +1502,17 @@ namespace dsp56k
 	void JitOps::op_Mpyri(TWord op)
 	{
 		// MPYRI is MPYI with rounding, which alu_mpy applies itself
-		const bool	ab = getFieldValue<Mpyri, Field_d>(op);
-		const bool	negate = getFieldValue<Mpyri, Field_k>(op);
-		const TWord qq = getFieldValue<Mpyri, Field_qq>(op);
-
-		DspValue s(m_block);
-		getOpWordB(s);
-
-		DspValue reg(m_block);
-		decode_qq_read(reg, qq, true, g_mpyOperandShift);
-
-		alu_mpy(ab, reg, s, negate, false, false, false, true, g_mpyOperandShift);
+		mpyImmediate<Mpyri>(op, false, true);
 	}
 
 	void JitOps::op_Maci_xxxx(TWord op)
 	{
-		const bool	ab = getFieldValue<Maci_xxxx, Field_d>(op);
-		const bool	negate = getFieldValue<Maci_xxxx, Field_k>(op);
-		const TWord qq = getFieldValue<Maci_xxxx, Field_qq>(op);
+		mpyImmediate<Maci_xxxx>(op, true, false);
+	}
 
-		DspValue s(m_block);
-		getOpWordB(s);
-
-		DspValue reg(m_block);
-		decode_qq_read(reg, qq, true, g_mpyOperandShift);
-
-		alu_mpy(ab, reg, s, negate, true, false, false, false, g_mpyOperandShift);
+	void JitOps::op_Macri_xxxx(TWord op)
+	{
+		mpyImmediate<Macri_xxxx>(op, true, true);
 	}
 
 	void JitOps::op_Neg(TWord op)

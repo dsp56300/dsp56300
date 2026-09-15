@@ -399,6 +399,8 @@ namespace dsp56k
 		bool	exec_parallel					(const TInstructionFunc& _instMove, const TInstructionFunc& _instAlu, TWord _op);
 
 		bool	do_exec							( TWord _loopcount, TWord _addr );
+		bool	do_execForever					( TWord _addr );
+		bool	do_start						( const TWord* _loopcount, TWord _addr );
 		bool	do_end							();
 
 		bool	rep_exec						(TWord _loopCount);
@@ -1399,6 +1401,9 @@ namespace dsp56k
 
 		// MOVEP between P memory and an I/O address, shared by the high (pp) and the low (qq) address forms
 		template <Instruction Inst> void movep_Pea(TWord op, EMemArea _periphArea, TWord _periphAddress);
+
+		// MPYI, MPYRI, MACI and MACRI: a register times the immediate extension word, accumulated and/or rounded
+		template <Instruction Inst> void alu_mpyImmediate(TWord op, bool _accumulate, bool _round);
 
 		// Memory Write
 		template <Instruction Inst, std::enable_if_t<has3Fields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr>
