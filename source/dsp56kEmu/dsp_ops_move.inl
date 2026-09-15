@@ -347,7 +347,19 @@ namespace dsp56k
 	}
 	inline void DSP::op_Movem_aa(const TWord op)
 	{
-		errNotImplemented("MOVE(M) S,P:aa");
+		// MOVE(M) S,P:aa / MOVE(M) P:aa,D with a 6 bit short absolute address
+		const auto	write	= getFieldValue<Movem_aa,Field_W>(op);
+		const TWord dddddd	= getFieldValue<Movem_aa,Field_dddddd>(op);
+		const TWord aa		= getFieldValue<Movem_aa,Field_aaaaaa>(op);
+
+		if( write )
+		{
+			decode_dddddd_write( dddddd, TReg24(memRead(MemArea_P, aa)) );
+		}
+		else
+		{
+			memWriteP( aa, decode_dddddd_read(dddddd).toWord() );
+		}
 	}
 	inline void DSP::op_Movep_ppea(const TWord op)
 	{

@@ -1219,6 +1219,11 @@ namespace dsp56k
 				const auto write = getFieldValue<Movem_ea, Field_W>(op);
 				return !write;
 			}
+		case Movem_aa:
+			{
+				const auto write = getFieldValue<Movem_aa, Field_W>(op);
+				return !write;
+			}
 		case Movep_eapp:
 			{
 				const auto write = getFieldValue<Movep_eapp, Field_W>(op);
