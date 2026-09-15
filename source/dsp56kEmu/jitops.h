@@ -228,7 +228,7 @@ namespace dsp56k
 		void op_Movec_S1D2(TWord op);
 		void op_Movec_xx(TWord op);
 		void op_Movem_ea(TWord op);
-		void op_Movem_aa(TWord op)				{ errNotImplemented(op); }
+		void op_Movem_aa(TWord op);
 		void op_Movep_ppea(TWord op);
 		void op_Movep_Xqqea(TWord op);
 		void op_Movep_Yqqea(TWord op);
@@ -422,7 +422,12 @@ namespace dsp56k
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>* = nullptr> void writeMem(TWord op, const DspValue& _src);
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>* = nullptr> void writeMem(TWord op, const DspValue& _src);
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_S, Field_s>() && hasFieldT<Inst, Field_aaaaaa>()>* = nullptr> void writeMem(TWord op, EMemArea _area, const DspValue& _src) const;
-		template<Instruction Inst> void writePmem(TWord _op, const DspValue& _src);
+		template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>* = nullptr> void writePmem(TWord _op, const DspValue& _src);
+		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFieldT<Inst, Field_aaaaaa>()>* = nullptr> void writePmem(TWord _op, const DspValue& _src);
+		void writePmem(const DspValue& _ea, const DspValue& _src);
+
+		// MOVE(M), shared by the effective address and the absolute short address forms
+		template <Instruction Inst> void movem(TWord op);
 
 		void debugDynamicPeripheralAddressing(const JitRegGP& _offset) const;
 		void readMemOrPeriph(DspValue& _dst, EMemArea _area, const DspValue& _offset, Instruction _inst) const;

@@ -258,7 +258,7 @@ namespace dsp56k
 		OpcodeCycles{Movec_xx,			1, 0, 0, 0},
 
 		OpcodeCycles{Movem_ea,			6, 1, 1, 0},
-		OpcodeCycles{Movem_aa,			6, 1, 1, 0},
+		OpcodeCycles{Movem_aa,			6, 0, 0, 0},	// absolute short: no addressing mode to add cycles for, sim56300 counts 6
 
 		OpcodeCycles{Movep_ppea,		2, 1, 1, 0},
 		OpcodeCycles{Movep_Xqqea,		2, 1, 1, 0},

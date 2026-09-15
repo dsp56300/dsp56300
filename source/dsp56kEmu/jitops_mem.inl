@@ -136,21 +136,29 @@ namespace dsp56k
 		m_block.mem().writeDspMemory(_area, offset, _src);
 	}
 
-	template <Instruction Inst> void JitOps::writePmem(const TWord _op, const DspValue& _src)
+	template <Instruction Inst, std::enable_if_t<hasFields<Inst, Field_MMM, Field_RRR>()>*> void JitOps::writePmem(const TWord _op, const DspValue& _src)
 	{
-		auto ea = effectiveAddress<Inst>(_op);
+		writePmem(effectiveAddress<Inst>(_op), _src);
+	}
 
+	template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFieldT<Inst, Field_aaaaaa>()>*> void JitOps::writePmem(const TWord _op, const DspValue& _src)
+	{
+		writePmem(DspValue(m_block, getFieldValue<Inst, Field_aaaaaa>(_op), DspValue::Immediate24), _src);
+	}
+
+	inline void JitOps::writePmem(const DspValue& _ea, const DspValue& _src)
+	{
 		DspValue compare(m_block, UsePooledTemp);
 
-		auto memRef = m_block.mem().readDspMemory(compare, MemArea_P, ea);
+		auto memRef = m_block.mem().readDspMemory(compare, MemArea_P, _ea);
 
 		const auto skip = m_asm.newLabel();
 		m_asm.cmp(r32(compare), r32(_src));
 		m_asm.jz(skip);
 
-		m_block.mem().writeDspMemory(MemArea_P, ea, _src, std::move(memRef));
+		m_block.mem().writeDspMemory(MemArea_P, _ea, _src, std::move(memRef));
 
-		m_block.mem().mov(m_block.pMemWriteAddress(), ea);
+		m_block.mem().mov(m_block.pMemWriteAddress(), _ea);
 		m_block.mem().mov(m_block.pMemWriteValue(), _src);
 
 		m_asm.bind(skip);

@@ -1215,10 +1215,8 @@ namespace dsp56k
 		switch (_inst)
 		{
 		case Movem_ea:
-			{
-				const auto write = getFieldValue<Movem_ea, Field_W>(op);
-				return !write;
-			}
+		case Movem_aa:
+			return !getFieldValue(_inst, Field_W, op);
 		case Movep_eapp:
 			{
 				const auto write = getFieldValue<Movep_eapp, Field_W>(op);

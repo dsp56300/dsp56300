@@ -1394,6 +1394,9 @@ namespace dsp56k
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_qqqqqq, Field_S>()>* = nullptr> TWord readMem(TWord op) const;
 		template <Instruction Inst, std::enable_if_t<!hasAnyField<Inst, Field_MMM, Field_RRR>() && hasFields<Inst, Field_pppppp, Field_S>()>* = nullptr> TWord readMem(TWord op) const;
 
+		// MOVE(M), shared by the effective address and the absolute short address forms
+		template <Instruction Inst> void movem(TWord op);
+
 		// Memory Write
 		template <Instruction Inst, std::enable_if_t<has3Fields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr>
 		void writeMem(TWord op, TWord value);

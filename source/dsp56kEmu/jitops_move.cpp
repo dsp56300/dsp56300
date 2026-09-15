@@ -441,16 +441,16 @@ namespace dsp56k
 		decode_ddddd_pcr_write(ddddd, r);
 	}
 
-	void JitOps::op_Movem_ea(TWord op)
+	template <Instruction Inst> void JitOps::movem(const TWord op)
 	{
-		const auto write = getFieldValue<Movem_ea, Field_W>(op);
-		const auto dddddd = getFieldValue<Movem_ea, Field_dddddd>(op);
+		const auto write = getFieldValue<Inst, Field_W>(op);
+		const auto dddddd = getFieldValue<Inst, Field_dddddd>(op);
 
 		if (write)
 		{
-			copy24ToDDDDDD<Movem_ea>(op, dddddd, UsePooledTemp, [&](DspValue& r)
+			copy24ToDDDDDD<Inst>(op, dddddd, UsePooledTemp, [&](DspValue& r)
 			{
-				readMem<Movem_ea>(r, op, MemArea_P);
+				readMem<Inst>(r, op, MemArea_P);
 			});
 		}
 		else
@@ -459,8 +459,18 @@ namespace dsp56k
 
 			decode_dddddd_read(r, dddddd);
 
-			writePmem<Movem_ea>(op, r);
+			writePmem<Inst>(op, r);
 		}
+	}
+
+	void JitOps::op_Movem_ea(TWord op)
+	{
+		movem<Movem_ea>(op);
+	}
+
+	void JitOps::op_Movem_aa(TWord op)
+	{
+		movem<Movem_aa>(op);
 	}
 
 	void JitOps::op_Movep_ppea(TWord op)

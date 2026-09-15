@@ -329,25 +329,29 @@ namespace dsp56k
 		const TWord ddddd		= getFieldValue<Movec_xx,Field_DDDDD>(op);
 		decode_ddddd_pcr_write( ddddd, TReg24(iiiiiiii) );
 	}
-	inline void DSP::op_Movem_ea(const TWord op)
+	template <Instruction Inst> void DSP::movem(const TWord op)
 	{
-		const auto	write	= getFieldValue<Movem_ea,Field_W>(op);
-		const TWord dddddd	= getFieldValue<Movem_ea,Field_dddddd>(op);
+		const auto	write	= getFieldValue<Inst,Field_W>(op);
+		const TWord dddddd	= getFieldValue<Inst,Field_dddddd>(op);
 
 		if( write )
 		{
-			const auto m = readMem<Movem_ea>(op, MemArea_P);
+			const auto m = readMem<Inst>(op, MemArea_P);
 			decode_dddddd_write( dddddd, TReg24(m));
 		}
 		else
 		{
-			const TWord ea = effectiveAddress<Movem_ea>(op);
+			const TWord ea = effectiveAddress<Inst>(op);
 			memWriteP(ea, decode_dddddd_read(dddddd).toWord() );
 		}
 	}
+	inline void DSP::op_Movem_ea(const TWord op)
+	{
+		movem<Movem_ea>(op);
+	}
 	inline void DSP::op_Movem_aa(const TWord op)
 	{
-		errNotImplemented("MOVE(M) S,P:aa");
+		movem<Movem_aa>(op);
 	}
 	inline void DSP::op_Movep_ppea(const TWord op)
 	{

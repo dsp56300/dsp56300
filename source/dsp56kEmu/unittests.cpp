@@ -3927,6 +3927,66 @@ namespace dsp56k
 			verify(dsp.regs().r[2].var == 0x123456);
 		});
 
+		// op_Movem_aa, absolute short P addresses. Results from sim56300: its 56303 model runs these directly, the
+		// 56362 model crashes on low P memory but gives the same results for the long absolute forms.
+		runTest([&]()
+		{
+			dsp.memory().set(MemArea_P, 0x17, 0);
+			dsp.x0(TWord(0x876543));
+			emit(0x071704);										// move x0,p:<$17
+		},
+			[&]()
+		{
+			verify(dsp.memory().get(MemArea_P, 0x17) == 0x876543);
+		});
+
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dsp.memory().set(MemArea_P, 0x17, 0x876543);
+			emit(0x07970e);										// move p:<$17,a
+		},
+			[&]()
+		{
+			verify(dsp.aluA().var == 0xff876543000000);
+		});
+
+		// SSH as the source post-decrements SP, SSH as the destination pre-increments it
+		runTest([&]()
+		{
+			dsp.memory().set(MemArea_P, 0x17, 0);
+			dsp.regs().sp.var = 2;
+			hiword(dsp.reg.ss[2], TReg24(0xabcdef));
+			emit(0x07173c);										// move ssh,p:<$17
+		},
+			[&]()
+		{
+			verify(dsp.memory().get(MemArea_P, 0x17) == 0xabcdef);
+			verify(dsp.regs().sp.var == 1);
+		});
+
+		runTest([&]()
+		{
+			dsp.memory().set(MemArea_P, 0x17, 0x876543);
+			dsp.regs().sp.var = 1;
+			emit(0x07973c);										// move p:<$17,ssh
+		},
+			[&]()
+		{
+			verify(dsp.regs().sp.var == 2);
+			verify(hiword(dsp.reg.ss[2]).var == 0x876543);
+		});
+
+		runTest([&]()
+		{
+			dsp.memory().set(MemArea_P, 0x3f, 0x000305);
+			emit(0x07bf39);										// move p:<$3f,sr
+		},
+			[&]()
+		{
+			verify(dsp.getSR().var == 0x000305);
+		});
+
 		// op_Movex_ea
 		runTest([&]()
 		{
@@ -6815,6 +6875,7 @@ namespace dsp56k
 		repAtVolatileAddress();
 		repTwoWordInstruction();
 		adcSbcCarryChain();
+		movemShortWritesCode();
 		conditionalCallAtVectorAddress();
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
@@ -7292,6 +7353,39 @@ namespace dsp56k
 
 			base += 0x40;
 		}
+	}
+
+	/*	MOVE(M) with an absolute short address writes into the low P memory, where firmware patches its vectors
+		and loads code. A block holding such a write has to end there so the JIT drops any block it overwrote,
+		or the second call below still runs the nop instead of the inc a that replaced it. sim56300: a = 1 and
+		the stack is empty again.
+	*/
+	void UnitTests::movemShortWritesCode()
+	{
+		enableDynamicFastInterrupts(true);
+
+		dsp.resetHW();
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.x0(TWord(0x000008));								// inc a
+
+		emitToMemory(0x000000, 0, 0x3e);						// nop, replaced below
+		emitToMemory("rts", 0x3f);
+
+		TWord pc = 0x100;
+		pc = emitToMemory(0x0d003e, 0, pc);						// jsr <$3e, builds the block with the nop
+		pc = emitToMemory(0x073e04, 0, pc);						// move x0,p:<$3e
+		pc = emitToMemory(0x0d003e, 0, pc);						// jsr <$3e
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.memory().get(MemArea_P, 0x3e) == 0x000008);
+		verify(dsp.aluA().var == 1);
+		verify(dsp.regs().sp.var == 0);
+
+		enableDynamicFastInterrupts(false);
 	}
 
 	/*	A conditional call in the vector region. This is a GUARD, not a reproduction: it passes even
