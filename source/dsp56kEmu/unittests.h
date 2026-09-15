@@ -212,6 +212,7 @@ namespace  dsp56k
 		void trapContinues();
 		void loopEndFollowsLA();
 		void loopEndFollowsLAFromInterrupt();
+		void movepWritesRegister();
 		void conditionalCallAtVectorAddress();
 		void callInsideLoopAtVectorAddress();
 		void do_callAtLoopEnd();

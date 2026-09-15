@@ -1037,6 +1037,8 @@ namespace dsp56k
 				const auto writePeriph = getFieldValue(_inst, Field_W, _op);
 				if (writePeriph)
 					readf(Field_dddddd);
+				else
+					writef(Field_dddddd);
 			}
 			break;
 		case Mpy_S1S2D:

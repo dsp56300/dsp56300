@@ -6972,6 +6972,7 @@ namespace dsp56k
 		trapContinues();
 		loopEndFollowsLA();
 		loopEndFollowsLAFromInterrupt();
+		movepWritesRegister();
 		conditionalCallAtVectorAddress();
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
@@ -7667,8 +7668,9 @@ namespace dsp56k
 	}
 
 	/*	The same through an interrupt, which is how firmware usually grows a running main loop: a fast interrupt whose
-		vector writes LA. IRQA is pending while the reset IPL masks it and is unmasked inside the loop, so it arrives at
-		the same point in both engines, early in the first pass and away from either loop end.
+		vector writes LA, either as an immediate or read from a peripheral the way a host command does. IRQA is pending
+		while the reset IPL masks it and is unmasked inside the loop, so it arrives at the same point in both engines,
+		early in the first pass and away from either loop end.
 	*/
 	void UnitTests::loopEndFollowsLAFromInterrupt()
 	{
@@ -7678,12 +7680,15 @@ namespace dsp56k
 			TWord doLoopEnd;
 			TWord newLoopEnd;
 			TWord r4r5;
+			bool fromPeripheral;
 		};
 
 		static constexpr Case cases[] =
 		{
-			{ 0x800, 0x808, 0x80a, 2 },		// moved out
-			{ 0x900, 0x90a, 0x908, 0 },		// moved in
+			{ 0x800, 0x808, 0x80a, 2, false },		// moved out
+			{ 0x900, 0x90a, 0x908, 0, false },		// moved in
+			{ 0xa00, 0xa08, 0xa0a, 2, true },		// moved out by movep x:<<$ffffc5,la
+			{ 0xb00, 0xb0a, 0xb08, 0, true },		// moved in by movep x:<<$ffffc5,la
 		};
 
 		for(const auto& c : cases)
@@ -7693,7 +7698,16 @@ namespace dsp56k
 			for(auto r = 0; r < 6; ++r)
 				dsp.regs().r[r].var = 0;
 
-			emitToMemory(0x05f43e, c.newLoopEnd, 0x10);				// IRQA vector: move #>newLoopEnd,la
+			if(c.fromPeripheral)
+			{
+				peripheralsX.write(0xffffc5, c.newLoopEnd);
+				emitToMemory(0x087e05, 0, 0x10);					// IRQA vector: movep x:<<$ffffc5,la
+				emitToMemory(0x000000, 0, 0x11);					// nop, the second instruction of the fast interrupt
+			}
+			else
+			{
+				emitToMemory(0x05f43e, c.newLoopEnd, 0x10);			// IRQA vector: move #>newLoopEnd,la
+			}
 
 			TWord pc = c.base;
 			pc = emitToMemory(0x000203, c.doLoopEnd, pc);			// +0: do forever
@@ -7726,6 +7740,34 @@ namespace dsp56k
 			verify(dsp.regs().sp.var == 0);
 			verify((dsp.getSR().var & (SR_LF | SR_FV)) == 0);
 		}
+	}
+
+	/*	MOVEP from an I/O address into a register writes that register, and the JIT's register analysis has to know it.
+		Here it is a modulo register, which changes how the address register steps in the same block. sim56300: m0 = 3
+		read from a peripheral turns r0 = 2 into 3 and then 0 after two (r0)+.
+	*/
+	void UnitTests::movepWritesRegister()
+	{
+		dsp.resetHW();
+		dsp.regs().r[0].var = 2;
+		peripheralsX.write(0xffffc5, 3);
+
+		TWord pc = 0xc00;
+		pc = emitToMemory(0x086005, 0, pc);						// movep x:<<$ffffc5,m0
+		pc = emitToMemory("move (r0)+", pc);
+		pc = emitToMemory("move (r0)+", pc);
+		emitToMemory("rts", pc);
+
+		pc = 0x100;
+		pc = emitToMemory("jsr $c00", pc);
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.regs().m[0].var == 3);
+		verify(dsp.regs().r[0].var == 0);
 	}
 
 	/*	A conditional call in the vector region. This is a GUARD, not a reproduction: it passes even
