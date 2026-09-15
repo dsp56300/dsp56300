@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <cstdlib>
 #include "dsp.h"
 #include "interrupts.h"
 #include "jitemitter.h"
@@ -832,6 +834,18 @@ namespace dsp56k
 		const auto childrenEstablishPc = exitsOnlyToChildren
 			&& (!child || child->establishesPc())
 			&& (!nonBranchChild || nonBranchChild->establishesPc());
+
+		if(fastInterruptMode == JitOps::FastInterruptMode::Dynamic && info.terminationReason != JitBlockInfo::TerminationReason::PopPC && info.branchTarget == g_invalidAddress)
+		{
+			/*	Ordinary code that fell into the vector region (a plain jump into it, or the OS
+				running vector-area code) continues at the next address like anywhere else. The
+				write above the op loop is not enough: the ops may have flushed the pool since,
+				so establish the PC again here as the last thing the block does. A real fast
+				interrupt overrides this anyway, DSP::execInterrupt restores the interrupted PC.
+			*/
+			DspValue pc(*this, pcNext, DspValue::Immediate24);
+			m_dspRegPool.write(PoolReg::DspPC, pc);
+		}
 
 		const auto pcWritten = m_dspRegPool.isWritten(PoolReg::DspPC);
 

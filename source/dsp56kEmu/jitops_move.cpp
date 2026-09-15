@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <cstdlib>
 #include "jitops.h"
 #include "jitdspmode.h"
 
@@ -509,10 +511,10 @@ namespace dsp56k
 		const EMemArea sp = getFieldValue<Movep_ppea, Field_s>(op) ? MemArea_Y : MemArea_X;
 		const EMemArea sm = getFieldValueMemArea<Movep_ppea>(op);
 
-		auto ea = effectiveAddress<Movep_ppea>(op);
-
 		if (write)
 		{
+			auto ea = effectiveAddress<Movep_ppea>(op);
+
 			if (mmmrrr == MMMRRR_ImmediateData)
 			{
 				m_block.mem().writePeriph(sp, pp, ea);
@@ -528,7 +530,19 @@ namespace dsp56k
 		{
 			DspValue r(m_block);
 			m_block.mem().readPeriph(r, sp, pp, Movep_ppea);
-			writeMemOrPeriph(sm, ea, r);
+
+			if (sm == MemArea_P)
+			{
+				// "movep x:<<M_HRX,p:(r0)+" is how the Nord Modular kernel links module code into
+				// program memory. Needs the same self-modifying-code bookkeeping as movem, or the
+				// JIT keeps executing the blocks it compiled from the previous code.
+				writePmem<Movep_ppea>(op, r);
+			}
+			else
+			{
+				auto ea = effectiveAddress<Movep_ppea>(op);
+				writeMemOrPeriph(sm, ea, r);
+			}
 		}
 	}
 

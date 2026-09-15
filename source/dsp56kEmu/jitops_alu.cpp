@@ -875,7 +875,13 @@ namespace dsp56k
 		const auto D = getFieldValue<Cmpm_S1S2, Field_d>(op);
 		const auto JJJ = getFieldValue<Cmpm_S1S2, Field_JJJ>(op);
 		const auto r = decode_JJJ_read_56(JJJ, !D);
-		alu_cmp(D, r64(r.get()), true);
+
+		// CMPM takes the magnitude of both operands. When S1 is the other accumulator, the decoder hands
+		// out that accumulator's live register, and alu_cmp's abs would be applied to the accumulator
+		// itself: "cmpm a,b" turned A into |A|. Work on a copy, CMPM does not modify S1.
+		const RegGP s1(m_block);
+		m_asm.mov(r64(s1), r64(r.get()));
+		alu_cmp(D, r64(s1), true);
 	}
 
 	void JitOps::op_Cmpu_S1S2(TWord op)

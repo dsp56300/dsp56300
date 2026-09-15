@@ -256,7 +256,10 @@ namespace dsp56k
 		else
 		{
 			m_block.mem().readPeriph(r, _area, qAddr, Inst);
-			writeMem<Inst>(op, r);
+			if (getFieldValueMemArea<Inst>(op) == MemArea_P)
+				writePmem<Inst>(op, r);		// self-modifying code bookkeeping, see op_Movep_ppea
+			else
+				writeMem<Inst>(op, r);
 		}
 	}
 

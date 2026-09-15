@@ -58,6 +58,8 @@ namespace dsp56k
 		void runCheckLoopRegs(TWord _pc) noexcept;
 
 		const JitConfig& getConfig() const { return m_config; }
+		const JitBlockChain* getCurrentChain() const { return m_currentChain; }	// for tools that inspect compiled blocks
+
 		JitConfig getConfig(TWord _pc) const;
 		void setConfig(const JitConfig& _config) { m_config = _config; }
 		void resetHW();
