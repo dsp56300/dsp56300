@@ -454,6 +454,7 @@ namespace dsp56k
 		uint32_t m_readRX = 0;
 		uint32_t m_txSlotCounter = 0;
 		uint32_t m_txFrameCounter = 0;
+		uint32_t m_txUnderrunSlots = 0;				// bit per transmit slot that underran when it was last sent
 		uint32_t m_rxSlotCounter = 0;
 		uint32_t m_rxFrameCounter = 0;
 

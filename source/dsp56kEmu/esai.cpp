@@ -42,6 +42,7 @@ namespace dsp56k
 		m_readRX = 0;
 		m_txSlotCounter = 0;
 		m_txFrameCounter = 0;
+		m_txUnderrunSlots = 0;
 		m_rxSlotCounter = 0;
 		m_rxFrameCounter = 0;
 
@@ -201,6 +202,7 @@ namespace dsp56k
 			{
 				m_txSlotCounter = 0;
 				m_txFrame.clear();
+				m_txUnderrunSlots = 0;
 			}
 
 			// Note: cannot cast m_periph directly here because we might be a Y peripheral
@@ -387,10 +389,24 @@ namespace dsp56k
 
 //		m_tx.fill(0);
 
+		// Firmware may enable slots that it does not write every frame, and the hardware underruns in them just the
+		// same (TUE set, the previous word sent again). Report when a slot starts and stops underrunning, not per frame
+		const auto slotBit = 1u << m_txSlotCounter;
+
 		if((m_writtenTX & tem) != tem)
 		{
-			LOG("ESAI transmit underrun, written is " << HEX(m_writtenTX) << ", enabled is " << HEX(tem));
+			if(!(m_txUnderrunSlots & slotBit))
+			{
+				LOG("ESAI transmit underrun in slot " << m_txSlotCounter << " from frame " << m_txFrameCounter
+					<< ", written is " << HEX(m_writtenTX) << ", enabled is " << HEX(tem));
+			}
+			m_txUnderrunSlots |= slotBit;
 			m_sr.set(M_TUE);
+		}
+		else if(m_txUnderrunSlots & slotBit)
+		{
+			LOG("ESAI transmit underrun in slot " << m_txSlotCounter << " ended in frame " << m_txFrameCounter);
+			m_txUnderrunSlots &= ~slotBit;
 		}
 
 		m_sr.set(M_TDE);
