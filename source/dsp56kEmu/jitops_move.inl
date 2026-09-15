@@ -280,6 +280,26 @@ namespace dsp56k
 			});
 		}
 	}
+
+	// MOVEP between P memory and an I/O address, shared by the high (pp) and the low (qq) address forms
+	template <Instruction Inst> void JitOps::movep_Pea(const TWord op, const EMemArea _periphArea, const TWord _periphAddress)
+	{
+		const auto write = getFieldValue<Inst, Field_W>(op);
+
+		DspValue v(m_block);
+
+		if(write)
+		{
+			readMem<Inst>(v, op, MemArea_P);
+			m_block.mem().writePeriph(_periphArea, _periphAddress, v);
+		}
+		else
+		{
+			m_block.mem().readPeriph(v, _periphArea, _periphAddress, Inst);
+
+			writePmem<Inst>(op, v);
+		}
+	}
 	template<Instruction Inst> void JitOps::copy24ToDDDDDD(const TWord _opA, const TWord _dddddd, bool _usePooledTemp, const std::function<void(DspValue&)>& _readCallback)
 	{
 		const auto regWrite = getRegisterDDDDDD(_dddddd);

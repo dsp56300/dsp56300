@@ -516,23 +516,14 @@ namespace dsp56k
 	void JitOps::op_Movep_eapp(TWord op)
 	{
 		// 0000100sW1MMMRRR01pppppp
-		const TWord		pppppp		= getFieldValue<Movep_eapp,Field_pppppp>(op);
-		const EMemArea	periphArea	= getFieldValue<Movep_eapp,Field_s>(op) ? MemArea_Y : MemArea_X;
-		const auto		write		= getFieldValue<Movep_eapp,Field_W>(op);
+		const EMemArea periphArea = getFieldValue<Movep_eapp,Field_s>(op) ? MemArea_Y : MemArea_X;
+		movep_Pea<Movep_eapp>(op, periphArea, getFieldValue<Movep_eapp,Field_pppppp>(op) + 0xffffc0);
+	}
 
-		DspValue v(m_block);
-
-		if(write)
-		{
-			readMem<Movep_eapp>(v, op, MemArea_P);
-			m_block.mem().writePeriph(periphArea, pppppp + 0xffffc0, v);
-		}
-		else
-		{
-			m_block.mem().readPeriph(v, periphArea, pppppp + 0xffffc0, Movep_eapp);
-
-			writePmem<Movep_eapp>(op, v);
-		}
+	void JitOps::op_Movep_eaqq(TWord op)
+	{
+		// 000000001WMMMRRR0Sqqqqqq
+		movep_Pea<Movep_eaqq>(op, getFieldValueMemArea<Movep_eaqq>(op), getFieldValue<Movep_eaqq,Field_qqqqqq>(op) + 0xffff80);
 	}
 
 	void JitOps::op_Movep_SXqq(TWord op)

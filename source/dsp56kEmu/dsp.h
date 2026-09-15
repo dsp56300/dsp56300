@@ -1397,6 +1397,9 @@ namespace dsp56k
 		// MOVE(M), shared by the effective address and the absolute short address forms
 		template <Instruction Inst> void movem(TWord op);
 
+		// MOVEP between P memory and an I/O address, shared by the high (pp) and the low (qq) address forms
+		template <Instruction Inst> void movep_Pea(TWord op, EMemArea _periphArea, TWord _periphAddress);
+
 		// Memory Write
 		template <Instruction Inst, std::enable_if_t<has3Fields<Inst, Field_MMM, Field_RRR, Field_S>()>* = nullptr>
 		void writeMem(TWord op, TWord value);

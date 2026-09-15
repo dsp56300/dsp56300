@@ -207,6 +207,7 @@ namespace  dsp56k
 		void repTwoWordInstruction();
 		void adcSbcCarryChain();
 		void movemShortWritesCode();
+		void movepWritesCode();
 		void conditionalCallAtVectorAddress();
 		void callInsideLoopAtVectorAddress();
 		void do_callAtLoopEnd();

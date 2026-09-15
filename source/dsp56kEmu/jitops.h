@@ -233,7 +233,7 @@ namespace dsp56k
 		void op_Movep_Xqqea(TWord op);
 		void op_Movep_Yqqea(TWord op);
 		void op_Movep_eapp(TWord op);
-		void op_Movep_eaqq(TWord op)			{ errNotImplemented(op); }
+		void op_Movep_eaqq(TWord op);
 		void op_Movep_Spp(TWord op);
 		void op_Movep_SXqq(TWord op);
 		void op_Movep_SYqq(TWord op);
@@ -662,6 +662,7 @@ namespace dsp56k
 		template<Instruction Inst> void move_L(TWord op);
 		template<Instruction Inst> void movep_qqea(TWord op, EMemArea _area);
 		template<Instruction Inst> void movep_sqq(TWord op, EMemArea _area);
+		template<Instruction Inst> void movep_Pea(TWord op, EMemArea _periphArea, TWord _periphAddress);
 
 		void copy24ToDDDDDD(TWord _dddddd, bool _usePooledTemp, const std::function<void(DspValue&)>& _readCallback, bool _readReg = false);
 		template<Instruction Inst> void copy24ToDDDDDD(TWord opA, TWord _dddddd, bool _usePooledTemp, const std::function<void(DspValue&)>& _readCallback);

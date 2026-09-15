@@ -4415,6 +4415,58 @@ namespace dsp56k
 			verify(dsp.memRead(MemArea_P, 0x23) == 0xc0de);
 		});
 
+		// op_Movep_eaqq, P memory to and from the low I/O addresses in X and Y. Encodings from the sim56300
+		// assembler, which also confirms the address register updates and both directions.
+		runTest([&]()
+		{
+			peripheralsX.write(0xffff85, 0);
+			dsp.memWriteP(0x1000, 0x123456);
+			dsp.regs().r[0].var = 0x1000;
+			emit(0x00d805);										// movep p:(r0)+,x:<<$ffff85
+		},
+			[&]()
+		{
+			verify(dsp.memReadPeriph(MemArea_X, 0xffff85, Movep_eaqq) == 0x123456);
+			verify(dsp.regs().r[0].var == 0x1001);
+		});
+
+		runTest([&]()
+		{
+			peripheralsX.write(0xffff85, 0xc0ffee);
+			dsp.memWriteP(0x1010, 0);
+			dsp.regs().r[1].var = 0x1010;
+			emit(0x00a105);										// movep x:<<$ffff85,p:(r1)
+		},
+			[&]()
+		{
+			verify(dsp.memRead(MemArea_P, 0x1010) == 0xc0ffee);
+			verify(dsp.regs().r[1].var == 0x1010);
+		});
+
+		runTest([&]()
+		{
+			peripheralsY.write(0xffff8c, 0);
+			dsp.memWriteP(0x1011, 0x654321);
+			emit(0x00f04c, 0x001011);							// movep p:>$1011,y:<<$ffff8c
+		},
+			[&]()
+		{
+			verify(dsp.memReadPeriph(MemArea_Y, 0xffff8c, Movep_eaqq) == 0x654321);
+		});
+
+		runTest([&]()
+		{
+			peripheralsY.write(0xffff8c, 0xabcdef);
+			dsp.memWriteP(0x1020, 0);
+			dsp.regs().r[2].var = 0x1021;
+			emit(0x00ba4c);										// movep y:<<$ffff8c,p:-(r2)
+		},
+			[&]()
+		{
+			verify(dsp.memRead(MemArea_P, 0x1020) == 0xabcdef);
+			verify(dsp.regs().r[2].var == 0x1020);
+		});
+
 		// op_Movep_Xqqea
 		runTest([&]()
 		{
@@ -6876,6 +6928,7 @@ namespace dsp56k
 		repTwoWordInstruction();
 		adcSbcCarryChain();
 		movemShortWritesCode();
+		movepWritesCode();
 		conditionalCallAtVectorAddress();
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
@@ -7386,6 +7439,34 @@ namespace dsp56k
 		verify(dsp.regs().sp.var == 0);
 
 		enableDynamicFastInterrupts(false);
+	}
+
+	/*	MOVEP from a low I/O address into P memory is a P write too: the block holding it has to end there, or the
+		second call below still runs the nop that the peripheral value replaced. sim56300: a = 1, stack empty again.
+	*/
+	void UnitTests::movepWritesCode()
+	{
+		dsp.resetHW();
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		peripheralsY.write(0xffff8c, 0x000008);					// inc a
+		dsp.regs().r[1].var = 0x1000;
+
+		emitToMemory(0x000000, 0, 0x1000);						// nop, replaced below
+		emitToMemory("rts", 0x1001);
+
+		TWord pc = 0x100;
+		pc = emitToMemory(0x0bf080, 0x001000, pc);				// jsr >$1000, builds the block with the nop
+		pc = emitToMemory(0x00a14c, 0, pc);						// movep y:<<$ffff8c,p:(r1)
+		pc = emitToMemory(0x0bf080, 0x001000, pc);				// jsr >$1000
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.memory().get(MemArea_P, 0x1000) == 0x000008);
+		verify(dsp.aluA().var == 1);
+		verify(dsp.regs().sp.var == 0);
 	}
 
 	/*	A conditional call in the vector region. This is a GUARD, not a reproduction: it passes even

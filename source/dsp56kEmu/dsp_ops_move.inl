@@ -409,22 +409,26 @@ namespace dsp56k
 			writeMem<Movep_Yqqea>(op, memReadPeriphFFFF80( area, qAddr, Movep_Yqqea ));
 		}
 	}
+	template <Instruction Inst> void DSP::movep_Pea(const TWord op, const EMemArea _periphArea, const TWord _periphAddress)
+	{
+		const auto	write	= getFieldValue<Inst,Field_W>(op);
+		const auto	ea		= effectiveAddress<Inst>(op);
+
+		if(write)
+			memWritePeriph(_periphArea, _periphAddress, memRead(MemArea_P, ea));
+		else
+			memWriteP(ea, memReadPeriph(_periphArea, _periphAddress, Inst));
+	}
 	inline void DSP::op_Movep_eapp(const TWord op)
 	{
 		// 0000100sW1MMMRRR01pppppp
-		const TWord		pppppp		= getFieldValue<Movep_eapp,Field_pppppp>(op);
-		const EMemArea	periphArea	= getFieldValue<Movep_eapp,Field_s>(op) ? MemArea_Y : MemArea_X;
-		const auto		write		= getFieldValue<Movep_eapp,Field_W>(op);
-		const auto		ea			= effectiveAddress<Movep_ppea>(op);
-
-		if(write)
-			memWritePeriphFFFFC0(periphArea, pppppp, memRead(MemArea_P, ea));
-		else
-			memWriteP(ea, memReadPeriphFFFFC0(periphArea, pppppp, Movep_eapp));
+		const EMemArea periphArea = getFieldValue<Movep_eapp,Field_s>(op) ? MemArea_Y : MemArea_X;
+		movep_Pea<Movep_eapp>(op, periphArea, getFieldValue<Movep_eapp,Field_pppppp>(op) + 0xffffc0);
 	}
 	inline void DSP::op_Movep_eaqq(const TWord op)
 	{
-		errNotImplemented("MOVE");
+		// 000000001WMMMRRR0Sqqqqqq
+		movep_Pea<Movep_eaqq>(op, getFieldValueMemArea<Movep_eaqq>(op), getFieldValue<Movep_eaqq,Field_qqqqqq>(op) + 0xffff80);
 	}
 	inline void DSP::op_Movep_Spp(const TWord op)
 	{
