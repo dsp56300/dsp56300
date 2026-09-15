@@ -47,17 +47,27 @@ namespace dsp56k
 			if(e.block)
 				destroy(e.block);
 
-			if(e.singleOpCache)
-			{
-				for (const auto& it : *e.singleOpCache)
-					release(it.second);
-
-				delete e.singleOpCache;
-				e.singleOpCache = nullptr;
-			}
+			releaseSingleOpCache(static_cast<TWord>(i));
 		}
 
 		m_jitCache.clear();
+	}
+
+	void JitBlockChain::releaseSingleOpCache(const TWord _pc)
+	{
+		if(_pc >= m_jitCache.size())
+			return;
+
+		auto& e = m_jitCache[_pc];
+
+		if(!e.singleOpCache)
+			return;
+
+		for (const auto& it : *e.singleOpCache)
+			release(it.second);
+
+		delete e.singleOpCache;
+		e.singleOpCache = nullptr;
 	}
 
 	bool JitBlockChain::canBeDefaultExecuted(TWord _pc) const

@@ -55,6 +55,7 @@ namespace dsp56k
 		void runCheckPMemWrite(TWord _pc) noexcept;
 		void runCheckPMemWriteAndModeChange(TWord _pc) noexcept;
 		void runCheckModeChange(TWord _pc) noexcept;
+		void runCheckLoopEnd(TWord _pc) noexcept;
 
 		const JitConfig& getConfig() const { return m_config; }
 		JitConfig getConfig(TWord _pc) const;
@@ -105,6 +106,8 @@ namespace dsp56k
 
 	private:
 		void checkPMemWrite() noexcept;
+		void checkLoopEnd() noexcept;
+		void moveLoopEnd(TWord _begin, TWord _end);
 
 		DSP& m_dsp;
 		JitTrampoline m_trampoline;

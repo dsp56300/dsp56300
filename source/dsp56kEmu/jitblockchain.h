@@ -69,6 +69,9 @@ namespace dsp56k
 
 		void notifyPMemWrite(TWord _addr, bool _isCurrentChain);
 
+		// drop the single instruction blocks kept for reuse at this address
+		void releaseSingleOpCache(TWord _pc);
+
 		size_t getFuncSize() const
 		{
 			return m_jitFuncs.size();

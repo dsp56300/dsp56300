@@ -6970,6 +6970,8 @@ namespace dsp56k
 		do_forever();
 		dorShortAddress();
 		trapContinues();
+		loopEndFollowsLA();
+		loopEndFollowsLAFromInterrupt();
 		conditionalCallAtVectorAddress();
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
@@ -7594,6 +7596,136 @@ namespace dsp56k
 		verify(dsp.aluB().var == 0x00fedcba987654);
 		verify((dsp.getSR().var & 0xff) == 0);
 		verify(dsp.regs().sp.var == 0);
+	}
+
+	/*	The DSP ends a loop by comparing the address it fetches with LA, so writing LA moves the end of the loop that is
+		running. The JIT compiles blocks against its loop registry instead and has to move the registry along, see
+		Jit::checkLoopEnd. sim56300, a DO FOREVER that writes LA in its first instruction and leaves through ENDDO once b
+		has counted down: moved out from $306 to $308 all three counters reach 2, moved in from $308 to $306 only r0 does.
+		Running the DO again loads LA from its operand, so a loop whose end was moved has to end there once the write is gone.
+
+		The write is not directly in front of either end: the DSP has already fetched the next instruction and compares it
+		with the old LA, which neither engine models.
+	*/
+	void UnitTests::loopEndFollowsLA()
+	{
+		struct Case
+		{
+			TWord base;
+			TWord doLoopEnd;		// last instruction of the loop according to the DO
+			TWord newLoopEnd;		// written to LA in the loop body, 0 = no write
+			TWord r1r2;
+		};
+
+		static constexpr Case cases[] =
+		{
+			{ 0x300, 0x306, 0x308, 2 },		// moved out
+			{ 0x700, 0x708, 0x706, 0 },		// moved in
+			{ 0x300, 0x306, 0x000, 0 },		// the first program again without the write: back at the DO's end
+		};
+
+		for(const auto& c : cases)
+		{
+			dsp.resetHW();
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(3)));
+			for(auto r = 0; r < 3; ++r)
+				dsp.regs().r[r].var = 0;
+
+			TWord pc = c.base;
+			pc = emitToMemory(0x000203, c.doLoopEnd, pc);			// +0: do forever
+			if(c.newLoopEnd)
+			{
+				pc = emitToMemory(0x05f43e, c.newLoopEnd, pc);		// +2: move #>newLoopEnd,la
+			}
+			else
+			{
+				pc = emitToMemory("nop", pc);
+				pc = emitToMemory("nop", pc);
+			}
+			pc = emitToMemory("dec b", pc);							// +4
+			pc = emitToMemory(0x0ea000 | (c.base + 0x10), 0, pc);	// +5: jeq +$10
+			pc = emitToMemory("move (r0)+", pc);					// +6
+			pc = emitToMemory("move (r1)+", pc);					// +7
+			emitToMemory("move (r2)+", pc);							// +8
+			emitToMemory("enddo", c.base + 0x10);
+			emitToMemory("rts", c.base + 0x11);
+
+			pc = 0x100;
+			pc = emitToMemory(0x0d0000 | c.base, 0, pc);			// jsr base
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			dsp.setPC(0x100);
+			execUntil(returnPC, 1000);
+
+			verify(dsp.regs().r[0].var == 2);
+			verify(dsp.regs().r[1].var == c.r1r2);
+			verify(dsp.regs().r[2].var == c.r1r2);
+			verify(dsp.regs().sp.var == 0);
+			verify((dsp.getSR().var & (SR_LF | SR_FV)) == 0);
+		}
+	}
+
+	/*	The same through an interrupt, which is how firmware usually grows a running main loop: a fast interrupt whose
+		vector writes LA. IRQA is pending while the reset IPL masks it and is unmasked inside the loop, so it arrives at
+		the same point in both engines, early in the first pass and away from either loop end.
+	*/
+	void UnitTests::loopEndFollowsLAFromInterrupt()
+	{
+		struct Case
+		{
+			TWord base;
+			TWord doLoopEnd;
+			TWord newLoopEnd;
+			TWord r4r5;
+		};
+
+		static constexpr Case cases[] =
+		{
+			{ 0x800, 0x808, 0x80a, 2 },		// moved out
+			{ 0x900, 0x90a, 0x908, 0 },		// moved in
+		};
+
+		for(const auto& c : cases)
+		{
+			dsp.resetHW();
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(3)));
+			for(auto r = 0; r < 6; ++r)
+				dsp.regs().r[r].var = 0;
+
+			emitToMemory(0x05f43e, c.newLoopEnd, 0x10);				// IRQA vector: move #>newLoopEnd,la
+
+			TWord pc = c.base;
+			pc = emitToMemory(0x000203, c.doLoopEnd, pc);			// +0: do forever
+			pc = emitToMemory(0x00fcb8, 0, pc);						// +2: andi #$fc,mr, IRQA is taken after this
+			pc = emitToMemory("dec b", pc);							// +3
+			pc = emitToMemory(0x0ea000 | (c.base + 0x10), 0, pc);	// +4: jeq +$10
+			pc = emitToMemory("move (r3)+", pc);					// +5
+			pc = emitToMemory("move (r0)+", pc);					// +6
+			pc = emitToMemory("move (r1)+", pc);					// +7
+			pc = emitToMemory("move (r2)+", pc);					// +8
+			pc = emitToMemory("move (r4)+", pc);					// +9
+			emitToMemory("move (r5)+", pc);							// +a
+			emitToMemory("enddo", c.base + 0x10);
+			emitToMemory("rts", c.base + 0x11);
+
+			pc = 0x100;
+			pc = emitToMemory(0x0d0000 | c.base, 0, pc);			// jsr base
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			dsp.injectInterrupt(0x10);
+
+			dsp.setPC(0x100);
+			execUntil(returnPC, 1000);
+
+			for(auto r = 0; r < 4; ++r)
+				verify(dsp.regs().r[r].var == 2);
+			verify(dsp.regs().r[4].var == c.r4r5);
+			verify(dsp.regs().r[5].var == c.r4r5);
+			verify(dsp.regs().sp.var == 0);
+			verify((dsp.getSR().var & (SR_LF | SR_FV)) == 0);
+		}
 	}
 
 	/*	A conditional call in the vector region. This is a GUARD, not a reproduction: it passes even

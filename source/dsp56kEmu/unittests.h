@@ -210,6 +210,8 @@ namespace  dsp56k
 		void movepWritesCode();
 		void dorShortAddress();
 		void trapContinues();
+		void loopEndFollowsLA();
+		void loopEndFollowsLAFromInterrupt();
 		void conditionalCallAtVectorAddress();
 		void callInsideLoopAtVectorAddress();
 		void do_callAtLoopEnd();

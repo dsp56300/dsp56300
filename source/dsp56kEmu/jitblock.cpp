@@ -131,6 +131,11 @@ namespace dsp56k
 
 			Opcodes::getRegisters(written, read, opA, instA, instB);
 
+			// A DO loads LA from its own operand and ENDDO restores the enclosing loop's, both agree with the loop registry.
+			// Any other LA write can move the end of the running loop, see Jit::checkLoopEnd.
+			if(any(written, RegisterMask::LA) && !(flags & OpFlagDo) && instA != Enddo)
+				_info.addFlag(JitBlockInfo::Flags::WritesLA);
+
 			/*	JitOps::rep_exec emits the repeated instruction as part of the REP and continues after both,
 				so the two have to be scanned as one. Scanned separately, anything that ends a block between
 				them - code that already exists at the repeated instruction, a volatile P address, a loop end -
@@ -232,7 +237,15 @@ namespace dsp56k
 			}
 
 			if(getLoopEndAddr(_info.loopEnd, instA, pc, opB))
+			{
 				_info.loopBegin = pc;
+
+				// An LA write moved this loop's end in the registry while it ran. Running the DO again loads LA from the
+				// operand, and only a check after the block can take that back into the registry.
+				const auto it = _loopStarts.find(pc);
+				if(it != _loopStarts.end() && it->second != _info.loopEnd)
+					_info.addFlag(JitBlockInfo::Flags::LoopEndMoved);
+			}
 
 			if(!isRep)
 			{
