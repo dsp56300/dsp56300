@@ -837,14 +837,26 @@ namespace dsp56k
 
 		if(fastInterruptMode == JitOps::FastInterruptMode::Dynamic && info.terminationReason != JitBlockInfo::TerminationReason::PopPC && info.branchTarget == g_invalidAddress)
 		{
-			/*	Ordinary code that fell into the vector region (a plain jump into it, or the OS
-				running vector-area code) continues at the next address like anywhere else. The
-				write above the op loop is not enough: the ops may have flushed the pool since,
-				so establish the PC again here as the last thing the block does. A real fast
-				interrupt overrides this anyway, DSP::execInterrupt restores the interrupted PC.
+			/*	Ordinary code that fell into the vector region (a plain jump into it, or an OS that
+				keeps code there) continues at the next address like anywhere else, so establish the
+				fall-through PC. Only when the DSP is not servicing a fast interrupt though: for a real
+				fast interrupt the PC is the interrupted program's, restored by DSP::execInterrupt, and
+				the block must leave it alone exactly as it always did. Stored straight to memory, the
+				register pool must not start caching the PC in what is usually a fast interrupt block.
 			*/
-			DspValue pc(*this, pcNext, DspValue::Immediate24);
-			m_dspRegPool.write(PoolReg::DspPC, pc);
+			JitOps op(*this, _rt, fastInterruptMode);
+			const RegGP mode(*this);
+			op.getDspProcessingMode(r64(mode));
+			const SkipLabel skip(m_asm);
+			m_asm.cmp(r32(mode), asmjit::Imm(DSP::ProcessingMode::FastInterrupt));
+			m_asm.jz(skip);
+			m_asm.mov(r32(mode), asmjit::Imm(pcNext));
+			const auto pcPtr = m_dspRegPool.makeDspPtr(&m_dsp.regs().pc.var, sizeof(TWord));
+#ifdef HAVE_ARM64
+			m_asm.str(r32(mode), pcPtr);
+#else
+			m_asm.mov(pcPtr, r32(mode));
+#endif
 		}
 
 		const auto pcWritten = m_dspRegPool.isWritten(PoolReg::DspPC);
