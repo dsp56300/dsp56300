@@ -306,6 +306,17 @@ namespace dsp56k
 			return !m_pendingExternalInterrupts.empty();
 		}
 
+		// DSP thread only. Edge triggered sources use it to latch one request until the core takes it
+		bool			hasPendingInterrupt				(const TWord _vba) const
+		{
+			for(size_t i=0; i<m_pendingInterrupts.size(); ++i)
+			{
+				if(m_pendingInterrupts[i] == _vba)
+					return true;
+			}
+			return false;
+		}
+
 		void			clearOpcodeCache				();
 		void			clearOpcodeCache				(TWord _address);
 
