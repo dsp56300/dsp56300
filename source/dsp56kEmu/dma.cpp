@@ -26,8 +26,7 @@ namespace dsp56k
 		using RequestSource = DmaChannel::RequestSource;
 
 		/*
-		Unfortunately the doc is a bit unclear here, at the moment we assume that DMA does never instantly trigger if it is enabled.
-		It needs the request from the peripheral and acts if its state **changes**
+		Whether a channel serves a request that its peripheral raised before the channel was enabled.
 
 		"
 		DMA Channel Enable
@@ -36,8 +35,22 @@ namespace dsp56k
 		single-line, or single-word DMA transfer in the transfer modes that use a requesting
 		device as a trigger."
 
-		For DE based triggers, it says  **triggers a ... transfer**, but for requests it says **enables a .... transfer**, assuming that
-		enabling means just setting it up so that its ready for transfer, but not immediately executing one
+		The manual calls a peripheral request "a regular peripheral request in which the peripheral can not generate a
+		second request until the first one is served". So a request stays raised until a channel serves it, and a
+		channel that is enabled while its peripheral requests serves it right away.
+
+		Firmware on the 56362 relies on that:
+		- An ESAI transmitter in network mode keeps TDE from its last active slot. A channel that is armed after that
+		  slot has to put its first word into slot 0 of the next frame. Without the pending request it only gets the
+		  TDE of slot 0, once slot 0 is loaded already, and every word goes out a slot late.
+		- Firmware that arms a transmit channel right after the frame sync puts the word for slot 1 first into its
+		  block, and firmware that arms a receive channel right after the receive frame sync stores the first word it
+		  gets as the one of slot 0.
+		- Firmware reads the receive register right before it arms a receive channel, which is only needed if a
+		  pending receive request would be served.
+
+		The 56303 keeps waiting for the next request. The 56303 firmware we run arms its ESSI channels with a request
+		pending at boot, so serving it would move those streams by a word, and nothing has been seen that asks for it.
 		*/
 
 		bool checkTrigger(Peripherals56303& _p, const RequestSource _src)
@@ -59,7 +72,6 @@ namespace dsp56k
 
 		bool checkTrigger(Peripherals56362& _p, const RequestSource _src)
 		{
-			return false;
 			switch (_src)
 			{
 			case RequestSource::EsaiReceiveData:			return _p.getEsai().getSR().test(Esai::M_RDF);
