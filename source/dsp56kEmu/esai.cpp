@@ -218,7 +218,14 @@ namespace dsp56k
 				if(!clock.isEnabled())
 					return;
 			}
-			execTX();
+
+			/*	The synthesized slot transfer starts the frame of a transmitter section that has just been switched on. A
+				transmitter that is enabled while others already run joins them at the next frame sync (56362 manual,
+				TE0-TE5) and adds no slot. Firmware that sets TE0-TE3 one bit at a time would otherwise move its frame
+				by three slots against the receive frame of the same ESAI.
+			*/
+			if(!tem)
+				execTX();
 		}
 	}
 
