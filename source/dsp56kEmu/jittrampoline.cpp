@@ -38,6 +38,24 @@ namespace dsp56k
 	{
 	}
 
+	void JitTrampoline::releaseCode(const TJitFunc _func)
+	{
+		if(m_running)
+			m_retiredCode.push_back(_func);
+		else
+			m_dsp.getJit().getRuntime()->release(_func);
+	}
+
+	void JitTrampoline::releaseRetiredCode() noexcept
+	{
+		auto* rt = m_dsp.getJit().getRuntime();
+
+		for (const auto func : m_retiredCode)
+			rt->release(func);
+
+		m_retiredCode.clear();
+	}
+
 	void JitTrampoline::initCodeHolder(asmjit::CodeHolder& _codeHolder)
 	{
 		_codeHolder.init(m_runtime.environment());

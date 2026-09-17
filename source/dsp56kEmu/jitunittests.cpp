@@ -2,6 +2,7 @@
 #include "jitdspregpool.h"
 #include "jitunittests.h"
 
+#include "externalbusdevice.h"
 #include "jitasmjithelpers.h"
 #include "jitblock.h"
 #include "jitblockruntimedata.h"
@@ -65,6 +66,8 @@ namespace dsp56k
 
 		parallelMoveXY();
 		parallelAluMoveSameAccumulator();
+
+		blockDestroyedWhileRunning();
 	}
 
 	JitUnittests::~JitUnittests()
@@ -1168,6 +1171,75 @@ namespace dsp56k
 		{
 			verify(dsp.aluA().var == 0x00000001000000);
 		});
+	}
+
+	/*	Generated code calls peripherals and external bus devices, and those can write P memory. The block that is running
+		may be one of the blocks that such a write destroys, and it has to keep its code until it has returned. Here an
+		external bus device overwrites the first instruction of the block that writes to it. The block runs to its end
+		with the code it was built from, and the next run at that address runs the new instruction.
+	*/
+	void JitUnittests::blockDestroyedWhileRunning()
+	{
+		constexpr TWord g_pc = 0x3000;
+		constexpr TWord g_device = 0x100000;
+		constexpr TWord g_incA = 0x000008;
+
+		struct Device final : IExternalBusDevice
+		{
+			explicit Device(DSP& _dsp) : dsp(_dsp) {}
+
+			TWord read(TWord) override { return 0; }
+
+			void write(TWord, TWord) override
+			{
+				const auto* allocator = dsp.getJit().getRuntime()->allocator();
+
+				usedBefore = allocator->statistics().usedSize();
+				dsp.memWriteP(g_pc, g_incA);
+				usedAfter = allocator->statistics().usedSize();
+			}
+
+			DSP& dsp;
+			size_t usedBefore = 0;
+			size_t usedAfter = 0;
+		};
+
+		Device device(dsp);
+
+		const auto oldConfig = dsp.getJit().getConfig();
+		auto config = oldConfig;
+		config.externalBusBegin = g_device;
+		config.externalBusEnd = g_device + 1;
+		dsp.getJit().setConfig(config);
+		dsp.setExternalBusDevice(&device);
+
+		dsp.resetHW();
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
+
+		TWord pc = g_pc;
+		pc = emitToMemory("inc b", pc);
+		pc = emitToMemory("move b,x:>$100000", pc);
+		pc = emitToMemory("inc b", pc);
+		verify(pc == g_pc + 4);
+		emitToMemory(0x0af080, g_pc, pc);						// jmp >g_pc
+
+		dsp.setPC(g_pc);
+		execStep();
+
+		verify(device.usedAfter == device.usedBefore);			// the block that is running kept its code
+		verify(dsp.getJit().getRuntime()->allocator()->statistics().usedSize() < device.usedBefore);
+		verify(dsp.aluA().var == 0);
+		verify(dsp.aluB().var == 2);
+		verify(dsp.getPC().toWord() == g_pc);
+
+		execStep();
+
+		verify(dsp.aluA().var == 1);
+		verify(dsp.aluB().var == 3);
+
+		dsp.setExternalBusDevice(nullptr);
+		dsp.getJit().setConfig(oldConfig);
 	}
 
 	void JitUnittests::emit(const TWord _opA, TWord _opB, TWord _pc)

@@ -76,6 +76,8 @@ namespace dsp56k
 		void parallelMoveXY();
 		void parallelAluMoveSameAccumulator();
 
+		void blockDestroyedWhileRunning();
+
 		void emit(TWord _opA, TWord _opB = 0, TWord _pc = 0) override;
 		void execStep() override { dsp.execJit(); }
 		using UnitTests::emit;

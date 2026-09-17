@@ -302,7 +302,7 @@ namespace dsp56k
 #endif
 		assert(m_codeSize >= _block->codeSize());
 		m_codeSize -= _block->codeSize();
-		m_jit.getRuntime()->release(_block->getFunc());
+		m_jit.getTrampoline().releaseCode(_block->getFunc());
 
 		m_jit.releaseBlockRuntimeData(_block);
 
