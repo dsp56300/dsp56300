@@ -31,6 +31,14 @@ namespace dsp56k
 
 		const auto& cycles = g_cycles[static_cast<uint32_t>(_inst)];
 
+		/*	Table A-1 has two rows for an absolute short MOVE: "MOVE [x or y]:aa,D" with one clock cycle, and a row that
+			is garbled to "MOVE [x or y]aa" with two. Every other MOVE has a row per direction, so the second one is the
+			write. Both directions used to count two, which made firmware whose audio loop is timed to a number of ESAI
+			frames overrun them.
+		*/
+		if((_inst == Movex_aa || _inst == Movey_aa) && getFieldValue(_inst, Field_W, _op))
+			return 1;
+
 		auto c = std::max(cycles.cycles, 1u);
 
 		if(cycles.pru || cycles.lab || cycles.lim)
