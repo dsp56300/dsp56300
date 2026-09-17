@@ -23,6 +23,7 @@ namespace dsp56k
 		testParallelInstructions();
 		testPeripheralSymbols();
 		testReservedAluEncodings();
+		testAccumulatorSourceEncodings();
 
 		std::cout << "Assembler tests: " << m_passCount << "/" << m_testCount << " passed";
 		if(m_failCount > 0)
@@ -81,6 +82,65 @@ namespace dsp56k
 		}
 
 		++m_passCount;
+	}
+
+	void AssemblerTest::expectAssembles(const char* _text, uint32_t _op)
+	{
+		++m_testCount;
+
+		Assembler assembler;
+		const auto result = assembler.assemble(_text);
+
+		if(!result.success() || result.wordCount != 1 || result.word[0] != _op)
+		{
+			++m_failCount;
+			std::cout << "FAIL: \"" << _text << "\" -> ";
+			if(result.success())
+				std::cout << "0x" << std::hex << result.word[0];
+			else
+				std::cout << "assemble error " << static_cast<int>(result.error);
+			std::cout << ", expected 0x" << std::hex << _op << std::dec << std::endl;
+			return;
+		}
+
+		++m_passCount;
+
+		// and the other direction: the disassembly must name the same instruction
+		roundTrip(_op);
+	}
+
+	void AssemblerTest::testAccumulatorSourceEncodings()
+	{
+		// TFR, CMP, CMPM and Tcc use JJJ=000 for "the other accumulator"; 001 is rnd/not/max/maxm.
+		// Expected words from the Freescale simulator (sim56300 6.3.2.6, asm + disassemble).
+		expectAssembles("tfr a,b", 0x200009);
+		expectAssembles("tfr b,a", 0x200001);
+		expectAssembles("cmpm a,b", 0x20000f);
+		expectAssembles("cmpm b,a", 0x200007);
+		expectAssembles("cmp a,b", 0x20000d);
+		expectAssembles("cmp b,a", 0x200005);
+		expectAssembles("teq a,b", 0x02a008);
+		expectAssembles("teq b,a", 0x02a000);
+		expectAssembles("teq b,a r0,r1", 0x03a001);
+		expectAssembles("tfr x0,a", 0x200041);
+
+		// ADD/SUB keep JJJ=001 for the other accumulator
+		expectAssembles("add a,b", 0x200018);
+		expectAssembles("sub b,a", 0x200014);
+
+		// the 56-bit X/Y sources are not legal for these
+		for(const auto* text : {"tfr x,a", "cmp y,b", "cmpm x,b", "teq x,a"})
+		{
+			++m_testCount;
+			Assembler assembler;
+			if(assembler.assemble(text).success())
+			{
+				++m_failCount;
+				std::cout << "FAIL: \"" << text << "\" assembled, expected an error" << std::endl;
+				continue;
+			}
+			++m_passCount;
+		}
 	}
 
 	void AssemblerTest::expectReserved(uint32_t _opA, uint32_t _opB)
@@ -629,15 +689,16 @@ namespace dsp56k
 
 		// ifcc parallel
 		roundTrip(0x202a10);	// add b,a ifeq
-		roundTrip(0x203115);	// cmp b,a ifge.u (canonical JJJ=1)
-		roundTrip(0x20311d);	// cmp a,b ifge.u (canonical JJJ=1)
+		roundTrip(0x203105);	// cmp b,a ifge.u
+		roundTrip(0x20310d);	// cmp a,b ifge.u
+		roundTrip(0x203115);	// maxm a,b ifge.u
+		roundTrip(0x20311d);	// max a,b ifge.u
 
-		// tfr: JJJ=0 (0x200009) and JJJ=1 (0x200019) both mean "other accumulator",
-		// assembler canonically picks JJJ=1
-		roundTrip(0x200019);	// tfr a,b (JJJ=1, canonical)
+		roundTrip(0x200009);	// tfr a,b
+		roundTrip(0x200019);	// rnd b
 
-		// tcc/tne: JJJ values 0-1 mean "other accumulator" (same as JJJ=1)
-		// Assembler uses JJJ>=4 for non-accumulator sources
+		// tcc/tne: JJJ=000 is the other accumulator, 100-111 are x0/y0/x1/y1
+		roundTrip(0x022008);	// tne a,b (Tcc_S1D1, JJJ=0)
 		roundTrip(0x022801);	// tne r0,r1 (Tcc_S2D2)
 		roundTrip(0x022040);	// tne x0,a (Tcc_S1D1, JJJ=4)
 		roundTrip(0x022048);	// tne x0,b (Tcc_S1D1, JJJ=4)

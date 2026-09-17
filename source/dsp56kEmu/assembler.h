@@ -68,7 +68,7 @@ namespace dsp56k
 		// Register encoding
 		static bool parseRegister_dddddd(const std::string& _reg, TWord& _value);
 		static bool parseRegister_DDDDD(const std::string& _reg, TWord& _value);
-		static bool parseRegister_JJJ(const std::string& _reg, bool _ab, TWord& _value);
+		static bool parseRegister_JJJ(const std::string& _reg, bool _ab, TWord& _value, bool _24BitOnly = false);
 		static bool parseRegister_QQQ(const std::string& _reg1, const std::string& _reg2, TWord& _value);
 		static bool parseRegister_QQQQ(const std::string& _reg1, const std::string& _reg2, TWord& _value);
 		static bool parseRegister_QQ(const std::string& _reg, TWord& _value);

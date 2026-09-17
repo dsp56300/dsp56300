@@ -185,13 +185,21 @@ namespace dsp56k
 		return true;
 	}
 
-	bool Assembler::parseRegister_JJJ(const std::string& _reg, bool _ab, TWord& _value)
+	bool Assembler::parseRegister_JJJ(const std::string& _reg, bool _ab, TWord& _value, bool _24BitOnly/* = false*/)
 	{
 		// _ab: true = destination is b, false = destination is a
-		// JJJ=1 means "other accumulator" (for Add/Sub etc)
-		// Note: for Tfr, JJJ=0 also falls through to mean "other accumulator" in the disassembler
-		// The caller is responsible for handling the JJJ=0 case for Tfr
+		// Add/Sub: 001 = other accumulator, 010/011 = X/Y
+		// Tfr/Cmp/Cmpm/Tcc (_24BitOnly): 000 = other accumulator, 001-011 are illegal (001 decodes as rnd/not/max...)
 		const auto reg = toLower(_reg);
+
+		if (_24BitOnly)
+		{
+			if (!parseRegister_JJJ(reg, _ab, _value))
+				return false;
+			if (_value == 1)
+				_value = 0;
+			return _value == 0 || _value >= 4;
+		}
 
 		if (reg == "b" && !_ab) { _value = 1; return true; }	// b when dest is a
 		if (reg == "a" && _ab) { _value = 1; return true; }	// a when dest is b
@@ -747,11 +755,8 @@ namespace dsp56k
 				TWord d;
 				if (!parseAluD(ops[1], d)) continue;
 				TWord jjj;
-				if (!parseRegister_JJJ(ops[0], d != 0, jjj)) continue;
-
-				// For Tfr, Cmp_S1S2, Cmpm_S1S2: JJJ value 0 is not valid
-				if ((inst == Tfr || inst == Cmp_S1S2 || inst == Cmpm_S1S2) && jjj == 0)
-					continue;
+				const bool is24BitOnly = inst == Tfr || inst == Cmp_S1S2 || inst == Cmpm_S1S2;
+				if (!parseRegister_JJJ(ops[0], d != 0, jjj, is24BitOnly)) continue;
 
 				setFieldValue(word, inst, Field_JJJ, jjj);
 				setFieldValue(word, inst, Field_d, d);
@@ -3228,15 +3233,14 @@ namespace dsp56k
 				// Tcc: S1,D1 [S2,D2]
 				case Tcc_S1D1:
 				{
+					if (!moveStr.empty()) continue;	// S2,D2 present -> Tcc_S1D1S2D2
 					std::vector<std::string> ops;
 					splitOperands(operands, ops);
 					if (ops.size() != 2) continue;
 					TWord d;
 					if (!parseAluD(ops[1], d)) continue;
 					TWord jjj;
-					if (!parseRegister_JJJ(ops[0], d != 0, jjj)) continue;
-					// JJJ < 4 overlaps with parallel move encoding, restrict to safe values
-					if (jjj < 4) continue;
+					if (!parseRegister_JJJ(ops[0], d != 0, jjj, true)) continue;
 					setFieldValue(word, inst, Field_JJJ, jjj);
 					setFieldValue(word, inst, Field_d, d);
 					result.word[0] = word;
@@ -3258,8 +3262,7 @@ namespace dsp56k
 					TWord d;
 					if (!parseAluD(ops1[1], d)) continue;
 					TWord jjj;
-					if (!parseRegister_JJJ(ops1[0], d != 0, jjj)) continue;
-					if (jjj < 4) continue;
+					if (!parseRegister_JJJ(ops1[0], d != 0, jjj, true)) continue;
 					TWord ttt, TTT;
 					if (!parseRegisterR(ops2[0], ttt)) continue;
 					if (!parseRegisterR(ops2[1], TTT)) continue;

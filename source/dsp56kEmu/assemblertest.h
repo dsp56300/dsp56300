@@ -22,6 +22,9 @@ namespace dsp56k
 		// Assert a word still decodes to a non-dc instruction.
 		void expectDecodes(uint32_t _opA, uint32_t _opB = 0);
 
+		// Assemble text and verify the word, then round-trip that word
+		void expectAssembles(const char* _text, uint32_t _op);
+
 		// Test individual instruction categories
 		void testAluInstructions();
 		void testMoveInstructions();
@@ -32,6 +35,7 @@ namespace dsp56k
 		void testParallelInstructions();
 		void testPeripheralSymbols();
 		void testReservedAluEncodings();
+		void testAccumulatorSourceEncodings();
 
 		uint32_t m_testCount = 0;
 		uint32_t m_passCount = 0;

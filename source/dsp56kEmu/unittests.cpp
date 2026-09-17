@@ -3176,14 +3176,12 @@ namespace dsp56k
 
 	void UnitTests::tfr()
 	{
-		// tfr a,b is a full 56-bit transfer. The assembler's "tfr a,b" may encode as
-		// "move a,b" (Mover) which saturates to 24 bits, so we use raw opcode to ensure
-		// the Tfr instruction (0x200009, JJJ=0 encoding) is tested.
+		// tfr a,b is a full 56-bit transfer, unlike "move a,b" which saturates to 24 bits
 		runTest([&]()
 		{
 			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x11223344556677)));
 			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
-			emit(0x200009);	// tfr a,b (56-bit transfer)
+			emit("tfr a,b");
 		},
 			[&]()
 		{
@@ -3232,15 +3230,13 @@ namespace dsp56k
 
 	void UnitTests::tcc()
 	{
-		// Tcc_S1D1: tne a,b has two valid encodings (JJJ=0 and JJJ=1)
-		// Test assembler encoding first, then verify alternative encoding matches
-
+		// Tcc_S1D1
 		runTest([&]()
 		{
 			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xaa112233445566)));
 			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.sr_set(CCR_Z);
-			emit(0x022008);	// tne a,b
+			emit("tne a,b");
 		},
 			[&]()
 		{
@@ -3252,32 +3248,7 @@ namespace dsp56k
 			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xbb112233445566)));
 			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
 			dsp.sr_clear(CCR_Z);
-			emit(0x022008);	// tne a,b
-		},
-			[&]()
-		{
-			verify(dsp.aluB().var == 0xbb112233445566);
-		});
-
-		// Same tests with alternative JJJ=0 encoding
-		runTest([&]()
-		{
-			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xaa112233445566)));
-			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
-			dsp.sr_set(CCR_Z);
-			emit(0x022008);	// tne a,b (JJJ=0, alternative encoding)
-		},
-			[&]()
-		{
-			verify(dsp.aluB().var == 0);
-		});
-
-		runTest([&]()
-		{
-			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0xbb112233445566)));
-			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
-			dsp.sr_clear(CCR_Z);
-			emit(0x022008);	// tne a,b (JJJ=0, alternative encoding)
+			emit("tne a,b");
 		},
 			[&]()
 		{
