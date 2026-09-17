@@ -41,7 +41,8 @@ namespace dsp56k
 		JitBlock(JitEmitter& _a, DSP& _dsp, JitRuntimeData& _runtimeData, JitConfig&& _config);
 		~JitBlock();
 
-		static void getInfo(JitBlockInfo& _info, const DSP& _dsp, TWord _pc, const JitConfig& _config, const MmuArray<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds);
+		// _opCycles receives the cycles of every instruction of the block, a REP together with one run of what it repeats
+		static void getInfo(JitBlockInfo& _info, const DSP& _dsp, TWord _pc, const JitConfig& _config, const MmuArray<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds, std::vector<TWord>* _opCycles = nullptr);
 
 		bool emit(JitBlockRuntimeData& _rt, JitBlockChain* _chain, TWord _pc, const MmuArray<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds, bool _profilingSupport);
 
@@ -66,6 +67,9 @@ namespace dsp56k
 		void increaseInstructionCount(const asmjit::Operand& _count);
 		void increaseCycleCount(const asmjit::Operand& _count);
 		void increaseUint64(const asmjit::Operand& _count, const uint64_t& _target);
+
+		// the instruction that is being generated accesses a peripheral, see emit()
+		void onPeripheralAccess() { m_opAccessesPeripherals = true; }
 
 		const JitConfig& getConfig() const { return m_config; }
 
@@ -139,5 +143,18 @@ namespace dsp56k
 
 		JitDspMode* m_mode = nullptr;
 		JitBlockRuntimeData* m_currentJitBlockRuntimeData = nullptr;
+
+		std::vector<TWord> m_opCycles;
+
+		// an instruction that accesses a peripheral: where its code starts and how much the block runs before it
+		struct PeripheralAccess
+		{
+			asmjit::BaseNode* cursor;
+			TWord instructions;
+			TWord cycles;
+		};
+
+		std::vector<PeripheralAccess> m_peripheralAccesses;
+		bool m_opAccessesPeripherals = false;
 	};
 }

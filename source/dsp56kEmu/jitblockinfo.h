@@ -54,7 +54,6 @@ namespace dsp56k
 			pc = 0;
 			memSize = 0;
 			instructionCount = 0;
-			cycleCount = 0;
 			readRegs = RegisterMask::None;
 			writtenRegs = RegisterMask::None;
 			branchTarget = g_invalidAddress;
@@ -73,7 +72,6 @@ namespace dsp56k
 		TWord pc = 0;
 		TWord memSize = 0;
 		TWord instructionCount = 0;
-		TWord cycleCount = 0;
 		RegisterMask readRegs = RegisterMask::None;
 		RegisterMask writtenRegs = RegisterMask::None;
 		TWord branchTarget = g_invalidAddress;

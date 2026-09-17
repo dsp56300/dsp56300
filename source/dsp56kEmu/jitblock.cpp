@@ -27,9 +27,12 @@ namespace dsp56k
 
 	JitBlock::~JitBlock() = default;
 
-	void JitBlock::getInfo(JitBlockInfo& _info, const DSP& _dsp, const TWord _pc, const JitConfig& _config, const MmuArray<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds)
+	void JitBlock::getInfo(JitBlockInfo& _info, const DSP& _dsp, const TWord _pc, const JitConfig& _config, const MmuArray<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds, std::vector<TWord>* _opCycles/* = nullptr*/)
 	{
 		const auto& opcodes = _dsp.opcodes();
+
+		if(_opCycles)
+			_opCycles->clear();
 
 		const bool isFastInterrupt = _pc < Vba_End;
 
@@ -45,7 +48,6 @@ namespace dsp56k
 
 		auto& numWords = _info.memSize;
 		auto& numInstructions = _info.instructionCount;
-		auto& numCycles = _info.cycleCount;
 
 		auto& terminationReason = _info.terminationReason;
 
@@ -227,13 +229,14 @@ namespace dsp56k
 
 			numWords += Opcodes::getOpcodeLength(opA, instA, instB);
 			++numInstructions;
-			numCycles += calcCycles(instA, instB, pc, opA, _dsp.memory().getBridgedMemoryAddress(), 1);
+
+			if(_opCycles)
+				_opCycles->push_back(calcCycles(instA, instB, pc, opA, _dsp.memory().getBridgedMemoryAddress(), 1) + repeatedCycles);
 
 			if(repeatedLength)
 			{
 				numWords += repeatedLength;
 				++numInstructions;
-				numCycles += repeatedCycles;
 			}
 
 			if(getLoopEndAddr(_info.loopEnd, instA, pc, opB))
@@ -393,7 +396,7 @@ namespace dsp56k
 
 		uint32_t blockFlags = 0;
 
-		getInfo(info, dsp(), _pc, m_config, _cache, _volatileP, _loopStarts, _loopEnds);
+		getInfo(info, dsp(), _pc, m_config, _cache, _volatileP, _loopStarts, _loopEnds, &m_opCycles);
 
 		const auto pcNext = _pc + info.memSize;
 
@@ -419,13 +422,19 @@ namespace dsp56k
 		uint32_t& ccrWrite = info.ccrWrite;
 		uint32_t& ccrOverwrite = info.ccrOverwrite;
 
-		_rt.m_encodedCycles = info.cycleCount;
+		// counted up per instruction, so that we know how much of the block runs before each of them
+		_rt.m_encodedCycles = 0;
 
 		TWord pMemSize = 0;
+		size_t opIndex = 0;
+		m_peripheralAccesses.clear();
 
 		while(pMemSize < info.memSize)
 		{
 			opPC = _pc + pMemSize;
+
+			const PeripheralAccess opStart{m_asm.cursor(), _rt.m_encodedInstructionCount, _rt.m_encodedCycles};
+			m_opAccessesPeripherals = false;
 
 			m_dsp.memory().getOpcode(opPC, opA, opB);
 
@@ -503,12 +512,16 @@ namespace dsp56k
 			}
 
 			blockFlags |= ops.getResultFlags();
-			
+
+			if(m_opAccessesPeripherals)
+				m_peripheralAccesses.push_back(opStart);
+
 			_rt.m_singleOpWordA = opA;
 			_rt.m_singleOpWordB = opB;
 
 			pMemSize += ops.getOpSize();
 			++_rt.m_encodedInstructionCount;
+			_rt.m_encodedCycles += m_opCycles[opIndex++];
 
 			_rt.m_lastOpSize = ops.getOpSize();
 
@@ -520,7 +533,10 @@ namespace dsp56k
 			ccrOverwrite |= ccrO;
 		}
 
+		assert(opIndex == m_opCycles.size());
 		assert(_rt.getEncodedCycleCount() >= _rt.getEncodedInstructionCount());
+
+		auto* const cursorAfterOps = m_asm.cursor();
 
 		if (info.terminationReason == JitBlockInfo::TerminationReason::PopPC)
 			blockFlags |= JitOps::PopPC;
@@ -600,9 +616,35 @@ namespace dsp56k
 			}
 		}
 
-		m_asm.setCursor(cursorInsertIncreaseInstructionCount);
-		increaseInstructionCount(asmjit::Imm(_rt.getEncodedInstructionCount()));
-		increaseCycleCount(asmjit::Imm(_rt.getEncodedCycleCount()));
+		/*	A block adds the instructions and cycles that it runs when it starts. An instruction that accesses a peripheral
+			lets the peripherals catch up first (Jitmem::execPeripheralsWithinBlock), and for that the counts have to be
+			exact when it runs. In a block that has such instructions, the counts are added in pieces instead: each one
+			right before such an instruction, and the rest after the last instruction of the block.
+		*/
+		auto addCounts = [this](asmjit::BaseNode* _cursor, const TWord _instructions, const TWord _cycles)
+		{
+			m_asm.setCursor(_cursor);
+			increaseInstructionCount(asmjit::Imm(_instructions));
+			increaseCycleCount(asmjit::Imm(_cycles));
+		};
+
+		TWord countedInstructions = 0;
+		TWord countedCycles = 0;
+
+		for (const auto& access : m_peripheralAccesses)
+		{
+			if(access.instructions == countedInstructions)
+				continue;
+
+			addCounts(access.cursor, access.instructions - countedInstructions, access.cycles - countedCycles);
+
+			countedInstructions = access.instructions;
+			countedCycles = access.cycles;
+		}
+
+		addCounts(m_peripheralAccesses.empty() ? cursorInsertIncreaseInstructionCount : cursorAfterOps,
+			_rt.getEncodedInstructionCount() - countedInstructions, _rt.getEncodedCycleCount() - countedCycles);
+
 		m_asm.setCursor(m_asm.lastNode());
 
 		auto jumpIfLoop = [&](const asmjit::Label& _ifTrue, const JitReg32& _regPC, const JitReg32& _regLC, const JitReg32& _temp)

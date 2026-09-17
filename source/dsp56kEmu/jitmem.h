@@ -114,6 +114,9 @@ namespace dsp56k
 		MemoryRef writeDspMemory(const DspValue& _offsetX, const DspValue& _offsetY, const DspValue& _srcX, const DspValue& _srcY) const;
 		void writeDspMemory(const DspValue& _offset, const DspValue& _srcX, const DspValue& _srcY) const;
 
+		// brings the peripherals up to the instruction that is being generated
+		void execPeripheralsWithinBlock() const;
+
 		void readPeriph(DspValue& _dst, EMemArea _area, TWord _offset, Instruction _inst) const;
 		void readPeriph(DspValue& _dst, EMemArea _area, const DspValue& _offset, Instruction _inst) const;
 
@@ -158,6 +161,9 @@ namespace dsp56k
 
 		void writePeriph(EMemArea _area, const JitReg32& _offset, const DspValue& _value) const;
 		void writeExternalBus(const JitReg32& _offset, const DspValue& _value) const;
+
+		// jumps to _notDue unless the peripherals have to run
+		void emitPeripheralsDueTest(const asmjit::Label& _notDue) const;
 
 		const TWord* getMemAreaHostPtr(EMemArea _area) const;
 
