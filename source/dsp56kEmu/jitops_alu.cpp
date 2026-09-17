@@ -875,7 +875,12 @@ namespace dsp56k
 		const auto D = getFieldValue<Cmpm_S1S2, Field_d>(op);
 		const auto JJJ = getFieldValue<Cmpm_S1S2, Field_JJJ>(op);
 		const auto r = decode_JJJ_read_56(JJJ, !D);
-		alu_cmp(D, r64(r.get()), true);
+
+		// alu_cmp takes the magnitude in place. For S1 = the other accumulator r is that accumulator's live pool
+		// register, CMPM would leave |S1| in it for the rest of the block
+		const RegGP s1(m_block);
+		m_asm.mov(r64(s1), r64(r.get()));
+		alu_cmp(D, r64(s1), true);
 	}
 
 	void JitOps::op_Cmpu_S1S2(TWord op)

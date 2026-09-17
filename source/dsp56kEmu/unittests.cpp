@@ -118,6 +118,7 @@ namespace dsp56k
 		clr();
 		cmp();
 		cmpm();
+		cmpm_accumulator();
 		cmpu();
 		mpyri();
 		merge();
@@ -1674,6 +1675,41 @@ namespace dsp56k
 		[&]()
 		{
 			verify(dsp.sr_test(CCR_C));
+		});
+	}
+
+	void UnitTests::cmpm_accumulator()
+	{
+		// Regression: the JIT took the magnitude of S1 in place. With S1 = the other accumulator that is its live
+		// register, so an instruction after CMPM in the same block read |S1| (seen in firmware oscillator code,
+		// `cmpm a,b` followed by `add x0,a`, which then never advanced its phase). CMPM must not change S1 or D
+		constexpr uint64_t negative = 0xff800000000000ULL;
+		constexpr uint64_t positive = 0x00200000000000ULL;
+
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(negative)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(positive)));
+			emit(0x20000f);	// cmpm a,b
+			emit(0x200009);	// tfr a,b
+		},
+		[&]()
+		{
+			verify(dsp.aluA().var == negative);
+			verify(dsp.aluB().var == negative);
+		});
+
+		runTest([&]()
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(positive)));
+			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(negative)));
+			emit(0x200007);	// cmpm b,a
+			emit(0x200001);	// tfr b,a
+		},
+		[&]()
+		{
+			verify(dsp.aluA().var == negative);
+			verify(dsp.aluB().var == negative);
 		});
 	}
 
