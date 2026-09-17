@@ -124,6 +124,13 @@ namespace dsp56k
 
 		ensureCacheSize(_pc+1);
 
+		if(!makeRoomForFirstInstruction(_pc))
+		{
+			// only a block that is being generated can be in the way, and no code runs while blocks are being generated
+			assert(!_execute);
+			return;
+		}
+
 		auto& cacheEntry = m_jitCache[_pc];
 
 		if(cacheEntry.singleOpCache)
@@ -169,6 +176,28 @@ namespace dsp56k
 		emit(_pc);
 		if(_execute)
 			exec(_pc);
+	}
+
+	bool JitBlockChain::makeRoomForFirstInstruction(const TWord _pc)
+	{
+		/*	A block takes its first instruction whole, see JitBlock::getInfo, so a block that starts on a later word of it
+			has to go - unless it, or a block that jumps to it, is being generated. Then no block can start at _pc for now.
+		*/
+		const auto pcEnd = _pc + JitBlock::getInstructionLength(m_jit.dsp(), _pc);
+
+		for(auto pc = _pc + 1; pc < pcEnd; ++pc)
+		{
+			const auto block = getBlock(pc);
+
+			if(!block)
+				continue;
+
+			if(isBeingGeneratedRecursive(block))
+				return false;
+
+			destroy(block);
+		}
+		return true;
 	}
 
 	void JitBlockChain::exec(const TWord _pc, const TJitFunc& _f) const

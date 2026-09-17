@@ -92,6 +92,8 @@ namespace dsp56k
 		void destroyParents(JitBlockRuntimeData* _block);
 		void destroy(JitBlockRuntimeData* _block);
 
+		bool makeRoomForFirstInstruction(TWord _pc);
+
 		void release(JitBlockRuntimeData* _block);
 		void occupyArea(JitBlockRuntimeData* _block);
 		void unoccupyArea(const JitBlockRuntimeData* _block);

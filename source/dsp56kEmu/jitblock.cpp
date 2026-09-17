@@ -27,6 +27,27 @@ namespace dsp56k
 
 	JitBlock::~JitBlock() = default;
 
+	TWord JitBlock::getInstructionLength(const DSP& _dsp, const TWord _pc)
+	{
+		const auto& opcodes = _dsp.opcodes();
+
+		TWord opA, opB;
+		_dsp.memory().getOpcode(_pc, opA, opB);
+
+		Instruction instA, instB;
+		opcodes.getInstructionTypes(opA, instA, instB);
+
+		const auto length = Opcodes::getOpcodeLength(opA, instA, instB);
+
+		if(!(Opcodes::getFlags(instA, instB) & (OpFlagRepDynamic | OpFlagRepImmediate)))
+			return length;
+
+		TWord repA, repB;
+		_dsp.memory().getOpcode(_pc + length, repA, repB);
+
+		return length + opcodes.getOpcodeLength(repA);
+	}
+
 	void JitBlock::getInfo(JitBlockInfo& _info, const DSP& _dsp, const TWord _pc, const JitConfig& _config, const MmuArray<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds, std::vector<TWord>* _opCycles/* = nullptr*/)
 	{
 		const auto& opcodes = _dsp.opcodes();
@@ -98,6 +119,17 @@ namespace dsp56k
 			assert(_pc == 0 || _pc != hiword(_dsp.regs().ss[_dsp.ssIndex()]).toWord());
 		}
 
+		// true if any P word in [_begin, _end) belongs to a block already
+		auto isExistingCode = [&_cache](const TWord _begin, const TWord _end)
+		{
+			for(auto pc = _begin; pc < _end && pc < _cache.size(); ++pc)
+			{
+				if(_cache[pc].block)
+					return true;
+			}
+			return false;
+		};
+
 		auto writesM = RegisterMask::None;
 		auto readsM = RegisterMask::None;
 
@@ -111,9 +143,14 @@ namespace dsp56k
 				break;
 			}
 
-			// never overwrite code that already exists
-			if(pc < _cache.size() && _cache[pc].block)
+			/*	Never overwrite code that already exists, with any word of the instruction. A block can start on what is an
+				extension word here, or on the instruction that a REP repeats: code jumped there, or P memory was rewritten
+				with that word unchanged, which memWriteP does not report, so the block stayed. Two blocks cannot own one
+				word. The first instruction of a block is always clear, JitBlockChain::create makes room for it.
+			*/
+			if(isExistingCode(pc, pc + getInstructionLength(_dsp, pc)))
 			{
+				assert(numInstructions && "JitBlockChain::create makes room for the first instruction of a block");
 				terminationReason = JitBlockInfo::TerminationReason::ExistingCode;
 				break;
 			}

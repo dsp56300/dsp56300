@@ -44,6 +44,9 @@ namespace dsp56k
 		// _opCycles receives the cycles of every instruction of the block, a REP together with one run of what it repeats
 		static void getInfo(JitBlockInfo& _info, const DSP& _dsp, TWord _pc, const JitConfig& _config, const MmuArray<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds, std::vector<TWord>* _opCycles = nullptr);
 
+		// P words that the instruction at _pc takes up in a block. A REP comes with the instruction it repeats, see JitOps::rep_exec
+		static TWord getInstructionLength(const DSP& _dsp, TWord _pc);
+
 		bool emit(JitBlockRuntimeData& _rt, JitBlockChain* _chain, TWord _pc, const MmuArray<JitCacheEntry>& _cache, const std::set<TWord>& _volatileP, const std::map<TWord, TWord>& _loopStarts, const std::set<TWord>& _loopEnds, bool _profilingSupport);
 
 		JitEmitter& asm_() { return m_asm; }

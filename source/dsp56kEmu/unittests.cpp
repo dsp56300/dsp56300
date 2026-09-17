@@ -6974,6 +6974,7 @@ namespace dsp56k
 		adcSbcCarryChain();
 		movemShortWritesCode();
 		movepWritesCode();
+		blockOnExtensionWord();
 		do_forever();
 		dorShortAddress();
 		trapContinues();
@@ -7518,6 +7519,89 @@ namespace dsp56k
 		verify(dsp.memory().get(MemArea_P, 0x1000) == 0x000008);
 		verify(dsp.aluA().var == 1);
 		verify(dsp.regs().sp.var == 0);
+	}
+
+	/*	A block that starts on a later word of another instruction: its extension word, or the instruction a REP repeats.
+		Code can jump there, and such a block also survives a rewrite of P memory that leaves its word as it was. The JIT
+		used to build the other instruction over it anyway. Two blocks owned one word: occupyArea asserted, and without
+		asserts a later write to that word left one of them in place, and its callers ran the old code.
+	*/
+	void UnitTests::blockOnExtensionWord()
+	{
+		auto call = [this](const TWord _callSite, const TWord _target)
+		{
+			emitToMemory(0x0d0000 | _target, 0, _callSite);		// jsr _target
+			emitToMemory("nop", _callSite + 1);
+
+			dsp.setPC(_callSite);
+			execUntil(_callSite + 1);
+
+			verify(dsp.regs().sp.var == 0);
+		};
+
+		struct Case
+		{
+			TWord entry;	// start of the block that gets the move
+			TWord move;		// move #>$c,x0 - its extension word $00000c is an rts
+		};
+
+		// the move starts its block, or follows a nop in it
+		for(const auto& c : {Case{0xd00, 0xd00}, Case{0xd10, 0xd11}})
+		{
+			dsp.resetHW();
+			dsp.regs().r[0] = TReg24(0);
+			dsp.x0(static_cast<TWord>(0));
+
+			const auto extensionWord = c.move + 1;
+
+			if(c.entry != c.move)
+				emitToMemory("nop", c.entry);
+			emitToMemory("move #>$c,x0", c.move);
+			emitToMemory("rts", c.move + 2);
+
+			call(c.entry + 8, extensionWord);		// a block of its own on the extension word, it returns at once
+			call(c.entry + 10, c.entry);			// the move over it
+			verify(dsp.x0().var == 0x00000c);
+
+			emitToMemory("move (r0)+", extensionWord);
+			call(c.entry + 8, extensionWord);		// same call site as before, must not reach the old rts
+			verify(dsp.regs().r[0].var == 1);
+		}
+
+		// The extension word is a jump back to the move. The move is compiled as the child of the block on that word
+		// while that block is still being generated, so it cannot replace it right away.
+		dsp.resetHW();
+		dsp.x0(static_cast<TWord>(0));
+
+		emitToMemory("move #>$c,x0", 0xd20);
+		emitToMemory(0x0c0d20, 0, 0xd21);			// jmp $d20, and the value that the move loads
+		emitToMemory("rts", 0xd22);
+
+		call(0xd28, 0xd21);
+		verify(dsp.x0().var == 0x0c0d20);
+
+		emitToMemory("rts", 0xd21);
+		call(0xd2a, 0xd20);
+		verify(dsp.x0().var == 0x00000c);
+
+		// a REP takes the instruction it repeats along
+		dsp.resetHW();
+		dsp.regs().r[0] = TReg24(0);
+		dsp.regs().r[1] = TReg24(0);
+
+		emitToMemory("rep #$3", 0xd30);
+		emitToMemory("move (r0)+", 0xd31);
+		emitToMemory("rts", 0xd32);
+
+		call(0xd38, 0xd31);							// the repeated instruction on its own, once
+		call(0xd3a, 0xd30);							// and three times with the REP
+		verify(dsp.regs().r[0].var == 4);
+
+		emitToMemory("move (r1)+", 0xd31);
+		call(0xd38, 0xd31);
+		call(0xd3a, 0xd30);
+		verify(dsp.regs().r[0].var == 4);
+		verify(dsp.regs().r[1].var == 4);
 	}
 
 	/*	DOR X:aa and DOR Y:aa take the loop count from the word stored at the short address. sim56300: a count of 3 runs
