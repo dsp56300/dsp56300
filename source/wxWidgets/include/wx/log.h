@@ -144,7 +144,7 @@ public:
     // default ctor creates an uninitialized object
     wxLogRecordInfo()
     {
-        memset(this, 0, sizeof(*this));
+        memset(static_cast<void*>(this), 0, sizeof(*this));
     }
 
     // normal ctor, used by wxLogger specifies the location of the log
@@ -278,7 +278,7 @@ public:
 private:
     void Copy(const wxLogRecordInfo& other)
     {
-        memcpy(this, &other, sizeof(*this));
+        memcpy(static_cast<void*>(this), &other, sizeof(*this));
         if ( other.m_data )
            m_data = new ExtraData(*other.m_data);
     }
@@ -1333,7 +1333,7 @@ WXDLLIMPEXP_BASE wxString wxSysErrorMsgStr(unsigned long nErrCode = 0);
 // and it will have changed already by then (in fact it even changes when
 // wxString::Format() is called because of vsnprintf() inside it so it can
 // change even much sooner)
-#define wxLOG_KEY_SYS_ERROR_CODE "wx.sys_error"
+#define wxLOG_KEY_SYS_ERROR_CODE wxASCII_STR("wx.sys_error")
 
 #define wxLogSysError \
     wxDO_LOG_IF_ENABLED_WITH_FUNC(Error, MaybeStore(wxLOG_KEY_SYS_ERROR_CODE, \
@@ -1349,7 +1349,7 @@ WXDLLIMPEXP_BASE wxString wxSysErrorMsgStr(unsigned long nErrCode = 0);
 #if wxUSE_GUI
     // wxLogStatus() is similar to wxLogSysError() as it allows to optionally
     // specify the frame to which the message should go
-    #define wxLOG_KEY_FRAME "wx.frame"
+    #define wxLOG_KEY_FRAME wxASCII_STR("wx.frame")
 
     #define wxLogStatus \
         wxDO_LOG_IF_ENABLED_WITH_FUNC(Status, MaybeStore(wxLOG_KEY_FRAME).Log)
@@ -1472,13 +1472,13 @@ wxSafeShowMessage(const wxString& title, const wxString& text);
 #ifdef __VISUALC__
     #define wxLogApiError(api, rc)                                            \
         wxLogDebug(wxT("%s(%d): '%s' failed with error 0x%08lx (%s)."),       \
-                   __FILE__, __LINE__, api,                                   \
+                   __TFILE__, __LINE__, api,                                  \
                    (long)rc, wxSysErrorMsgStr(rc))
 #else // !VC++
     #define wxLogApiError(api, rc)                                            \
         wxLogDebug(wxT("In file %s at line %d: '%s' failed with ")            \
                    wxT("error 0x%08lx (%s)."),                                \
-                   __FILE__, __LINE__, api,                                   \
+                   __TFILE__, __LINE__, api,                                  \
                    (long)rc, wxSysErrorMsgStr(rc))
 #endif // VC++/!VC++
 

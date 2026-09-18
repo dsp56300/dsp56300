@@ -27,7 +27,8 @@
  *    algorithms limitations, only dates from Nov 24, 4714BC are handled
  *
  * 3. standard ANSI C functions are used to do time calculations whenever
- *    possible, i.e. when the date is in the range Jan 1, 1970 to 2038
+ *    possible, i.e. when the date is in time_t range, i.e. after Jan 1, 1970
+ *    and, for 32-bit time_t, before 2038.
  *
  * 4. otherwise, the calculations are done by converting the date to/from JDN
  *    first (the range limitation mentioned above comes from here: the
@@ -82,6 +83,7 @@
 #endif
 
 #include "wx/datetime.h"
+#include "wx/uilocale.h"
 
 // ----------------------------------------------------------------------------
 // wxXTI
@@ -773,19 +775,13 @@ wxString wxDateTime::GetEnglishMonthName(Month month, NameFlags flags)
 wxString wxDateTime::GetMonthName(wxDateTime::Month month,
                                   wxDateTime::NameFlags flags)
 {
-#ifdef wxHAS_STRFTIME
-    wxCHECK_MSG( month != Inv_Month, wxEmptyString, wxT("invalid month") );
-
-    // notice that we must set all the fields to avoid confusing libc (GNU one
-    // gets confused to a crash if we don't do this)
-    tm tm;
-    wxInitTm(tm);
-    tm.tm_mon = month;
-
-    return wxCallStrftime(flags == Name_Abbr ? wxS("%b") : wxS("%B"), &tm);
-#else // !wxHAS_STRFTIME
+    wxCHECK_MSG(month != Inv_Month, wxEmptyString, wxT("invalid month"));
+#if wxUSE_INTL
+    wxString name = wxUILocale::GetCurrent().GetMonthName(month, flags);
+    if (!name.empty())
+        return name;
+#endif // wxUSE_INTL
     return GetEnglishMonthName(month, flags);
-#endif // wxHAS_STRFTIME/!wxHAS_STRFTIME
 }
 
 /* static */
@@ -811,29 +807,13 @@ wxString wxDateTime::GetEnglishWeekDayName(WeekDay wday, NameFlags flags)
 wxString wxDateTime::GetWeekDayName(wxDateTime::WeekDay wday,
                                     wxDateTime::NameFlags flags)
 {
-#ifdef wxHAS_STRFTIME
-    wxCHECK_MSG( wday != Inv_WeekDay, wxEmptyString, wxT("invalid weekday") );
-
-    // take some arbitrary Sunday (but notice that the day should be such that
-    // after adding wday to it below we still have a valid date, e.g. don't
-    // take 28 here!)
-    tm tm;
-    wxInitTm(tm);
-    tm.tm_mday = 21;
-    tm.tm_mon = Nov;
-    tm.tm_year = 99;
-
-    // and offset it by the number of days needed to get the correct wday
-    tm.tm_mday += wday;
-
-    // call mktime() to normalize it...
-    (void)mktime(&tm);
-
-    // ... and call strftime()
-    return wxCallStrftime(flags == Name_Abbr ? wxS("%a") : wxS("%A"), &tm);
-#else // !wxHAS_STRFTIME
+    wxCHECK_MSG(wday != Inv_WeekDay, wxEmptyString, wxT("invalid weekday"));
+#if wxUSE_INTL
+    wxString name = wxUILocale::GetCurrent().GetWeekDayName(wday, flags);
+    if (!name.empty())
+        return name;
+#endif // wxUSE_INTL
     return GetEnglishWeekDayName(wday, flags);
-#endif // wxHAS_STRFTIME/!wxHAS_STRFTIME
 }
 
 /* static */
@@ -1282,13 +1262,25 @@ wxDateTime& wxDateTime::Set(wxDateTime_t day,
     wxDATETIME_CHECK( (0 < day) && (day <= GetNumberOfDays(month, year)),
                       wxT("Invalid date in wxDateTime::Set()") );
 
-    // the range of time_t type (inclusive)
+    // Check if we can use the standard library implementation: this only works
+    // for the dates representable by time_t, i.e. after the beginning of the
+    // Epoch and, for 32-bit time_t, before 2038 (for 64-bit time_t, the range
+    // is unlimited and while we can't be sure that the standard library works
+    // for the dates in the distant future, we are not going to do better
+    // ourselves neither, so let it handle them).
     static const int yearMinInRange = 1970;
     static const int yearMaxInRange = 2037;
 
     // test only the year instead of testing for the exact end of the Unix
     // time_t range - it doesn't bring anything to do more precise checks
-    if ( year >= yearMinInRange && year <= yearMaxInRange )
+    if ( year >= yearMinInRange &&
+            ((sizeof(time_t) > 4
+#if defined(__VISUALC__) || defined(__MINGW64__)
+              // MSVC CRT (also used by MinGW) is documented not to support
+              // years > 3000, even when using 64-bit time_t.
+              && year <= 3000
+#endif // Using MSVC CRT
+             ) || year <= yearMaxInRange) )
     {
         // use the standard library version if the date is in range - this is
         // probably more efficient than our code

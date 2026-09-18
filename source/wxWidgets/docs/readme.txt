@@ -1,4 +1,4 @@
-wxWidgets 3.2.1 Release Notes
+wxWidgets 3.2.11 Release Notes
 =============================
 
 Welcome to the new stable release of wxWidgets, a free and open source
@@ -16,7 +16,7 @@ more about wxWidgets at:
 
 Documentation is available online at:
 
-* https://docs.wxwidgets.org/3.2.1/
+* https://docs.wxwidgets.org/3.2.11/
 
 wxWidgets sources and binaries for the selected platforms are available for
 download from:
@@ -25,37 +25,78 @@ download from:
 
 or, for a more more permanent but less convenient to use link, from
 
-* https://github.com/wxWidgets/wxWidgets/releases/tag/v3.2.1/
+* https://github.com/wxWidgets/wxWidgets/releases/tag/v3.2.11/
 
-Please see https://docs.wxwidgets.org/3.2.1/overview_install.html for full
+Please see https://docs.wxwidgets.org/3.2.11/overview_install.html for full
 installation instructions.
 
 
 
-Changes since 3.2.0
--------------------
+Changes since 3.2.10
+--------------------
 
-Coming soon after 3.2.0, this is mostly a bug fix release, with just one
-noteworthy new feature: the addition of wxFileDialog::AddShortcut() function.
-However it fixes some important regressions and other problems:
+This release contains a big number of important fixes, including for potential
+security problems, and upgrading to it is strongly recommended for all
+wxWidgets users.
 
-- Fix crash in applications calling g_log_set_writer_func() with recent glib.
-- Several fixes to alpha channel handling in wxMSW bitmaps.
-- Generate key and focus events for wxSearchCtrl in wxOSX.
-- Fix creating wxRadioBox without any items in wxOSX.
-- Fix regression with AUI floating pane positioning.
-- Avoid new warnings given by gcc 12.
-- Fix building with MSVS 2022 standard-conforming preprocessor.
-- Work around MSVS 2022 optimizer bug that broke wxImage resizing.
-- NetBSD build fixes.
+The following bugs were fixed:
+
+- Fix wxCondition and wxSemaphore::WaitTimeout() after 2038 under Unix (#26466).
+- Fix buffer overflow in wxGethostby{addr,name}_r() (#26528).
+- Fix buffer overflow in wxTarInputStream (#26530).
+- Fix out-of-bounds read in wxFileType::ExpandCommand() (#26531).
+- Fix buffer overflow in wxVsnprintf() (#26522).
+- Fix out-of-bounds read in wxRegEx::Replace() (#26541).
+- Fix out-of-bounds read in wxUString (#26548).
+- Fix wxDateTime::Format() handling of invalid format (#26543).
+- Fix buffer overflow in wxGethostbyxxx_r() on some systems (#26553).
+- Fix wxCaret position in scrolled windows (#26282).
+- Correct delta-RLE bitmap background colour (#23599).
+- Correct loading of `BI_BITFIELDS` bitmaps (#23601).
+- Fix loading 32bpp BMP files without valid alpha (#24219).
+- Fix buffer overwrite when loading malformed BMPs with invalid RLE data.
+- Avoid out-of-bounds palette read in 8bpp BMP decoder (#26438).
+- Avoid out-of-bounds palette write in wxIFFDecoder (#26440).
+- Avoid out-of-bounds read in wxPCXHandler (#26441).
+- Avoid out-of-bounds read in wxXPMDecoder (#26442).
+- Fix reading ANI images with invalid frame count (#26492).
+- Avoid out-of-bounds write for invalid BMP RLE runs (#26496).
+- Fix out-of-bounds read when loading invalid 4bpp BMPs (#26511).
+- Avoid out-of-bounds write on bad BMHD chunk in wxIFFDecoder (#26497).
+- Fix write overflow in TGA files with invalid colour map (#26493).
+- Fix read overflow in wxXPMDecoder on unterminated quote (#26499).
+- Fix read overflow in wxXPMDecoder on invalid width (#26519).
+- Reject more invalid GIFs and do it without leaking memory (#26501).
+- Fix buffer overflows decoding invalid GIFs (#26521, #26524).
+- Fix multiple buffer overflows in wxIFFDecoder (#26505, #26518).
+- Fix multiple buffer overflows in wxSound (#26506, #26525).
+- Fix reading too short extra field in ZIP64 files (#26507).
+- Fix out-of-bounds table read in wxMBConvUTF7::ToWChar(#26517).
+- Fix buffer overflow reading corrupted message catalogs (#26513).
+- Fix buffer overflow for too big tables in wxHTML (#26554).
+- Add wxGrid::GetFrozen{Row,Col}LabelWindow() (#26617).
+- Fix wxPropertyGrid macros with wxNO_IMPLICIT_WXSTRING_ENCODING (#26651).
+- Fix copy/paste in wxGTK when a clipboard manager is running (#26265).
+- Fix crash with EGL-based wxGLCanvas in wxNotebook (#26340).
+- Fix possible wxTextCtrl crash with GSpell attached (#26464).
+- Fix drawing of very large bitmaps in wxGTK (#25656).
+- Fix memory leak in wxDataViewChoiceRenderer.
+- Fix resource leak when using EGL with X11 (#26341).
+- Fix showing title bar under Wayland with wxBORDER_NONE (#26357).
+- Remove maximum text length limitation in "picker" controls in wxGTK (#26314).
+- Fix appearance of dashed lines drawn by wxDC::DrawLine() in wxGTK (#26449).
+- Fix non-resizable TLW size when setting client size in wxGTK (#26480).
+- Fix wxBufferedPaintDC when using RTL layout in wxMSW (#26266).
+- Fix crash after destroying wxFileSystemWatcher in wxOSX (#26658).
+- Fix possible crash in wxFont::SetNativeFontInfo() in wxOSX (#26411).
 
 Please see the full change log for more details:
 
-https://raw.githubusercontent.com/wxWidgets/wxWidgets/v3.2.1/docs/changes.txt
+https://raw.githubusercontent.com/wxWidgets/wxWidgets/v3.2.11/docs/changes.txt
 
-This release is API and ABI-compatible with 3.2.0, so the existing
-applications don't even need to be rebuilt to profit from all the fixes
-above if they use shared/dynamic libraries. And if they do need to be
+This release is API and ABI-compatible with the previous 3.2.x releases, so
+the existing applications don't even need to be rebuilt to profit from all the
+fixes above if they use shared/dynamic libraries. And if they do need to be
 recompiled, this can be done without any changes to the code.
 
 
@@ -66,7 +107,7 @@ Supported Platforms
 This version of wxWidgets supports the following primary platforms:
 
 * Windows XP, Vista, 7, 8, 10 and 11 (32/64 bits).
-* Most Unix variants using the GTK+ toolkit (version 2.6 or newer)
+* Most Unix variants using the GTK toolkit (version 2.6 or newer or 3.x)
 * macOS (10.10 or newer) using Cocoa (x86-64 or ARM).
 
 There is some support for the following platforms:
@@ -151,4 +192,4 @@ developed by its users and your contributions to it are always welcome!
 
 Have fun!
 
-The wxWidgets Team, September 2022
+The wxWidgets Team, March 2026

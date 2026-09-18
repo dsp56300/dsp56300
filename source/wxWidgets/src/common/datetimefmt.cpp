@@ -320,13 +320,15 @@ wxString wxDateTime::Format(const wxString& formatp, const TimeZone& tz) const
 
     wxString format = formatp;
 #ifdef __WXOSX__
+#if wxUSE_INTL
     if ( format.Contains("%c") )
         format.Replace("%c", wxUILocale::GetCurrent().GetInfo(wxLOCALE_DATE_TIME_FMT));
     if ( format.Contains("%x") )
         format.Replace("%x", wxUILocale::GetCurrent().GetInfo(wxLOCALE_SHORT_DATE_FMT));
     if ( format.Contains("%X") )
         format.Replace("%X", wxUILocale::GetCurrent().GetInfo(wxLOCALE_TIME_FMT));
-#endif
+#endif // wxUSE_INTL
+#endif // __WXOSX__
     // we have to use our own implementation if the date is out of range of
     // strftime()
 #ifdef wxHAS_STRFTIME
@@ -336,8 +338,8 @@ wxString wxDateTime::Format(const wxString& formatp, const TimeZone& tz) const
     bool isPercent = false;
 
     // We also can't use strftime() if we use non standard specifier: either
-    // our own extension "%l" or one of "%g", "%G", "%V", "%z" which are POSIX
-    // but not supported under Windows.
+    // our own extension "%l" or one of C99/POSIX specifiers not always
+    // supported under Windows.
     for ( wxString::const_iterator p = format.begin();
           canUseStrftime && p != format.end();
           ++p )
@@ -354,6 +356,10 @@ wxString wxDateTime::Format(const wxString& formatp, const TimeZone& tz) const
         {
             case 'l':
 #ifdef __WINDOWS__
+            // Versions of MSVC until 2015 and MinGW don't support "%F".
+#if defined(__MINGW32__) || (defined(__VISUALC__) && !wxCHECK_VISUALC_VERSION(14))
+            case 'F':
+#endif
             case 'g':
             case 'G':
             case 'V':
@@ -392,7 +398,7 @@ wxString wxDateTime::Format(const wxString& formatp, const TimeZone& tz) const
     tmTimeOnly.tm_year = 76;
     tmTimeOnly.tm_isdst = 0;        // no DST, we adjust for tz ourselves
 
-    wxString tmp, res, fmt;
+    wxString res, fmt;
     for ( wxString::const_iterator p = format.begin(); p != format.end(); ++p )
     {
         if ( *p != wxT('%') )
@@ -403,8 +409,17 @@ wxString wxDateTime::Format(const wxString& formatp, const TimeZone& tz) const
             continue;
         }
 
+        // advance to the format specifier following the '%': a trailing '%'
+        // is not a valid format, so output it verbatim and stop here instead
+        // of letting the loop's own ++p move the iterator past the end
+        if ( ++p == format.end() )
+        {
+            res += wxT('%');
+            break;
+        }
+
         // set the default format
-        switch ( (*++p).GetValue() )
+        switch ( (*p).GetValue() )
         {
             case wxT('Y'):               // year has 4 digits
             case wxT('G'):               // (and ISO week year too)
@@ -579,6 +594,10 @@ wxString wxDateTime::Format(const wxString& formatp, const TimeZone& tz) const
                     res += wxString::Format(fmt, tm.mday);
                     break;
 
+                case wxT('F'):      // ISO 8601 date
+                    res += wxString::Format(wxT("%04d-%02d-%02d"), tm.year, tm.mon + 1, tm.mday);
+                    break;
+
                 case wxT('g'):      // 2-digit week-based year
                     res += wxString::Format(fmt, GetWeekBasedYear() % 100);
                     break;
@@ -626,6 +645,10 @@ wxString wxDateTime::Format(const wxString& formatp, const TimeZone& tz) const
 
                 case wxT('S'):       // second as a decimal number (00-61)
                     res += wxString::Format(fmt, tm.sec);
+                    break;
+
+                case wxT('T'):       // time as %H:%M:%S
+                    res += wxString::Format(wxT("%02d:%02d:%02d"), tm.hour, tm.min, tm.sec);
                     break;
 
                 case wxT('U'):       // week number in the year (Sunday 1st week day)
@@ -1038,7 +1061,6 @@ wxDateTime::ParseFormat(const wxString& date,
     wxCHECK_MSG( !format.empty(), false, "format can't be empty" );
     wxCHECK_MSG( endParse, false, "end iterator pointer must be specified" );
 
-    wxString str;
     unsigned long num;
 
     // what fields have we found?
@@ -1100,13 +1122,20 @@ wxDateTime::ParseFormat(const wxString& date,
         }
 
         // start of a format specification
+        ++fmt;
+
+        // skip the optional character specifying the padding: this is a GNU
+        // extension which we need to support as this is used in the default
+        // date formats for some locales (but luckily this is simple to do)
+        if ( *fmt == '-' || *fmt == '_' || *fmt == '0' )
+            ++fmt;
 
         // parse the optional width
         size_t width = 0;
-        while ( wxIsdigit(*++fmt) )
+        while ( wxIsdigit(*fmt) )
         {
             width *= 10;
-            width += *fmt - '0';
+            width += *fmt++ - '0';
         }
 
         // the default widths for the various fields
@@ -1226,6 +1255,22 @@ wxDateTime::ParseFormat(const wxString& date,
                 // do it later - assume ok for now
                 haveDay = true;
                 mday = (wxDateTime_t)num;
+                break;
+
+            case wxT('F'):       // ISO 8601 date
+                {
+                    wxDateTime dt = ParseFormatAt(input, end, wxS("%Y-%m-%d"));
+                    if ( !dt.IsValid() )
+                        return false;
+
+                    const Tm tm = dt.GetTm();
+
+                    year = tm.year;
+                    mon = tm.mon;
+                    mday = tm.mday;
+
+                    haveDay = haveMon = haveYear = true;
+                }
                 break;
 
             case wxT('H'):       // hour in 24h format (00-23)
@@ -1753,6 +1798,10 @@ wxDateTime::ParseDateTime(const wxString& date, wxString::const_iterator *end)
     {
         // Skip spaces, as the ParseTime() function fails on spaces
         while ( endDate != date.end() && wxIsspace(*endDate) )
+            ++endDate;
+
+        // Skip possible 'T' separator in front of time component
+        if ( endDate != date.end() && *endDate == 'T' )
             ++endDate;
 
         const wxString timestr(endDate, date.end());

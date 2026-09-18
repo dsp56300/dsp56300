@@ -227,6 +227,10 @@ void wxImage::Destroy()
 
 void wxImage::Clear(unsigned char value)
 {
+    wxCHECK_RET( IsOk(), wxT("invalid image") );
+
+    AllocExclusive();
+
     memset(M_IMGDATA->m_data, value, M_IMGDATA->m_width*M_IMGDATA->m_height*3);
 }
 
@@ -390,11 +394,11 @@ wxImage wxImage::ShrinkBy( int xFactor , int yFactor ) const
                     unsigned char red = pixel[0] ;
                     unsigned char green = pixel[1] ;
                     unsigned char blue = pixel[2] ;
-                    unsigned char alpha = 255  ;
-                    if ( source_alpha )
-                        alpha = *(source_alpha + y_offset + x * xFactor + x1) ;
                     if ( !hasMask || red != maskRed || green != maskGreen || blue != maskBlue )
                     {
+                        unsigned char alpha = 255  ;
+                        if ( source_alpha )
+                            alpha = *(source_alpha + y_offset + x * xFactor + x1) ;
                         if ( alpha > 0 )
                         {
                             avgRed += red ;
@@ -550,13 +554,13 @@ wxImage wxImage::ResampleNearest(int width, int height) const
 
     unsigned char* dest_pixel = target_data;
 
-    wxUIntPtr y = 0;
+    wxUIntPtr y = y_delta / 2;
     for (int j = 0; j < height; j++)
     {
         const unsigned char* src_line = &source_data[(y>>16)*old_width*3];
         const unsigned char* src_alpha_line = source_alpha ? &source_alpha[(y>>16)*old_width] : 0 ;
 
-        wxUIntPtr x = 0;
+        wxUIntPtr x = x_delta / 2;
         for (int i = 0; i < width; i++)
         {
             const unsigned char* src_pixel = &src_line[(x>>16)*3];
@@ -1736,6 +1740,14 @@ wxImage::Paste(const wxImage & image, int x, int y,
                         float light_left = (alpha_target_data[i] / 255.0f) * (1.0f - source_alpha);
                         float result_alpha = source_alpha + light_left;
                         alpha_target_data[i] = (unsigned char)((result_alpha * 255) + 0.5f);
+                        if (result_alpha <= 0)
+                        {
+                            int c = 3 * i;
+                            target_data[c++] = 0;
+                            target_data[c++] = 0;
+                            target_data[c] = 0;
+                            continue;
+                        }
                         for (int c = 3 * i; c < 3 * (i + 1); c++)
                         {
                             target_data[c] =
@@ -2201,6 +2213,8 @@ unsigned char *wxImage::GetAlpha() const
 
 void wxImage::InitAlpha()
 {
+    wxCHECK_RET( IsOk(), wxT("invalid image") );
+
     wxCHECK_RET( !HasAlpha(), wxT("image already has an alpha channel") );
 
     // initialize memory for alpha channel

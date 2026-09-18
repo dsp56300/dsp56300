@@ -12,6 +12,8 @@ if(wxBUILD_MONOLITHIC)
     set(wxMONO_SRC_FILES)
     set(wxMONO_LIBS_PRIVATE)
     set(wxMONO_LIBS_PUBLIC)
+    set(wxMONO_DIRS_PRIVATE)
+    set(wxMONO_DIRS_PUBLIC)
     set(wxMONO_INCLUDE_DIRS)
     set(wxMONO_DEFINITIONS)
     set(wxMONO_NONCOMPILED_CPP_FILES)
@@ -27,44 +29,33 @@ foreach(LIB IN LISTS LIBS_THIRDPARTY)
     include(${LIB}.cmake)
 endforeach()
 
-# add_opt_lib()
-# Add library which may have been disabled by wxUSE_...
-macro(add_opt_lib name var_name)
-    if(${var_name})
-        list(APPEND LIBS ${name})
-    endif()
-endmacro()
-
 # Define base libraries
-set(LIBS base)
-add_opt_lib(net wxUSE_SOCKETS)
+set(LIBS base net)
 
 # Define UI libraries
 if(wxUSE_GUI)
-    list(APPEND LIBS core adv)
-    foreach(lib
+    list(APPEND LIBS
+        core
+        adv
         aui
+        gl
         html
+        media
         propgrid
+        qa
         ribbon
         richtext
-        webview
         stc
+        webview
         xrc
-        )
-        string(TOUPPER ${lib} _name_upper)
-        add_opt_lib(${lib} wxUSE_${_name_upper})
-    endforeach()
-    add_opt_lib(media wxUSE_MEDIACTRL)
-    add_opt_lib(gl wxUSE_OPENGL)
-    add_opt_lib(qa wxUSE_DEBUGREPORT)
+    )
 endif() # wxUSE_GUI
 
 # Include XML library last
 # In the monolithic build, where all target properties (include dirs) from different targets are concatenated,
 # wxml might include system expat, which might use Mono, which has it's own copy of png.
 # Thus to ensure wx's core library includes the right png class, core must be processed first before xml
-add_opt_lib(xml wxUSE_XML)
+list(APPEND LIBS xml)
 
 # Include cmake file for every library
 foreach(LIB ${LIBS})
@@ -82,6 +73,9 @@ if(wxBUILD_MONOLITHIC)
             endforeach()
 
             target_link_libraries(wxmono ${vis} ${wxMONO_LIBS_${vis}})
+        endif()
+        if(wxMONO_DIRS_${vis})
+            target_link_directories(wxmono ${vis} ${wxMONO_DIRS_${vis}})
         endif()
     endforeach()
     if(wxMONO_INCLUDE_DIRS)
@@ -103,3 +97,5 @@ endif()
 
 # Propagate variable(s) to parent scope
 set(wxLIB_TARGETS ${wxLIB_TARGETS} PARENT_SCOPE)
+set(wxLIB_BUILTIN_TARGETS ${wxLIB_BUILTIN_TARGETS} PARENT_SCOPE)
+set(wxINSTALL_HEADERS ${wxINSTALL_HEADERS} PARENT_SCOPE)

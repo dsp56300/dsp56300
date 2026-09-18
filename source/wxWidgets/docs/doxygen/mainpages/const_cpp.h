@@ -31,6 +31,7 @@ using @ifdef_ and not @if_.
 @itemdef{\__WXGTK210__, GTK+ 2.10 or higher}
 @itemdef{\__WXGTK218__, GTK+ 2.18 or higher}
 @itemdef{\__WXGTK220__, GTK+ 2.20 or higher}
+@itemdef{\__WXGTK3__, GTK+ 3.0 or higher}
 @itemdef{\__WXMAC__, old define, same as <tt>\__WXOSX__</tt>}
 @itemdef{\__WXMOTIF__, Motif}
 @itemdef{\__WXMOTIF20__, Motif 2.0 or higher}
@@ -396,6 +397,20 @@ more details.
         the applications using the library to disable implicit
         conversions from and to <tt>const char*</tt> in wxString class.
         Support for this option appeared in wxWidgets 3.1.4.}
+@itemdef{wxNO_INITIALIZER_LIST,
+        this symbol is not defined by wxWidgets itself, but can be defined by
+        the applications using the library to disable the definition of
+        overloads accepting <tt>std::initializer_list</tt> if they create
+        overload ambiguities in the existing code. It is still recommended to
+        fix such problems, by explicitly selecting the wanted conversion, as
+        this symbol is only honoured by wxWidgets 3.2 (since 3.2.5) but not by
+        the future versions of the library.}
+@itemdef{wxNO_UNUSED_VARIABLES,
+        this symbol is not defined by wxWidgets itself, but can be defined by
+        the applications using the library to opt-in enabling the @c wxWARN_UNUSED
+        attribute, and use it for selected wxWidgets classes to allow warnings
+        for unused instances. This symbol only has effect in wxWidgets 3.2
+        (since 3.2.7); it is no longer needed with 3.3.0 and later.}
 @itemdef{WXMAKINGDLL_XXX,
         used internally and defined when building the
         library @c XXX as a DLL; when a monolithic wxWidgets build is used only a

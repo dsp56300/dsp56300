@@ -21,6 +21,11 @@ namespace dsp56kDebugger
 		: StyledTextCtrl(_parent, wxID_ANY, wxDefaultPosition, wxSize(900,1000))
 		, DebuggerListener(_debugger)
 	{
+		// Before any StyledTextCtrl (Assembly/Memory) has actually received
+		// keyboard focus, treat the Disassembly view as the default target
+		// for commands like "Go to Address" (see isLastFocused()).
+		setAsDefaultFocus();
+
 		SetIndent(14);
 		SetTabWidth(14);
 		StyleSetForeground(2, *wxYELLOW);
@@ -218,7 +223,11 @@ namespace dsp56kDebugger
 
 	void Assembly::evGotoAddress(dsp56k::TWord _addr)
 	{
-		if(this->GetSTCFocus())
+		// See Memory::evGotoAddress() for why isLastFocused() is needed in
+		// addition to the live focus state: this event fires right after
+		// the modal "Go to Address" dialog closes, and focus may not have
+		// been restored to this control yet at that exact point in time.
+		if(this->GetSTCFocus() || isLastFocused())
 			GotoLine(static_cast<int>(_addr));
 	}
 
@@ -249,7 +258,7 @@ namespace dsp56kDebugger
 	}
 }
 
-wxBEGIN_EVENT_TABLE(dsp56kDebugger::Assembly, wxStyledTextCtrl)
+wxBEGIN_EVENT_TABLE(dsp56kDebugger::Assembly, StyledTextCtrl)
 	EVT_STC_CHANGE(wxID_ANY, Assembly::onChange)
 	EVT_STC_PAINTED(wxID_ANY, Assembly::onChange)
 	EVT_STC_DOUBLECLICK(wxID_ANY, Assembly::onDoubleClick)

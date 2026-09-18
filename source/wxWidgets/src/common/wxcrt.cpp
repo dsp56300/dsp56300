@@ -52,13 +52,6 @@
 
 #include <errno.h>
 
-#if defined(__DARWIN__)
-    #include "wx/osx/core/cfref.h"
-    #include <CoreFoundation/CFLocale.h>
-    #include "wx/osx/core/cfstring.h"
-    #include <xlocale.h>
-#endif
-
 wxDECL_FOR_STRICT_MINGW32(int, vswprintf, (wchar_t*, const wchar_t*, __VALIST))
 wxDECL_FOR_STRICT_MINGW32(int, _putws, (const wchar_t*))
 wxDECL_FOR_STRICT_MINGW32(void, _wperror, (const wchar_t*))
@@ -125,27 +118,7 @@ WXDLLIMPEXP_BASE size_t wxWC2MB(char *buf, const wchar_t *pwz, size_t n)
 
 char* wxSetlocale(int category, const char *locale)
 {
-#ifdef __WXMAC__
-    char *rv = NULL ;
-    if ( locale != NULL && locale[0] == 0 )
-    {
-        // the attempt to use newlocale(LC_ALL_MASK, "", NULL);
-        // here in order to deduce the language along the environment vars rules
-        // lead to strange crashes later...
-
-        // we have to emulate the behaviour under OS X
-        wxCFRef<CFLocaleRef> userLocaleRef(CFLocaleCopyCurrent());
-        wxCFStringRef str(wxCFRetain((CFStringRef)CFLocaleGetValue(userLocaleRef, kCFLocaleLanguageCode)));
-        wxString langFull = str.AsString()+"_";
-        str.reset(wxCFRetain((CFStringRef)CFLocaleGetValue(userLocaleRef, kCFLocaleCountryCode)));
-        langFull += str.AsString();
-        rv = setlocale(category, langFull.c_str());
-    }
-    else
-        rv = setlocale(category, locale);
-#else
     char *rv = setlocale(category, locale);
-#endif
     if ( locale != NULL /* setting locale, not querying */ &&
          rv /* call was successful */ )
     {
@@ -554,7 +527,7 @@ int ConvertStringToBuf(const wxString& s, char *out, size_t outsize)
     {
         memcpy(out, buf, len+1);
     }
-    else // not enough space
+    else if ( outsize > 0 ) // not enough space
     {
         memcpy(out, buf, outsize-1);
         out[outsize-1] = '\0';
@@ -573,7 +546,7 @@ int ConvertStringToBuf(const wxString& s, wchar_t *out, size_t outsize)
     {
         memcpy(out, buf, (len+1) * sizeof(wchar_t));
     }
-    else // not enough space
+    else if ( outsize > 0 ) // not enough space
     {
         memcpy(out, buf, (outsize-1) * sizeof(wchar_t));
         out[outsize-1] = 0;
@@ -654,7 +627,8 @@ int wxVsnprintf(char *str, size_t size, const wxString& format, va_list argptr)
 
     // VsnprintfTestCase reveals that glibc's implementation of vswprintf
     // doesn't nul terminate on truncation.
-    str[size - 1] = 0;
+    if ( size )
+        str[size - 1] = 0;
 
     return rv;
 }
@@ -1092,6 +1066,19 @@ char *strdup(const char *s)
 bool wxLocaleIsUtf8 = false; // the safer setting if not known
 #endif
 
+static bool wxIsCharsetUtf8(const char* charset)
+{
+    if ( strcmp(charset, "UTF-8") == 0 ||
+         strcmp(charset, "utf-8") == 0 ||
+         strcmp(charset, "UTF8") == 0 ||
+         strcmp(charset, "utf8") == 0 )
+    {
+        return true;
+    }
+
+    return false;
+}
+
 static bool wxIsLocaleUtf8()
 {
     // NB: we intentionally don't use wxLocale::GetSystemEncodingName(),
@@ -1102,31 +1089,28 @@ static bool wxIsLocaleUtf8()
     // GNU libc provides current character set this way (this conforms to
     // Unix98)
     const char *charset = nl_langinfo(CODESET);
-    if ( charset )
-    {
-        // "UTF-8" is used by modern glibc versions, but test other variants
-        // as well, just in case:
-        if ( strcmp(charset, "UTF-8") == 0 ||
-             strcmp(charset, "utf-8") == 0 ||
-             strcmp(charset, "UTF8") == 0 ||
-             strcmp(charset, "utf8") == 0 )
-        {
-            return true;
-        }
-    }
+    if ( charset && wxIsCharsetUtf8(charset) )
+        return true;
 #endif // HAVE_LANGINFO_H
 
-    // check if we're running under the "C" locale: it is 7bit subset
-    // of UTF-8, so it can be safely used with the UTF-8 build:
+    // check LC_CTYPE string: this also works with (sufficiently recent) MSVC
+    // and on any other system without nl_langinfo()
     const char *lc_ctype = setlocale(LC_CTYPE, NULL);
-    if ( lc_ctype &&
-         (strcmp(lc_ctype, "C") == 0 || strcmp(lc_ctype, "POSIX") == 0) )
+    if ( lc_ctype )
     {
-        return true;
+        // check if we're running under the "C" locale: it is 7bit subset
+        // of UTF-8, so it can be safely used with the UTF-8 build:
+        if ( (strcmp(lc_ctype, "C") == 0 || strcmp(lc_ctype, "POSIX") == 0) )
+            return true;
+
+        // any other locale can also use UTF-8 encoding if it's explicitly
+        // specified
+        const char* charset = strrchr(lc_ctype, '.');
+        if ( charset && wxIsCharsetUtf8(charset + 1) )
+            return true;
     }
 
-    // we don't know what charset libc is using, so assume the worst
-    // to be safe:
+    // by default assume that we don't use UTF-8
     return false;
 }
 
