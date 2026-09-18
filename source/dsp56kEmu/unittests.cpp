@@ -224,6 +224,7 @@ namespace dsp56k
 
 		// peripherals
 		peripheralDeadline();
+		esaiClockAfterReset();
 
 		// multi-instruction tests
 		multiInstructionTests();
@@ -252,6 +253,19 @@ namespace dsp56k
 		// and zero means right now
 		peripheralsX.setDelayCycles(0);
 		verify(peripheralsX.getTargetClock() == start + 50);
+	}
+
+	// resetHW starts the instruction and cycle counters over while the ESAI clock still holds the time of its last
+	// slot. It then served slots "due" since a point in time that was far in the future and never returned.
+	void UnitTests::esaiClockAfterReset()
+	{
+		dsp.fastForward(100000, 100000);
+		peripheralsX.exec();
+
+		dsp.resetHW();
+
+		// returns at all, and with the next slot one slot ahead of the new count
+		verify(peripheralsX.exec() < 100000);
 	}
 
 	void UnitTests::conditionCodes()

@@ -225,6 +225,7 @@ namespace  dsp56k
 		void subr_leftAligned();
 		void ccrCrossBlockConsumer();
 		void peripheralDeadline();
+		void esaiClockAfterReset();
 
 		Peripherals56362 peripheralsX;
 		Peripherals56367 peripheralsY;

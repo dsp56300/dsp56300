@@ -20,6 +20,11 @@ namespace dsp56k
 		if(!m_enabled)
 			return std::numeric_limits<uint32_t>::max();
 
+		// DSP::resetHW starts the counter over. The time since the last slot would come out negative, a huge unsigned
+		// number, and serving every slot that is "due" by then would never end. The clock starts over with the counter
+		if(*m_dspInstructionCounter < m_lastClock)
+			m_lastClock = *m_dspInstructionCounter;
+
 		auto diff = *m_dspInstructionCounter - m_lastClock;
 
 		if(diff < m_cyclesPerSample)
