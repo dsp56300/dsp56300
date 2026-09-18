@@ -83,6 +83,16 @@ namespace dsp56k
 		return false;
 	}
 
+	inline bool HDI08Queue::hasPendingHostFlags() const
+	{
+		for (const auto* hdi08 : m_hdi08)
+		{
+			if(hdi08->hasPendingHostFlags01())
+				return true;
+		}
+		return false;
+	}
+
 	void HDI08Queue::sendPendingData()
 	{
 		while(!m_dataRX.empty())
@@ -124,7 +134,11 @@ namespace dsp56k
 			}
 			else
 			{
-				if(rxFull())
+				// A data word waits until the DSP has seen the flag change in front of it, just as the host waits
+				// for the DSP to answer that change before it sends the word. Delivered earlier, the word can reach
+				// the receive register while the DSP is still reacting to the flag, for example while a DMA channel
+				// that the DSP disarms in its answer is still armed, and that channel then takes the word as data.
+				if(rxFull() || hasPendingHostFlags())
 					break;
 
 				for (auto* hdi08 : m_hdi08)

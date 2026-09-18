@@ -228,6 +228,7 @@ namespace  dsp56k
 		void ccrCrossBlockConsumer();
 		void peripheralDeadline();
 		void esaiClockAfterReset();
+		void hostQueueDataWaitsForHostFlags();
 
 		Peripherals56362 peripheralsX;
 		Peripherals56367 peripheralsY;

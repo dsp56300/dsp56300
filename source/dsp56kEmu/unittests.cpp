@@ -1,6 +1,8 @@
 #include "unittests.h"
 #include "unittests_sa_bitfield.h"
 
+#include "hdi08queue.h"
+
 
 namespace dsp56k
 {
@@ -226,6 +228,7 @@ namespace dsp56k
 		// peripherals
 		peripheralDeadline();
 		esaiClockAfterReset();
+		hostQueueDataWaitsForHostFlags();
 
 		// multi-instruction tests
 		multiInstructionTests();
@@ -267,6 +270,41 @@ namespace dsp56k
 
 		// returns at all, and with the next slot one slot ahead of the new count
 		verify(peripheralsX.exec() < 100000);
+	}
+
+	/*	A host that changes a host flag waits for the DSP to answer the change before it sends the data behind it. The
+		queue does not wait, so it holds such a word back until the DSP has read the flag. Delivered earlier, the word
+		can reach the DSP while it is still reacting to the flag, for example while a DMA channel that it is about to
+		disarm is still armed and takes the word as data.
+	*/
+	void UnitTests::hostQueueDataWaitsForHostFlags()
+	{
+		auto& hdi08 = peripheralsX.getHDI08();
+
+		HDI08Queue queue;
+		queue.addHDI08(hdi08);
+
+		// an address announced by an HF0 pulse, and the address word
+		queue.writeHostFlags(1, 0);
+		queue.writeHostFlags(0, 0);
+		const TWord address = 0x000123;
+		queue.writeRX(&address, 1);
+
+		verify(!hdi08.hasRXData());
+
+		// the DSP reads HF0 = 1, the change to 0 is passed on, the word stays in the queue
+		verify(bittest(hdi08.readStatusRegister(), HDI08::HSR_HF0));
+		queue.exec();
+		verify(hdi08.hasPendingHostFlags01());
+		verify(!hdi08.hasRXData());
+
+		// the DSP reads HF0 = 0, now the word follows
+		verify(!bittest(hdi08.readStatusRegister(), HDI08::HSR_HF0));
+		queue.exec();
+		verify(hdi08.hasRXData());
+
+		hdi08.clearRX();
+		hdi08.reset();
 	}
 
 	void UnitTests::conditionCodes()

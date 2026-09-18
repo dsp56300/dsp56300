@@ -32,6 +32,7 @@ namespace dsp56k
 
 	private:
 		bool rxFull() const;
+		bool hasPendingHostFlags() const;
 		void sendPendingData();
 
 		static constexpr uint8_t HostFlagInvalid = 0xff;
