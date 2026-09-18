@@ -111,6 +111,10 @@ namespace dsp56k
 		const TWord& getDCO() const;
 		const TWord& getDCR() const;
 
+		// a DE triggered transfer that has not completed yet
+		bool hasPendingTransfer() const { return m_pendingTransfer > 0; }
+		TWord getIndex() const { return m_index; }
+
 		uint32_t exec();
 
 		void triggerByRequest();
@@ -175,6 +179,7 @@ namespace dsp56k
 		TWord m_dcolInit = 0;
 
 		int32_t m_pendingTransfer = 0;
+		bool m_dataTransferred = false;
 		uint64_t m_lastClock = 0;
 	};
 
@@ -214,6 +219,7 @@ namespace dsp56k
 		uint32_t exec() noexcept;
 		void setActiveChannel(TWord _channel);
 		void clearActiveChannel();
+
 
 		bool hasTrigger(DmaChannel::RequestSource _source) const;
 		bool trigger(DmaChannel::RequestSource _source) const;

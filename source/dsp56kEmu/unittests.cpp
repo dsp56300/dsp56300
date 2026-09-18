@@ -119,6 +119,7 @@ namespace dsp56k
 		cmp();
 		cmpm();
 		cmpm_accumulator();
+		dmaAddressModes();
 		cmpu();
 		mpyri();
 		merge();
@@ -1753,6 +1754,101 @@ namespace dsp56k
 			verify(dsp.aluA().var == negative);
 			verify(dsp.aluB().var == negative);
 		});
+	}
+
+	void UnitTests::dmaAddressModes()
+	{
+		constexpr TWord deBlock = (1 << 23) | (3 << 19);	// DE, DTM = block, triggered by DE, DE cleared afterwards
+		constexpr TWord toY = 1 << 2;						// DDS = Y, DSS = X
+
+		// two-dimensional, DOR3 on both sides: 18 words, DOR3 = -17 takes the source back to where it started.
+		// The data moves as soon as DE is set, dmaDelayedBlockTransfer covers the completion
+		runTest([&]()
+		{
+			for(TWord i=0; i<20; ++i)
+			{
+				dsp.memory().set(MemArea_X, 0x100 + i, 0x100 + i);
+				dsp.memory().set(MemArea_Y, 0x200 + i, 0);
+			}
+
+			peripheralsX.write(XIO_DOR3, 0xffffef);
+			peripheralsX.write(XIO_DSR0, 0x100);
+			peripheralsX.write(XIO_DDR0, 0x200);
+			peripheralsX.write(XIO_DCO0, 0x11);
+			peripheralsX.write(XIO_DCR0, deBlock | (0x1b << 4) | toY);
+
+			emit("nop");
+		},
+		[&]()
+		{
+			for(TWord i=0; i<18; ++i)
+				verify(dsp.memory().get(MemArea_Y, 0x200 + i) == 0x100 + i);
+			verify(dsp.memory().get(MemArea_Y, 0x212) == 0);
+			verify(peripheralsX.read(XIO_DSR0, Nop) == 0x100);
+		});
+
+		// no update on either side: a single word from a fixed location to a fixed location
+		runTest([&]()
+		{
+			dsp.memory().set(MemArea_X, 0x120, 0x123456);
+			dsp.memory().set(MemArea_Y, 0x400, 0);
+			dsp.memory().set(MemArea_Y, 0x401, 0);
+
+			peripheralsX.write(XIO_DSR0, 0x120);
+			peripheralsX.write(XIO_DDR0, 0x400);
+			peripheralsX.write(XIO_DCO0, 0);
+			peripheralsX.write(XIO_DCR0, deBlock | (0x24 << 4) | toY);
+
+			emit("nop");
+		},
+		[&]()
+		{
+			verify(dsp.memory().get(MemArea_Y, 0x400) == 0x123456);
+			verify(dsp.memory().get(MemArea_Y, 0x401) == 0);
+		});
+	}
+
+	void UnitTests::dmaDelayedBlockTransfer()
+	{
+		// The data of a DE triggered block is there at once, the transfer completes after two instructions per word.
+		// Meanwhile another channel completes a transfer, which clears the active channel. The block has to complete
+		// anyway
+		constexpr TWord deBlock = (1 << 23) | (3 << 19);
+		constexpr TWord toY = 1 << 2;
+
+		auto& dma = peripheralsX.getDMA();
+
+		dsp.resetHW();
+
+		for(TWord i=0; i<20; ++i)
+		{
+			dsp.memory().set(MemArea_X, 0x140 + i, 0x140 + i);
+			dsp.memory().set(MemArea_Y, 0x500 + i, 0);
+		}
+
+		for(TWord i=0; i<64; ++i)
+			emitToMemory("nop", 0xe00 + i);
+		emitToMemory(0x0c0e40, 0, 0xe40);	// jmp $e40, the JIT runs whole blocks, it has to end somewhere
+
+		peripheralsX.write(XIO_DOR3, 0xffffef);
+		peripheralsX.write(XIO_DSR0, 0x140);
+		peripheralsX.write(XIO_DDR0, 0x500);
+		peripheralsX.write(XIO_DCO0, 0x11);
+		peripheralsX.write(XIO_DCR0, deBlock | (0x1b << 4) | toY);
+
+		for(TWord i=0; i<18; ++i)
+			verify(dsp.memory().get(MemArea_Y, 0x500 + i) == 0x140 + i);
+		verify(dsp.memory().get(MemArea_Y, 0x512) == 0);
+		verify(peripheralsX.read(XIO_DSR0, Nop) == 0x140);
+		verify((peripheralsX.read(XIO_DCR0, Nop) & (1 << 23)) != 0);
+
+		dma.clearActiveChannel();
+
+		dsp.setPC(0xe00);
+		execUntil(0xe40);
+		dma.exec();
+
+		verify((peripheralsX.read(XIO_DCR0, Nop) & (1 << 23)) == 0);
 	}
 
 	void UnitTests::dec()
@@ -7017,6 +7113,7 @@ namespace dsp56k
 		movemShortWritesCode();
 		movepWritesCode();
 		blockOnExtensionWord();
+		dmaDelayedBlockTransfer();
 		do_forever();
 		dorShortAddress();
 		trapContinues();

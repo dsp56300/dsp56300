@@ -17,8 +17,6 @@
 #define LOGDMA(S) do{}while(0)
 #endif
 
-constexpr bool g_delayedDmaTransfer = true;
-
 namespace dsp56k
 {
 	namespace
@@ -167,8 +165,9 @@ namespace dsp56k
 		}
 		else
 		{
+			// counter mode B splits DCO into DCOH[23-12] and DCOL[11-0], mode A only uses m_dcom
 			m_dcohInit = m_dco >> 12;
-			m_dcolInit = m_dco & 0xff;
+			m_dcolInit = m_dco & 0xfff;
 
 			m_dcoh = m_dcohInit;
 			m_dcol = m_dcolInit;
@@ -184,19 +183,16 @@ namespace dsp56k
 
 			m_dma.setActiveChannel(m_index);
 
-			if constexpr(!g_delayedDmaTransfer)
-			{
-				if(execTransfer())
-					finishTransfer();
-			}
-			else
-			{
-				// "When the needed resources are available, each word transfer performed by the DMA takes at least two core clock cycles"
-				m_pendingTransfer = std::max(1, static_cast<int32_t>((m_dco + 1) << 1));
-//				m_pendingTransfer = 1;
-				m_peripherals.setDelayCycles(m_pendingTransfer);
-				m_lastClock = m_peripherals.getDSP().getInstructionCounter();
-			}
+			// "When the needed resources are available, each word transfer performed by the DMA takes at least two core
+			// clock cycles". The data moves right away, the transfer completes (DE, DTD, interrupt) after that time.
+			// The JIT only runs the peripherals between its blocks, so data that arrived at the end of the time would
+			// be too late for firmware that sets DE and uses the data further down the same interrupt handler.
+			// The data arrives earlier than on the chip, which only matters to firmware that races the DMA
+			m_dataTransferred = execTransfer();
+
+			m_pendingTransfer = std::max(1, static_cast<int32_t>((m_dco + 1) << 1));
+			m_peripherals.setDelayCycles(m_pendingTransfer);
+			m_lastClock = m_peripherals.getDSP().getInstructionCounter();
 			return;
 		}
 
@@ -257,9 +253,6 @@ namespace dsp56k
 
 	uint32_t DmaChannel::exec()
 	{
-		if constexpr (!g_delayedDmaTransfer)
-			return IPeripherals::MaxDelayCycles;
-
 		if(m_pendingTransfer <= 0)
 			return IPeripherals::MaxDelayCycles;
 
@@ -271,9 +264,10 @@ namespace dsp56k
 
 		if(m_pendingTransfer <= 0)
 		{
-			if(execTransfer())
+			if(m_dataTransferred || execTransfer())
 			{
 				m_pendingTransfer = 0;
+				m_dataTransferred = false;
 				finishTransfer();
 			}
 			else
@@ -686,6 +680,27 @@ namespace dsp56k
 			return true;
 		}
 
+		if (agmS == AddressGenMode::SingleCounterAnoUpdate && agmD == AddressGenMode::SingleCounterAnoUpdate)
+		{
+			// a peripheral into a fixed location, or the other way around
+			if(isRequestTrigger())
+			{
+				memWrite(areaD, m_ddr, memRead(areaS, m_dsr));
+				if(m_dco)
+				{
+					--m_dco;
+					return false;
+				}
+
+				m_dco = m_dcomInit;
+				return true;
+			}
+
+			for(TWord i=0; i<=m_dco; ++i)
+				memWrite(areaD, m_ddr, memRead(areaS, m_dsr));
+			return true;
+		}
+
 		if(agmS == AddressGenMode::SingleCounterApostInc && agmD == AddressGenMode::SingleCounterAnoUpdate)
 		{
 			// can be used to continously feed a peripheral from a memory region
@@ -726,6 +741,53 @@ namespace dsp56k
 			while(isLineTransfer && m_dcol != m_dcolInit);
 
 			return false;
+		}
+
+		if(agmS <= AddressGenMode::DualCounterDOR3 || agmD <= AddressGenMode::DualCounterDOR3)
+		{
+			// Two-dimensional on either side, counter mode B. Each word moves a two-dimensional address by one, or by
+			// its offset register after the last word of a line; the other side updates as its own mode says
+			auto advance = [this](TWord& _addr, const AddressGenMode _mode, const bool _lineEnd)
+			{
+				if(_mode <= AddressGenMode::DualCounterDOR3)
+					_addr += _lineEnd ? m_dma.getDOR(static_cast<TWord>(_mode)) : 1;
+				else if(_mode == AddressGenMode::SingleCounterApostInc)
+					++_addr;
+				_addr &= 0xffffff;
+			};
+
+			const auto tm = getTransferMode();
+			const auto isWordTransfer = tm == TransferMode::WordTriggerRequest || tm == TransferMode::WordTriggerRequestClearDE;
+			const auto isLineTransfer = tm == TransferMode::LineTriggerRequestClearDE;
+
+			while(true)
+			{
+				memWrite(areaD, m_ddr, memRead(areaS, m_dsr));
+
+				const auto lineEnd = m_dcol == 0;
+				const auto blockEnd = lineEnd && m_dcoh == 0;
+
+				advance(m_dsr, agmS, lineEnd);
+				advance(m_ddr, agmD, lineEnd);
+
+				if(!lineEnd)
+				{
+					--m_dcol;
+				}
+				else
+				{
+					m_dcol = m_dcolInit;
+					if(blockEnd)
+						m_dcoh = m_dcohInit;
+					else
+						--m_dcoh;
+				}
+
+				if(blockEnd)
+					return true;
+				if(isWordTransfer || (isLineTransfer && lineEnd))
+					return false;
+			}
 		}
 
 		assert(false && "DMA transfer mode not supported yet");
@@ -805,8 +867,19 @@ namespace dsp56k
 		m_dstr |= _channel << Dch0;
 	}
 
-	inline void Dma::clearActiveChannel()
+	void Dma::clearActiveChannel()
 	{
+		// exec only runs while a channel is active. A transfer that completes right away must not hide the delayed
+		// transfer of another channel, which would never finish then and keep its DE set
+		for (const auto& channel : m_channels)
+		{
+			if(channel.hasPendingTransfer())
+			{
+				setActiveChannel(channel.getIndex());
+				return;
+			}
+		}
+
 		m_dstr &= ~(1 << Dact);
 	}
 
