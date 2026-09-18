@@ -222,8 +222,36 @@ namespace dsp56k
 		jsclr_jsset_ppqq();
 		brclr_brset_ppqq();
 
+		// peripherals
+		peripheralDeadline();
+
 		// multi-instruction tests
 		multiInstructionTests();
+	}
+
+	void UnitTests::peripheralDeadline()
+	{
+		/*	A peripheral that asks to run again in N instructions must keep that point in time. The ESAI asks for its
+			next slot, and a caller in the middle of a slot used to carry the remaining delay over to its own
+			instruction count, which pushed the ESAI up to a full slot into the future. The DSP then read status
+			flags of a slot that was already over.
+		*/
+		const auto start = dsp.getInstructionCounter();
+
+		peripheralsX.resetDelayCycles(start, 72);
+		verify(peripheralsX.getTargetClock() == start + 72);
+
+		dsp.fastForward(50, 50);
+		peripheralsX.setDelayCycles(1000);
+		verify(peripheralsX.getTargetClock() == start + 72);
+
+		// a deadline that is closer than the one that is set wins
+		peripheralsX.setDelayCycles(5);
+		verify(peripheralsX.getTargetClock() == start + 55);
+
+		// and zero means right now
+		peripheralsX.setDelayCycles(0);
+		verify(peripheralsX.getTargetClock() == start + 50);
 	}
 
 	void UnitTests::conditionCodes()

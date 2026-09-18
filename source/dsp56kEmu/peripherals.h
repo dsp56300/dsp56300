@@ -117,11 +117,9 @@ namespace dsp56k
 
 		void resetDelayCycles(const uint64_t _instructionCount, const uint32_t _delayCycles) noexcept
 		{
-			m_delayCycles.store(_delayCycles, std::memory_order_relaxed);
 			m_targetClock.store(_instructionCount + _delayCycles, std::memory_order_relaxed);
 		}
 
-		uint32_t getDelayCycles() const { return m_delayCycles.load(std::memory_order_relaxed); }
 		auto getTargetClock() const { return m_targetClock.load(std::memory_order_relaxed); }
 
 		// the trampoline inlines the "is a peripheral due" test into its exec loop and needs the address of
@@ -132,7 +130,7 @@ namespace dsp56k
 
 	private:
 		DSP* m_dsp = nullptr;
-		std::atomic<uint32_t> m_delayCycles{0};		// advisory pacing hint, read cross-thread by DSP exec
+		// advisory pacing hint, read cross-thread by DSP exec
 		std::atomic<uint64_t> m_targetClock{0};
 		PeripheralType m_type;
 	};

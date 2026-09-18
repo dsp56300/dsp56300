@@ -110,10 +110,16 @@ namespace dsp56k
 
 	void IPeripherals::setDelayCycles(const uint32_t _delayCycles) noexcept
 	{
+		/*	A deadline may only move closer. The one that is set belongs to the peripheral that asked to run at that
+			instruction count, and carrying the remaining delay over to now would postpone it by everything that ran in
+			between. The ESAI is the one that suffers: its deadline is the next slot, and a caller in the middle of a
+			slot used to push it a full slot into the future, so the DSP read status flags of a slot that was over.
+		*/
 		// Pacing hint only (advisory); atomic-relaxed so a concurrent DSP-thread read is torn-free, ordering irrelevant.
-		const auto d = std::min(m_delayCycles.load(std::memory_order_relaxed), _delayCycles);
-		m_delayCycles.store(d, std::memory_order_relaxed);
-		m_targetClock.store(m_dsp->getInstructionCounter() + d, std::memory_order_relaxed);
+		const auto target = m_dsp->getInstructionCounter() + _delayCycles;
+
+		if(target < m_targetClock.load(std::memory_order_relaxed))
+			m_targetClock.store(target, std::memory_order_relaxed);
 	}
 
 	// _____________________________________________________________________________
