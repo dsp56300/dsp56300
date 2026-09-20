@@ -309,7 +309,11 @@ namespace dsp56k
 	{
 		if(!m_transmitDataAlwaysEmpty && !m_dataTX.empty())
 		{
-			LOG("Write HDI08 HOTX: Discarding " << HEX(m_dataTX.front()) << ", HOTX is full, replacing with " << HEX(_val));
+			// A DSP that writes faster than the host reads overwrites its own word, exactly as the hardware
+			// does. Only a different word is worth a line: a program that answers the same value in a loop
+			// logged several hundred thousand times per second and starved the emulation of everything else.
+			if(m_dataTX.front() != _val)
+				LOG("Write HDI08 HOTX: Discarding " << HEX(m_dataTX.front()) << ", HOTX is full, replacing with " << HEX(_val));
 			m_dataTX.front() = _val;
 			return;
 		}
