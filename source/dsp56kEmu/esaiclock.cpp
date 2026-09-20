@@ -28,7 +28,9 @@ namespace dsp56k
 		auto diff = *m_dspInstructionCounter - m_lastClock;
 
 		if(diff < m_cyclesPerSample)
-			return instructionsForCycles(static_cast<uint32_t>(m_cyclesPerSample - diff));
+			return (static_cast<uint32_t>(m_cyclesPerSample - diff)) >> static_cast<uint32_t>(m_clockSource);	// see explanation at end of this func
+
+		m_lastClock += m_cyclesPerSample;
 
 		auto advanceClock = [](Clock& _c)
 		{
@@ -40,72 +42,33 @@ namespace dsp56k
 			return false;
 		};
 
-		/*	Serve every slot that is due in one go. Asking to be called again immediately for the next one let the
-			clock catch up at the speed of the DSP rather than the speed of the serial clock: two slots then ran
-			one instruction apart, and firmware that writes its transmit register right after a frame sync found
-			the frame already moved on. Firmware that writes a sync word that way and then arms a DMA channel
-			for the rest of the frame sent its whole stream one slot late.
-		*/
-		do
+		std::array<Esxi*, MaxEsais> processTx;
+		uint32_t txCount = 0;
+		std::array<Esxi*, MaxEsais> processRx;
+		uint32_t rxCount = 0;
+
+		for (auto& e : m_esais)
 		{
-			m_lastClock += m_cyclesPerSample;
-			diff -= m_cyclesPerSample;
+			if(e.esai->hasEnabledTransmitters() && advanceClock(e.tx))
+				processTx[txCount++] = e.esai;
 
-			std::array<Esxi*, MaxEsais> processTx;
-			uint32_t txCount = 0;
-			std::array<Esxi*, MaxEsais> processRx;
-			uint32_t rxCount = 0;
-
-			for (auto& e : m_esais)
-			{
-				if(e.esai->hasEnabledTransmitters() && advanceClock(e.tx))
-					processTx[txCount++] = e.esai;
-
-				if (e.esai->hasEnabledReceivers() && advanceClock(e.rx))
-					processRx[rxCount++] = e.esai;
-			}
-
-			for(size_t i=0; i<txCount; ++i) processTx[i]->execTX();
-			for(size_t i=0; i<rxCount; ++i) processRx[i]->execRX();
-		}
-		while(diff >= m_cyclesPerSample);
-
-		return instructionsForCycles(static_cast<uint32_t>(m_cyclesPerSample - diff));
-	}
-
-	/*	The DSP paces its peripherals by the instruction counter, so a clock that counts cycles has to convert its
-		delay. The ratio is not fixed - regular code runs about three cycles per instruction and a loop that polls a
-		peripheral register runs far more - so it is measured over the interval since the last call instead of
-		assumed to be two. It is rounded up, which serves the clock on the instruction its slot belongs to or
-		slightly before, never after: firmware that reacts to a frame sync within a couple of instructions has the
-		whole slot of headroom that it has on hardware.
-	*/
-	uint32_t EsxiClock::instructionsForCycles(const uint32_t _cycles) noexcept
-	{
-		if(m_clockSource == ClockSource::Instructions)
-			return _cycles;
-
-		const auto& dsp = m_periph.getDSP();
-
-		const auto instructions = dsp.getInstructionCounter();
-		const auto deltaInstructions = instructions - m_ratioInstructions;
-
-		// This runs for every slot, so the ratio is measured over a window and kept as a reciprocal: what is left
-		// per call is a multiply. The window also keeps the estimate out of the noise of a single instruction.
-		if(deltaInstructions >= g_ratioWindow)
-		{
-			const auto cycles = dsp.getCycles();
-			const auto deltaCycles = cycles - m_ratioCycles;
-
-			m_ratioInstructions = instructions;
-			m_ratioCycles = cycles;
-
-			// round the ratio up and its reciprocal down, so the estimate never claims the DSP is slower than it is
-			const auto cyclesPerInstruction = std::max(static_cast<uint64_t>(1), (deltaCycles + deltaInstructions - 1) / deltaInstructions);
-			m_instructionsPerCycle = static_cast<uint32_t>((1u << g_ratioShift) / cyclesPerInstruction);
+			if (e.esai->hasEnabledReceivers() && advanceClock(e.rx))
+				processRx[rxCount++] = e.esai;
 		}
 
-		return static_cast<uint32_t>((static_cast<uint64_t>(_cycles) * m_instructionsPerCycle) >> g_ratioShift);
+		for(size_t i=0; i<txCount; ++i) processTx[i]->execTX();
+		for(size_t i=0; i<rxCount; ++i) processRx[i]->execRX();
+
+		if(diff >= (m_cyclesPerSample<<1))
+			return 0;
+
+		const auto delay = static_cast<uint32_t>((m_cyclesPerSample << 1) - diff);
+
+		// if the clock source is not instructions but cycles, we will miss frames if we return the cycle delay here because
+		// peripherals are processed via instruction counts. Return only half of the cycles in this case
+		static_assert(static_cast<uint32_t>(ClockSource::Instructions) == 0);
+		static_assert(static_cast<uint32_t>(ClockSource::Cycles) == 1);
+		return delay >> static_cast<uint32_t>(m_clockSource);
 	}
 
 	void EsxiClock::setPCTL(const TWord _val)

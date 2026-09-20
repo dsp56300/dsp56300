@@ -75,7 +75,6 @@ namespace dsp56k
 		const auto& getPeripherals() const { return m_periph; }
 
 	private:
-		uint32_t instructionsForCycles(uint32_t _cycles) noexcept;
 		void setClockSource(const DSP* _dsp, ClockSource _clockSource);
 
 		void updateCyclesPerSample();
@@ -85,13 +84,6 @@ namespace dsp56k
 		uint32_t m_cyclesPerSample = 2133;				// estimated cycles per sample before calculated
 
 		ClockSource m_clockSource = ClockSource::Instructions;
-
-		// measured instructions per cycle, to convert a cycle delay into the instruction count the DSP paces by
-		static constexpr uint32_t g_ratioShift = 16;			// fixed point fraction of the reciprocal
-		static constexpr uint32_t g_ratioWindow = 16;			// instructions to measure over before it is updated
-		uint64_t m_ratioInstructions = 0;
-		uint64_t m_ratioCycles = 0;
-		uint32_t m_instructionsPerCycle = (1u << g_ratioShift) / 2;
 
 		IPeripherals& m_periph;
 
