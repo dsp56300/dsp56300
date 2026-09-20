@@ -392,6 +392,7 @@ namespace dsp56k
 	, m_dax(*this)
 	, m_timers(*this, Vba_TIMER0_Compare)
 	, m_disableTimers(false)
+	, m_deviceId(0x362)
 	{
 		m_esaiClock.setEsaiDivider(&m_esai, 0);
 		if(_peripherals56367)
@@ -467,7 +468,7 @@ namespace dsp56k
 //		case XIO_DSTR:					// DMA status reg
 //			return 0x3f;
 		case XIO_IDR:					// ID Register
-			return 0x362;
+			return m_deviceId;
 
 		case M_AAR0:
 		case M_AAR1:

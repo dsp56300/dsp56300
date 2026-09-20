@@ -240,6 +240,13 @@ namespace dsp56k
 			m_disableTimers = _disable;
 		}
 
+		// the derivative number the ID register reports, used by firmware to tell the members of the
+		// DSP56300 family apart. $362 unless a board is populated with a different derivative
+		void setDeviceId(const TWord _id)
+		{
+			m_deviceId = _id;
+		}
+
 		void setDSP(DSP* _dsp) override;
 
 	private:
@@ -252,6 +259,7 @@ namespace dsp56k
 		Timers m_timers;
 		EsaiPortC m_portC;
 		bool m_disableTimers;
+		TWord m_deviceId;
 	};
 
 	class Peripherals56367 final : public IPeripherals
