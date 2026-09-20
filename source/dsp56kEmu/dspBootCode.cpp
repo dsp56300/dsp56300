@@ -46,7 +46,6 @@ namespace dsp56k
 			m_dsp.regs().r[1].var = static_cast<int32_t>(m_address);
 
 			m_dsp.regs().sr.var &= ~0xff;	// ccr is cleared before jump to r1
-			m_dsp.setPC(m_address);			// jmp (r1)
 
 			m_state = State::Data;
 			return false;
@@ -59,6 +58,7 @@ namespace dsp56k
 			{
 				LOG("DSP Boot: finished");
 				m_state = State::Finished;
+				m_dsp.setPC(m_initialPC);		// jmp (r1), the boot loader jumps once it has read every word
 				return true;
 			}
 			return false;

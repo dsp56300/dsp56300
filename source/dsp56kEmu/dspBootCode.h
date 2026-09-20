@@ -21,6 +21,9 @@ namespace dsp56k
 
 		bool hdiWriteTX(const TWord& _val);
 
+		// start over, for a DSP whose reset line is asserted again while it is already running a program
+		void reset() { m_state = State::Length; }
+
 		bool finished() const { return m_state == State::Finished; }
 
 		auto getLength() const { return m_length; }
