@@ -114,10 +114,22 @@ namespace dsp56k
 			if(isForeverLoop(_pc - 2))
 				_info.addFlag(JitBlockInfo::Flags::IsLoopForever);
 		}
-		else
-		{
-			assert(_pc == 0 || _pc != hiword(_dsp.regs().ss[_dsp.ssIndex()]).toWord());
-		}
+
+		/*	There is no useful converse check here. That the top of the system stack holds this PC does
+			not make the block a loop body begin, and the three things it would have to be compared
+			against drift apart legitimately:
+
+			- the stack is shared by DO, JSR/BSR and interrupts, so its top entry is a loop start only
+			  when the last push came from a DO;
+			- m_loops is filled when a block containing a DO is COMPILED and dropped again by
+			  removeLoop, which a write to the P memory holding that DO triggers;
+			- the P memory a loop was built from can be replaced while the loop is still live in LA/LC
+			  and on the stack. A host that reloads a DSP program does exactly that: observed with
+			  LA=$71a and LC=$8e6 naming a live loop while P:$717-$719 had already been cleared to zero.
+
+			An assertion on the converse used to live here and had already grown a carve-out for PC 0,
+			which is the same false positive from an uninitialised stack.
+		*/
 
 		// true if any P word in [_begin, _end) belongs to a block already
 		auto isExistingCode = [&_cache](const TWord _begin, const TWord _end)
