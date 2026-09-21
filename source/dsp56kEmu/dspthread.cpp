@@ -18,7 +18,7 @@ namespace dsp56k
 	{
 	}
 
-	DSPThread::DSPThread(DSP& _dsp, const char* _name/* = nullptr*/, std::shared_ptr<DebuggerInterface> _debugger/* = {}*/, ThreadPriority _initialPriority/* = ThreadPriority::Highest*/)
+	DSPThread::DSPThread(DSP& _dsp, const char* _name/* = nullptr*/, std::shared_ptr<DebuggerInterface> _debugger/* = {}*/, ThreadPriority _initialPriority/* = ThreadPriority::Highest*/, const Callback& _callback/* = {}*/)
 		: m_dsp(_dsp)
 		, m_name(_name ? _name : std::string())
 		, m_initialPriority(_initialPriority)
@@ -31,7 +31,7 @@ namespace dsp56k
 		if(m_debugger)
 			setDebugger(m_debugger.get());
 
-		setCallback(defaultCallback);
+		setCallback(_callback ? _callback : defaultCallback);
 
 #ifdef _WIN32
 		m_thread.reset(new std::thread([this]

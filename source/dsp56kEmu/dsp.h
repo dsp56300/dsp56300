@@ -301,6 +301,13 @@ namespace dsp56k
 			return false;
 		}
 
+		// the queue is bounded and injectExternalInterrupt blocks when it is full, which is fatal for a
+		// caller that is itself the one who would let the DSP drain it
+		bool			pendingExternalInterruptsFull	() const
+		{
+			return m_pendingExternalInterrupts.full();
+		}
+
 		bool			hasPendingExternalInterrupts	() const
 		{
 			return !m_pendingExternalInterrupts.empty();
