@@ -5,12 +5,9 @@
 #include "threadtools.h"
 
 #include "logging.h"
+#include "profiler.h"
 
 #include <algorithm>
-
-#ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
-#include "vtuneSdk/include/ittnotify.h"
-#endif
 
 #ifdef _WIN32
 #	include <Windows.h>
@@ -95,9 +92,7 @@ namespace dsp56k
 		pthread_setname_np(pthread_self(), _name.c_str());
 #endif
 
-#ifdef DSP56K_USE_VTUNE_JIT_PROFILING_API
-		__itt_thread_set_name(_name.c_str());
-#endif
+		Profiler::setThreadName(_name.c_str());
 	}
 
 	bool ThreadTools::setCurrentThreadPriority(ThreadPriority _priority)

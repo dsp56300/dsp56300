@@ -7,6 +7,7 @@
 #include "jitemitter.h"
 #include "jitoptimizer.h"
 #include "jitprofilingsupport.h"
+#include "dsp56kBase/profiler.h"
 #include "asmjit/core/jitruntime.h"
 #include "jitblockemitter.h"
 
@@ -394,6 +395,8 @@ namespace dsp56k
 			assert(false && "ordinary code in the vector region with dynamicFastInterrupts disabled");
 		}
 #endif
+
+		const ProfilerScope profilerScope("JitBlockChain::emit");
 
 		auto* emitter = m_jit.acquireEmitter(_pc);
 
