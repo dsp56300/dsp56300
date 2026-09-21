@@ -75,6 +75,10 @@ namespace dsp56k
 			Timer2                = 0b10100, // TIMER2 (TCF=1)
 			Dsp56362Reserved      = 0b10101,
 
+			// DSP56367, which has a second ESAI (DSP56367UM table 6-7)
+			Esai1ReceiveData      = 0b10101, // ESAI_1 receive data (RDF=1)
+			Esai1TransmitData     = 0b10110, // ESAI_1 transmit data (TDE=1)
+
 			// DSP56303
 			Essi0ReceiveData      = 0b01010, // ESSI0 receive data (RDF0 = 1)
 			Essi0TransmitData     = 0b01011, // ESSI0 transmit data (TDE0 = 1))
@@ -84,10 +88,14 @@ namespace dsp56k
 			Hi08TransmitDataEmpty = 0b10100, // Host transmit data empty (HTDE = 1)
 			Dsp56303Reserved      = 0b10101,
 
-			Count = Dsp56303Reserved
+			// DRS is a five bit field that firmware fills in, so every one of its 32 values has to index
+			// the target array. Firmware for a 56367 board arms channels on the two ESAI_1 sources, which
+			// are past the last source a 56362 defines - and the array was sized by that, so the request
+			// list for them was built outside it and corrupted the heap.
+			Count = 0b100000
 		};
 
-		static_assert(RequestSource::Dsp56362Reserved == RequestSource::Dsp56303Reserved, "update definition of Count in request sources");
+		static_assert(RequestSource::Dsp56362Reserved == RequestSource::Dsp56303Reserved, "the two derivatives share the reserved slot");
 
 		enum class TransferMode
 		{

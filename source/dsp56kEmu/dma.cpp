@@ -76,6 +76,15 @@ namespace dsp56k
 			case RequestSource::EsaiTransmitData:			return _p.getEsai().getSR().test(Esai::M_TDE);
 			case RequestSource::HostReceiveData:			return _p.getHDI08().readStatusRegister() & (1 << dsp56k::HDI08::HSR_HRDF);
 			case RequestSource::HostTransmitData:			return _p.getHDI08().readStatusRegister() & (1 << dsp56k::HDI08::HSR_HTDE);
+			// a 56367 board has a second ESAI, in the Y peripherals, served by this same DMA controller
+			case RequestSource::Esai1ReceiveData:
+				if(auto* p367 = _p.getPeripherals56367())
+					return p367->getEsai().getSR().test(Esai::M_RDF);
+				return false;
+			case RequestSource::Esai1TransmitData:
+				if(auto* p367 = _p.getPeripherals56367())
+					return p367->getEsai().getSR().test(Esai::M_TDE);
+				return false;
 			default:
 				assert("Unsupported request source for 56362");
 				return false;

@@ -396,7 +396,12 @@ namespace dsp56k
 	{
 		m_esaiClock.setEsaiDivider(&m_esai, 0);
 		if(_peripherals56367)
+		{
 			m_esaiClock.setEsaiDivider(&_peripherals56367->getEsai(), 0);
+			// one DMA controller for both ESAIs, see Esai::setDma
+			_peripherals56367->getEsai().setDma(&m_dma);
+			m_peripherals56367 = _peripherals56367;
+		}
 	}
 
 	TWord Peripherals56362::read(const TWord _addr, const Instruction _inst)

@@ -268,6 +268,10 @@ namespace dsp56k
 		void reset();
 		void setDSP(DSP* _dsp);
 
+		// The DSP has one DMA controller. ESAI_1 of a 56367 sits in the Y peripherals while the DMA sits
+		// in the X ones, so it is handed over once both exist.
+		void setDma(Dma* _dma) { m_dma = _dma; }
+
 		void execTX() override;
 		void execRX() override;
 
@@ -358,6 +362,10 @@ namespace dsp56k
 
 		EMemArea getMemArea() const { return m_area; }
 
+		// ESAI_1 of a DSP56367 is the one mapped into Y memory; it has its own interrupt vectors and its
+		// own pair of DMA request sources
+		bool isEsai1() const { return m_area == MemArea_Y; }
+
 		uint32_t getTxFrameCounter() const { return m_txFrameCounter; }
 
 		uint32_t getTxWordCount() const
@@ -434,7 +442,7 @@ namespace dsp56k
 		IPeripherals& m_periph;
 		const EMemArea m_area;
 		const TWord m_vba;							// base address for interrupts differs between ESAI and ESAI_1 (on DSP 56367)
-		Dma* const m_dma;
+		Dma* m_dma;									// ESAI_1 lives in the Y peripherals and is wired to the DMA of the X ones, see setDma
 		Bitfield<uint32_t, SrBits, 18> m_sr;		// status register
 		TWord m_cr = 0;								// control register
 

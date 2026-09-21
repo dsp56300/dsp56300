@@ -382,7 +382,7 @@ namespace dsp56k
 		m_sr.set(M_RDF);
 
 		if(m_dma)
-			m_dma->trigger(DmaChannel::RequestSource::EsaiReceiveData);
+			m_dma->trigger(isEsai1() ? DmaChannel::RequestSource::Esai1ReceiveData : DmaChannel::RequestSource::EsaiReceiveData);
 	}
 
 	void Esai::writeSlotToFrame()
@@ -420,7 +420,7 @@ namespace dsp56k
 		m_writtenTX = 0;
 
 		if(m_dma)
-			m_dma->trigger(DmaChannel::RequestSource::EsaiTransmitData);
+			m_dma->trigger(isEsai1() ? DmaChannel::RequestSource::Esai1TransmitData : DmaChannel::RequestSource::EsaiTransmitData);
 	}
 
 	void Esai::writeTSMA(const TWord _tsma)

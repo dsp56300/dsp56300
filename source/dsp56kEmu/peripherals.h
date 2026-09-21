@@ -260,6 +260,10 @@ namespace dsp56k
 		EsaiPortC m_portC;
 		bool m_disableTimers;
 		TWord m_deviceId;
+		Peripherals56367* m_peripherals56367 = nullptr;	// the second ESAI of a 56367, if the board has one
+
+	public:
+		Peripherals56367* getPeripherals56367() const { return m_peripherals56367; }
 	};
 
 	class Peripherals56367 final : public IPeripherals
