@@ -28,7 +28,7 @@ namespace dsp56k
 		auto diff = *m_dspInstructionCounter - m_lastClock;
 
 		if(diff < m_cyclesPerSample)
-			return (static_cast<uint32_t>(m_cyclesPerSample - diff)) >> static_cast<uint32_t>(m_clockSource);	// see explanation at end of this func
+			return instructionsForCycles(static_cast<uint32_t>(m_cyclesPerSample - diff));
 
 		m_lastClock += m_cyclesPerSample;
 
@@ -59,16 +59,67 @@ namespace dsp56k
 		for(size_t i=0; i<txCount; ++i) processTx[i]->execTX();
 		for(size_t i=0; i<rxCount; ++i) processRx[i]->execRX();
 
+		// Behind by a whole slot or more: ask to be called again right away. One slot is still served per call,
+		// so the DSP keeps its chance to run - and to refill a transmit register - between two of them.
 		if(diff >= (m_cyclesPerSample<<1))
 			return 0;
 
 		const auto delay = static_cast<uint32_t>((m_cyclesPerSample << 1) - diff);
 
-		// if the clock source is not instructions but cycles, we will miss frames if we return the cycle delay here because
-		// peripherals are processed via instruction counts. Return only half of the cycles in this case
-		static_assert(static_cast<uint32_t>(ClockSource::Instructions) == 0);
-		static_assert(static_cast<uint32_t>(ClockSource::Cycles) == 1);
-		return delay >> static_cast<uint32_t>(m_clockSource);
+		return instructionsForCycles(delay);
+	}
+
+	/*	The DSP paces its peripherals by the instruction counter, so a clock that counts cycles has to convert its
+		delay. The ratio is not fixed - regular code runs about three cycles per instruction and a loop that polls a
+		peripheral register runs far more - so it is measured over the interval since the last call instead of
+		assumed to be two. Assuming two returned a deadline about one and a half times too long, the DSP overran it
+		by that much, and a clock that found itself a slot behind caught up at the speed of the DSP: two slots ran
+		an instruction apart. Firmware that writes its transmit register right after it sees the frame sync and then
+		arms a DMA channel for the rest of the frame found the frame moved on in between and sent its whole stream
+		one slot late, on a few percent of boots.
+
+		The estimate is rounded to be early rather than late, so the clock is served on the instruction its slot
+		belongs to or slightly before, never after.
+	*/
+	uint32_t EsxiClock::instructionsForCycles(const uint32_t _cycles) noexcept
+	{
+		if(m_clockSource == ClockSource::Instructions)
+			return _cycles;
+
+		const auto& dsp = m_periph.getDSP();
+
+		const auto instructions = dsp.getInstructionCounter();
+
+		// DSP::resetHW starts both counters over. The deltas below would wrap and the ratio come out of two
+		// numbers that are each nearly the whole range, which is any value at all - measured once as a full
+		// cycle per instruction, which is the deadline three times too long that this conversion exists to
+		// avoid. Start the measurement over with the counters. The reciprocal keeps its last measured value
+		// rather than falling back to the assumption of two: the DSP runs the same code after a reset, and a
+		// window later it is measured again either way.
+		if(instructions < m_ratioInstructions)
+		{
+			m_ratioInstructions = instructions;
+			m_ratioCycles = dsp.getCycles();
+		}
+
+		const auto deltaInstructions = instructions - m_ratioInstructions;
+
+		// This runs for every slot, so the ratio is measured over a window and kept as a reciprocal: what is left
+		// per call is a multiply. The window also keeps the estimate out of the noise of a single instruction.
+		if(deltaInstructions >= g_ratioWindow)
+		{
+			const auto cycles = dsp.getCycles();
+			const auto deltaCycles = cycles - m_ratioCycles;
+
+			m_ratioInstructions = instructions;
+			m_ratioCycles = cycles;
+
+			// round the ratio up and its reciprocal down, so the estimate never claims the DSP is slower than it is
+			const auto cyclesPerInstruction = std::max(static_cast<uint64_t>(1), (deltaCycles + deltaInstructions - 1) / deltaInstructions);
+			m_instructionsPerCycle = static_cast<uint32_t>((1u << g_ratioShift) / cyclesPerInstruction);
+		}
+
+		return static_cast<uint32_t>((static_cast<uint64_t>(_cycles) * m_instructionsPerCycle) >> g_ratioShift);
 	}
 
 	void EsxiClock::setPCTL(const TWord _val)

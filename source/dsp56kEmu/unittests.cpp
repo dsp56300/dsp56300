@@ -228,6 +228,7 @@ namespace dsp56k
 		// peripherals
 		peripheralDeadline();
 		esaiClockAfterReset();
+		esaiClockCycleDeadline();
 		hostQueueDataWaitsForHostFlags();
 
 		// multi-instruction tests
@@ -270,6 +271,56 @@ namespace dsp56k
 
 		// returns at all, and with the next slot one slot ahead of the new count
 		verify(peripheralsX.exec() < 100000);
+	}
+
+	/*	The DSP paces its peripherals by its instruction counter while a clock that counts cycles measures its slots
+		in cycles, so exec() has to convert the delay to its next slot. It assumed two cycles per instruction.
+		Regular code runs about three, so every deadline came out about half again as long as it should be, the DSP
+		overran it, and a clock that found itself a whole slot behind asked to be called again immediately and
+		caught up at the speed of the DSP rather than the speed of the serial clock.
+	*/
+	void UnitTests::esaiClockCycleDeadline()
+	{
+		auto& clock = peripheralsX.getEsaiClock();
+
+		const auto oldSource = clock.getClockSource();
+		const auto oldCycles = clock.getCyclesPerSample();
+
+		clock.setCyclesPerSample(72);
+		clock.setClockSource(EsxiClock::ClockSource::Cycles);
+
+		// let the clock measure its ratio over intervals that run three cycles per instruction
+		for(uint32_t i=0; i<4; ++i)
+		{
+			clock.restartClock();
+			dsp.fastForward(16, 48);
+			clock.exec();
+		}
+
+		// a third of the way into the slot, so 48 of its 72 cycles are left: 16 instructions at three cycles
+		// each. Assuming two says 24, and the DSP overruns the slot by a third of it before the clock is asked
+		// again. The clock counts cycles in this mode, so the cycles of fastForward are what moves it.
+		clock.restartClock();
+		dsp.fastForward(8, 24);
+		const auto delay = clock.exec();
+
+		verify(delay >= 12);
+		verify(delay <= 17);
+
+		/*	DSP::resetHW rewinds both counters. The measured ratio has to start over with them: its deltas
+			wrapped, the reciprocal collapsed to zero, and every delay came out as zero until the next window
+			replaced it - the clock asked to be called again on every single instruction meanwhile.
+		*/
+		dsp.resetHW();
+		clock.restartClock();
+		dsp.fastForward(8, 24);
+		const auto afterReset = clock.exec();
+
+		verify(afterReset >= 12);
+		verify(afterReset <= 17);
+
+		clock.setCyclesPerSample(oldCycles);
+		clock.setClockSource(oldSource);
 	}
 
 	/*	A host that changes a host flag waits for the DSP to answer the change before it sends the data behind it. The
