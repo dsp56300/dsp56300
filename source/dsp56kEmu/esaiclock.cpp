@@ -59,6 +59,9 @@ namespace dsp56k
 		for(size_t i=0; i<txCount; ++i) processTx[i]->execTX();
 		for(size_t i=0; i<rxCount; ++i) processRx[i]->execRX();
 
+		if(m_tickCallback)
+			m_tickCallback();
+
 		// Behind by a whole slot or more: ask to be called again right away. One slot is still served per call,
 		// so the DSP keeps its chance to run - and to refill a transmit register - between two of them.
 		if(diff >= (m_cyclesPerSample<<1))

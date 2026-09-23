@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <vector>
 
 #include "types.h"
@@ -74,6 +75,12 @@ namespace dsp56k
 			return _flag == ExpectedResult ? 0 : getRemainingInstructionsForFrameSync();
 		}
 
+		// Called on the DSP thread once per slot of the serial clock, after every transmitter and receiver has been
+		// served. For a board that derives a signal from the serial clock, a sample clock that is a fixed number of
+		// slots long for example, and needs it on the exact slot
+		using TickCallback = std::function<void()>;
+		void setTickCallback(TickCallback _callback) { m_tickCallback = std::move(_callback); }
+
 	protected:
 		auto getDspInstructionCounter() const { return *m_dspInstructionCounter; }
 		auto getLastClock() const { return m_lastClock; }
@@ -125,6 +132,8 @@ namespace dsp56k
 		};
 
 		std::vector<EsaiEntry> m_esais;
+
+		TickCallback m_tickCallback;
 	};
 
 	class EsaiClock : public EsxiClock
