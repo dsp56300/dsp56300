@@ -359,6 +359,8 @@ namespace dsp56k
 				}
 			}
 
+			const auto writesPMem = writesToPMemory(instA, opA) || writesToPMemory(instB, opA);
+
 			// always terminate block if loop end has reached
 			if(_loopEnds.find(_pc + numWords) != _loopEnds.end())
 			{
@@ -377,11 +379,14 @@ namespace dsp56k
 				*/
 				assert(!(_dsp.regs().sr.var & SR_LF) || (_pc + numWords) == static_cast<TWord>(_dsp.regs().la.var + 1));
 				terminationReason = JitBlockInfo::TerminationReason::LoopEnd;
+				// The loop end wins over the P write as the reason, but the write still has to be reported
+				if(writesPMem)
+					_info.addFlag(JitBlockInfo::Flags::WritesPMemAtLoopEnd);
 				markForeverLoopEndingAt(_pc + numWords);
 				break;
 			}
 
-			if(writesToPMemory(instA, opA) || writesToPMemory(instB, opA))
+			if(writesPMem)
 			{
 				terminationReason = JitBlockInfo::TerminationReason::WritePMem;
 				break;
@@ -592,7 +597,9 @@ namespace dsp56k
 
 		const auto isLoopStart = info.hasFlag(JitBlockInfo::Flags::IsLoopBodyBegin);
 		const auto isLoopEnd = info.terminationReason == JitBlockInfo::TerminationReason::LoopEnd;
-		const auto isLoopBody = isLoopStart && isLoopEnd;
+		// A P write is reported after the block returns and only the last address is kept, so a loop that writes P
+		// memory must not iterate inside the block
+		const auto isLoopBody = isLoopStart && isLoopEnd && !info.hasFlag(JitBlockInfo::Flags::WritesPMemAtLoopEnd);
 		const auto isLoopForever = info.hasFlag(JitBlockInfo::Flags::IsLoopForever) != 0;
 
 		bool childIsConditional = false;

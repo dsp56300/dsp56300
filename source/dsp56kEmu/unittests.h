@@ -212,6 +212,7 @@ namespace  dsp56k
 		void adcSbcCarryChain();
 		void movemShortWritesCode();
 		void movepWritesCode();
+		void doLoopWritesCode();
 		void blockOnExtensionWord();
 		void dorShortAddress();
 		void trapContinues();

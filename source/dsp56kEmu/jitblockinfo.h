@@ -34,6 +34,7 @@ namespace dsp56k
 			BranchAtLoopEnd		= 0x10,	// the loop's last instruction is an unconditional branch
 			WritesLA			= 0x20,	// writes LA other than through DO or ENDDO, see Jit::checkLoopEnd
 			LoopEndMoved		= 0x40,	// a DO whose loop end in the registry was moved away from its operand by an LA write
+			WritesPMemAtLoopEnd	= 0x80,	// ends a loop with an instruction that writes P memory, see Jit::updateRunFunc
 		};
 
 		auto hasFlag(const Flags _flag) const

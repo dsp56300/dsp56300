@@ -319,7 +319,7 @@ namespace dsp56k
 	{
 		const auto& i = e.block->getInfo();
 
-		if(i.terminationReason == JitBlockInfo::TerminationReason::WritePMem)
+		if(i.terminationReason == JitBlockInfo::TerminationReason::WritePMem || i.hasFlag(JitBlockInfo::Flags::WritesPMemAtLoopEnd))
 		{
 			if(i.hasFlag(JitBlockInfo::Flags::ModeChange))
 				return &funcRunCheckPMemWriteAndModeChange;

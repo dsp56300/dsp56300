@@ -7263,6 +7263,7 @@ namespace dsp56k
 		adcSbcCarryChain();
 		movemShortWritesCode();
 		movepWritesCode();
+		doLoopWritesCode();
 		blockOnExtensionWord();
 		dmaDelayedBlockTransfer();
 		dmaBlockTriggeredByRequest();
@@ -7809,6 +7810,39 @@ namespace dsp56k
 
 		verify(dsp.memory().get(MemArea_P, 0x1000) == 0x000008);
 		verify(dsp.aluA().var == 1);
+		verify(dsp.regs().sp.var == 0);
+	}
+
+	/*	A DO loop whose last instruction writes P memory, the way firmware patches its own code while it runs. The block
+		that ends the loop classified itself as a loop end, not as a P write, so nothing checked the write, and the loop ran
+		all its iterations inside the block, which keeps only one written address anyway. The second call below still ran
+		the two nops it had compiled before. Both words are rewritten to inc a, so a = 2 and the stack is empty again.
+	*/
+	void UnitTests::doLoopWritesCode()
+	{
+		dsp.resetHW();
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.x0(TWord(0x000008));								// inc a
+		dsp.regs().r[1].var = 0x1100;
+
+		emitToMemory(0x000000, 0, 0x1100);						// nop, replaced below
+		emitToMemory(0x000000, 0, 0x1101);						// nop, replaced below
+		emitToMemory("rts", 0x1102);
+
+		TWord pc = 0x100;
+		pc = emitToMemory(0x0bf080, 0x001100, pc);				// jsr >$1100, builds the block with the nops
+		pc = emitToMemory(0x060280, pc + 2, pc);				// do #2, the loop is the one instruction behind it
+		pc = emitToMemory(0x075984, 0, pc);						// move x0,p:(r1)+
+		pc = emitToMemory(0x0bf080, 0x001100, pc);				// jsr >$1100
+		const auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.memory().get(MemArea_P, 0x1100) == 0x000008);
+		verify(dsp.memory().get(MemArea_P, 0x1101) == 0x000008);
+		verify(dsp.aluA().var == 2);
 		verify(dsp.regs().sp.var == 0);
 	}
 
