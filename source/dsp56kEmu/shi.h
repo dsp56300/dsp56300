@@ -90,6 +90,10 @@ namespace dsp56k
 		// true if the DSP has put a fresh word in HTX that no transfer has taken yet
 		bool hasTxData() const						{ return !bittest(m_hcsr, HCSR_HTDE); }
 
+		// The word the next transfer shifts out. A peer that moves a word a byte at
+		// a time needs it when the transfer starts, not when exchange() ends it.
+		TWord peekTx() const						{ return m_htx; }
+
 		void setCallbackTx(CallbackTx&& _cb)		{ m_callbackTx = std::move(_cb); }
 
 		static void setSymbols(class Disassembler& _disasm);
