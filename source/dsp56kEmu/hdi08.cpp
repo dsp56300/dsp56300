@@ -235,6 +235,9 @@ namespace dsp56k
 	{
 //		LOG("Write HDR: " << HEX(_val));
 		m_hdr = _val;
+
+		if(m_callbackWriteHDR)
+			m_callbackWriteHDR(_val);
 	}
 
 	TWord HDI08::readHDDR() const

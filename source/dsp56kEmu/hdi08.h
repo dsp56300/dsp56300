@@ -62,6 +62,7 @@ namespace dsp56k
 		using CallbackTx = std::function<void()>;
 		using CallbackRx = std::function<void()>;
 		using CallbackHostStateChanged = std::function<void()>;
+		using CallbackWriteHDR = std::function<void(TWord)>;
 
 		TWord readStatusRegister();
 
@@ -174,6 +175,13 @@ namespace dsp56k
 				m_callbackHostStateChanged = [] {};
 		}
 
+		// Called with every value the DSP writes to HDR, for boards that use the host port pins as general purpose
+		// outputs
+		void setWriteHDRCallback(const CallbackWriteHDR& _callback)
+		{
+			m_callbackWriteHDR = _callback;
+		}
+
 	private:
 		bool dmaTriggerReceive() const;
 		bool dmaTriggerTransmit() const;
@@ -193,6 +201,7 @@ namespace dsp56k
 		CallbackTx m_callbackTx;
 		CallbackRx m_callbackRx = [] {};
 		CallbackHostStateChanged m_callbackHostStateChanged = [] {};
+		CallbackWriteHDR m_callbackWriteHDR;
 		uint32_t m_rxRateLimit;		// minimum number of instructions between two RX interrupts
 		bool m_waitServeRXInterrupt = false;
 		std::atomic<int32_t> m_pendingHostFlags01{-1};	// pulse latch: UC/queue thread sets, DSP thread reads+clears
