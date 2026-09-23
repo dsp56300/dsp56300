@@ -208,7 +208,7 @@ namespace dsp56k
 		const auto tm = getTransferMode();
 		const auto reqSrc = getRequestSource();
 
-		const auto isSupportedTransferMode = tm == TransferMode::WordTriggerRequest || tm == TransferMode::WordTriggerRequestClearDE || tm == TransferMode::LineTriggerRequestClearDE;
+		const auto isSupportedTransferMode = tm == TransferMode::WordTriggerRequest || tm == TransferMode::WordTriggerRequestClearDE || tm == TransferMode::LineTriggerRequestClearDE || tm == TransferMode::BlockTriggerRequestClearDE;
 
 		if(!isSupportedTransferMode)
 		{
@@ -302,8 +302,20 @@ namespace dsp56k
 		if(!m_dsrWritten || !m_ddrWritten)
 			return;
 
-		if(execTransfer())
-			finishTransfer();
+		// In block mode one request moves the whole block. execTransfer() returns false after each word in the
+		// address modes that it moves word by word, so keep calling it until the block is done
+		if(getTransferMode() == TransferMode::BlockTriggerRequestClearDE)
+		{
+			while(!execTransfer())
+			{
+			}
+		}
+		else if(!execTransfer())
+		{
+			return;
+		}
+
+		finishTransfer();
 	}
 
 	DmaChannel::TransferMode DmaChannel::getTransferMode() const
@@ -652,7 +664,9 @@ namespace dsp56k
 
 			assert(false && "three-dimensional DMA modes are not supported yet");
 
-			return blockFinished;
+			// end the block, as the unsupported modes at the end of this function do, rather than rewrite the same
+			// word forever
+			return true;
 		}
 
 		const auto agmS = getSourceAddressGenMode();
@@ -660,7 +674,7 @@ namespace dsp56k
 
 		if (agmS == AddressGenMode::SingleCounterApostInc && agmD == AddressGenMode::SingleCounterApostInc)
 		{
-			assert(!isRequestTrigger() && "not supported yet, needs to be transfer one word at a time");
+			assert((!isRequestTrigger() || getTransferMode() == TransferMode::BlockTriggerRequestClearDE) && "not supported yet, needs to be transfer one word at a time");
 			memCopy(areaD, m_ddr, areaS, m_dsr, m_dco + 1);
 			m_dsr += m_dco + 1;
 			m_ddr += m_dco + 1;
@@ -812,6 +826,9 @@ namespace dsp56k
 
 		if(bitvalue(m_dcr, Die))
 			m_peripherals.getDSP().injectInterrupt(Vba_DMAchannel0 + (m_index<<1));
+
+		// the finished block is the request of every channel that waits for "transfer done from channel n"
+		m_dma.trigger(static_cast<RequestSource>(static_cast<TWord>(RequestSource::DMAChannel0) + m_index));
 	}
 
 	Dma::Dma(IPeripherals& _peripherals)

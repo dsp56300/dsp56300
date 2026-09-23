@@ -1940,6 +1940,68 @@ namespace dsp56k
 		verify((peripheralsX.read(XIO_DCR0, Nop) & (1 << 23)) == 0);
 	}
 
+	void UnitTests::dmaBlockTriggeredByRequest()
+	{
+		// A block transfer triggered by request moves nothing until the request comes, then the whole block. Firmware
+		// uses it with channels that wait for an edge on an IRQ pin, which the board drives from a host port pin, and
+		// with a channel that waits for "transfer done" of another
+		constexpr TWord blockRequest = 1 << 23;		// DE, DTM = block, triggered by request, DE cleared afterwards
+		constexpr TWord fromIrqD = 3 << 11;			// DRS = IRQD pin
+		constexpr TWord fromChannel0 = 4 << 11;		// DRS = transfer done from channel 0
+		constexpr TWord postInc = 0x2d << 4;		// DAM = post-increment on both sides
+		constexpr TWord toY = 1 << 2;				// DDS = Y, DSS = X
+
+		auto& dma = peripheralsX.getDMA();
+
+		dsp.resetHW();
+
+		for(TWord i=0; i<8; ++i)
+		{
+			dsp.memory().set(MemArea_X, 0x180 + i, 0x180 + i);
+			dsp.memory().set(MemArea_Y, 0x600 + i, 0);
+			dsp.memory().set(MemArea_Y, 0x610 + i, 0);
+		}
+
+		// channel 0 moves four words on IRQD, channel 1 the next two when channel 0 is done
+		peripheralsX.write(XIO_DSR0, 0x180);
+		peripheralsX.write(XIO_DDR0, 0x600);
+		peripheralsX.write(XIO_DCO0, 3);
+		peripheralsX.write(XIO_DCR0, blockRequest | fromIrqD | postInc | toY);
+
+		peripheralsX.write(XIO_DSR1, 0x184);
+		peripheralsX.write(XIO_DDR1, 0x604);
+		peripheralsX.write(XIO_DCO1, 1);
+		peripheralsX.write(XIO_DCR1, blockRequest | fromChannel0 | postInc | toY);
+
+		verify(dsp.memory().get(MemArea_Y, 0x600) == 0);
+
+		dma.trigger(DmaChannel::RequestSource::ExternalIRQD);
+
+		for(TWord i=0; i<6; ++i)
+			verify(dsp.memory().get(MemArea_Y, 0x600 + i) == 0x180 + i);
+		verify(dsp.memory().get(MemArea_Y, 0x606) == 0);
+		verify((peripheralsX.read(XIO_DCR0, Nop) & (1 << 23)) == 0);
+		verify((peripheralsX.read(XIO_DCR1, Nop) & (1 << 23)) == 0);
+
+		// DE is cleared, so the next request moves nothing
+		dsp.memory().set(MemArea_Y, 0x600, 0);
+		dma.trigger(DmaChannel::RequestSource::ExternalIRQD);
+		verify(dsp.memory().get(MemArea_Y, 0x600) == 0);
+
+		// two-dimensional source in counter mode B: DCOH = 1 and DCOL = 0 are two lines of one word, DOR0 apart
+		peripheralsX.write(XIO_DOR0, 5);
+		peripheralsX.write(XIO_DSR2, 0x180);
+		peripheralsX.write(XIO_DDR2, 0x610);
+		peripheralsX.write(XIO_DCO2, 0x1000);
+		peripheralsX.write(XIO_DCR2, blockRequest | fromIrqD | (0x28 << 4) | toY);
+
+		dma.trigger(DmaChannel::RequestSource::ExternalIRQD);
+
+		verify(dsp.memory().get(MemArea_Y, 0x610) == 0x180);
+		verify(dsp.memory().get(MemArea_Y, 0x611) == 0x185);
+		verify(dsp.memory().get(MemArea_Y, 0x612) == 0);
+	}
+
 	void UnitTests::dec()
 	{
 		runTest([&]()
@@ -7203,6 +7265,7 @@ namespace dsp56k
 		movepWritesCode();
 		blockOnExtensionWord();
 		dmaDelayedBlockTransfer();
+		dmaBlockTriggeredByRequest();
 		do_forever();
 		dorShortAddress();
 		trapContinues();
