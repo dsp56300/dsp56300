@@ -106,11 +106,17 @@ namespace dsp56k
 		if(!slotActive)
 			return;
 
+		// Exception first, then even slot data, then data (56362 UM table D-3). At the start of an even slot TDE and
+		// TEDE are both set, and the handler of the even slot interrupt clears both when it writes TX
 		if (m_sr.test(M_TUE) && m_tcr.test(M_TEIE))
 		{
 			injectInterrupt(Vba_ESAI_Transmit_Data_with_Exception_Status);
 
 			m_sr.clear(M_TUE);
+		}
+		else if (m_sr.test(M_TEDE) && m_tcr.test(M_TEDIE))
+		{
+			injectInterrupt(Vba_ESAI_Transmit_Even_Data);
 		}
 		else if (m_tcr.test(M_TIE))
 		{
@@ -137,10 +143,15 @@ namespace dsp56k
 
 		if(slotActive)
 		{
+			// exception first, then even slot data, then data, as on the transmit side
 			if (m_sr.test(M_ROE) && m_rcr.test(M_REIE))
 			{
 				injectInterrupt(Vba_ESAI_Receive_Data_With_Exception_Status);
 				m_sr.clear(M_ROE);
+			}
+			else if (m_sr.test(M_REDF) && m_rcr.test(M_REDIE))
+			{
+				injectInterrupt(Vba_ESAI_Receive_Even_Data);
 			}
 			else if (m_rcr.test(M_RIE))
 			{
@@ -270,6 +281,7 @@ namespace dsp56k
 //			if (m_hasReadStatus)
 				m_sr.clear(M_TUE);
 			m_sr.clear(M_TDE);
+			m_sr.clear(M_TEDE, M_TODE);
 		}
 	}
 
@@ -283,6 +295,7 @@ namespace dsp56k
 		if(!m_readRX)
 		{
 			m_sr.clear(M_RDF, M_ROE);
+			m_sr.clear(M_REDF, M_RODF);
 		}
 
 		return m_rx[_index];
@@ -381,6 +394,10 @@ namespace dsp56k
 		m_readRX = rem;
 		m_sr.set(M_RDF);
 
+		// REDF or RODF: whether the data arrived in an even or an odd slot (56362 UM 8.3.6.8, 8.3.6.9)
+		m_sr.set((m_rxSlotCounter & 1) ? M_RODF : M_REDF);
+		m_sr.clear((m_rxSlotCounter & 1) ? M_REDF : M_RODF);
+
 		if(m_dma)
 			m_dma->trigger(isEsai1() ? DmaChannel::RequestSource::Esai1ReceiveData : DmaChannel::RequestSource::EsaiReceiveData);
 	}
@@ -417,6 +434,11 @@ namespace dsp56k
 		}
 
 		m_sr.set(M_TDE);
+
+		// TEDE or TODE: whether TX emptied at the start of an even or an odd slot (56362 UM 8.3.6.13, 8.3.6.14)
+		m_sr.set((m_txSlotCounter & 1) ? M_TODE : M_TEDE);
+		m_sr.clear((m_txSlotCounter & 1) ? M_TEDE : M_TODE);
+
 		m_writtenTX = 0;
 
 		if(m_dma)

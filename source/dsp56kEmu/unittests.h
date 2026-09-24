@@ -231,6 +231,7 @@ namespace  dsp56k
 		void peripheralDeadline();
 		void esaiClockAfterReset();
 		void esaiClockCycleDeadline();
+		void esaiEvenSlotInterrupts();
 		void hostQueueDataWaitsForHostFlags();
 
 		Peripherals56362 peripheralsX;

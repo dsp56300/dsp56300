@@ -2,6 +2,7 @@
 #include "unittests_sa_bitfield.h"
 
 #include "hdi08queue.h"
+#include "interrupts.h"
 
 
 namespace dsp56k
@@ -229,6 +230,7 @@ namespace dsp56k
 		peripheralDeadline();
 		esaiClockAfterReset();
 		esaiClockCycleDeadline();
+		esaiEvenSlotInterrupts();
 		hostQueueDataWaitsForHostFlags();
 
 		// multi-instruction tests
@@ -321,6 +323,83 @@ namespace dsp56k
 
 		clock.setCyclesPerSample(oldCycles);
 		clock.setClockSource(oldSource);
+	}
+
+	/*	Firmware tells the words of the two slots of a stereo frame apart by the even slot interrupts. At the start of an
+		even slot TDE and TEDE are both set, and with TEDIE the transmitter raises "transmit even data", which ranks above
+		"transmit data" (56362 UM 8.3.6.13 and table D-3). The receiver does the same with REDF and REDIE. Without it,
+		every slot went to the transmit data and receive data handlers.
+	*/
+	void UnitTests::esaiEvenSlotInterrupts()
+	{
+		auto& esai = peripheralsX.getEsai();
+		auto& clock = peripheralsX.getEsaiClock();
+		const auto clockEnabled = clock.isEnabled();
+
+		dsp.resetHW();
+		clock.setEnabled(false);	// switching the sections on must not synthesize a slot, the test clocks them itself
+
+		esai.writeTransmitClockControlRegister(1 << Esai::M_TDC0);		// two slots per frame
+		esai.writeReceiveClockControlRegister(1 << Esai::M_RDC0);
+		esai.writeTransmitControlRegister((1 << Esai::M_TIE) | (1 << Esai::M_TEDIE) | (1 << Esai::M_TMOD0) | (1 << Esai::M_TE0));
+		esai.writeReceiveControlRegister((1 << Esai::M_RIE) | (1 << Esai::M_REDIE) | (1 << Esai::M_RMOD0) | (1 << Esai::M_RE0));
+
+		auto sr = [&](const Esai::SrBits _bit) { return (esai.readStatusRegister() & (1 << _bit)) != 0; };
+
+		esai.writeTX(0, 0x111111);
+		esai.execTX();									// slot 0, even
+		verify(sr(Esai::M_TEDE) && !sr(Esai::M_TODE));
+		verify(dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Even_Data));
+		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Data));
+
+		esai.writeTX(0, 0x222222);						// what the handler does, it clears TDE and TEDE
+		verify(!sr(Esai::M_TDE) && !sr(Esai::M_TEDE));
+
+		esai.execTX();									// slot 1, odd
+		verify(sr(Esai::M_TODE) && !sr(Esai::M_TEDE));
+		verify(dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Data));
+
+		esai.writeEmptyAudioIn(2);
+		esai.execRX();									// slot 0, even
+		verify(sr(Esai::M_REDF) && !sr(Esai::M_RODF));
+		verify(dsp.hasPendingInterrupt(Vba_ESAI_Receive_Even_Data));
+		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Data));
+
+		esai.readRX(0);									// what the handler does, it clears RDF and REDF
+		verify(!sr(Esai::M_RDF) && !sr(Esai::M_REDF));
+
+		esai.execRX();									// slot 1, odd
+		verify(sr(Esai::M_RODF) && !sr(Esai::M_REDF));
+		verify(dsp.hasPendingInterrupt(Vba_ESAI_Receive_Data));
+
+		esai.writeTransmitControlRegister(0);
+		esai.writeReceiveControlRegister(0);
+		clock.setEnabled(clockEnabled);
+
+		// Serve the four interrupts, so that no later test takes them. Their vectors hold nops, which a fast interrupt
+		// runs and returns from
+		for(TWord v = Vba_ESAI_Receive_Data; v <= Vba_ESAI_Transmit_Last_Slot + 1; ++v)
+			emitToMemory(0, 0, v);
+		for(TWord i=0; i<8; ++i)
+			emitToMemory("nop", 0xe80 + i);
+		emitToMemory(0x0c0e88, 0, 0xe88);	// jmp $e88, the JIT runs whole blocks, it has to end somewhere
+
+		const auto sr0 = dsp.getSR().var;
+		dsp.setSR(sr0 & ~0x300);			// I1:I0 = 0, so that they are taken
+
+		// the JIT runs the nops as one block, so each run takes one interrupt on its way
+		for(int i=0; i<8 && dsp.hasPendingInterrupts(); ++i)
+		{
+			dsp.setPC(0xe80);
+			execUntil(0xe88);
+		}
+
+		dsp.setSR(sr0);
+
+		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Even_Data));
+		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Data));
+		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Even_Data));
+		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Data));
 	}
 
 	/*	A host that changes a host flag waits for the DSP to answer the change before it sends the data behind it. The
