@@ -232,6 +232,7 @@ namespace dsp56k
 		esaiClockAfterReset();
 		esaiClockCycleDeadline();
 		esaiEvenSlotInterrupts();
+		esaiResetClearsStatus();
 		dmaPendingRequestAtArm();
 		hostQueueDataWaitsForHostFlags();
 
@@ -325,6 +326,33 @@ namespace dsp56k
 
 		clock.setCyclesPerSample(oldCycles);
 		clock.setClockSource(oldSource);
+	}
+
+	/*	Reset clears TFS and TDE, and the transmitter sets them when its first slot starts (56362 UM 8.3.6.10, 8.3.6.12,
+		the 56300 simulator reads SAISR $000000 after reset and after TE0 is set). With TDE set from reset, a transmit
+		DMA channel that firmware armed before the first slot moved a word earlier than the chip does
+	*/
+	void UnitTests::esaiResetClearsStatus()
+	{
+		auto& esai = peripheralsX.getEsai();
+		auto& clock = peripheralsX.getEsaiClock();
+		const auto clockEnabled = clock.isEnabled();
+
+		dsp.resetHW();
+		clock.setEnabled(false);	// the test starts the first slot itself
+
+		verify(esai.readStatusRegister() == 0);
+
+		esai.writeTransmitClockControlRegister(1 << Esai::M_TDC0);		// two slots per frame
+		esai.writeTransmitControlRegister((1 << Esai::M_TMOD0) | (1 << Esai::M_TE0));
+		verify(esai.readStatusRegister() == 0);
+
+		esai.execTX();									// slot 0
+		verify(esai.getSR().test(Esai::M_TFS));
+		verify(esai.getSR().test(Esai::M_TDE));
+
+		esai.writeTransmitControlRegister(0);
+		clock.setEnabled(clockEnabled);
 	}
 
 	/*	Firmware tells the words of the two slots of a stereo frame apart by the even slot interrupts. At the start of an

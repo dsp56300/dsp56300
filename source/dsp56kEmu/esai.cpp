@@ -10,9 +10,6 @@ namespace dsp56k
 	{
 		m_tx.fill(0);
 		m_rx.fill(0);
-
-		m_sr.set(M_TFS);
-		m_sr.set(M_TDE);
 	}
 
 	void Esai::reset()
@@ -24,10 +21,9 @@ namespace dsp56k
 		m_tccr = 0;
 		m_rccr = 0;
 
-		// Reset status register to power-on state (TFS and TDE set)
+		// Reset clears the status register, TFS and TDE included: the first slot sets them (56362 UM 8.3.6.10,
+		// 8.3.6.12). The 56300 simulator reads SAISR $000000 after reset and after TE is set
 		m_sr = 0;
-		m_sr.set(M_TFS);
-		m_sr.set(M_TDE);
 
 		// Reset TX/RX data registers
 		m_tx.fill(0);
