@@ -89,6 +89,7 @@ namespace  dsp56k
 		void dmaAddressModes();
 		void dmaDelayedBlockTransfer();
 		void dmaBlockTriggeredByRequest();
+		void dmaPendingRequestAtArm();
 		void cmpu();
 		void mpyri();
 		void merge();

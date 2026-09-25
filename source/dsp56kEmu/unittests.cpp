@@ -231,6 +231,7 @@ namespace dsp56k
 		esaiClockAfterReset();
 		esaiClockCycleDeadline();
 		esaiEvenSlotInterrupts();
+		dmaPendingRequestAtArm();
 		hostQueueDataWaitsForHostFlags();
 
 		// multi-instruction tests
@@ -2079,6 +2080,74 @@ namespace dsp56k
 		verify(dsp.memory().get(MemArea_Y, 0x610) == 0x180);
 		verify(dsp.memory().get(MemArea_Y, 0x611) == 0x185);
 		verify(dsp.memory().get(MemArea_Y, 0x612) == 0);
+	}
+
+	/*	A channel that is enabled while its request is raised. A DCR write that selects the request source and
+		enables the channel at once waits for the next request: firmware arms its ESAI receive channel that way while
+		RDF has been pending for many slots, and serving that request put its input a word ahead of the hardware. A
+		channel that had the source selected before, with DE clear, serves the raised request as soon as DE is set,
+		which is how firmware re-arms a channel. See checkTrigger in dma.cpp
+	*/
+	void UnitTests::dmaPendingRequestAtArm()
+	{
+		constexpr TWord de = 1 << 23;
+		constexpr TWord wordRequest = 5 << 19;				// DTM = word, triggered by request, DE stays set
+		constexpr TWord fromEsaiRx = 0xb << 11;				// DRS = ESAI receive data
+		constexpr TWord toYPostInc = (0x2c << 4) | (1 << 2);	// DAM = destination +1, source fixed, DDS = Y, DSS = X
+		constexpr TWord dcr = de | wordRequest | fromEsaiRx | toYPostInc;
+
+		auto& esai = peripheralsX.getEsai();
+		auto& clock = peripheralsX.getEsaiClock();
+		const auto clockEnabled = clock.isEnabled();
+
+		dsp.resetHW();
+		clock.setEnabled(false);	// the test clocks the receiver itself
+
+		esai.writeReceiveClockControlRegister(1 << Esai::M_RDC0);		// two slots per frame
+		esai.writeReceiveControlRegister((1 << Esai::M_RMOD0) | (1 << Esai::M_RE0));
+		esai.writeEmptyAudioIn(2);										// the input words are 0
+
+		for(TWord i=0; i<4; ++i)
+			dsp.memory().set(MemArea_Y, 0x700 + i, 0x7ad000 + i);
+
+		auto rdf = [&] { return esai.getSR().test(Esai::M_RDF); };
+		auto ddr = [&] { return peripheralsX.read(XIO_DDR4, Nop); };
+
+		peripheralsX.write(XIO_DCR4, 0);
+		peripheralsX.write(XIO_DSR4, Esai::M_RX0);
+		peripheralsX.write(XIO_DDR4, 0x700);
+		peripheralsX.write(XIO_DCO4, 0x3f);
+
+		esai.execRX();								// slot 0, RDF is raised
+		verify(rdf());
+
+		// enabled together with its request source: the raised request is not served
+		peripheralsX.write(XIO_DCR4, dcr);
+		verify(ddr() == 0x700);
+		verify(dsp.memory().get(MemArea_Y, 0x700) == 0x7ad000);
+		verify(rdf());
+
+		esai.execRX();								// slot 1, the next request
+		verify(ddr() == 0x701);
+		verify(dsp.memory().get(MemArea_Y, 0x700) == 0);
+		verify(dsp.memory().get(MemArea_Y, 0x701) == 0x7ad001);
+		verify(!rdf());
+
+		// disabled with the source kept, a word arrives, enabled again: the raised request is served right away
+		peripheralsX.write(XIO_DCR4, dcr & ~de);
+		esai.execRX();								// slot 0 of the next frame
+		verify(rdf());
+		verify(ddr() == 0x701);
+
+		peripheralsX.write(XIO_DCR4, dcr);
+		verify(ddr() == 0x702);
+		verify(dsp.memory().get(MemArea_Y, 0x701) == 0);
+		verify(dsp.memory().get(MemArea_Y, 0x702) == 0x7ad002);
+		verify(!rdf());
+
+		peripheralsX.write(XIO_DCR4, 0);
+		esai.writeReceiveControlRegister(0);
+		clock.setEnabled(clockEnabled);
 	}
 
 	void UnitTests::dec()
