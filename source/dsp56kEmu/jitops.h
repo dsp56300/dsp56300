@@ -347,7 +347,7 @@ namespace dsp56k
 		template<Instruction Inst, ExpectedBitValue BitValue>
 		void esaiFrameSyncSpinloopJmp(TWord op) const;
 
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 		void signed24To56(const JitReg64& _dst, const JitReg64& _src) const;
 #endif
 		constexpr static uint64_t signed24To56(const TWord _src)
@@ -577,13 +577,8 @@ namespace dsp56k
 
 		// decode
 		void decode_cccc(const JitRegGP& _dst, TWord cccc);
-#ifdef HAVE_X86_64
-		asmjit::x86::CondCode decode_cccc(TWord cccc);
-		static asmjit::x86::CondCode reverseCC(asmjit::x86::CondCode cccc);
-#else
-		asmjit::arm::CondCode decode_cccc(TWord cccc);
-		static asmjit::arm::CondCode reverseCC(asmjit::arm::CondCode cccc);
-#endif
+		JitCondCode decode_cccc(TWord cccc);
+		static JitCondCode reverseCC(JitCondCode cccc);
 		void decode_dddddd_read(DspValue& _dst, TWord _dddddd);
 		void decode_dddddd_write(TWord _dddddd, const DspValue& _src, bool _sourceIs8Bit = false);
 		DspValue decode_dddddd_ref(TWord _dddddd, bool _read = false, bool _write = true) const;

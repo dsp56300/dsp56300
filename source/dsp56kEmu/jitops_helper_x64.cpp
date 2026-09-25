@@ -1,7 +1,7 @@
 #include "jitdspregpool.h"
 #include "jittypes.h"
 
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 
 #include "jitops.h"
 #include "dsp.h"

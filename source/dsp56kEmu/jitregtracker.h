@@ -244,7 +244,7 @@ namespace dsp56k
 		const uint32_t m_funcArgIndex;
 	};
 
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 	class ShiftReg : public PushGP
 	{
 	public:
@@ -371,7 +371,7 @@ namespace dsp56k
 			return m_acquired;
 		}
 
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 		auto r8() const { return get().r8(); }
 #endif
 

@@ -269,7 +269,7 @@ namespace dsp56k
 		else if constexpr (sizeof(m_block.dsp().m_processingMode) == sizeof(uint64_t))
 			m_block.mem().mov(reinterpret_cast<uint64_t&>(m_block.dsp().m_processingMode), r);
 
-		static_assert(sizeof(m_block.dsp().m_interruptFunc) == 8);
+		static_assert(!g_jitSupported || sizeof(m_block.dsp().m_interruptFunc) == 8);
 
 		if(_mode == DSP::DefaultPreventInterrupt)
 		{

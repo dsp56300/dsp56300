@@ -182,7 +182,7 @@ namespace dsp56k
 		m_block.stack().unregisterFuncArg(m_funcArgIndex);
 	}
 
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 	ShiftReg::ShiftReg(JitBlock& _block): PushGP(_block, asmjit::x86::rcx)
 	{
 		_block.lockShift();

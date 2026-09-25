@@ -101,7 +101,7 @@ namespace dsp56k
 		m_asm.push(asmjit::a64::regs::x30);
 #endif
 
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 #ifdef _WIN32
 		static constexpr uint32_t g_shadow = 32;
 #else
@@ -157,7 +157,7 @@ namespace dsp56k
 		m_asm.lea(regDspPtr, ptrDspRegs);
 #endif
 
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 		m_asm.mov(asmjit::x86::rax, asmjit::Imm(periphFunc));
 		m_asm.mov(asmjit::x86::ptr(asmjit::x86::regs::rsp, g_slotPeriphFunc, 8), asmjit::x86::rax);
 		m_asm.mov(asmjit::x86::rax, asmjit::Imm(targetClock));
@@ -239,7 +239,7 @@ namespace dsp56k
 #endif
 		m_asm.jnz(label);
 
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 		m_asm.add(asmjit::x86::regs::rsp, asmjit::Imm(g_additionalStackSize));
 #endif
 
@@ -289,7 +289,7 @@ namespace dsp56k
 
 		m_asm.mov(regDspPtr, g_funcArgGPs[0]);
 
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 #ifdef _WIN32
 		static constexpr int g_oneShadow = 32;
 #else

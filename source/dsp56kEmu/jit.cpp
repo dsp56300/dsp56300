@@ -154,7 +154,9 @@ namespace dsp56k
 			LOG("No profiler detected");
 		}
 
-		m_trampoline.generateCode();
+		// a build without a JIT backend, a 32 bit one for example, runs the interpreter and cannot generate this code
+		if constexpr (g_jitSupported)
+			m_trampoline.generateCode();
 	}
 
 	Jit::~Jit()

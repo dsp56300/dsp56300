@@ -622,10 +622,10 @@ namespace dsp56k
 
 	void JitOps::op_Stop(TWord op)
 	{
-#ifdef HAVE_X86_64
-		m_block.asm_().int3();
-#else
+#ifdef HAVE_ARM64
 		m_block.asm_().brk(asmjit::Imm(m_pcCurrentOp & 0xffff));
+#else
+		m_block.asm_().int3();
 #endif
 	}
 

@@ -1,6 +1,6 @@
 #include "jittypes.h"
 
-#ifdef HAVE_X86_64
+#ifndef HAVE_ARM64
 
 #include "opcodecycles.h"
 #include "dsp.h"

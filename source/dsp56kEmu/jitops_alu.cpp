@@ -1116,7 +1116,7 @@ namespace dsp56k
 		m_asm.xor_(s, s);
 		m_asm.bind(extracted);
 		width.release();
-#ifndef HAVE_X86_64
+#ifdef HAVE_ARM64
 		shift.release();
 #endif
 
