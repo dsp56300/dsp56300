@@ -174,6 +174,7 @@ namespace dsp56k
 		TWord m_ddr = 0;
 		TWord m_dco = 0;
 		TWord m_dcr = 0;
+		RequestSource m_prevRequestSource = RequestSource::ExternalIRQA;	// request source before the last DCR write
 		bool m_dsrWritten = false;
 		bool m_ddrWritten = false;
 		bool m_armed = false;

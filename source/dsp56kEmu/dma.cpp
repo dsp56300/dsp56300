@@ -34,18 +34,26 @@ namespace dsp56k
 		device as a trigger."
 
 		The manual calls a peripheral request "a regular peripheral request in which the peripheral can not generate a
-		second request until the first one is served". So a request stays raised until a channel serves it, and a
-		channel that is enabled while its peripheral requests serves it right away.
+		second request until the first one is served", and says that all request sources "behave as edge-triggered
+		synchronous inputs". Firmware on the 56362 needs both halves of that:
 
-		Firmware on the 56362 relies on that:
-		- An ESAI transmitter in network mode keeps TDE from its last active slot. A channel that is armed after that
-		  slot has to put its first word into slot 0 of the next frame. Without the pending request it only gets the
-		  TDE of slot 0, once slot 0 is loaded already, and every word goes out a slot late.
-		- Firmware that arms a transmit channel right after the frame sync puts the word for slot 1 first into its
-		  block, and firmware that arms a receive channel right after the receive frame sync stores the first word it
-		  gets as the one of slot 0.
-		- Firmware reads the receive register right before it arms a receive channel, which is only needed if a
-		  pending receive request would be served.
+		- A channel that already had its request source selected serves a request that was raised while it was
+		  disabled, as soon as it is enabled. All of these select the source first, with DE clear in a first DCR write,
+		  or in a mode that clears DE after each block:
+		  - An ESAI transmitter in network mode keeps TDE from its last active slot. A channel that is armed after that
+		    slot has to put its first word into slot 0 of the next frame. Without the pending request it only gets the
+		    TDE of slot 0, once slot 0 is loaded already, and every word goes out a slot late.
+		  - Firmware that arms a transmit channel right after the frame sync puts the word for slot 1 first into its
+		    block, and firmware that arms a receive channel right after the receive frame sync stores the first word it
+		    gets as the one of slot 0.
+		  - Firmware reads the receive register right before it arms a receive channel, which is only needed if a
+		    pending receive request would be served.
+		- A DCR write that selects a new request source and enables the channel at once does not serve a request that
+		  was raised before; the channel waits for the next one. Firmware arms its ESAI receive channel that way while
+		  RDF has been pending for many slots, and later reads each half of its input ring in the slot in which the
+		  channel starts to refill it. Serving the pending request puts the channel a word ahead, so the first word of
+		  every half is overwritten before the firmware reads it. The hardware does not do that. The 56300 simulator
+		  does serve the request here, so it is no reference for this case.
 
 		The 56303 keeps waiting for the next request. The 56303 firmware we run arms its ESSI channels with a request
 		pending at boot, so serving it would move those streams by a word, and nothing has been seen that asks for it.
@@ -140,6 +148,7 @@ namespace dsp56k
 		m_dma.removeTriggerTarget(this);
 		m_armed = false;
 
+		m_prevRequestSource = getRequestSource();
 		m_dcr = _controlRegister;
 
 		LOGDMA("DMA set DCR" << m_index << " = " << HEX(_controlRegister));
@@ -229,7 +238,8 @@ namespace dsp56k
 			auto* p362 = static_cast<Peripherals56362*>(&m_peripherals);
 			m_dma.addTriggerTarget(this);
 			m_armed = true;
-			if(checkTrigger(*p362, reqSrc))
+			// a raised request is only served by a channel that was set to that request source before, see checkTrigger
+			if(reqSrc == m_prevRequestSource && checkTrigger(*p362, reqSrc))
 				triggerByRequest();
 		}
 		else
