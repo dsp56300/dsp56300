@@ -3,6 +3,7 @@
 // DSP56300FM.pdf chapter 10 (page 181 ff)
 
 #include "dsp.h"
+#include "externalbusdevice.h"
 #include "peripherals.h"
 #include "utils.h"
 
@@ -422,7 +423,8 @@ namespace dsp56k
 //			auto& dsp = m_peripherals.getDSP();
 //			auto& mem = dsp.memory();
 
-			if (bridgedOverlap(_dstArea, _dstAddr, _count) || bridgedOverlap(_srcArea, _srcAddr, _count))
+			if (bridgedOverlap(_dstArea, _dstAddr, _count) || bridgedOverlap(_srcArea, _srcAddr, _count) ||
+				externalBusOverlap(_dstArea, _dstAddr, _count))
 			{
 				copyIndividual();
 			}
@@ -443,7 +445,8 @@ namespace dsp56k
 		if(_dstAddr >= m_peripherals.getDSP().memory().getBridgedMemoryAddress())
 			_dstArea = MemArea_P;
 
-		const auto writeIndividual = _dstArea == MemArea_P || isPeripheralAddr(_dstArea, _dstAddr, _count) || bridgedOverlap(_dstArea, _dstAddr, _count);
+		const auto writeIndividual = _dstArea == MemArea_P || isPeripheralAddr(_dstArea, _dstAddr, _count) ||
+			bridgedOverlap(_dstArea, _dstAddr, _count) || externalBusOverlap(_dstArea, _dstAddr, _count);
 
 		if (readMultiple)
 		{
@@ -543,6 +546,23 @@ namespace dsp56k
 		return true;
 	}
 
+	// The DMA drives the same external bus as the core, so a device there sees its writes as it sees the core's
+	// (externalbusdevice.h). Reads come from memory, as the core's dynamic reads do
+	bool DmaChannel::externalBusOverlap(const EMemArea _area, const TWord _first, const TWord _count) const
+	{
+		if (_area == MemArea_P)
+			return false;
+
+		const auto& dsp = m_peripherals.getDSP();
+
+		if (!dsp.getExternalBusDevice())
+			return false;
+
+		const auto& config = dsp.getJit().getConfig();
+
+		return _first < config.externalBusEnd && _first + _count > config.externalBusBegin;
+	}
+
 	void DmaChannel::extractDCOHML(TWord& _h, TWord& _m, TWord& _l) const
 	{
 		const auto dam = getDAM();
@@ -586,6 +606,8 @@ namespace dsp56k
 			dsp.getPeriph(_area)->write(_addr | 0xff0000, _value);
 		else if (_area == MemArea_P)
 			dsp.memWriteP(_addr, _value);
+		else if (externalBusOverlap(_area, _addr, 1))
+			dsp.getExternalBusDevice()->write(_addr, _value);
 		else
 			dsp.memWrite(_area, _addr, _value);
 	}

@@ -145,6 +145,7 @@ namespace dsp56k
 		bool isPeripheralAddr(EMemArea _area, TWord _addr) const;
 
 		bool bridgedOverlap(EMemArea _area, TWord _first, TWord _count) const;
+		bool externalBusOverlap(EMemArea _area, TWord _first, TWord _count) const;
 
 		void extractDCOHML(TWord& _h, TWord& _m, TWord& _l) const;
 

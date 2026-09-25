@@ -1,6 +1,7 @@
 #include "unittests.h"
 #include "unittests_sa_bitfield.h"
 
+#include "externalbusdevice.h"
 #include "hdi08queue.h"
 #include "interrupts.h"
 
@@ -2080,6 +2081,75 @@ namespace dsp56k
 		verify(dsp.memory().get(MemArea_Y, 0x610) == 0x180);
 		verify(dsp.memory().get(MemArea_Y, 0x611) == 0x185);
 		verify(dsp.memory().get(MemArea_Y, 0x612) == 0);
+	}
+
+	/*	A device on the external bus sees the DMA's writes into its range as it sees the core's. A board can wire
+		memory there that keeps fewer than 24 bits, and firmware moves data to it by DMA. Words outside the range go
+		to memory, and the DMA reads from memory
+	*/
+	void UnitTests::dmaExternalBusWrites()
+	{
+		constexpr TWord deBlock = (1 << 23) | (3 << 19);	// DE, DTM = block, triggered by DE, DE cleared afterwards
+		constexpr TWord blockRequest = 1 << 23;				// DE, DTM = block, triggered by request, DE cleared afterwards
+		constexpr TWord fromIrqD = 3 << 11;					// DRS = IRQD pin
+		constexpr TWord postInc = 0x2d << 4;				// DAM = post-increment on both sides
+		constexpr TWord fill = 0x2c << 4;					// DAM = destination +1, source fixed
+		constexpr TWord toY = 1 << 2;						// DDS = Y, DSS = X
+
+		struct Device final : IExternalBusDevice
+		{
+			TWord read(TWord) override { return 0; }
+			void write(const TWord _addr, const TWord _value) override { writes.emplace_back(_addr, _value); }
+
+			std::vector<std::pair<TWord, TWord>> writes;
+		};
+
+		Device device;
+
+		const auto oldConfig = dsp.getJit().getConfig();
+		auto config = oldConfig;
+		config.externalBusBegin = 0x702;
+		config.externalBusEnd = 0x706;
+		dsp.getJit().setConfig(config);
+		dsp.setExternalBusDevice(&device);
+
+		auto& dma = peripheralsX.getDMA();
+
+		dsp.resetHW();
+
+		for(TWord i=0; i<8; ++i)
+		{
+			dsp.memory().set(MemArea_X, 0x1c0 + i, 0x1c0 + i);
+			dsp.memory().set(MemArea_Y, 0x700 + i, 0);
+		}
+
+		// channel 1 fills four words across the end of the range as soon as DE is set, channel 0 copies four across its
+		// start on a request. Both would take a shortcut past memWrite into plain memory
+		peripheralsX.write(XIO_DSR1, 0x1c7);
+		peripheralsX.write(XIO_DDR1, 0x704);
+		peripheralsX.write(XIO_DCO1, 3);
+		peripheralsX.write(XIO_DCR1, deBlock | fill | toY);
+
+		peripheralsX.write(XIO_DSR0, 0x1c0);
+		peripheralsX.write(XIO_DDR0, 0x700);
+		peripheralsX.write(XIO_DCO0, 3);
+		peripheralsX.write(XIO_DCR0, blockRequest | fromIrqD | postInc | toY);
+
+		dma.trigger(DmaChannel::RequestSource::ExternalIRQD);
+
+		verify(dsp.memory().get(MemArea_Y, 0x700) == 0x1c0);
+		verify(dsp.memory().get(MemArea_Y, 0x701) == 0x1c1);
+		verify(dsp.memory().get(MemArea_Y, 0x706) == 0x1c7);
+		verify(dsp.memory().get(MemArea_Y, 0x707) == 0x1c7);
+
+		for(TWord i=0x702; i<0x706; ++i)
+			verify(dsp.memory().get(MemArea_Y, i) == 0);
+
+		const std::vector<std::pair<TWord, TWord>> expected{{0x704, 0x1c7}, {0x705, 0x1c7}, {0x702, 0x1c2}, {0x703, 0x1c3}};
+		verify(device.writes == expected);
+
+		dsp.setExternalBusDevice(nullptr);
+		dsp.getJit().setConfig(oldConfig);
 	}
 
 	/*	A channel that is enabled while its request is raised. A DCR write that selects the request source and
@@ -7415,6 +7485,7 @@ namespace dsp56k
 		blockOnExtensionWord();
 		dmaDelayedBlockTransfer();
 		dmaBlockTriggeredByRequest();
+		dmaExternalBusWrites();
 		do_forever();
 		dorShortAddress();
 		trapContinues();

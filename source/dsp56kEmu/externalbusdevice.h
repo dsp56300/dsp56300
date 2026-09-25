@@ -14,6 +14,8 @@ namespace dsp56k
 	 *
 	 * - absolute addresses are classified while the block is compiled, so they cost nothing
 	 * - dynamic addresses cost one unsigned range check, on writes only
+	 * - the DMA drives the same bus, so its writes into the range come here too, word by word; its
+	 *   reads come from memory, as dynamic reads do
 	 *
 	 * Dynamic reads are deliberately not routed. A device that keeps its contents in DSP memory
 	 * answers them correctly all by itself, which is the case we care about. If a device ever
