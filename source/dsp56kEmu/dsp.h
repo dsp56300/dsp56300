@@ -165,7 +165,9 @@ namespace dsp56k
 			// instruction, so interpret instead
 			if((reg.sr.var & SR_LF) && TWord(reg.la.var - _pc) < b.numWords - 1)
 				return false;
+#ifdef DSP56K_RECOMP_STATS
 			++m_recompExecuted;
+#endif
 			return b.func(this);
 		}
 		// do_exec's loop: when the block at PC ends exactly at LA (the last block of a DO loop body), run it directly,
@@ -188,7 +190,9 @@ namespace dsp56k
 			if(ASMJIT_UNLIKELY(m_recompState[bi] != 1) && !recompVerify(bi))
 				return false;
 			pcCurrentInstruction = pc;
+#ifdef DSP56K_RECOMP_STATS
 			++m_recompExecuted;
+#endif
 			return b.func(this);
 		}
 		// do_exec, before its generic loop: if the block at the loop start covers the whole body [PC, LA] and has a loop
@@ -210,7 +214,9 @@ namespace dsp56k
 			if(ASMJIT_UNLIKELY(m_recompState[bi] != 1) && !recompVerify(bi))
 				return false;
 			pcCurrentInstruction = pc;
+#ifdef DSP56K_RECOMP_STATS
 			++m_recompExecuted;
+#endif
 			return b.loopFunc(this);
 		}
 		bool recompVerify(TWord _index) noexcept;
@@ -367,7 +373,7 @@ namespace dsp56k
 		template<TWord PC> static bool recompLoop(DSP* _dsp) noexcept;
 		bool recompEnabled() const { return m_recomp != nullptr; }
 		size_t recompBlockCount() const;
-		uint64_t recompExecutedBlocks() const { return m_recompExecuted; }
+		uint64_t recompExecutedBlocks() const { return m_recompExecuted; }	// counted only with -DDSP56K_RECOMP_STATS
 #ifdef DSP56K_RECOMP_DISCOVERY
 		static inline void (*s_recompTraceHook)(DSP*, TWord) = nullptr;
 #endif
@@ -505,9 +511,9 @@ namespace dsp56k
 
 		bool			isPeripheralAddress(const TWord _addr) const
 		{
-			if(sr_test(SR_SC))
-				return _addr >= XIO_Reserved_High_First_16;
-			return _addr >= XIO_Reserved_High_First;
+			// one compare against a selected threshold (armv7: a conditional move) rather than two branches
+			const TWord first = (reg.sr.var & SR_SC) ? static_cast<TWord>(XIO_Reserved_High_First_16) : static_cast<TWord>(XIO_Reserved_High_First);
+			return _addr >= first;
 		}
 
 		void fastForward(const TWord _instructions, const TWord _cycles)
