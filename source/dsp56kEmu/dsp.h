@@ -822,20 +822,25 @@ namespace dsp56k
 
 		void limit_transfer( int& _dst, const TReg56& _src )
 		{
-			const int64_t& test = _src.signextend<int64_t>();
+			const int64_t test = _src.signextend<int64_t>();
 
-			if( test < -140737488355328 )			// ff 800000 000000
+			// arm32: one unsigned range check for the common in-range case instead of two signed 64-bit compares
+			// that also materialise both saturation constants. Same bounds as before: no limiting iff
+			// -0x800000000000 <= test <= 0x7fffff000000 (ff 800000 000000 .. 00 7fffff 000000)
+			if( ASMJIT_LIKELY(static_cast<uint64_t>(test + 0x800000000000LL) <= static_cast<uint64_t>(0x7fffff000000LL + 0x800000000000LL)) )
+			{
+				_dst = static_cast<int>(_src.var >> 24) & 0xffffff;
+			}
+			else if( test < 0 )
 			{
 				sr_set( CCR_L );
 				_dst = 0x800000;
 			}
-			else if( test > 140737471578112 )		// 00 7fffff 000000
+			else
 			{
 				sr_set( CCR_L );
 				_dst = 0x7FFFFF;
 			}
-			else
-				_dst = static_cast<int>(_src.var >> 24) & 0xffffff;
 			assert( (_dst & 0xff000000) == 0 );
 		}
 
