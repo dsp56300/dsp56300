@@ -503,6 +503,10 @@ namespace dsp56k
 		// __________________
 		//
 
+#ifdef DSP56K_RECOMP
+		if(execRecompiledLoop())
+			return true;
+#endif
 		while(reg.sc.var >= stackCount)
 		{
 #ifdef DSP56K_RECOMP

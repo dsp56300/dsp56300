@@ -119,7 +119,8 @@ namespace dsp56k
 	public:
 		// static recompilation: one generated function per basic block (see recompInstall below)
 		using RecompFunc = bool (*)(DSP*) noexcept;
-		struct RecompBlock { RecompFunc func; const TWord* words; TWord pc; TWord numWords; };
+		// loopFunc (may be null): the same block run as a whole DO loop body, iterating internally until the loop ends
+		struct RecompBlock { RecompFunc func; const TWord* words; TWord pc; TWord numWords; RecompFunc loopFunc; };
 		struct RecompProgram
 		{
 			const RecompBlock* blocks;		// [0] unused, so index 0 in 'index' means "no block"
@@ -189,6 +190,28 @@ namespace dsp56k
 			pcCurrentInstruction = pc;
 			++m_recompExecuted;
 			return b.func(this);
+		}
+		// do_exec, before its generic loop: if the block at the loop start covers the whole body [PC, LA] and has a loop
+		// variant, run the entire loop there (it ends the loop itself, including do_end)
+		ASMJIT_FORCE_INLINE bool execRecompiledLoop() noexcept
+		{
+			if(!m_recomp || m_processingMode == FastInterrupt)
+				return false;
+			const TWord pc = reg.pc.toWord();
+			const TWord i = pc - m_recomp->base;
+			if(i >= m_recomp->indexSize)
+				return false;
+			const auto bi = m_recomp->index[i];
+			if(!bi)
+				return false;
+			const auto& b = m_recomp->blocks[bi];
+			if(!b.loopFunc || b.pc + b.numWords != reg.la.toWord() + 1)
+				return false;
+			if(ASMJIT_UNLIKELY(m_recompState[bi] != 1) && !recompVerify(bi))
+				return false;
+			pcCurrentInstruction = pc;
+			++m_recompExecuted;
+			return b.loopFunc(this);
 		}
 		bool recompVerify(TWord _index) noexcept;
 		void recompInvalidate(TWord _pAddress) noexcept;
@@ -341,6 +364,7 @@ namespace dsp56k
 		// having traced everything.
 		static const RecompProgram* recompProgram();	// shared by all DSP instances; nullptr without a generated program
 		template<TWord PC> static bool recompBlock(DSP* _dsp) noexcept;
+		template<TWord PC> static bool recompLoop(DSP* _dsp) noexcept;
 		bool recompEnabled() const { return m_recomp != nullptr; }
 		size_t recompBlockCount() const;
 		uint64_t recompExecutedBlocks() const { return m_recompExecuted; }

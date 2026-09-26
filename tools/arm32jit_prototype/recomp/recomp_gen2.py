@@ -73,6 +73,22 @@ def reorderable(i):
     if mv.startswith(('opCE_Movex_ea<0u,', 'opCE_Movey_ea<0u,', 'opCE_Movexy<0u, 0u,')): return True
     return False
 
+# a block can also be emitted as a whole-loop function when it ends exactly at an observed DO loop end, contains only
+# plain (kind 0) instructions, and nothing whose name suggests it could touch loop/stack/mode state (register masks are
+# unreliable, see reorderable)
+LOOP_UNSAFE = ('Enddo', 'Movec', 'Do', 'Rep', 'Jsr', 'Bsr', 'Rts', 'Rti', 'Jmp', 'Bra', 'Jcc', 'Bcc', 'JScc', 'BScc',
+               'Jclr', 'Jset', 'Brclr', 'Brset', 'Jsclr', 'Jsset', 'Bsclr', 'Bsset', 'Andi', 'Ori', 'Illegal', 'Stop',
+               'Wait', 'Reset', 'Trap', 'Ifcc', 'Tcc', 'Lra', 'Plock', 'Punlock', 'Pfree', 'Pflush')
+loop_blocks = set()
+def loop_body_ok(pcs):
+    last = pcs[-1]
+    if last + ins[last]['len'] - 1 not in loopends: return False
+    for pc in pcs:
+        i = ins[pc]
+        if i['kind'] != 0 or i['readsPC']: return False
+        if any(u in n for n in names_of(i) for u in LOOP_UNSAFE): return False
+    return True
+
 def handler(off):
     if off not in syms: raise KeyError(f'no symbol for handler offset {off:x}')
     return syms[off]
@@ -98,8 +114,7 @@ for pcs in blocks:
         i = ins[pc]; words.append(i['a'])
         if i['len'] == 2: words.append(i['b'])
     out.append(f'static constexpr TWord g_recompWords_{start:06x}[] = {{{", ".join(f"0x{w:06x}" for w in words)}}};')
-    out.append(f'template<> __attribute__((flatten)) bool DSP::recompBlock<0x{start:06x}>(DSP* d) noexcept')
-    out.append('{')
+    body = []
     for n, pc in enumerate(pcs):
         i = ins[pc]; op = f'0x{i["a"]:06x}u'
         h = handler(i['op']) if not i['par'] else ''
@@ -111,27 +126,42 @@ for pcs in blocks:
         # PC bookkeeping only where a handler reads it: control flow (kind 1, always a block's last
         # instruction), anything that reads PC, LRA/STOP. The block's final PC is written once at its end.
         if i['kind'] == 1 or i['readsPC'] or h.startswith(('op_Lra', 'op_Stop')):
-            out.append(f'\td->pcCurrentInstruction = 0x{pc:06x}; d->reg.pc.var = 0x{pc + 1:06x};')
+            body.append(f'\td->pcCurrentInstruction = 0x{pc:06x}; d->reg.pc.var = 0x{pc + 1:06x};')
         if i['len'] == 2:
-            out.append(f'\td->m_opWordB = 0x{i["b"]:06x}u;')
+            body.append(f'\td->m_opWordB = 0x{i["b"]:06x}u;')
         if i['par'] and i['moveAB'] and reorderable(i):
-            out += [f'\td->{handler(i["mv"])}({op});', f'\td->{alu}({op});']
+            body += [f'\td->{handler(i["mv"])}({op});', f'\td->{alu}({op});']
         elif i['par'] and i['moveAB']:
             # the move reads/writes A or B: reproduce exec_parallel's latch (move sees pre-ALU A/B)
-            out += ['\t{', '\t\tconst auto preA = d->reg.a, preB = d->reg.b;', f'\t\td->{alu}({op});',
+            body += ['\t{', '\t\tconst auto preA = d->reg.a, preB = d->reg.b;', f'\t\td->{alu}({op});',
                     '\t\tconst auto postA = d->reg.a, postB = d->reg.b;', '\t\td->reg.a = preA; d->reg.b = preB;',
                     f'\t\td->{handler(i["mv"])}({op});', '\t\tif (postA != preA) d->reg.a = postA;',
                     '\t\tif (postB != preB) d->reg.b = postB;', '\t}']
         elif i['par']:
             # the move doesn't touch A or B, so ALU-then-move is exactly what the latch would produce
-            out += [f'\td->{alu}({op});', f'\td->{handler(i["mv"])}({op});']
+            body += [f'\td->{alu}({op});', f'\td->{handler(i["mv"])}({op});']
         else:
-            out.append(f'\td->{h}({op});')
+            body.append(f'\td->{h}({op});')
+    last = pcs[-1]; end = last + ins[last]['len']
+    out.append(f'template<> __attribute__((flatten)) bool DSP::recompBlock<0x{start:06x}>(DSP* d) noexcept')
+    out.append('{')
+    out += body
     out.append(f'\td->m_instructions += {len(pcs)};')   # once per block, like the JIT
-    last = pcs[-1]
     if ins[last]['kind'] != 1:
-        out.append(f'\td->pcCurrentInstruction = 0x{last:06x}; d->reg.pc.var = 0x{last + ins[last]["len"]:06x};')
+        out.append(f'\td->pcCurrentInstruction = 0x{last:06x}; d->reg.pc.var = 0x{end:06x};')
     out += ['\treturn true;', '}', '']
+    if loop_body_ok(pcs):
+        # the whole DO loop in one call: do_exec's per-iteration logic (pc == la+1 is guaranteed: plain instructions
+        # only, the block ends at LA), without the dispatch in between -- like the JIT's in-block loop
+        loop_blocks.add(start)
+        out.append(f'template<> __attribute__((flatten)) bool DSP::recompLoop<0x{start:06x}>(DSP* d) noexcept')
+        out += ['{', '\tfor(;;)', '\t{']
+        out += ['\t' + l for l in body]
+        out.append(f'\t\td->m_instructions += {len(pcs)};')
+        out.append(f'\t\tif(!(d->reg.sr.var & SR_LF)) {{ d->pcCurrentInstruction = 0x{last:06x}; d->reg.pc.var = 0x{end:06x}; return true; }}')
+        out.append(f'\t\tif(d->reg.lc.var <= 1) {{ d->pcCurrentInstruction = 0x{last:06x}; d->setPC(0x{end:06x}); d->do_end(); return true; }}')
+        out.append('\t\t--d->reg.lc.var;')
+        out += ['\t}', '}', '']
     blocks_words = nwords
     total_instr += len(pcs)
 
@@ -141,10 +171,11 @@ maxw = max(b[-1] + ins[b[-1]]['len'] - b[0] for b in blocks)
 out.append('const DSP::RecompProgram* DSP::recompProgram()')
 out.append('{')
 out.append('\tstatic const RecompBlock blocks[] = {')
-out.append('\t\t{nullptr, nullptr, 0, 0},')
+out.append('\t\t{nullptr, nullptr, 0, 0, nullptr},')
 for b in blocks:
     nw = b[-1] + ins[b[-1]]['len'] - b[0]
-    out.append(f'\t\t{{&DSP::recompBlock<0x{b[0]:06x}>, g_recompWords_{b[0]:06x}, 0x{b[0]:06x}, {nw}}},')
+    lf = f'&DSP::recompLoop<0x{b[0]:06x}>' if b[0] in loop_blocks else 'nullptr'
+    out.append(f'\t\t{{&DSP::recompBlock<0x{b[0]:06x}>, g_recompWords_{b[0]:06x}, 0x{b[0]:06x}, {nw}, {lf}}},')
 out.append('\t};')
 out.append('\tstatic const std::vector<uint16_t> index = [] {')
 out.append(f'\t\tstd::vector<uint16_t> v(0x{top - base + 1:x} + {maxw}, 0);   // + maxw: covered[] shares this size')
@@ -168,4 +199,4 @@ covered = sum(ins[pc]['count'] for b in blocks for pc in b)
 alln = sum(i['count'] for i in ins.values())
 sys.stderr.write(f'{len(blocks)} blocks, {total_instr} instructions, avg {total_instr/len(blocks):.1f}/block, '
                  f'max {maxw} words; covers {100*covered/alln:.2f}% of executed instructions; '
-                 f'dead-CCR ALU ops {100*dead_ccr/alln:.2f}% of executed instructions\n')
+                 f'dead-CCR ALU ops {100*dead_ccr/alln:.2f}% of executed instructions; {len(loop_blocks)} whole-loop blocks\n')
