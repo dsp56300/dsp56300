@@ -122,6 +122,7 @@ namespace dsp56k
 		};
 
 		std::vector<OpcodeCacheEntry>	m_opcodeCache;
+		bool							m_interpreterEnabled = false;	// Schwung: see clearOpcodeCache
 		
 		InstructionCache				cache;
 
@@ -290,6 +291,7 @@ namespace dsp56k
 		}
 
 		void			clearOpcodeCache				();
+		void			setInterpreterEnabled			(bool _enabled);	// Schwung: the interpreter needs its opcode cache
 		void			clearOpcodeCache				(TWord _address);
 
 		void			dumpRegisters					() const;

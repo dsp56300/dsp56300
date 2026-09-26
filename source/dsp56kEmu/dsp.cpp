@@ -1004,7 +1004,7 @@ namespace dsp56k
 
 		const auto res = mem.set(MemArea_P, _offset, _value);
 
-		if (_offset < m_opcodeCache.size() && oldValue != _value)
+		if (_offset < mem.sizeP() && oldValue != _value)
 		{
 			notifyProgramMemWrite(_offset);
 			m_jit.notifyProgramMemWrite(_offset);
@@ -1029,7 +1029,8 @@ namespace dsp56k
 
 	void DSP::notifyProgramMemWrite(TWord _offset)
 	{
-		m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
+		if (_offset < m_opcodeCache.size())
+			m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
 
 #if DSP56300_DEBUGGER
 		if(m_debugger)
@@ -1275,13 +1276,25 @@ namespace dsp56k
 
 	void DSP::clearOpcodeCache()
 	{
+		// Schwung: the interpreter's per-address cache (48 bytes per P word, ~75 MB for a 1.5M-word P space)
+		// is only built when the interpreter is enabled; the JIT never reads it.
 		m_opcodeCache.clear();
-		m_opcodeCache.resize(mem.sizeP(), {&DSP::op_ResolveCache});
+		if (m_interpreterEnabled)
+			m_opcodeCache.resize(mem.sizeP(), {&DSP::op_ResolveCache});
+		else
+			m_opcodeCache.shrink_to_fit();
+	}
+
+	void DSP::setInterpreterEnabled(const bool _enabled)
+	{
+		m_interpreterEnabled = _enabled;
+		clearOpcodeCache();
 	}
 
 	void DSP::clearOpcodeCache(const TWord _address)
 	{
-		m_opcodeCache[_address].op = &DSP::op_ResolveCache;
+		if (_address < m_opcodeCache.size())
+			m_opcodeCache[_address].op = &DSP::op_ResolveCache;
 		m_jit.notifyProgramMemWrite(_address);
 	}
 	

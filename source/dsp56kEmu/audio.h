@@ -263,7 +263,13 @@ namespace dsp56k
 		auto& getAudioOutputs() { return m_audioOutputs; }
 
 	public:
+#ifdef DSP56300_AUDIO_RINGBUFFER_SIZE
+		// Schwung: a host that never streams audio through ESSI/ESAI (the Monomodule harness) shrinks these;
+		// at the default each Audio holds ~42 MB of zero-filled frames.
+		static constexpr uint32_t RingBufferSize = DSP56300_AUDIO_RINGBUFFER_SIZE;
+#else
 		static constexpr uint32_t RingBufferSize = 8192 * 4;
+#endif
 
 	protected:
 		void readRXimpl(RxFrame& _values);

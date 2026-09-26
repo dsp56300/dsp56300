@@ -207,7 +207,10 @@ namespace dsp56k
 
 	uint8_t* MmuHelper::reserveAddressRange(const size_t _byteSize)
 	{
-		auto* ptr = mmap(nullptr, _byteSize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, InvalidHandle, 0);
+		// Schwung: reserve ADDRESSES only. Every byte in use is mapped over this with MAP_FIXED from the backing
+		// store (mapRegion); a writable shared anonymous reservation was charged in full to the commit total
+		// (~850 MB per DSP), enough to exhaust a Move's commit headroom and fail later allocations.
+		auto* ptr = mmap(nullptr, _byteSize, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, InvalidHandle, 0);
 		if (ptr == MAP_FAILED)
 		{
 			LOG("MmuHelper: mmap failed to reserve address range");
