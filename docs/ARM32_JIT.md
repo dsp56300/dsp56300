@@ -492,3 +492,36 @@ build now produces the same audio as the x86/aarch64 builds.
 Next candidates (bigger): specialise address-register updates on the M register values seen at each
 instruction (with a runtime guard); run single-block DO loop bodies in a tight loop inside generated
 code instead of via do_exec + execInterpreter per iteration; recompile REP'd instructions.
+
+## Stage 3 progress (2026-09-26/27, overnight)
+
+Every step below is bit-exact on all 22 machines (x86 and Force). Force median of 3 pinned runs
+(`tools/arm32jit_prototype/recomp/bench.py`, noise about ±1% when MPC is quiet, ±5% otherwise):
+
+| step | commit | avg load |
+|---|---|---|
+| whole-program recompiler | d6bc6250 | 113% (98-102% on a quieter device) |
+| `alu_mpy`: 32x32->64 multiply (one `smull`) | f944993d | ~95% |
+| dead-CCR elimination for MPY/MPYR/MAC/MACR (36% of executed instructions) | 3fdc3398 | 89.2% |
+| DO loop's final body block run straight from do_exec (like the JIT's in-block loop) | 59a12d1c | 87.9% |
+| register->memory parallel moves run before the ALU, no A/B latch | 8cc3a9dd | 85.9% |
+
+Lessons:
+- **opcodeanalysis' register masks are incomplete.** Some MAC/MPY entries report no X/Y source
+  registers at all. Trusting them to reorder parallel moves broke 10 machines, which `mnm-golden`
+  caught. Decide safety from opcode bits (move direction W) and from handler names, never from those
+  masks alone. The dead-CCR pass also has name-based barriers for this reason.
+- **p99 spikes are not DSP work.** `mnm-spikes` (per-block wall time and DSP instruction count):
+  the slowest 1% of blocks execute exactly the average instruction count. At normal priority, the
+  benchmark is preempted by other processes (node servers, VNC, MPC). Under `SCHED_FIFO` 70 pinned
+  to CPU 3, which is how an audio thread really runs, every machine's mean drops ~25%. Heaviest
+  machines:
+  - DPRO DDRW: mean 84%, p99 122%
+  - DPRO DENS: mean 83%, p99 117%
+  - RINGMOD: mean 82%, p99 120%
+  - REVERB: mean 75%, p99 113%
+  - Everything else: mean <= 70%.
+
+  mnm-bench's numbers (normal priority) overstate the real load. The remaining p99 is
+  micro-architectural (cache/TLB, shared L2 with MPC's cores), so the VST wrapper should run the DSP on
+  its own RT thread with a buffer of lookahead, where the mean is what counts.
