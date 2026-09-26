@@ -100,6 +100,59 @@ timing.
       rather than more code reading; this is where stage 1 picks back up.
 - [ ] Once traced and fixed, `mnm-golden` must hash-match on all 22 machines.
 
+**Second session's findings (2026-09-26, continued):** narrowed the sine-table bug to an exact,
+reproducible test vector, and ruled out two plausible-looking causes by testing them, not just
+reading code -- both changes below are harmless/more-correct but confirmed **not** the cause:
+- Dumped the built 8192-entry sine table (Y:$14A000) directly (no audio rendering needed -- it's
+  built once during engine init) and diffed interpreter vs. JIT. They agree exactly through index
+  0x1800 (both = 0x800000, i.e. exactly -1.0, the table's minimum). From index **0x1801 onward, every
+  remaining entry differs** (2047 of 8192): JIT continues correctly (0x800002, 0x80000a, 0x800016...
+  -- values easing up from -1.0), the interpreter's values flip sign (0x7fffff, 0x7fffec, 0x7fffda...
+  -- near +1.0 instead). This is a clean, cheap repro: `mnm-dumptable <os.syx>` (a small new tool,
+  not yet committed anywhere durable -- see below) vs. the same with `MNM_DSP_INTERP=1`.
+- Ruled out: `limit_arithmeticSaturation`'s bit-check (bits 55/48/47 only, vs. the JIT's full
+  sign-extend-and-range-check in `alu_saturateSM`) -- genuinely inconsistent logic between the two,
+  fixed in `dsp.h`, but `SR_SM` is never set during this script, so the fix is inert here (kept
+  anyway, real bug relative to the JIT's own logic, just not *this* bug).
+- Ruled out: `alu_mac` (used by `macsu`, one of this loop's instructions) added the old accumulator's
+  raw `.var` instead of its sign-extended value, unlike its siblings (`alu_mpy`, `alu_mpysuuu`,
+  `alu_dmac`) which all sign-extend first. Looked like a strong match for a sign-flip bug. Turned out
+  to be a **numerical no-op**: since the result is masked back to 56 bits (mod 2^56) either way, adding
+  the raw two's-complement bit pattern vs. its sign-extended form gives bit-identical results after
+  masking -- reverted, not worth the confusion of keeping a change that provably does nothing.
+- Not yet checked: the multiply/accumulate chain's actual arithmetic (this loop is a CORDIC-style
+  rotation: `mpyuu` (replace, unsigned*unsigned) -> `dmac su` (double-precision MAC, shifts the old
+  accumulator right 24 before adding -- a genuinely different accumulation model worth scrutinizing
+  on its own) -> `macsu` (normal MAC) -> `dmac ss` -> `asl a` (parallel with `l:(r1),y`) -> `sub y,a`),
+  and specifically how `y` (the 48-bit data register, loaded via the parallel move) gets sign-extended
+  to 56 bits for the `sub` (`XYto56`/`signextend48to56` -- read but not yet verified against the JIT's
+  equivalent bit-for-bit). `alu_dmac`'s own `>>24` old-value handling is also unverified against the
+  JIT's `op_Dmac` line by line, beyond confirming both skip SM saturation identically.
+- Tooling built for this (in the schwung-monomodule scratchpad, `libs`-linked against this fork via
+  `-DMNM_DSP56300_DIR`, not yet copied anywhere durable): `mnm-dumptable` (dumps the sine table for
+  diffing), a `MNM_STEP_TRACE` env-gated per-`exec()` register hash hook added to `DspEngine.cpp`
+  (useful for coarse checkpointing by matching `getInstructionCounter()` values between runs, but
+  **not reliable inside a JIT-compiled hardware loop**: `maxInstructionsPerBlock` does not apply to
+  `isRep`/`isFastInterrupt` blocks (`jitblock.cpp:220`), so a `do`/`rep` loop still executes
+  atomically -- confirmed by watching `m_instructions` jump by ~8190*10 in one `exec()` call even with
+  the block-size limit set to 1). `Jit::setConfig()`/`maxDoIterations` looked like the fix for that
+  (meant to give a JIT block an exit point every N loop iterations) but a first attempt to use it
+  (setting `maxDoIterations=1` before `resetKeepCode()`, to re-run the init under single-step config)
+  hung or never reached the target address within a 20M-step guard -- not debugged further this
+  session; if picked back up, check whether `resetKeepCode()` after `destroyAllBlocks()` breaks the
+  init handshake, and whether `Y:$14A000`'s `r0` register actually holds the bridged absolute address
+  ($14A000+index) rather than a bare index (this was left unverified and may just be a wrong target
+  address in the test, not a real hang).
+- **Next step, if resumed**: either (a) fix the `resetKeepCode`+`maxDoIterations` single-step harness
+  and diff full register state (not just a hash) one loop iteration at a time approaching index
+  0x1801, or (b) skip stepping entirely and hand-check `alu_dmac`'s double-precision accumulation
+  model and the `y`-register sign-extension path against the JIT's `jitops_alu.cpp`/`jitops_agu*.cpp`
+  equivalents line by line -- given how narrow and reproducible the failing test vector now is (a
+  single sine-table entry, deterministic, no audio pipeline needed), this should be tractable without
+  needing device access or even the DspEngine/MonoVoice harness at all: a from-scratch few-instruction
+  reproducer feeding the exact operand sequence into a bare `DSP` instance for both engines would
+  isolate it faster than debugging inside the full kernel's loop.
+
 ## Stage 2: kill dispatch overhead only (no real code generation yet)
 
 - Decode each DSP instruction once per basic block instead of every execution; emit a straight-line
