@@ -5,7 +5,7 @@
 //   mnm-recomp-discover <os.syx> <out.txt>
 //
 // Output lines:
-//   I pc wordA wordB len kind parallel opOff moveOff aluOff count moveAB readsPC ccr   one per distinct (pc, wordA, wordB)
+//   I pc wordA wordB len kind parallel opOff moveOff aluOff count moveAB readsPC ccr moveR moveW aluR aluW   one per distinct (pc, wordA, wordB)
 //       kind: 0 = plain, 1 = ends its block (branch/return/loop or mode register write; PC checked after it),
 //             2 = never recompiled (DO/REP/WAIT/IFcc, or not resolved); offsets are handler addresses
 //             relative to the binary's load base (map them with nm -C of this same binary)
@@ -13,6 +13,7 @@
 //       readsPC: the instruction reads PC (the generated code must set reg.pc/pcCurrentInstruction first)
 //       ccr: bit 0 reads the CCR, bit 1 writes it, bit 2 is conditional (Tcc/Bcc/...): input to the generator's
 //            dead-CCR analysis, which only ever treats a CCR write as dead when a known full writer follows it
+//       moveR/moveW/aluR/aluW: RegisterMask (hex) of the move and ALU parts of a parallel instruction (0 otherwise)
 //   E pc      an entry point: reached other than by falling through from the previous instruction
 //   L la      a DO loop end address seen while the loop was active
 #include <cstdio>
@@ -59,7 +60,7 @@ void hook(DSP* d, TWord pc) {
 uintptr_t off(void* p) { Dl_info i{}; return p && dladdr(p, &i) ? uintptr_t(p) - uintptr_t(i.dli_fbase) : 0; }
 
 using Key = std::tuple<TWord, TWord, TWord>;
-struct Info { TWord len; int kind; bool parallel; size_t op, mv, alu; uint64_t count; bool moveAB, readsPC; int ccr; };
+struct Info { TWord len; int kind; bool parallel; size_t op, mv, alu; uint64_t count; bool moveAB, readsPC; int ccr; uint64_t mr, mw, ar, aw; };
 std::map<Key, Info> g_infos;
 
 void collect(DSP& d) {
@@ -85,6 +86,7 @@ void collect(DSP& d) {
         else if ((flags & (OpFlagBranch | OpFlagPopPC)) || (written & ctrl) != RegisterMask::None)
             kind = 1;
         bool moveAB = true;
+        uint64_t pmr = 0, pmw = 0, par_ = 0, paw = 0;
         if (ri.parallel) {
             RegisterMask mw = RegisterMask::None, mr = RegisterMask::None;
             RegisterMask aw = RegisterMask::None, ar = RegisterMask::None;
@@ -94,12 +96,13 @@ void collect(DSP& d) {
             auto touches = [](RegisterMask m, RegisterMask acc) { return (m & acc) != RegisterMask::None; };
             moveAB = (touches(aw, RegisterMask::A) && touches(mw | mr, RegisterMask::A)) ||
                      (touches(aw, RegisterMask::B) && touches(mw | mr, RegisterMask::B));
+            pmr = uint64_t(mr); pmw = uint64_t(mw); par_ = uint64_t(ar); paw = uint64_t(aw);
         }
         const bool readsPC = (read & RegisterMask::PC) != RegisterMask::None;
         const int ccr = int((read & RegisterMask::CCR) != RegisterMask::None) |
                         int((written & RegisterMask::CCR) != RegisterMask::None || (flags & OpFlagCCR)) << 1 |
                         int((flags & OpFlagCondition) != 0) << 2;
-        g_infos[k] = {len ? len : 1, kind, ri.parallel, off(ri.op), off(ri.opMove), off(ri.opAlu), n, moveAB, readsPC, ccr};
+        g_infos[k] = {len ? len : 1, kind, ri.parallel, off(ri.op), off(ri.opMove), off(ri.opAlu), n, moveAB, readsPC, ccr, pmr, pmw, par_, paw};
     }
     g_runCount.clear();
 }
@@ -152,8 +155,9 @@ int main(int argc, char** argv)
     FILE* f = std::fopen(argv[2], "w");
     if (!f) { std::perror(argv[2]); return 1; }
     for (const auto& [k, i] : g_infos)
-        std::fprintf(f, "I %06x %06x %06x %u %d %d %zx %zx %zx %llu %d %d %d\n", std::get<0>(k), std::get<1>(k), std::get<2>(k), i.len,
-                     i.kind, int(i.parallel), i.op, i.mv, i.alu, (unsigned long long)i.count, int(i.moveAB), int(i.readsPC), i.ccr);
+        std::fprintf(f, "I %06x %06x %06x %u %d %d %zx %zx %zx %llu %d %d %d %llx %llx %llx %llx\n", std::get<0>(k), std::get<1>(k), std::get<2>(k), i.len,
+                     i.kind, int(i.parallel), i.op, i.mv, i.alu, (unsigned long long)i.count, int(i.moveAB), int(i.readsPC), i.ccr,
+                     (unsigned long long)i.mr, (unsigned long long)i.mw, (unsigned long long)i.ar, (unsigned long long)i.aw);
     for (auto e : g_entries) std::fprintf(f, "E %06x\n", e);
     for (auto l : g_loopEnds) std::fprintf(f, "L %06x\n", l);
     std::fclose(f);

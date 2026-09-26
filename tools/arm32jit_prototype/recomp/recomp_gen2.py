@@ -19,7 +19,8 @@ for l in open(sys.argv[1]):
         pc = int(f[1], 16)
         ins[pc] = dict(a=int(f[2], 16), b=int(f[3], 16), len=int(f[4]), kind=int(f[5]), par=f[6] == '1',
                        op=int(f[7], 16), mv=int(f[8], 16), alu=int(f[9], 16), count=int(f[10]),
-                       moveAB=f[11] == '1', readsPC=f[12] == '1', ccr=int(f[13]))
+                       moveAB=f[11] == '1', readsPC=f[12] == '1', ccr=int(f[13]),
+                       mr=int(f[14], 16), mw=int(f[15], 16), ar=int(f[16], 16), aw=int(f[17], 16))
     elif f[0] == 'E': entries.add(int(f[1], 16))
     elif f[0] == 'L': loopends.add(int(f[1], 16))
 
@@ -38,13 +39,35 @@ def alu_name(i):
 def is_killer(i):
     n = alu_name(i)
     return (n in KILLERS or n.startswith('opCE_Asl_D<')) and not (i['ccr'] & 0b101)
+# belt and braces: opcodeanalysis' register masks are known to be incomplete (see reorderable below), so anything
+# whose handler name says it may read or rewrite the CCR is a barrier even when its masks and flags say otherwise
+CCR_BARRIER_NAMES = ('Movec', 'Tcc', 'Bcc', 'Jcc', 'BScc', 'JScc', 'Ifcc', 'ADC', 'Adc', 'Sbc', 'SBC', 'Div', 'Norm',
+                     'Andi', 'Ori', 'Rep', 'Do', 'Jclr', 'Jset', 'Brclr', 'Brset', 'Jsclr', 'Jsset', 'Bsclr', 'Bsset')
+def names_of(i):
+    return [handler(i['alu']), handler(i['mv'])] if i['par'] else [handler(i['op'])]
+def ccr_barrier(i):
+    return i['ccr'] or any(b in n for n in names_of(i) for b in CCR_BARRIER_NAMES)
 def ccr_dead(pcs, k):
     for pc in pcs[k + 1:]:
         j = ins[pc]
-        if is_killer(j): return True
-        if j['ccr']: return False
+        if is_killer(j) and not ccr_barrier_by_move(j): return True
+        if ccr_barrier(j): return False
     return False
+def ccr_barrier_by_move(i):
+    return i['par'] and any(b in handler(i['mv']) for b in CCR_BARRIER_NAMES)
 dead_ccr = 0
+
+# Parallel ALU+move without the latch: exec_parallel runs the ALU, then the move with A/B restored to their pre-ALU
+# values. Running the move FIRST is identical when the move only STORES (register -> memory, W=0): it then writes only
+# memory and address registers, which no parallel ALU op reads, and any register it reads is either untouched by the
+# ALU or the ALU's destination accumulator, which it must see pre-ALU anyway. (A move's limiter may set the sticky L
+# bit, which commutes with the ALU's own L |= V.) Direction comes from the opcode, NOT from opcodeanalysis' register
+# masks: those miss some MAC/MPY source registers (e.g. report no X/Y reads), and trusting them broke 10 machines.
+def reorderable(i):
+    mv = handler(i['mv'])
+    if mv == 'op_Movel_ea': return not (i['a'] >> 15) & 1
+    if mv.startswith(('opCE_Movex_ea<0u,', 'opCE_Movey_ea<0u,', 'opCE_Movexy<0u, 0u,')): return True
+    return False
 
 def handler(off):
     if off not in syms: raise KeyError(f'no symbol for handler offset {off:x}')
@@ -87,7 +110,9 @@ for pcs in blocks:
             out.append(f'\td->pcCurrentInstruction = 0x{pc:06x}; d->reg.pc.var = 0x{pc + 1:06x};')
         if i['len'] == 2:
             out.append(f'\td->m_opWordB = 0x{i["b"]:06x}u;')
-        if i['par'] and i['moveAB']:
+        if i['par'] and i['moveAB'] and reorderable(i):
+            out += [f'\td->{handler(i["mv"])}({op});', f'\td->{alu}({op});']
+        elif i['par'] and i['moveAB']:
             # the move reads/writes A or B: reproduce exec_parallel's latch (move sees pre-ALU A/B)
             out += ['\t{', '\t\tconst auto preA = d->reg.a, preB = d->reg.b;', f'\t\td->{alu}({op});',
                     '\t\tconst auto postA = d->reg.a, postB = d->reg.b;', '\t\td->reg.a = preA; d->reg.b = preB;',
