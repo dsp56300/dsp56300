@@ -349,3 +349,35 @@ flush before executing the buffer):
   still. Removing dispatch and decode saves only ~12%, so the time is in the opcode handlers
   themselves (the arithmetic and state access), which is what Stage 3 would have to rewrite natively
   anyway. Per this plan's bail-out rule, **the arm32 JIT effort stops here.**
+
+## Interpreter profile on the Force (2026-09-26): flat, no cheap win. Port shelved.
+
+`perf record -F 2000` of `mnm-bench os.syx 3 3` (all 22 machines, 3 s each, pinned to cpu 3,
+`MNM_DSP_INTERP=1`, Release, branch tip). The average load was 241.9% of one core. perf came from
+Debian bookworm's `linux-perf:armhf` and its dependencies, unpacked into /tmp and run with
+`LD_LIBRARY_PATH`; the Force has an `armv7_cortex_a12` PMU but ships no perf.
+
+| share | where |
+|---|---|
+| 10.5% | `DSP::op_Parallel` (parallel move/ALU dispatch) |
+| 8.7% | `DSP::do_exec` (per-instruction fetch/dispatch) |
+| 7.9% | `DSP::alu_mpy` |
+| 6.6% | `dspExecPeripherals<Peripherals56303>` (run every instruction) |
+| 6.3% | `DSP::op_Mac_S1S2` |
+| 4.9% | `DspEngine::runUntilTx` (glue: polls HI08 tx and the instruction budget every instruction) |
+| ~3% each or less | AGU update, ddddd decode, the Movex/Movey/Movel/Movexy handlers, Asl, Mpy, Add, `Memory::get`, ... (a long tail) |
+
+Reading it:
+- There's no dominant helper. The biggest single symbol is 10.5%, and the MAC/MPY arithmetic totals
+  about 18%. Hand-optimizing the arithmetic, even perfectly, is worth at most about 1.2x.
+- Per-instruction overhead (do_exec + op_Parallel + peripherals + runUntilTx) is about 31%. Batching
+  the peripheral tick and the `runUntilTx` poll every N instructions is cheap (it's in the glue),
+  but removing *all* of that overhead would cap out around 1.45x, matching Stage 2's 1.13x from
+  removing dispatch alone.
+- The port needs about 2.5x just to reach 100% of one core, and about 4x for a comfortable 60%. The
+  interpreter can't get there. Only a full native-code JIT could, and Stage 2's gate already ruled
+  that out as a bet.
+
+**Decision: Monomodule on the Force is shelved.** The fork stays as a record. If revisited, the only
+realistic path is a full native JIT for the hot handlers (Stage 3 as written), with the
+register-pressure risk noted above.
