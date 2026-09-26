@@ -604,3 +604,64 @@ Open items for the port itself:
   back on.
 - VST wrapper: run the DSP on its own `SCHED_FIFO` thread (pinned, one buffer of lookahead); the
   p99-vs-window data above supports that.
+
+
+## Coexistence with the rest of MPC (2026-09-27)
+
+Question: can a Monomodule instance (one voice, one machine, as upstream designs it) run on the Force while it
+keeps running other tracks and plugins? Setup on the Force (which had your normal add-ons running):
+- MPC has one `AudioWorker` per core: SCHED_RR priority 20, each pinned to its own core (0-3). MPC's main/UI
+  threads are on core 0 and its background/file threads mostly on core 1. `Audio Processing` runs on core 3.
+- The current project barely loads the workers (~1%, 4%, 1%, 0.2% of cores 0-3).
+- Your `mpc-vst-jv880` runs a `jv880-emu` thread inside MPC at SCHED_FIFO **45** on cores 0-2, ~20% of a core.
+- Core 3 has no JV-880 and the audio-DMA interrupt; per-core single-engine results are near-identical
+  (0.3-1.5% of blocks over deadline for the heaviest machine on any core).
+- The kernel is PREEMPT_RT, governor `performance`, no cpuidle driver. Each engine costs 62 MB PSS (2 GB total).
+
+**One engine per core (cores 1,2,3), each engine's own processing time** (mean% / p99% of the 2902 us block):
+
+| other load per core, engine priority | DDRW 1 / 2 / 3 engines | SWAVE SAW 1 / 2 / 3 engines |
+|---|---|---|
+| none, FIFO 25 | 68/88, 65/89, 65/92 | 47/63, 46/64, 47/66 |
+| 25% RR-20, FIFO 25 (above MPC workers) | 67/88, 64/87, 65/90 | 47/63, 46/64, 47/65 |
+| 50% RR-20, FIFO 25 | 59/84, 60/83, 63/86 | 44/60, 44/61, 45/65 |
+| 25% RR-20, FIFO **15** (below workers) | 98/151, 95/143, 111/175 (30% / 19% / 95% of blocks late) | 50/94, 55/93, 76/110 |
+| 50% RR-20, FIFO 15 | 166/263 (all late) | 106/181 (70% late) |
+
+So **N instances need N separate cores, and the DSP thread must run above MPC's AudioWorkers (priority > 20).**
+Below them, even 25% background load causes misses. More engines than free cores is not an option for the
+heavy machines (two engines on one core would need >130%); two typical ones (2 x 47%) would only just fit.
+
+**Cost to the other work when the engine runs above it** (one engine, FIFO 25, on the same core as RR-20 work
+that does a fixed amount of work per 2902 us period; percentage of the other work's periods that finish late):
+
+| other load on that core | DPRO DDRW (66%) | SWAVE SAW (46%) | GND SIN (38%) |
+|---|---|---|---|
+| 10% | 0.8% | 0.03% | 0 |
+| 20% | 1.6% | 0 | 0 |
+| 30% | 6.8% | 0.16% | 0 |
+| 40% | 2.9% | 0.07% | 0.09% |
+| 50% | 25% (worst 53 ms) | 0.07% | 0 |
+
+Reading it: typical machines coexist with up to ~50% other real-time work on their core. The heavy ones
+(DPRO DDRW/DENS, RINGMOD, REVERB, SID) need a core mostly to themselves: other work is fine up to ~20% and
+degrades past ~30%. The pattern is that the engine's slowest blocks (p99 87%, max ~115%) hold the core for
+milliseconds, and any other work waking during them runs late.
+
+Harness pitfalls found on the way (all cost me time, so noting them):
+- **Makespan vs per-engine time.** `mnm-bench --engines` used to report only the block's makespan, which
+  includes waking an unpinned CFS coordinator thread. With engines on core 1 plus another core that added
+  ~25% of a period and looked like 33% deadline misses; each engine's own time was fine (mean 65%, p99 92%).
+  Trust the "slowest worker's own time" line.
+- **SCHED_FIFO below MPC's workers** looks like a performance problem when it's a priority problem.
+- **Compute-only load on other cores does not slow an engine** (it measured *faster*, 60% vs 69%, with
+  burners on other cores; not understood, possibly the DRAM/interconnect staying at a higher clock).
+
+Not measured / open:
+- How MPC actually calls a plugin: on its AudioWorker (RR 20) inside the audio callback, or on threads the
+  plugin creates. Everything above assumes the plugin owns a FIFO thread above priority 20. A plugin doing
+  the DSP inside `process()` on an AudioWorker at 66% of a core would leave that core's worker only ~34%.
+- Real MPC projects (this used a synthetic fixed-work-per-period load, with the current near-idle project).
+- The cost of idle-voice skipping (would cut the load of silent tracks; not implemented).
+- Starvation risk: a FIFO thread that overruns starves the AudioWorker on its core (RT throttling caps it at
+  95% per second). The wrapper needs a bailout, e.g. skip a block and output silence when behind.

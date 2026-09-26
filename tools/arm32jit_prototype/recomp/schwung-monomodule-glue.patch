@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index b47494f..07c9530 100644
+index b47494f..39ff94c 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -71,3 +71,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+@@ -71,3 +71,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
    target_include_directories(mnm-hosttest PRIVATE src)
    target_link_libraries(mnm-hosttest PRIVATE dl pthread)
  endif()
@@ -18,6 +18,9 @@ index b47494f..07c9530 100644
 +
 +add_executable(mnm-spikes tools/bench/mnm_spikes.cpp)
 +target_link_libraries(mnm-spikes PRIVATE mnmcore)
++
++add_executable(mnm-busyload tools/bench/mnm_busyload.cpp)
++target_link_libraries(mnm-busyload PRIVATE pthread)
 diff --git a/src/engine/dsp/DspEngine.cpp b/src/engine/dsp/DspEngine.cpp
 index ec13032..7ad82ce 100644
 --- a/src/engine/dsp/DspEngine.cpp
@@ -31,3 +34,71 @@ index ec13032..7ad82ce 100644
          if (trace) std::fprintf(stderr, "PC=%06x\n", m_dsp->getPC().toWord());
          if (m_useJit) m_dsp->exec(); else m_dsp->execInterpreter();
          if (m_useJit && m_dsp->getJit().hasFailed()) {   // no JIT memory (or code generation failed): silence and a status, never a crash
+diff --git a/tools/bench/mnm_bench.cpp b/tools/bench/mnm_bench.cpp
+index d607349..3c232ed 100644
+--- a/tools/bench/mnm_bench.cpp
++++ b/tools/bench/mnm_bench.cpp
+@@ -103,17 +103,23 @@ static int multiEngine(const fw::Firmware& fw, int n, double seconds, const char
+     const long pss1 = pssKb(), avail1 = availKb();
+     if (std::getenv("MNM_SMAPS")) dumpSmaps();
+ 
+-    const int workers = std::min(n, 3);
++    // MNM_CPUS="1,2,3": cores for the worker threads (default 0,1,2). One worker per core, at most n workers.
++    std::vector<int> cpus;
++    if (const char* c = std::getenv("MNM_CPUS")) { for (const char* q = c; *q;) { cpus.push_back(std::atoi(q)); while (*q && *q != ',') ++q; if (*q) ++q; } }
++    if (cpus.empty()) cpus = {0, 1, 2};
++    const int workers = std::min<int>(n, int(cpus.size()));
+     const int blocks = int(seconds * 44100.0 / kMoveFrames);
+     std::mutex m;
+     std::condition_variable cvGo, cvDone;
+     int gen = 0, done = 0;
+     bool quit = false;
+     std::vector<std::thread> pool;
++    std::vector<std::atomic<double>> workerUs(static_cast<size_t>(workers));   // each worker's own processing time for the block
++    std::vector<double> perWorkerMax; perWorkerMax.reserve(size_t(seconds * 44100.0 / kMoveFrames) + 8);
+     for (int w = 0; w < workers; ++w)
+         pool.emplace_back([&, w] {
+ #ifdef __linux__
+-            cpu_set_t s; CPU_ZERO(&s); CPU_SET(w, &s); sched_setaffinity(0, sizeof(s), &s);
++            cpu_set_t s; CPU_ZERO(&s); CPU_SET(cpus[size_t(w)], &s); sched_setaffinity(0, sizeof(s), &s);
+             if (fifoPrio > 0) { sched_param sp{}; sp.sched_priority = fifoPrio; if (sched_setscheduler(0, SCHED_FIFO, &sp) != 0) std::perror("SCHED_FIFO"); }
+ #endif
+             std::vector<float> L(kMoveFrames), R(kMoveFrames), in(kMoveFrames, 0.1f);
+@@ -125,10 +131,12 @@ static int multiEngine(const fw::Firmware& fw, int n, double seconds, const char
+                     if (quit) return;
+                     seen = gen;
+                 }
++                const auto wt0 = Clock::now();
+                 for (int e = w; e < n; e += workers) {
+                     if (fx) voices[size_t(e)]->processFx(in.data(), in.data(), L.data(), R.data(), kMoveFrames);
+                     else voices[size_t(e)]->process(L.data(), R.data(), kMoveFrames);
+                 }
++                workerUs[size_t(w)].store(std::chrono::duration<double, std::micro>(Clock::now() - wt0).count(), std::memory_order_relaxed);
+                 { std::lock_guard<std::mutex> lk(m); ++done; }
+                 cvDone.notify_one();
+             }
+@@ -143,6 +151,8 @@ static int multiEngine(const fw::Firmware& fw, int n, double seconds, const char
+         cvGo.notify_all();
+         { std::unique_lock<std::mutex> lk(m); cvDone.wait(lk, [&] { return done == workers; }); }
+         us.push_back(std::chrono::duration<double, std::micro>(Clock::now() - s).count());
++        double mx = 0; for (auto& a : workerUs) mx = std::max(mx, a.load(std::memory_order_relaxed));
++        perWorkerMax.push_back(mx);
+     }
+     { std::lock_guard<std::mutex> lk(m); quit = true; }
+     cvGo.notify_all();
+@@ -152,6 +162,15 @@ static int multiEngine(const fw::Firmware& fw, int n, double seconds, const char
+     std::printf("%s x%d on %d cores: makespan mean %.0f us (%.1f%%)  p99 %.0f us (%.1f%%)  p99.9 %.0f us  max %.0f us\n",
+                 def->name, n, workers, mean, 100 * mean / kDeadlineUs, sorted[size_t(sorted.size() * 0.99)],
+                 100 * sorted[size_t(sorted.size() * 0.99)] / kDeadlineUs, sorted[size_t(sorted.size() * 0.999)], sorted.back());
++    {   // the slowest worker's own time per block: excludes waking the (unpinned) coordinator, which a real audio callback doesn't have
++        std::vector<double> pw = perWorkerMax; std::sort(pw.begin(), pw.end());
++        double pm = 0; for (double x : pw) pm += x; pm /= pw.size();
++        size_t pmiss = 0; for (double x : perWorkerMax) pmiss += x > kDeadlineUs;
++        std::printf("  slowest worker's own time: mean %.1f%%  p99 %.1f%%  max %.1f%%  over deadline %.2f%%\n", 100 * pm / kDeadlineUs,
++                    100 * pw[size_t(pw.size() * 0.99)] / kDeadlineUs, 100 * pw.back() / kDeadlineUs, 100.0 * pmiss / pw.size());
++    }
++    size_t miss = 0, over90 = 0; for (double x : us) { miss += x > kDeadlineUs; over90 += x > 0.9 * kDeadlineUs; }
++    std::printf("  blocks over deadline: %zu of %zu (%.2f%%), over 90%%: %zu (%.2f%%)\n", miss, us.size(), 100.0 * miss / us.size(), over90, 100.0 * over90 / us.size());
+     std::printf("init %.0f ms total; per engine: PSS %.1f MB, MemAvailable drop %.1f MB\n", initMs,
+                 pss0 > 0 ? (pss1 - pss0) / 1024.0 / n : 0.0, avail0 > 0 ? (avail0 - avail1) / 1024.0 / n : 0.0);
+     return 0;

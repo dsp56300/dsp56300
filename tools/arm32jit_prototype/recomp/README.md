@@ -20,6 +20,11 @@ needs your own OS file.
 - `bench.py` + `devbench.sh`: interleaved, pinned median of mnm-bench on the Force.
 - `prof.sh` + `profagg.py`: `-g` build profiled on the device, samples mapped to inlined source
   functions/lines.
+- `mnm_busyload.cpp`: stand-in for MPC's own audio work (SCHED_RR, one thread per core, fixed work per 128-frame
+  period) that reports how often it finishes late. `matrix2.sh` (engines x background x priority), `inversion.sh`
+  (cost to the other work when an engine runs above it) and `cpustat.sh` drive it with
+  `mnm-bench --engines <n> <sec> <machine> <fifo-prio>` (`MNM_CPUS=1,2,3` picks cores; prints each engine's own
+  processing time, which is what to trust: the makespan also includes waking the unpinned coordinator thread).
 - `mnm_recomp.cpp` + `recomp_gen.py`: the earlier single-loop gate test (superseded).
 
 ## Pipeline (Docker images as in `../toolchain-diff/`; x86 image = that plus build-essential)
