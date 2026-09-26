@@ -8,6 +8,8 @@
 #include <sstream>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <cstdlib>
+#include <ctime>
 #include "MonoVoice.h"
 #include "firmware/Firmware.h"
 #include "dsp56kEmu/dsp.h"
@@ -96,8 +98,8 @@ int main(int argc, char** argv) {
             a.load32(1, uint32_t(uintptr_t(handlerMove)));
             a.load32(2, uint32_t(uintptr_t(handlerAlu)));
             a.load32(3, wordA);
-            a.load32(5, callParallelAddr);   // 4 args fill r0-r3; keep the callee address in a scratch reg
-            a.blx(5);
+            a.load32(12, callParallelAddr);   // 4 args fill r0-r3; ip (r12) is caller-saved scratch -- r5 would need saving
+            a.blx(12);
         }
         std::printf("pc=%06x wordA=%06x wordB=%06x len=%u instA=%d instB=%d\n",
                      pc, wordA, wordB, len, int(instA), int(instB));
@@ -110,6 +112,7 @@ int main(int argc, char** argv) {
     void* buf = mmap(nullptr, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (buf == MAP_FAILED) { std::perror("mmap"); return 1; }
     std::memcpy(buf, a.code.data(), a.sizeBytes());
+    __builtin___clear_cache(static_cast<char*>(buf), static_cast<char*>(buf) + a.sizeBytes());
 
     // --- reference: interpreter, from the identical starting state ---
     setSnapshot(dsp);
@@ -130,6 +133,22 @@ int main(int argc, char** argv) {
 
     std::printf("--- interpreter ---\n%s\n--- generated block ---\n%s\n", refStr.c_str(), genStr.c_str());
     std::printf("%s\n", refStr == genStr ? "PASS: identical register state" : "FAIL: register state differs");
+
+    // --- Stage 2 bail-out gate: time both paths over the same loop body, same per-iteration reset ---
+    const int iters = argc > 2 ? std::atoi(argv[2]) : 200000;
+    auto now = [] { timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1e9 + t.tv_nsec; };
+    double tReset = now();
+    for (int k = 0; k < iters; ++k) setSnapshot(dsp);
+    tReset = now() - tReset;
+    double tInt = now();
+    for (int k = 0; k < iters; ++k) { setSnapshot(dsp); for (int i = 0; i < nInstr; ++i) dsp.execInterpreter(); }
+    tInt = now() - tInt - tReset;
+    double tGen = now();
+    for (int k = 0; k < iters; ++k) { setSnapshot(dsp); fn(); }
+    tGen = now() - tGen - tReset;
+    const double n = double(iters) * nInstr;
+    std::printf("interpreter: %.1f ns/instr\ngenerated:   %.1f ns/instr\nspeedup:     %.2fx (gate: >= 1.30x)\n",
+                tInt / n, tGen / n, tInt / tGen);
     return refStr == genStr ? 0 : 1;
 #else
     std::printf("--- interpreter reference ---\n%s\n(x86 host build: not executing generated Thumb-2 code)\n", refStr.c_str());

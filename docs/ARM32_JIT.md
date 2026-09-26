@@ -316,3 +316,36 @@ crash comes from this session's build (`mnm-armhf-qemu` image + `build-fork-armh
 hardware or from upstream `memorybuffer.cpp`. Next session: diff the two builds' compile/link
 flags (`build-armhf/CMakeCache.txt` vs `build-fork-armhf/CMakeCache.txt`, and the image each was
 built with) and rebuild Stage 2's tools the old way.
+
+## Stage 2 result (2026-09-26, later session): gate FAILED -- JIT effort stopped
+
+**The "MemoryBuffer crash" was never a toolchain or memory bug.** schwung-monomodule's `DspEngine`
+defaults to the JIT path unless `MNM_DSP_INTERP=1` is set; on armv7 there is no JIT, so `exec()`
+loads through a NULL JIT table (gdbserver backtrace: `DspEngine::runUntilTx`, `ldr r2,[r2=0,...]`).
+The old `mnm-bench` numbers were taken with that variable set. With it, every build works, both
+`a750f285` and the branch tip, built with `Release` in the old `debian:bookworm` +
+`crossbuild-essential-armhf` image and `tools/arm32jit_prototype/toolchain-diff/armhf.cmake`.
+(The core goes to the vendor's `az01-coredump` handler, so use `gdbserver` from the bookworm
+`gdbserver:armhf` deb plus `gdb-multiarch` in Docker to debug on-device.)
+
+**New open issue (not Stage 2): the armhf interpreter isn't bit-exact with x86.** On the branch tip,
+the x86 interpreter matches the x86 JIT on all 22 machines (Stage 1 holds). The armhf interpreter,
+on the Force *and* identically under qemu-arm (so it's deterministic, not the hardware), matches on the
+15 synth machines but differs on all 7 effect machines (THRU, REVERB, CHORUS, DYNAMIX, RINGMOD, PHASER,
+FLANGER). The earlier "armhf matches on all 22" note above is wrong. It is likely a 32-bit
+portability bug (`long`/`size_t` width or a shift) in the interpreter or glue. It would matter for
+shipping the interpreter on the Force.
+
+**Block compiler on-device** (`tools/arm32jit_prototype/mnm_arm32block.cpp`, fixed this session:
+it used callee-saved r5 as scratch without saving it (now r12), and it was missing the i-cache
+flush before executing the buffer):
+- Runs, but **register state differs** from the interpreter: after the 10-instruction sine loop body,
+  `a0` and `y0` come out swapped (interpreter a0=$c62f03 y0=$ba9a81, block a0=$ba9a81 y0=$c62f03).
+  This looks like the parallel move/ALU ordering in `callParallel` (the move must read its source
+  before the ALU writes). Not fixed, since the gate below failed first.
+- **Timing, Force, 2M iterations x 10 instr, 3 runs: interpreter 60-62 ns/instr, block 53-54
+  ns/instr, speedup 1.12-1.17x. The gate is >= 1.3x, so it FAILS.** The block also skips the
+  interpreter's per-instruction interrupt and loop bookkeeping, so a complete version would be slower
+  still. Removing dispatch and decode saves only ~12%, so the time is in the opcode handlers
+  themselves (the arithmetic and state access), which is what Stage 3 would have to rewrite natively
+  anyway. Per this plan's bail-out rule, **the arm32 JIT effort stops here.**
