@@ -68,6 +68,7 @@ namespace dsp56k
 		parallelAluMoveSameAccumulator();
 
 		blockDestroyedWhileRunning();
+		branchOutOfPMemory();
 	}
 
 	JitUnittests::~JitUnittests()
@@ -1239,6 +1240,31 @@ namespace dsp56k
 		verify(dsp.aluB().var == 3);
 
 		dsp.setExternalBusDevice(nullptr);
+		dsp.getJit().setConfig(oldConfig);
+	}
+
+	/*	A first bootstrap stage ends by jumping back into the bootstrap ROM, which the emulator does not have: the device
+		sees the PC there and hands the DSP the next stage itself. It keeps blocks unlinked until then, and a block that
+		ends in that jump has to compile and return to the caller with the PC out of P memory.
+	*/
+	void JitUnittests::branchOutOfPMemory()
+	{
+		constexpr TWord g_pc = 0x3100;
+		constexpr TWord g_bootRom = 0xff0000;
+
+		const auto oldConfig = dsp.getJit().getConfig();
+		auto config = oldConfig;
+		config.linkJitBlocks = false;
+		dsp.getJit().setConfig(config);
+
+		dsp.resetHW();
+		emitToMemory(0x0af080, g_bootRom, g_pc);		// jmp >$ff0000
+
+		dsp.setPC(g_pc);
+		execStep();
+
+		verify(dsp.getPC().toWord() == g_bootRom);
+
 		dsp.getJit().setConfig(oldConfig);
 	}
 

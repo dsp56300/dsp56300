@@ -620,7 +620,9 @@ namespace dsp56k
 
 				if (branchTarget != g_invalidAddress)
 				{
-					assert(branchTarget == g_dynamicAddress || branchTarget < m_dsp.memory().sizeP());
+					// A branch out of P memory - back into a bootstrap ROM that is not emulated, which a device then stands
+					// in for - is fine as long as blocks are not linked: getChildBlock() does not look at the target then
+					assert(branchTarget == g_dynamicAddress || branchTarget < m_dsp.memory().sizeP() || !m_config.linkJitBlocks);
 
 					const auto pcLast = pcFirst + pMemSize;
 
