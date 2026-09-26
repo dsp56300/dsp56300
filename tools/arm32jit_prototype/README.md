@@ -14,6 +14,13 @@ left.
   member pointer. Needs the built `libdsp56kEmu.a`/`libdsp56kBase.a`/`libasmjit.a`/`libvtuneSdk.a`
   (build this repo via schwung-monomodule's `-DMNM_DSP56300_DIR=<this repo>` CMake option, or any
   other consumer that builds `source/dsp56kEmu`) to link against.
+- `mnm_arm32block.cpp` — the actual Stage 2 block compiler: walks a P-memory range (currently
+  Stage 1's sine-table loop body, `$100091-$10009a`), resolves each instruction the same way
+  `op_ResolveCache` does, and emits the Thumb-2 call sequence. Belongs in schwung-monomodule's
+  `tools/bench/` (needs `MonoVoice`/`Firmware` from that repo, plus `arm32asm.h` alongside it) —
+  copy it there rather than trying to build it from this repo alone. See `docs/ARM32_JIT.md`'s
+  Stage 2 section for the CMakeLists line to add and the exact build/deploy/run commands used
+  (including the device-blocking bug found while testing it, which isn't this file's fault).
 
 To rebuild/run (x86 example; swap `g++` for `arm-linux-gnueabihf-g++` + `qemu-arm` for the ARM
 target — see ARM32_JIT.md for the exact commands used):

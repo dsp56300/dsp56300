@@ -235,11 +235,46 @@ change -- it's the standing regression gate for the rest of this investigation.
   `dsp.execInterpreter()` over the same 10 instructions, on the Force (`root@192.168.1.44`,
   reachable this session). That answers Stage 2's actual question (is dispatch/decode where the
   time goes) without needing the lazy-compilation/chaining machinery Stage 3+ would need anyway.
-- Device confirmed reachable this session (`ssh root@192.168.1.44` -- armv7l). Not yet used for
-  this stage's own timing measurement.
-- Bail-out gate (unchanged from the original plan): if this isn't at least ~1.3x faster than the
-  interpreter for that loop on-device, dispatch isn't where the time goes and full native codegen
-  (Stage 3) likely won't pay for itself either -- stop.
+- Device confirmed reachable this session (`ssh root@192.168.1.44` -- armv7l).
+- Built the compiler: `mnm-arm32block.cpp` (schwung-monomodule scratchpad, not yet committed
+  anywhere durable -- move it into this repo's `tools/arm32jit_prototype/` next session) walks
+  P:$100091-$10009a (Stage 1's sine-table loop body), uses `Opcodes::getInstructionTypes` +
+  `DSP::resolvePermutation` to resolve each instruction exactly like `op_ResolveCache` does (minus
+  the execution side effect), and emits the Thumb-2 call sequence via `arm32asm.h`, using
+  `DSP::prepareOp`/`callInstruction`/`callParallel`. Confirmed on x86 (decode-only path, since
+  Thumb-2 bytes aren't valid x86) that it resolves and decodes the whole loop correctly (mpyuu,
+  dmac x2, macsu, the `asl a`/`l:(r1),y` parallel pair, the "sub y,a" pair, the nop, both L-moves).
+- **Blocked -- found a real, pre-existing, unrelated bug**: running *any* armhf binary built
+  against this fork on the real Force crashes with `SIGSEGV, si_code=SEGV_MAPERR`, PC == fault
+  address (`0xf505e7c2` in one run) -- a wild jump, not a bad data access. This is **not** Stage 1
+  or Stage 2 code: it reproduces with plain `mnm-golden` (Stage 1's own bit-exactness tool,
+  unmodified since it passed), at `-O0`/Debug with no LTO, so it's not an optimizer miscompile
+  either. `strace -i` pins it inside `MemoryBuffer`'s constructor (`memorybuffer.cpp`, upstream
+  code, not touched by this fork's patches) -- crashes right after the last of a long run of
+  `mmap2`+`mlock` pairs (the "map scratch blocks to cover the full $000000-$ffffff range" loop,
+  the same code Stage 1 traced through to find the OOB-read alias behaviour). Confirmed this is
+  **not** a qemu-user artifact: reproduces identically running the binary natively on the device
+  over SSH (qemu-arm was actually flakier/inconsistent in this session for unrelated environment
+  reasons -- a loader-path issue that came and went; don't trust qemu-user for this repo without
+  `QEMU_LD_PREFIX=/usr/arm-linux-gnueabihf`, and even then treat it as a second check, not ground
+  truth -- the device is ground truth).
+  - This is confusing against `[[monomodule-force-feasibility]]`'s own numbers, which record real
+    interpreter benchmarks (150-285% load) *from the Force*, implying the MMU-backed memory setup
+    worked at some point on this exact hardware. Whatever toolchain built *that* binary is not the
+    one this session's `mnm-armhf-qemu` Docker image + `xbuild/armhf.cmake` produces (GCC 12,
+    `-mcpu=cortex-a17 -mfpu=neon-vfpv4 -mfloat-abi=hard`) -- worth finding that original build
+    (or its flags/compiler version) before assuming this is a genuine 32-bit correctness bug in
+    `memorybuffer.cpp` rather than a toolchain regression. PC==faultAddr (a wild branch) is more
+    consistent with stack/return-address corruption than a straightforward pointer-arithmetic bug,
+    which nudges toward "toolchain/ABI mismatch" over "logic bug", but that's not confirmed.
+  - Next step if resumed: either (a) track down the toolchain that produced the numbers already in
+    `[[monomodule-force-feasibility]]` and rebuild with that instead, or (b) get a real backtrace
+    (no `gdb` on-device or in this session's containers; `strace -i` gave the faulting PC but not a
+    call stack -- installing `gdb` cross tools, or copying the core file off the device to analyse
+    with `arm-linux-gnueabihf-gdb` on the host, is the way to actually see the corrupted call chain).
+- Bail-out gate (unchanged, not yet reached): if the compiled block, once actually run, isn't at
+  least ~1.3x faster than the interpreter for that loop on-device, stop -- but this can't be
+  measured until the above is resolved.
 
 - Decode each DSP instruction once per basic block instead of every execution; emit a straight-line
   chain of calls into the *existing* interpreter opcode handlers with operands baked in, using a

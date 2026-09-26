@@ -229,6 +229,18 @@ namespace dsp56k
 			std::memcpy(&fAlu, rawA, sizeof(fAlu));
 			exec_parallel(fMove, fAlu, _op);
 		}
+		// arm32 Stage 2: a handler resolved for some instruction at compile-time-known address A
+		// needs the DSP state it would see if reached by the normal fetchPC()/execOp() path: reg.pc
+		// pointing one word past A (fetchPC()'s own ++), and m_opWordB holding the word at A+1 (2-word
+		// instructions read it themselves via fetchOpWordB(), which also does their second ++reg.pc).
+		// A generated block can set both directly, but that's a 5th argument (this, rawFunc, op,
+		// opWordB, pcAfterFirstWord) -- one over AAPCS's 4 register args -- so it's split into this
+		// call plus callInstruction/callParallel, rather than hand-emitting a stack-passed argument.
+		void prepareOp(TWord _opWordB, TWord _pcAfterFirstWord) noexcept
+		{
+			m_opWordB = _opWordB;
+			reg.pc.var = static_cast<int32_t>(_pcAfterFirstWord);
+		}
 
 		template<typename Ta, typename Tb> void execPeriph() noexcept
 		{
