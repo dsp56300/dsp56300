@@ -18,8 +18,8 @@ namespace dsp56k
 		m_tx.fill(0);
 		m_rx.fill(0);
 
-		m_sr.set(SSISR_TDE);
-		m_sr.set(SSISR_TFS);
+		// SSISR starts at zero, TDE and TFS included: the first slot sets them (56303 UM, SSISR reset values). The
+		// 56300 simulator reads SSISR $000000 after reset
 	}
 
 	void Essi::reset()

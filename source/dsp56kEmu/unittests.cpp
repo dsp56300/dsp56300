@@ -234,6 +234,7 @@ namespace dsp56k
 		esaiEvenSlotInterrupts();
 		esaiResetClearsStatus();
 		dmaPendingRequestAtArm();
+		essiDmaPendingRequestAtArm();
 		hostQueueDataWaitsForHostFlags();
 
 		// multi-instruction tests
@@ -2246,6 +2247,68 @@ namespace dsp56k
 		peripheralsX.write(XIO_DCR4, 0);
 		esai.writeReceiveControlRegister(0);
 		clock.setEnabled(clockEnabled);
+	}
+
+	/*	The rule of dmaPendingRequestAtArm on a 56303, whose DMA controller is the same part of the core. Its ESSI
+		starts with SSISR at zero: TDE and TFS are set when the first slot starts (56303 UM, SSISR reset values, the
+		56300 simulator reads $000000 after reset). Set from reset, a transmit channel armed before the first slot
+		served a request that the chip does not raise yet
+	*/
+	void UnitTests::essiDmaPendingRequestAtArm()
+	{
+		constexpr TWord de = 1 << 23;
+		constexpr TWord wordRequest = 5 << 19;				// DTM = word, triggered by request, DE stays set
+		constexpr TWord fromEssi0Rx = 0xa << 11;			// DRS = ESSI0 receive data
+		constexpr TWord toYPostInc = (0x2c << 4) | (1 << 2);	// DAM = destination +1, source fixed, DDS = Y, DSS = X
+		constexpr TWord dcr = de | wordRequest | fromEssi0Rx | toYPostInc;
+
+		Peripherals56303 periph;
+		PeripheralsNop periphNop;
+		Memory mem303(g_defaultMemoryValidator, 0x10000);
+		DSP dsp303(mem303, &periph, &periphNop);
+
+		auto& essi = periph.getEssi0();
+		verify(essi.readSR() == 0);
+
+		essi.writeCRA(1 << Essi::CRA_DC0);							// two slots per frame
+		essi.writeCRB((1 << Essi::CRB_MOD) | (1 << Essi::CRB_RE));	// network mode, receiver on
+		essi.writeEmptyAudioIn(2);									// the input words are 0
+
+		for(TWord i=0; i<4; ++i)
+			mem303.set(MemArea_Y, 0x700 + i, 0x7ad000 + i);
+
+		auto rdf = [&] { return (essi.readSR() & (1 << Essi::SSISR_RDF)) != 0; };
+		auto ddr = [&] { return periph.read(XIO_DDR1, Nop); };
+
+		periph.write(XIO_DSR1, Essi::ESSI0_RX);
+		periph.write(XIO_DDR1, 0x700);
+		periph.write(XIO_DCO1, 0x3f);
+
+		essi.execRX();								// slot 0, RDF is raised
+		verify(rdf());
+
+		// enabled together with its request source: the raised request is not served
+		periph.write(XIO_DCR1, dcr);
+		verify(ddr() == 0x700);
+		verify(mem303.get(MemArea_Y, 0x700) == 0x7ad000);
+		verify(rdf());
+
+		essi.execRX();								// slot 1, the next request
+		verify(ddr() == 0x701);
+		verify(mem303.get(MemArea_Y, 0x700) == 0);
+		verify(!rdf());
+
+		// disabled with the source kept, a word arrives, enabled again: the raised request is served right away
+		periph.write(XIO_DCR1, dcr & ~de);
+		essi.execRX();								// slot 0 of the next frame
+		verify(rdf());
+		verify(ddr() == 0x701);
+
+		periph.write(XIO_DCR1, dcr);
+		verify(ddr() == 0x702);
+		verify(mem303.get(MemArea_Y, 0x701) == 0);
+		verify(mem303.get(MemArea_Y, 0x702) == 0x7ad002);
+		verify(!rdf());
 	}
 
 	void UnitTests::dec()

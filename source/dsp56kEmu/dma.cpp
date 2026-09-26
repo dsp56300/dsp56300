@@ -36,7 +36,8 @@ namespace dsp56k
 
 		The manual calls a peripheral request "a regular peripheral request in which the peripheral can not generate a
 		second request until the first one is served", and says that all request sources "behave as edge-triggered
-		synchronous inputs". Firmware on the 56362 needs both halves of that:
+		synchronous inputs". The DMA controller is part of the core, so the 56303 and the 56362 behave alike, and
+		firmware needs both halves of that:
 
 		- A channel that already had its request source selected serves a request that was raised while it was
 		  disabled, as soon as it is enabled. All of these select the source first, with DE clear in a first DCR write,
@@ -49,20 +50,19 @@ namespace dsp56k
 		    gets as the one of slot 0.
 		  - Firmware reads the receive register right before it arms a receive channel, which is only needed if a
 		    pending receive request would be served.
+		  - Firmware on the 56303 sets DE of its ESSI receive channel in a second DCR write, right after it saw the
+		    receive frame sync with RDF set, and takes the word that is pending then as the first of its ring. Waiting
+		    for the next request swapped the words of every frame.
 		- A DCR write that selects a new request source and enables the channel at once does not serve a request that
 		  was raised before; the channel waits for the next one. Firmware arms its ESAI receive channel that way while
 		  RDF has been pending for many slots, and later reads each half of its input ring in the slot in which the
 		  channel starts to refill it. Serving the pending request puts the channel a word ahead, so the first word of
 		  every half is overwritten before the firmware reads it. The hardware does not do that. The 56300 simulator
 		  does serve the request here, so it is no reference for this case.
-
-		The 56303 keeps waiting for the next request. The 56303 firmware we run arms its ESSI channels with a request
-		pending at boot, so serving it would move those streams by a word, and nothing has been seen that asks for it.
 		*/
 
 		bool checkTrigger(Peripherals56303& _p, const RequestSource _src)
 		{
-			return false;
 			switch (_src)
 			{
 			case RequestSource::Essi0TransmitData:			return _p.getEssi0().getSR().test(Essi::SSISR_TDE);
@@ -226,21 +226,22 @@ namespace dsp56k
 			return;
 		}
 
-		if(m_peripherals.getType() == PeripheralType::Peripherals56303)
+		const auto type = m_peripherals.getType();
+
+		if(type == PeripheralType::Peripherals56303 || type == PeripheralType::Peripherals56362)
 		{
-			auto* p303 = static_cast<Peripherals56303*>(&m_peripherals);
 			m_dma.addTriggerTarget(this);
 			m_armed = true;
-			if(checkTrigger(*p303, reqSrc))
-				triggerByRequest();
-		}
-		else if(m_peripherals.getType() == PeripheralType::Peripherals56362)
-		{
-			auto* p362 = static_cast<Peripherals56362*>(&m_peripherals);
-			m_dma.addTriggerTarget(this);
-			m_armed = true;
+
+			auto raised = [&]
+			{
+				if(type == PeripheralType::Peripherals56303)
+					return checkTrigger(static_cast<Peripherals56303&>(m_peripherals), reqSrc);
+				return checkTrigger(static_cast<Peripherals56362&>(m_peripherals), reqSrc);
+			};
+
 			// a raised request is only served by a channel that was set to that request source before, see checkTrigger
-			if(reqSrc == m_prevRequestSource && checkTrigger(*p362, reqSrc))
+			if(reqSrc == m_prevRequestSource && raised())
 				triggerByRequest();
 		}
 		else

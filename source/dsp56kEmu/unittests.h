@@ -91,6 +91,7 @@ namespace  dsp56k
 		void dmaBlockTriggeredByRequest();
 		void dmaExternalBusWrites();
 		void dmaPendingRequestAtArm();
+		void essiDmaPendingRequestAtArm();
 		void cmpu();
 		void mpyri();
 		void merge();
