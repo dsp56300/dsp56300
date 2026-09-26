@@ -1,0 +1,3 @@
+FROM debian:bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends crossbuild-essential-armhf cmake ninja-build git file ca-certificates && rm -rf /var/lib/apt/lists/*
+ENV CROSS_PREFIX=arm-linux-gnueabihf-
