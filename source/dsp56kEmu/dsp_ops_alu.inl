@@ -355,10 +355,12 @@ namespace dsp56k
 	{
 	//	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
 
-		const int64_t s1 = _s1.signextend<int64_t>();
-		const int64_t s2 = _s2.signextend<int64_t>();
+		// both operands are sign-extended 24-bit values: a 32x32->64 multiply is exact, and on 32-bit ARM this is
+		// a single smull instead of the three multiplies a full 64x64 product compiles to
+		const int32_t s1 = _s1.signextend<int32_t>();
+		const int32_t s2 = _s2.signextend<int32_t>();
 
-		auto res = s1 * s2;
+		auto res = int64_t(s1) * int64_t(s2);
 
 		// fractional multiplication requires one post-shift to be correct
 		res <<= 1;
