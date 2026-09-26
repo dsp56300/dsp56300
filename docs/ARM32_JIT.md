@@ -184,7 +184,62 @@ were both removed again after use; not committed.
 Going forward, re-run this check (`mnm-golden`, x86, no device needed) after any dsp56300 patch
 change -- it's the standing regression gate for the rest of this investigation.
 
-## Stage 2 (next): kill dispatch overhead only (no real code generation yet)
+## Stage 2 (in progress, 2026-09-26): kill dispatch overhead only (no real code generation yet)
+
+**Where this stands, for the next session:**
+
+- Chose the calling shape: a compiled block is hand-written Thumb-2 bytes in an mmap'd
+  `PROT_EXEC` page, structured as `push {r4,lr}; [load r0=this, r1=op, r2=handlerAddr; blx r2]* ;
+  pop {r4,pc}`. Every encoding this needs (`movw`/`movt` 32-bit-immediate-load pair, hi-register
+  `mov`, `push {r4,lr}`/`pop {r4,pc}`, `blx`) was derived **empirically** -- assembled a probe with
+  `arm-linux-gnueabihf-as`, read the bytes back with `objdump -d`, fit a bit-field formula to
+  several different immediates to confirm it, never taken from memory of the ARM ARM. See
+  `arm32asm.h` (scratchpad, not yet committed to this repo -- small, worth moving into
+  `source/dsp56kEmu/` next session as e.g. `arm32blockemitter.h`).
+- Proved the core ABI assumption end-to-end, twice:
+  1. On a toy class (x86): a non-virtual member function pointer with no multiple inheritance is
+     `{address, 0}` under the Itanium C++ ABI (verified: `sizeof` is 2 pointers, second word is 0,
+     and calling the first word as a plain `void(*)(T*, Args...)` with `this` as arg0 works).
+  2. On the real thing: `test_emit.cpp` (scratchpad) generates actual Thumb-2 machine code with the
+     block shape above and runs it under `qemu-arm` calling two real (non-inlined) C functions with
+     baked-in operands -- output matched calling them directly. Then `test_callwrap.cpp`
+     (scratchpad) did the same against the *real* dsp56300 handlers: resolved `DSP::op_Inc` via
+     `DSP::resolvePermutation()`, confirmed its `TInstructionFunc`'s raw bytes are `{address, 0}`,
+     and confirmed `DSP::callInstruction(rawAddress, op)` (the new wrapper, see the dsp.h commit)
+     produces identical state to calling the resolved handler directly -- checked on x86 and on a
+     real armhf binary under qemu-arm (cross-built via `xbuild/armhf.cmake` against
+     `-DMNM_DSP56300_DIR=<this fork>`).
+  3. Also reconfirmed, on that same armhf cross-build: `mnm-golden` still hash-matches on all 22
+     machines under qemu-arm -- Stage 1's fix holds on a real ARM binary, not just x86.
+- Added `DSP::callInstruction(void* rawFunc, TWord op)` and
+  `DSP::callParallel(void* rawMove, void* rawAlu, TWord op)` (public, dsp.h) as the bridge: a
+  generated block can't easily build a real `TInstructionFunc`
+  value (or its address, for `exec_parallel`'s by-const-ref params) without emitting data
+  alongside the code, so these wrappers rebuild it from a plain address in ordinary C++ instead.
+  Committed and pushed.
+- Deliberately **not yet done, and not started**: the actual block compiler (walk P memory from a
+  PC using `Opcodes`/`getInstructionTypes` -- same APIs Stage 0's histogram tool already used --
+  to find non-parallel vs. parallel instructions and where a basic block ends, mirroring
+  `op_ResolveCache`'s *decode* logic in `dsp_ops.inl:547` without its *execution* side effect);
+  wiring compiled blocks into `DSP::m_jitEntries`/`execJit()` (or, more likely for a first
+  measurement -- see below -- bypassing that entirely); and the actual on-device timing comparison
+  against the interpreter, which is the whole point of this stage.
+- **Scope decision for finishing this stage, so as not to over-build**: don't try to retrofit this
+  into `DSP`'s real lazy `m_jitEntries` dispatch machinery yet (that's tightly coupled to the old
+  asmjit-based `Jit` class's own lazy-compile-on-first-call trampoline, which would need real
+  surgery to share cleanly). Instead, for *this* measurement: eagerly compile a fixed, known
+  region -- Stage 1's already-fully-reverse-engineered sine-table loop body (P:$100091-$10009a,
+  10 instructions, see Stage 1's section above for the disassembly) is a good first target, since
+  its instructions, operands and correctness are already fully understood -- into one block ahead
+  of time, and time N repetitions of calling that block directly vs. N repetitions of
+  `dsp.execInterpreter()` over the same 10 instructions, on the Force (`root@192.168.1.44`,
+  reachable this session). That answers Stage 2's actual question (is dispatch/decode where the
+  time goes) without needing the lazy-compilation/chaining machinery Stage 3+ would need anyway.
+- Device confirmed reachable this session (`ssh root@192.168.1.44` -- armv7l). Not yet used for
+  this stage's own timing measurement.
+- Bail-out gate (unchanged from the original plan): if this isn't at least ~1.3x faster than the
+  interpreter for that loop on-device, dispatch isn't where the time goes and full native codegen
+  (Stage 3) likely won't pay for itself either -- stop.
 
 - Decode each DSP instruction once per basic block instead of every execution; emit a straight-line
   chain of calls into the *existing* interpreter opcode handlers with operands baked in, using a
