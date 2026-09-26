@@ -505,6 +505,45 @@ Every step below is bit-exact on all 22 machines (x86 and Force). Force median o
 | dead-CCR elimination for MPY/MPYR/MAC/MACR (36% of executed instructions) | 3fdc3398 | 89.2% |
 | DO loop's final body block run straight from do_exec (like the JIT's in-block loop) | 59a12d1c | 87.9% |
 | register->memory parallel moves run before the ALU, no A/B latch | 8cc3a9dd | 85.9% |
+| dead-CCR variants for ADD/SUB S,D and ASL/ASR #ii | (gen) | 85.8% |
+| whole-DO-loop functions for single-block loop bodies (`recompLoop<PC>`) | 5dcedc92 | 78.7% |
+| `limit_transfer`: one unsigned range check | 07076d6d | 73.2% |
+| AGU linear-addressing fast path; peripheral branches unlikely | 269d6867 | 67.6% |
+| 56-bit `signextend` via high word only (one `sbfx`); `scale()` single test | e1223e6f | 60.5% |
+| HDI08 TX polled without acquire barriers (`RingBuffer::sizeSameThread`, glue patch) | c30aa221 | 59.1% |
+
+(mnm-bench, normal priority, pinned; the interpreter was ~225% on the same measure.)
+
+**Realistic load (2026-09-27): every machine's p99 is under 100%.** `mnm-spikes` with `MNM_PACE=1`
+(sleeps to each 128-frame deadline, like an audio thread), `SCHED_FIFO` 70, CPU 3. Measured with the
+user's normal background load running: a JV-880 emulator in MPC using most of another core, and
+MockbaMod's capture script run once a second.
+
+| machine | mean | p99 (128 fr) | p99 (512 fr) | max |
+|---|---|---|---|---|
+| DPRO DDRW (heaviest) | 66.3% | 93.0% | 89.3% | 103.6% |
+| DPRO DENS | 66.6% | 91.5% | 87.9% | 105.4% |
+| RINGMOD | 64.8% | 88.9% | 86.5% | 101.1% |
+| REVERB / SID 6581 | 61.6% | 87.2% / 83.8% | 83.6% / 81.0% | 97.4% / 92.4% |
+| lightest (GND SIN) | 38.0% | 54.0% | 51.6% | 60.8% |
+
+Method notes, so these numbers get reproduced properly:
+- **Don't benchmark `SCHED_FIFO` without pacing.** A FIFO thread that never sleeps hits RT throttling
+  (`sched_rt_runtime_us` 950000/1000000 on the Force), which shows as 14-block bursts of ~1.5x-slow
+  blocks once per wall-clock second.
+- **Even paced, a ~40 ms 1.3x slowdown recurs once a second**, from the background (a system-wide
+  `perf record -a` shows `capture.sh`/`mount`/`mkdir` spawned every second at the same phase, plus
+  `jv880-emu` running continuously). This is what sets p99 on this device today.
+- **The slowest blocks execute the same number of DSP instructions as the rest** (`slow1%` = 1.00x
+  in mnm-spikes), so all the variance is environmental.
+- **Where the time goes now:** `prof.sh` (a `-g` build profiled on the device, samples mapped to
+  inlined source functions with `addr2line -i`) is the tool that found the last four wins. Hot now:
+  - `alu_mpyT` 7.5%
+  - `updateAddressRegister` fast path 7% (memory read-modify-write of R registers)
+  - `limit_transfer` 4%
+  - `isPeripheralAddress` 3%
+  - SR bit set/clear/toggle ~6% combined
+  - the outer dispatch (runUntilTx + execRecompiled + peripheral tick) ~8%
 
 Lessons:
 - **opcodeanalysis' register masks are incomplete.** Some MAC/MPY entries report no X/Y source
