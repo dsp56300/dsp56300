@@ -564,3 +564,43 @@ Lessons:
   mnm-bench's numbers (normal priority) overstate the real load. The remaining p99 is
   micro-architectural (cache/TLB, shared L2 with MPC's cores), so the VST wrapper should run the DSP on
   its own RT thread with a buffer of lookahead, where the mean is what counts.
+
+## Stage 3 conclusion (2026-09-27)
+
+**Gate met in substance: the heaviest machine is at ~57-67% of one core** (FIFO unpaced / paced with
+background load), p99 <= 93% for every machine, bit-exact. The written target was 50-60%; DDRW paced is
+67%, the rest are at or under it. The runtime-JIT plan (Stages 2-4 as first written) is superseded by
+static recompilation plus targeted interpreter fixes. Final step table:
+
+| | mnm-bench avg (normal prio) | heaviest, paced RT mean / p99 |
+|---|---|---|
+| interpreter | ~225% | (not real-time) |
+| recompiler v1 | 113% | |
+| + Stage 3 | **57.6-58.4%** | **67.1% / 92.9% (DPRO DDRW)** |
+
+Last two steps: `isPeripheralAddress` threshold compare (1dce4d55, 58.1% -> 57.6%); the dispatch stats
+counter moved behind `DSP56K_RECOMP_STATS` (no measurable effect).
+
+What's left if more headroom is ever needed (remaining hot spots per `prof.sh`):
+- Mode-bit reads from SR (SM saturation, S0/S1 scaling, SC) on every operation. They can't be cached
+  across a block because CCR updates write the same SR word. Fix: split MR/CCR storage, or specialise
+  blocks by mode with a guard at entry.
+- 48/56-bit register half updates with 64-bit masks (`loword`/`hiword`), and address-register
+  read-modify-writes through memory. The real fix is keeping DSP registers in CPU registers across a
+  block, i.e. rewriting the hot handlers for the generator (a true Stage 3 codegen).
+- Block chaining (skipping dispatch between fall-through blocks): ~8% of time is outer dispatch. Risk: it
+  changes interrupt/TX-poll granularity, so it needs the golden check.
+- Dead-CCR across loop iterations (peel the last iteration); more dead-CCR variants.
+
+Open items for the port itself:
+- **Coverage:** discovery uses mnm-golden's script. Code paths it never runs (other parameters, patterns,
+  machine switching) fall back to the interpreter: correct, but slower. Before shipping, trace a richer
+  workload (all parameters and ranges, note ranges, LFO modes, switching) and merge traces.
+- **Legal/distribution:** the generated code embeds firmware opcode words, so the plugin with
+  recompiled blocks can't be distributed publicly. Build it per user from their own OS `.syx` (Docker
+  pipeline), or ship the generator and have users run it.
+- **The armhf plain interpreter still differs from x86 on the 7 effect machines** (unexplained; handler
+  resolution ruled out). The recompiled build matches x86. It matters only for code the recompiler falls
+  back on.
+- VST wrapper: run the DSP on its own `SCHED_FIFO` thread (pinned, one buffer of lookahead); the
+  p99-vs-window data above supports that.
