@@ -29,6 +29,11 @@ namespace dsp56k
 		// needs to be true if there is code that executes code in interrupt regions as regular jumps
 		bool dynamicFastInterrupts = false;
 
+		// MNM patch: treat the interrupt vector region (P:$0..$FF) as ordinary code unless the DSP is
+		// currently executing a fast interrupt. For firmware that places regular code below $100
+		// and never takes interrupts there (Elektron Monomachine kernel).
+		bool interruptRegionIsCode = false;
+
 		// asmjit can validate the generate code, usually not needed
 		bool asmjitDiagnostics = false;
 

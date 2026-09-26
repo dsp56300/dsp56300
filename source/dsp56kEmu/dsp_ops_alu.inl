@@ -72,6 +72,7 @@ namespace dsp56k
 
 		d.var = res;
 		d.doMasking();
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 
 		const auto carry = int(res > g_alu_max_56_u);
 
@@ -146,6 +147,7 @@ namespace dsp56k
 
 		d.var = res;
 		d.doMasking();
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 
 		// S L E U N Z V C
 		sr_toggle(CCR_C, carry);
@@ -271,6 +273,7 @@ namespace dsp56k
 		const TInt64 res = (d.signextend<TInt64>() << 1) + s.signextend<TInt64>();
 		d.var = res;
 		d.doMasking();
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 
 		sr_z_update(d);
 		sr_clear(CCR_V);		// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
@@ -293,6 +296,7 @@ namespace dsp56k
 
 		d.var = res;
 		d.doMasking();
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 
 		sr_z_update(d);
 		sr_v_update(res, d);
@@ -368,6 +372,7 @@ namespace dsp56k
 			res += d.signextend<int64_t>();
 
 		d.var = res & 0x00ffffffffffffff;
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 
 		// Update SR
 		sr_z_update(d);
@@ -411,6 +416,7 @@ namespace dsp56k
 
 		d.var = res;
 		d.doMasking();
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 
 		// Update SR
 		sr_z_update( d );
@@ -489,6 +495,7 @@ namespace dsp56k
 		d.var = res;
 
 		d.doMasking();
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 
 		// Update SR
 		sr_z_update( d );
@@ -786,6 +793,7 @@ namespace dsp56k
 		const auto res = --d.var;
 
 		d.doMasking();
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 
 		sr_z_update(d);
 		sr_v_update(res,d);
@@ -913,6 +921,7 @@ namespace dsp56k
 		const auto res = ++d.var;
 
 		d.doMasking();
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 
 		sr_z_update(d);
 		sr_v_update(res,d);
@@ -1160,7 +1169,17 @@ namespace dsp56k
 	}
 	inline void DSP::op_Mpyri(const TWord op)
 	{
-		errNotImplemented("MPYRI");
+		// MNM patch: MPYRI (+/-)#xxxx,S,D = MPYI followed by RND
+		const bool	ab		= getFieldValue<Mpyri,Field_d>(op);
+		const bool	negate	= getFieldValue<Mpyri,Field_k>(op);
+		const TWord qq		= getFieldValue<Mpyri,Field_qq>(op);
+
+		const TReg24 s		= TReg24(immediateDataExt<Mpyri>());
+
+		const TReg24 reg	= decode_qq_read(qq);
+
+		alu_mpy( ab, reg, s, negate, false );
+		alu_rnd( ab );
 	}
 	inline void DSP::op_Neg(const TWord op)
 	{
@@ -1275,6 +1294,7 @@ namespace dsp56k
 		const TInt64 res = (d.signextend<TInt64>() << 1) - s.signextend<TInt64>();
 		d.var = res;
 		d.doMasking();
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 		// Carry bit note: "The Carry bit (C) is set correctly if the source operand does not overflow as a result of the left shift operation.", we do not care at the moment
 		sr_toggle(CCR_V, bittest(old, 55) != bittest(d, 55));
 		sr_z_update(d);
@@ -1293,6 +1313,7 @@ namespace dsp56k
 		const TInt64 res = (d.signextend<TInt64>() >> 1) - s.signextend<TInt64>();
 		d.var = res;
 		d.doMasking();
+		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
 		sr_z_update(d);
 		//sr_l_update_by_v();
 		sr_c_update_arithmetic(old, d);

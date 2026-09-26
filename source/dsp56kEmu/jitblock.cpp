@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "dsp.h"
 #include "interrupts.h"
 #include "jitemitter.h"
@@ -31,7 +32,7 @@ namespace dsp56k
 	{
 		const auto& opcodes = _dsp.opcodes();
 
-		const bool isFastInterrupt = _pc < Vba_End;
+		const bool isFastInterrupt = _pc < Vba_End && !(_config.interruptRegionIsCode && _dsp.getProcessingMode() != DSP::FastInterrupt);   // MNM patch
 
 		const TWord pcMax = isFastInterrupt ? (_pc + 2) : _dsp.memory().sizeP();
 
@@ -236,7 +237,7 @@ namespace dsp56k
 
 		m_chain = _chain;
 
-		const bool isFastInterrupt = _pc < Vba_End;
+		const bool isFastInterrupt = _pc < Vba_End && !(m_config.interruptRegionIsCode && m_dsp.getProcessingMode() != DSP::FastInterrupt);   // MNM patch
 		const auto fastInterruptMode = isFastInterrupt ? (m_config.dynamicFastInterrupts ? JitOps::FastInterruptMode::Dynamic : JitOps::FastInterruptMode::Static) : JitOps::FastInterruptMode::None;
 
 		dspAsm.clear();

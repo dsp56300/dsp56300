@@ -5,6 +5,7 @@
 #include "types.h"
 
 #include <set>
+#include <string>   // MNM patch: std::string failReason (MSVC does not get it through the other headers)
 #include <vector>
 #include <unordered_map>
 
@@ -74,6 +75,13 @@ namespace dsp56k
 			return m_volatileP.find(_pc) != m_volatileP.end();
 		}
 
+		// MNM patch: a block that could not be generated (code generation or the JIT runtime's add() failed, e.g. no
+		// JIT memory) is a sticky failure the host must check after exec(): the DSP makes no progress at that pc
+		// (create() returns instead of re-entering itself through the stub, which recursed without bound before).
+		bool hasFailed() const { return m_failed; }
+		const std::string& failReason() const { return m_failReason; }
+		void setFailure(const std::string& _reason) { if(!m_failed) { m_failed = true; m_failReason = _reason; } }
+
 		void create(TWord _pc, bool _execute);
 		void recreate(TWord _pc);
 
@@ -132,5 +140,7 @@ namespace dsp56k
 		// the following data is accessed by JIT code at runtime, it NEEDS to be put last into this struct to be
 		// able to use ARM relative addressing, see member ordering in dsp.h
 		JitRuntimeData m_runtimeData;
+		bool m_failed = false;   // MNM patch
+		std::string m_failReason;
 	};
 }

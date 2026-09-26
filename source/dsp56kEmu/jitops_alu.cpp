@@ -49,6 +49,7 @@ namespace dsp56k
 		}
 
 		m_dspRegs.mask56(alu);
+		alu_saturateSM(alu);   // MNM patch
 
 		if(!m_disableCCRUpdates)
 			ccr_dirty(_ab, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
@@ -77,6 +78,7 @@ namespace dsp56k
 		}
 
 		m_dspRegs.mask56(alu);
+		alu_saturateSM(alu);   // MNM patch
 
 		if(!m_disableCCRUpdates)
 			ccr_dirty(_ab, alu, static_cast<CCRMask>(CCR_E | CCR_N | CCR_U | CCR_Z));
@@ -385,6 +387,16 @@ namespace dsp56k
 
 		AluRef d(m_block, ab, _accumulate, true);
 
+		// MNM patch: a 24-bit immediate operand (mpyi/maci/mpyri/macri) is signed; materialize it
+		// sign-extended to the full register so that the signed multiply below sees the right value
+		// (aarch64 multiplies the 32-bit halves, x64 the 64-bit registers: a 32-bit move would zero-extend there).
+		if (_s2.isImmediate() && !_s2Unsigned && (_s2.imm24() & 0x800000))
+		{
+			const int32_t sv = static_cast<int32_t>(_s2.imm24() << 8) >> 8;
+			_s2.temp(DspValue::Temp24);
+			m_asm.mov(r64(_s2), asmjit::Imm(static_cast<int64_t>(sv)));
+		}
+
 #ifdef HAVE_ARM64
 		if (_negate)
 		{
@@ -496,6 +508,7 @@ namespace dsp56k
 
 			if (canOverflow || _negate)
 				m_dspRegs.mask56(d);
+			alu_saturateSM(d);   // MNM patch
 		}
 		else
 		{
@@ -997,6 +1010,22 @@ namespace dsp56k
 		decode_qq_read(reg, qq, true);
 
 		alu_mpy(ab, reg, s, negate, false, false, false, false);
+	}
+
+	void JitOps::op_Mpyri(TWord op)
+	{
+		// MNM patch: MPYRI = MPYI + RND
+		const bool	ab = getFieldValue<Mpyri, Field_d>(op);
+		const bool	negate = getFieldValue<Mpyri, Field_k>(op);
+		const TWord qq = getFieldValue<Mpyri, Field_qq>(op);
+
+		DspValue s(m_block);
+		getOpWordB(s);
+
+		DspValue reg(m_block);
+		decode_qq_read(reg, qq, true);
+
+		alu_mpy(ab, reg, s, negate, false, false, false, true);
 	}
 
 	void JitOps::op_Maci_xxxx(TWord op)

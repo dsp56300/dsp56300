@@ -269,6 +269,7 @@ namespace dsp56k
 
 	void Jit::resetHW()
 	{
+		m_failed = false; m_failReason.clear();   // MNM patch: a reset retries the JIT (the shortage may have passed)
 		checkModeChange();
 	}
 

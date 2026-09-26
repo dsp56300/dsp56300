@@ -28,6 +28,27 @@ namespace dsp56k
 	constexpr size_t g_shadowSpaceSize = 0;
 #endif
 
+	// MNM patch: on x64 the Win64 ABI treats XMM6-XMM15 as callee-saved in full 128 bits, so vector registers are
+	// saved/restored with 128-bit moves (movq would zero the upper half). pushSize() already reserves 16 bytes per
+	// vector register. ARM64 only preserves the low 64 bits of v8-v15, the 64-bit str/ldr there is correct.
+	static void saveVec(JitEmitter& _e, const JitReg128& _reg, const int32_t _offset)
+	{
+#ifdef HAVE_ARM64
+		_e.movq(ptr(g_stackReg, _offset), _reg);
+#else
+		_e.movdqu(asmjit::x86::xmmword_ptr(asmjit::x86::rsp, _offset), _reg);
+#endif
+	}
+
+	static void restoreVec(JitEmitter& _e, const JitReg128& _reg, const int32_t _offset)
+	{
+#ifdef HAVE_ARM64
+		_e.movq(_reg, ptr(g_stackReg, _offset));
+#else
+		_e.movdqu(_reg, asmjit::x86::xmmword_ptr(asmjit::x86::rsp, _offset));
+#endif
+	}
+
 	JitStackHelper::JitStackHelper(JitBlock& _block) : m_block(_block)
 	{
 		m_pushedRegs.reserve(32);
@@ -55,7 +76,7 @@ namespace dsp56k
 	{
 		PushedReg reg;
 		stackRegSub(pushSize(_reg));
-		m_block.asm_().movq(ptr(g_stackReg), _reg);
+		saveVec(m_block.asm_(), _reg, 0);   // MNM patch
 		reg.reg = _reg;
 
 		m_pushedBytes += pushSize(_reg);
@@ -83,7 +104,7 @@ namespace dsp56k
 		m_pushedRegs.pop_back();
 		m_pushedBytes -= pushSize(_reg);
 
-		m_block.asm_().movq(_reg, ptr(g_stackReg));
+		restoreVec(m_block.asm_(), _reg, 0);   // MNM patch
 		stackRegAdd(pushSize(_reg));
 	}
 
@@ -130,7 +151,7 @@ namespace dsp56k
 
 				if(r.reg.isVec())
 				{
-					m_block.asm_().movq(r.reg.as<JitReg128>(), memPtr);
+					restoreVec(m_block.asm_(), r.reg.as<JitReg128>(), offset);   // MNM patch
 				}
 				else
 				{
@@ -204,7 +225,7 @@ namespace dsp56k
 				offset += static_cast<int32_t>(size);
 				if(reg.isVec())
 				{
-					m_block.asm_().movq(memPtr, reg.as<JitReg128>());
+					saveVec(m_block.asm_(), reg.as<JitReg128>(), static_cast<int32_t>(offset - size));   // MNM patch (offset was advanced above)
 				}
 				else
 				{

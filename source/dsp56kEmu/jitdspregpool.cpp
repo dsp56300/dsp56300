@@ -380,6 +380,15 @@ namespace dsp56k
 		return true;
 	}
 
+	// MNM patch: remove a recorded GP->XMM spill move whose value is about to be overwritten before being read back
+	void JitDspRegPool::dropDeadSpillMove(const PoolReg _reg)
+	{
+		auto& sm = m_moveToXmmInstruction[_reg];
+		if(sm.isValid())
+			m_block.asm_().removeNode(sm.spillMoveOp);
+		sm.reset();
+	}
+
 	void JitDspRegPool::setIsParallelOp(const bool _isParallelOp)
 	{
 		m_isParallelOp = _isParallelOp;
@@ -400,7 +409,13 @@ namespace dsp56k
 			if(m_gpList.get(gpDst, _dst))
 				m_block.asm_().mov(gpDst, gpSrc);
 			else if(m_xmList.get(xmDst, _dst))
+			{
+				// MNM patch: if _dst was spilled to this XMM and never read back since, that earlier spill move is dead
+				// (overwritten right here). Drop it, otherwise it survives as an orphan write to the XMM with no record
+				// that would mark the register as used, i.e. it is never saved/restored (clobbers callee-saved XMMs on Win64).
+				dropDeadSpillMove(_dst);
 				spillMove(_dst, xmDst, gpSrc);
+			}
 			else
 				return false;
 			return true;
@@ -419,7 +434,10 @@ namespace dsp56k
 			}
 			else if(m_xmList.get(xmDst, _dst))
 			{
+				dropDeadSpillMove(_dst);   // MNM patch: see above
 				spillMove(xmDst, xmSrc);
+				// MNM patch: the source XMM has been read now, its spill move must not be eliminated on release
+				m_moveToXmmInstruction[_src].reset();
 			}
 			else
 				return false;

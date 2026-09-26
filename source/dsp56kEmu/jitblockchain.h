@@ -119,5 +119,6 @@ namespace dsp56k
 		std::unique_ptr<AsmJitErrorHandler> m_errorHandler;
 
 		size_t m_codeSize = 0;
+		int m_mnmEmitCount = 0;   // MNM patch: MNM_JIT_FAIL_AT
 	};
 }

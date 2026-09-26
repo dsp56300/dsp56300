@@ -240,7 +240,7 @@ namespace dsp56k
 		template<Instruction Inst, bool Accumulate> void op_Mpy_su(TWord op);
 		void op_Mpyi(TWord op);
 		void op_Mpyr_S1S2D(TWord op)			{ alu_multiply(op); }
-		void op_Mpyri(TWord op)					{ errNotImplemented(op); }
+		void op_Mpyri(TWord op);
 		void op_Neg(TWord op);
 		void op_Nop(TWord op);
 		void op_Norm(TWord op)					{ errNotImplemented(op); }
@@ -250,7 +250,7 @@ namespace dsp56k
 		void op_Or_xx(TWord op);
 		void op_Or_xxxx(TWord op);
 		void op_Ori(TWord op);
-		void op_Pflush(TWord op)				{ errNotImplemented(op); }
+		void op_Pflush(TWord op)				{ op_Pflushun(op); }
 		void op_Pflushun(TWord op);
 		void op_Pfree(TWord op);
 		void op_Plock(TWord op);
@@ -586,6 +586,7 @@ namespace dsp56k
 		void alu_mpy(TWord ab, DspValue& _s1, DspValue& _s2, bool _negate, bool _accumulate, bool _s1Unsigned, bool _s2Unsigned, bool _round);
 		void alu_multiply(TWord op);
 		void alu_or(TWord ab, DspValue& _v);
+		void alu_saturateSM(const JitRegGP& _alu);   // MNM patch: SR.SM arithmetic saturation to 48 bits
 		void alu_rnd(TWord ab);
 		void alu_rnd(TWord ab, const JitReg64& d, bool _needsSignextend = true);
 		void alu_insert(TWord ab, const DspValue& _src, DspValue& _widthOffset);

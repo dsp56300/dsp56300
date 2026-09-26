@@ -665,6 +665,40 @@ namespace dsp56k
 
 		m_dspRegs.mask56(d);
 	}
+
+	// MNM patch: DSP56300 arithmetic saturation mode (SR bit SM): after a data-ALU operation the 56-bit
+	// result is limited to the 48-bit range when bits 55, 48 and 47 are not all equal. Same logic as the
+	// aarch64 version (jitops_alu_aarch64.cpp).
+	void JitOps::alu_saturateSM(const JitRegGP& _alu)
+	{
+		const JitDspMode* mode = m_block.getMode();
+		if(mode && !mode->testSR(SRB_SM))
+			return;
+
+		const auto skip = m_asm.newLabel();
+		if(!mode)
+		{
+			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_SM);
+			m_asm.jz(skip);
+		}
+
+		const auto d = r64(_alu);
+		const RegGP t(m_block);
+		const RegGP t2(m_block);
+		m_asm.mov(r64(t), d);
+		m_asm.shl(r64(t), asmjit::Imm(8));
+		m_asm.sar(r64(t), asmjit::Imm(8));                       // sign-extend 56 -> 64
+		m_asm.mov(r64(t2), r64(t));
+		m_asm.sar(r64(t2), asmjit::Imm(47));                     // 0 or -1 when within the 48-bit range
+		m_asm.add(r64(t2), asmjit::Imm(1));
+		m_asm.cmp(r64(t2), asmjit::Imm(1));
+		m_asm.jbe(skip);                                         // unsigned <= 1: in range, nothing to do
+		m_asm.mov(r64(t2), asmjit::Imm(0x007fffffffffffULL));
+		m_asm.mov(d, asmjit::Imm(0xff800000000000ULL));
+		m_asm.test(r64(t), r64(t));
+		m_asm.cmovge(d, r64(t2));                                // positive -> upper limit, negative -> lower limit
+		m_asm.bind(skip);
+	}
 }
 
 #endif

@@ -193,6 +193,7 @@ namespace dsp56k
 
 		bool canMakeSpace(PoolReg _reg, PoolReg _excludeReg) const;
 		bool canMakeSpace(PoolReg _excludeReg = PoolReg::DspCount) const;
+		void dropDeadSpillMove(PoolReg _reg);   // MNM patch
 
 	private:
 		JitRegPoolRegPair& getPair(const bool _y)

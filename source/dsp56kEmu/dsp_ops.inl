@@ -427,7 +427,8 @@ namespace dsp56k
 
 	inline void DSP::op_Pflush(const TWord op)
 	{
-		errNotImplemented("PFLUSH");		
+		// MNM patch: flush whole cache (emulator has no locked sectors, same as pflushun)
+		cache.pflushun();
 	}
 	inline void DSP::op_Pflushun(const TWord op)
 	{

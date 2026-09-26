@@ -1,4 +1,6 @@
 #include "jitblockchain.h"
+#include <cstdio>
+#include <cstdlib>
 
 #include "dsp.h"
 #include "jitasmjithelpers.h"
@@ -156,7 +158,10 @@ namespace dsp56k
 			}
 		}
 
-		emit(_pc);
+		// MNM patch: a failed emit leaves the create stub installed for _pc; exec() would re-enter it (unbounded
+		// recursion). Return instead: the failure is sticky (Jit::hasFailed) and the host stops the DSP.
+		if(!emit(_pc))
+			return;
 		if(_execute)
 			exec(_pc);
 	}
@@ -361,11 +366,21 @@ namespace dsp56k
 
 		m_generatingBlocks.insert(std::make_pair(_pc, b));
 
+		// MNM patch: a block occupies its area as soon as it links a child (getChildBlock), so a failed emit has to
+		// take it out of the cache again; otherwise later parents link to a block without code (a jump to null).
+		auto discard = [&](JitBlockRuntimeData* _b)
+		{
+			if(_b->getPMemSize() > 0 && _b->getPCFirst() < m_jitCache.size() && m_jitCache[_b->getPCFirst()].block == _b)
+				unoccupyArea(_b);
+			m_jit.releaseBlockRuntimeData(_b);
+		};
+
 		if(!emitter->block.emit(*b, this, _pc, m_jitCache, m_jit.getVolatileP(), m_jit.getLoops(), m_jit.getLoopEnds(), m_jit.getProfilingSupport()))
 		{
 			LOG("FATAL: code generation failed for PC " << HEX(_pc));
-			m_jit.releaseBlockRuntimeData(b);
+			m_jit.setFailure("code generation failed at P:$" + std::to_string(_pc));   // MNM patch
 			m_generatingBlocks.erase(_pc);
+			discard(b);   // MNM patch (was: releaseBlockRuntimeData only)
 			m_jit.releaseEmitter(emitter);
 			return nullptr;
 		}
@@ -382,12 +397,23 @@ namespace dsp56k
 
 		TJitFunc func;
 
-		const auto err = m_jit.getRuntime()->add(&func, &emitter->codeHolder);
+		auto err = m_jit.getRuntime()->add(&func, &emitter->codeHolder);
+
+		// MNM patch: simulate a JIT runtime failure on the n-th block (tests the failure path)
+		if(static const char* failAt = std::getenv("MNM_JIT_FAIL_AT"); failAt && ++m_mnmEmitCount == std::atoi(failAt))
+		{
+			m_jit.getRuntime()->release(func);
+			err = asmjit::DebugUtils::errored(asmjit::kErrorOutOfMemory);
+		}
 
 		if(err)
 		{
 			const auto* const errString = asmjit::DebugUtils::errorAsString(err);
 			LOG("JIT failed: " << err << " - " << errString << "PC " << HEX(_pc));
+			char reason[128];
+			snprintf(reason, sizeof reason, "JIT runtime: %s (asmjit error %u) at P:$%06X", errString, unsigned(err), unsigned(_pc));
+			m_jit.setFailure(reason);   // MNM patch
+			discard(b);                 // MNM patch (the block was leaked here, still in the cache once it had linked a child)
 			m_jit.releaseEmitter(emitter);
 			return nullptr;
 		}
