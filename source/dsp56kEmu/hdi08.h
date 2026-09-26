@@ -122,8 +122,6 @@ namespace dsp56k
 
 		bool dataRXFull() const;
 
-		void terminate();
-
 		TWord readHDR() const;
 		void writeHDR(TWord _val);
 

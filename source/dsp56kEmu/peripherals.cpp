@@ -376,7 +376,9 @@ namespace dsp56k
 
 	void Peripherals56303::terminate()
 	{
-		m_hi08.terminate();
+		// Not the HI08: the DSP never waits for host data, an empty receive register reads 0. Filling the receive FIFO
+		// made the DSP, which runs until its thread sees the request, take thousands of words that no host sent. The XT
+		// stores host words into a 32 word buffer by interrupt, and they overwrote the code pointer that follows it
 		m_essi0.terminate();
 		m_essi1.terminate();
 	}
@@ -775,7 +777,7 @@ namespace dsp56k
 
 	void Peripherals56362::terminate()
 	{
-		m_hdi08.terminate();
+		// not the HDI08, see Peripherals56303::terminate
 		m_esai.terminate();
 	}
 

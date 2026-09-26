@@ -219,12 +219,6 @@ namespace dsp56k
 		return m_dataRX.full();
 	}
 
-	void HDI08::terminate()
-	{
-		while(!m_dataRX.full())
-			m_dataRX.push_back(0);
-	}
-
 	TWord HDI08::readHDR() const
 	{
 //		LOG("Read HDR: " << HEX(m_hdr));
