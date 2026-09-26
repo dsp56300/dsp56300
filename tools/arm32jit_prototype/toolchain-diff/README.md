@@ -30,3 +30,12 @@ implies here (e.g. `NDEBUG` defined, assert()s compiled out, differs from both `
 
 Everything else in the diff is just path differences (old build used a `/s` mount alias, new
 used `/scratch` — almost certainly irrelevant, but noted in case it isn't).
+
+**Update 2026-09-26 (later session):** the "just path differences" above are not all harmless.
+`MNM_DSP56300_DIR` / `ASMJIT_DIR` show the two builds compiled **different dsp56300 source trees**:
+old = `/s/dsp56300` (a scratchpad checkout, now gone; most likely the fork at or near `a750f285`,
+whose commit message records mnm-bench running on-device), new = `/dsp56300-fork` (this branch's tip).
+So the crash may come from a source change after `a750f285`, not the compiler flags. Candidates:
+`a0c86d8e` (memory.cpp OOB alias) and the `dsp.h` changes (`1db3f2bb`, `0cfaa42d`, `51d33b8c`).
+Bisect: build mnm-golden against `a750f285` using `-DCMAKE_BUILD_TYPE=Release`, then walk forward.
+Also note that `a750f285` defines `HAVE_X86_64` on armv7; check any code gated on it.
