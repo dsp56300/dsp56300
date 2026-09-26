@@ -1,0 +1,3 @@
+# generated from the Monomachine OS firmware -- contains firmware opcode words, never commit
+dsp56k_recomp.inl
+*.txt

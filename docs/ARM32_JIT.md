@@ -443,3 +443,52 @@ block, dispatch by PC through a table, verify each block's P-memory words at run
 interpreter on mismatch or unknown PC), and handle DO/REP loops and branches at block ends. Gate for
 that stage: `mnm-golden` hash-matches the interpreter on all 22 machines, and `mnm-bench` averages
 <= 100% of one core on the Force.
+
+## Whole-program static recompiler: first working version (2026-09-26)
+
+**Result: correct on all 22 machines, Force load 225.5% -> 113.4% of one core (1.99x).** The gate is
+<= 100%, so it isn't there yet.
+
+How it works (`tools/arm32jit_prototype/recomp/`, dsp.h/dsp.cpp `recomp*`):
+1. `mnm-recomp-discover` (a build with `-DDSP56K_RECOMP_DISCOVERY`, run with `MNM_DSP_INTERP=1`) runs
+   mnm-golden's exact workload with a pre-execution hook in `execInterpreter`. It records each executed
+   instruction (words, the handlers the interpreter's opcode cache resolved, block-ending kind, whether
+   the parallel move needs the ALU/move latch, whether it reads PC), plus entry points and DO loop ends.
+   Result: 9043 distinct instructions, no address ever holds two different instructions.
+2. `recomp_gen2.py` builds basic blocks (1136 blocks, avg 7.6 instructions, covering 98.4% of executed
+   instructions) and emits one `__attribute__((flatten))` `DSP::recompBlock<PC>` per block, plus
+   `DSP::recompProgram()` (the block table, a PC index and a covered-address bitmap, all shared by every
+   DSP instance).
+3. A build with `-DDSP56K_RECOMP -I<dir of dsp56k_recomp.inl>`: `execInterpreter()` runs the block at the
+   current PC instead of one instruction, when:
+   - the block's P words match (verified lazily, and again after a P write inside it);
+   - not in fast-interrupt mode;
+   - no active DO loop ends strictly inside the block.
+
+   Otherwise it interprets. DO/REP/WAIT/IFcc always go through the interpreter, and so do DO loops
+   (do_exec calls execInterpreter recursively, so loop bodies dispatch to blocks). Interrupts and
+   peripherals are checked once per block, and the instruction counter is advanced once per block,
+   like the JIT.
+4. The generated `.inl` contains firmware opcode words: never commit it (there's a `.gitignore`). Build
+   it from your own OS `.syx`.
+
+What's in a block: per instruction, direct calls to the interpreter's handlers with constant opcodes.
+There's no PC or opcode-length bookkeeping except where a handler reads it (control flow, LRA, STOP),
+and the final PC is set once at block end. Parallel instructions skip the latch unless the move
+touches an accumulator the ALU writes (36.7% still need it).
+
+Measured on the Force (SID machine, pinned): ARM instructions 10.1G -> 4.9G, IPC unchanged (~1.1),
+L1 I-cache misses 21.7M -> 44.6M (the generated code is several MB), branch misses 110M -> 20M.
+Profile: 76% in blocks, 6.9% do_exec, 2.7% runUntilTx, 2.6% peripherals, ~2% leftover interpreter.
+Neither per-block instruction counting nor a P-write coverage bitmap made a measurable difference.
+
+**Bit-exactness, and an unexplained difference:** recompiled builds match the x86 interpreter/JIT
+hashes on all 22 machines, both on x86 and **on the Force**. The plain armhf interpreter still differs
+on the 7 effect machines (see above). It isn't handler resolution: armhf discovery (under qemu)
+resolves identical handlers at every PC to x86's. So it's something in the interpreter's
+per-instruction path that the recompiled path bypasses; still open. Practically, the recompiled Force
+build now produces the same audio as the x86/aarch64 builds.
+
+Next candidates (bigger): specialise address-register updates on the M register values seen at each
+instruction (with a runtime guard); run single-block DO loop bodies in a tight loop inside generated
+code instead of via do_exec + execInterpreter per iteration; recompile REP'd instructions.

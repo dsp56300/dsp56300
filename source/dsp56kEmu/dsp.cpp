@@ -99,6 +99,10 @@ namespace dsp56k
 
 		clearOpcodeCache();
 
+		m_recomp = recompProgram();
+		if(m_recomp)
+			m_recompState.assign(m_recomp->numBlocks, 0);
+
 		resetHW();
 	}
 
@@ -1029,6 +1033,7 @@ namespace dsp56k
 
 	void DSP::notifyProgramMemWrite(TWord _offset)
 	{
+		recompInvalidate(_offset);
 		if (_offset < m_opcodeCache.size())
 			m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
 
@@ -1279,6 +1284,7 @@ namespace dsp56k
 		// Schwung: the interpreter's per-address cache (48 bytes per P word, ~75 MB for a 1.5M-word P space)
 		// is only built when the interpreter is enabled; the JIT never reads it.
 		m_opcodeCache.clear();
+		recompInvalidateAll();
 		if (m_interpreterEnabled)
 			m_opcodeCache.resize(mem.sizeP(), {&DSP::op_ResolveCache});
 		else
@@ -1295,6 +1301,7 @@ namespace dsp56k
 	{
 		if (_address < m_opcodeCache.size())
 			m_opcodeCache[_address].op = &DSP::op_ResolveCache;
+		recompInvalidate(_address);
 		m_jit.notifyProgramMemWrite(_address);
 	}
 	
@@ -1493,9 +1500,63 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 
 	// arm32 static-recompilation prototype (see dsp.h getRecompInfo): a generated file included here sees every
 	// opcode handler's definition, so its constant-opcode calls can be inlined and constant-folded by the compiler.
-#if __has_include("dsp56k_recomp.inl")
-#	include "dsp56k_recomp.inl"
+#if defined(DSP56K_RECOMP) && __has_include("dsp56k_recomp.inl")
+#	include "dsp56k_recomp.inl"		// defines DSP::recompProgram and the block functions it lists
 #else
-	bool DSP::runRecompiled(TWord) noexcept { return false; }
+	const DSP::RecompProgram* DSP::recompProgram() { return nullptr; }
 #endif
+
+	// runs the recompiled block at _pc unconditionally (test tools only; execInterpreter() uses execRecompiled)
+	bool DSP::runRecompiled(const TWord _pc) noexcept
+	{
+		if(!m_recomp || _pc - m_recomp->base >= m_recomp->indexSize)
+			return false;
+		const auto bi = m_recomp->index[_pc - m_recomp->base];
+		return bi && m_recomp->blocks[bi].func(this);
+	}
+
+	size_t DSP::recompBlockCount() const
+	{
+		return m_recomp ? m_recomp->numBlocks - 1 : 0;
+	}
+
+	bool DSP::recompVerify(const TWord _index) noexcept
+	{
+		if(m_recompState[_index] == 2)
+			return false;
+		const auto& b = m_recomp->blocks[_index];
+		for(TWord i = 0; i < b.numWords; ++i)
+		{
+			if(mem.get(MemArea_P, b.pc + i) != b.words[i])
+			{
+				m_recompState[_index] = 2;
+				return false;
+			}
+		}
+		m_recompState[_index] = 1;
+		return true;
+	}
+
+	void DSP::recompInvalidate(const TWord _pAddress) noexcept
+	{
+		// every block that could contain _pAddress starts at most maxWords-1 words before it
+		if(!m_recomp)
+			return;
+		// most runtime P writes are data (e.g. bridged external memory), not code: skip them in one lookup
+		const TWord c = _pAddress - m_recomp->base;
+		if(c >= m_recomp->indexSize || !m_recomp->covered[c])
+			return;
+		const TWord first = _pAddress >= m_recomp->maxWords ? _pAddress - m_recomp->maxWords + 1 : 0;
+		for(TWord a = first; a <= _pAddress; ++a)
+		{
+			const TWord i = a - m_recomp->base;
+			if(i < m_recomp->indexSize && m_recomp->index[i])
+				m_recompState[m_recomp->index[i]] = 0;
+		}
+	}
+
+	void DSP::recompInvalidateAll() noexcept
+	{
+		std::fill(m_recompState.begin(), m_recompState.end(), uint8_t(0));
+	}
 }

@@ -116,6 +116,21 @@ namespace dsp56k
 
 		Opcodes							m_opcodes;
 
+	public:
+		// static recompilation: one generated function per basic block (see recompInstall below)
+		using RecompFunc = bool (*)(DSP*) noexcept;
+		struct RecompBlock { RecompFunc func; const TWord* words; TWord pc; TWord numWords; };
+		struct RecompProgram
+		{
+			const RecompBlock* blocks;		// [0] unused, so index 0 in 'index' means "no block"
+			size_t numBlocks;
+			const uint16_t* index;			// PC - base -> block number
+			const uint8_t* covered;			// PC - base -> nonzero if any block contains this P word
+			TWord indexSize;
+			TWord base;
+			TWord maxWords;					// longest block, in P words
+		};
+	private:
 		struct OpcodeCacheEntry
 		{
 			TInstructionFunc op;
@@ -124,6 +139,37 @@ namespace dsp56k
 		};
 
 		std::vector<OpcodeCacheEntry>	m_opcodeCache;
+
+		// static recompilation (see recompProgram)
+		const RecompProgram*			m_recomp = nullptr;
+		std::vector<uint8_t>			m_recompState;		// per block: 0 = not verified, 1 = verified, 2 = P words differ
+		uint64_t						m_recompExecuted = 0;
+
+		ASMJIT_FORCE_INLINE bool execRecompiled(const TWord _pc) noexcept
+		{
+			if(!m_recomp)
+				return false;
+			const TWord i = _pc - m_recomp->base;
+			if(i >= m_recomp->indexSize)
+				return false;
+			const auto bi = m_recomp->index[i];
+			if(!bi)
+				return false;
+			if(ASMJIT_UNLIKELY(m_recompState[bi] != 1) && !recompVerify(bi))
+				return false;
+			if(m_processingMode == FastInterrupt)
+				return false;
+			const auto& b = m_recomp->blocks[bi];
+			// an active DO loop that ends strictly inside this block: do_exec must see pc == la+1 after that
+			// instruction, so interpret instead
+			if((reg.sr.var & SR_LF) && TWord(reg.la.var - _pc) < b.numWords - 1)
+				return false;
+			++m_recompExecuted;
+			return b.func(this);
+		}
+		bool recompVerify(TWord _index) noexcept;
+		void recompInvalidate(TWord _pAddress) noexcept;
+		void recompInvalidateAll() noexcept;
 		bool							m_interpreterEnabled = false;	// Schwung: see clearOpcodeCache
 		
 		InstructionCache				cache;
@@ -200,6 +246,14 @@ namespace dsp56k
 
 			pcCurrentInstruction = reg.pc.toWord();
 
+#ifdef DSP56K_RECOMP_DISCOVERY
+			if(s_recompTraceHook)
+				s_recompTraceHook(this, pcCurrentInstruction);
+#endif
+#ifdef DSP56K_RECOMP
+			if(execRecompiled(pcCurrentInstruction))
+				return;
+#endif
 			const auto op = fetchPC();
 
 			execOp(op);
@@ -246,14 +300,30 @@ namespace dsp56k
 		// _pc (after it has executed once), as raw function addresses, so an offline generator can emit
 		// direct, inlinable calls to the same handlers. runRecompiled() is defined by a generated
 		// dsp56k_recomp.inl when one is on the include path (see dsp.cpp), otherwise it returns false.
-		struct RecompInfo { void* op; void* opMove; void* opAlu; bool parallel; };
+		struct RecompInfo { void* op; void* opMove; void* opAlu; bool parallel; bool resolved; };
 		RecompInfo getRecompInfo(TWord _pc) const noexcept
 		{
 			const auto& e = m_opcodeCache[_pc];
 			auto raw = [](const TInstructionFunc& _f) { void* r[2]; std::memcpy(r, &_f, sizeof(r)); return r[0]; };
-			return { raw(e.op), raw(e.opMove), raw(e.opAlu), e.op == &DSP::op_Parallel };
+			return { raw(e.op), raw(e.opMove), raw(e.opAlu), e.op == &DSP::op_Parallel, e.op != &DSP::op_ResolveCache };
 		}
 		bool runRecompiled(TWord _pc) noexcept;
+
+		// Whole-program static recompilation (docs/ARM32_JIT.md). A generated dsp56k_recomp.inl (compiled into
+		// dsp.cpp) provides one function per basic block of the DSP program, found by tracing real executions.
+		// execInterpreter() runs the block for the current PC instead of a single instruction when it is safe:
+		// the block's P words are verified before first use (and again after any P write in its range), the DSP
+		// is not in fast-interrupt mode, and no active DO loop ends inside the block. Anything else - unknown
+		// PCs, DO/REP/WAIT, changed code - falls back to the interpreter, so correctness never depends on
+		// having traced everything.
+		static const RecompProgram* recompProgram();	// shared by all DSP instances; nullptr without a generated program
+		template<TWord PC> static bool recompBlock(DSP* _dsp) noexcept;
+		bool recompEnabled() const { return m_recomp != nullptr; }
+		size_t recompBlockCount() const;
+		uint64_t recompExecutedBlocks() const { return m_recompExecuted; }
+#ifdef DSP56K_RECOMP_DISCOVERY
+		static inline void (*s_recompTraceHook)(DSP*, TWord) = nullptr;
+#endif
 
 		template<typename Ta, typename Tb> void execPeriph() noexcept
 		{
