@@ -814,6 +814,8 @@ namespace dsp56k
 
 		void scale( TReg56& _scale ) const
 		{
+			if( ASMJIT_LIKELY(!(reg.sr.var & (SR_S1 | SR_S0))) )	// no scaling: one test instead of two
+				return;
 			if( sr_test_noCache(SR_S1) )
 				_scale.var <<= 1;
 			else if( sr_test_noCache(SR_S0) )
