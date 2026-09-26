@@ -309,3 +309,10 @@ aarch64 JIT has roughly double the registers to work with. Expect heavier regist
 Rough pre-measurement guess: 25-40 cycles/instruction on the Force's A17 (vs. ~10 on aarch64 Move
 hardware, per schwung-monomodule's docs/PERF.md), landing Monomodule around 35-65% of one core if
 stage-0's 95% coverage holds and the uncovered 5% doesn't dominate via interpreter fallback.
+
+**Update (end of session):** the original `build-armhf/mnm-bench` binary, the one behind the
+recorded Force numbers, *still runs* on the device today and gets past MemoryBuffer init. So the
+crash comes from this session's build (`mnm-armhf-qemu` image + `build-fork-armhf`), not from the
+hardware or from upstream `memorybuffer.cpp`. Next session: diff the two builds' compile/link
+flags (`build-armhf/CMakeCache.txt` vs `build-fork-armhf/CMakeCache.txt`, and the image each was
+built with) and rebuild Stage 2's tools the old way.
