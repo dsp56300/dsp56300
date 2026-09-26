@@ -63,7 +63,7 @@ scratch history), ran upstream's `mnm-golden` fixed script on all 22 machines, h
 fall back to the interpreter without dominating the cost, *if* the covered forms are cheap enough
 and the fallback rate stays low.
 
-## Stage 1 (in progress): make the interpreter bit-exact against the JIT
+## Stage 1 (done, 2026-09-26): make the interpreter bit-exact against the JIT
 
 Needed regardless of the JIT outcome -- it's both the correctness fallback path and the reference
 every later stage is checked against. All work below runs entirely on x86 (built against this fork
@@ -143,17 +143,48 @@ reading code -- both changes below are harmless/more-correct but confirmed **not
   init handshake, and whether `Y:$14A000`'s `r0` register actually holds the bridged absolute address
   ($14A000+index) rather than a bare index (this was left unverified and may just be a wrong target
   address in the test, not a real hang).
-- **Next step, if resumed**: either (a) fix the `resetKeepCode`+`maxDoIterations` single-step harness
-  and diff full register state (not just a hash) one loop iteration at a time approaching index
-  0x1801, or (b) skip stepping entirely and hand-check `alu_dmac`'s double-precision accumulation
-  model and the `y`-register sign-extension path against the JIT's `jitops_alu.cpp`/`jitops_agu*.cpp`
-  equivalents line by line -- given how narrow and reproducible the failing test vector now is (a
-  single sine-table entry, deterministic, no audio pipeline needed), this should be tractable without
-  needing device access or even the DspEngine/MonoVoice harness at all: a from-scratch few-instruction
-  reproducer feeding the exact operand sequence into a bare `DSP` instance for both engines would
-  isolate it faster than debugging inside the full kernel's loop.
+**Resolved.** Found it by building the from-scratch reproducer this doc's previous revision
+recommended: captured the exact register state at the real divergence boundary (via a temporary
+debug hook in `do_exec`'s loop, dumping registers once `r0` reached the target table address), then
+replayed the loop body's 10 instructions from that exact state, once, in both engines, diffing full
+registers after every instruction instead of a hash. The two diverged on the *very first*
+instruction (`move l:(r1)+,y`), which pointed straight at the *previous* iteration's `move a,l:(r1)`
+(the loop's only other write to that address) rather than anything in the instructions between them.
 
-## Stage 2: kill dispatch overhead only (no real code generation yet)
+Root cause: `decode_LLL_read`'s case 4/5 ("A"/"B", used by plain `move a,l:(rN)` /
+`move b,l:(rN)`) in the interpreter did a raw `reg.a.var >> 24` / `& 0xffffff` bit split with no
+scaling or saturation. The JIT's equivalent (`jitops_decode.cpp`, same case 4/5) runs the full
+accumulator through `transferSaturation48` first -- scale(), sign-extend, clamp to the 48-bit signed
+range, mask. Those only agree when the accumulator's extension byte is still consistent with bit 47;
+any iterative accumulation (this loop's CORDIC-style multiply-accumulate chain) can produce a
+borderline value where they aren't, and once that happens, the two engines write *different* raw
+patterns into the loop's read-back buffer even though the buffer's *visible* effect stayed masked for
+a few more iterations by an unrelated coincidence: the table-write instruction (`move a,y:(r0)+`)
+goes through `limit_transfer` (24-bit saturation), which happened to saturate both engines' already-
+different values to the identical `$800000` right at the table's minimum, so the divergence was
+invisible in the sine table itself until the values moved away from that boundary. Fixed by adding
+`DSP::limit_transfer48()` (mirrors `transferSaturation48` bit-for-bit) and using it in
+`decode_LLL_read`'s case 4/5, in `dsp.h`/`dsp_decode.inl`.
+
+Verified: `mnm-golden` now hash-matches the JIT on **all 22 machines**, and the sine table dumps
+(`mnm-dumptable`, both engines) are byte-identical across all 8192 entries. Stage 1's gate is
+cleared -- the interpreter is bit-exact against the JIT for Monomodule's actual firmware, not just
+in isolated unit tests.
+
+Debug tools built along the way (schwung-monomodule scratchpad, not committed anywhere durable --
+cheap to rebuild from this description if needed again): `mnm-dumptable` (dumps the sine table for
+diffing, no audio pipeline needed), `mnm-bodydiff` (replays a captured register snapshot through a
+fixed instruction range in both engines, diffing full registers after every instruction -- this is
+what actually found the bug, and is the technique to reach for first next time, not instruction-count
+tracing, which doesn't survive JIT/interpreter hardware-loop batching, see the ruled-out attempts
+above). The `MNM_STEP_TRACE` hook added to `DspEngine.cpp` and the temporary `MNM_DEBUG_R0_HEX` hook
+added to `dsp.cpp`'s `do_exec` (used to capture the exact register snapshot fed into `mnm-bodydiff`)
+were both removed again after use; not committed.
+
+Going forward, re-run this check (`mnm-golden`, x86, no device needed) after any dsp56300 patch
+change -- it's the standing regression gate for the rest of this investigation.
+
+## Stage 2 (next): kill dispatch overhead only (no real code generation yet)
 
 - Decode each DSP instruction once per basic block instead of every execution; emit a straight-line
   chain of calls into the *existing* interpreter opcode handlers with operands baked in, using a

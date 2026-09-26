@@ -623,12 +623,10 @@ namespace dsp56k
 		case 2: convert(x, x1());			convert(y, x0());			return;
 		case 3: convert(x, y1());			convert(y, y0());			return;
 		case 4:
-			x = reg.a.var >> 24 & 0xffffff;
-			y = reg.a.var & 0xffffff;
+			limit_transfer48(x, y, reg.a);
 			return;
 		case 5:
-			x = reg.b.var >> 24 & 0xffffff;
-			y = reg.b.var & 0xffffff;
+			limit_transfer48(x, y, reg.b);
 			return;
 		case 6: x = getA<TWord>();			y = getB<TWord>();			return;
 		case 7: x = getB<TWord>();			y = getA<TWord>();			return;

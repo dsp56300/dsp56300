@@ -703,6 +703,35 @@ namespace dsp56k
 			sr_set(CCR_V);
 		}
 
+		// MNM patch: the JIT's decode_LLL_read (jitops_decode.cpp, case 4/5 "A"/"B") runs the full
+		// accumulator through transferSaturation48 -- scale(), sign-extend, clamp to the 48-bit signed
+		// range, mask -- before splitting it into the two 24-bit halves an L-move transfers. The
+		// interpreter's decode_LLL_read only did a raw `reg.a.var >> 24` / `& 0xffffff` bit split with
+		// no scaling or saturation at all. Confirmed as a real divergence: an accumulator value with an
+		// inconsistent extension byte (i.e. already borderline-overflowed, which any iterative
+		// accumulation can produce) round-trips differently through "move a,l:(rN)" depending on engine
+		// -- the JIT clamps it, the interpreter passes the raw pattern through unchanged. This is what
+		// corrupted Monomodule's sine-table-build loop from the entry after crossing -1.0 onward: that
+		// loop's "move a,l:(r1)" (writing a working buffer read back via "move l:(r1)+,y" next
+		// iteration) diverged here, one iteration before any visible difference in the loop's actual
+		// table output (the table write goes through limit_transfer, which happened to saturate both
+		// engines' already-different raw values to the same $800000 for a few more entries, masking it).
+		void limit_transfer48( TWord& _x, TWord& _y, const TReg56& _src )
+		{
+			TReg56 tmp = _src;
+			scale(tmp);
+
+			const int64_t se = tmp.signextend<int64_t>();
+			int64_t clamped = se;
+
+			if( se < -0x800000000000LL )		{ clamped = -0x800000000000LL; sr_set(CCR_L); }
+			else if( se > 0x7fffffffffffLL )	{ clamped = 0x7fffffffffffLL;  sr_set(CCR_L); }
+
+			const auto masked = static_cast<uint64_t>(clamped) & 0xffffffffffffULL;
+			_x = static_cast<TWord>((masked >> 24) & 0xffffff);
+			_y = static_cast<TWord>(masked & 0xffffff);
+		}
+
 		TReg8	ccr				() const							{ return byte0(getSR()); }
 		TReg8	mr				() const							{ return byte1(reg.sr); }
 		void	ccr				( TReg8 _val )						{ byte0(reg.sr,_val); resetCCRCache(); }
