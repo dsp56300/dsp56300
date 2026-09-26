@@ -26,6 +26,18 @@ namespace dsp56k
 		template<bool add>
 		static void updateAddressRegister( TWord& r, TWord n, TWord m, TWord moduloMask, int32_t modulo )
 		{
+			// linear addressing (M = $ffffff; set_m gives it mask $ffffff, which no modulo/bit-reverse mode has): the
+			// general path below reduces to exactly this with modulo 0, without the bound computations
+			if (moduloMask == 0xffffff)
+			{
+				if constexpr (add)
+					r += n;
+				else
+					r -= n;
+				r &= 0x00ffffff;
+				return;
+			}
+
 			// modulo or linear addressing
 			if (moduloMask)
 			{
