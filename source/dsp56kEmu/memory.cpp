@@ -145,7 +145,7 @@ namespace dsp56k
 			}
 		}
 */
-		if (_offset < size(_area))		// Fix the amazing "write to wrong address" bug
+		if (_offset < size(_area) || hasMmuSupport())		// Fix the amazing "write to wrong address" bug; MNM patch: MMU-backed OOB writes hit the same aliased scratch region the JIT writes through, matching JIT behaviour (dsp56300#8)
 			m_mem[_area][_offset] = _value & 0x00ffffff;
 
 		return true;
@@ -172,8 +172,11 @@ namespace dsp56k
 		if(!m_memoryMap.memValidateAccess(_area, _offset, true))
 			return 0;
 #endif
-		if( _offset >= size(_area) )
+		if( _offset >= size(_area) && !hasMmuSupport() )
 		{
+			// MNM patch (dsp56300#8): with MMU support, out-of-range addresses are backed by memorybuffer.cpp's
+			// aliased scratch region (same as the JIT reads via jitmem.cpp's getMemAreaPtr), so fall through and
+			// read it instead of returning 0 -- otherwise the interpreter and JIT diverge on every OOB read.
 			LOG_ERR_MEM_READ( _offset );
 			return 0;
 		}
