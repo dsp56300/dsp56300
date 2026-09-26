@@ -63,20 +63,42 @@ scratch history), ran upstream's `mnm-golden` fixed script on all 22 machines, h
 fall back to the interpreter without dominating the cost, *if* the covered forms are cheap enough
 and the fallback rate stays low.
 
-## Stage 1 (next): make the interpreter bit-exact against the JIT
+## Stage 1 (in progress): make the interpreter bit-exact against the JIT
 
 Needed regardless of the JIT outcome -- it's both the correctness fallback path and the reference
-every later stage is checked against.
+every later stage is checked against. All work below runs entirely on x86 (built against this fork
+via schwung-monomodule's `-DMNM_DSP56300_DIR`, no device needed); the Force is only needed for later
+timing.
 
-- [ ] Fix the accumulator-overflow saturation bug (Schwung's `DspEngine.cpp` comment: interpreter
-      mis-limits accumulator-to-memory moves, e.g. `a = -1.0-eps` stores `$7FFFFF` instead of
-      `$800000`, corrupting the runtime sine table).
-- [ ] Resolve upstream's known interpreter/JIT divergence on out-of-range memory reads
-      ([dsp56300#8](https://github.com/dsp56300/dsp56300/issues/8): interpreter returns 0, JIT masks
-      to an aliased address). Likely explains the bad-memory-read spam seen in the Force bench.
-- [ ] `mnm-golden` (schwung-monomodule's bit-exactness gate) must hash-match JIT output for every
-      machine, including the FX machines that mismatched in the stage-0 spot check.
-- Runs entirely on x86 under `qemu-arm` for correctness; the Force is only needed for later timing.
+- [x] Resolved upstream's known interpreter/JIT divergence on out-of-range memory reads
+      ([dsp56300#8](https://github.com/dsp56300/dsp56300/issues/8)). Root cause confirmed empirically:
+      `Memory::get()`/`dspWrite()` unconditionally bailed out (return 0 / drop the write) for any
+      offset >= the area's nominal size, *even when the MMU-backed `MemoryBuffer` is active* -- but
+      the MMU buffer already maps the whole $000000-$ffffff DSP address range, aliasing every
+      out-of-range address onto one shared scratch region (`memorybuffer.cpp`'s comment describes
+      this). The JIT (`jitmem.cpp`) already reads/writes through that aliased scratch memory with no
+      bounds check at all when MMU support is present; the interpreter didn't. Fixed in `memory.cpp`:
+      skip the bounds bail-out when `hasMmuSupport()`. Verified: before the fix, `mnm-golden` (x86,
+      `MNM_DSP_INTERP=1`) spammed thousands of `LOG_ERR_MEM_READ` lines across the script; after, zero.
+      In practice the scratch region reads back as 0 either way in our engine so this alone didn't
+      change any golden hash, but it's a real, confirmed divergence source worth having fixed (matters
+      more once code starts writing through it) and is upstreamable as-is.
+- [ ] **Still open, still the actual cause of the 10/22 mismatches**: `mnm-golden` hash-compared JIT
+      vs. interpreter (x86, this fork, after the fix above) -- still exactly the same 10 machines
+      mismatch as in stage 0's spot check: FM+ STAT/PAR/DYN, GND SIN, SWAVE SAW/PULS, DPRO WAVE,
+      REVERB, RINGMOD, PHASER. All 12 others (GND ---/NOIS, SWAVE ENS, SID 6581, DPRO BBOX/DDRW/DENS,
+      VO-6, THRU, CHORUS, DYNAMIX, FLANGER) already match.
+      Narrowed with a raw-sample diff (`mnm-golden`'s `raw-out-dir` arg) on GND SIN: JIT and
+      interpreter audio first diverge at **sample 24 of 264448** (i.e. within the first millisecond,
+      not after some later parameter sweep), and by a small amount (0.128 vs 0.131) -- not a gross
+      garbage/clipped value. That's more consistent with a rounding/precision difference in early
+      oscillator or sine-table-build arithmetic than a dramatic saturation blowup, so the "accumulator
+      overflow corrupts the sine table" bug from Schwung's `DspEngine.cpp` comment may be real but is
+      probably not (solely) this. `getA<T>()`/`getB<T>()` (`limit_transfer`) and `alu_add`/`alu_sub`'s
+      `limit_arithmeticSaturation` calls were checked and look correct on inspection -- next step is a
+      per-instruction trace comparison (interpreter vs. JIT, same script, diff first mismatching PC)
+      rather than more code reading; this is where stage 1 picks back up.
+- [ ] Once traced and fixed, `mnm-golden` must hash-match on all 22 machines.
 
 ## Stage 2: kill dispatch overhead only (no real code generation yet)
 
