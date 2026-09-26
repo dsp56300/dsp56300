@@ -1,0 +1,33 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b47494f..07c9530 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -71,3 +71,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+   target_include_directories(mnm-hosttest PRIVATE src)
+   target_link_libraries(mnm-hosttest PRIVATE dl pthread)
+ endif()
++
++add_executable(mnm-arm32block tools/bench/mnm_arm32block.cpp)
++target_link_libraries(mnm-arm32block PRIVATE mnmcore)
++
++add_executable(mnm-recomp tools/bench/mnm_recomp.cpp)
++target_link_libraries(mnm-recomp PRIVATE mnmcore ${CMAKE_DL_LIBS})
++
++add_executable(mnm-recomp-discover tools/bench/mnm_recomp_discover.cpp)
++target_link_libraries(mnm-recomp-discover PRIVATE mnmcore ${CMAKE_DL_LIBS})
++
++add_executable(mnm-spikes tools/bench/mnm_spikes.cpp)
++target_link_libraries(mnm-spikes PRIVATE mnmcore)
+diff --git a/src/engine/dsp/DspEngine.cpp b/src/engine/dsp/DspEngine.cpp
+index ec13032..7ad82ce 100644
+--- a/src/engine/dsp/DspEngine.cpp
++++ b/src/engine/dsp/DspEngine.cpp
+@@ -196,7 +196,7 @@ bool DspEngine::runUntilTx(size_t words, uint64_t maxInstr)
+     auto& hi = m_periphX->getHI08();
+     const uint64_t start = m_dsp->getInstructionCounter();
+     const bool trace = m_trace;
+-    while (hi.txData().size() < words) {
++    while (hi.txData().sizeSameThread() < words) {   // same thread as the DSP: no acquire barriers (dmb on armv7)
+         if (trace) std::fprintf(stderr, "PC=%06x\n", m_dsp->getPC().toWord());
+         if (m_useJit) m_dsp->exec(); else m_dsp->execInterpreter();
+         if (m_useJit && m_dsp->getJit().hasFailed()) {   // no JIT memory (or code generation failed): silence and a status, never a crash

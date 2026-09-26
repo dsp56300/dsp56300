@@ -39,6 +39,9 @@ namespace dsp56k
 		bool empty() const					{ return loadReadAcq() == loadWriteAcq(); }
 		bool full() const					{ return size() >= C; }
 		size_t size() const					{ return loadWriteAcq() - loadReadAcq(); }
+		// for a caller on the producer's and consumer's own thread (e.g. polling HDI08 TX from the thread that runs the
+		// DSP): no acquire barriers needed -- on armv7 each acquire load is a dmb, and this is polled per DSP block
+		size_t sizeSameThread() const		{ return m_writeCount.load(std::memory_order_relaxed) - m_readCount.load(std::memory_order_relaxed); }
 		size_t remaining() const			{ return (C - size()); }
 
 		void push_back( const T& _val )
