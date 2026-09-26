@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstring>
+
 #include "disasm.h"
 #include "dspconfig.h"
 #include "dspregs.h"
@@ -201,6 +203,31 @@ namespace dsp56k
 			const auto op = fetchPC();
 
 			execOp(op);
+		}
+
+		// arm32 Stage 2: exec_jump/exec_parallel take TInstructionFunc (a non-virtual member-pointer,
+		// {address, 0} on the Itanium C++ ABI these targets use) by const reference. A block compiled
+		// to raw machine code can't easily materialise a real TInstructionFunc value or take its
+		// address, but it CAN pass a plain function-address value in a register -- so these wrappers
+		// take that instead and rebuild the member pointer here, in normal compiler-verified C++,
+        // once. resolvePermutation() gives calling code that raw address already (it's just the
+        // low word of the TInstructionFunc it returns), so nothing else needs to construct one.
+		void callInstruction(void* _rawFunc, TWord _op) noexcept
+		{
+			TInstructionFunc f;
+			static_assert(sizeof(f) == 2 * sizeof(void*), "expected the Itanium member-pointer layout {ptr, adjustment}");
+			void* raw[2] = { _rawFunc, nullptr };
+			std::memcpy(&f, raw, sizeof(f));
+			exec_jump(f, _op);
+		}
+		void callParallel(void* _rawMove, void* _rawAlu, TWord _op) noexcept
+		{
+			TInstructionFunc fMove, fAlu;
+			void* rawM[2] = { _rawMove, nullptr };
+			void* rawA[2] = { _rawAlu, nullptr };
+			std::memcpy(&fMove, rawM, sizeof(fMove));
+			std::memcpy(&fAlu, rawA, sizeof(fAlu));
+			exec_parallel(fMove, fAlu, _op);
 		}
 
 		template<typename Ta, typename Tb> void execPeriph() noexcept
