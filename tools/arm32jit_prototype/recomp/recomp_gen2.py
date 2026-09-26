@@ -19,13 +19,32 @@ for l in open(sys.argv[1]):
         pc = int(f[1], 16)
         ins[pc] = dict(a=int(f[2], 16), b=int(f[3], 16), len=int(f[4]), kind=int(f[5]), par=f[6] == '1',
                        op=int(f[7], 16), mv=int(f[8], 16), alu=int(f[9], 16), count=int(f[10]),
-                       moveAB=f[11] == '1', readsPC=f[12] == '1')
+                       moveAB=f[11] == '1', readsPC=f[12] == '1', ccr=int(f[13]))
     elif f[0] == 'E': entries.add(int(f[1], 16))
     elif f[0] == 'L': loopends.add(int(f[1], 16))
 
 leaders = set(entries) | {la + 1 for la in loopends}
 for pc, i in ins.items():
     if i['kind'] != 0: leaders.add(pc + i['len'])
+
+# Dead-CCR analysis (Stage 3). A MPY/MAC-family instruction's V/Z/E/U/N results are dead when, later in the same
+# block, a KILLER (verified to overwrite all of V, Z, E, U, N on every path: see docs/ARM32_JIT.md) executes before
+# any instruction that reads the CCR, is conditional, or writes the CCR in any other way. Block ends count as reads.
+MULTIPLY = {'op_Mac_S1S2', 'op_Macr_S1S2', 'op_Mpy_S1S2D', 'op_Mpyr_S1S2D'}
+KILLERS = MULTIPLY | {'op_Add_SD', 'op_Sub_SD', 'op_Add_xx', 'op_Sub_xx', 'op_Add_xxxx', 'op_Sub_xxxx',
+                      'op_Asl_ii', 'op_Asl_D', 'op_Asr_ii', 'op_Asr_D', 'op_Cmp_S1S2', 'op_Cmp_xxS2'}
+def alu_name(i):
+    return handler(i['alu']) if i['par'] else handler(i['op'])
+def is_killer(i):
+    n = alu_name(i)
+    return (n in KILLERS or n.startswith('opCE_Asl_D<')) and not (i['ccr'] & 0b101)
+def ccr_dead(pcs, k):
+    for pc in pcs[k + 1:]:
+        j = ins[pc]
+        if is_killer(j): return True
+        if j['ccr']: return False
+    return False
+dead_ccr = 0
 
 def handler(off):
     if off not in syms: raise KeyError(f'no symbol for handler offset {off:x}')
@@ -57,6 +76,11 @@ for pcs in blocks:
     for n, pc in enumerate(pcs):
         i = ins[pc]; op = f'0x{i["a"]:06x}u'
         h = handler(i['op']) if not i['par'] else ''
+        alu = alu_name(i)
+        if alu in MULTIPLY and not (i['ccr'] & 0b101) and ccr_dead(pcs, n):
+            dead_ccr += i['count']
+            alu = 'op_Multiply_T<false>'
+            if not i['par']: h = alu
         # PC bookkeeping only where a handler reads it: control flow (kind 1, always a block's last
         # instruction), anything that reads PC, LRA/STOP. The block's final PC is written once at its end.
         if i['kind'] == 1 or i['readsPC'] or h.startswith(('op_Lra', 'op_Stop')):
@@ -65,13 +89,13 @@ for pcs in blocks:
             out.append(f'\td->m_opWordB = 0x{i["b"]:06x}u;')
         if i['par'] and i['moveAB']:
             # the move reads/writes A or B: reproduce exec_parallel's latch (move sees pre-ALU A/B)
-            out += ['\t{', '\t\tconst auto preA = d->reg.a, preB = d->reg.b;', f'\t\td->{handler(i["alu"])}({op});',
+            out += ['\t{', '\t\tconst auto preA = d->reg.a, preB = d->reg.b;', f'\t\td->{alu}({op});',
                     '\t\tconst auto postA = d->reg.a, postB = d->reg.b;', '\t\td->reg.a = preA; d->reg.b = preB;',
                     f'\t\td->{handler(i["mv"])}({op});', '\t\tif (postA != preA) d->reg.a = postA;',
                     '\t\tif (postB != preB) d->reg.b = postB;', '\t}']
         elif i['par']:
             # the move doesn't touch A or B, so ALU-then-move is exactly what the latch would produce
-            out += [f'\td->{handler(i["alu"])}({op});', f'\td->{handler(i["mv"])}({op});']
+            out += [f'\td->{alu}({op});', f'\td->{handler(i["mv"])}({op});']
         else:
             out.append(f'\td->{h}({op});')
     out.append(f'\td->m_instructions += {len(pcs)};')   # once per block, like the JIT
@@ -114,4 +138,5 @@ print('\n'.join(out))
 covered = sum(ins[pc]['count'] for b in blocks for pc in b)
 alln = sum(i['count'] for i in ins.values())
 sys.stderr.write(f'{len(blocks)} blocks, {total_instr} instructions, avg {total_instr/len(blocks):.1f}/block, '
-                 f'max {maxw} words; covers {100*covered/alln:.2f}% of executed instructions\n')
+                 f'max {maxw} words; covers {100*covered/alln:.2f}% of executed instructions; '
+                 f'dead-CCR multiplies {100*dead_ccr/alln:.2f}% of executed instructions\n')

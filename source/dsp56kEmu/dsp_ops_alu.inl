@@ -353,6 +353,15 @@ namespace dsp56k
 	//
 	void DSP::alu_mpy( bool ab, const TReg24& _s1, const TReg24& _s2, bool _negate, bool _accumulate )
 	{
+		alu_mpyT<true>(ab, _s1, _s2, _negate, _accumulate);
+	}
+
+	// static recompilation (Stage 3): UpdateCCR=false is for a MPY/MAC whose V/Z/E/U/N results the generator has proven
+	// dead (a later instruction in the same block overwrites all of them before anything reads the CCR). It still
+	// saturates and still does the sticky L |= V, and in arithmetic saturation mode (where V is only ever set, never
+	// cleared) it does the full update, so the architectural state after the overwriting instruction is identical.
+	template<bool UpdateCCR> void DSP::alu_mpyT( bool ab, const TReg24& _s1, const TReg24& _s2, bool _negate, bool _accumulate )
+	{
 	//	assert( sr_test(SR_S0) == 0 && sr_test(SR_S1) == 0 );
 
 		// both operands are sign-extended 24-bit values: a 32x32->64 multiply is exact, and on 32-bit ARM this is
@@ -375,6 +384,17 @@ namespace dsp56k
 
 		d.var = res & 0x00ffffffffffffff;
 		limit_arithmeticSaturation(d);   // MNM patch: SM (arithmetic saturation mode)
+
+		if constexpr (!UpdateCCR)
+		{
+			if(!sr_test_noCache(SR_SM))
+			{
+				// sr_v_update's non-SM V condition, feeding only the sticky L
+				if(((res>>48)^(d.var>>48))&255)
+					sr_set(CCR_L);
+				return;
+			}
+		}
 
 		// Update SR
 		sr_z_update(d);
@@ -512,6 +532,11 @@ namespace dsp56k
 	//
 	void DSP::alu_rnd(bool ab)
 	{
+		alu_rndT<true>(ab);
+	}
+
+	template<bool UpdateCCR> void DSP::alu_rndT(bool ab)
+	{
 		auto& _alu = ab ? reg.b : reg.a;
 
 		int64_t rounder = 0x800000;
@@ -535,6 +560,16 @@ namespace dsp56k
 
 		_alu.doMasking();
 
+		if constexpr (!UpdateCCR)
+		{
+			if(!sr_test_noCache(SR_SM))
+			{
+				if(((res>>48)^(_alu.var>>48))&255)
+					sr_set(CCR_L);
+				return;
+			}
+		}
+
 		sr_z_update(_alu);
 		sr_v_update(res, _alu);
 
@@ -543,6 +578,11 @@ namespace dsp56k
 	}
 	
 	inline bool DSP::alu_multiply(const TWord _op)
+	{
+		return alu_multiplyT<true>(_op);
+	}
+
+	template<bool UpdateCCR> bool DSP::alu_multiplyT(const TWord _op)
 	{
 		const auto round = _op & 0x1;
 		const auto mulAcc = (_op>>1) & 0x1;
@@ -554,14 +594,23 @@ namespace dsp56k
 
 		decode_QQQ_read(s1, s2, qqq);
 
-		alu_mpy(ab, s1, s2, negative, mulAcc);
-
 		if(round)
 		{
-			alu_rnd(ab);
+			// the multiply's own V/Z/E/U/N are always overwritten by the rounding step (only its L survives)
+			alu_mpyT<false>(ab, s1, s2, negative, mulAcc);
+			alu_rndT<UpdateCCR>(ab);
+		}
+		else
+		{
+			alu_mpyT<UpdateCCR>(ab, s1, s2, negative, mulAcc);
 		}
 
 		return true;
+	}
+
+	template<bool UpdateCCR> void DSP::op_Multiply_T(const TWord op)
+	{
+		alu_multiplyT<UpdateCCR>(op);
 	}
 
 	// __________________

@@ -919,6 +919,14 @@ namespace dsp56k
 		void	alu_rnd				( bool _ab );
 
 		bool	alu_multiply		(TWord _op);
+		template<bool UpdateCCR> void alu_mpyT(bool ab, const TReg24& _s1, const TReg24& _s2, bool _negate, bool _accumulate);
+		template<bool UpdateCCR> void alu_rndT(bool _ab);
+		template<bool UpdateCCR> bool alu_multiplyT(TWord _op);
+	public:
+		// MPY/MPYR/MAC/MACR S1,S2,D (op_Mpy_S1S2D, op_Mpyr_S1S2D, op_Mac_S1S2, op_Macr_S1S2 all decode the same way):
+		// the static recompiler calls op_Multiply_T<false> when the instruction's V/Z/E/U/N results are dead
+		template<bool UpdateCCR> void op_Multiply_T(TWord op);
+	private:
 
 		void	alu_abs				( bool ab );
 
