@@ -4,6 +4,7 @@ project(dsp56kBase)
 add_library(dsp56kBase)
 
 set(SOURCES
+audioworkgroup.cpp audioworkgroup.h
 bitfield.h
 buildconfig.h
 conditionvariable.cpp conditionvariable.h

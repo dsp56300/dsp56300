@@ -6,6 +6,7 @@
 
 #include "debuggerinterface.h"
 #include "dsp.h"
+#include "dsp56kBase/audioworkgroup.h"
 #include "dsp56kBase/threadtools.h"
 
 #if DSP56300_DEBUGGER
@@ -128,6 +129,8 @@ namespace dsp56k
 		ThreadTools::setCurrentThreadPriority(m_initialPriority);
 		ThreadTools::setCurrentThreadName(m_name.empty() ? "DSP" : "DSP " + m_name);
 
+		AudioWorkgroup::Member workgroup(m_initialPriority == ThreadPriority::Highest);
+
 		uint64_t instructions = 0;
 		uint64_t cycles = 0;
 		uint64_t counter = 0;
@@ -147,6 +150,8 @@ namespace dsp56k
 #endif
 		while(m_runThread)
 		{
+			workgroup.update();
+
 			{
 				Guard g(m_mutex);
 
