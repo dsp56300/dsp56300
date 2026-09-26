@@ -10,7 +10,7 @@ namespace dsp56k
 	constexpr bool g_useAARTranslate = false;
 #endif
 
-#if defined(HAVE_X86_64) || defined(HAVE_ARM64)
+#if (defined(HAVE_X86_64) || defined(HAVE_ARM64)) && !defined(DSP56K_NO_JIT_RUNTIME)
 	constexpr bool g_jitSupported = true;
 #else
 	constexpr bool g_jitSupported = false;
