@@ -167,6 +167,29 @@ namespace dsp56k
 			++m_recompExecuted;
 			return b.func(this);
 		}
+		// do_exec's loop: when the block at PC ends exactly at LA (the last block of a DO loop body), run it directly,
+		// without the per-instruction interrupt/peripheral call. The JIT does the same: with maxDoIterations == 0
+		// (the default) a loop-body block jumps back to its own start until the loop ends.
+		ASMJIT_FORCE_INLINE bool execRecompiledLoopBody() noexcept
+		{
+			if(!m_recomp || m_processingMode == FastInterrupt)
+				return false;
+			const TWord pc = reg.pc.toWord();
+			const TWord i = pc - m_recomp->base;
+			if(i >= m_recomp->indexSize)
+				return false;
+			const auto bi = m_recomp->index[i];
+			if(!bi)
+				return false;
+			const auto& b = m_recomp->blocks[bi];
+			if(b.pc + b.numWords != reg.la.toWord() + 1)
+				return false;
+			if(ASMJIT_UNLIKELY(m_recompState[bi] != 1) && !recompVerify(bi))
+				return false;
+			pcCurrentInstruction = pc;
+			++m_recompExecuted;
+			return b.func(this);
+		}
 		bool recompVerify(TWord _index) noexcept;
 		void recompInvalidate(TWord _pAddress) noexcept;
 		void recompInvalidateAll() noexcept;

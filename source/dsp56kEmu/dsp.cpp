@@ -505,6 +505,9 @@ namespace dsp56k
 
 		while(reg.sc.var >= stackCount)
 		{
+#ifdef DSP56K_RECOMP
+			if(!execRecompiledLoopBody())
+#endif
 			execInterpreter();
 
 			if(reg.pc.var != (reg.la.var+1))
