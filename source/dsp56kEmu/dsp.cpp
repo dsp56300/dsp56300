@@ -1490,4 +1490,12 @@ aar0=$000008 aar1=$000000 aar2=$000000 aar3=$000000
 
 		m_interruptFunc = &dspExecInterrupts;
 	}
+
+	// arm32 static-recompilation prototype (see dsp.h getRecompInfo): a generated file included here sees every
+	// opcode handler's definition, so its constant-opcode calls can be inlined and constant-folded by the compiler.
+#if __has_include("dsp56k_recomp.inl")
+#	include "dsp56k_recomp.inl"
+#else
+	bool DSP::runRecompiled(TWord) noexcept { return false; }
+#endif
 }

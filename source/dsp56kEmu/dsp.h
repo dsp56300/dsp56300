@@ -242,6 +242,19 @@ namespace dsp56k
 			reg.pc.var = static_cast<int32_t>(_pcAfterFirstWord);
 		}
 
+		// arm32 static-recompilation prototype: expose what the interpreter resolved for the instruction at
+		// _pc (after it has executed once), as raw function addresses, so an offline generator can emit
+		// direct, inlinable calls to the same handlers. runRecompiled() is defined by a generated
+		// dsp56k_recomp.inl when one is on the include path (see dsp.cpp), otherwise it returns false.
+		struct RecompInfo { void* op; void* opMove; void* opAlu; bool parallel; };
+		RecompInfo getRecompInfo(TWord _pc) const noexcept
+		{
+			const auto& e = m_opcodeCache[_pc];
+			auto raw = [](const TInstructionFunc& _f) { void* r[2]; std::memcpy(r, &_f, sizeof(r)); return r[0]; };
+			return { raw(e.op), raw(e.opMove), raw(e.opAlu), e.op == &DSP::op_Parallel };
+		}
+		bool runRecompiled(TWord _pc) noexcept;
+
 		template<typename Ta, typename Tb> void execPeriph() noexcept
 		{
 			// this is a super hot function and for some reason the compiler insists of doing all the stack frame work

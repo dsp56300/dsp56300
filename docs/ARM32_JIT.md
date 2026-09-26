@@ -381,3 +381,30 @@ Reading it:
 **Decision: Monomodule on the Force is shelved.** The fork stays as a record. If revisited, the only
 realistic path is a full native JIT for the hot handlers (Stage 3 as written), with the
 register-pressure risk noted above.
+
+## Static recompilation gate test (2026-09-26): 1.84-2.06x, registers match
+
+Stage 2 only removed dispatch; the profile showed the cost is inside the handlers (runtime operand
+decode, generic flag updates). So this test translates the same 10-instruction loop **ahead of time
+into C++**: each instruction becomes a direct call to the interpreter's own handler with a *constant*
+opcode, compiled into `dsp.cpp`'s translation unit (`dsp56k_recomp.inl`, via `__has_include`) so GCC
+inlines the handlers and folds their decoding away. The handler for each PC is read from the
+interpreter's own opcode cache after one interpreted pass (`DSP::getRecompInfo`), so resolution
+matches the interpreter by construction. Tools: `tools/arm32jit_prototype/recomp/`.
+
+- **Correctness: PASS.** Identical registers to the interpreter.
+- **Stage 2's "a0/y0 swap" was a harness bug, not a compiler bug.** The loop writes `l:(r1)` and
+  `y:(r0)+`, and the old harness reset registers but not memory, so the second run read the first
+  run's writes. Once memory is restored too, it passes. Stage 2's block was probably correct as well.
+  Separately, Stage 2 wrongly treated `$100097` (0x200034, ALU-only) as a parallel pair; the
+  interpreter's cache doesn't.
+- **Force timing (3 runs, 2M iterations): interpreter 62-66 ns/instr, recompiled 30-36 ns/instr,
+  1.84-2.06x.** That passes the 1.3x gate Stage 2 failed, with no hand tuning at all.
+- It is **not yet enough on its own.** At ~2x, the 242% average load would drop to ~120% of one core,
+  still over budget. Remaining out-of-line calls in the generated code are memory access
+  (`Memory::get`, `memWrite`, `decode_MMMRRR_read`) and `alu_asl`. DSP registers also still live in
+  the `DSP` object rather than in locals across the block.
+- **Next gate:** inline the memory fast path (MMU-backed direct array access) and see whether this
+  loop reaches **>= 3x**. If it does, a whole-program recompiler (per-block, hash-checked, falling
+  back to the interpreter, plus batching the peripheral tick and `runUntilTx` poll that cost ~11% in
+  the profile) is a realistic weeks-scale project. If it stalls around 2x, stop.
