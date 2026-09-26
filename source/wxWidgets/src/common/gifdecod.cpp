@@ -50,6 +50,15 @@ public:
     // def ctor
     GIFImage();
 
+    // Normally this class does _not_ free its memory as it is owned by
+    // wxGIFDecoder, but this function can be used to do it if an error happens
+    // before the image is added to the decoder.
+    void Free()
+    {
+        free(p);
+        free(pal);
+    }
+
     unsigned int w;                 // width
     unsigned int h;                 // height
     unsigned int left;              // x coord (in logical screen)
@@ -145,6 +154,25 @@ bool wxGIFDecoder::ConvertToImage(unsigned int frame, wxImage *image) const
     dst = image->GetData();
     transparent = GetTransparentColourIndex(frame);
 
+    // Reject decoded pixels that reference palette entries past the
+    // loaded portion of the per-frame palette buffer: GIF files where
+    // the LZW minimum code size implies a larger alphabet than the
+    // declared colour table can emit literal codes >= ncolours. pimg->pal
+    // is a fixed 768 bytes but only 3*ncolours of them are populated from
+    // the file (the rest is left uninitialised), so the pal[3*(*src) + ...]
+    // reads below would otherwise pull uninitialised bytes into the image.
+    // The index stays within the 768-byte buffer (a pixel byte is at most
+    // 255), so this is an uninitialised read rather than an out-of-bounds
+    // one, but it still leaks junk into the decoded pixels.
+    unsigned long npixel =
+        static_cast<unsigned long>(sz.GetWidth()) * sz.GetHeight();
+    const unsigned int ncolours = GetNcolours(frame);
+    for (i = 0; i < npixel; i++)
+    {
+        if (src[i] >= ncolours)
+            return false;
+    }
+
     // set transparent colour mask
     if (transparent != -1)
     {
@@ -217,7 +245,6 @@ bool wxGIFDecoder::ConvertToImage(unsigned int frame, wxImage *image) const
 #endif // wxUSE_PALETTE
 
     // copy image data
-    unsigned long npixel = sz.GetWidth() * sz.GetHeight();
     for (i = 0; i < npixel; i++, src++)
     {
         *(dst++) = pal[3 * (*src) + 0];
@@ -308,8 +335,9 @@ int wxGIFDecoder::getcode(wxInputStream& stream, int bits, int ab_fin)
              * an end-of-image symbol (ab_fin) they come up with
              * a zero-length subblock!! We catch this here so
              * that the decoder sees an ab_fin code.
+             * We also need to check if the file doesn't end unexpectedly.
              */
-            if (m_restbyte == 0)
+            if (stream.Eof() || m_restbyte == 0)
             {
                 code = ab_fin;
                 break;
@@ -445,28 +473,26 @@ wxGIFDecoder::dgif(wxInputStream& stream, GIFImage *img, int interl, int bits)
         // make new entry in alphabet (only if NOT just cleared)
         if (lastcode != -1)
         {
-            // Normally, after the alphabet is full and can't grow any
-            // further (ab_free == 4096), encoder should (must?) emit CLEAR
-            // to reset it. This checks whether we really got it, otherwise
-            // the GIF is damaged.
-            if (ab_free > ab_max)
-                return wxGIF_INVFORMAT;
-
-            // This assert seems unnecessary since the condition above
-            // eliminates the only case in which it went false. But I really
-            // don't like being forced to ask "Who in .text could have
-            // written there?!" And I wouldn't have been forced to ask if
-            // this line had already been here.
-            wxASSERT(ab_free < allocSize);
-
-            ab_prefix[ab_free] = lastcode;
-            ab_tail[ab_free]   = code;
-            ab_free++;
-
-            if ((ab_free > ab_max) && (ab_bits < 12))
+            // The GIF specification does not require sending a CLEAR code
+            // once the alphabet is full.  Instead, the encoder can continue
+            // with the alphabet as-is, making no further updates until a
+            // CLEAR code is emitted.
+            if (ab_free <= ab_max)
             {
-                ab_bits++;
-                ab_max = (1 << ab_bits) - 1;
+                // It should be impossible to trigger this assert, since the
+                // above check should prevent the alphabet from growing
+                // beyond 4096 entries.
+                wxASSERT(ab_free < allocSize);
+
+                ab_prefix[ab_free] = lastcode;
+                ab_tail[ab_free]   = code;
+                ab_free++;
+
+                if ((ab_free > ab_max) && (ab_bits < 12))
+                {
+                    ab_bits++;
+                    ab_max = (1 << ab_bits) - 1;
+                }
             }
         }
 
@@ -666,7 +692,7 @@ wxGIFErrorCode wxGIFDecoder::LoadGIF(wxInputStream& stream)
     // load global color map if available
     if ((buf[4] & 0x80) == 0x80)
     {
-        int backgroundColIndex = buf[5];
+        unsigned int backgroundColIndex = buf[5];
 
         global_ncolors = 2 << (buf[4] & 0x07);
         unsigned int numBytes = 3 * global_ncolors;
@@ -676,9 +702,18 @@ wxGIFErrorCode wxGIFDecoder::LoadGIF(wxInputStream& stream)
             return wxGIF_INVFORMAT;
         }
 
-        m_background.Set(pal[backgroundColIndex*3 + 0],
-                         pal[backgroundColIndex*3 + 1],
-                         pal[backgroundColIndex*3 + 2]);
+        // The background colour index must reference an entry in the global
+        // colour table: only the first 3*global_ncolors bytes of pal were read
+        // from the file above, so an index past that would take the background
+        // colour from the uninitialised tail of the buffer (and leak it out
+        // through GetBackgroundColour()). Leave the background unset in that
+        // case, as we do for a GIF that doesn't specify one at all.
+        if (backgroundColIndex < global_ncolors)
+        {
+            m_background.Set(pal[backgroundColIndex*3 + 0],
+                             pal[backgroundColIndex*3 + 1],
+                             pal[backgroundColIndex*3 + 2]);
+        }
     }
 
     // transparent colour, disposal method and delay default to unused
@@ -784,10 +819,10 @@ wxGIFErrorCode wxGIFDecoder::LoadGIF(wxInputStream& stream)
                 // allocate memory for IMAGEN struct
                 GIFImagePtr pimg(new GIFImage());
 
-                wxScopeGuard guardDestroy = wxMakeObjGuard(*this, &wxGIFDecoder::Destroy);
-
                 if ( !pimg.get() )
                     return wxGIF_MEMERR;
+
+                wxScopeGuard guardDestroy = wxMakeObjGuard(*pimg, &GIFImage::Free);
 
                 // fill in the data
                 static const unsigned int idbSize = (2 + 2 + 2 + 2 + 1);
@@ -834,6 +869,14 @@ wxGIFErrorCode wxGIFDecoder::LoadGIF(wxInputStream& stream)
                 interl = ((buf[8] & 0x40)? 1 : 0);
                 size = pimg->w * pimg->h;
 
+                // Reject frames with zero width or height: malloc(0) below
+                // returns an empty allocation that the dgif() decode loop
+                // still writes into. The subsequent-frames check above
+                // rejects zero size in animations but the first frame and
+                // the non-animated GIF87a path both reach here unchecked.
+                if (size == 0)
+                    return wxGIF_INVFORMAT;
+
                 pimg->transparent = transparent;
                 pimg->disposal = disposal;
                 pimg->delay = delay;
@@ -863,7 +906,11 @@ wxGIFErrorCode wxGIFDecoder::LoadGIF(wxInputStream& stream)
 
                 // get initial code size from first byte in raster data
                 bits = stream.GetC();
-                if (bits == 0)
+                // dgif() sizes the LZW tables for codes up to 12 bits, so a
+                // minimum code size of 12 or more would start ab_free past the
+                // end of ab_prefix/ab_tail and corrupt the heap on the first
+                // alphabet update.
+                if (stream.Eof() || bits <= 0 || bits > 11)
                     return wxGIF_INVFORMAT;
 
                 // decode image

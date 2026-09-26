@@ -94,7 +94,7 @@ void wxPGCellRenderer::DrawEditorValue( wxDC& dc, const wxRect& rect,
     {
         wxRect rect2(rect);
         rect2.Offset(xOffset, yOffset);
-        rect2.height -= yOffset;
+        rect2.height -= yOffset * 2;
         editor->DrawValue( dc, rect2, property, text );
     }
     else
@@ -2059,6 +2059,15 @@ int wxPGProperty::GetChoiceSelection() const
 void wxPGProperty::SetChoiceSelection( int newValue )
 {
     wxCHECK_RET( m_choices.IsOk(), wxS("invalid choiceinfo") );
+
+    // Allow setting the value of -1 to reset the selection, for consistency
+    // with wxChoice::SetSelection().
+    if ( newValue == wxNOT_FOUND )
+    {
+        SetValueToUnspecified();
+        return;
+    }
+
     wxCHECK_RET( newValue >= 0 && newValue < (int)m_choices.GetCount(),
                  wxS("New index is out of range") );
 

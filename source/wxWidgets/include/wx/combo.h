@@ -378,7 +378,7 @@ public:
 
     // Call with enable as true to use a type of popup window that guarantees ability
     // to focus the popup control, and normal function of common native controls.
-    // This alternative popup window is usually a wxDialog, and as such it's parent
+    // This alternative popup window is usually a wxDialog, and as such its parent
     // frame will appear as if the focus has been lost from it.
     void UseAltPopupWindow( bool enable = true )
     {
@@ -454,6 +454,9 @@ public:
 
     // common code to be called on popup hide/dismiss
     void OnPopupDismiss(bool generateEvent);
+
+    // called if popup is destroyed not by wxComboCtrl itself
+    void OnPopupDestroy();
 
     // PopupShown states
     enum

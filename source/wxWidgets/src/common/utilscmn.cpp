@@ -1384,18 +1384,28 @@ int wxMessageBox(const wxString& message, const wxString& caption, long style,
 
 wxVersionInfo wxGetLibraryVersionInfo()
 {
+    // Only add the last build component to the version if it's non-zero, it's
+    // pretty useless otherwise.
+    wxString ver = wxString::Format
+                   (
+                        wxS("%d.%d.%d"),
+                        wxMAJOR_VERSION,
+                        wxMINOR_VERSION,
+                        wxRELEASE_NUMBER
+                   );
+    if ( wxSUBRELEASE_NUMBER )
+        ver += wxString::Format(wxS(".%d"), wxSUBRELEASE_NUMBER);
+
     // don't translate these strings, they're for diagnostics purposes only
     wxString msg;
     msg.Printf(wxS("wxWidgets Library (%s port)\n")
-               wxS("Version %d.%d.%d (Unicode: %s, debug level: %d),\n")
+               wxS("Version %s (Unicode: %s, debug level: %d),\n")
 #if !wxUSE_REPRODUCIBLE_BUILD
                wxS("compiled at %s %s\n\n")
 #endif
-               wxS("Runtime version of toolkit used is %d.%d.\n"),
+               wxS("Runtime version of toolkit used is %d.%d.%d.\n"),
                wxPlatformInfo::Get().GetPortIdName(),
-               wxMAJOR_VERSION,
-               wxMINOR_VERSION,
-               wxRELEASE_NUMBER,
+               ver,
 #if wxUSE_UNICODE_UTF8
                "UTF-8",
 #elif wxUSE_UNICODE
@@ -1415,7 +1425,8 @@ wxVersionInfo wxGetLibraryVersionInfo()
                __TTIME__,
 #endif
                wxPlatformInfo::Get().GetToolkitMajorVersion(),
-               wxPlatformInfo::Get().GetToolkitMinorVersion()
+               wxPlatformInfo::Get().GetToolkitMinorVersion(),
+               wxPlatformInfo::Get().GetToolkitMicroVersion()
               );
 
 #ifdef __WXGTK__
@@ -1435,7 +1446,7 @@ wxVersionInfo wxGetLibraryVersionInfo()
                          wxMINOR_VERSION,
                          wxRELEASE_NUMBER,
                          msg,
-                         wxS("Copyright (c) 1992-2022 wxWidgets team"));
+                         wxS("Copyright (c) 1992-2026 wxWidgets team"));
 }
 
 void wxInfoMessageBox(wxWindow* parent)

@@ -304,6 +304,15 @@ typedef short int WXTYPE;
 #if __cplusplus >= 201103L || wxCHECK_VISUALC_VERSION(14)
     #define wxHAS_MEMBER_DEFAULT
 
+    // Rvalue references are supported since MSVS 2010, but enabling them
+    // causes compilation errors on versions before 2015
+    //
+    // And move support in wxString is only available since 3.2.3, so don't
+    // compile it in when compatibility with older versions is requested.
+#if wxABI_VERSION >= 30203
+    #define wxHAS_RVALUE_REF
+#endif
+
     #define wxHAS_NOEXCEPT
     #define wxNOEXCEPT noexcept
 #else
@@ -330,6 +339,21 @@ typedef short int WXTYPE;
 
 #ifndef wxFALLTHROUGH
     #define wxFALLTHROUGH ((void)0)
+#endif
+
+/* wxWARN_UNUSED is used as an attribute to a class, stating that unused instances
+   should be warned about (in case such warnings are enabled in the first place)
+   In 3.2.x this is an opt-in feature enabled by defining wxNO_UNUSED_VARIABLES. */
+
+#if defined(wxNO_UNUSED_VARIABLES) || defined(WXBUILDING)
+    #ifdef __has_attribute /* __has_cpp_attribute(warn_unused) would return false with Clang, */
+        #if __has_attribute(warn_unused) /* so use __has_attribute instead */
+            #define wxWARN_UNUSED __attribute__((warn_unused))
+        #endif
+    #endif
+#endif
+#ifndef wxWARN_UNUSED
+    #define wxWARN_UNUSED
 #endif
 
 /* these macros are obsolete, use the standard C++ casts directly now */
@@ -452,9 +476,27 @@ typedef short int WXTYPE;
             #define HAVE_TR1_UNORDERED_SET
         #endif
     #endif /* defined(__has_include) */
+#endif /* !__WX_SETUP_H__ */
 
-    #endif /* __cplusplus */
-#endif /* __WX_SETUP_H__ */
+// Allow disabling the use of std::initializer_list<> if it creates overload
+// ambiguities for the existing code by predefining wxNO_INITIALIZER_LIST and
+// also always predefine this symbol when ABI compatibility with versions
+// before support for std::initializer_list<> was added is requested.
+#if wxABI_VERSION < 30205
+    #ifndef wxNO_INITIALIZER_LIST
+        #define wxNO_INITIALIZER_LIST
+    #endif
+#endif /* wxABI_VERSION < 30205 */
+
+#if !defined(wxHAVE_INITIALIZER_LIST) && !defined(wxNO_INITIALIZER_LIST)
+    #if __cplusplus >= 201103L
+        #define wxHAVE_INITIALIZER_LIST
+    #elif wxCHECK_VISUALC_VERSION(12)
+        #define wxHAVE_INITIALIZER_LIST
+    #endif
+#endif /* !wxHAVE_INITIALIZER_LIST && !wxNO_INITIALIZER_LIST */
+
+#endif /* __cplusplus */
 
 /* provide replacement for C99 va_copy() if the compiler doesn't have it */
 
@@ -605,7 +647,12 @@ typedef short int WXTYPE;
     #if __has_cpp_attribute(deprecated)
         /* gcc 5 claims to support this attribute, but actually doesn't */
         #if !defined(__GNUC__) || wxCHECK_GCC_VERSION(6, 0)
-            #define wxHAS_DEPRECATED_ATTR
+            /* Even later gcc versions only support it when using C++11. */
+            #ifdef __cplusplus
+                #if __cplusplus >= 201103L
+                    #define wxHAS_DEPRECATED_ATTR
+                #endif
+            #endif
         #endif
     #endif
 #endif
@@ -698,6 +745,43 @@ typedef short int WXTYPE;
 #endif
 
 /*
+    Some gcc versions choke on __has_cpp_attribute(gnu::visibility) due to the
+    presence of the colon, but we only need this macro in C++ code, so just
+    don't define it when using C.
+ */
+#ifdef __cplusplus
+
+/*
+    wxDEPRECATED_EXPORT_CORE is a special macro used for the classes that are
+    exported and deprecated (but not when building the library itself, as this
+    would trigger warnings about using this class when implementing it).
+
+    It exists because standard [[deprecated]] attribute can't be combined with
+    legacy __attribute__((visibility)), but we can't use [[visibility]] instead
+    of the latter because it can't be use in the same place in the declarations
+    where we use WXDLLIMPEXP_CORE. So we define this special macro which uses
+    the standard visibility attribute just where we can't do otherwise.
+ */
+#ifdef WXBUILDING
+    #define wxDEPRECATED_EXPORT_CORE(msg) WXDLLIMPEXP_CORE
+#else /* !WXBUILDING */
+    #ifdef wxHAS_DEPRECATED_ATTR
+        #if __has_cpp_attribute(gnu::visibility)
+            #define wxDEPRECATED_EXPORT_CORE(msg) \
+                [[deprecated(msg), gnu::visibility("default")]]
+        #endif
+    #endif
+
+    #ifndef wxDEPRECATED_EXPORT_CORE
+        /* Fall back when nothing special is needed or available. */
+        #define wxDEPRECATED_EXPORT_CORE(msg) \
+            wxDEPRECATED_MSG(msg) WXDLLIMPEXP_CORE
+    #endif
+#endif /* WXBUILDING/!WXBUILDING */
+
+#endif /* __cplusplus */
+
+/*
    Macros to suppress and restore gcc warnings, requires g++ >= 4.6 and don't
    do anything otherwise.
 
@@ -724,7 +808,7 @@ typedef short int WXTYPE;
 /*
     Similar macros but for gcc-specific warnings.
  */
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 #   define wxGCC_ONLY_WARNING_SUPPRESS(x) wxGCC_WARNING_SUPPRESS(x)
 #   define wxGCC_ONLY_WARNING_RESTORE(x) wxGCC_WARNING_RESTORE(x)
 #else
@@ -1090,20 +1174,36 @@ typedef double wxDouble;
 
 /* Define wxChar16 and wxChar32                                              */
 
+#ifdef __cplusplus
+
 #if SIZEOF_WCHAR_T == 2
     #define wxWCHAR_T_IS_WXCHAR16
     typedef wchar_t wxChar16;
 #else
-    typedef wxUint16 wxChar16;
+    // For compatibility, we keep using wxUint16 here, but this wouldn't
+    // compile with libc++ 19+, so use the (more correct but, more importantly,
+    // working) char16_t in this case as there is nothing to be compatible
+    // with in this case.
+    #if defined(_LIBCPP_VERSION) && (_LIBCPP_VERSION+0 >= 19000)
+        typedef char16_t wxChar16;
+    #else
+        typedef wxUint16 wxChar16;
+    #endif
 #endif
 
 #if SIZEOF_WCHAR_T == 4
     #define wxWCHAR_T_IS_WXCHAR32
     typedef wchar_t wxChar32;
 #else
-    typedef wxUint32 wxChar32;
+    // See the comment above for wxChar16 definition.
+    #if defined(_LIBCPP_VERSION) && (_LIBCPP_VERSION+0 >= 19000)
+        typedef char32_t wxChar32;
+    #else
+        typedef wxUint32 wxChar32;
+    #endif
 #endif
 
+#endif /* __cplusplus */
 
 /*
     Helper macro expanding into the given "m" macro invoked with each of the
@@ -3163,14 +3263,28 @@ typedef const void* WXWidget;
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L || wxCHECK_VISUALC_VERSION(14))
     #define wxMEMBER_DELETE = delete
+
+    // Note that all these macros don't require a semicolon after them because
+    // they are empty in the "#else" branch and can't be followed by a
+    // semicolon in that case.
     #define wxDECLARE_DEFAULT_COPY_CTOR(classname) \
         public:                                    \
             classname(const classname&) = default;
+
+    #define wxDECLARE_DEFAULT_COPY(classname)  \
+        wxDECLARE_DEFAULT_COPY_CTOR(classname) \
+        classname& operator=(const classname&) = default;
+
+    #define wxDECLARE_DEFAULT_COPY_AND_DEF(classname) \
+        classname() = default;                        \
+        wxDECLARE_DEFAULT_COPY(classname)
 #else
     #define wxMEMBER_DELETE
 
     // We can't do this without C++11 "= default".
     #define wxDECLARE_DEFAULT_COPY_CTOR(classname)
+    #define wxDECLARE_DEFAULT_COPY(classname)
+    #define wxDECLARE_DEFAULT_COPY_AND_DEF(classname)
 #endif
 
 #define wxDECLARE_NO_COPY_CLASS(classname)      \

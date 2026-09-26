@@ -52,6 +52,7 @@
 #include "wx/hashset.h"
 #include "wx/uilocale.h"
 
+#include "wx/private/localeset.h"
 #include "wx/private/uilocale.h"
 
 #ifdef __WIN32__
@@ -126,7 +127,7 @@ const char* wxLanguageInfo::TrySetLocale() const
     // CRT (check by calling setlocale()).
     if ( wxGetWinVersion() >= wxWinVersion_Vista )
     {
-        locale = LocaleTag;
+        locale = GetCanonicalWithRegion();
         const char* const retloc = wxSetlocale(LC_ALL, locale);
         if ( retloc )
             return retloc;
@@ -410,6 +411,9 @@ bool wxLocale::DoCommonPostInit(bool success,
             t->AddStdCatalog();
     }
 
+    // Do this again here in case LC_CTYPE was changed by setlocale().
+    wxEnsureLocaleIsCompatibleWithCRT();
+
     return success;
 }
 
@@ -465,8 +469,16 @@ bool wxLocale::Init(int lang, int flags)
     }
 
     // Under (non-Darwn) Unix wxUILocale already set the C locale, but under
-    // the other platforms we still have to do it here.
-#if defined(__WIN32__) || defined(__WXOSX__)
+    // the other platforms we still have to do it.
+#if defined(__WXOSX__)
+    // Locale-related environment variables are typically not set at all under
+    // macOS, so don't rely on them unless we really have no other choice, i.e.
+    // we don't recognize the locale ourselves.
+    if ( !(info ? info->TrySetLocale() : wxSetlocale(LC_ALL, "")) )
+    {
+        ok = false;
+    }
+#elif defined(__WIN32__)
 
     // We prefer letting the CRT to set its locale on its own when using
     // default locale, as it does a better job of it than we do. We also have
@@ -684,8 +696,14 @@ const wxLanguageInfo* wxLocale::GetLanguageInfo(int lang)
 {
     // We need to explicitly handle the case "lang == wxLANGUAGE_DEFAULT" here,
     // because wxUILocale::GetLanguageInfo() determines the system language
-    // based on the the preferred UI language while wxLocale uses the default
+    // based on the preferred UI language while wxLocale uses the default
     // user locale for that purpose.
+    //
+    // Note that even though wxUILocale::GetLanguageInfo() seems to do the same
+    // thing as we do here, it actually does _not_ because we're calling our
+    // GetSystemLanguage() which maps to wxUILocale::GetSystemLocale() and not
+    // the function with the same name in that class. This is incredibly
+    // confusing but necessary for backwards compatibility.
     if (lang == wxLANGUAGE_DEFAULT)
         lang = GetSystemLanguage();
     return wxUILocale::GetLanguageInfo(lang);
@@ -757,11 +775,36 @@ bool wxLocale::IsAvailable(int lang)
     const wxLanguageInfo *info = wxLocale::GetLanguageInfo(lang);
     if ( !info )
     {
-        // The language is unknown (this normally only happens when we're
-        // passed wxLANGUAGE_DEFAULT), so we can't support it.
-        wxASSERT_MSG( lang == wxLANGUAGE_DEFAULT,
-                      wxS("No info for a valid language?") );
-        return false;
+        // This must be wxLANGUAGE_DEFAULT as otherwise we should have found
+        // the matching entry.
+        wxCHECK_MSG( lang == wxLANGUAGE_DEFAULT, false,
+                     wxS("No info for a valid language?") );
+
+        // For this one, we need to check whether using it later is going to
+        // actually work, i.e. if the CRT supports it.
+        const char* const origLocale = wxSetlocale(LC_ALL, NULL);
+        if ( !origLocale )
+        {
+            // This is not supposed to happen, we should always be able to
+            // query the current locale, but don't crash if it does.
+            return false;
+        }
+
+        // Make a copy of the string because wxSetlocale() call below may
+        // change the buffer to which it points.
+        const wxString origLocaleStr = wxString::FromUTF8(origLocale);
+
+        if ( !wxSetlocale(LC_ALL, "") )
+        {
+            // Locale wasn't changed, so nothing else to do.
+            return false;
+        }
+
+        // We support this locale, but restore the original one before
+        // returning.
+        wxSetlocale(LC_ALL, origLocaleStr.utf8_str());
+
+        return true;
     }
 
     wxString localeTag = info->GetCanonicalWithRegion();

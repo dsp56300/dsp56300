@@ -1,10 +1,12 @@
 #include "styledTextCtrl.h"
 
-#include "dsp56kEmu/logging.h"
+#include "dsp56kBase/logging.h"
 
 namespace dsp56kDebugger
 {
 	const wxFont g_font(12, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false);
+
+	StyledTextCtrl* StyledTextCtrl::s_lastFocused = nullptr;
 
 	StyledTextCtrl::StyledTextCtrl(wxWindow* _parent, wxStandardID _id, const wxPoint& _pos, const wxSize& _size) : wxStyledTextCtrl(_parent, _id, _pos, _size)
 	{
@@ -17,6 +19,17 @@ namespace dsp56kDebugger
 	bool StyledTextCtrl::isFocused() const
 	{
 		return m_focused || this->GetSTCFocus();
+	}
+
+	bool StyledTextCtrl::isLastFocused() const
+	{
+		return s_lastFocused == this;
+	}
+
+	void StyledTextCtrl::setAsDefaultFocus()
+	{
+		if(!s_lastFocused)
+			s_lastFocused = this;
 	}
 
 	void StyledTextCtrl::setLineCount(uint32_t _count)
@@ -58,6 +71,15 @@ namespace dsp56kDebugger
 
 		const auto prevLine = GetCurrentLine();
 
+		// Remove()/InsertText() below can move the caret and, more
+		// importantly, can make Scintilla scroll the view to keep the
+		// (possibly relocated) caret visible. This function is called
+		// periodically to refresh content that may have changed underneath
+		// the user (e.g. memory/registers while the DSP is running), so it
+		// must not fight the user's own scrolling. Remember the current
+		// scroll position and caret line and restore both afterwards.
+		const auto firstVisibleLine = GetFirstVisibleLine();
+
 		const auto count = lastDifferent - firstDifferent + 1;
 
 		const int posStart = firstDifferent > 0 ? GetLineEndPosition(firstDifferent-1) + 1 : 0;
@@ -79,6 +101,8 @@ namespace dsp56kDebugger
 		const auto newLine = GetCurrentLine();
 		if(newLine != prevLine)
 			GotoLine(prevLine);
+
+		SetFirstVisibleLine(firstVisibleLine);
 	}
 
 	void StyledTextCtrl::addMarker(int _line, int _marker)
@@ -195,6 +219,7 @@ namespace dsp56kDebugger
 	void StyledTextCtrl::onSetFocus(wxFocusEvent&)
 	{
 		m_focused = true;
+		s_lastFocused = this;
 		LOG("Focus Gained");
 	}
 

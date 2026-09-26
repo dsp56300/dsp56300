@@ -179,7 +179,14 @@ bool wxGenericProgressDialog::Create( const wxString& title,
     // top-level sizerTop
     wxSizer * const sizerTop = new wxBoxSizer(wxVERTICAL);
 
-    m_msg = new wxStaticText(this, wxID_ANY, message);
+    // We use wxST_NO_AUTORESIZE to prevent the label from snapping back to
+    // smaller size if the message becomes shorter: we need this because we
+    // always increase its size to fit the longest message and so we assume
+    // that its current size is always this longest size and not some maybe
+    // shorter size.
+    m_msg = new wxStaticText(this, wxID_ANY, message,
+                             wxDefaultPosition, wxDefaultSize,
+                             wxST_NO_AUTORESIZE);
     sizerTop->Add(m_msg, 0, wxLEFT | wxRIGHT | wxTOP, 2*LAYOUT_MARGIN);
 
     int gauge_style = wxGA_HORIZONTAL;
@@ -210,29 +217,20 @@ bool wxGenericProgressDialog::Create( const wxString& title,
     m_estimated =
     m_remaining = NULL;
 
-    // also count how many labels we really have
-    size_t nTimeLabels = 0;
-
     wxSizer * const sizerLabels = new wxFlexGridSizer(2);
 
     if ( style & wxPD_ELAPSED_TIME )
     {
-        nTimeLabels++;
-
         m_elapsed = CreateLabel(GetElapsedLabel(), sizerLabels);
     }
 
     if ( style & wxPD_ESTIMATED_TIME )
     {
-        nTimeLabels++;
-
         m_estimated = CreateLabel(GetEstimatedLabel(), sizerLabels);
     }
 
     if ( style & wxPD_REMAINING_TIME )
     {
-        nTimeLabels++;
-
         m_remaining = CreateLabel(GetRemainingLabel(), sizerLabels);
     }
     sizerTop->Add(sizerLabels, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP, LAYOUT_MARGIN);
@@ -787,12 +785,18 @@ void wxGenericProgressDialog::UpdateMessage(const wxString &newmsg)
 {
     if ( !newmsg.empty() && newmsg != m_msg->GetLabel() )
     {
-        const wxSize sizeOld = m_msg->GetSize();
-
         m_msg->SetLabel(newmsg);
 
-        if ( m_msg->GetSize().x > sizeOld.x )
+        // When using wxST_NO_AUTORESIZE, best size is not invalidated by
+        // changing the label, but we do want to compute the best size here
+        // so do it manually.
+        m_msg->InvalidateBestSize();
+
+        const wxSize sizeNeeded = m_msg->GetBestSize();
+        if ( sizeNeeded.x > m_msg->GetSize().x )
         {
+            m_msg->SetSize(sizeNeeded);
+
             // Resize the dialog to fit its new, longer contents instead of
             // just truncating it.
             Fit();

@@ -50,10 +50,11 @@ Microsoft Visual C++ Compilation       {#msw_build_msvs}
 ### From the IDE
 
 Ready to use project files are provided for VC++ versions 8, 9,
-10, 11, 12, 14, 15, 16 and 17 (also known as MSVS 2005, 2008, 2010, 2012,
-2013, 2015, 2017, 2019 and 2022 respectively).
+10, 11, 12, 14, 15, 16, 17 and 18 (also known as MSVS 2005, 2008, 2010, 2012,
+2013, 2015, 2017, 2019, 2022 and 2026 respectively).
 
-Simply open `wx_vcN.sln` (for N=8, 9, 10, 11, 12, 14, 15, 16 or 17) file,
+Simply open `wx_vcN.sln` (for N=8, 9, 10, 11, 12, 14, 15, 16 or 17, matching
+MSVS versions between 2005 and 2022) or `wx_vc18.slnx` (for MSVS 2026) file,
 select the appropriate configuration (Debug or Release, static or DLL)
 and build the solution. Notice that when building a DLL configuration,
 you may need to perform the build several times because the projects
@@ -235,9 +236,11 @@ executed from a DOS command line window (cmd.exe, *not* Bash sh.exe).
    for more details.
 
    NOTE: For parallel builds, i.e. using `-jN` make option, please run
-         `mingw32-make -jN ... setup_h` first and then rerun the full
-         make command without `setup_h` at the end to work around a bug
-         in the current makefiles.
+         the make command first without the `-jN` option and with `setup_h`
+         target specified, e.g. `mingw32-make ... setup_h`. Only after that
+         run the make command with the same wxWidgets build options but now
+         with the `-jN` option and without `setup_h` target, e.g. `mingw32-make -j4 ...`.
+         All this is necessary to work around the bug in the makefile.
 
 2. To verify your build, change the directory to `samples\minimal` and
    run the same mingw32-make command (with the same parameters there),
@@ -345,9 +348,8 @@ The full list of the build settings follows:
 
 * `RUNTIME_LIBS=static`
 
-  Links static version of C and C++ runtime libraries into the executable, so
-  that the program does not depend on DLLs provided with the compiler (e.g.
-  Visual C++'s msvcrt.dll).
+  (VC++ only.) Links static version of C and C++ runtime libraries into the
+  executable, so that the program does not depend on DLLs provided with the compiler.
   Caution: Do not use static runtime libraries when building DLL (SHARED=1)!
 
 * `DEBUG_FLAG=0`
