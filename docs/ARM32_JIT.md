@@ -408,3 +408,38 @@ matches the interpreter by construction. Tools: `tools/arm32jit_prototype/recomp
   loop reaches **>= 3x**. If it does, a whole-program recompiler (per-block, hash-checked, falling
   back to the interpreter, plus batching the peripheral tick and `runUntilTx` poll that cost ~11% in
   the profile) is a realistic weeks-scale project. If it stalls around 2x, stop.
+
+### Second gate (same day): 3.73-3.83x with `flatten`, gate passed
+
+Two changes, measured separately. Force, pinned with `taskset -c 3`, 5 alternating runs x 3M
+iterations; the performance governor was already set:
+
+| variant | interpreter | recompiled | speedup |
+|---|---|---|---|
+| inline memory fast path only | 70 ns/instr | 35-36 ns/instr | 1.94-2.04x |
+| + `__attribute__((flatten))` on the generated block | 66 ns/instr | 17.3-17.8 ns/instr | **3.73-3.83x** |
+
+Registers matched the interpreter on every run.
+
+- **Inline memory fast path** (`memory.h`): with a valid MMU buffer, `Memory::get`/`dspWrite` are
+  inline one-line array accesses; everything else goes to the renamed `getSlow`/`dspWriteSlow`.
+  Behaviour is unchanged, and it helps the interpreter too. On its own it made no measurable
+  difference to the recompiled block.
+- **`flatten`** (emitted by `recomp_gen.py`) makes GCC inline everything reachable from the block:
+  `decode_MMMRRR_read`, `DSP::memWrite`, `alu_asl`, plus the now-inline memory access. That's where
+  the win is.
+- Earlier, unpinned runs swung 60-98 ns/instr for the interpreter alone (MPC load on shared cores),
+  so always pin with `taskset` for these measurements.
+
+At ~3.8x, the 242% average interpreter load would come to ~64% of one core. That's close to the
+~60% target, before the other planned savings: batching the peripheral tick and the `runUntilTx`
+poll (~11% of the profile), and dropping per-instruction bookkeeping the block still does. Caveat:
+this is one MAC-heavy loop, and a whole program adds block entry/exit, branches, hardware loops and
+interpreter fallback.
+
+**Next: whole-program recompiler.** Walk the DSP program into basic blocks from real executions
+(same trick: the interpreter's opcode cache gives the handlers), generate one `flatten` function per
+block, dispatch by PC through a table, verify each block's P-memory words at runtime (fall back to the
+interpreter on mismatch or unknown PC), and handle DO/REP loops and branches at block ends. Gate for
+that stage: `mnm-golden` hash-matches the interpreter on all 22 machines, and `mnm-bench` averages
+<= 100% of one core on the Force.

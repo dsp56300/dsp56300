@@ -102,7 +102,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// set
 	//
-	bool Memory::dspWrite( EMemArea& _area, TWord& _offset, TWord _value )
+	bool Memory::dspWriteSlow( EMemArea& _area, TWord& _offset, TWord _value )
 	{
 #if MEMORY_HEAT_MAP
 		++m_heatMap[_area][_offset];
@@ -154,7 +154,7 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// get
 	//
-	TWord Memory::get( EMemArea _area, TWord _offset ) const
+	TWord Memory::getSlow( EMemArea _area, TWord _offset ) const
 	{
 #if MEMORY_HEAT_MAP
 		++m_heatMap[_area][_offset];

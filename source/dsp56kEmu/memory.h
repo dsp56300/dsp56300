@@ -98,8 +98,31 @@ namespace dsp56k
 
 		bool				set					( EMemArea _area, TWord _offset, TWord _value )	{ return dspWrite(_area, _offset, _value); }
 
-		bool				dspWrite			( EMemArea& _area, TWord& _offset, TWord _value );
-		TWord				get					( EMemArea _area, TWord _offset ) const;
+		// arm32 static-recompilation: with a valid MMU buffer, memTranslateAddress() is a no-op and out-of-range
+		// addresses are backed by the aliased scratch region, so both accesses reduce to the plain array access.
+		// Inline that case (the recompiled code in dsp.cpp can then inline it); everything else takes the
+		// original out-of-line path.
+		bool				dspWrite			( EMemArea& _area, TWord& _offset, TWord _value )
+		{
+#if !MEMORY_HEAT_MAP && !DSP56300_DEBUGGER && !defined(_DEBUG)
+			if(m_mmuBuffer)
+			{
+				m_mem[_area][_offset] = _value & 0x00ffffff;
+				return true;
+			}
+#endif
+			return dspWriteSlow(_area, _offset, _value);
+		}
+		TWord				get					( EMemArea _area, TWord _offset ) const
+		{
+#if !MEMORY_HEAT_MAP && !DSP56300_DEBUGGER && !defined(_DEBUG)
+			if(m_mmuBuffer)
+				return m_mem[_area][_offset];
+#endif
+			return getSlow(_area, _offset);
+		}
+		bool				dspWriteSlow		( EMemArea& _area, TWord& _offset, TWord _value );
+		TWord				getSlow				( EMemArea _area, TWord _offset ) const;
 		void				getOpcode			( TWord _offset, TWord& _wordA, TWord& _wordB ) const;
 
 		bool				save				(const char* _file, EMemArea _area) const;
