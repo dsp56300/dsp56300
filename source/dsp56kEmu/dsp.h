@@ -949,7 +949,15 @@ namespace dsp56k
 		// MPY/MPYR/MAC/MACR S1,S2,D (op_Mpy_S1S2D, op_Mpyr_S1S2D, op_Mac_S1S2, op_Macr_S1S2 all decode the same way):
 		// the static recompiler calls op_Multiply_T<false> when the instruction's V/Z/E/U/N results are dead
 		template<bool UpdateCCR> void op_Multiply_T(TWord op);
+		template<bool UpdateCCR> void op_Add_SD_T(TWord op);
+		template<bool UpdateCCR> void op_Sub_SD_T(TWord op);
+		template<bool UpdateCCR> void op_Asl_ii_T(TWord op);
+		template<bool UpdateCCR> void op_Asr_ii_T(TWord op);
 	private:
+		template<bool UpdateCCR> void alu_addT(bool ab, const TReg56& _val);
+		template<bool UpdateCCR> void alu_subT(bool ab, const TReg56& _val);
+		template<bool UpdateCCR> void alu_aslT(bool abDst, bool abSrc, int _shiftAmount);
+		template<bool UpdateCCR> void alu_asrT(bool abDst, bool abSrc, int _shiftAmount);
 
 		void	alu_abs				( bool ab );
 

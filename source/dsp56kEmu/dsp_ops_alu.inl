@@ -63,6 +63,11 @@ namespace dsp56k
 	//
 	void DSP::alu_add( bool ab, const TReg56& _val )
 	{
+		alu_addT<true>(ab, _val);
+	}
+
+	template<bool UpdateCCR> void DSP::alu_addT( bool ab, const TReg56& _val )
+	{
 		TReg56& d = ab ? reg.b : reg.a;
 
 		const TReg56 old = d;
@@ -78,8 +83,13 @@ namespace dsp56k
 
 		// S L E U N Z V C
 
-		sr_z_update(d);
 		sr_toggle(CCRB_C, Bit(carry));
+		if constexpr (!UpdateCCR)
+		{
+			if(!sr_test_noCache(SR_SM))
+				return;		// dead V/Z/E/U/N (see alu_mpyT); C above is always written
+		}
+		sr_z_update(d);
 		sr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 //		sr_l_update_by_v();
 
@@ -138,6 +148,11 @@ namespace dsp56k
 	//
 	void DSP::alu_sub( bool ab, const TReg56& _val )
 	{
+		alu_subT<true>(ab, _val);
+	}
+
+	template<bool UpdateCCR> void DSP::alu_subT( bool ab, const TReg56& _val )
+	{
 		TReg56& d = ab ? reg.b : reg.a;
 
 		const uint64_t d64 = d.var;
@@ -151,6 +166,11 @@ namespace dsp56k
 
 		// S L E U N Z V C
 		sr_toggle(CCR_C, carry);
+		if constexpr (!UpdateCCR)
+		{
+			if(!sr_test_noCache(SR_SM))
+				return;		// dead V/Z/E/U/N (see alu_mpyT); C above is always written
+		}
 		sr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
 
 		sr_z_update(d);
@@ -162,6 +182,11 @@ namespace dsp56k
 	// alu_asr
 	//
 	void DSP::alu_asr( bool abDst, bool abSrc, int _shiftAmount )
+	{
+		alu_asrT<true>(abDst, abSrc, _shiftAmount);
+	}
+
+	template<bool UpdateCCR> void DSP::alu_asrT( bool abDst, bool abSrc, int _shiftAmount )
 	{
 		const TReg56& dSrc = abSrc ? reg.b : reg.a;
 
@@ -176,6 +201,11 @@ namespace dsp56k
 		d.var = res & 0x00ffffffffffffff;
 
 		// S L E U N Z V C
+		if constexpr (!UpdateCCR)
+		{
+			if(!sr_test_noCache(SR_SM))
+				return;		// dead V/Z/E/U/N (see alu_mpyT); C above is always written
+		}
 
 		sr_z_update(d);
 		sr_clear(CCR_V);
@@ -187,6 +217,11 @@ namespace dsp56k
 	// alu_asl
 	//
 	void DSP::alu_asl( bool abDst, bool abSrc, int _shiftAmount )
+	{
+		alu_aslT<true>(abDst, abSrc, _shiftAmount);
+	}
+
+	template<bool UpdateCCR> void DSP::alu_aslT( bool abDst, bool abSrc, int _shiftAmount )
 	{
 		const TReg56& dSrc = abSrc ? reg.b : reg.a;
 
@@ -208,6 +243,16 @@ namespace dsp56k
 		overflowMaskU >>= 8;
 		const uint64_t v = d64 & overflowMaskU;
 		const bool isOverflow = v != overflowMaskU && v != 0;
+
+		if constexpr (!UpdateCCR)
+		{
+			if(!sr_test_noCache(SR_SM))
+			{
+				if(isOverflow)
+					sr_set(CCR_L);		// sticky L |= V; V/Z/E/U/N dead (see alu_mpyT)
+				return;
+			}
+		}
 
 		// S L E U N Z V C
 		sr_z_update(d);
@@ -631,6 +676,12 @@ namespace dsp56k
 	{
 		errNotImplemented("ADC");
 	}
+	template<bool UpdateCCR> void DSP::op_Add_SD_T(const TWord op)
+	{
+		const auto D = getFieldValue<Add_SD, Field_d>(op);
+		const auto JJJ = getFieldValue<Add_SD, Field_JJJ>(op);
+		alu_addT<UpdateCCR>(D, decode_JJJ_read_56(JJJ, !D));
+	}
 	inline void DSP::op_Add_SD(const TWord op)
 	{
 		const auto D = getFieldValue<Add_SD, Field_d>(op);
@@ -704,6 +755,10 @@ namespace dsp56k
 	{
 		alu_asl(D, D, 1);
 	}
+	template<bool UpdateCCR> void DSP::op_Asl_ii_T(const TWord op)
+	{
+		alu_aslT<UpdateCCR>(getFieldValue<Asl_ii,Field_D>(op), getFieldValue<Asl_ii,Field_S>(op), getFieldValue<Asl_ii,Field_iiiiii>(op));
+	}
 	inline void DSP::op_Asl_ii(const TWord op)
 	{
 		const TWord shiftAmount	= getFieldValue<Asl_ii,Field_iiiiii>(op);
@@ -727,6 +782,10 @@ namespace dsp56k
 	{
 		const auto D = getFieldValue<Asr_D, Field_d>(op);
 		alu_asr(D, D, 1);
+	}
+	template<bool UpdateCCR> void DSP::op_Asr_ii_T(const TWord op)
+	{
+		alu_asrT<UpdateCCR>(getFieldValue<Asr_ii,Field_D>(op), getFieldValue<Asr_ii,Field_S>(op), getFieldValue<Asr_ii,Field_iiiiii>(op));
 	}
 	inline void DSP::op_Asr_ii(const TWord op)
 	{		
@@ -1311,6 +1370,12 @@ namespace dsp56k
 	inline void DSP::op_Sbc(const TWord op)
 	{
 		errNotImplemented("SBC");
+	}
+	template<bool UpdateCCR> void DSP::op_Sub_SD_T(const TWord op)
+	{
+		const auto D = getFieldValue<Sub_SD, Field_d>(op);
+		const auto JJJ = getFieldValue<Sub_SD, Field_JJJ>(op);
+		alu_subT<UpdateCCR>(D, decode_JJJ_read_56(JJJ, !D));
 	}
 	inline void DSP::op_Sub_SD(const TWord op)
 	{

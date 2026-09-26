@@ -34,6 +34,10 @@ for pc, i in ins.items():
 MULTIPLY = {'op_Mac_S1S2', 'op_Macr_S1S2', 'op_Mpy_S1S2D', 'op_Mpyr_S1S2D'}
 KILLERS = MULTIPLY | {'op_Add_SD', 'op_Sub_SD', 'op_Add_xx', 'op_Sub_xx', 'op_Add_xxxx', 'op_Sub_xxxx',
                       'op_Asl_ii', 'op_Asl_D', 'op_Asr_ii', 'op_Asr_D', 'op_Cmp_S1S2', 'op_Cmp_xxS2'}
+# instructions with a dead-V/Z/E/U/N variant (UpdateCCR=false; see dsp_ops_alu.inl alu_mpyT etc.)
+DEAD_CCR_VARIANT = {n: 'op_Multiply_T' for n in MULTIPLY}
+DEAD_CCR_VARIANT.update({'op_Add_SD': 'op_Add_SD_T', 'op_Sub_SD': 'op_Sub_SD_T',
+                         'op_Asl_ii': 'op_Asl_ii_T', 'op_Asr_ii': 'op_Asr_ii_T'})
 def alu_name(i):
     return handler(i['alu']) if i['par'] else handler(i['op'])
 def is_killer(i):
@@ -100,9 +104,9 @@ for pcs in blocks:
         i = ins[pc]; op = f'0x{i["a"]:06x}u'
         h = handler(i['op']) if not i['par'] else ''
         alu = alu_name(i)
-        if alu in MULTIPLY and not (i['ccr'] & 0b101) and ccr_dead(pcs, n):
+        if alu in DEAD_CCR_VARIANT and not ccr_barrier_by_move(i) and not (i['ccr'] & 0b101) and ccr_dead(pcs, n):
             dead_ccr += i['count']
-            alu = 'op_Multiply_T<false>'
+            alu = DEAD_CCR_VARIANT[alu] + '<false>'
             if not i['par']: h = alu
         # PC bookkeeping only where a handler reads it: control flow (kind 1, always a block's last
         # instruction), anything that reads PC, LRA/STOP. The block's final PC is written once at its end.
@@ -164,4 +168,4 @@ covered = sum(ins[pc]['count'] for b in blocks for pc in b)
 alln = sum(i['count'] for i in ins.values())
 sys.stderr.write(f'{len(blocks)} blocks, {total_instr} instructions, avg {total_instr/len(blocks):.1f}/block, '
                  f'max {maxw} words; covers {100*covered/alln:.2f}% of executed instructions; '
-                 f'dead-CCR multiplies {100*dead_ccr/alln:.2f}% of executed instructions\n')
+                 f'dead-CCR ALU ops {100*dead_ccr/alln:.2f}% of executed instructions\n')
