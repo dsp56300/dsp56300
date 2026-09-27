@@ -69,7 +69,17 @@ namespace dsp56k
 		{
 			const D shiftAmount = (sizeof(D) * CHAR_BIT) - bitCount;
 			static_assert( shiftAmount > 0, "Invalid destination data size" );
-			return (D(var) << shiftAmount) >> shiftAmount;
+			if constexpr (sizeof(T) == 8 && sizeof(D) == 8 && bitCount > 32)
+			{
+				// 32-bit targets: only the high word needs sign-extending (one sbfx), instead of a 64-bit shift pair
+				const auto lo = static_cast<uint32_t>(static_cast<uint64_t>(var));
+				const auto hi = static_cast<int32_t>(static_cast<uint32_t>(static_cast<uint64_t>(var) >> 32) << (64 - bitCount)) >> (64 - bitCount);
+				return static_cast<D>((static_cast<uint64_t>(static_cast<uint32_t>(hi)) << 32) | lo);
+			}
+			else
+			{
+				return (D(var) << shiftAmount) >> shiftAmount;
+			}
 		}
 
 		TWord toWord() const
