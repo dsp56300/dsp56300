@@ -237,6 +237,7 @@ namespace  dsp56k
 		void esaiEvenSlotInterrupts();
 		void esaiResetClearsStatus();
 		void hostQueueDataWaitsForHostFlags();
+		void memoryMirror();
 
 		Peripherals56362 peripheralsX;
 		Peripherals56367 peripheralsY;

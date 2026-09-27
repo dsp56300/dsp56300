@@ -54,16 +54,32 @@ The memory layout that the emulator uses looks like this:
 bounds access will use this scratch area, not harmful if written to or read from but not
 affecting the regular, valid DSP memory.
 
+Mirrors (see MemoryMirror) replace parts of the internal memory below SRAM start. Each shows a
+range of SRAM through a second set of addresses, again shared by X, Y and P.
+
 */
 
 namespace dsp56k
 {
-	MemoryBuffer::MemoryBuffer(TWord _pSize, TWord _xySize, TWord _externalMemAddress)
+	MemoryBuffer::MemoryBuffer(TWord _pSize, TWord _xySize, TWord _externalMemAddress, const std::vector<MemoryMirror>& _mirrors)
 	{
 		const auto usedAreaSize = std::max(_pSize, _xySize);
 
 		if(_externalMemAddress == 0 || _externalMemAddress >= usedAreaSize)
 			return;
+
+		// mirrors are in ascending order, above address 0, which is internal memory on every chip, and below SRAM start.
+		// They show words of the external memory
+		TWord mirrorEnd = 1;
+		for(const auto& m : _mirrors)
+		{
+			if(!m.size || m.address < mirrorEnd || m.address + m.size > _externalMemAddress || m.source < _externalMemAddress || m.source + m.size > usedAreaSize)
+			{
+				assert(false && "invalid memory mirror");
+				return;
+			}
+			mirrorEnd = m.address + m.size;
+		}
 
 		constexpr TWord totalDspAreaSize = 0x1000000;
 		constexpr TWord totalDspAreaByteSize = sizeof(TWord) * totalDspAreaSize;
@@ -93,10 +109,35 @@ namespace dsp56k
 
 		size_t backingByteOffset = 0;
 
-		// map memory for internal X, Y and P memory. They point to unique memory and are separated
-		m_x = static_cast<TWord*>(m_mmu.mapRegion(backingByteOffset, _externalMemAddress * sizeof(TWord), hostPtrX));	backingByteOffset += _externalMemAddress * sizeof(TWord);
-		m_y = static_cast<TWord*>(m_mmu.mapRegion(backingByteOffset, _externalMemAddress * sizeof(TWord), hostPtrY));	backingByteOffset += _externalMemAddress * sizeof(TWord);
-		m_p = static_cast<TWord*>(m_mmu.mapRegion(backingByteOffset, _externalMemAddress * sizeof(TWord), hostPtrP));	backingByteOffset += _externalMemAddress * sizeof(TWord);
+		// the external memory follows the internal memory of all three areas in the backing store
+		const auto externalByteOffset = 3 * static_cast<size_t>(_externalMemAddress) * sizeof(TWord);
+
+		// unique memory of one area from _begin to _end
+		auto mapUnique = [&](const size_t _byteOffset, TWord* _hostPtr, const TWord _begin, const TWord _end)
+		{
+			return _begin >= _end || m_mmu.mapRegion(_byteOffset + _begin * sizeof(TWord), (_end - _begin) * sizeof(TWord), _hostPtr + _begin);
+		};
+
+		// map memory for internal X, Y and P memory. They point to unique memory and are separated, apart from the mirrors
+		auto mapInternal = [&](const size_t _byteOffset, TWord* _hostPtr) -> TWord*
+		{
+			TWord addr = 0;
+
+			for(const auto& m : _mirrors)
+			{
+				if(!mapUnique(_byteOffset, _hostPtr, addr, m.address))
+					return nullptr;
+				if(!m_mmu.mapRegion(externalByteOffset + (m.source - _externalMemAddress) * sizeof(TWord), m.size * sizeof(TWord), _hostPtr + m.address))
+					return nullptr;
+				addr = m.address + m.size;
+			}
+
+			return mapUnique(_byteOffset, _hostPtr, addr, _externalMemAddress) ? _hostPtr : nullptr;
+		};
+
+		m_x = mapInternal(backingByteOffset, hostPtrX);	backingByteOffset += _externalMemAddress * sizeof(TWord);
+		m_y = mapInternal(backingByteOffset, hostPtrY);	backingByteOffset += _externalMemAddress * sizeof(TWord);
+		m_p = mapInternal(backingByteOffset, hostPtrP);	backingByteOffset += _externalMemAddress * sizeof(TWord);
 
 		if(!m_x || !m_y || !m_p)
 			return;
@@ -142,9 +183,12 @@ namespace dsp56k
 
 		// test if its working
 
-		m_x[_externalMemAddress-1] = 0x111111;
-		m_y[_externalMemAddress-1] = 0x222222;
-		m_p[_externalMemAddress-1] = 0x333333;
+		// the last word of internal memory, in front of the first mirror if there is one, is unique per area
+		const auto internalEnd = _mirrors.empty() ? _externalMemAddress : _mirrors.front().address;
+
+		m_x[internalEnd-1] = 0x111111;
+		m_y[internalEnd-1] = 0x222222;
+		m_p[internalEnd-1] = 0x333333;
 
 		for(auto i=0; i<3; ++i)
 		{
@@ -157,9 +201,9 @@ namespace dsp56k
 		m_y[_externalMemAddress+1] = 0x555555;
 		m_p[_externalMemAddress+2] = 0x666666;
 
-		if( m_x[_externalMemAddress-1] == 0x111111 &&
-			m_y[_externalMemAddress-1] == 0x222222 &&
-			m_p[_externalMemAddress-1] == 0x333333 &&
+		if( m_x[internalEnd-1] == 0x111111 &&
+			m_y[internalEnd-1] == 0x222222 &&
+			m_p[internalEnd-1] == 0x333333 &&
 
 			m_x[_externalMemAddress+0] == 0x444444 && m_y[_externalMemAddress+0] == 0x444444 && m_p[_externalMemAddress+0] == 0x444444 &&
 			m_x[_externalMemAddress+1] == 0x555555 && m_y[_externalMemAddress+1] == 0x555555 && m_p[_externalMemAddress+1] == 0x555555 &&
@@ -173,9 +217,9 @@ namespace dsp56k
 		{
 			LOG("MMU based DSP memory setup FAILED, test has failed:");
 
-			LOG("m_x[_externalMemAddress-1] == 0x111111 ? = " << HEX(m_x[_externalMemAddress-1]));
-			LOG("m_y[_externalMemAddress-1] == 0x222222 ? = " << HEX(m_y[_externalMemAddress-1]));
-			LOG("m_p[_externalMemAddress-1] == 0x333333 ? = " << HEX(m_p[_externalMemAddress-1]));
+			LOG("m_x[internalEnd-1] == 0x111111 ? = " << HEX(m_x[internalEnd-1]));
+			LOG("m_y[internalEnd-1] == 0x222222 ? = " << HEX(m_y[internalEnd-1]));
+			LOG("m_p[internalEnd-1] == 0x333333 ? = " << HEX(m_p[internalEnd-1]));
 
 			LOG("m_x[_externalMemAddress+0] == 0x444444 ? = " << HEX(m_x[_externalMemAddress+0]));
 			LOG("m_y[_externalMemAddress+0] == 0x444444 ? = " << HEX(m_y[_externalMemAddress+0]));

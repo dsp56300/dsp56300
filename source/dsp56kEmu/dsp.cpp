@@ -1079,14 +1079,17 @@ namespace dsp56k
 
 	void DSP::notifyProgramMemWrite(TWord _offset)
 	{
-		m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
-		if constexpr(!g_useJIT)
-			m_opcodeCycleCache[_offset] = 0;
+		mem.forEachAlias(_offset, [this](const TWord _addr)
+		{
+			m_opcodeCache[_addr].op = &DSP::op_ResolveCache;
+			if constexpr(!g_useJIT)
+				m_opcodeCycleCache[_addr] = 0;
 
 #if DSP56300_DEBUGGER
-		if(m_debugger)
-			m_debugger->onProgramMemWrite(_offset);
+			if(m_debugger)
+				m_debugger->onProgramMemWrite(_addr);
 #endif
+		});
 	}
 
 	// _____________________________________________________________________________
@@ -1364,9 +1367,7 @@ namespace dsp56k
 
 	void DSP::clearOpcodeCache(const TWord _address)
 	{
-		m_opcodeCache[_address].op = &DSP::op_ResolveCache;
-		if constexpr(!g_useJIT)
-			m_opcodeCycleCache[_address] = 0;
+		notifyProgramMemWrite(_address);
 		m_jit.notifyProgramMemWrite(_address);
 	}
 	

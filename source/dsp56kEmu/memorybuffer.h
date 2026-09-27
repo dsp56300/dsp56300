@@ -1,15 +1,26 @@
 #pragma once
 
+#include <vector>
+
 #include "dsp56kBase/mmuhelper.h"
 #include "types.h"
 
 namespace dsp56k
 {
+	// A range of DSP addresses below the external memory address that shows external memory, in P, X and Y alike. On
+	// the chip, that is a chip select window over memory that decodes fewer address lines than the DSP drives
+	struct MemoryMirror
+	{
+		TWord address;	// first DSP address of the mirror
+		TWord size;		// number of words
+		TWord source;	// DSP address of the external memory word that appears at 'address'
+	};
+
 #ifdef __ANDROID__
 	class MemoryBuffer
 	{
 	public:
-		MemoryBuffer(TWord _pSize, TWord _xySize, TWord _externalMemAddress) {}
+		MemoryBuffer(TWord _pSize, TWord _xySize, TWord _externalMemAddress, const std::vector<MemoryMirror>& _mirrors) {}
 		~MemoryBuffer() {}
 
 		bool isValid() const { return false; }
@@ -22,7 +33,7 @@ namespace dsp56k
 	class MemoryBuffer
 	{
 	public:
-		MemoryBuffer(TWord _pSize, TWord _xySize, TWord _externalMemAddress);
+		MemoryBuffer(TWord _pSize, TWord _xySize, TWord _externalMemAddress, const std::vector<MemoryMirror>& _mirrors);
 		~MemoryBuffer() = default;
 
 		bool isValid() const { return m_isValid; }

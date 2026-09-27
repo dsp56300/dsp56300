@@ -90,7 +90,7 @@ namespace dsp56k
 		//
 	public:
 		explicit Memory(const IMemoryValidator& _memoryMap, TWord _memSize = 0xc00000, TWord* _externalBuffer = nullptr);
-		explicit Memory(const IMemoryValidator& _memoryMap, TWord _memSizeP, TWord _memSizeXY, TWord _brigedMemoryAddress, TWord* _externalBuffer = nullptr);
+		explicit Memory(const IMemoryValidator& _memoryMap, TWord _memSizeP, TWord _memSizeXY, TWord _brigedMemoryAddress, TWord* _externalBuffer = nullptr, std::vector<MemoryMirror> _mirrors = {});
 		Memory(const Memory&) = delete;
 		Memory& operator = (const Memory&) = delete;
 
@@ -158,10 +158,36 @@ namespace dsp56k
 
 		bool hasMmuSupport() const { return m_mmuBuffer != nullptr; }
 
+		// calls _func for _addr and for every other address that shows the same memory word through a mirror
+		template<typename TFunc> void forEachAlias(const TWord _addr, TFunc&& _func) const
+		{
+			_func(_addr);
+
+			// the address of the word in the external memory
+			auto external = _addr;
+			for(const auto& m : m_mirrors)
+			{
+				if(_addr - m.address < m.size)
+				{
+					external = _addr - m.address + m.source;
+					_func(external);
+					break;
+				}
+			}
+
+			for(const auto& m : m_mirrors)
+			{
+				const auto alias = external - m.source + m.address;
+				if(external - m.source < m.size && alias != _addr)
+					_func(alias);
+			}
+		}
+
 	private:
 		void				fillWithInitPattern	();
 		void				memTranslateAddress	(EMemArea& _area, const TWord& _addr) const;
 
 		std::unique_ptr<MemoryBuffer> m_mmuBuffer;
+		std::vector<MemoryMirror> m_mirrors;
 	};
 }

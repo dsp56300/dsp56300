@@ -49,7 +49,7 @@ namespace dsp56k
 			fillWithInitPattern();
 	}
 
-	Memory::Memory(const IMemoryValidator& _memoryMap, TWord _memSizeP, TWord _memSizeXY, TWord _brigedMemoryAddress/* = 0*/, TWord* _externalBuffer/* = nullptr*/)
+	Memory::Memory(const IMemoryValidator& _memoryMap, TWord _memSizeP, TWord _memSizeXY, TWord _brigedMemoryAddress/* = 0*/, TWord* _externalBuffer/* = nullptr*/, std::vector<MemoryMirror> _mirrors/* = {}*/)
 		: m_memoryMap(_memoryMap)
 		, m_size({_memSizeP, _memSizeXY, _memSizeXY})
 		, m_mem({nullptr})
@@ -60,16 +60,21 @@ namespace dsp56k
 		const auto pSize = calcPMemSize(_memSizeP, _memSizeXY, _brigedMemoryAddress);
 		const auto xySize = calcXYMemSize(_memSizeXY, _brigedMemoryAddress);
 
-		m_mmuBuffer.reset(new MemoryBuffer(pSize, xySize, _brigedMemoryAddress));
+		m_mmuBuffer.reset(new MemoryBuffer(pSize, xySize, _brigedMemoryAddress, _mirrors));
 
 		if(m_mmuBuffer->isValid())
 		{
 			x = m_mmuBuffer->ptrX();
 			y = m_mmuBuffer->ptrY();
 			p = m_mmuBuffer->ptrP();
+			m_mirrors = std::move(_mirrors);
 		}
 		else
 		{
+			// only the host MMU can show the same memory at two addresses
+			if(!_mirrors.empty())
+				LOG("Memory mirrors are not available without the host MMU, they are ignored");
+
 			m_mmuBuffer.reset();
 			auto* address = _externalBuffer;
 

@@ -251,10 +251,13 @@ namespace dsp56k
 
 	void Jit::notifyProgramMemWrite(const TWord _offset)
 	{
-		for (auto& it : m_chains)
-			it.second->notifyPMemWrite(_offset, it.second.get() == m_currentChain);
+		m_dsp.memory().forEachAlias(_offset, [this](const TWord _addr)
+		{
+			for (auto& it : m_chains)
+				it.second->notifyPMemWrite(_addr, it.second.get() == m_currentChain);
 
-		m_maxUsedPAddress = std::max(m_maxUsedPAddress, static_cast<size_t>(_offset));
+			m_maxUsedPAddress = std::max(m_maxUsedPAddress, static_cast<size_t>(_addr));
+		});
 	}
 
 	void Jit::run(const TWord _pc) noexcept

@@ -237,6 +237,9 @@ namespace dsp56k
 		essiDmaPendingRequestAtArm();
 		hostQueueDataWaitsForHostFlags();
 
+		// memory
+		memoryMirror();
+
 		// multi-instruction tests
 		multiInstructionTests();
 	}
@@ -2309,6 +2312,81 @@ namespace dsp56k
 		verify(mem303.get(MemArea_Y, 0x701) == 0);
 		verify(mem303.get(MemArea_Y, 0x702) == 0x7ad002);
 		verify(!rdf());
+	}
+
+	/*	A mirror shows external memory at a second range of addresses, like a chip select window over memory that
+		decodes fewer address lines than the DSP drives. A word is the same in P, X and Y through both ranges, and a P
+		write through one range drops the code that the JIT compiled or the interpreter decoded at the other
+	*/
+	void UnitTests::memoryMirror()
+	{
+		constexpr TWord external = 0x10000;
+		constexpr TWord mirror = 0x1000;		// $1000-$ffff shows the external words at $11000-$1ffff
+
+		PeripheralsNop periphX;
+		PeripheralsNop periphY;
+		Memory memM(g_defaultMemoryValidator, 0x20000, 0x20000, external, nullptr, {{mirror, external - mirror, external + mirror}});
+		DSP dspM(memM, &periphX, &periphY);
+
+		// only the host MMU can show the same memory at two addresses
+		if(!memM.hasMmuSupport())
+			return;
+
+		memM.set(MemArea_X, 0x1234, 0x123456);
+		verify(memM.get(MemArea_Y, 0x1234) == 0x123456);
+		verify(memM.get(MemArea_P, external + 0x1234) == 0x123456);
+
+		memM.set(MemArea_P, external + 0xffff, 0x654321);
+		verify(memM.get(MemArea_X, 0xffff) == 0x654321);
+
+		// in front of the mirror, each area has its own internal memory
+		memM.set(MemArea_X, mirror - 1, 1);
+		memM.set(MemArea_Y, mirror - 1, 2);
+		memM.set(MemArea_P, mirror - 1, 3);
+		verify(memM.get(MemArea_X, mirror - 1) == 1);
+		verify(memM.get(MemArea_Y, mirror - 1) == 2);
+		verify(memM.get(MemArea_P, mirror - 1) == 3);
+
+		// a different instruction, not just a different operand: the interpreter keeps the handler per address and hands
+		// it the word it fetched, so a stale "inc" would still get "inc b" right
+		const auto incA = assembler.assemble("inc a").word[0];
+		const auto decB = assembler.assemble("dec b").word[0];
+
+		// run "inc a" at _pc, replace it with "dec b" through _alias and run it again
+		auto replaceThroughAlias = [&](const TWord _pc, const TWord _alias, const bool _jit)
+		{
+			dspM.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+			dspM.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
+
+			dspM.memWriteP(_pc, incA);
+			dspM.memWriteP(_pc + 1, 0x0af080);		// jmp >_pc
+			dspM.memWriteP(_pc + 2, _pc);
+
+			auto run = [&]
+			{
+				dspM.setPC(_pc);
+				if(_jit)
+					dspM.execJit();
+				else
+					dspM.execInterpreter();
+			};
+
+			run();
+			verify(dspM.aluA().var == 1);
+
+			dspM.memWriteP(_alias, decB);
+			run();
+			verify(dspM.aluA().var == 1);
+			verify(dspM.aluB().var == 0xffffffffffffff);
+		};
+
+		if constexpr(g_useJIT)
+		{
+			replaceThroughAlias(0x2000, external + 0x2000, true);
+			replaceThroughAlias(external + 0x3000, 0x3000, true);
+		}
+		replaceThroughAlias(0x4000, external + 0x4000, false);
+		replaceThroughAlias(external + 0x5000, 0x5000, false);
 	}
 
 	void UnitTests::dec()
