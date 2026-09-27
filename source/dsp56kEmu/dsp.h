@@ -393,6 +393,8 @@ namespace dsp56k
 
 		std::string getSSindent() const;
 
+		void	queueInterrupt					(TWord _vba);
+
 		TWord	fetchOpWordB()
 		{
 			++m_currentOpLen;

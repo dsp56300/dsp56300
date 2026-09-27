@@ -179,8 +179,13 @@ namespace dsp56k
 
 		const auto vba = interrupt;
 
+		// A masked request stays pending until the mask allows it. The peripherals keep running meanwhile, as they do on
+		// the chip: firmware that masks interrupts and then waits for a peripheral flag waited forever otherwise
 		if(isInterruptMasked(vba))
+		{
+			m_execPeripheralsFunc(this);
 			return;
+		}
 
 		// it is important that the processing mode is switched first before popping the vector to prevent a possible race condition in hasPendingInterrupt()
 		{
@@ -1297,12 +1302,21 @@ namespace dsp56k
 
 	bool DSP::injectInterrupt(uint32_t _interruptVectorAddress)
 	{
-		m_pendingInterrupts.push_back({_interruptVectorAddress});
+		// A source has one pending flag on the chip. While its request waits for the mask to drop, the peripherals keep
+		// running (see execInterrupts), and a source that raises it again does not queue a second one
+		if(_interruptVectorAddress < Vba_End && isInterruptMasked(_interruptVectorAddress) && hasPendingInterrupt(_interruptVectorAddress))
+			return true;
+
+		queueInterrupt(_interruptVectorAddress);
+		return true;
+	}
+
+	void DSP::queueInterrupt(const TWord _vba)
+	{
+		m_pendingInterrupts.push_back({_vba});
 
 		if(m_interruptFunc == m_execPeripheralsFunc)
 			m_interruptFunc = &dspExecInterrupts;
-
-		return true;
 	}
 
 	bool DSP::injectInterruptImmediate(const uint32_t _interruptVectorAddress)
@@ -1334,8 +1348,9 @@ namespace dsp56k
 
 	void DSP::processExternalInterrupts()
 	{
+		// the device decides how often it raises an interrupt, so each one is queued
 		while(!m_pendingExternalInterrupts.empty())
-			injectInterrupt(m_pendingExternalInterrupts.pop_front());
+			queueInterrupt(m_pendingExternalInterrupts.pop_front());
 	}
 
 	uint32_t DSP::calcOpcodeCycles(const TWord _pc) const

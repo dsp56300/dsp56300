@@ -236,6 +236,7 @@ namespace dsp56k
 		dmaPendingRequestAtArm();
 		essiDmaPendingRequestAtArm();
 		hostQueueDataWaitsForHostFlags();
+		maskedInterruptKeepsPeripheralsRunning();
 
 		// memory
 		memoryMirror();
@@ -2312,6 +2313,46 @@ namespace dsp56k
 		verify(mem303.get(MemArea_Y, 0x701) == 0);
 		verify(mem303.get(MemArea_Y, 0x702) == 0x7ad002);
 		verify(!rdf());
+	}
+
+	/*	A masked interrupt stays pending while the peripherals keep running. The core used to stop them until the mask
+		dropped, so firmware that masks interrupts and then waits for a peripheral flag hung. A source that raises its
+		request again while it waits has one pending flag on the chip, so it is serviced once
+	*/
+	void UnitTests::maskedInterruptKeepsPeripheralsRunning()
+	{
+		dsp.resetHW();									// I1:I0 = 3 after reset, peripheral interrupts are masked
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+
+		emitToMemory("inc a", Vba_Host_Receive_Data_Full);
+		emitToMemory("nop", Vba_Host_Receive_Data_Full + 1);
+		emitToMemory("nop", Vba_IRQA);
+		emitToMemory("nop", Vba_IRQA + 1);
+
+		constexpr TWord loop = 0x100;
+		emitToMemory("nop", loop);
+		emitToMemory(0x0af080, loop, loop + 1);			// jmp >loop
+		dsp.setPC(loop);
+
+		dsp.injectInterrupt(Vba_Host_Receive_Data_Full);
+		dsp.injectInterrupt(Vba_Host_Receive_Data_Full);	// raised again while it waits
+		verify(dsp.m_pendingInterrupts.size() == 1);
+
+		// external interrupts reach the queue when the peripherals run, so this one shows that they did
+		dsp.injectExternalInterrupt(Vba_IRQA);
+		peripheralsX.resetDelayCycles(dsp.getInstructionCounter(), 0);
+		execStep();
+		verify(dsp.hasPendingInterrupt(Vba_IRQA));
+		verify(dsp.aluA().var == 0);
+
+		// unmasked, both are serviced, the host receive interrupt once
+		dsp.sr_clear(static_cast<CCRMask>(SR_I0 | SR_I1));
+		for(int i=0; i<8 && dsp.hasPendingInterrupts(); ++i)
+			execStep();
+		verify(!dsp.hasPendingInterrupts());
+		verify(dsp.aluA().var == 1);
+
+		dsp.resetHW();
 	}
 
 	/*	A mirror shows external memory at a second range of addresses, like a chip select window over memory that
