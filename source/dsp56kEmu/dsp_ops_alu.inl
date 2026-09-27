@@ -1218,7 +1218,22 @@ namespace dsp56k
 	}
 	inline void DSP::op_Merge(const TWord op)
 	{
-		errNotImplemented("MERGE");		
+		// Ported from gearmulator-md-mm's dsp56300 fork (dsp_ops_alu.inl), adapted from that fork's
+		// right-aligned accumulator (aluField24(reg, pos)) to this fork's left-aligned one (a1()/b1()).
+		const auto sss = getFieldValue<Merge, Field_SSS>(op);
+		const bool ab = getFieldValue<Merge, Field_D>(op);
+		const auto source = decode_sss_read<TWord>(sss);
+		const auto oldD1 = (ab ? b1() : a1()).var;
+		// DSP56300FM 13-108: concatenate S[11:0] with D[35:24] into D[47:24], leaving the other
+		// accumulator fields unchanged.
+		const auto result = ((source & 0x0fff) << 12) | (oldD1 & 0x0fff);
+		if(ab) b1(TReg24(static_cast<int32_t>(result))); else a1(TReg24(static_cast<int32_t>(result)));
+
+		// Preserve E/U from preceding arithmetic before replacing N/Z/V.
+		updateDirtyCCR();
+		sr_toggle(CCR_N, (result & 0x800000) != 0);
+		sr_toggle(CCR_Z, result == 0);
+		sr_clear(CCR_V);
 	}
 	inline void DSP::op_Mpy_S1S2D(const TWord op)
 	{
