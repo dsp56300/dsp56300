@@ -45,20 +45,25 @@ namespace dsp56k
 
 				n = signextend<int, 24>(n);
 
+				// Work on the buffer-relative offset in signed arithmetic. r is
+				// unsigned, so for a buffer based at address 0 a step below the
+				// base underflowed and the lower-bound test could never see it.
 				const auto lowerBound = r & ~moduloMask;
-				const auto upperBound = lowerBound + m;
+				const auto wrap = (n & moduloMask) ? modulo : 0;
+
+				auto rel = static_cast<int32_t>(r - lowerBound);
 
 				if constexpr(add)
-					r += n;
+					rel += static_cast<int32_t>(n);
 				else
-					r -= n;
+					rel -= static_cast<int32_t>(n);
 
-				modulo = n & moduloMask ? modulo : 0;
+				if(rel < 0)
+					rel += wrap;
+				else if(rel > static_cast<int32_t>(m))
+					rel -= wrap;
 
-				if(r < lowerBound)
-					r += modulo;
-				if(r > upperBound)
-					r -= modulo;
+				r = lowerBound + static_cast<TWord>(rel);
 				/*
 				if constexpr(add)
 				{
