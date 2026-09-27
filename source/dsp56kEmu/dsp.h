@@ -791,20 +791,18 @@ namespace dsp56k
 			if( !sr_test_noCache(SR_SM) )
 				return;
 
-			const auto v = (bitvalue( _dst, 55 + g_aluShift ).bit << 2) | (bitvalue( _dst, 48 + g_aluShift ).bit << 1) | bitvalue(_dst, 47 + g_aluShift).bit;
+			// This used to test only bits 55/48/47 (a 3-bit boundary check) instead of whether the
+			// sign-extended 56-bit value actually fits the 48-bit range -- those aren't equivalent
+			// whenever bits 54..49 disagree with bit 55 while 48 and 47 happen to still match it. The
+			// JIT (alu_saturateSM) always sign-extends and range-checks, so this brings the interpreter
+			// in line with it.
+			const int64_t signExtended = aluSignextend(_dst) >> g_aluShift;
 
-			switch( v )
-			{
-			case 0:
-			case 7:	/* do nothing */								break;
-			case 1:
-			case 2:
-			case 3:	_dst.var = 0x007fffffffffffll << g_aluShift;	sr_set(CCR_V);	break;
-			case 4:
-			case 5:
-			case 6: _dst.var = static_cast<TReg56::MyType>(0xff800000000000ull << g_aluShift);	sr_set(CCR_V);	break;
-			default: assert( 0 && "impossible" );
-			}
+			if( signExtended >= -0x800000000000LL && signExtended <= 0x7fffffffffffLL )
+				return;	// in range, nothing to do
+
+			_dst.var = (signExtended >= 0 ? 0x007fffffffffffll : static_cast<TReg56::MyType>(0xff800000000000ull)) << g_aluShift;
+			sr_set(CCR_V);
 		}
 
 		TReg8	ccr				() const							{ return byte0(getSR()); }
