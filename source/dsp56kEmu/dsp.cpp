@@ -107,6 +107,14 @@ namespace dsp56k
 			}
 		}
 	}
+	uint64_t DSP::spinSkippedAll()
+	{
+#ifdef DSP56K_SPIN_SKIP
+		std::lock_guard l(g_execMutex); uint64_t t = 0; for (auto* d : execRegistry()) t += d->m_spinSkipped; return t;
+#else
+		return 0;
+#endif
+	}
 	uint64_t DSP::execCountAll() { std::lock_guard l(g_execMutex); uint64_t t = g_execRetired; for (auto* d : execRegistry()) t += d->m_execCount; return t; }
 #endif
 
@@ -367,6 +375,39 @@ namespace dsp56k
 
 #ifdef DSP56K_INTERP_CYCLES
 		m_cycles += opCache.cycles;
+#endif
+#ifdef DSP56K_SPIN_SKIP
+		if(opCache.poll)
+		{
+			if(m_pollRun == 0)
+				m_pollA = m_pollB = currentOp;
+			else if(currentOp != m_pollA && currentOp != m_pollB)
+			{
+				if(m_pollB == m_pollA)
+					m_pollB = currentOp;
+				else
+				{
+					m_pollA = m_pollB = currentOp;
+					m_pollRun = 0;
+				}
+			}
+			if(++m_pollRun >= 16)
+			{
+				m_pollRun = 0;
+				const auto target = perif[0]->getTargetClock();
+				if(target > m_instructions + 4)
+				{
+					const uint64_t d = (target - m_instructions - 2) & ~static_cast<uint64_t>(1);
+					m_instructions += d;
+#ifdef DSP56K_INTERP_CYCLES
+					m_cycles += d * opCache.cycles;
+#endif
+					m_spinSkipped += d;
+				}
+			}
+		}
+		else
+			m_pollRun = 0;
 #endif
 		if(pcCurrentInstruction == currentOp)
 		{

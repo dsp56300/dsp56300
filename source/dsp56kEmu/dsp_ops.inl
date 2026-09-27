@@ -548,6 +548,9 @@ namespace dsp56k
 	{
 		auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
 		cacheEntry.op = &DSP::op_Nop;
+#ifdef DSP56K_SPIN_SKIP
+		cacheEntry.poll = 0;
+#endif
 #ifdef DSP56K_INTERP_CYCLES
 		{
 			Instruction instA = Invalid, instB = Invalid;
@@ -574,7 +577,16 @@ namespace dsp56k
 			}
 
 			cacheEntry.op = resolvePermutation(oi->m_instruction, op);
-
+#ifdef DSP56K_SPIN_SKIP
+			switch(oi->m_instruction)
+			{
+			case Jset_pp: case Jclr_pp: case Jset_qq: case Jclr_qq:
+			case Brset_pp: case Brclr_pp: case Brset_qq: case Brclr_qq:
+				cacheEntry.poll = 1;
+				break;
+			default: break;
+			}
+#endif
 			exec_jump(cacheEntry.op, op);
 			return;
 		}

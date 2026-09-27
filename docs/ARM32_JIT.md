@@ -731,3 +731,36 @@ not deterministic (above), so armhf and x86 hashes differ for that reason alone.
   thread (mc68k) also has to keep up, so a synth is really 2-3 threads.
 - Memory: not measured on device (free memory was ~1 GB of 2 GB). The interpreter opcode cache is 48 B per P word;
   the P sizes of these synths were not checked.
+
+### Follow-up (same day): Virus A, and idle-spin skipping for Vavra
+
+**Virus A (OS 2.8, two .mid files):** 44 M DSP instr/s, flat profile (top address <1%: no idle loop to skip, unlike
+B/C). Force interpreter, all threads on core 3: 4.99x real time -> ~130% after recompilation (÷3.9). Better than B/C,
+still over 100% (and that's the DSP alone). Not friendlier enough on its own.
+
+**Idle-spin skipping (`DSP56K_SPIN_SKIP`, off by default):** a run of >= 16 consecutive peripheral polls
+(jset/jclr/brset/brclr on pp/qq addresses) confined to two addresses can only end when a peripheral changes, which
+only happens when peripherals run, so the interpreter advances `m_instructions`/`m_cycles` straight to the
+peripheral deadline. On Vavra this removes ~150 M of 260 M instructions per 6 s (52 -> ~35 M/s executed); what is
+left is real DSP work (MAC/MPY loops at $223-$228, $6dd-$6e7, $963-$965). Force, all threads on core 3, 4 s of audio:
+interpreter 6.55x -> 5.75x. Per-thread CPU on the Force for that run: DSP thread 20.3 s, 68k µC thread 6.3 s,
+audio thread 0.9 s. So on the Force the µC is ~25% of the total, and the spin-skip helps less than the instruction
+count suggests because the DSP thread's remaining time is real work. Projection with the recompiler (÷3.9 on the
+DSP part only): DSP thread ~ 90-110% of a core (34 M instr/s vs ~36 M/s), µC thread on a second core.
+That is still not comfortable; Vavra is "marginal on two cores", not "fits".
+The poll instructions are never recompiled (they must run through the interpreter for the detector), which is the
+right choice for a spin anyway.
+
+**Why gate 2 (bit-exactness) is blocked, precisely:** the µC (68331) runs on its own free-running thread; it is
+clocked from the ESAI frame count the DSP thread has reached (`wLib::Hardware::syncUcToDSP`), so how many frames the
+µC sees per slice, and where MIDI lands relative to the DSP, depends on thread timing. A deterministic device needs
+the µC stepped at fixed points of the DSP's timeline. Options: (1) run the µC inside the DSP thread's ESAI callback
+(one thread, deterministic, and no spin/yield loops, which is also what the Force wants) but the µC's DSP reset
+request currently terminates the DSP thread from the µC side, which would join itself; (2) keep two threads but
+hand off per ESAI frame via the existing halt-DSP mechanism (deterministic, ~90k context switches/s). Not done.
+
+**Wave (mo0kid/wave) prerequisites:** the user's own Wave OS 1.700 files `w2sys.bin` and `wdv.sys` (from Waldorf's
+public Legacy Wave System.zip; the loader checks hashes; wavetable images optional). It is 68000 code plus an ES2
+ASIC model, so the DSP recompiler is irrelevant; the question there is the cost of the 68000 cores and the ASIC
+voice model (its README mentions 3 worker threads at high polyphony) and whether the JUCE build works on Linux/armhf
+(its targets are macOS AU/VST3/AAX plus standalone).

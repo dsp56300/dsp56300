@@ -3,6 +3,7 @@
 // Runs a scripted workload in lock step (block-granular MIDI), prints an FNV hash of every output
 // sample plus the interpreter's executed-instruction count and wall time.
 #include <unistd.h>
+#include <dirent.h>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -117,6 +118,23 @@ int main(int argc, char** argv)
 	printf("synth=%s sr=%.0f out=%u audio=%.2fs wall=%.2fs rt=%.2fx exec_instr=%llu rate=%.2f Minstr/s hash=%016llx\n",
 		GM_NAME, sr, nOut, blocks * block / sr, wall, wall / (blocks * block / sr),
 		(unsigned long long)instr, instr / (blocks * block / sr) / 1e6, (unsigned long long)g_hash);
+	{	// per-thread CPU seconds (whole run incl. boot)
+		DIR* d = opendir("/proc/self/task");
+		while (auto* e = d ? readdir(d) : nullptr)
+		{
+			if (e->d_name[0] == '.') continue;
+			char path[128]; snprintf(path, sizeof path, "/proc/self/task/%s/stat", e->d_name);
+			FILE* f = fopen(path, "r"); if (!f) continue;
+			char buf[512]; size_t n = fread(buf, 1, sizeof buf - 1, f); buf[n] = 0; fclose(f);
+			char* cl = strrchr(buf, ')'); char* op = strchr(buf, '(');
+			if (!cl || !op) continue;
+			*cl = 0; unsigned long ut = 0, st = 0;
+			sscanf(cl + 2, "%*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu", &ut, &st);
+			printf("thread %-16s cpu=%.2fs\n", op + 1, (ut + st) / (double)sysconf(_SC_CLK_TCK));
+		}
+		if (d) closedir(d);
+	}
+	printf("spin_skipped=%llu\n", (unsigned long long)dsp56k::DSP::spinSkippedAll());
 	if (getenv("GM_HOT")) dsp56k::DSP::dumpHotAll(static_cast<size_t>(atoi(getenv("GM_HOT"))));
 	if (dump) fclose(dump);
 	fflush(stdout);

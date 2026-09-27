@@ -140,6 +140,9 @@ namespace dsp56k
 #ifdef DSP56K_INTERP_CYCLES
 			uint32_t cycles;	// gearmulator study: synths whose ESAI clock counts DSP cycles (mQ, XT, n2x) need them from the interpreter too
 #endif
+#ifdef DSP56K_SPIN_SKIP
+			uint32_t poll;		// 1 = jset/jclr/brset/brclr on a peripheral register (candidate for an idle spin loop)
+#endif
 		};
 
 		std::vector<OpcodeCacheEntry>	m_opcodeCache;
@@ -232,6 +235,15 @@ namespace dsp56k
 #endif
 		
 		InstructionCache				cache;
+#ifdef DSP56K_SPIN_SKIP
+		// idle-loop skipping: a run of >= 16 consecutive peripheral polls confined to two addresses can only end when a
+		// peripheral changes state, which only happens when the peripherals run, so jump straight to that deadline.
+		TWord							m_pollA = 0, m_pollB = 0;
+		uint32_t						m_pollRun = 0;
+	public:
+		uint64_t						m_spinSkipped = 0;
+	private:
+#endif
 
 		// used to monitor ALL register changes during exec
 		struct SRegChange
@@ -275,6 +287,7 @@ namespace dsp56k
 		~DSP();
 		uint64_t m_execCount = 0;
 		static uint64_t execCountAll();
+		static uint64_t spinSkippedAll();
 		std::vector<uint32_t> m_pcHist;
 		static void dumpHotAll(size_t _n);
 #endif
