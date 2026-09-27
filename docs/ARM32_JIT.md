@@ -665,3 +665,69 @@ Not measured / open:
 - The cost of idle-voice skipping (would cut the load of silent tracks; not implemented).
 - Starvation risk: a FIFO thread that overruns starves the AudioWorker on its core (RT throttling caps it at
   95% per second). The wrapper needs a bailout, e.g. skip a block and output silence when behind.
+
+
+## Gearmulator synths on the Force (2026-09-27)
+
+Question: which other gearmulator (`dsp56300/gearmulator`, main @ 9710c1f) synths could use the static recompiler on
+the Force? Names checked in the tree: Osirus/OsTIrus = `axel/`, Vavra (microQ) = `waldi/microq`, Xenia
+(Microwave II/XT) = `waldi/xt`, Nord Lead 2x = Nodal Red 2x = `claudia/n2x`. No Nord Lead 1 support exists.
+Method and tools: `tools/gearmulator_study/` (gm_probe: scripted MIDI workload on the whole device, x86 interpreter
+build with `DSP56K_NO_JIT_RUNTIME`, plus the same probe cross-built for armhf and run on the Force, pinned to core 3
+with every thread of the synth on that one core, so its wall/real-time figure includes the 68k µC and thread costs).
+ROMs: user's own (Virus B/C .BIN, microQ 2.23 (byte-swapped dump, swapped back), Microwave II EPROM pair, Nord Lead 2x).
+Not tested: Virus A (OS is two .mid files), OsTIrus (no TI ROM).
+
+**Porting the core to these synths needed two things Monomodule never did** (both behind macros, off by default,
+Monomodule build unchanged):
+1. gearmulator has no interpreter path (it calls `getJit().exec()` and needs the JIT's config); the fork's opcode
+   cache must be enabled (`DSP56K_INTERP_DEFAULT`).
+2. **mQ, XT and n2x clock the ESAI from DSP *cycles*** (`ClockSource::Cycles`); the interpreter only counted
+   instructions, so those synths hang at boot. `DSP56K_INTERP_CYCLES` adds the per-instruction cycle count
+   (`calcCycles`, cached at resolve time). The generated recompiled blocks would have to add the same per-block sum.
+   Also the JIT's `dynamicPeripheralAddressing` (wLib, patterns after `clr b M_AAR3,r2`) has no interpreter
+   equivalent yet: not verified whether it matters for mQ/XT audio.
+
+### Gate 1: cost (stopped here for everything except, conditionally, Vavra)
+
+Executed instructions per audio second (interpreter, whole run incl. boot, 1 DSP unless noted) and the measured Force
+interpreter time for the same run (all threads on core 3):
+
+| synth | DSPs | DSP instr/s | of which idle spin-loops | Force interp (x real time) | projected after recompile (÷3.9) |
+|---|---|---|---|---|---|
+| Vavra (microQ 2.23) | 1 | 52 M | ~42% (4 addresses polling DSR0/TCSR2) | 6.55x | ~170%; ~100% if idle spins are skipped |
+| Xenia (MW2/XT) | 1 | 59 M | ~13% | 7.71x | ~200% |
+| Osirus Virus B | 1 | 107 M | ~59% (main loop at $29051/$e3c) | 8.37x | ~215%; ~120% with idle skip |
+| Osirus Virus C | 1 | 98 M | ~45% (loop $2c084-$2c0a7) | not run | ~200%; ~110-150% with idle skip |
+| Nord Lead 2x | 2 | 189 M total (95 M each) | small | not run (x86 3.0x) | ~250% per DSP thread |
+
+Calibration: the Force runs about 8-9 M DSP instr/s per core in the interpreter (Monomodule: 21 M instr/s at 225%)
+and about 36 M/s recompiled (21 M at 58%). The "20-25 M interpreter, x3.7" rule of thumb would put Vavra at ~65%,
+so the Force run above (which includes the µC) is the number to trust: the interpreter is ~8 M/s here too.
+Verdict per the rule (over ~100% after recompilation = stop): **Osirus, Xenia and Nord Lead 2x fail gate 1.**
+**Vavra is borderline and only passes if idle spin loops are skipped** (a poll-loop fast-forward to the next
+peripheral event; not implemented; changes timing of when the polled bit is seen, so it is not free), and the
+68k µC (mc68k) adds to it. Gates 2-4 were not started for any of them.
+
+### Gate 2 finding: no synth is deterministic run to run, even on the x86 interpreter
+
+Two identical runs of gm_probe give different output hashes for mQ, XT and Virus B (5 s each). The µC thread, the DSP
+thread and the audio thread run free (MIDI lands at a DSP position that depends on thread timing), so "hash the
+x86 interpreter, require the recompiled build to match" does not work at the device level. It needs a lock-step
+mode (DSP halted at frame boundaries, MIDI applied at frame counts) or a DSP-level record/replay of HDI/ESAI input.
+Neither exists; that is the first piece of work if any of these are pursued.
+
+### Known open issue check
+The armhf-vs-x86 interpreter difference seen on Monomodule's effect machines could not be checked: the runs are
+not deterministic (above), so armhf and x86 hashes differ for that reason alone.
+
+### Other candidates
+- `mo0kid/wave` (Waldorf Wave): a JUCE emulator built on 68000 cores and an ES2 ASIC model, no DSP56300. The static
+  recompiler does not apply; it also needs `w2sys.bin`/`wdv.sys`, which are not in the roms folder.
+- "Goldfinger": not in gearmulator main (no source, docs or commits mention it); needs a pointer.
+
+### What each would need
+- DSP thread pinning: one core per DSP (n2x two), SCHED_FIFO above MPC's AudioWorkers (RR 20) as for Monomodule; the µC
+  thread (mc68k) also has to keep up, so a synth is really 2-3 threads.
+- Memory: not measured on device (free memory was ~1 GB of 2 GB). The interpreter opcode cache is 48 B per P word;
+  the P sizes of these synths were not checked.

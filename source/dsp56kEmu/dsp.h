@@ -137,6 +137,9 @@ namespace dsp56k
 			TInstructionFunc op;
 			TInstructionFunc opMove;
 			TInstructionFunc opAlu;
+#ifdef DSP56K_INTERP_CYCLES
+			uint32_t cycles;	// gearmulator study: synths whose ESAI clock counts DSP cycles (mQ, XT, n2x) need them from the interpreter too
+#endif
 		};
 
 		std::vector<OpcodeCacheEntry>	m_opcodeCache;
@@ -222,7 +225,11 @@ namespace dsp56k
 		bool recompVerify(TWord _index) noexcept;
 		void recompInvalidate(TWord _pAddress) noexcept;
 		void recompInvalidateAll() noexcept;
+#ifdef DSP56K_INTERP_DEFAULT
+		bool							m_interpreterEnabled = true;	// gearmulator study: hosts that never call setInterpreterEnabled()
+#else
 		bool							m_interpreterEnabled = false;	// Schwung: see clearOpcodeCache
+#endif
 		
 		InstructionCache				cache;
 
@@ -262,6 +269,15 @@ namespace dsp56k
 		void 	resetHW							();
 		void 	resetSW							();
 
+#ifdef DSP56K_EXEC_STATS
+		// gearmulator study: instructions actually executed by the interpreter (idle WAIT time excluded).
+		// A registry of live DSPs lets a harness sum them across a whole synth; m_pcHist backs dumpHotAll().
+		~DSP();
+		uint64_t m_execCount = 0;
+		static uint64_t execCountAll();
+		std::vector<uint32_t> m_pcHist;
+		static void dumpHotAll(size_t _n);
+#endif
 		void	jsr								(const TReg24& _val);
 		void	jsr								( const TWord _val )						{ jsr(TReg24(_val)); }
 
@@ -305,6 +321,11 @@ namespace dsp56k
 #ifdef DSP56K_RECOMP
 			if(execRecompiled(pcCurrentInstruction))
 				return;
+#endif
+#ifdef DSP56K_EXEC_STATS
+			++m_execCount;
+			if(m_pcHist.size() <= pcCurrentInstruction) m_pcHist.resize(mem.sizeP());
+			++m_pcHist[pcCurrentInstruction];
 #endif
 			const auto op = fetchPC();
 

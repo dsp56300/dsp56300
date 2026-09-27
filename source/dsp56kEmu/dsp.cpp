@@ -3,9 +3,14 @@
 #include "dsp.h"
 
 #include <iomanip>
+#include <mutex>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
 #include <cstring>
 
 #include "registers.h"
+#include "opcodecycles.h"
 #include "types.h"
 #include "memory.h"
 #include "disasm.h"
@@ -76,6 +81,35 @@ namespace dsp56k
 	// _____________________________________________________________________________
 	// DSP
 	//
+#ifdef DSP56K_EXEC_STATS
+	namespace { std::mutex g_execMutex; std::vector<const DSP*>& execRegistry() { static std::vector<const DSP*> r; return r; } uint64_t g_execRetired = 0; }
+	DSP::~DSP() { std::lock_guard l(g_execMutex); g_execRetired += m_execCount; auto& r = execRegistry(); r.erase(std::remove(r.begin(), r.end(), this), r.end()); }
+	void DSP::dumpHotAll(size_t _n)
+	{
+		std::lock_guard l(g_execMutex);
+		int idx = 0;
+		for (auto* dc : execRegistry())
+		{
+			auto* d = const_cast<DSP*>(dc);
+			std::vector<std::pair<uint32_t, uint32_t>> v;
+			uint64_t tot = 0;
+			for (uint32_t i = 0; i < d->m_pcHist.size(); ++i) if (d->m_pcHist[i]) { v.push_back({d->m_pcHist[i], i}); tot += d->m_pcHist[i]; }
+			std::sort(v.rbegin(), v.rend());
+			printf("DSP#%d total=%llu distinct_pcs=%zu\n", idx++, (unsigned long long)tot, v.size());
+			uint64_t cum = 0;
+			for (size_t k = 0; k < v.size() && k < _n; ++k)
+			{
+				const TWord pc = v[k].second;
+				const TWord a = d->mem.get(MemArea_P, pc), b = d->mem.get(MemArea_P, pc + 1);
+				std::string txt; d->m_disasm.disassemble(txt, a, b, 0, 0, pc);
+				cum += v[k].first;
+				printf("  %06x %6.2f%% cum %6.2f%%  %06x %06x  %s\n", pc, 100.0 * v[k].first / tot, 100.0 * cum / tot, a, b, txt.c_str());
+			}
+		}
+	}
+	uint64_t DSP::execCountAll() { std::lock_guard l(g_execMutex); uint64_t t = g_execRetired; for (auto* d : execRegistry()) t += d->m_execCount; return t; }
+#endif
+
 	DSP::DSP(Memory& _memory, IPeripherals* _pX, IPeripherals* _pY)
 		: mem(_memory)
 		, perif({_pX, _pY})
@@ -86,6 +120,9 @@ namespace dsp56k
 		, m_disasm(m_opcodes)
 	{
 		assert(_pX != _pY && "cannot use the same peripherals twice");
+#ifdef DSP56K_EXEC_STATS
+		{ std::lock_guard l(g_execMutex); execRegistry().push_back(this); }
+#endif
 
 		mem.setDSP(this);
 
@@ -328,6 +365,9 @@ namespace dsp56k
 
 		exec_jump(opCache.op, op);
 
+#ifdef DSP56K_INTERP_CYCLES
+		m_cycles += opCache.cycles;
+#endif
 		if(pcCurrentInstruction == currentOp)
 		{
 			++m_instructions;

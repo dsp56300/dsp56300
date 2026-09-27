@@ -1,0 +1,83 @@
+diff --git a/source/axel/virusLib/device.cpp b/source/axel/virusLib/device.cpp
+index 611a0a5d..a04ec90f 100644
+--- a/source/axel/virusLib/device.cpp
++++ b/source/axel/virusLib/device.cpp
+@@ -661,7 +661,7 @@ namespace virusLib
+ 			// retired and the DSP derails into a garbage PC while still booting. Verified on
+ 			// 2.52, the whole 2.5x range is assumed to share it. Later OSs contain the pattern
+ 			// too but not on a path that derails, so keep them as they are.
+-			conf.supportBranchAtLoopEnd = _rom.getOsVersion().find("v25") == 0;
++			// (fork core: no supportBranchAtLoopEnd)
+ 		}
+ 
+ 		jit.setConfig(conf);
+diff --git a/source/claudia/n2x/n2xLib/n2xhardware.cpp b/source/claudia/n2x/n2xLib/n2xhardware.cpp
+index 6ec2aef7..1263d761 100644
+--- a/source/claudia/n2x/n2xLib/n2xhardware.cpp
++++ b/source/claudia/n2x/n2xLib/n2xhardware.cpp
+@@ -1,7 +1,6 @@
+ #include "n2xhardware.h"
+ 
+ #include "n2xromloader.h"
+-#include "dsp56kBase/audioworkgroup.h"
+ #include "dsp56kBase/threadtools.h"
+ #include "synthLib/deviceException.h"
+ 
+@@ -294,11 +293,9 @@ namespace n2x
+ 		dsp56k::ThreadTools::setCurrentThreadName("MC68331");
+ 		dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest);
+ 
+-		dsp56k::AudioWorkgroup::Member workgroup;
+ 
+ 		while(!m_destroy)
+ 		{
+-			workgroup.update();
+ 			processUC();
+ 			processUC();
+ 			processUC();
+diff --git a/source/waldi/microq/mqLib/microq.cpp b/source/waldi/microq/mqLib/microq.cpp
+index a92a3ffc..2fb3d5b6 100644
+--- a/source/waldi/microq/mqLib/microq.cpp
++++ b/source/waldi/microq/mqLib/microq.cpp
+@@ -3,7 +3,6 @@
+ #include "synthLib/midiTypes.h"
+ #include "synthLib/deviceException.h"
+ 
+-#include "dsp56kBase/audioworkgroup.h"
+ #include "dsp56kBase/threadtools.h"
+ 
+ #include "mqhardware.h"
+@@ -46,10 +45,8 @@ namespace mqLib
+ 		{
+ 			dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest);
+ 			dsp56k::ThreadTools::setCurrentThreadName("MC68331");
+-			dsp56k::AudioWorkgroup::Member workgroup;
+ 			while(!m_destroy)
+ 			{
+-				workgroup.update();
+ 				processUcThread();
+ 			}
+ 			m_destroy = false;
+diff --git a/source/waldi/xt/xtLib/xt.cpp b/source/waldi/xt/xtLib/xt.cpp
+index e2cc6700..c5f0e3ab 100644
+--- a/source/waldi/xt/xtLib/xt.cpp
++++ b/source/waldi/xt/xtLib/xt.cpp
+@@ -3,7 +3,6 @@
+ #include "xtBuildconfig.h"
+ #include "synthLib/midiTypes.h"
+ 
+-#include "dsp56kBase/audioworkgroup.h"
+ #include "dsp56kBase/threadtools.h"
+ 
+ #include "xtHardware.h"
+@@ -24,10 +23,8 @@ namespace xt
+ 		{
+ 			dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest);
+ 			dsp56k::ThreadTools::setCurrentThreadName("MC68331");
+-			dsp56k::AudioWorkgroup::Member workgroup;
+ 			while(!m_destroy)
+ 			{
+-				workgroup.update();
+ 				processUcThread();
+ 			}
+ 			m_destroy = false;

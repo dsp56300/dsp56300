@@ -548,6 +548,14 @@ namespace dsp56k
 	{
 		auto& cacheEntry = m_opcodeCache[pcCurrentInstruction];
 		cacheEntry.op = &DSP::op_Nop;
+#ifdef DSP56K_INTERP_CYCLES
+		{
+			Instruction instA = Invalid, instB = Invalid;
+			if(op)
+				m_opcodes.getInstructionTypes(op, instA, instB);
+			cacheEntry.cycles = op ? calcCycles(instA, instB, pcCurrentInstruction, op, 0, 1) : 1;
+		}
+#endif
 
 		if( !op )
 		{
