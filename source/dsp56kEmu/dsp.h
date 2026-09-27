@@ -254,8 +254,13 @@ namespace dsp56k
 		void	execDefaultPreventInterrupt		();
 
 		bool	readReg							( EReg _reg, TReg8& _res ) const;
+		bool	writeReg						( EReg _reg, const TReg8& _val );
+
 		bool	readReg							( EReg _reg, TReg48& _res ) const;
+		bool	writeReg						( EReg _reg, const TReg48& _val );
+
 		bool	readReg							( EReg _reg, TReg5& _res ) const;
+		bool	writeReg						( EReg _reg, const TReg5& _val );
 
 		bool	readReg							( EReg _reg, TReg24& _res ) const;
 		bool	writeReg						( EReg _reg, const TReg24& _val );

@@ -750,8 +750,8 @@ namespace dsp56k
 		case Reg_VBA:	_res = reg.vba;			break;
 		case Reg_SZ:	_res = reg.sz;			break;
 		case Reg_EP:	_res = reg.ep;			break;
-		case Reg_DCR:	_res.var = 0;/*reg.dcr;*/	break;
-		case Reg_BCR:	_res.var = 0;/*reg.bcr;*/	break;
+		case Reg_DCR:	_res.var = memReadPeriph(MemArea_X, XIO_DCR, Nop);	break;
+		case Reg_BCR:	_res.var = memReadPeriph(MemArea_X, XIO_BCR, Nop);	break;
 		case Reg_IPRP:	_res.var = iprp();		break;
 		case Reg_IPRC:	_res.var = iprc();		break;
 
@@ -877,7 +877,14 @@ namespace dsp56k
 	bool DSP::writeReg( EReg _reg, const TReg24& _res )
 	{
 		assert( (_res.var & 0xff000000) == 0 );
-			
+
+		// the JIT compiles for the addressing mode of each M register and the mode bits of the SR
+		auto setM = [&](const int _index)
+		{
+			set_m(_index, _res.var);
+			m_jit.checkModeChange();
+		};
+
 		switch( _reg )
 		{
 		case Reg_N0:	reg.n[0] = _res;	break;
@@ -898,14 +905,14 @@ namespace dsp56k
 		case Reg_R6:	reg.r[6] = _res;	break;
 		case Reg_R7:	reg.r[7] = _res;	break;
 							
-		case Reg_M0:	set_m(0, _res.var);		break;
-		case Reg_M1:	set_m(1, _res.var);		break;
-		case Reg_M2:	set_m(2, _res.var);		break;
-		case Reg_M3:	set_m(3, _res.var);		break;
-		case Reg_M4:	set_m(4, _res.var);		break;
-		case Reg_M5:	set_m(5, _res.var);		break;
-		case Reg_M6:	set_m(6, _res.var);		break;
-		case Reg_M7:	set_m(7, _res.var);		break;
+		case Reg_M0:	setM(0);		break;
+		case Reg_M1:	setM(1);		break;
+		case Reg_M2:	setM(2);		break;
+		case Reg_M3:	setM(3);		break;
+		case Reg_M4:	setM(4);		break;
+		case Reg_M5:	setM(5);		break;
+		case Reg_M6:	setM(6);		break;
+		case Reg_M7:	setM(7);		break;
 							
 		case Reg_A0:	a0(_res);		break;
 		case Reg_A1:	a1(_res);		break;
@@ -919,6 +926,42 @@ namespace dsp56k
 		case Reg_Y1:	y1(_res);		break;
 
 		case Reg_PC:	setPC(_res);	break;
+		case Reg_SR:	setSR(_res);	m_jit.checkModeChange();	break;
+		case Reg_OMR:	reg.omr = _res;		break;
+		case Reg_SP:	reg.sp = _res;		break;
+
+		// LA is where the running loop ends, the JIT keeps a registry of loop ends
+		case Reg_LA:	reg.la = _res;	m_jit.checkLoopEnd();	break;
+		case Reg_LC:	reg.lc = _res;		break;
+
+		// like readReg, the top of the stack is written in place, unlike a MOVEC to SSH that pushes
+		case Reg_SSH:	hiword(reg.ss[ssIndex()], _res);	break;
+		case Reg_SSL:	ssl(_res);			break;
+
+		case Reg_VBA:	reg.vba = _res;		break;
+		case Reg_SZ:	reg.sz = _res;		break;
+		case Reg_EP:	reg.ep = _res;		break;
+		case Reg_DCR:	memWritePeriph(MemArea_X, XIO_DCR, _res.var);	break;
+		case Reg_BCR:	memWritePeriph(MemArea_X, XIO_BCR, _res.var);	break;
+		case Reg_IPRP:	iprp(_res.var);		break;
+		case Reg_IPRC:	iprc(_res.var);		break;
+
+		case Reg_AAR0:	memWritePeriph(MemArea_X, M_AAR0, _res.var);	break;
+		case Reg_AAR1:	memWritePeriph(MemArea_X, M_AAR1, _res.var);	break;
+		case Reg_AAR2:	memWritePeriph(MemArea_X, M_AAR2, _res.var);	break;
+		case Reg_AAR3:	memWritePeriph(MemArea_X, M_AAR3, _res.var);	break;
+
+		// the instruction counter and the counters that readReg reports as zero are not modelled registers
+		case Reg_ICTR:
+		case Reg_CNT1:
+		case Reg_CNT2:
+		case Reg_CNT3:
+		case Reg_CNT4:
+		case Reg_REPLACE:
+		case Reg_HIT:
+		case Reg_MISS:
+		case Reg_CYC:
+			return false;
 
 		default:
 			assert( 0 && "unknown register" );
@@ -937,6 +980,45 @@ namespace dsp56k
 		{
 		case Reg_A:		setALU(false, _val);	return true;
 		case Reg_B:		setALU(true , _val);	return true;
+		}
+		assert( 0 && "unknown register" );
+		return false;
+	}
+	// _____________________________________________________________________________
+	// writeReg
+	//
+	bool DSP::writeReg( EReg _reg, const TReg8& _val )
+	{
+		switch( _reg )
+		{
+		case Reg_A2:	a2(_val);	return true;
+		case Reg_B2:	b2(_val);	return true;
+		}
+		assert( 0 && "unknown register" );
+		return false;
+	}
+	// _____________________________________________________________________________
+	// writeReg
+	//
+	bool DSP::writeReg( EReg _reg, const TReg48& _val )
+	{
+		switch( _reg )
+		{
+		case Reg_X:		reg.x = _val;	return true;
+		case Reg_Y:		reg.y = _val;	return true;
+		}
+		assert( 0 && "unknown register" );
+		return false;
+	}
+	// _____________________________________________________________________________
+	// writeReg
+	//
+	bool DSP::writeReg( EReg _reg, const TReg5& _val )
+	{
+		if( _reg == Reg_SC )
+		{
+			reg.sc.var = _val.var & 0x1f;
+			return true;
 		}
 		assert( 0 && "unknown register" );
 		return false;

@@ -238,6 +238,7 @@ namespace  dsp56k
 		void esaiResetClearsStatus();
 		void hostQueueDataWaitsForHostFlags();
 		void maskedInterruptKeepsPeripheralsRunning();
+		void writeRegAndJitMode();
 		void memoryMirror();
 
 		Peripherals56362 peripheralsX;

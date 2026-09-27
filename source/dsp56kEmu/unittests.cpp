@@ -238,6 +238,9 @@ namespace dsp56k
 		hostQueueDataWaitsForHostFlags();
 		maskedInterruptKeepsPeripheralsRunning();
 
+		// register access
+		writeRegAndJitMode();
+
 		// memory
 		memoryMirror();
 
@@ -2351,6 +2354,86 @@ namespace dsp56k
 			execStep();
 		verify(!dsp.hasPendingInterrupts());
 		verify(dsp.aluA().var == 1);
+
+		dsp.resetHW();
+	}
+
+	/*	writeReg covers every register that readReg reports. The JIT compiles for the mode bits of the SR and the addressing
+		mode of each M register, so a write to them has to switch the JIT to code for the new mode
+	*/
+	void UnitTests::writeRegAndJitMode()
+	{
+		dsp.resetHW();
+
+		auto roundTrip = [&](const EReg _reg, const auto& _value)
+		{
+			verify(dsp.writeReg(_reg, _value));
+			auto res = _value;
+			res.var = 0;
+			verify(dsp.readReg(_reg, res));
+			verify(res.var == _value.var);
+		};
+
+		// LA before SP: with an empty stack there is no running loop whose end the JIT would move
+		roundTrip(Reg_LA, TReg24(0x000400));
+		roundTrip(Reg_LC, TReg24(0x000010));
+		roundTrip(Reg_SR, TReg24(0x0003c5));
+		roundTrip(Reg_OMR, TReg24(0x000001));
+		roundTrip(Reg_SP, TReg24(0x000003));
+		roundTrip(Reg_SSH, TReg24(0x123456));
+		roundTrip(Reg_SSL, TReg24(0x654321));
+		roundTrip(Reg_VBA, TReg24(0x000100));
+		roundTrip(Reg_SZ, TReg24(0x000020));
+		roundTrip(Reg_EP, TReg24(0x000123));
+		roundTrip(Reg_IPRP, TReg24(0x000003));
+		roundTrip(Reg_IPRC, TReg24(0x000004));
+		roundTrip(Reg_AAR1, TReg24(0x00023a));
+		roundTrip(Reg_DCR, TReg24(0xffb905));
+		roundTrip(Reg_BCR, TReg24(0x012421));
+		roundTrip(Reg_A2, TReg8(static_cast<TReg8::MyType>(0x12)));
+		roundTrip(Reg_B2, TReg8(static_cast<TReg8::MyType>(0xfe)));
+		TReg48 xy;
+		xy.var = 0x123456789abc;
+		roundTrip(Reg_X, xy);
+		xy.var = 0xcba987654321;
+		roundTrip(Reg_Y, xy);
+		roundTrip(Reg_SC, TReg5(static_cast<TReg5::MyType>(0x15)));
+
+		// the instruction counter is not a register that the DSP code can write
+		verify(!dsp.writeReg(Reg_ICTR, TReg24(0)));
+
+		dsp.resetHW();
+
+		// scaling mode on a move out of an accumulator
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00123456000000)));
+		emitToMemory("move a,x0", 0x100);
+		emitToMemory(0x0af080, 0x100, 0x101);			// jmp >$100
+		dsp.setPC(0x100);
+		execStep();
+		verify(dsp.x0().var == 0x123456);
+
+		TReg24 sr;
+		verify(dsp.readReg(Reg_SR, sr));
+		verify(dsp.writeReg(Reg_SR, TReg24(sr.var | SR_S0)));	// scale down
+		dsp.setPC(0x100);
+		execStep();
+		verify(dsp.x0().var == 0x091a2b);
+
+		dsp.resetHW();
+
+		// modulo 4 on r0 wraps from $203 to $200
+		emitToMemory("move (r0)+", 0x110);
+		emitToMemory(0x0af080, 0x110, 0x111);			// jmp >$110
+		dsp.regs().r[0].var = 0x203;
+		dsp.setPC(0x110);
+		execStep();
+		verify(dsp.regs().r[0].var == 0x204);
+
+		verify(dsp.writeReg(Reg_M0, TReg24(0x000003)));
+		dsp.regs().r[0].var = 0x203;
+		dsp.setPC(0x110);
+		execStep();
+		verify(dsp.regs().r[0].var == 0x200);
 
 		dsp.resetHW();
 	}

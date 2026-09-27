@@ -88,6 +88,7 @@ namespace dsp56k
 		void destroyToRecreate(TWord _pc);
 
 		void checkModeChange() noexcept;
+		void checkLoopEnd() noexcept;
 
 		void onDebuggerAttached(DebuggerInterface& _debugger) const;
 
@@ -106,7 +107,6 @@ namespace dsp56k
 
 	private:
 		void checkPMemWrite() noexcept;
-		void checkLoopEnd() noexcept;
 		void moveLoopEnd(TWord _begin, TWord _end);
 
 		DSP& m_dsp;
