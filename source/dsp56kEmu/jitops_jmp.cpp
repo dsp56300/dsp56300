@@ -16,123 +16,85 @@ namespace dsp56k
 		_dsp->fastForward(_instructions, _instructions);
 	}
 
-	template<bool ExpectedValue>
-	void callDspRemainingInstructionsForTransmitFrameSync(DSP* _dsp)
+	template<bool ExpectedValue, TWord Bit>
+	void callDspSkipToEsaiSlot(DSP* _dsp)
 	{
 		auto* p = static_cast<Peripherals56362*>(_dsp->getPeriph(0));  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
-		skipToFrameSync(_dsp, p->getEsaiClock().getRemainingInstructionsForTransmitFrameSync<ExpectedValue>());
+		const bool flag = bittest<TWord, Bit>(p->getEsai().readStatusRegister());
+		skipToFrameSync(_dsp, p->getEsaiClock().getRemainingInstructionsUntil<ExpectedValue>(flag));
 	}
 
-	template<bool ExpectedValue>
-	void callDspRemainingInstructionsForReceiveFrameSync(DSP* _dsp)
-	{
-		auto* p = static_cast<Peripherals56362*>(_dsp->getPeriph(0));  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
-		skipToFrameSync(_dsp, p->getEsaiClock().getRemainingInstructionsForReceiveFrameSync<ExpectedValue>());
-	}
-
-	template<bool ExpectedValue, uint32_t EssiIndex>
-	void callDspRemainingInstructionsForEssiTransmitFrameSync(DSP* _dsp)
+	template<bool ExpectedValue, uint32_t EssiIndex, TWord Bit>
+	void callDspSkipToEssiSlot(DSP* _dsp)
 	{
 		auto* p = static_cast<Peripherals56303*>(_dsp->getPeriph(0));  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
-		skipToFrameSync(_dsp, p->getEssiClock().getRemainingInstructionsForTransmitFrameSync<ExpectedValue>(EssiIndex));
+		const bool flag = bittest<TWord, Bit>((EssiIndex ? p->getEssi1() : p->getEssi0()).readSR());
+		skipToFrameSync(_dsp, p->getEssiClock().getRemainingInstructionsUntil<ExpectedValue>(flag));
 	}
 
-	template<bool ExpectedValue, uint32_t EssiIndex>
-	void callDspRemainingInstructionsForEssiReceiveFrameSync(DSP* _dsp)
+	using SkipToSlotFunc = void (*)(DSP*);
+
+	template<bool ExpectedValue> SkipToSlotFunc esaiSkipToSlot(const TWord _bit)
 	{
-		auto* p = static_cast<Peripherals56303*>(_dsp->getPeriph(0));  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
-		skipToFrameSync(_dsp, p->getEssiClock().getRemainingInstructionsForReceiveFrameSync<ExpectedValue>(EssiIndex));
+		switch(_bit)
+		{
+		case Esai::M_TFS:	return &callDspSkipToEsaiSlot<ExpectedValue, Esai::M_TFS>;
+		case Esai::M_RFS:	return &callDspSkipToEsaiSlot<ExpectedValue, Esai::M_RFS>;
+		case Esai::M_TDE:	return &callDspSkipToEsaiSlot<ExpectedValue, Esai::M_TDE>;
+		case Esai::M_RDF:	return &callDspSkipToEsaiSlot<ExpectedValue, Esai::M_RDF>;
+		default:			return nullptr;
+		}
 	}
 
-	// If the DSP is spinlooping while waiting for the ESAI frame sync to flip, we fast-forward the DSP instructions to make it happen ASAP
-
-	template<Instruction Inst, ExpectedBitValue BitValue> void JitOps::esaiFrameSyncSpinloopBra(const TWord op) const
+	template<bool ExpectedValue, uint32_t EssiIndex> SkipToSlotFunc essiSkipToSlot(const TWord _bit)
 	{
-		if(!dynamic_cast<Peripherals56362*>(getBlock().dsp().getPeriph(0)))
+		switch(_bit)
+		{
+		case Essi::SSISR_TFS:	return &callDspSkipToEssiSlot<ExpectedValue, EssiIndex, Essi::SSISR_TFS>;
+		case Essi::SSISR_RFS:	return &callDspSkipToEssiSlot<ExpectedValue, EssiIndex, Essi::SSISR_RFS>;
+		case Essi::SSISR_TDE:	return &callDspSkipToEssiSlot<ExpectedValue, EssiIndex, Essi::SSISR_TDE>;
+		case Essi::SSISR_RDF:	return &callDspSkipToEssiSlot<ExpectedValue, EssiIndex, Essi::SSISR_RDF>;
+		default:				return nullptr;
+		}
+	}
+
+	/*	A DSP that spins on a flag of its serial interface - a frame sync, a transmit register that became empty or a
+		receive register that became full - waits for the next slot, so fast forward it to that slot. Spinning, it runs
+		several cycles per instruction, many more than the code the clock measured its ratio on: after a restart of the
+		clock, a poll for the first received word ran past the slot by more than a slot and found an overrun
+	*/
+	template<Instruction Inst, ExpectedBitValue BitValue> void JitOps::serialStatusSpinloop(const TWord op, const bool _loopsToItself) const
+	{
+		if(!_loopsToItself)
 			return;
 
-		// If the DSP is spinlooping while waiting for the ESAI frame sync to flip, we fast-forward the DSP instructions to make it happen ASAP
+		// spinning while the bit is clear waits for it to be set
+		constexpr bool expected = BitValue == BitClear;
+
 		const auto bit = getBit<Inst>(op);
 		const auto addr = getFieldValue<Inst, Field_qqqqqq>(op) + 0xffff80;
 
-		if (m_opWordB == 0 && addr == Esai::M_SAISR && bit == Esai::M_TFS)
-		{
-			// op word B = jump to self, addr = ESAI status register, bit test for bit Transmit Frame Sync
-			const FuncArg r0(m_block, 0);
-			m_block.mem().makeDspPtr(r0);
-			m_block.stack().call(asmjit::func_as_ptr(&callDspRemainingInstructionsForTransmitFrameSync<BitValue == BitClear>));
-		}
-	}
+		SkipToSlotFunc func = nullptr;
 
-	template<Instruction Inst, ExpectedBitValue BitValue> void JitOps::esaiFrameSyncSpinloopJmp(const TWord op) const
-	{
 		if(dynamic_cast<Peripherals56362*>(getBlock().dsp().getPeriph(0)))
 		{
-			const auto bit = getBit<Inst>(op);
-			const auto addr = getFieldValue<Inst, Field_qqqqqq>(op) + 0xffff80;
-
-			if (m_opWordB == m_pcCurrentOp && addr == Esai::M_SAISR)
-			{
-				if(bit == Esai::M_TFS)
-				{
-					// op word B = jump to self, addr = ESAI status register, bit test for bit Transmit Frame Sync
-					const FuncArg r0(m_block, 0);
-					m_block.mem().makeDspPtr(r0);
-					m_block.stack().call(asmjit::func_as_ptr(&callDspRemainingInstructionsForTransmitFrameSync<BitValue == BitClear>));
-				}
-				else if(bit == Esai::M_RFS)
-				{
-					// op word B = jump to self, addr = ESAI status register, bit test for bit Receive Frame Sync
-					const FuncArg r0(m_block, 0);
-					m_block.mem().makeDspPtr(r0);
-					m_block.stack().call(asmjit::func_as_ptr(&callDspRemainingInstructionsForReceiveFrameSync<BitValue == BitClear>));
-				}
-			}
+			if(addr == Esai::M_SAISR)
+				func = esaiSkipToSlot<expected>(bit);
 		}
 		else if(dynamic_cast<Peripherals56303*>(getBlock().dsp().getPeriph(0)))
 		{
-			const auto bit = getBit<Inst>(op);
-			const auto addr = getFieldValue<Inst, Field_qqqqqq>(op) + 0xffff80;
-
-			if (m_opWordB != m_pcCurrentOp)
-				return;
-
 			if(addr == Essi::ESSI0_SSISR)
-			{
-				if(bit == Essi::SSISR_TFS)
-				{
-					// op word B = jump to self, addr = ESSI0 status register, bit test for bit Transmit Frame Sync
-					const FuncArg r0(m_block, 0);
-					m_block.mem().makeDspPtr(r0);
-					m_block.stack().call(asmjit::func_as_ptr(&callDspRemainingInstructionsForEssiTransmitFrameSync<BitValue == BitClear, 0>));
-				}
-				if(bit == Essi::SSISR_RFS)
-				{
-					// op word B = jump to self, addr = ESSI0 status register, bit test for bit Receive Frame Sync
-					const FuncArg r0(m_block, 0);
-					m_block.mem().makeDspPtr(r0);
-					m_block.stack().call(asmjit::func_as_ptr(&callDspRemainingInstructionsForEssiReceiveFrameSync<BitValue == BitClear, 0>));
-				}
-			}
-
-			if(addr == Essi::ESSI1_SSISR)
-			{
-				if(bit == Essi::SSISR_TFS)
-				{
-					// op word B = jump to self, addr = ESSI1 status register, bit test for bit Transmit Frame Sync
-					const FuncArg r0(m_block, 0);
-					m_block.mem().makeDspPtr(r0);
-					m_block.stack().call(asmjit::func_as_ptr(&callDspRemainingInstructionsForEssiTransmitFrameSync<BitValue == BitClear, 1>));
-				}
-				if(bit == Essi::SSISR_RFS)
-				{
-					// op word B = jump to self, addr = ESSI1 status register, bit test for bit Receive Frame Sync
-					const FuncArg r0(m_block, 0);
-					m_block.mem().makeDspPtr(r0);
-					m_block.stack().call(asmjit::func_as_ptr(&callDspRemainingInstructionsForEssiReceiveFrameSync<BitValue == BitClear, 1>));
-				}
-			}
+				func = essiSkipToSlot<expected, 0>(bit);
+			else if(addr == Essi::ESSI1_SSISR)
+				func = essiSkipToSlot<expected, 1>(bit);
 		}
+
+		if(!func)
+			return;
+
+		const FuncArg r0(m_block, 0);
+		m_block.mem().makeDspPtr(r0);
+		m_block.stack().call(asmjit::func_as_ptr(func));
 	}
 
 	// Brclr
@@ -141,7 +103,7 @@ namespace dsp56k
 	void JitOps::op_Brclr_pp(const TWord op) { braIfBitTestMem<Brclr_pp, Bra, BitClear>(op); }
 	void JitOps::op_Brclr_qq(const TWord op)
 	{
-		esaiFrameSyncSpinloopBra<Brclr_qq, BitClear>(op);
+		serialStatusSpinloop<Brclr_qq, BitClear>(op, m_opWordB == 0);
 		braIfBitTestMem<Brclr_qq, Bra, BitClear>(op);
 	}
 	void JitOps::op_Brclr_S(const TWord op) { braIfBitTestDDDDDD<Brclr_S, Bra, BitClear>(op); }
@@ -152,7 +114,7 @@ namespace dsp56k
 	void JitOps::op_Brset_pp(const TWord op) { braIfBitTestMem<Brset_pp, Bra, BitSet>(op); }
 	void JitOps::op_Brset_qq(const TWord op)
 	{
-		esaiFrameSyncSpinloopBra<Brset_qq, BitSet>(op);
+		serialStatusSpinloop<Brset_qq, BitSet>(op, m_opWordB == 0);
 		braIfBitTestMem<Brset_qq, Bra, BitSet>(op);
 	}
 	void JitOps::op_Brset_S(const TWord op) { braIfBitTestDDDDDD<Brset_S, Bra, BitSet>(op); }
@@ -268,7 +230,7 @@ namespace dsp56k
 	void JitOps::op_Jclr_pp(const TWord op) { jumpIfBitTestMem<Jclr_pp, Jump, BitClear>(op); }
 	void JitOps::op_Jclr_qq(const TWord op)
 	{
-		esaiFrameSyncSpinloopJmp<Jclr_qq, BitClear>(op);
+		serialStatusSpinloop<Jclr_qq, BitClear>(op, m_opWordB == m_pcCurrentOp);
 		jumpIfBitTestMem<Jclr_qq, Jump, BitClear>(op);
 	}
 	void JitOps::op_Jclr_S(const TWord op) { jumpIfBitTestDDDDDD<Jclr_S, Jump, BitClear>(op); }
@@ -283,7 +245,7 @@ namespace dsp56k
 	void JitOps::op_Jset_pp(const TWord op) { jumpIfBitTestMem<Jset_pp, Jump, BitSet>(op); }
 	void JitOps::op_Jset_qq(const TWord op)
 	{
-		esaiFrameSyncSpinloopJmp<Jclr_qq, BitSet>(op);
+		serialStatusSpinloop<Jclr_qq, BitSet>(op, m_opWordB == m_pcCurrentOp);
 		jumpIfBitTestMem<Jset_qq, Jump, BitSet>(op);
 	}
 	void JitOps::op_Jset_S(const TWord op) { jumpIfBitTestDDDDDD<Jset_S, Jump, BitSet>(op); }

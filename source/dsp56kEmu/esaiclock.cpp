@@ -312,63 +312,7 @@ namespace dsp56k
 	{
 	}
 
-	template<bool ExpectedResult>
-	TWord EsaiClock::getRemainingInstructionsForTransmitFrameSync() const
-	{
-		if (static_cast<bool>(static_cast<Esai*>(getEsais().front().esai)->getTransmitFrameSync()) == ExpectedResult)
-		{
-			// already reached the desired value
-			return 0;
-		}
-
-		return getRemainingInstructionsForFrameSync();
-	}
-
-	template<bool ExpectedResult>
-	TWord EsaiClock::getRemainingInstructionsForReceiveFrameSync() const
-	{
-		if (static_cast<bool>(static_cast<Esai*>(getEsais().front().esai)->getReceiveFrameSync()) == ExpectedResult)
-		{
-			// already reached the desired value
-			return 0;
-		}
-
-		return getRemainingInstructionsForFrameSync();
-	}
-
 	EssiClock::EssiClock(Peripherals56303& _peripherals) : EsxiClock(_peripherals)
 	{
 	}
-
-	template<bool ExpectedResult>
-	TWord EssiClock::getRemainingInstructionsForTransmitFrameSync(uint32_t _esaiIndex) const
-	{
-		if (static_cast<Essi*>(getEsais()[_esaiIndex].esai)->getTransmitFrameSync() == ExpectedResult)
-		{
-			// already reached the desired value
-			return 0;
-		}
-		return getRemainingInstructionsForFrameSync();
-	}
-
-	template<bool ExpectedResult>
-	TWord EssiClock::getRemainingInstructionsForReceiveFrameSync(uint32_t _esaiIndex) const
-	{
-		if (static_cast<Essi*>(getEsais()[_esaiIndex].esai)->getReceiveFrameSync() == ExpectedResult)
-		{
-			// already reached the desired value
-			return 0;
-		}
-		return getRemainingInstructionsForFrameSync();
-	}
-
-	template TWord EssiClock::getRemainingInstructionsForTransmitFrameSync<true>(uint32_t) const;
-	template TWord EssiClock::getRemainingInstructionsForTransmitFrameSync<false>(uint32_t) const;
-	template TWord EssiClock::getRemainingInstructionsForReceiveFrameSync<true>(uint32_t) const;
-	template TWord EssiClock::getRemainingInstructionsForReceiveFrameSync<false>(uint32_t) const;
-
-	template TWord EsaiClock::getRemainingInstructionsForTransmitFrameSync<true>() const;
-	template TWord EsaiClock::getRemainingInstructionsForTransmitFrameSync<false>() const;
-	template TWord EsaiClock::getRemainingInstructionsForReceiveFrameSync<true>() const;
-	template TWord EsaiClock::getRemainingInstructionsForReceiveFrameSync<false>() const;
 }

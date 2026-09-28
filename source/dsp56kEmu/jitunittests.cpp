@@ -69,6 +69,7 @@ namespace dsp56k
 
 		blockDestroyedWhileRunning();
 		branchOutOfPMemory();
+		receivePollAfterClockRestart();
 	}
 
 	JitUnittests::~JitUnittests()
@@ -1266,6 +1267,54 @@ namespace dsp56k
 		verify(dsp.getPC().toWord() == g_bootRom);
 
 		dsp.getJit().setConfig(oldConfig);
+	}
+
+	/*	A poll for the first received word right after the serial clock restarted. The clock converts the cycles to
+		its next slot to instructions with the ratio it measured last, here on code that ran a cycle per instruction.
+		The poll runs several cycles per instruction and reached that deadline slots after its slot. A poll that
+		loops to itself fast forwards to the slot instead
+	*/
+	void JitUnittests::receivePollAfterClockRestart()
+	{
+		constexpr TWord g_pc = 0x3200;
+		constexpr uint32_t g_cyclesPerSample = 72;
+
+		auto& esai = peripheralsX.getEsai();
+		auto& clock = peripheralsX.getEsaiClock();
+
+		const auto oldSource = clock.getClockSource();
+		const auto oldCycles = clock.getCyclesPerSample();
+
+		dsp.resetHW();
+
+		clock.setCyclesPerSample(g_cyclesPerSample);
+		clock.setClockSource(EsxiClock::ClockSource::Cycles);
+
+		for(uint32_t i=0; i<4; ++i)
+		{
+			clock.restartClock();
+			dsp.fastForward(16, 16);
+			clock.exec();
+		}
+
+		emitToMemory("brclr #8,x:<<$ffffb3,>$0", g_pc);	// RDF, loops to itself
+		dsp.memWriteP(g_pc + 1, 0);
+		emitToMemory("nop", g_pc + 2);
+
+		esai.writeReceiveClockControlRegister(1 << Esai::M_RDC0);		// two slots per frame
+		esai.writeEmptyAudioIn(2);
+		esai.writeReceiveControlRegister((1 << Esai::M_RMOD0) | (1 << Esai::M_RE0));	// restarts the clock
+
+		const auto start = dsp.getCycles();
+
+		dsp.setPC(g_pc);
+		execUntil(g_pc + 2);
+
+		verify(dsp.getCycles() - start < g_cyclesPerSample * 3 / 2);
+
+		esai.writeReceiveControlRegister(0);
+		clock.setCyclesPerSample(oldCycles);
+		clock.setClockSource(oldSource);
 	}
 
 	void JitUnittests::emit(const TWord _opA, TWord _opB, TWord _pc)

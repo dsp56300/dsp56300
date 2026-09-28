@@ -78,6 +78,7 @@ namespace dsp56k
 
 		void blockDestroyedWhileRunning();
 		void branchOutOfPMemory();
+		void receivePollAfterClockRestart();
 
 		void emit(TWord _opA, TWord _opB = 0, TWord _pc = 0) override;
 		void execStep() override { dsp.execJit(); }

@@ -68,6 +68,12 @@ namespace dsp56k
 
 		TWord getRemainingInstructionsForFrameSync() const;
 
+		// the instructions until the next slot, none if the flag the DSP spins on already has the value it waits for
+		template<bool ExpectedResult> TWord getRemainingInstructionsUntil(const bool _flag) const
+		{
+			return _flag == ExpectedResult ? 0 : getRemainingInstructionsForFrameSync();
+		}
+
 	protected:
 		auto getDspInstructionCounter() const { return *m_dspInstructionCounter; }
 		auto getLastClock() const { return m_lastClock; }
@@ -125,15 +131,11 @@ namespace dsp56k
 	{
 	public:
 		EsaiClock(Peripherals56362& _peripherals);
-		template<bool ExpectedResult> TWord getRemainingInstructionsForTransmitFrameSync() const;
-		template<bool ExpectedResult> TWord getRemainingInstructionsForReceiveFrameSync() const;
 	};
 
 	class EssiClock : public EsxiClock
 	{
 	public:
 		EssiClock(Peripherals56303& _peripherals);
-		template<bool ExpectedResult> TWord getRemainingInstructionsForTransmitFrameSync(uint32_t _esaiIndex) const;
-		template<bool ExpectedResult> TWord getRemainingInstructionsForReceiveFrameSync(uint32_t _esaiIndex) const;
 	};
 }

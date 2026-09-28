@@ -342,10 +342,7 @@ namespace dsp56k
 		void updateAddressRegisterSubBitreverseN1(const JitReg32& _r, bool _addN);
 
 		template<Instruction Inst, ExpectedBitValue BitValue>
-		void esaiFrameSyncSpinloopBra(TWord op) const;
-
-		template<Instruction Inst, ExpectedBitValue BitValue>
-		void esaiFrameSyncSpinloopJmp(TWord op) const;
+		void serialStatusSpinloop(TWord op, bool _loopsToItself) const;
 
 #ifndef HAVE_ARM64
 		void signed24To56(const JitReg64& _dst, const JitReg64& _src) const;
