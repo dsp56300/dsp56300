@@ -6,6 +6,11 @@
 
 namespace dsp56k
 {
+	// Completes std::atomic<uint32_t> before s_generation below. In a file where that declaration is the first use of
+	// the type, MSVC records the inline variable without the alignment of the type, and /LTCG warns C4744 against the
+	// files that used it earlier
+	static_assert(alignof(std::atomic<uint32_t>) == alignof(uint32_t));
+
 	// The audio workgroup of the host, macOS 11 and later. A no-op elsewhere.
 	//
 	// Threads that produce the audio the host waits for belong into it. Apple Silicon schedules threads that are not
