@@ -55,9 +55,10 @@ namespace dsp56k
 
 				modulo = n & moduloMask ? modulo : 0;
 
-				if(r < lowerBound)
+				// signed, as in the JIT: a buffer at address zero goes below it, and unsigned that reads as a huge address
+				if(static_cast<int32_t>(r) < static_cast<int32_t>(lowerBound))
 					r += modulo;
-				if(r > upperBound)
+				if(static_cast<int32_t>(r) > static_cast<int32_t>(upperBound))
 					r -= modulo;
 				/*
 				if constexpr(add)

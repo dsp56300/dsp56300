@@ -665,6 +665,23 @@ namespace dsp56k
 		{
 			verify(dsp.regs().r[0] == 0x0ba601);
 		});
+
+		runTest([&]()
+		{
+			// a buffer at address zero, stepping below it
+			dsp.set_m(0, 0x0000ff);
+			dsp.regs().r[0].var = 0x000000;
+			dsp.set_m(1, 0x0000ff);
+			dsp.regs().r[1].var = 0x000010;
+			dsp.regs().n[1].var = 0x000020;
+
+			emit("move (r0)-");
+			emit("move (r1)-n1");
+		}, [&]()
+		{
+			verify(dsp.regs().r[0] == 0x0000ff);
+			verify(dsp.regs().r[1] == 0x0000f0);
+		});
 	}
 
 	void UnitTests::aguMultiWrapModulo()
