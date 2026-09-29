@@ -238,6 +238,7 @@ namespace  dsp56k
 		void esaiResetClearsStatus();
 		void esaiControlRegisterReadBack();
 		void hostQueueDataWaitsForHostFlags();
+		void shiTransmitEmptyAfterReset();
 		void maskedInterruptKeepsPeripheralsRunning();
 		void writeRegAndJitMode();
 		void memoryMirror();

@@ -237,6 +237,7 @@ namespace dsp56k
 		dmaPendingRequestAtArm();
 		essiDmaPendingRequestAtArm();
 		hostQueueDataWaitsForHostFlags();
+		shiTransmitEmptyAfterReset();
 		maskedInterruptKeepsPeripheralsRunning();
 
 		// register access
@@ -470,6 +471,51 @@ namespace dsp56k
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Data));
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Even_Data));
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Data));
+	}
+
+	/*	After a reset HTX is empty, HTDE is set (56362 UM 7.4.6.13), and with HTIE and HTDE set the SHI requests the
+		transmit data interrupt (7.4.6.10), also when HTIE is set after HTX became empty. So the program's handler fills
+		HTX before the peer's first transfer. With HTDE clear after a reset, that transfer took HTX's reset value, zero,
+		for a word the program had sent, and the handler ran only after it.
+	*/
+	void UnitTests::shiTransmitEmptyAfterReset()
+	{
+		auto& shi = peripheralsX.getSHI();
+
+		dsp.resetHW();
+
+		verify(shi.read(SHI::HCSR) & (1 << SHI::HCSR_HTDE));
+		verify(!dsp.hasPendingInterrupt(Vba_SHI_Transmit_Data));
+
+		shi.write(SHI::HCSR, (1 << SHI::HCSR_HEN) | (1 << SHI::HCSR_HTIE));
+		verify(dsp.hasPendingInterrupt(Vba_SHI_Transmit_Data));
+
+		shi.write(SHI::HTX, 0xff0000);					// what the handler does, it clears HTDE
+		verify(!(shi.read(SHI::HCSR) & (1 << SHI::HCSR_HTDE)));
+		verify(shi.exchange(0) == 0xff0000);
+		verify(!(shi.read(SHI::HCSR) & (1 << SHI::HCSR_HTUE)));
+
+		shi.write(SHI::HCSR, 0);
+
+		// Serve the interrupt, so that no later test takes it. Its vector holds nops, which a fast interrupt runs and
+		// returns from
+		emitToMemory(0, 0, Vba_SHI_Transmit_Data);
+		for(TWord i=0; i<8; ++i)
+			emitToMemory("nop", 0xe80 + i);
+		emitToMemory(0x0c0e88, 0, 0xe88);	// jmp $e88, the JIT runs whole blocks, it has to end somewhere
+
+		const auto sr0 = dsp.getSR().var;
+		dsp.setSR(sr0 & ~0x300);			// I1:I0 = 0, so that it is taken
+
+		for(int i=0; i<8 && dsp.hasPendingInterrupts(); ++i)
+		{
+			dsp.setPC(0xe80);
+			execUntil(0xe88);
+		}
+
+		dsp.setSR(sr0);
+
+		verify(!dsp.hasPendingInterrupt(Vba_SHI_Transmit_Data));
 	}
 
 	/*	A host that changes a host flag waits for the DSP to answer the change before it sends the data behind it. The

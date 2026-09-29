@@ -102,6 +102,7 @@ namespace dsp56k
 		uint32_t fifoSize() const					{ return bittest(m_hcsr, HCSR_HFIFO) ? FifoSizeLarge : FifoSizeSmall; }
 		void updateStatus();
 		void injectReceiveInterrupt();
+		void injectTransmitInterrupt();
 
 		IPeripherals& m_periph;
 

@@ -15,11 +15,13 @@ namespace dsp56k
 	void SHI::reset()
 	{
 		m_hckr = 0;
-		m_hcsr = 0;
 		m_hsar = 0;
 		m_htx = 0;
 		m_rxCount = 0;
 		m_rx.fill(0);
+
+		// HTX is empty: "HTDE is set by hardware reset, software reset, SHI individual reset" (UM 7.4.6.13)
+		m_hcsr = 1 << HCSR_HTDE;
 
 		updateStatus();
 	}
@@ -58,6 +60,17 @@ namespace dsp56k
 
 		if(bittest(m_hcsr, HCSR_HRNE))
 			m_periph.getDSP().injectInterrupt(Vba_SHI_Receive_FIFO_Not_Empty);
+	}
+
+	void SHI::injectTransmitInterrupt()
+	{
+		// "If both HTIE and HTDE are set and HTUE is cleared, the SHI requests an SHI transmit-data interrupt" (UM
+		// 7.4.6.10). A level, not an edge: it holds for a DSP that sets HTIE while HTX is already empty
+		if(!bittest(m_hcsr, HCSR_HEN) || !bittest(m_hcsr, HCSR_HTIE))
+			return;
+
+		if(bittest(m_hcsr, HCSR_HTDE) && !bittest(m_hcsr, HCSR_HTUE))
+			m_periph.getDSP().injectInterrupt(Vba_SHI_Transmit_Data);
 	}
 
 	TWord SHI::read(const TWord _addr)
@@ -123,8 +136,10 @@ namespace dsp56k
 
 				updateStatus();
 
-				// enabling the receive interrupt while data is already waiting must not lose it
+				// enabling the receive interrupt while data is already waiting must not lose it, and enabling the
+				// transmit interrupt while HTX is empty asks for data right away
 				injectReceiveInterrupt();
+				injectTransmitInterrupt();
 			}
 			return;
 		case HTX:
@@ -161,8 +176,7 @@ namespace dsp56k
 			if(m_callbackTx)
 				m_callbackTx(out);
 
-			if(bittest(m_hcsr, HCSR_HTIE))
-				m_periph.getDSP().injectInterrupt(Vba_SHI_Transmit_Data);
+			injectTransmitInterrupt();
 		}
 
 		if(m_rxCount >= fifoSize())
