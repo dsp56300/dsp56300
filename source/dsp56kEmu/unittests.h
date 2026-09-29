@@ -236,6 +236,7 @@ namespace  dsp56k
 		void esaiClockCycleDeadline();
 		void esaiEvenSlotInterrupts();
 		void esaiResetClearsStatus();
+		void esaiControlRegisterReadBack();
 		void hostQueueDataWaitsForHostFlags();
 		void maskedInterruptKeepsPeripheralsRunning();
 		void writeRegAndJitMode();

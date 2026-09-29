@@ -316,6 +316,11 @@ namespace dsp56k
 			return m_tccr;
 		}
 
+		TWord readControlRegister() const
+		{
+			return m_cr;
+		}
+
 		void writeReceiveControlRegister(TWord _val);
 
 		void writeTransmitControlRegister(TWord _val);
@@ -325,7 +330,8 @@ namespace dsp56k
 		void writeControlRegister(TWord _val)
 		{
 			LOG("Write ESAI CR " << HEX(_val));
-			m_cr = _val;
+			// bits 3-5 and 9-23 are reserved and read as zero (56362 UM 8.3.5.4)
+			m_cr = _val & ((1 << M_ALC) | (1 << M_TEBE) | (1 << M_SYN) | (1 << M_OF2) | (1 << M_OF1) | (1 << M_OF0));
 		}
 
 		void writeReceiveClockControlRegister(TWord _val);

@@ -233,6 +233,7 @@ namespace dsp56k
 		esaiClockCycleDeadline();
 		esaiEvenSlotInterrupts();
 		esaiResetClearsStatus();
+		esaiControlRegisterReadBack();
 		dmaPendingRequestAtArm();
 		essiDmaPendingRequestAtArm();
 		hostQueueDataWaitsForHostFlags();
@@ -361,6 +362,37 @@ namespace dsp56k
 
 		esai.writeTransmitControlRegister(0);
 		clock.setEnabled(clockEnabled);
+	}
+
+	/*	SAICR is a read/write register (56362 UM 8.3.5). A read of it fell through to the plain peripheral memory, which
+		the write never reached, so it read as zero, and a bset or bclr on it wrote zero back to every other bit. Its
+		reserved bits 3-5 and 9-23 read as zero
+	*/
+	void UnitTests::esaiControlRegisterReadBack()
+	{
+		constexpr TWord syn = 1 << Esai::M_SYN;
+		constexpr TWord of1 = 1 << Esai::M_OF1;
+		constexpr TWord alc = 1 << Esai::M_ALC;
+		constexpr TWord reserved = (1 << 3) | (1 << 9);
+
+		auto test = [&](IPeripherals& _periph, const TWord _saicr, const char* _bsetAlc)
+		{
+			_periph.write(_saicr, syn | of1 | reserved);
+			verify(_periph.read(_saicr, Nop) == (syn | of1));
+
+			runTest([&]
+			{
+				emit(_bsetAlc);
+			}, [&]
+			{
+				verify(_periph.read(_saicr, Nop) == (syn | of1 | alc));
+			});
+
+			_periph.write(_saicr, 0);
+		};
+
+		test(peripheralsX, Esai::M_SAICR, "bset #$8,x:<<$ffffb4");		// ESAI
+		test(peripheralsY, Esai::M_SAICR_1, "bset #$8,y:<<$ffff94");	// ESAI_1 of a 56367
 	}
 
 	/*	Firmware tells the words of the two slots of a stereo frame apart by the even slot interrupts. At the start of an

@@ -420,6 +420,7 @@ namespace dsp56k
 		case Esai::M_RCR:	return m_esai.readReceiveControlRegister();
 		case Esai::M_RCCR:	return m_esai.readReceiveClockControlRegister();
 		case Esai::M_SAISR:	return m_esai.readStatusRegister();
+		case Esai::M_SAICR:	return m_esai.readControlRegister();
 		case Esai::M_TCR:	return m_esai.readTransmitControlRegister();
 		case Esai::M_TCCR:	return m_esai.readTransmitClockControlRegister();
 		case Esai::M_RX0:
@@ -802,6 +803,7 @@ namespace dsp56k
 		case Esai::M_RCR_1:			return m_esai.readReceiveControlRegister();
 		case Esai::M_RCCR_1:		return m_esai.readReceiveClockControlRegister();
 		case Esai::M_SAISR_1:		return m_esai.readStatusRegister();
+		case Esai::M_SAICR_1:		return m_esai.readControlRegister();
 		case Esai::M_TCR_1:			return m_esai.readTransmitControlRegister();
 		case Esai::M_TCCR_1:		return m_esai.readTransmitClockControlRegister();
 		case Esai::M_RX0_1:
