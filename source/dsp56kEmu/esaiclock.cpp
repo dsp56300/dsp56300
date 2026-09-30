@@ -30,6 +30,39 @@ namespace dsp56k
 		if(diff < m_cyclesPerSample)
 			return instructionsForCycles(static_cast<uint32_t>(m_cyclesPerSample - diff));
 
+		/*	A clock that is behind serves its slots back to back (see the end of this function), where the chip has a slot
+			period between two of them. The DSP takes the request of one slot before the next one starts unless it masks
+			interrupts for that long. Back to back, a few masked instructions are enough, and the request that the next
+			slot raises while the previous one still waits is lost (DSP::injectInterrupt, one pending flag per source).
+			Firmware that counts its slots by its interrupts falls out of step then. The Virus B runs one transmit
+			interrupt per slot through a buffer of alternating left and right words, and a patch change, whose DO loop
+			kept the peripherals from running for a dozen slots, swapped its channels.
+
+			So a slot waits while the DSP has not taken a request that one of the interfaces raised less than a slot period
+			ago. A request that waits for longer than that waits because the firmware masks interrupts for that long, and
+			the next one joins it, as on the chip.
+
+			The wait is one tick of this clock at most, which is a slot period only for an interface with divider 0. An
+			interface with a divider has (divider + 1) ticks per slot and can still lose a request when a masked section
+			in a backlog lasts longer than a tick but not a slot, see EMU-141.
+		*/
+		std::array<bool, MaxEsais> pending{};
+
+		// Outside of a masked phase the DSP has taken every request by the time the peripherals run again, so the
+		// interfaces only need to be asked while one waits
+		const auto anyPending = m_periph.getDSP().hasPendingInterrupts();
+
+		if(anyPending)
+		{
+			for(size_t i=0; i<m_esais.size(); ++i)
+			{
+				pending[i] = m_esais[i].esai->hasPendingInterrupts();
+
+				if(pending[i] && *m_dspInstructionCounter - m_esais[i].requestTime < m_cyclesPerSample)
+					return 0;
+			}
+		}
+
 		m_lastClock += m_cyclesPerSample;
 
 		auto advanceClock = [](Clock& _c)
@@ -58,6 +91,14 @@ namespace dsp56k
 
 		for(size_t i=0; i<txCount; ++i) processTx[i]->execTX();
 		for(size_t i=0; i<rxCount; ++i) processRx[i]->execRX();
+
+		// The time of a request that this slot raised, not of one that joined an older one. With nothing pending before,
+		// whatever is pending now is new, and the time of an interface that raised nothing is never looked at
+		for(size_t i=0; i<m_esais.size(); ++i)
+		{
+			if(!anyPending || (!pending[i] && m_esais[i].esai->hasPendingInterrupts()))
+				m_esais[i].requestTime = *m_dspInstructionCounter;
+		}
 
 		if(m_tickCallback)
 			m_tickCallback();

@@ -14,5 +14,8 @@ namespace dsp56k
 
 		virtual TWord hasEnabledTransmitters() const = 0;
 		virtual TWord hasEnabledReceivers() const = 0;
+
+		// an interrupt request of this interface is pending that the DSP has not taken yet
+		virtual bool hasPendingInterrupts() const = 0;
 	};
 }

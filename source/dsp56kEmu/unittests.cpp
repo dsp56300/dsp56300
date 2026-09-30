@@ -239,6 +239,7 @@ namespace dsp56k
 		hostQueueDataWaitsForHostFlags();
 		shiTransmitEmptyAfterReset();
 		maskedInterruptKeepsPeripheralsRunning();
+		esaiClockBacklogWaitsForRequest();
 
 		// register access
 		writeRegAndJitMode();
@@ -2450,6 +2451,83 @@ namespace dsp56k
 		verify(!dsp.hasPendingInterrupts());
 		verify(dsp.aluA().var == 1);
 
+		dsp.resetHW();
+	}
+
+	/*	A clock that is behind, because a long JIT block kept the peripherals from running, serves its slots back to back
+		where the chip has a slot period between two of them. The DSP masked interrupts right after the first one, the
+		second one raised its transmit request again while the first one still waited, and one pending flag per source
+		dropped it: one interrupt for two slots. The Virus B counts its slots by that interrupt and swapped its channels.
+		The second slot now waits until the DSP has taken the request of the first, for a slot period at most. After that
+		the DSP masks interrupts for longer than a slot, and the next request joins the one that waits, as on the chip.
+	*/
+	void UnitTests::esaiClockBacklogWaitsForRequest()
+	{
+		auto& esai = peripheralsX.getEsai();
+		auto& clock = peripheralsX.getEsaiClock();
+
+		const auto clockEnabled = clock.isEnabled();
+		const auto oldSource = clock.getClockSource();
+		const auto oldCycles = clock.getCyclesPerSample();
+
+		dsp.resetHW();									// I1:I0 = 3 after reset, peripheral interrupts are masked
+		verify(!dsp.hasPendingInterrupts());
+
+		emitToMemory("nop", Vba_ESAI_Transmit_Data);
+		emitToMemory("nop", Vba_ESAI_Transmit_Data + 1);
+
+		// the DSP takes the request as it does when the mask drops, without running the peripherals on the way
+		auto takeRequest = [&]
+		{
+			dsp.sr_clear(static_cast<CCRMask>(SR_I0 | SR_I1));
+			dsp.execInterrupts();
+			dsp.sr_set(static_cast<CCRMask>(SR_I0 | SR_I1));
+		};
+
+		clock.setEnabled(false);						// switching the transmitter on must not synthesize a slot
+		clock.setClockSource(EsxiClock::ClockSource::Instructions);
+		clock.setCyclesPerSample(100);
+
+		esai.writeTransmitClockControlRegister(0);		// one slot per frame, the frame counter counts the slots
+		esai.writeTransmitControlRegister((1 << Esai::M_TIE) | (1 << Esai::M_TMOD0) | (1 << Esai::M_TE0));
+
+		clock.setEnabled(true);							// starts the clock over at the current instruction count
+		dsp.fastForward(400, 400);						// four slots behind
+
+		const auto frame = esai.getTxFrameCounter();
+
+		clock.exec();
+		verify(esai.getTxFrameCounter() == frame + 1);
+		verify(dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Data));
+
+		// the next slot of the backlog waits while that request waits for the mask
+		clock.exec();
+		verify(esai.getTxFrameCounter() == frame + 1);
+
+		// and follows once the DSP has taken it
+		takeRequest();
+		verify(dsp.m_pendingInterrupts.empty());
+		clock.exec();
+		verify(esai.getTxFrameCounter() == frame + 2);
+		verify(dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Data));
+
+		// for a slot period at most
+		dsp.fastForward(99, 99);
+		clock.exec();
+		verify(esai.getTxFrameCounter() == frame + 2);
+
+		dsp.fastForward(1, 1);
+		clock.exec();
+		verify(esai.getTxFrameCounter() == frame + 3);
+		verify(dsp.m_pendingInterrupts.size() == 1);	// the request of that slot joined the one that waits
+
+		takeRequest();
+		verify(dsp.m_pendingInterrupts.empty());
+
+		esai.writeTransmitControlRegister(0);
+		clock.setCyclesPerSample(oldCycles);
+		clock.setClockSource(oldSource);
+		clock.setEnabled(clockEnabled);
 		dsp.resetHW();
 	}
 

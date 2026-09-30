@@ -329,6 +329,17 @@ namespace dsp56k
 			return false;
 		}
 
+		// DSP thread only. Whether a request with a vector in [_first, _last] is pending, the vectors of one peripheral
+		bool			hasPendingInterrupt				(const TWord _first, const TWord _last) const
+		{
+			for(size_t i=0; i<m_pendingInterrupts.size(); ++i)
+			{
+				if(m_pendingInterrupts[i] >= _first && m_pendingInterrupts[i] <= _last)
+					return true;
+			}
+			return false;
+		}
+
 		void			clearOpcodeCache				();
 		void			clearOpcodeCache				(TWord _address);
 

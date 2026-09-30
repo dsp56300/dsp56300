@@ -465,6 +465,12 @@ namespace dsp56k
 		m_periph.getDSP().injectInterrupt(_interrupt + m_index * EssiAddressOffset);
 	}
 
+	bool Essi::hasPendingInterrupts() const
+	{
+		const auto offset = m_index * EssiAddressOffset;
+		return m_periph.getDSP().hasPendingInterrupt(Vba_ESSI0receivedata + offset, Vba_ESSI0transmitlastslot + offset);
+	}
+
 	void Essi::readSlotFromFrame()
 	{
 		const auto rem = m_crb.test(RegCRBbits::CRB_RE);

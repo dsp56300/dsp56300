@@ -129,6 +129,8 @@ namespace dsp56k
 
 			Clock tx;
 			Clock rx;
+
+			uint64_t requestTime = 0;					// while a request of it is pending: when the slot that raised it came
 		};
 
 		std::vector<EsaiEntry> m_esais;

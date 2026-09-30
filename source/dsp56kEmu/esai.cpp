@@ -164,6 +164,11 @@ namespace dsp56k
 		}
 	}
 
+	bool Esai::hasPendingInterrupts() const
+	{
+		return m_periph.getDSP().hasPendingInterrupt(Vba_ESAI_Receive_Data + m_vba, Vba_ESAI_Transmit_Last_Slot + m_vba);
+	}
+
 	const TWord& Esai::readStatusRegister() const
 	{
 		return m_sr;

@@ -240,6 +240,7 @@ namespace  dsp56k
 		void hostQueueDataWaitsForHostFlags();
 		void shiTransmitEmptyAfterReset();
 		void maskedInterruptKeepsPeripheralsRunning();
+		void esaiClockBacklogWaitsForRequest();
 		void writeRegAndJitMode();
 		void memoryMirror();
 
