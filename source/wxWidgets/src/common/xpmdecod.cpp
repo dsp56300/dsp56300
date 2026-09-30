@@ -168,6 +168,11 @@ wxImage wxXPMDecoder::ReadFile(wxInputStream& stream)
                 break;
         }
 
+        // unterminated /*-comment: stop processing rather than reading past
+        // the end of the buffer in strlen() below.
+        if (*q == '\0')
+            break;
+
         // memmove allows overlaps (unlike strcpy):
         size_t cpylen = strlen(q + 2) + 1;
         memmove(p, q + 2, cpylen);
@@ -184,7 +189,13 @@ wxImage wxXPMDecoder::ReadFile(wxInputStream& stream)
         for (q = p + 1; *q != '\0'; q++)
             if (*q == '"')
                 break;
-        strncpy(xpm_buffer + i, p + 1, q - p - 1);
+
+        // unterminated quoted string: stop processing rather than reading
+        // past the end of the buffer when the outer loop next advances p.
+        if (*q == '\0')
+            break;
+
+        memmove(xpm_buffer + i, p + 1, q - p - 1);
         i += q - p - 1;
         xpm_buffer[i++] = '\n';
         p = q + 1;
@@ -775,7 +786,8 @@ wxImage wxXPMDecoder::ReadData(const char* const* xpm_data)
         for (i = 0; i < width; i++, img_data += 3)
         {
             const char *xpmImgLine = xpm_data[1 + colors_cnt + j];
-            if ( !xpmImgLine || strlen(xpmImgLine) < width*chars_per_pixel )
+            if ( !xpmImgLine ||
+                    strlen(xpmImgLine) < (unsigned long long)width*chars_per_pixel )
             {
                 wxLogError(_("XPM: truncated image data at line %d!"),
                            (int)(1 + colors_cnt + j));
@@ -806,9 +818,15 @@ wxImage wxXPMDecoder::ReadData(const char* const* xpm_data)
         }
     }
 #if wxUSE_PALETTE
-    unsigned char* r = new unsigned char[colors_cnt];
-    unsigned char* g = new unsigned char[colors_cnt];
-    unsigned char* b = new unsigned char[colors_cnt];
+    // The header colour count can be larger than the number of entries
+    // actually in the map if a malformed XPM reuses the same key on several
+    // colour lines, as the map then collapses them into a single entry. Build
+    // the palette from the real number of distinct colours so we don't read
+    // past the part of the arrays we filled in below.
+    const size_t palette_cnt = clr_tbl.size();
+    unsigned char* r = new unsigned char[palette_cnt];
+    unsigned char* g = new unsigned char[palette_cnt];
+    unsigned char* b = new unsigned char[palette_cnt];
 
     for (it = clr_tbl.begin(), i = 0; it != clr_tbl.end(); ++it, ++i)
     {
@@ -816,8 +834,8 @@ wxImage wxXPMDecoder::ReadData(const char* const* xpm_data)
         g[i] = it->second.G;
         b[i] = it->second.B;
     }
-    wxASSERT(i == colors_cnt);
-    img.SetPalette(wxPalette(colors_cnt, r, g, b));
+    wxASSERT(i == palette_cnt);
+    img.SetPalette(wxPalette(palette_cnt, r, g, b));
     delete[] r;
     delete[] g;
     delete[] b;

@@ -47,17 +47,15 @@ inline bool wxGetNonEmptyEnvVar(const wxString& name, wxString* value)
     return wxGetEnv(name, value) && !value->empty();
 }
 
-// Get locale information from the appropriate environment variable: the output
+// Get locale information from the specified environment variable: the output
 // variables are filled with the locale part (xx_XX) and the modifier is filled
 // with the optional part following "@".
 //
 // Return false if there is no locale information in the environment variables
 // or if it is just "C" or "POSIX".
-bool GetLocaleFromEnvironment(wxString& langFull, wxString& modifier)
+bool GetLocaleFromEnvVar(const char* var, wxString& langFull, wxString& modifier)
 {
-    if (!wxGetNonEmptyEnvVar(wxS("LC_ALL"), &langFull) &&
-        !wxGetNonEmptyEnvVar(wxS("LC_MESSAGES"), &langFull) &&
-        !wxGetNonEmptyEnvVar(wxS("LANG"), &langFull))
+    if ( !wxGetNonEmptyEnvVar(var, &langFull) )
     {
         return false;
     }
@@ -186,10 +184,16 @@ public:
     int CompareStrings(const wxString& lhs, const wxString& rhs,
                        int flags) const wxOVERRIDE;
 
+#if wxUSE_DATETIME
+    wxString DoGetMonthName(wxDateTime::Month month, wxDateTime::NameFlags flags) const;
+    wxString DoGetWeekDayName(wxDateTime::WeekDay weekday, wxDateTime::NameFlags flags) const;
+#endif // wxUSE_DATETIME
+
 private:
 #ifdef HAVE_LANGINFO_H
     // Call nl_langinfo_l() if available, or nl_langinfo() otherwise.
     const char* GetLangInfo(nl_item item) const;
+    const wchar_t* GetLangInfoWide(nl_item item) const;
 
 #ifdef __LINUX__
     // Call GetLangInfo() using either the native or English item depending on
@@ -276,9 +280,9 @@ locale_t TryCreateMatchingLocale(wxLocaleIdent& locId)
     locale_t loc = TryCreateLocaleWithUTF8(locId);
     if ( !loc )
     {
-        // Try to find a variant of this locale available on this system: first
-        // of all, using just the language, without the territory, typically
-        // does _not_ work under Linux, so try adding one if we don't have it.
+        // Try to find a variant of this locale available on this system: as
+        // using just the language, without the territory, typically does _not_
+        // work under Linux, we try adding one if we don't have it.
         const wxString lang = locId.GetLanguage();
 
         const wxLanguageInfos& infos = wxGetLanguageInfos();
@@ -330,20 +334,7 @@ wxString wxLocaleIdent::GetName() const
 
     wxString name;
     if ( !m_language.empty() )
-    {
-        name << m_language;
-
-        if ( !m_region.empty() )
-            name << "_" << m_region;
-
-        if ( !m_charset.empty() )
-            name << "." << m_charset;
-
-        if ( !m_script.empty() )
-            name << "@" << wxUILocale::GetScriptAliasFromName(m_script);
-        else if ( !m_modifier.empty() )
-            name << "@" << m_modifier;
-    }
+        name = GetTag(wxLOCALE_TAGTYPE_POSIX);
 
     return name;
 }
@@ -479,7 +470,8 @@ wxUILocaleImplUnix::InitLocaleNameAndCodeset() const
         // This must be the default locale.
         wxString locName,
                  modifier;
-        if ( !GetLocaleFromEnvironment(locName, modifier) )
+        if ( !GetLocaleFromEnvVar("LC_ALL", locName, modifier) &&
+                !GetLocaleFromEnvVar("LANG", locName, modifier) )
         {
             // This is the default locale if nothing is specified.
             locName = "en_US";
@@ -531,6 +523,20 @@ wxUILocaleImplUnix::GetLangInfo(nl_item item) const
 #endif // HAVE_LOCALE_T
 
     return nl_langinfo(item);
+}
+
+const wchar_t*
+wxUILocaleImplUnix::GetLangInfoWide(nl_item item) const
+{
+#ifdef HAVE_LOCALE_T
+    // We assume that we have nl_langinfo_l() if we have locale_t.
+    if ( m_locale )
+        return (wchar_t*) nl_langinfo_l(item, m_locale);
+#else
+    TempLocaleSetter setThisLocale(LC_CTYPE, m_locId.GetName());
+#endif // HAVE_LOCALE_T
+
+    return (wchar_t*) nl_langinfo(item);
 }
 
 #ifdef __LINUX__
@@ -619,7 +625,7 @@ wxString
 wxUILocaleImplUnix::GetLocalizedName(wxLocaleName name, wxLocaleForm form) const
 {
     wxString str;
-#if defined(HAVE_LANGINFO_H) && defined(__LINUX__)
+#if defined(HAVE_LANGINFO_H) && defined(__LINUX__) && defined(__GLIBC__)
     switch (name)
     {
         case wxLOCALE_NAME_LOCALE:
@@ -694,6 +700,112 @@ wxUILocaleImplUnix::GetLocalizedName(wxLocaleName name, wxLocaleForm form) const
     return str;
 }
 
+#if wxUSE_DATETIME
+wxString
+wxUILocaleImplUnix::DoGetMonthName(wxDateTime::Month month, wxDateTime::NameFlags flags) const
+{
+#if defined(HAVE_LANGINFO_H)
+#if defined(__LINUX__) && defined(__GLIBC__)
+    static int monthNameIndex[2][12] =
+    {
+        // Formatting context
+        { _NL_WMON_1,  _NL_WMON_2,  _NL_WMON_3,
+          _NL_WMON_4,  _NL_WMON_5,  _NL_WMON_6,
+          _NL_WMON_7,  _NL_WMON_8,  _NL_WMON_9,
+          _NL_WMON_10, _NL_WMON_11, _NL_WMON_12 },
+        { _NL_WABMON_1,  _NL_WABMON_2,  _NL_WABMON_3,
+          _NL_WABMON_4,  _NL_WABMON_5,  _NL_WABMON_6,
+          _NL_WABMON_7,  _NL_WABMON_8,  _NL_WABMON_9,
+          _NL_WABMON_10, _NL_WABMON_11, _NL_WABMON_12 },
+    };
+
+    int idx = ArrayIndexFromFlag(flags);
+    if (idx == -1)
+        return wxString();
+
+    return wxString(GetLangInfoWide(monthNameIndex[idx][month]));
+#else // !__LINUX__ || !__GLIBC__
+    // If system is not Linux-like or does not have GLIBC, fall back
+    // to LC_TIME symbols that should be defined according to POSIX.
+    static int monthNameIndex[2][12] =
+    {
+        // Formatting context
+        { MON_1,  MON_2,  MON_3,
+          MON_4,  MON_5,  MON_6,
+          MON_7,  MON_8,  MON_9,
+          MON_10, MON_11, MON_12 },
+        { ABMON_1,  ABMON_2,  ABMON_3,
+          ABMON_4,  ABMON_5,  ABMON_6,
+          ABMON_7,  ABMON_8,  ABMON_9,
+          ABMON_10, ABMON_11, ABMON_12 }
+    };
+
+    int idx = ArrayIndexFromFlag(flags);
+    if (idx == -1)
+        return wxString();
+
+    return wxString(GetLangInfo(monthNameIndex[idx][month]), wxCSConv(GetCodeSet()));
+#endif //  __LINUX__ && __GLIBC__ / !__LINUX__ || !__GLIBC__
+#else // !HAVE_LANGINFO_H
+    // If HAVE_LANGINFO_H is not available, fall back to English names.
+    return wxDateTime::GetEnglishMonthName(month, flags);
+#endif // HAVE_LANGINFO_H && __LINUX__/!HAVE_LANGINFO_H || !__LINUX__
+}
+
+wxString
+wxUILocaleImplUnix::DoGetWeekDayName(wxDateTime::WeekDay weekday, wxDateTime::NameFlags flags) const
+{
+#if defined(HAVE_LANGINFO_H)
+#if defined(__LINUX__) && defined(__GLIBC__)
+    static int weekdayNameIndex[2][12] =
+    {
+        { _NL_WDAY_1, _NL_WDAY_2, _NL_WDAY_3,
+          _NL_WDAY_4, _NL_WDAY_5, _NL_WDAY_6, _NL_WDAY_7 },
+        { _NL_WABDAY_1, _NL_WABDAY_2, _NL_WABDAY_3,
+          _NL_WABDAY_4, _NL_WABDAY_5, _NL_WABDAY_6, _NL_WABDAY_7 }
+    };
+
+    const int idx = ArrayIndexFromFlag(flags);
+    if (idx == -1)
+        return wxString();
+
+    return wxString(GetLangInfoWide(weekdayNameIndex[idx][weekday]));
+#else // !__LINUX__ || !__GLIBC__
+    // If system is not Linux-like or does not have GLIBC, fall back
+    // to LC_TIME symbols that should be defined according to POSIX.
+    static int weekdayNameIndex[2][12] =
+    {
+        { DAY_1, DAY_2, DAY_3,
+          DAY_4, DAY_5, DAY_6, DAY_7 },
+        { ABDAY_1, ABDAY_2, ABDAY_3,
+          ABDAY_4, ABDAY_5, ABDAY_6, ABDAY_7 }
+    };
+
+    const int idx = ArrayIndexFromFlag(flags);
+    if (idx == -1)
+        return wxString();
+
+    return wxString(GetLangInfo(weekdayNameIndex[idx][weekday]), wxCSConv(GetCodeSet()));
+#endif //  __LINUX__ && __GLIBC__ / !__LINUX__ || !__GLIBC__
+#else // !HAVE_LANGINFO_H
+    // If HAVE_LANGINFO_H is not available, fall back to English names.
+    return wxDateTime::GetEnglishWeekDayName(weekday, flags);
+#endif // HAVE_LANGINFO_H / !HAVE_LANGINFO_H
+}
+
+wxString
+wxUILocaleImpl::GetMonthName(wxDateTime::Month month, wxDateTime::NameFlags flags) const
+{
+    return static_cast<const wxUILocaleImplUnix*>(this)->DoGetMonthName(month, flags);
+}
+
+wxString
+wxUILocaleImpl::GetWeekDayName(wxDateTime::WeekDay weekday, wxDateTime::NameFlags flags) const
+{
+    return static_cast<const wxUILocaleImplUnix*>(this)->DoGetWeekDayName(weekday, flags);
+}
+#endif // wxUSE_DATETIME
+
 wxLayoutDirection
 wxUILocaleImplUnix::GetLayoutDirection() const
 {
@@ -734,7 +846,21 @@ wxUILocaleImpl* wxUILocaleImpl::CreateStdC()
 /* static */
 wxUILocaleImpl* wxUILocaleImpl::CreateUserDefault()
 {
+#ifdef HAVE_LOCALE_T
+    // Setting default locale can fail under Unix if LANG or LC_ALL are set to
+    // an unsupported value, so check for this here to let the caller know if
+    // we can't do it.
+    wxLocaleIdent locDef;
+    locale_t loc = TryCreateLocaleWithUTF8(locDef);
+    if ( !loc )
+        return NULL;
+
+    return new wxUILocaleImplUnix(wxLocaleIdent(), loc);
+#else // !HAVE_LOCALE_T
+    // We could temporarily change the locale here to check if it's supported,
+    // but for now don't bother and assume it is.
     return new wxUILocaleImplUnix(wxLocaleIdent());
+#endif // HAVE_LOCALE_T/!HAVE_LOCALE_T
 }
 
 /* static */
@@ -764,7 +890,37 @@ wxVector<wxString> wxUILocaleImpl::GetPreferredUILanguages()
     // When the preferred UI language is determined, the LANGUAGE environment
     // variable is the primary source of preference.
     // http://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html
-    //
+
+    // Since the first item in LANGUAGE is supposed to be equal to LANG resp LC_ALL,
+    // determine the default language based on the locale related environment variables
+    // as the first entry in the list of preferred languages.
+    wxString langFull;
+    wxString modifier;
+
+    // Check LC_ALL first, as it's supposed to override everything else, then
+    // for LC_MESSAGES because this is the variable defining the translations
+    // language and so must correspond to the language the user wants to use
+    // and, otherwise, fall back on LANG which is the normal way to specify
+    // both the locale and the language.
+    if ( GetLocaleFromEnvVar("LC_ALL", langFull, modifier) ||
+            GetLocaleFromEnvVar("LC_MESSAGES", langFull, modifier) ||
+                GetLocaleFromEnvVar("LANG", langFull, modifier) )
+    {
+        if (!modifier.empty())
+        {
+            // Locale name with modifier
+            if (const wxLanguageInfo* li = wxUILocale::FindLanguageInfo(langFull + modifier))
+            {
+                preferred.push_back(li->CanonicalName);
+            }
+        }
+        // Locale name without modifier
+        if (const wxLanguageInfo* li = wxUILocale::FindLanguageInfo(langFull))
+        {
+            preferred.push_back(li->CanonicalName);
+        }
+    }
+
     // The LANGUAGE variable may contain a colon separated list of language
     // codes in the order of preference.
     // http://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html
@@ -784,25 +940,18 @@ wxVector<wxString> wxUILocaleImpl::GetPreferredUILanguages()
             return preferred;
         wxLogTrace(TRACE_I18N, " - LANGUAGE was set, but it didn't contain any languages recognized by the system");
     }
+    else
+    {
+        wxLogTrace(TRACE_I18N, " - LANGUAGE was not set or empty, check LC_ALL, LC_MESSAGES, and LANG");
+    }
 
-    wxLogTrace(TRACE_I18N, " - LANGUAGE was not set or empty, check LC_ALL, LC_MESSAGES, and LANG");
-
-    // first get the string identifying the language from the environment
-    wxString langFull,
-             modifier;
-    if (!GetLocaleFromEnvironment(langFull, modifier))
+    if (preferred.empty())
     {
         // no language specified, treat it as English
         langFull = "en_US";
+        preferred.push_back(langFull);
+        wxLogTrace(TRACE_I18N, " - LC_ALL, LC_MESSAGES, and LANG were not set or empty, use English");
     }
-
-    if (!modifier.empty())
-    {
-        // Locale name with modifier
-        preferred.push_back(langFull + modifier);
-    }
-    // Locale name without modifier
-    preferred.push_back(langFull);
 
     return preferred;
 }

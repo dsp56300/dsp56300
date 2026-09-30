@@ -41,6 +41,7 @@
 #include "wx/thread.h"
 #include "wx/evtloop.h"
 #include "wx/link.h"
+#include "wx/vector.h"
 
 #include "wx/private/fd.h"
 #include "wx/private/socket.h"
@@ -689,7 +690,15 @@ int wxSocketImpl::RecvDgram(void *buffer, int size)
                                   0, &from.addr, &fromlen) );
 
     if ( ret == SOCKET_ERROR )
-        return SOCKET_ERROR;
+    {
+#ifdef __WINDOWS__
+        if ( WSAGetLastError() == WSAEMSGSIZE )
+            ret = size;
+        else
+#endif // __WINDOWS__
+            return SOCKET_ERROR;
+    }
+
 
     m_peer = wxSockAddressImpl(from.addr, fromlen);
     if ( !m_peer.IsOk() )
@@ -1131,14 +1140,48 @@ wxSocketBase& wxSocketBase::ReadMsg(void* buffer, wxUint32 nbytes)
 
 wxSocketBase& wxSocketBase::Peek(void* buffer, wxUint32 nbytes)
 {
+    // If we're already closed, don't try switching the invalid socket into
+    // non-blocking mode, but still use the already read data, if any.
+    if ( m_impl->m_fd == INVALID_SOCKET )
+    {
+        m_lcount = GetPushback(buffer, nbytes, true);
+        return *this;
+    }
+
     wxSocketReadGuard read(this);
 
     // Peek() should never block
     wxSocketWaitModeChanger changeFlags(this, wxSOCKET_NOWAIT);
 
-    m_lcount = DoRead(buffer, nbytes);
+    // Guard against data loss when reading fewer bytes
+    // than are present in a received datagram
+    void* readbuf;
+    wxUint32 readbytes;
+    const wxUint32 DGRAM_MIN_READ = 65536;  // 64K is enough for UDP
+    wxVector<unsigned char> peekbuf;
+    bool usePeekbuf = !m_impl->m_stream && nbytes < DGRAM_MIN_READ;
+    if ( usePeekbuf )
+    {
+        // Allocate our own buffer
+        peekbuf.resize(DGRAM_MIN_READ);
+        readbuf = &peekbuf[0];
+        readbytes = DGRAM_MIN_READ;
+    }
+    else
+    {
+        // Use the caller-supplied buffer directly
+        readbuf = buffer;
+        readbytes = nbytes;
+    }
 
-    Pushback(buffer, m_lcount);
+    wxUint32 lcount = DoRead(readbuf, readbytes);
+
+    Pushback(readbuf, lcount);
+
+    if ( usePeekbuf )
+        lcount = GetPushback(buffer, nbytes, true);
+
+    m_lcount = lcount;
 
     return *this;
 }
@@ -1662,12 +1705,18 @@ void wxSocketBase::SetTimeout(long seconds)
 
 void wxSocketBase::SetFlags(wxSocketFlags flags)
 {
-    // Do some sanity checking on the flags used: not all values can be used
-    // together.
-    wxASSERT_MSG( !(flags & wxSOCKET_NOWAIT) ||
-                  !(flags & (wxSOCKET_WAITALL | wxSOCKET_BLOCK)),
-                  "Using wxSOCKET_WAITALL or wxSOCKET_BLOCK with "
-                  "wxSOCKET_NOWAIT doesn't make sense" );
+    // Do some sanity checking on the flags used: we can't not wait at all and
+    // wait for all data in the same direction (but using wxSOCKET_NOWAIT_READ
+    // with wxSOCKET_WAITALL_WRITE, or vice versa, is fine).
+    wxASSERT_MSG( (!(flags & wxSOCKET_NOWAIT_READ) ||
+                   !(flags & wxSOCKET_WAITALL_READ)) &&
+                  (!(flags & wxSOCKET_NOWAIT_WRITE) ||
+                   !(flags & wxSOCKET_WAITALL_WRITE)),
+                  "wxSOCKET_WAITALL and wxSOCKET_NOWAIT are incompatible" );
+
+    // And blocking is not compatible with not waiting, in any direction.
+    wxASSERT_MSG( !(flags & wxSOCKET_BLOCK) || !(flags & wxSOCKET_NOWAIT),
+                  "wxSOCKET_BLOCK and wxSOCKET_NOWAIT are incompatible" );
 
     // Blocking sockets are very different from non-blocking ones and we need
     // to [un]register the socket with the event loop if wxSOCKET_BLOCK is

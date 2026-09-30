@@ -522,7 +522,7 @@ wxSize wxNotebook::CalcSizeFromPage(const wxSize& sizePage) const
     const int rows = GetRowCount();
 
     // add an extra margin in both directions
-    const int MARGIN = 8;
+    const int MARGIN = FromDIP(8);
     if ( IsVertical() )
     {
         sizeTotal.x += MARGIN;
@@ -1030,7 +1030,17 @@ void wxNotebook::OnNavigationKey(wxNavigationKeyEvent& event)
             // focus is currently on notebook tab and should leave
             // it backwards (Shift-TAB)
             event.SetCurrentFocus(this);
-            parent->HandleWindowEvent(event);
+            if ( !parent->HandleWindowEvent(event) )
+            {
+                // if the parent didn't handle this event, the notebook
+                // must be its only child accepting focus, so let the page
+                // handle it to wrap around to the last control in tab order
+                if ( m_selection != wxNOT_FOUND )
+                {
+                    wxWindow* page = m_pages[m_selection];
+                    page->HandleWindowEvent(event);
+                }
+            }
         }
         else if ( isFromParent || isFromSelf )
         {
@@ -1070,8 +1080,14 @@ void wxNotebook::OnNavigationKey(wxNavigationKeyEvent& event)
             else if ( parent )
             {
                 event.SetCurrentFocus(this);
-                parent->HandleWindowEvent(event);
-            }
+                if ( !parent->HandleWindowEvent(event) )
+                {
+                    // if the parent didn't handle this event, the notebook
+                    // must be its only child accepting focus, so take it
+                    event.Skip(false);
+                    SetFocus();
+                }
+             }
         }
     }
 }

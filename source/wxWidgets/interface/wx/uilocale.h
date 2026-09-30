@@ -198,6 +198,38 @@ public:
     wxString GetLocalizedName(wxLocaleName name, wxLocaleForm form) const;
 
     /**
+        Gets the full (default) or abbreviated name of the given month.
+
+        This function returns the name in the current locale, use
+        wxDateTime::GetEnglishMonthName() to get the untranslated name if necessary.
+
+        @param month
+            One of wxDateTime::Jan, ..., wxDateTime::Dec values.
+        @param flags
+            Either wxDateTime::Name_Full (default) or wxDateTime::Name_Abbr.
+
+        @see GetWeekDayName()
+        @since 3.2.3
+    */
+    wxString GetMonthName(wxDateTime::Month month, wxDateTime::NameFlags flags = wxDateTime::Name_Full);
+
+    /**
+        Gets the full (default) or abbreviated name of the given week day.
+
+        This function returns the name in the current locale, use
+        wxDateTime::GetEnglishWeekDayName() to get the untranslated name if necessary.
+
+        @param weekday
+            One of wxDateTime::Sun, ..., wxDateTime::Sat values.
+        @param flags
+            Either wxDateTime::Name_Full (default) or wxDateTime::Name_Abbr.
+
+        @see GetMonthName()
+        @since 3.2.3
+    */
+    wxString GetWeekDayName(wxDateTime::WeekDay weekday, wxDateTime::NameFlags flags = wxDateTime::Name_Full);
+
+    /**
         Query the layout direction of the current locale.
 
         @return
@@ -290,7 +322,7 @@ public:
               by the operating system (for example, Windows 7 and below), the user's
               default @em locale will be used.
 
-        @see wxTranslations::GetBestTranslation().
+        @see wxTranslations::GetBestTranslation(), GetSystemLocaleId().
     */
     static int GetSystemLanguage();
 
@@ -298,7 +330,8 @@ public:
         Tries to detect the user's default locale setting.
 
         Returns the ::wxLanguage value or @c wxLANGUAGE_UNKNOWN if the locale-guessing
-        algorithm failed.
+        algorithm failed or if the locale can't be described using solely a
+        language constant. Consider using GetSystemLocaleId() in this case.
 
         @note This function works with @em locales and returns the user's default
               locale. This may be, and usually is, the same as their preferred UI
@@ -309,7 +342,20 @@ public:
 
         @see wxTranslations::GetBestTranslation().
     */
-    static int GetSystemLocale();};
+    static int GetSystemLocale();
+
+    /**
+        Return the description of the default system locale.
+
+        This function can always represent the system locale, even when using
+        a language and region pair that doesn't correspond to any of the
+        predefined ::wxLanguage constants, such as e.g. "fr-DE", which means
+        French language used with German locale settings.
+
+        @since 3.2.2
+     */
+    static wxLocaleIdent GetSystemLocaleId();
+};
 
 /**
     Return the format to use for formatting user-visible dates.

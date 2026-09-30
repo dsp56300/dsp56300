@@ -33,6 +33,8 @@ namespace dsp56kDebugger
 		uint32_t m_columnCount = 8;
 		dsp56k::EMemArea m_area;
 		dsp56k::TWord m_selectedAddr = 0;
+		int m_selectedIndicatorStart = -1;
+		int m_selectedIndicatorEnd = -1;
 
 		wxDECLARE_EVENT_TABLE();
 	};

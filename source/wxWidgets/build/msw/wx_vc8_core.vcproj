@@ -2858,6 +2858,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\wx\msw\mfc.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\wx\msw\minifram.h"
 				>
 			</File>
@@ -3562,6 +3566,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\wx\combobox.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\wx\persist\combobox.h"
 				>
 			</File>
 			<File

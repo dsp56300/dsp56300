@@ -60,7 +60,7 @@ enum
     internal top level window list.
 
     @beginEventEmissionTable
-    @event{EVT_MAXIMIZE(id, func)}
+    @event{EVT_MAXIMIZE(func)}
         Process a @c wxEVT_MAXIMIZE event. See wxMaximizeEvent.
     @event{EVT_MOVE(func)}
         Process a @c wxEVT_MOVE event, which is generated when a window is moved.
@@ -75,7 +75,7 @@ enum
         See wxMoveEvent.
     @event{EVT_SHOW(func)}
         Process a @c wxEVT_SHOW event. See wxShowEvent.
-    @event{EVT_FULLSCREEN(id, func)}
+    @event{EVT_FULLSCREEN(func)}
         Process a @c wxEVT_FULLSCREEN event. See wxFullScreenEvent.
     @endEventTable
 
@@ -192,7 +192,7 @@ public:
 
     /**
         Returns a pointer to the button which is the default for this window, or
-        @c @NULL. The default button is the one activated by pressing the Enter
+        @NULL. The default button is the one activated by pressing the Enter
         key.
     */
     wxWindow* GetDefaultItem() const;
@@ -246,7 +246,7 @@ public:
         @param iconize
             If @true, iconizes the window; if @false, shows and restores it.
 
-        @see IsIconized(), Restore()(), wxIconizeEvent.
+        @see IsIconized(), Restore(), wxIconizeEvent.
     */
     virtual void Iconize(bool iconize = true);
 

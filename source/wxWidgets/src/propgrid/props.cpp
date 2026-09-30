@@ -165,7 +165,11 @@ wxNumericPropertyValidator::
         allowedChars += wxS("-+eE");
 
         // Use locale-specific decimal point
-        allowedChars += wxString::Format(wxS("%g"), 1.1)[1];
+
+        // Don't optimize away this "useless" string, it avoids bogus ABI
+        // breakage error, see the commit adding it.
+        wxString s(wxNumberFormatter::GetDecimalSeparator());
+        allowedChars.append(s.at(0));
     }
 
     SetStyle(style);
@@ -253,7 +257,7 @@ namespace {
         // Round value to the required precision.
         wxVariant variant = value;
         wxString strVal = prop->ValueToString(variant, wxPG_FULL_VALUE);
-        strVal.ToDouble(&value);
+        wxNumberFormatter::FromString(strVal, &value);
         return value;
     }
 } // namespace
@@ -973,15 +977,14 @@ wxString wxFloatProperty::ValueToString( wxVariant& value,
 
 bool wxFloatProperty::StringToValue( wxVariant& variant, const wxString& text, int argFlags ) const
 {
-    double value;
-
     if ( text.empty() )
     {
         variant.MakeNull();
         return true;
     }
 
-    bool res = text.ToDouble(&value);
+    double value;
+    bool res = wxNumberFormatter::FromString(text, &value);
     if ( res )
     {
         if ( variant != value )
@@ -2571,8 +2574,7 @@ void wxPGArrayEditorDialog::OnEndLabelEdit(wxListEvent& event)
     else
     {
         // Change an existing item
-        int index = GetSelection();
-        wxASSERT( index != wxNOT_FOUND );
+        long index = event.GetIndex();
         if ( ArraySet(index, str) )
             m_modified = true;
         else
@@ -2628,6 +2630,7 @@ bool wxPGArrayStringEditorDialog::ArrayInsert( const wxString& str, int index )
 
 bool wxPGArrayStringEditorDialog::ArraySet( size_t index, const wxString& str )
 {
+    wxCHECK_MSG(index < m_array.size(), false, "Index out of range");
     m_array[index] = str;
     return true;
 }

@@ -45,6 +45,7 @@ endif()
 if(UNIX)
     wx_setup_definition(wxUSE_UNIX)
     wx_setup_definition(__UNIX__)
+    list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_FILE_OFFSET_BITS=64)
 endif()
 
 if(UNIX AND NOT APPLE)
@@ -75,11 +76,17 @@ set(wxINSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
 check_include_files("stdlib.h;stdarg.h;string.h;float.h" STDC_HEADERS)
 
-if(wxBUILD_SHARED)
-    if(wxUSE_VISIBILITY)
-        check_cxx_compiler_flag(-fvisibility=hidden HAVE_VISIBILITY)
-    endif()
-endif() # wxBUILD_SHARED
+if(NOT WIN32 AND wxUSE_VISIBILITY)
+    check_cxx_compiler_flag(-fvisibility=hidden HAVE_VISIBILITY)
+else()
+    set(HAVE_VISIBILITY 0)
+endif()
+
+if(MSVC)
+    set(DISABLE_ALL_WARNINGS "/w")
+else()
+    set(DISABLE_ALL_WARNINGS "-w")
+endif()
 
 # wx_check_cxx_source_compiles(<code> <var> [headers...])
 function(wx_check_cxx_source_compiles code res_var)
@@ -95,10 +102,15 @@ function(wx_check_cxx_source_compiles code res_var)
         endif()
     endforeach()
     set(src "${src}\n\nint main(int argc, char* argv[]) {\n ${code}\nreturn 0; }")
+    # We're not interested in any warnings that can arise in the test, which is
+    # especially important if -Werror is globally in effect.
+    cmake_push_check_state()
+    set(CMAKE_REQUIRED_FLAGS ${DISABLE_ALL_WARNINGS})
     check_cxx_source_compiles("${src}" ${res_var})
+    cmake_pop_check_state()
 endfunction()
 
-# wx_check_cxx_source_compiles(<code> <var> [headers...])
+# wx_check_c_source_compiles(<code> <var> [headers...])
 function(wx_check_c_source_compiles code res_var)
     set(src)
     foreach(header ${ARGN})
@@ -398,6 +410,10 @@ if(UNIX)
 
     wx_check_funcs(fdopen)
 
+    if(wxBUILD_LARGEFILE_SUPPORT)
+        wx_check_funcs(fseeko)
+    endif()
+
     if(wxUSE_TARSTREAM)
         wx_check_funcs(sysconf)
 
@@ -445,7 +461,7 @@ if(UNIX)
         check_symbol_exists(inet_addr arpa/inet.h HAVE_INET_ADDR)
     endif(wxUSE_SOCKETS)
 
-    if(wxUSE_JOYSTICK AND NOT APPLE)
+    if(wxUSE_JOYSTICK AND WXGTK)
         check_include_files("linux/joystick.h" HAVE_JOYSTICK_H)
         if(NOT HAVE_JOYSTICK_H)
             message(WARNING "wxJoystick is not available")
@@ -456,7 +472,7 @@ endif(UNIX)
 
 if(CMAKE_USE_PTHREADS_INIT)
     cmake_push_check_state(RESET)
-    set(CMAKE_REQUIRED_LIBRARIES pthread)
+    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
     wx_check_cxx_source_compiles("
         void *p;
         pthread_cleanup_push(ThreadCleanupFunc, p);
@@ -613,7 +629,7 @@ check_include_file(wcstr.h HAVE_WCSTR_H)
 if(wxUSE_DATETIME)
     # check for timezone variable
     #   doesn't exist under Darwin / Mac OS X which uses tm_gmtoff instead
-    foreach(timezone_def timezone _timezone __timezone)
+    foreach(timezone_def _timezone __timezone timezone)
         wx_check_cxx_source_compiles("
             int tz;
             tz = ${timezone_def};"
@@ -656,13 +672,20 @@ if(wxUSE_FSWATCHER)
 endif()
 
 if(wxUSE_XLOCALE)
+    list(APPEND xlocale_headers locale.h stdlib.h)
     check_include_file(xlocale.h HAVE_XLOCALE_H)
-    set(CMAKE_EXTRA_INCLUDE_FILES locale.h)
     if(HAVE_XLOCALE_H)
-        list(APPEND CMAKE_EXTRA_INCLUDE_FILES xlocale.h)
+        list(APPEND xlocale_headers xlocale.h)
     endif()
-    check_type_size(locale_t LOCALE_T)
-    set(CMAKE_EXTRA_INCLUDE_FILES)
+    wx_check_c_source_compiles("
+        locale_t t;
+        strtod_l(NULL, NULL, t);
+        strtol_l(NULL, NULL, 0, t);
+        strtoul_l(NULL, NULL, 0, t);
+"
+        HAVE_LOCALE_T
+        ${xlocale_headers}
+        )
 endif()
 
 # Check sizes of various types

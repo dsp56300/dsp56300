@@ -45,7 +45,6 @@
     if( m_trackingArea != nil )
     {
         [self removeTrackingArea:m_trackingArea];
-        [m_trackingArea release];
     }
 
     int options = NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways;
@@ -54,6 +53,7 @@
                                                     owner: self
                                                  userInfo: nil];
     [self addTrackingArea:m_trackingArea];
+    [m_trackingArea release];
 }
 
 - (void)mouseEntered:(NSEvent *)evt
@@ -104,9 +104,9 @@ WX_NSWindow CreateFloatingWindow(wxWindow* wxWin)
                                               styleMask: NSBorderlessWindowMask
                                                 backing: NSBackingStoreBuffered
                                                   defer: NO];
-    [w setLevel:NSFloatingWindowLevel];
+    [w setLevel:NSPopUpMenuWindowLevel];
     [w setHasShadow:YES];
-    [w setContentView:[[wxSTCPopupBaseView alloc] initWithwxWin:wxWin]];
+    [w setContentView:[[[wxSTCPopupBaseView alloc] initWithwxWin:wxWin] autorelease]] ;
 
     return w;
 }
