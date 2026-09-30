@@ -734,6 +734,8 @@ namespace dsp56k
 
 		void scale( TReg56& _scale ) const
 		{
+			if( ASMJIT_LIKELY(!(reg.sr.var & (SR_S1 | SR_S0))) )	// no scaling: one test instead of two
+				return;
 			if( sr_test_noCache(SR_S1) )
 				_scale.var <<= 1;
 			else if( sr_test_noCache(SR_S0) )
@@ -768,18 +770,25 @@ namespace dsp56k
 				return;
 			}
 
-			if( test < (-140737488355328ll << g_aluShift) )	// ff 800000 000000
+			// one unsigned range check for the common in-range case instead of two signed 64-bit
+			// compares that also materialise both saturation constants. Same bounds as before: no
+			// limiting iff (ff 800000 000000 << shift) <= test <= (00 7fffff 000000 << shift)
+			constexpr int64_t lo = -(140737488355328ll << g_aluShift);	// ff 800000 000000
+			constexpr int64_t hi = 140737471578112ll << g_aluShift;	// 00 7fffff 000000
+			if( ASMJIT_LIKELY(static_cast<uint64_t>(test - lo) <= static_cast<uint64_t>(hi - lo)) )
+			{
+				_dst = static_cast<int>(_src.var >> (24 + g_aluShift)) & 0xffffff;
+			}
+			else if( test < 0 )
 			{
 				sr_set( CCR_L );
 				_dst = 0x800000;
 			}
-			else if( test > (140737471578112ll << g_aluShift) )	// 00 7fffff 000000
+			else
 			{
 				sr_set( CCR_L );
 				_dst = 0x7FFFFF;
 			}
-			else
-				_dst = static_cast<int>(_src.var >> (24 + g_aluShift)) & 0xffffff;
 			assert( (_dst & 0xff000000) == 0 );
 		}
 
