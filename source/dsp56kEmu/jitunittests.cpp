@@ -42,6 +42,32 @@ namespace dsp56k
 
 		runTest(&JitUnittests::transferSaturation_build, &JitUnittests::transferSaturation_verify);
 		transferSaturation48();
+		dsp.setSR(0x000b00);
+		runTest([&]()
+		{
+			const RegGP temp(*block);
+			struct Case { uint64_t value; bool sixteen; };
+			const Case cases[] =
+			{
+				{0xfff00000000000ULL, false}, {0x807ffeff000000ULL, false},
+				{0x407ffeff000000ULL, false}, {0x807ffeff000000ULL, true}
+			};
+			for(size_t i = 0; i < 4; ++i)
+			{
+				block->asm_().mov(temp, asmjit::Imm(aluTestValue(cases[i].value)));
+				if(cases[i].sixteen)
+					ops->transferSaturation16(temp, temp);
+				else
+					ops->transferSaturation24(temp, temp);
+				block->mem().mov(m_checks[i], temp);
+			}
+		}, [&]()
+		{
+			verify(m_checks[0] == 0xe00000);
+			verify(m_checks[1] == 0x800000);
+			verify(m_checks[2] == 0x7fffff);
+			verify(m_checks[3] == 0xff8000);
+		});
 
 		{
 			constexpr auto T=true;

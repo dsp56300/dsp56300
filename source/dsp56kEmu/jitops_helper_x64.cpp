@@ -239,6 +239,7 @@ namespace dsp56k
 		else
 		{
 			const ShiftReg s0s1(m_block);
+			m_asm.sar(_dst, asmjit::Imm(g_aluBitOffset));
 
 			sr_getBitValue(s0s1, SRB_S1);
 			m_asm.shl(_dst, s0s1.get().r8());
@@ -247,28 +248,28 @@ namespace dsp56k
 			m_asm.sar(_dst, s0s1.get().r8());
 
 			// non-limited default
-			m_asm.sar(_dst, asmjit::Imm(24 + g_aluBitOffset));
+			m_asm.sar(_dst, asmjit::Imm(24));
 		}
 
 		{
 			const ShiftReg tester(m_block);
-			m_asm.mov(r32(tester), r32(_dst));
+			m_asm.mov(r64(tester), r64(_dst));
 
 			{
 				const RegScratch minmax(m_block);
 
 				// lower limit
-				m_asm.mov(r32(minmax), 0xff800000);
-				m_asm.cmp(r32(tester), r32(minmax));
-				m_asm.cmovl(r32(_dst), r32(minmax));
+				m_asm.mov(r64(minmax), asmjit::Imm(0xffffffffff800000ull));
+				m_asm.cmp(r64(tester), r64(minmax));
+				m_asm.cmovl(r64(_dst), r64(minmax));
 
 				// upper limit
-				m_asm.not_(r32(minmax)); // = 0x007fffff
-				m_asm.cmp(r32(tester), r32(minmax));
-				m_asm.cmovg(r32(_dst), r32(minmax));
+				m_asm.not_(r64(minmax)); // = 0x007fffff
+				m_asm.cmp(r64(tester), r64(minmax));
+				m_asm.cmovg(r64(_dst), r64(minmax));
 			}
 
-			m_asm.cmp(r32(tester), r32(_dst));
+			m_asm.cmp(r64(tester), r64(_dst));
 			ccr_update_ifNotZero(CCRB_L);
 			m_asm.and_(r32(_dst), asmjit::Imm(0x00ffffff));
 		}
@@ -294,6 +295,7 @@ namespace dsp56k
 		else
 		{
 			const ShiftReg s0s1(m_block);
+			m_asm.sar(_dst, asmjit::Imm(g_aluBitOffset));
 
 			sr_getBitValue(s0s1, SRB_S1);
 			m_asm.shl(_dst, s0s1.get().r8());
@@ -301,7 +303,7 @@ namespace dsp56k
 			sr_getBitValue(s0s1, SRB_S0);
 			m_asm.sar(_dst, s0s1.get().r8());
 
-			m_asm.sar(_dst, asmjit::Imm(32 + g_aluBitOffset));
+			m_asm.sar(_dst, asmjit::Imm(32));
 		}
 
 		{

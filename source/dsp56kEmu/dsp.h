@@ -745,15 +745,17 @@ namespace dsp56k
 
 		void scale( TReg56& _scale ) const
 		{
+			// Scale the sign-extended accumulator before discarding any high bits.
+			_scale.var >>= g_aluShift;
 			if( sr_test_noCache(SR_S1) )
-				_scale.var <<= 1;
+				_scale.var *= 2;
 			else if( sr_test_noCache(SR_S0) )
 				_scale.var >>= 1;
 		}
 
 		void limit_transfer( int& _dst, const TReg56& _src )
 		{
-			// left-aligned the value is already sign-correct in 64 bits, no sign extension needed
+			// scale() leaves a sign-extended, right-aligned value.
 			const int64_t test = _src.var;
 
 			if(sr_test_noCache(SR_SA))
@@ -761,36 +763,36 @@ namespace dsp56k
 				// Sixteen-bit Arithmetic mode (FM 3.5.1.2): the scaled and limited 16-bit word goes to bus
 				// bits 15..0, bus bits 23..16 carry its sign extension. Limiting triggers exactly when the
 				// value does not fit into 48 bits, i.e. when EXT is not the sign extension of bit 47.
-				if( test < (-140737488355328ll << g_aluShift) )	// ff 8000 0000 0000
+				if( test < -140737488355328ll )	// ff 8000 0000 0000
 				{
 					sr_set( CCR_L );
 					_dst = 0xff8000;
 				}
-				else if( test >= (140737488355328ll << g_aluShift) )	// 00 8000 0000 0000
+				else if( test >= 140737488355328ll )	// 00 8000 0000 0000
 				{
 					sr_set( CCR_L );
 					_dst = 0x007fff;
 				}
 				else
 				{
-					const auto word = static_cast<uint32_t>(test >> (32 + g_aluShift)) & 0xffff;
+					const auto word = static_cast<uint32_t>(test >> 32) & 0xffff;
 					_dst = static_cast<int>(word | ((word & 0x8000) ? 0xff0000 : 0));
 				}
 				return;
 			}
 
-			if( test < (-140737488355328ll << g_aluShift) )	// ff 800000 000000
+			if( test < -140737488355328ll )	// ff 800000 000000
 			{
 				sr_set( CCR_L );
 				_dst = 0x800000;
 			}
-			else if( test > (140737471578112ll << g_aluShift) )	// 00 7fffff 000000
+			else if( test > 140737471578112ll )	// 00 7fffff 000000
 			{
 				sr_set( CCR_L );
 				_dst = 0x7FFFFF;
 			}
 			else
-				_dst = static_cast<int>(_src.var >> (24 + g_aluShift)) & 0xffffff;
+				_dst = static_cast<int>(_src.var >> 24) & 0xffffff;
 			assert( (_dst & 0xff000000) == 0 );
 		}
 
@@ -1002,13 +1004,13 @@ namespace dsp56k
 		{
 			scale(_src);
 			const int64_t test = _src.var;
-			if(test < (-140737488355328ll << g_aluShift))
+			if(test < -140737488355328ll)
 			{
 				sr_set(CCR_L);
 				_x = 0xff8000;
 				_y = 0x000000;
 			}
-			else if(test >= (140737488355328ll << g_aluShift))
+			else if(test >= 140737488355328ll)
 			{
 				sr_set(CCR_L);
 				_x = 0x007fff;
@@ -1016,9 +1018,9 @@ namespace dsp56k
 			}
 			else
 			{
-				const auto hi = static_cast<TWord>(test >> (32 + g_aluShift)) & 0xffff;
+				const auto hi = static_cast<TWord>(test >> 32) & 0xffff;
 				_x = hi | ((hi & 0x8000) ? 0xff0000 : 0);
-				_y = static_cast<TWord>(test >> (16 + g_aluShift)) & 0xffff;
+				_y = static_cast<TWord>(test >> 16) & 0xffff;
 			}
 		}
 

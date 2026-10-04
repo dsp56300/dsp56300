@@ -6907,6 +6907,38 @@ namespace dsp56k
 		// scaling applied on the move (value stays in range)
 		chk(0x00200000000000ULL, static_cast<TWord>(SR_S1), 0x400000, "+0.25 scaleUp->0.5");
 		chk(0x00400000000000ULL, static_cast<TWord>(SR_S0), 0x200000, "+0.5 scaleDown->0.25");
+		chk(0x807ffeff000000ULL, 0x000b00, 0x800000, "scale up keeps negative sign");
+		chk(0x407ffeff000000ULL, 0x000b00, 0x7fffff, "scale up keeps positive sign");
+		chk(0xfff00000000000ULL, 0x000b00, 0xe00000, "scale up in range");
+		chk(0x807ffeff000000ULL, 0x000b00 | static_cast<TWord>(SR_SA), 0xff8000, "16-bit scale up keeps negative sign");
+
+		for(const bool b : {false, true})
+		{
+			runTest([&]()
+			{
+				dsp.setSR(0x000b00);
+				dsp.setALU(b, TReg56(static_cast<TReg56::MyType>(0x807ffeff000000ULL)));
+				emit(b ? "move b,x0" : "move a,x0");
+			}, [&]()
+			{
+				verify(dsp.x0().toWord() == 0x800000);
+				verify(dsp.sr_test(CCR_L));
+			});
+		}
+
+		runTest([&]()
+		{
+			dsp.setSR(0x000b00 | static_cast<TWord>(SR_SA));
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x807ffeff000000ULL)));
+			dsp.memWrite(MemArea_X, 0x20, 0);
+			dsp.memWrite(MemArea_X, 0x21, 0);
+			emit(0x482000);	// move a,l:$20
+		}, [&]()
+		{
+			verify(dsp.memRead(MemArea_X, 0x20) == 0xff8000);
+			verify(dsp.memRead(MemArea_X, 0x21) == 0);
+			verify(dsp.sr_test(CCR_L));
+		});
 	}
 
 	void UnitTests::max_ccr()
