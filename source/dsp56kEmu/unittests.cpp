@@ -7983,6 +7983,7 @@ namespace dsp56k
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
 		do_twoWordCallAtLoopEnd();
+		do_callToLoopEndPlusOne();
 		do_callNotAtLoopEnd();
 		jsr_rts();
 		ccrBackendParity();
@@ -9056,6 +9057,55 @@ namespace dsp56k
 		execUntil(returnPC);
 
 		verifyLoopRetired(5);
+	}
+
+	/*	A loop ends at the fetch of its last word. A call from the body to the code right behind the loop lands at LA+1
+		too, and the interpreter took that for a loop end: the code there never ran and the call's return address stayed
+		on the stack. Found by helica1 (dsp56300 PR #15). The bodies count before they call, so a broken loop end still
+		terminates instead of hanging the test
+	*/
+	void UnitTests::do_callToLoopEndPlusOne()
+	{
+		for(const auto forever : {false, true})
+		{
+			dsp.resetHW();
+			dsp.regs().n[4] = TReg24(4);
+			dsp.regs().r[0] = TReg24(0);
+			dsp.regs().r[1] = TReg24(0);
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(4)));
+
+			TWord pc = 0x100;
+			pc = emitToMemory(forever ? "jsr $620" : "jsr $600", pc);
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			if(forever)
+			{
+				pc = emitToMemory(0x000203, 0x000626, 0x620);	// $620: do forever, LA = $626
+				pc = emitToMemory("dec a", pc);					// $622
+				pc = emitToMemory("brkeq", pc);					// $623: the way out after four passes
+				pc = emitToMemory("move (r0)+", pc);			// $624
+				pc = emitToMemory("jsr $627", pc);				// $625: calls LA+1
+			}
+			else
+			{
+				pc = emitToMemory("do n4,>$605", 0x600);		// $600-$601, LA = $604
+				pc = emitToMemory("move (r0)+", pc);			// $602
+				pc = emitToMemory("jsr $605", pc);				// $603: calls LA+1
+			}
+			pc = emitToMemory("nop", pc);						// LA
+			pc = emitToMemory("move (r1)+", pc);				// LA+1: the callee, and the way out of the loop
+			emitToMemory("rts", pc);
+
+			dsp.setPC(0x100);
+			execUntil(returnPC);
+
+			// four passes, each calls once, the way out runs the callee once more. DO FOREVER leaves on its fourth pass
+			// before it counts
+			verifyLoopRetired(forever ? 3 : 4);
+			verify(dsp.regs().r[1].var == (forever ? 4u : 5u));
+			verify((dsp.getSR().var & SR_FV) == 0);
+		}
 	}
 
 	void UnitTests::do_multi()

@@ -207,6 +207,7 @@ namespace  dsp56k
 		void verifyLoopRetired(uint32_t _expectedR0) const;
 		void enableBranchAtLoopEnd();
 		void do_twoWordCallAtLoopEnd();
+		void do_callToLoopEndPlusOne();
 		void enableDynamicFastInterrupts(bool _enable);
 		void callAtVectorAddress();
 		void callAfterRepAtVectorAddress();

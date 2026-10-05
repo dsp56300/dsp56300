@@ -533,14 +533,26 @@ namespace dsp56k
 		// __________________
 		//
 
+		/*	The loop ends where the chip decides it, at the fetch of the word at LA: when the instruction that ends at LA
+			falls through, or when a call at LA returns there. A jump or call from the body that merely lands at LA+1
+			does not count. It was taken for a loop end, the code at LA+1 never ran and the call's return address stayed
+			on the stack. Found by helica1 (dsp56300 PR #15)
+		*/
+		bool fetchedLA = false;
+
 		// note the terminate check: the interpreter executes a whole DO loop inside this function, it never returns
 		// to DSPThread::threadFunc in between. Without it, a firmware loop that never ends deadlocks the join on shutdown.
 		while(reg.sc.var >= stackCount && !m_terminate.load(std::memory_order_relaxed))
 		{
 			execInterpreter();
 
-			if(reg.pc.var != (reg.la.var+1))
+			if(pcCurrentInstruction + m_currentOpLen == reg.la.var + 1)
+				fetchedLA = true;
+
+			if(reg.pc.var != (reg.la.var+1) || !fetchedLA)
 				continue;
+
+			fetchedLA = false;
 
 			if(!sr_test_noCache(SR_LF))
 				break;
