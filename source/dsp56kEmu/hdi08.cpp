@@ -375,11 +375,11 @@ namespace dsp56k
 		}
 	}
 
-	void HDI08::writeStatusRegister(const TWord _val)
+	void HDI08::writeStatusRegister(TWord)
 	{
-//		LOG("Write HDI08 HSR " << HEX(_val));
-		m_hsr = _val;
-		m_periph.setDelayCycles(0);
+		// HSR is read-only for the DSP: HRDF, HTDE and HCP are status, HF0 and HF1 belong to the host. A BSET or BCLR on
+		// it wrote back what it had read, and could set a host flag again that the host had just cleared, or corrupt
+		// HTDE (helica1, dsp56300 PR #15). Nothing changes, so the peripherals need not run early either
 	}
 
 	void HDI08::writePortControlRegister(const TWord _val)

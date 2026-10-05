@@ -237,6 +237,7 @@ namespace dsp56k
 		dmaPendingRequestAtArm();
 		essiDmaPendingRequestAtArm();
 		hostQueueDataWaitsForHostFlags();
+		hostStatusRegisterReadOnly();
 		movepPeripheralEa();
 		shiTransmitEmptyAfterReset();
 		maskedInterruptKeepsPeripheralsRunning();
@@ -552,6 +553,28 @@ namespace dsp56k
 		verify(hdi08.hasRXData());
 
 		hdi08.clearRX();
+		hdi08.reset();
+	}
+
+	/*	HSR is read-only for the DSP. A BCLR or BSET on it wrote back what it had read and could clear a host flag the host
+		had set, or set one it had cleared (helica1, dsp56300 PR #15)
+	*/
+	void UnitTests::hostStatusRegisterReadOnly()
+	{
+		auto& hdi08 = peripheralsX.getHDI08();
+
+		hdi08.setHostFlags(1, 0);
+
+		runTest([&]()
+		{
+			emit("bclr #3,x:<<$ffffc3");		// HF0
+			emit("bset #4,x:<<$ffffc3");		// HF1
+		}, [&]()
+		{
+			verify(bittest(hdi08.readStatusRegister(), HDI08::HSR_HF0));
+			verify(!bittest(hdi08.readStatusRegister(), HDI08::HSR_HF1));
+		});
+
 		hdi08.reset();
 	}
 

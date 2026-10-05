@@ -41,10 +41,8 @@ namespace dsp56k
 			return m_hsr;
 		}
 		
-		void writeStatusRegister(TWord _val)
-		{
-			m_hsr = _val;
-		}
+		// read-only for the DSP, see HDI08::writeStatusRegister
+		void writeStatusRegister(TWord) {}
 		
 		void reset() {}
 
