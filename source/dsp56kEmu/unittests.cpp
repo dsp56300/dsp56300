@@ -237,6 +237,7 @@ namespace dsp56k
 		dmaPendingRequestAtArm();
 		essiDmaPendingRequestAtArm();
 		hostQueueDataWaitsForHostFlags();
+		movepPeripheralEa();
 		shiTransmitEmptyAfterReset();
 		maskedInterruptKeepsPeripheralsRunning();
 		esaiClockBacklogWaitsForRequest();
@@ -552,6 +553,37 @@ namespace dsp56k
 
 		hdi08.clearRX();
 		hdi08.reset();
+	}
+
+	/*	MOVEP between a peripheral and an ea that addresses a peripheral as well. The interpreter used memory for the ea
+		side, so movep x:<<M_HORX,x:(r0) with r0 at DOR0 never reached the DMA register (helica1, dsp56300 PR #15)
+	*/
+	void UnitTests::movepPeripheralEa()
+	{
+		dsp.regs().m[0].var = 0xffffff;
+		dsp.regs().r[0].var = XIO_DOR0;
+
+		runTest([&]()
+		{
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0x123456);
+			dsp.getPeriph(0)->write(XIO_DOR0, 0);
+			emit(("movep x:<<" + testPeriphAddrStr() + ",x:(r0)").c_str());
+		}, [&]()
+		{
+			verify(dsp.getPeriph(0)->read(XIO_DOR0, Nop) == 0x123456);
+		});
+
+		runTest([&]()
+		{
+			dsp.getPeriph(0)->write(XIO_DOR0, 0x654321);
+			dsp.getPeriph(0)->write(g_testPeriphAddr, 0);
+			emit(("movep x:(r0),x:<<" + testPeriphAddrStr()).c_str());
+		}, [&]()
+		{
+			verify(dsp.getPeriph(0)->read(g_testPeriphAddr, Nop) == 0x654321);
+		});
+
+		dsp.getPeriph(0)->write(XIO_DOR0, 0);
 	}
 
 	void UnitTests::conditionCodes()

@@ -363,16 +363,24 @@ namespace dsp56k
 
 		const TWord ea		= effectiveAddress<Movep_ppea>(op);
 
+		// The ea side may address a peripheral too, as with readMem/writeMem and in the JIT: firmware loads DMA offset
+		// registers with movep x:<<M_HORX,x:(r0) and r0 at DOR0 (helica1, dsp56300 PR #15)
 		if( write )
 		{
 			// TODO: remove the if here, use helper templates instead
 			if( mmmrrr == MMMRRR_ImmediateData )
 				memWritePeriphFFFFC0( s, pp, ea );
 			else
-				memWritePeriphFFFFC0( s, pp, memRead( S, ea ) );
+				memWritePeriphFFFFC0( s, pp, isPeripheralAddress(ea) ? memReadPeriph( S, ea, Movep_ppea ) : memRead( S, ea ) );
 		}
 		else
-			memWrite( S, ea, memReadPeriphFFFFC0( s, pp, Movep_ppea) );
+		{
+			const auto value = memReadPeriphFFFFC0( s, pp, Movep_ppea);
+			if( isPeripheralAddress(ea) )
+				memWritePeriph( S, ea, value );
+			else
+				memWrite( S, ea, value );
+		}
 	}
 	inline void DSP::op_Movep_Xqqea(const TWord op)
 	{
