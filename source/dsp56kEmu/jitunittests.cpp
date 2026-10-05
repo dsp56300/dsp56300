@@ -42,6 +42,7 @@ namespace dsp56k
 
 		runTest(&JitUnittests::transferSaturation_build, &JitUnittests::transferSaturation_verify);
 		transferSaturation48();
+		transferSaturationScaleUp();
 
 		{
 			constexpr auto T=true;
@@ -537,6 +538,37 @@ namespace dsp56k
 		verify(m_checks[0] == 0x800000);
 		verify(m_checks[1] == 0x7fffff);
 		verify(m_checks[2] == 0x334455);
+	}
+
+	// Scale Up on the path that reads S1 at run time, as without a known mode (sim56300, SR $000b00)
+	void JitUnittests::transferSaturationScaleUp()
+	{
+		const auto sr = dsp.regs().sr.var;
+		dsp.setSR(0x000b00);
+
+		runTest([&]()
+		{
+			const RegGP temp(*block);
+
+			block->asm_().mov(temp, asmjit::Imm(aluTestValue(0x00807ffeff000000)));
+			ops->transferSaturation24(temp, temp);
+			block->mem().mov(m_checks[0], temp);
+
+			block->asm_().mov(temp, asmjit::Imm(aluTestValue(0x00407ffeff000000)));
+			ops->transferSaturation24(temp, temp);
+			block->mem().mov(m_checks[1], temp);
+
+			block->asm_().mov(temp, asmjit::Imm(aluTestValue(0x00807ffeff000000)));
+			ops->transferSaturation16(temp, temp);
+			block->mem().mov(m_checks[2], temp);
+		}, [&]()
+		{
+			verify(m_checks[0] == 0x800000);
+			verify(m_checks[1] == 0x7fffff);
+			verify(m_checks[2] == 0xff8000);
+		});
+
+		dsp.setSR(sr);
 	}
 
 	void JitUnittests::transferSaturation48()

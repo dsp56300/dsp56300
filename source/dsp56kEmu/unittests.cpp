@@ -6907,6 +6907,27 @@ namespace dsp56k
 		// scaling applied on the move (value stays in range)
 		chk(0x00200000000000ULL, static_cast<TWord>(SR_S1), 0x400000, "+0.25 scaleUp->0.5");
 		chk(0x00400000000000ULL, static_cast<TWord>(SR_S0), 0x200000, "+0.5 scaleDown->0.25");
+		// Scale Up keeps the sign of an accumulator whose bits 55 and 54 differ (sim56300, SR $000b00)
+		chk(0x807ffeff000000ULL, static_cast<TWord>(SR_S1), 0x800000, "scaleUp big- -> sat-");
+		chk(0x407ffeff000000ULL, static_cast<TWord>(SR_S1), 0x7FFFFF, "scaleUp big+ -> sat+");
+		chk(0x807ffeff000000ULL, static_cast<TWord>(SR_S1 | SR_SA), 0xFF8000, "SA scaleUp big- -> sat-");
+
+		// L reports a limited transfer only: $00:7fffff:000001 fits into 48 bits (sim56300)
+		auto chkL = [&](const uint64_t _a, const TWord _sr, const bool _l)
+		{
+			runTest([&]()
+			{
+				dsp.setSR(_sr);
+				dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(_a)));
+				emit("move a,x0");
+			}, [&]()
+			{
+				const bool l = dsp.sr_test(CCR_L);
+				verify(l == _l);
+			});
+		};
+		chkL(0x807ffeff000000ULL, static_cast<TWord>(SR_S1), true);
+		chkL(0x007fffff000001ULL, 0, false);
 	}
 
 	void UnitTests::max_ccr()

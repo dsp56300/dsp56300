@@ -189,36 +189,39 @@ namespace dsp56k
 		else
 		{
 			const ShiftReg shifter(m_block);
+			// sign-extended first, Scale Up of the left-aligned value pushed bit 55 out of the host word
+			m_asm.asr(_dst, _src, asmjit::Imm(g_aluBitOffset));
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S1);
 			m_asm.cset(shifter, asmjit::arm::CondCode::kNotZero);
-			m_asm.lsl(_dst, _src, shifter.get());
+			m_asm.lsl(_dst, _dst, shifter.get());
 
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S0);
 			m_asm.cset(shifter, asmjit::arm::CondCode::kNotZero);
 			m_asm.asr(_dst, _dst, shifter.get());
 
-			m_asm.asr(r64(_dst), r64(_dst), asmjit::Imm(24 + g_aluBitOffset));
+			m_asm.asr(r64(_dst), r64(_dst), asmjit::Imm(24));
 		}
 		
 		{
+			// Scale Up leaves 33 significant bits, a 32 bit compare would truncate them
 			const RegGP tester(m_block);
-			m_asm.mov(r32(tester), r32(_dst));
+			m_asm.mov(r64(tester), r64(_dst));
 
 			{
 				// lower limit
 				const RegScratch limit(m_block);
 
-				m_asm.mov(r32(limit), asmjit::Imm(0xff800000));
-				m_asm.cmp(r32(tester), r32(limit));
-				m_asm.csel(r32(_dst), r32(limit), r32(_dst), asmjit::arm::CondCode::kLT);
+				m_asm.mov(r64(limit), asmjit::Imm(-0x800000));
+				m_asm.cmp(r64(tester), r64(limit));
+				m_asm.csel(r64(_dst), r64(limit), r64(_dst), asmjit::arm::CondCode::kLT);
 
 				// upper limit
-				m_asm.mvn(r32(limit), r32(limit)); // = 0x007fffff
-				m_asm.cmp(r32(tester), r32(limit));
-				m_asm.csel(r32(_dst), r32(limit), r32(_dst), asmjit::arm::CondCode::kGT);
+				m_asm.mvn(r64(limit), r64(limit)); // = 0x007fffff
+				m_asm.cmp(r64(tester), r64(limit));
+				m_asm.csel(r64(_dst), r64(limit), r64(_dst), asmjit::arm::CondCode::kGT);
 			}
 
-			m_asm.cmp(r32(tester), r32(_dst));
+			m_asm.cmp(r64(tester), r64(_dst));
 			ccr_update_ifNotZero(CCRB_L);
 			m_asm.and_(r32(_dst), asmjit::Imm(0x00ffffff));
 		}
@@ -242,15 +245,17 @@ namespace dsp56k
 		else
 		{
 			const ShiftReg shifter(m_block);
+			// sign-extended first, Scale Up of the left-aligned value pushed bit 55 out of the host word
+			m_asm.asr(_dst, _src, asmjit::Imm(g_aluBitOffset));
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S1);
 			m_asm.cset(shifter, asmjit::arm::CondCode::kNotZero);
-			m_asm.lsl(_dst, _src, shifter.get());
+			m_asm.lsl(_dst, _dst, shifter.get());
 
 			m_asm.bitTest(m_dspRegs.getSR(JitDspRegs::Read), SRB_S0);
 			m_asm.cset(shifter, asmjit::arm::CondCode::kNotZero);
 			m_asm.asr(_dst, _dst, shifter.get());
 
-			m_asm.asr(r64(_dst), r64(_dst), asmjit::Imm(32 + g_aluBitOffset));
+			m_asm.asr(r64(_dst), r64(_dst), asmjit::Imm(32));
 		}
 
 		{

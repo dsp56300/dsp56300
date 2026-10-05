@@ -240,6 +240,9 @@ namespace dsp56k
 		{
 			const ShiftReg s0s1(m_block);
 
+			// sign-extended first, Scale Up of the left-aligned value pushed bit 55 out of the host word
+			m_asm.sar(_dst, asmjit::Imm(g_aluBitOffset));
+
 			sr_getBitValue(s0s1, SRB_S1);
 			m_asm.shl(_dst, s0s1.get().r8());
 
@@ -247,28 +250,34 @@ namespace dsp56k
 			m_asm.sar(_dst, s0s1.get().r8());
 
 			// non-limited default
-			m_asm.sar(_dst, asmjit::Imm(24 + g_aluBitOffset));
+			m_asm.sar(_dst, asmjit::Imm(24));
 		}
 
 		{
+			// Scale Up leaves 33 significant bits, which a 32 bit compare truncates, so the limit took the wrong sign
+			const bool wide = !mode || mode->testSR(SRB_S1);
+			const auto dst = wide ? static_cast<JitRegGP>(r64(_dst)) : static_cast<JitRegGP>(r32(_dst));
+
 			const ShiftReg tester(m_block);
-			m_asm.mov(r32(tester), r32(_dst));
+			const auto t = wide ? static_cast<JitRegGP>(r64(tester)) : static_cast<JitRegGP>(r32(tester));
+			m_asm.mov(t, dst);
 
 			{
 				const RegScratch minmax(m_block);
+				const auto m = wide ? static_cast<JitRegGP>(r64(minmax)) : static_cast<JitRegGP>(r32(minmax));
 
 				// lower limit
-				m_asm.mov(r32(minmax), 0xff800000);
-				m_asm.cmp(r32(tester), r32(minmax));
-				m_asm.cmovl(r32(_dst), r32(minmax));
+				m_asm.mov(m, asmjit::Imm(-0x800000));
+				m_asm.cmp(t, m);
+				m_asm.cmovl(dst, m);
 
 				// upper limit
-				m_asm.not_(r32(minmax)); // = 0x007fffff
-				m_asm.cmp(r32(tester), r32(minmax));
-				m_asm.cmovg(r32(_dst), r32(minmax));
+				m_asm.not_(m); // = 0x007fffff
+				m_asm.cmp(t, m);
+				m_asm.cmovg(dst, m);
 			}
 
-			m_asm.cmp(r32(tester), r32(_dst));
+			m_asm.cmp(t, dst);
 			ccr_update_ifNotZero(CCRB_L);
 			m_asm.and_(r32(_dst), asmjit::Imm(0x00ffffff));
 		}
@@ -295,13 +304,16 @@ namespace dsp56k
 		{
 			const ShiftReg s0s1(m_block);
 
+			// sign-extended first, see transferSaturation24
+			m_asm.sar(_dst, asmjit::Imm(g_aluBitOffset));
+
 			sr_getBitValue(s0s1, SRB_S1);
 			m_asm.shl(_dst, s0s1.get().r8());
 
 			sr_getBitValue(s0s1, SRB_S0);
 			m_asm.sar(_dst, s0s1.get().r8());
 
-			m_asm.sar(_dst, asmjit::Imm(32 + g_aluBitOffset));
+			m_asm.sar(_dst, asmjit::Imm(32));
 		}
 
 		{

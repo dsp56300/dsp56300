@@ -746,7 +746,12 @@ namespace dsp56k
 		void scale( TReg56& _scale ) const
 		{
 			if( sr_test_noCache(SR_S1) )
-				_scale.var <<= 1;
+			{
+				// A value whose bits 55 and 54 differ is out of range after Scale Up. Shifting it left-aligned pushed bit 55
+				// out of the host word and the limit took the wrong sign, so it saturates with its own sign instead
+				const auto up = static_cast<int64_t>(static_cast<uint64_t>(_scale.var) << 1);
+				_scale.var = (up ^ _scale.var) < 0 ? (_scale.var >> 63) ^ 0x7fffffffffffffffll : up;
+			}
 			else if( sr_test_noCache(SR_S0) )
 				_scale.var >>= 1;
 		}
@@ -784,7 +789,7 @@ namespace dsp56k
 				sr_set( CCR_L );
 				_dst = 0x800000;
 			}
-			else if( test > (140737471578112ll << g_aluShift) )	// 00 7fffff 000000
+			else if( test >= (140737488355328ll << g_aluShift) )	// 00 800000 000000
 			{
 				sr_set( CCR_L );
 				_dst = 0x7FFFFF;
