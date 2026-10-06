@@ -15,6 +15,7 @@
 #	include <sys/mman.h>
 #	include <sys/stat.h>
 #	include <sstream>
+#	include <atomic>
 #endif
 
 namespace dsp56k
@@ -222,19 +223,21 @@ namespace dsp56k
 	{
 		if (m_basePtr == nullptr)
 			return;
-		// On Linux, the base allocation is replaced by individual mappings.
-		// We do not munmap the whole block as it was already overwritten by
-		// the individual mapRegion calls. Just clear the pointer.
+		// unmapRegion never leaves a hole, the whole range is still ours
+		munmap(m_basePtr, m_basePtrSize);
 		m_basePtr = nullptr;
 		m_basePtrSize = 0;
 	}
 
 	bool MmuHelper::createBackingStore(const size_t _byteSize)
 	{
-		static uint32_t g_uid = 0;
+		static std::atomic<uint32_t> g_uid{0};
 
+		// The name is system-wide: 'this' separates instances within a process, the pid separates processes
+		// that have an instance at the same address (always the case without ASLR, i.e. under a debugger).
+		// Hex and a short prefix: macOS limits the name to 31 characters (PSHMNAMLEN), longer ones fail with ENAMETOOLONG
 		std::stringstream name;
-		name << "dsp56300_" << reinterpret_cast<uint64_t>(this) << '_' << g_uid++;
+		name << "dsp_" << std::hex << getpid() << '_' << reinterpret_cast<uint64_t>(this) << '_' << g_uid++;
 		const std::string na(name.str());
 
 		int fd = shm_open(na.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
@@ -286,7 +289,10 @@ namespace dsp56k
 			return false;
 		}
 		munlock(_addr, it->second);
-		const auto res = munmap(_addr, it->second) == 0;
+		// Replace the mapping with a reservation instead of munmapping it. A munmap leaves a hole until the
+		// next MAP_FIXED mapRegion, and an mmap on another thread (another DSP's JIT) can be placed into it.
+		// The MAP_FIXED then silently overwrites that allocation. Same race as the Windows placeholder fix.
+		const auto res = mmap(_addr, it->second, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE, InvalidHandle, 0) == _addr;
 		m_mappedRegions.erase(it);
 		if (!res)
 			LOG("MmuHelper: Failed to unmap memory, err " << errno);
