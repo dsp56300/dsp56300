@@ -198,8 +198,12 @@ namespace dsp56k
 			const auto backingOffset = blockIdx * blockBytes;
 			auto* target = reinterpret_cast<uint8_t*>(m_ptr) + blockIdx * blockBytes;
 
-			// Unmap the current (shared default) mapping for this block
+			// Unmap the current (shared default) mapping for this block. Only Windows needs this: its placeholder unmap is
+			// atomic. On POSIX, mmap with MAP_FIXED below replaces the mapping atomically, while a munmap first leaves a hole
+			// that another thread's mmap (asmjit code of the other DSP, malloc) can take, and MAP_FIXED then clobbers it
+#ifdef _WIN32
 			m_mmu.unmapRegion(target);
+#endif
 
 			// Map to the block's own private region in the backing store
 			if (!m_mmu.mapRegion(backingOffset, blockBytes, target))
