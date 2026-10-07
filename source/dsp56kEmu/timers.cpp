@@ -88,7 +88,11 @@ namespace dsp56k
 				_t.m_tcr = _t.m_tlr + _t.m_tcr;	// keep the overshoot
 		}
 
-		if (_t.m_tcr >= _t.m_tcpr)
+		// in the measurement modes TCF reports an input edge, the counter is not compared against TCPR
+		const auto m = mode(_index);
+		const bool measures = m == ModeMeasureInputWidth || m == ModeMeasureInputPeriod || m == ModeMeasurementCapture;
+
+		if (!measures && _t.m_tcr >= _t.m_tcpr)
 		{
 			// Compare
 			const auto overshoot = _t.m_tcr - _t.m_tcpr;
@@ -137,6 +141,31 @@ namespace dsp56k
 		// DI is read only, it follows the TIO pin
 		constexpr TWord di = 1 << Timer::M_DI;
 		t.m_tcsr = (_val & ~di) | (static_cast<TWord>(t.m_tcsr) & di);
+	}
+
+	void Timers::setInputPin(const int _index, const bool _level)
+	{
+		auto& t = m_timers[_index];
+
+		const bool old = t.m_tcsr.test(Timer::M_DI) != 0;
+
+		if(_level)
+			t.m_tcsr.set(Timer::M_DI);
+		else
+			t.m_tcsr.clear(Timer::M_DI);
+
+		if(old == _level || !t.m_tcsr.test(Timer::M_TE) || mode(_index) != ModeMeasurementCapture)
+			return;
+
+		// capture: INV clear selects the rising edge of TIO, INV set the falling one
+		const bool rising = _level;
+		if(rising == (t.m_tcsr.test(Timer::M_INV) != 0))
+			return;
+
+		if(t.m_tcsr.test(Timer::M_TCIE))
+			injectInterrupt(Vba_TIMER0_Compare, static_cast<uint32_t>(_index));
+
+		t.m_tcsr.set(Timer::M_TCF);
 	}
 
 	void Timers::writeTLR(int _index, TWord _val)

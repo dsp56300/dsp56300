@@ -121,20 +121,16 @@ namespace dsp56k
 
 		const TWord& readTCSR(int _index) const			{ return m_timers[_index].m_tcsr; }
 
-		// level of the TIO pin of a timer, as seen by the DI bit of its TCSR
-		void setInputPin(const int _index, const bool _level)
-		{
-			if(_level)
-				m_timers[_index].m_tcsr.set(Timer::M_DI);
-			else
-				m_timers[_index].m_tcsr.clear(Timer::M_DI);
-		}
 		const TWord& readTLR(int _index) const			{ return m_timers[_index].m_tlr; }
 		const TWord& readTCPR(int _index) const			{ return m_timers[_index].m_tcpr; }
 		const TWord& readTCR(int _index) const			{ return m_timers[_index].m_tcr; }
 
 		const TWord& readTPLR() const					{ return m_tplr; }
 		const TWord& readTPCR() const					{ return m_tpcr; }
+
+		// Level of the TIO pin of a timer, as seen by the DI bit of its TCSR. In capture mode the selected edge
+		// sets TCF. ponytail: the other input modes (event counter, width, period) do not react to the pin yet
+		void setInputPin(int _index, bool _level);
 
 		void setDSP(const DSP* _dsp);
 

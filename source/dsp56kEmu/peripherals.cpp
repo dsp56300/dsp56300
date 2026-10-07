@@ -717,6 +717,8 @@ namespace dsp56k
 		if (!m_disableTimers)
 			delay = std::min(delay, m_timers.exec());
 		delay = std::min(delay, m_dma.exec());
+		if(m_execCallback)
+			delay = std::min(delay, m_execCallback());
 		return delay;
 	}
 

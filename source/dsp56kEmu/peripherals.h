@@ -250,7 +250,13 @@ namespace dsp56k
 
 		void setDSP(DSP* _dsp) override;
 
+		// Called with the peripherals, from inside DSP execution, for board logic that changes pins over time (a
+		// chip on a timer input that turns ready, for example). Returns the instructions until it wants to run again
+		using ExecCallback = std::function<uint32_t()>;
+		void setExecCallback(ExecCallback&& _cb) { m_execCallback = std::move(_cb); }
+
 	private:
+		ExecCallback m_execCallback;
 		Dma m_dma;
 		EsaiClock m_esaiClock;
 		Esai m_esai;
