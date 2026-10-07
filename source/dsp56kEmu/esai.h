@@ -48,6 +48,9 @@ namespace dsp56k
 
 		enum AddressesY
 		{
+			M_PCRE    = 0xFFFF9F, // Port E GPIO Control Register (the pins of ESAI_1)
+			M_PRRE    = 0xFFFF9E, // Port E Direction Register
+			M_PDRE    = 0xFFFF9D, // Port E GPIO Data Register
 			M_RSMB_1  = 0xFFFF9C, // ESAI_1 Receive Slot Mask Register B (RSMB)
 			M_RSMA_1  = 0xFFFF9B, // ESAI_1 Receive Slot Mask Register A (RSMA)
 			M_TSMB_1  = 0xFFFF9A, // ESAI_1 Transmit Slot Mask Register B (TSMB)

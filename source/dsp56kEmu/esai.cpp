@@ -504,6 +504,9 @@ namespace dsp56k
 		constexpr std::pair<int, const char*> symbolsY[] =
 		{
 			// ESAI_1
+			{M_PCRE		, "M_PCRE"},
+			{M_PRRE		, "M_PRRE"},
+			{M_PDRE		, "M_PDRE"},
 			{M_RSMB_1	, "M_RSMB_1"},
 			{M_RSMA_1	, "M_RSMA_1"},
 			{M_TSMB_1	, "M_TSMB_1"},

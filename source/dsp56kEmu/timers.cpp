@@ -134,7 +134,9 @@ namespace dsp56k
 		timerFlagReset<Timer::M_TOF>(t.m_tcsr, _val);
 		timerFlagReset<Timer::M_TCF>(t.m_tcsr, _val);
 
-		t.m_tcsr = _val;
+		// DI is read only, it follows the TIO pin
+		constexpr TWord di = 1 << Timer::M_DI;
+		t.m_tcsr = (_val & ~di) | (static_cast<TWord>(t.m_tcsr) & di);
 	}
 
 	void Timers::writeTLR(int _index, TWord _val)

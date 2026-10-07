@@ -120,6 +120,15 @@ namespace dsp56k
 		void writeTPCR(TWord _val);
 
 		const TWord& readTCSR(int _index) const			{ return m_timers[_index].m_tcsr; }
+
+		// level of the TIO pin of a timer, as seen by the DI bit of its TCSR
+		void setInputPin(const int _index, const bool _level)
+		{
+			if(_level)
+				m_timers[_index].m_tcsr.set(Timer::M_DI);
+			else
+				m_timers[_index].m_tcsr.clear(Timer::M_DI);
+		}
 		const TWord& readTLR(int _index) const			{ return m_timers[_index].m_tlr; }
 		const TWord& readTCPR(int _index) const			{ return m_timers[_index].m_tcpr; }
 		const TWord& readTCR(int _index) const			{ return m_timers[_index].m_tcr; }

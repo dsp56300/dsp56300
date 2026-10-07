@@ -230,6 +230,7 @@ namespace dsp56k
 		Dma& getDMA()					{ return m_dma; }
 		EsaiPortC& getPortC()			{ return m_portC; }
 		const Timers& getTimers() const	{ return m_timers; }
+		Timers& getTimers()				{ return m_timers; }
 
 		void setSymbols(Disassembler& _disasm) const override;
 
@@ -280,6 +281,17 @@ namespace dsp56k
 		void reset() override;
 
 		Esai& getEsai() { return m_esai; }
+		EsaiPortC& getPortE() { return m_portE; }	// GPIO on the ESAI_1 pins, same layout as Port C on the ESAI
+
+		// Y I/O registers a derivative adds on top of the ones handled here. The read callback returns false
+		// for an address it does not handle, which then reads back what was last written to it
+		using IoRead = std::function<bool(TWord _addr, TWord& _value)>;
+		using IoWrite = std::function<bool(TWord _addr, TWord _value)>;
+		void setIoExtension(IoRead&& _read, IoWrite&& _write)
+		{
+			m_ioExtRead = std::move(_read);
+			m_ioExtWrite = std::move(_write);
+		}
 
 		void setSymbols(Disassembler& _disasm) const override;
 
@@ -294,5 +306,8 @@ namespace dsp56k
 	private:
 		std::array<TWord, XIO_Reserved_High_Last - XIO_Reserved_High_First + 1> m_mem;
 		Esai m_esai;
+		EsaiPortC m_portE;
+		IoRead m_ioExtRead;
+		IoWrite m_ioExtWrite;
 	};
 }

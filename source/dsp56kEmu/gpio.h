@@ -30,8 +30,8 @@ namespace dsp56k
 
 		TWord dspRead() const
 		{
-			// DSP will only get a bit if is configued as an input
-			return (m_hostWrite & ~m_direction) & m_control;
+			// a GPIO input reads the pin, a GPIO output reads back what the DSP wrote to it
+			return ((m_hostWrite & ~m_direction) | (m_dspWrite & m_direction)) & m_control;
 		}
 
 		TWord hostRead() const

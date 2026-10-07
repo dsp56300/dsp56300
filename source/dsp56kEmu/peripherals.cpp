@@ -814,7 +814,16 @@ namespace dsp56k
 		case Esai::M_TSMB_1:		return m_esai.readTSMB();
 		case Esai::M_RSMA_1:		return m_esai.readRSMA();
 		case Esai::M_RSMB_1:		return m_esai.readRSMB();
+		case Esai::M_PCRE:			return m_portE.getControl();
+		case Esai::M_PDRE:			return m_portE.dspRead();
+		case Esai::M_PRRE:			return m_portE.getDirection();
 		default:
+			if(m_ioExtRead)
+			{
+				TWord v;
+				if(m_ioExtRead(_addr, v))
+					return v;
+			}
 			return m_mem[_addr - XIO_Reserved_High_First];
 		}
 	}
@@ -839,7 +848,12 @@ namespace dsp56k
 		case Esai::M_TSMB_1:	m_esai.writeTSMB(_val);								return;
 		case Esai::M_RSMA_1:	m_esai.writeRSMA(_val);								return;
 		case Esai::M_RSMB_1:	m_esai.writeRSMB(_val);								return;
+		case Esai::M_PCRE:		m_portE.setControl(_val);							return;
+		case Esai::M_PDRE:		m_portE.dspWrite(_val);								return;
+		case Esai::M_PRRE:		m_portE.setDirection(_val);							return;
 		default:
+			if(m_ioExtWrite && m_ioExtWrite(_addr, _val))
+				return;
 			break;
 		}
 		if (_addr != 0xffffd5)
