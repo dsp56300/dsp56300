@@ -143,6 +143,7 @@ namespace dsp56k
 		insert();
 		saBitfield();
 		timerPrescaler();
+		timerRestartShortPeriod();
 		jscc();
 		lra();
 		lsl();
@@ -9568,6 +9569,41 @@ namespace dsp56k
 		verify(tcf(0));
 	}
 
+
+	/*	A timer that restarts on compare (TRM) with a period shorter than the counts one timer update adds. The update
+		reloaded TLR plus everything it had counted past TCPR, which left the counter above TCPR, and a counter above
+		TCPR only reaches it again after the 24 bit overflow: the compare stopped for millions of counts
+	*/
+	void UnitTests::timerRestartShortPeriod()
+	{
+		constexpr TWord compare = 99;
+
+		const auto tcf = [&]() { return (peripheralsX.getTimers().readTCSR(2) & (1 << Timer::M_TCF)) != 0; };
+
+		dsp.memWritePeriph(MemArea_X, Timers::M_TCPR2, compare);
+		dsp.memWritePeriph(MemArea_X, Timers::M_TLR2, 0);
+
+		dsp.memWriteP(0x100, 0x000000);				// nop
+		emitToMemory("jmp $100", 0x101);
+		dsp.setPC(0x100);
+
+		constexpr TWord control = (1 << Timer::M_TE) | (1 << Timer::M_TRM);
+		dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, control);
+
+		for(int round = 0; round < 4; ++round)
+		{
+			for(uint32_t i = 0; i < 8192; ++i)
+				execStep();
+
+			verify(tcf());
+			verify(peripheralsX.getTimers().readTCR(2) < compare);
+
+			dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, control | (1 << Timer::M_TCF));	// writing TCF clears it
+			verify(!tcf());
+		}
+
+		dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, 0);
+	}
 
 	// Condition codes that both JIT back ends got wrong, all values captured from the reference
 	// simulator. Each case failed on at least one back end before the fixes and they disagreed with

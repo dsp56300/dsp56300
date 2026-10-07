@@ -72,12 +72,22 @@ namespace dsp56k
 		if (!_cycles)
 			return;
 
-		_t.m_tcr += _cycles;
+		const TWord tcpr = _t.m_tcpr;
+		const TWord before = _t.m_tcr;
+		const uint64_t after = static_cast<uint64_t>(before) + _cycles;
+		const bool overflow = after > 0xffffff;
+		const TWord wrapped = static_cast<TWord>(after & 0xffffff);
 
-		if (_t.m_tcr > 0xffffff)
+		// The compare event is the count on which TCR reaches TCPR, before the counter wraps or after it. A counter
+		// that starts above TCPR (a load value above the compare value) reaches it only after the overflow
+		const bool reached = before < tcpr ? after >= tcpr : (overflow && wrapped >= tcpr);
+		const TWord overshoot = before < tcpr ? static_cast<TWord>((after - tcpr) & 0xffffff) : wrapped - tcpr;
+
+		_t.m_tcr = wrapped;
+
+		if (overflow)
 		{
 			// Overflow
-			_t.m_tcr &= 0xFFFFFF;
 
 			if(_t.m_tcsr.test(Timer::M_TOIE))
 				injectInterrupt(Vba_TIMER0_Overflow, _index);
@@ -92,18 +102,27 @@ namespace dsp56k
 		const auto m = mode(_index);
 		const bool measures = m == ModeMeasureInputWidth || m == ModeMeasureInputPeriod || m == ModeMeasurementCapture;
 
-		if (!measures && _t.m_tcr >= _t.m_tcpr)
+		// ponytail: PWM keeps the compare it had, TCR >= TCPR on every update. It fires for a TCPR the counter never
+		// gets to as well, and firmware takes that interrupt, so products sound the way they do with it. Check PWM
+		// against hardware before changing it
+		const bool compare = m == ModePWM ? _t.m_tcr >= tcpr : reached;
+
+		if (!measures && compare)
 		{
 			// Compare
-			const auto overshoot = _t.m_tcr - _t.m_tcpr;
-
 			if(_t.m_tcsr.test(Timer::M_TCIE))
 				injectInterrupt(Vba_TIMER0_Compare, _index);
 
 			_t.m_tcsr.set(Timer::M_TCF);
 
+			// The counter restarts from TLR each time it reaches TCPR. An update can count further than one period, and
+			// a counter left above TCPR would only reach it again after the overflow, so what is left of the last
+			// period counts on from TLR
 			if(mode(_index) != ModePWM && _t.m_tcsr.test(Timer::M_TRM))
-				_t.m_tcr = _t.m_tlr + overshoot;
+			{
+				const TWord period = (tcpr - _t.m_tlr) & 0xffffff;
+				_t.m_tcr = (_t.m_tlr + (period ? overshoot % period : 0)) & 0xffffff;
+			}
 		}
 	}
 
