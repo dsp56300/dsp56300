@@ -692,9 +692,15 @@ namespace dsp56k
 		}, false);
 	}
 
+	// An undefined opcode decodes as ILLEGAL too, see Opcodes::findNonParallelOpcodeInfo. Firmware has been seen to run
+	// $000040 every sample, harmless on the chip as its illegal instruction vector is empty: only ILLEGAL itself stops
+	// in a debugger, an undefined opcode is logged when its block is compiled
 	void JitOps::op_Illegal(TWord op)
 	{
-		op_Trap(op);
+		if(match(Opcodes::getOpcodeInfoAt(Illegal), op))
+			op_Trap(op);
+		else
+			LOG("Undefined opcode " << HEX(op) << " at " << HEX(m_pcCurrentOp) << " runs as ILLEGAL");
 	}
 
 	void JitOps::op_Wait(TWord op)

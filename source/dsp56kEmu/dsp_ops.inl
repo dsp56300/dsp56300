@@ -345,7 +345,10 @@ namespace dsp56k
 	}
 	inline void DSP::op_Illegal(const TWord op)
 	{
-		op_Trap(op);
+		// only ILLEGAL itself stops in a debugger, not an undefined opcode that decodes as ILLEGAL,
+		// see JitOps::op_Illegal
+		if(match(Opcodes::getOpcodeInfoAt(Illegal), op))
+			op_Trap(op);
 	}
 
 	inline void DSP::op_Lra_Rn(const TWord op)	// 0000010011000RRR000ddddd
