@@ -668,6 +668,7 @@ namespace dsp56k
 		void do_start(const DspValue* _lc, TWord _addr);
 		void do_end(const RegGP& _temp);
 		void emitLoopEndBeforeBranch(bool _loopStartIsBlockStart, bool _loopIsForever, TWord _blockPc, TWord _pcAfterBranch);
+		void jumpIfNotLoopEnd(const asmjit::Label& _target, const JitReg32& _sr, const JitReg32& _la, const JitReg32& _temp, TWord _loopEnd);
 		void setPushPCFromReg(const bool _v) { m_pushPCFromReg = _v; }
 		void do_end();
 		void rep_exec(TWord _lc);

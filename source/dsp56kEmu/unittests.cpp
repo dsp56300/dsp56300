@@ -9165,10 +9165,12 @@ namespace dsp56k
 	}
 
 	/*	Code that jumps into the tail of a DO loop runs the loop's last instruction outside the loop. A boot loader in the
-		interrupt vector region does that, the vector region only makes the blocks shorter. The tail ran before the loop's
-		DO was ever compiled and registering the loop later did not recompile it, so the loop ran its body once and the RTS
-		behind it returned through the DO's stack entry. The subroutine is called twice: the shortcut into the tail, then
-		the loop
+		interrupt vector region does that, also from inside a loop of its own, the vector region only makes the blocks
+		shorter. The DSP ends a loop when it fetches from LA, so the tail ends nothing then. The JIT went wrong twice:
+		- the tail ran before the loop's DO was ever compiled and registering the loop later did not recompile it, so the
+		  loop ran its body once and the RTS behind it returned through the DO's stack entry
+		- once the loop was known, the tail ended whatever loop was running, as only LF was tested
+		The subroutine is called three times: the shortcut into the tail, the loop, and the shortcut inside another loop
 	*/
 	void UnitTests::do_loopTailOutsideItsLoop()
 	{
@@ -9206,15 +9208,19 @@ namespace dsp56k
 			pc = emitToMemory(call, pc);						// $100, b = 0: the shortcut
 			pc = emitToMemory("inc b", pc);
 			pc = emitToMemory(call, pc);						// $102, b != 0: the loop
+			pc = emitToMemory("clr b", pc);
+			pc = emitToMemory("do #2,>$108", pc);				// $104-$105, LA = $107
+			pc = emitToMemory(call, pc);						// $106, b = 0: the shortcut inside another loop
+			pc = emitToMemory("nop", pc);
 			const auto returnPC = pc;
 			emitToMemory("nop", pc);
 
 			dsp.setPC(0x100);
 			execUntil(returnPC);
 
-			// four passes, and the shortcut ran the tail once more
+			// four passes, and three shortcuts ran the tail
 			verifyLoopRetired(4);
-			verify(dsp.regs().r[1].var == 5);
+			verify(dsp.regs().r[1].var == 7);
 		}
 
 		enableDynamicFastInterrupts(false);

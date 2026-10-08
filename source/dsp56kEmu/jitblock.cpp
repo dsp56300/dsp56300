@@ -784,7 +784,7 @@ namespace dsp56k
 			RegGP temp(*this);
 
 			const auto& sr = r32(m_dspRegPool.get(PoolReg::DspSR, true, true));
-			                 r32(m_dspRegPool.get(PoolReg::DspLA, true, true));	// we don't use it here but do_end does
+			const auto& la = r32(m_dspRegPool.get(PoolReg::DspLA, true, true));
 			const auto& lc = r32(m_dspRegPool.get(PoolReg::DspLC, true, true));
 
 			m_dspRegPool.lock(PoolReg::DspSR);
@@ -793,10 +793,7 @@ namespace dsp56k
 
 			DSPReg pc(*this, PoolReg::DspPC, true, true);
 
-			// check loop flag
-
-			m_asm.bitTest(sr, SRB_LF);
-			m_asm.jz(skip);
+			ops.jumpIfNotLoopEnd(skip, sr, la, r32(temp), pcNext);
 
 			/*	A DO FOREVER never ends on the loop counter - it does not even load one - and is
 				left only by ENDDO. Which kind of loop this is was settled when the block was

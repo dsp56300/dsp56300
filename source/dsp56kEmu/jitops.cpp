@@ -537,7 +537,7 @@ namespace dsp56k
 		const RegGP temp(m_block);
 
 		const auto sr = r32(pool.get(PoolReg::DspSR, true, true));
-		                r32(pool.get(PoolReg::DspLA, true, true));	// unused here, but do_end needs it
+		const auto la = r32(pool.get(PoolReg::DspLA, true, true));
 		const auto lc = r32(pool.get(PoolReg::DspLC, true, true));
 
 		pool.lock(PoolReg::DspSR);
@@ -548,8 +548,7 @@ namespace dsp56k
 
 		m_asm.mov(r32(pc), asmjit::Imm(_pcAfterBranch));	// default: leave the loop
 
-		m_asm.bitTest(sr, SRB_LF);
-		m_asm.jz(done);										// not inside a loop at all
+		jumpIfNotLoopEnd(done, sr, la, r32(temp), _pcAfterBranch);
 
 		// a DO FOREVER has no loop counter and cannot retire here - it only ends via ENDDO or BRKcc
 		if(!_loopIsForever)
@@ -580,6 +579,22 @@ namespace dsp56k
 		pool.unlock(PoolReg::DspSR);
 		pool.unlock(PoolReg::DspLA);
 		pool.unlock(PoolReg::DspLC);
+	}
+
+	/*	The DSP ends a loop when it fetches from LA while LF is set. Code outside the loop can run the instruction at LA as
+		well, by jumping into the tail of the loop, and it ends nothing then - not even when it runs inside another loop.
+	*/
+	void JitOps::jumpIfNotLoopEnd(const asmjit::Label& _target, const JitReg32& _sr, const JitReg32& _la, const JitReg32& _temp, const TWord _loopEnd)
+	{
+		m_asm.bitTest(_sr, SRB_LF);
+		m_asm.jz(_target);
+#ifdef HAVE_ARM64
+		m_asm.mov(_temp, asmjit::Imm(_loopEnd - 1));
+		m_asm.cmp(_la, _temp);
+#else
+		m_asm.cmp(_la, asmjit::Imm(_loopEnd - 1));
+#endif
+		m_asm.jnz(_target);
 	}
 
 	void JitOps::do_end(const RegGP& r)
