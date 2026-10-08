@@ -114,6 +114,7 @@ namespace  dsp56k
 		void saBitfield();
 		void timerPrescaler();
 		void timerRestartShortPeriod();
+		void timerPwmCompare();
 		void jscc();
 		void lra();
 		void lsl();

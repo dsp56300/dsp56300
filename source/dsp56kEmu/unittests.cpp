@@ -144,6 +144,7 @@ namespace dsp56k
 		saBitfield();
 		timerPrescaler();
 		timerRestartShortPeriod();
+		timerPwmCompare();
 		jscc();
 		lra();
 		lsl();
@@ -9688,6 +9689,66 @@ namespace dsp56k
 		}
 
 		dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, 0);
+	}
+
+	/*	PWM with TRM counts from TLR to $FFFFFF and reloads TLR on the overflow. The compare fires once a period if TCPR
+		lies in that range and never otherwise, which firmware uses to hold the output at one level. In the reference
+		simulator TLR $FFDFF8 with TCPR 0 raised no compare interrupt at all, TLR $FFFBFE with TCPR $FFFF9F one per
+		overflow. The emulator raised the first on every timer update. In timer mode the wrap to zero is the overflow,
+		not a compare with a TCPR of zero either. The counts below run the same setups as the simulator did
+	*/
+	void UnitTests::timerPwmCompare()
+	{
+		struct Case { TWord tcsr; TWord tlr; TWord tcpr; bool compares; };
+
+		constexpr TWord interrupts = (1 << Timer::M_TE) | (1 << Timer::M_TOIE) | (1 << Timer::M_TCIE);
+		constexpr TWord pwm = interrupts | (7 << Timer::M_TC0) | (1 << Timer::M_TRM);
+
+		constexpr Case cases[] =
+		{
+			{pwm,        0xffdff8, 0x000000, false},		// TCPR outside TLR..$FFFFFF
+			{pwm,        0xfffbfe, 0xffff9f, true},		// once a period
+			{interrupts, 0xffdff8, 0x000000, false},		// timer mode, no TRM: the wrap to zero is no compare
+		};
+
+		// fast interrupts count them: compares in r7, overflows in r6
+		emitToMemory("move (r7)+", Vba_TIMER2_Compare);
+		emitToMemory("nop", Vba_TIMER2_Compare + 1);
+		emitToMemory("move (r6)+", Vba_TIMER2_Overflow);
+		emitToMemory("nop", Vba_TIMER2_Overflow + 1);
+
+		dsp.memWriteP(0x100, 0x000000);				// nop
+		emitToMemory("jmp $100", 0x101);
+
+		for (const auto& c : cases)
+		{
+			dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, 0);
+			dsp.memWritePeriph(MemArea_X, Timers::M_TLR2, c.tlr);
+			dsp.memWritePeriph(MemArea_X, Timers::M_TCPR2, c.tcpr);
+
+			dsp.regs().r[6] = TReg24(0);
+			dsp.regs().r[7] = TReg24(0);
+			dsp.regs().m[6] = TReg24(0xffffff);
+			dsp.regs().m[7] = TReg24(0xffffff);
+
+			const auto sr = dsp.getSR().var;
+			dsp.setSR(sr & ~0x300);
+			dsp.setPC(0x100);
+
+			dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, c.tcsr);
+
+			for(uint32_t i = 0; i < 200000; ++i)
+				execStep();
+
+			dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, 0);
+			dsp.setSR(sr);
+
+			const auto compares = dsp.regs().r[7].var;
+			const auto overflows = dsp.regs().r[6].var;
+
+			verify(overflows > 0);
+			verify(c.compares ? (compares > 0 && compares + 1 >= overflows && overflows + 1 >= compares) : compares == 0);
+		}
 	}
 
 	// Condition codes that both JIT back ends got wrong, all values captured from the reference

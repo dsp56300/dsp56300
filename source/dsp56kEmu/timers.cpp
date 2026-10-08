@@ -73,17 +73,21 @@ namespace dsp56k
 			return;
 
 		const TWord tcpr = _t.m_tcpr;
+		const TWord tlr = _t.m_tlr;
 		const TWord before = _t.m_tcr;
 		const uint64_t after = static_cast<uint64_t>(before) + _cycles;
 		const bool overflow = after > 0xffffff;
 		const TWord wrapped = static_cast<TWord>(after & 0xffffff);
 
 		// The compare event is the count on which TCR reaches TCPR, before the counter wraps or after it. A counter
-		// that starts above TCPR (a load value above the compare value) reaches it only after the overflow
-		const bool reached = before < tcpr ? after >= tcpr : (overflow && wrapped >= tcpr);
+		// that starts above TCPR (a load value above the compare value) reaches it only after the overflow, and the
+		// wrap to zero is the overflow, not a compare with a TCPR of zero (reference simulator)
+		bool reached = before < tcpr ? after >= tcpr : (overflow && tcpr && wrapped >= tcpr);
 		const TWord overshoot = before < tcpr ? static_cast<TWord>((after - tcpr) & 0xffffff) : wrapped - tcpr;
 
 		_t.m_tcr = wrapped;
+
+		const auto m = mode(_index);
 
 		if (overflow)
 		{
@@ -94,20 +98,23 @@ namespace dsp56k
 			else
 				_t.m_tcsr.set(Timer::M_TOF);
 
-			if(mode(_index) == ModePWM && _t.m_tcsr.test(Timer::M_TRM))
-				_t.m_tcr = _t.m_tlr + _t.m_tcr;	// keep the overshoot
+			// PWM with TRM reloads TLR on the overflow, a period counts from TLR to $FFFFFF. A TCPR outside of that is
+			// never reached, which firmware uses to keep the output at one level (reference simulator)
+			if(m == ModePWM && _t.m_tcsr.test(Timer::M_TRM))
+			{
+				const uint64_t period = 0x1000000 - tlr;
+				const uint64_t counted = after - 0x1000000;		// since the first overflow, which loaded TLR
+
+				reached = before < tcpr || (tcpr >= tlr && (counted >= period || tlr + counted % period >= tcpr));
+
+				_t.m_tcr = static_cast<TWord>(tlr + counted % period);
+			}
 		}
 
 		// in the measurement modes TCF reports an input edge, the counter is not compared against TCPR
-		const auto m = mode(_index);
 		const bool measures = m == ModeMeasureInputWidth || m == ModeMeasureInputPeriod || m == ModeMeasurementCapture;
 
-		// ponytail: PWM keeps the compare it had, TCR >= TCPR on every update. It fires for a TCPR the counter never
-		// gets to as well, and firmware takes that interrupt, so products sound the way they do with it. Check PWM
-		// against hardware before changing it
-		const bool compare = m == ModePWM ? _t.m_tcr >= tcpr : reached;
-
-		if (!measures && compare)
+		if (!measures && reached)
 		{
 			// Compare
 			if(_t.m_tcsr.test(Timer::M_TCIE))
