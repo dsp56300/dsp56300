@@ -4,6 +4,8 @@
 
 #include "timers.h"
 
+#include <algorithm>
+
 namespace dsp56k
 {
 	uint32_t Timers::exec() noexcept
@@ -63,6 +65,71 @@ namespace dsp56k
 		return static_cast<uint32_t>((m_timerupdateInterval << 1) - diff);
 	}
 
+	namespace
+	{
+		struct TimerEvents
+		{
+			bool compare = false;
+			bool overflow = false;
+		};
+
+		/*	A timer with TRM runs in a cycle. In timer mode the counter counts from TLR up to TCPR, and the count after
+			the one that reached TCPR loads TLR. In PWM mode it counts up to $FFFFFF, the wrap to zero is the overflow,
+			and the count after it loads TLR. So a period is one count longer than the distance from TLR (reference
+			simulator: 100 counts for TLR 0 and TCPR 99, 3249 for TLR $FFF350 and TCPR 0, 257 for PWM with TLR $FFFF00).
+			The compare is the count that reaches TCPR, but never the wrap to a TCPR of zero. Advances _tcr by _counts
+			and returns the events, an update reports each of them once
+		*/
+		TimerEvents countRestarting(TWord& _tcr, const TWord _tlr, const TWord _tcpr, const bool _pwm, uint64_t _counts)
+		{
+			// the value of the count before the one that loads TLR
+			const TWord last = _pwm ? 0 : _tcpr;
+			const uint64_t period = _pwm ? 0x1000001 - _tlr : ((_tcpr - _tlr) & 0xffffff) + 1;
+
+			// the position of a value in the cycle, one outside of it is at period or beyond
+			const auto position = [&](const TWord _value) -> uint64_t { return (_value - _tlr) & 0xffffff; };
+
+			TimerEvents e;
+
+			uint64_t p = position(_tcr);
+
+			if(p >= period)
+			{
+				// TLR or TCPR changed after TLR was loaded: the counter counts up to the last value before it enters
+				// the cycle
+				const uint64_t toLast = (last - _tcr) & 0xffffff;
+				const uint64_t end = _tcr + std::min(_counts, toLast);
+
+				e.overflow = end > 0xffffff;
+				e.compare = _tcpr && (_tcr < _tcpr ? end >= _tcpr : (e.overflow && (end & 0xffffff) >= _tcpr));
+
+				if(_counts < toLast)
+				{
+					_tcr = static_cast<TWord>(end & 0xffffff);
+					return e;
+				}
+
+				_counts -= toLast;
+				p = period - 1;
+			}
+
+			// whether these counts pass a position
+			const auto passes = [&](const uint64_t _q) { return p + _counts >= (_q > p ? _q : _q + period); };
+
+			// the wrap follows $FFFFFF if the cycle runs through it and it is not the last value
+			const uint64_t wrap = position(0xffffff) + 1;
+			if(wrap < period && passes(wrap))
+				e.overflow = true;
+
+			const uint64_t compareAt = position(_tcpr);
+			if(_tcpr && compareAt < period && passes(compareAt))
+				e.compare = true;
+
+			_tcr = static_cast<TWord>((_tlr + (p + _counts) % period) & 0xffffff);
+			return e;
+		}
+	}
+
 	void Timers::execTimer(Timer& _t, const uint32_t _index, uint32_t _cycles) const
 	{
 		if (!_t.m_tcsr.test(Timer::M_TE))
@@ -73,65 +140,48 @@ namespace dsp56k
 		if (!_cycles)
 			return;
 
-		const TWord tcpr = _t.m_tcpr;
-		const TWord tlr = _t.m_tlr;
-		const TWord before = _t.m_tcr;
-		const uint64_t after = static_cast<uint64_t>(before) + _cycles;
-		const bool overflow = after > 0xffffff;
-		const TWord wrapped = static_cast<TWord>(after & 0xffffff);
-
-		// The compare event is the count on which TCR reaches TCPR, before the counter wraps or after it. A counter
-		// that starts above TCPR (a load value above the compare value) reaches it only after the overflow, and the
-		// wrap to zero is the overflow, not a compare with a TCPR of zero (reference simulator)
-		bool reached = before < tcpr ? after >= tcpr : (overflow && tcpr && wrapped >= tcpr);
-		const TWord overshoot = before < tcpr ? static_cast<TWord>((after - tcpr) & 0xffffff) : wrapped - tcpr;
-
-		_t.m_tcr = wrapped;
-
 		const auto m = mode(_index);
-
-		if (overflow)
-		{
-			// Overflow
-
-			if(_t.m_tcsr.test(Timer::M_TOIE))
-				injectInterrupt(Vba_TIMER0_Overflow, _index);
-			else
-				_t.m_tcsr.set(Timer::M_TOF);
-
-			// PWM with TRM reloads TLR on the overflow, a period counts from TLR to $FFFFFF. A TCPR outside of that is
-			// never reached, which firmware uses to keep the output at one level (reference simulator)
-			if(m == ModePWM && _t.m_tcsr.test(Timer::M_TRM))
-			{
-				const uint64_t period = 0x1000000 - tlr;
-				const uint64_t counted = after - 0x1000000;		// since the first overflow, which loaded TLR
-
-				reached = before < tcpr || (tcpr >= tlr && (counted >= period || tlr + counted % period >= tcpr));
-
-				_t.m_tcr = static_cast<TWord>(tlr + counted % period);
-			}
-		}
 
 		// in the measurement modes TCF reports an input edge, the counter is not compared against TCPR
 		const bool measures = m == ModeMeasureInputWidth || m == ModeMeasureInputPeriod || m == ModeMeasurementCapture;
 
-		if (!measures && reached)
+		TimerEvents e;
+
+		if (_t.m_tcsr.test(Timer::M_TRM) && !measures)
 		{
-			// Compare
+			TWord tcr = _t.m_tcr;
+			e = countRestarting(tcr, _t.m_tlr, _t.m_tcpr, m == ModePWM, _cycles);
+			_t.m_tcr = tcr;
+		}
+		else
+		{
+			// Free running. The compare event is the count on which TCR reaches TCPR, before the counter wraps or after
+			// it, and the wrap to zero is the overflow, not a compare with a TCPR of zero (reference simulator)
+			const TWord tcpr = _t.m_tcpr;
+			const TWord before = _t.m_tcr;
+			const uint64_t after = static_cast<uint64_t>(before) + _cycles;
+
+			e.overflow = after > 0xffffff;
+			const bool reached = before < tcpr ? after >= tcpr : (e.overflow && tcpr && (after & 0xffffff) >= tcpr);
+			e.compare = !measures && reached;
+
+			_t.m_tcr = static_cast<TWord>(after & 0xffffff);
+		}
+
+		if (e.overflow)
+		{
+			if(_t.m_tcsr.test(Timer::M_TOIE))
+				injectInterrupt(Vba_TIMER0_Overflow, _index);
+			else
+				_t.m_tcsr.set(Timer::M_TOF);
+		}
+
+		if (e.compare)
+		{
 			if(_t.m_tcsr.test(Timer::M_TCIE))
 				injectInterrupt(Vba_TIMER0_Compare, _index);
 
 			_t.m_tcsr.set(Timer::M_TCF);
-		}
-
-		// The counter restarts from TLR each time it reaches TCPR. A TCPR of zero is reached on the wrap, which raises no
-		// compare but restarts all the same: firmware runs a period of $1000000 - TLR that way (reference simulator). An
-		// update can count further than one period, and a counter left above TCPR would only reach it again after the
-		// overflow, so what is left of the last period counts on from TLR
-		if (!measures && (reached || (overflow && !tcpr)) && m != ModePWM && _t.m_tcsr.test(Timer::M_TRM))
-		{
-			const TWord period = (tcpr - _t.m_tlr) & 0xffffff;
-			_t.m_tcr = (_t.m_tlr + (period ? overshoot % period : 0)) & 0xffffff;
 		}
 	}
 

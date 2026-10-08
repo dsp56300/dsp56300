@@ -115,6 +115,7 @@ namespace  dsp56k
 		void timerPrescaler();
 		void timerRestartShortPeriod();
 		void timerPwmCompare();
+		void timerRestartPeriod();
 		void jscc();
 		void lra();
 		void lsl();

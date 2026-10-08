@@ -145,6 +145,7 @@ namespace dsp56k
 		timerPrescaler();
 		timerRestartShortPeriod();
 		timerPwmCompare();
+		timerRestartPeriod();
 		jscc();
 		lra();
 		lsl();
@@ -9682,7 +9683,7 @@ namespace dsp56k
 				execStep();
 
 			verify(tcf());
-			verify(peripheralsX.getTimers().readTCR(2) < compare);
+			verify(peripheralsX.getTimers().readTCR(2) <= compare);
 
 			dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, control | (1 << Timer::M_TCF));	// writing TCF clears it
 			verify(!tcf());
@@ -9691,12 +9692,13 @@ namespace dsp56k
 		dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, 0);
 	}
 
-	/*	PWM with TRM counts from TLR to $FFFFFF and reloads TLR on the overflow. The compare fires once a period if TCPR
-		lies in that range and never otherwise, which firmware uses to hold the output at one level. In the reference
-		simulator TLR $FFDFF8 with TCPR 0 raised no compare interrupt at all, TLR $FFFBFE with TCPR $FFFF9F one per
-		overflow. The emulator raised the first on every timer update. In timer mode the wrap to zero is the overflow,
-		not a compare with a TCPR of zero either, but a timer with TRM restarts there all the same: a period of $1000000 -
-		TLR, which firmware runs a software UART with. The counts below run the same setups as the simulator did
+	/*	PWM with TRM counts from TLR up to the wrap to zero, the overflow, and the count after it reloads TLR. The
+		compare fires once a period if TCPR lies in TLR..$FFFFFF and never otherwise, which firmware uses to hold the
+		output at one level. In the reference simulator TLR $FFDFF8 with TCPR 0 raised no compare interrupt at all, TLR
+		$FFFBFE with TCPR $FFFF9F one per overflow. The emulator raised the first on every timer update. In timer mode
+		the wrap to zero is the overflow, not a compare with a TCPR of zero either, but a timer with TRM restarts after
+		it all the same: a period of $1000000 - TLR + 1, which firmware runs a software UART with. The counts below run
+		the same setups as the simulator did
 	*/
 	void UnitTests::timerPwmCompare()
 	{
@@ -9751,6 +9753,90 @@ namespace dsp56k
 			verify(c.restarts ? overflows > 2 : overflows == 1);
 			verify(c.compares ? (compares > 0 && compares + 1 >= overflows && overflows + 1 >= compares) : compares == 0);
 		}
+	}
+
+	/*	A timer with TRM restarts one count after the count that reached TCPR, in PWM mode one count after the wrap to
+		zero: a period is one count longer than the distance from TLR. The reference simulator measured 100.0 counts for
+		TLR 0 and TCPR 99, 1000.0 for TCPR 999, 900.1 for TLR 100 and TCPR 999, 33.0 for TLR $FFFFF0 and TCPR $10, 3249
+		for TLR $FFF350 and TCPR 0, 257.0 and 4097.0 for PWM with TLR $FFFF00 and $FFF000. The emulator counted one
+		less. Short periods make that tell here
+	*/
+	void UnitTests::timerRestartPeriod()
+	{
+		struct Case { TWord tcsr; TWord tlr; TWord tcpr; uint64_t period; bool compares; };
+
+		constexpr TWord trm = (1 << Timer::M_TE) | (1 << Timer::M_TOIE) | (1 << Timer::M_TCIE) | (1 << Timer::M_TRM);
+
+		constexpr Case cases[] =
+		{
+			{trm,                      0x000000, 0x000020, 33, true},		// timer mode
+			{trm,                      0xfffff0, 0x000010, 33, true},		// timer mode, through the wrap
+			{trm,                      0xfffff0, 0x000000, 17, false},		// TCPR 0: restarts after the wrap
+			{trm | (7 << Timer::M_TC0), 0xfffff0, 0xfffff8, 17, true},		// PWM
+		};
+
+		// fast interrupts count them: compares in r7, overflows in r6
+		emitToMemory("move (r7)+", Vba_TIMER2_Compare);
+		emitToMemory("nop", Vba_TIMER2_Compare + 1);
+		emitToMemory("move (r6)+", Vba_TIMER2_Overflow);
+		emitToMemory("nop", Vba_TIMER2_Overflow + 1);
+
+		dsp.memWriteP(0x100, 0x000000);				// nop
+		emitToMemory("jmp $100", 0x101);
+
+		// an update reports each event once, so one count per update. Periods stay long enough to serve each interrupt
+		auto& timers = peripheralsX.getTimers();
+		timers.setTimerUpdateInterval(2);
+
+		// the update that the old interval scheduled is still ahead. The first update after an enable counts the time
+		// since the previous one, so a late one would swallow periods
+		dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, 0);
+		dsp.setPC(0x100);
+		for(uint32_t i = 0; i < 8192; ++i)
+			execStep();
+
+		for (const auto& c : cases)
+		{
+			dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, 0);
+			dsp.memWritePeriph(MemArea_X, Timers::M_TLR2, c.tlr);
+			dsp.memWritePeriph(MemArea_X, Timers::M_TCPR2, c.tcpr);
+
+			dsp.regs().r[6] = TReg24(0);
+			dsp.regs().r[7] = TReg24(0);
+			dsp.regs().m[6] = TReg24(0xffffff);
+			dsp.regs().m[7] = TReg24(0xffffff);
+
+			const auto sr = dsp.getSR().var;
+			dsp.setSR(sr & ~0x300);
+			dsp.setPC(0x100);
+
+			const auto start = dsp.getInstructionCounter();
+			dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, c.tcsr);
+
+			for(uint32_t i = 0; i < 100000; ++i)
+				execStep();
+
+			// the timer clock is half the instruction clock here
+			const uint64_t periods = (dsp.getInstructionCounter() - start) / 2 / c.period;
+
+			// stop it and serve what it raised last, no later test may find it pending
+			dsp.memWritePeriph(MemArea_X, Timers::M_TCSR2, 0);
+			for(uint32_t i = 0; i < 64; ++i)
+				execStep();
+			dsp.setSR(sr);
+
+			const uint64_t compares = dsp.regs().r[7].var;
+			const uint64_t overflows = dsp.regs().r[6].var;
+
+			const uint64_t events = c.compares ? compares : overflows;
+			// one count less per period would be 6% more events for 17 counts, 3% for 33
+			verify(events + 2 >= periods && events <= periods + 2);
+
+			if(!c.compares)
+				verify(compares == 0);
+		}
+
+		timers.setTimerUpdateInterval(2048);
 	}
 
 	// Condition codes that both JIT back ends got wrong, all values captured from the reference
