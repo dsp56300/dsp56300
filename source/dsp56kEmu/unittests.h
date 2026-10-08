@@ -241,6 +241,7 @@ namespace  dsp56k
 		void esaiReceiveLastSlotInterrupt();
 		void esaiTimeSlotRegister();
 		void undefinedOpcode();
+		void illegalKeepsRegisters();
 		void esaiResetClearsStatus();
 		void esaiControlRegisterReadBack();
 		void hostQueueDataWaitsForHostFlags();

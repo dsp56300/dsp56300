@@ -44,6 +44,8 @@ namespace dsp56k
 		void load0(const JitReg32& _dst) const;
 		void load1(const JitReg32& _dst) const;
 
+		void debugStore() const;
+
 	private:
 		void store01(const JitReg32& _reg0, const JitReg32& _reg1) const;
 

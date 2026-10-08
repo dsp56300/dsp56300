@@ -236,6 +236,7 @@ namespace dsp56k
 		esaiReceiveLastSlotInterrupt();
 		esaiTimeSlotRegister();
 		undefinedOpcode();
+		illegalKeepsRegisters();
 		esaiResetClearsStatus();
 		esaiControlRegisterReadBack();
 		dmaPendingRequestAtArm();
@@ -527,6 +528,55 @@ namespace dsp56k
 		execUntil(0xec2);
 
 		verify(dsp.aluA().var == 2);
+	}
+
+	/*	ILLEGAL stores the registers for a debugger in the middle of a block, which goes on with them. It shifted X1 into
+		the upper half of its host register, which the block read afterwards. A register written and spilled before it
+		kept what its XMM held before the spill: the block end removed the spill and stored the register from where it
+		was spilled, earlier than the store of ILLEGAL
+	*/
+	void UnitTests::illegalKeepsRegisters()
+	{
+		dsp.regs().x.var = 0;
+		dsp.regs().y.var = 0;
+
+		TWord pc = 0xec0;
+		pc = emitToMemory("move #>$123456,x1", pc);
+		pc = emitToMemory("move #>$654321,y0", pc);
+		pc = emitToMemory(0x000005, 0, pc);		// illegal
+		pc = emitToMemory("move x1,a", pc);
+		pc = emitToMemory("move y0,b", pc);
+		emitToMemory(0x0c0000 | pc, 0, pc);		// jmp *
+
+		dsp.setPC(0xec0);
+		execUntil(pc);
+
+		verify(dsp.aluA().var == 0x00123456000000);
+		verify(dsp.aluB().var == 0x00654321000000);
+		verify(dsp.regs().x.var == 0x123456000000);
+		verify(dsp.regs().y.var == 0x000000654321);
+
+		// more registers than the pool keeps in GPs
+		pc = 0xec0;
+		for(TWord i = 0; i < 8; ++i)
+		{
+			char text[32];
+			snprintf(text, sizeof(text), "move #>$%x,r%u", 0x100 + i, i);
+			pc = emitToMemory(text, pc);
+			snprintf(text, sizeof(text), "move #>$%x,n%u", 0x200 + i, i);
+			pc = emitToMemory(text, pc);
+		}
+		pc = emitToMemory(0x000005, 0, pc);		// illegal
+		emitToMemory(0x0c0000 | pc, 0, pc);		// jmp *
+
+		dsp.setPC(0xec0);
+		execUntil(pc);
+
+		for(TWord i = 0; i < 8; ++i)
+		{
+			verify(dsp.regs().r[i].var == 0x100 + i);
+			verify(dsp.regs().n[i].var == 0x200 + i);
+		}
 	}
 
 	/*	RLIE raises "receive last slot" once the last slot of a frame ended, whatever the slot masks say, in network mode

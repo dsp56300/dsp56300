@@ -154,6 +154,31 @@ namespace dsp56k
 		}
 	}
 
+	// Stores the written halves for a debugger and leaves both the pool and their registers as they are: store0/store1
+	// clear the written flags and store1 destroys its source, as they run when a register is released
+	void JitRegPoolRegPair::debugStore() const
+	{
+		const auto w0 = m_pool.isWritten(m_reg0);
+		const auto w1 = m_pool.isWritten(m_reg1);
+
+		if(!w0 && !w1)
+			return;
+
+		const RegGP s(getBlock());
+		m_pool.movDspReg(r64(s), dspReg());
+
+		if(w0)
+			replaceLow(r64(s), r32(m_pool.get(m_reg0, true, false)));
+
+		if(w1)
+		{
+			const RegGP temp(getBlock());
+			replaceHigh(r64(temp), r64(s), r32(m_pool.get(m_reg1, true, false)));
+		}
+
+		m_pool.movDspReg(dspReg(), r64(s));
+	}
+
 	void JitRegPoolRegPair::store01(const JitReg32& _reg0, const JitReg32& _reg1) const
 	{
 		assert(m_pool.isWritten(m_reg0) && m_pool.isWritten(m_reg1));
