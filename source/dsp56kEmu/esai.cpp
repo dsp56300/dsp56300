@@ -161,6 +161,11 @@ namespace dsp56k
 		{
 			m_rxSlotCounter = 0;
 			++m_rxFrameCounter;
+
+			// after the last slot of a frame ended, whatever the slot masks say, and in network mode only, but not on demand
+			// (RDC = 0) (56362 UM, RCR RLIE). Firmware may run its whole per-sample processing from this interrupt
+			if(m_rcr.test(M_RLIE) && (m_rcr & M_RMOD) && getRxWordCount())
+				injectInterrupt(Vba_ESAI_Receive_Last_Slot);
 		}
 	}
 

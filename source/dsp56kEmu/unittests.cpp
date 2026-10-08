@@ -232,6 +232,7 @@ namespace dsp56k
 		esaiClockAfterReset();
 		esaiClockCycleDeadline();
 		esaiEvenSlotInterrupts();
+		esaiReceiveLastSlotInterrupt();
 		esaiResetClearsStatus();
 		esaiControlRegisterReadBack();
 		dmaPendingRequestAtArm();
@@ -474,6 +475,65 @@ namespace dsp56k
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Data));
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Even_Data));
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Data));
+	}
+
+	/*	RLIE raises "receive last slot" once the last slot of a frame ended, whatever the slot masks say, in network mode
+		only and not on demand (56362 UM, RCR bit 23). It was never raised, and firmware that runs its per-sample
+		processing from it never ran it.
+	*/
+	void UnitTests::esaiReceiveLastSlotInterrupt()
+	{
+		auto& esai = peripheralsX.getEsai();
+		auto& clock = peripheralsX.getEsaiClock();
+		const auto clockEnabled = clock.isEnabled();
+
+		dsp.resetHW();
+		clock.setEnabled(false);	// the test clocks the receiver itself
+
+		esai.writeReceiveClockControlRegister(1 << Esai::M_RDC0);		// two slots per frame
+		esai.writeEmptyAudioIn(4);
+
+		esai.writeReceiveControlRegister((1 << Esai::M_RLIE) | (1 << Esai::M_RE0));		// normal mode
+		esai.execRX();
+		esai.execRX();
+		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Last_Slot));
+
+		esai.writeReceiveControlRegister(0);
+		esai.writeReceiveClockControlRegister(0);										// on demand: network mode, RDC = 0
+		esai.writeReceiveControlRegister((1 << Esai::M_RLIE) | (1 << Esai::M_RMOD0) | (1 << Esai::M_RE0));
+		esai.execRX();
+		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Last_Slot));
+		esai.writeReceiveClockControlRegister(1 << Esai::M_RDC0);
+
+		esai.writeReceiveControlRegister(0);
+		esai.writeReceiveControlRegister((1 << Esai::M_RLIE) | (1 << Esai::M_RMOD0) | (1 << Esai::M_RE0));	// network mode
+		esai.execRX();									// slot 0
+		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Last_Slot));
+		esai.execRX();									// slot 1, the last one
+		verify(dsp.hasPendingInterrupt(Vba_ESAI_Receive_Last_Slot));
+
+		esai.writeReceiveControlRegister(0);
+		clock.setEnabled(clockEnabled);
+
+		// serve it, so that no later test takes it, see esaiEvenSlotInterrupts
+		emitToMemory(0, 0, Vba_ESAI_Receive_Last_Slot);
+		emitToMemory(0, 0, Vba_ESAI_Receive_Last_Slot + 1);
+		for(TWord i=0; i<8; ++i)
+			emitToMemory("nop", 0xe80 + i);
+		emitToMemory(0x0c0e88, 0, 0xe88);
+
+		const auto sr0 = dsp.getSR().var;
+		dsp.setSR(sr0 & ~0x300);
+
+		for(int i=0; i<8 && dsp.hasPendingInterrupts(); ++i)
+		{
+			dsp.setPC(0xe80);
+			execUntil(0xe88);
+		}
+
+		dsp.setSR(sr0);
+
+		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Last_Slot));
 	}
 
 	/*	After a reset HTX is empty, HTDE is set (56362 UM 7.4.6.13), and with HTIE and HTDE set the SHI requests the
