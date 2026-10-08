@@ -234,6 +234,7 @@ namespace dsp56k
 		esaiClockCycleDeadline();
 		esaiEvenSlotInterrupts();
 		esaiReceiveLastSlotInterrupt();
+		esaiTimeSlotRegister();
 		undefinedOpcode();
 		esaiResetClearsStatus();
 		esaiControlRegisterReadBack();
@@ -477,6 +478,39 @@ namespace dsp56k
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Data));
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Even_Data));
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Data));
+	}
+
+	/*	TSR is a null data register (56362 UM 8.3.11, 8.3.6.12): writing it clears TDE like writing all enabled transmit
+		registers, without an underrun in the slot it stands for, and TDE comes back at that slot. Firmware counts slots
+		with it before it enables a transmit DMA. Writes to it were ignored, such a loop ran through at once and the DMA
+		started a slot early
+	*/
+	void UnitTests::esaiTimeSlotRegister()
+	{
+		auto& esai = peripheralsX.getEsai();
+		auto& clock = peripheralsX.getEsaiClock();
+		const auto clockEnabled = clock.isEnabled();
+
+		dsp.resetHW();
+		clock.setEnabled(false);	// the test clocks the transmitter itself
+
+		esai.writeTransmitClockControlRegister(1 << Esai::M_TDC0);		// two slots per frame
+		esai.writeTransmitControlRegister((1 << Esai::M_TMOD0) | (1 << Esai::M_TE0));
+
+		auto sr = [&](const Esai::SrBits _bit) { return (esai.readStatusRegister() & (1 << _bit)) != 0; };
+
+		esai.writeTX(0, 0x123456);
+		esai.execTX();									// slot 0 sends TX0, TDE asks for the next one
+		verify(sr(Esai::M_TDE) && !sr(Esai::M_TUE));
+
+		peripheralsX.write(Esai::M_TSR, 0);				// through the peripheral address, as firmware does
+		verify(!sr(Esai::M_TDE) && !sr(Esai::M_TEDE) && !sr(Esai::M_TODE));
+
+		esai.execTX();									// slot 1 is not driven, but it is no underrun either
+		verify(sr(Esai::M_TDE) && !sr(Esai::M_TUE));
+
+		esai.writeTransmitControlRegister(0);
+		clock.setEnabled(clockEnabled);
 	}
 
 	/*	An undefined opcode runs as ILLEGAL, which carries on with the next instruction here, see DSP::op_Trap. The JIT
@@ -5655,9 +5689,10 @@ namespace dsp56k
 		// op_Movep_SYqq
 		runTest([&]()
 		{
-			peripheralsY.write(0xffff86, 0x112233);
+			// $FFFF87 is reserved, it holds what is written. $FFFF86 is TSR of the ESAI_1, which keeps nothing
+			peripheralsY.write(0xffff87, 0x112233);
 			dsp.setALU(true , TReg56(static_cast<TReg56::MyType>(0)));
-			emit(0x044f26);	// movep y:<<$ffff86,b
+			emit("movep y:<<$ffff87,b");
 		},
 			[&]()
 		{

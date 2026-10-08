@@ -341,6 +341,7 @@ namespace dsp56k
 		void writeReceiveClockControlRegister(TWord _val);
 
 		void writeTX(uint32_t _index, TWord _val);
+		void writeTSR();
 		TWord readRX(uint32_t _index);
 
 		TWord readTSMA() const
@@ -469,6 +470,7 @@ namespace dsp56k
 		RxFrame m_rxFrame;
 		
 		uint32_t m_writtenTX = 0;
+		bool m_tsrWritten = false;					// the next slot is not transmitted, see writeTSR
 		uint32_t m_readRX = 0;
 		uint32_t m_txSlotCounter = 0;
 		uint32_t m_txFrameCounter = 0;

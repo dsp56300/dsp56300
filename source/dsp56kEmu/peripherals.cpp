@@ -647,6 +647,7 @@ namespace dsp56k
 		case Esai::M_TX3:
 		case Esai::M_TX4:
 		case Esai::M_TX5:			m_esai.writeTX(_addr - Esai::M_TX0, _val);			return;
+		case Esai::M_TSR:			m_esai.writeTSR();									return;
 		case Esai::M_TSMA:			m_esai.writeTSMA(_val);								return;
 		case Esai::M_TSMB:			m_esai.writeTSMB(_val);								return;
 		case Esai::M_RSMA:			m_esai.writeRSMA(_val);								return;
@@ -846,6 +847,7 @@ namespace dsp56k
 		case Esai::M_TX3_1:
 		case Esai::M_TX4_1:
 		case Esai::M_TX5_1:		m_esai.writeTX(_addr - Esai::M_TX0_1, _val);		return;
+		case Esai::M_TSR_1:		m_esai.writeTSR();									return;
 		case Esai::M_TSMA_1:	m_esai.writeTSMA(_val);								return;
 		case Esai::M_TSMB_1:	m_esai.writeTSMB(_val);								return;
 		case Esai::M_RSMA_1:	m_esai.writeRSMA(_val);								return;

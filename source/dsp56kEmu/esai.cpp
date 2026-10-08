@@ -35,6 +35,7 @@ namespace dsp56k
 
 		// Reset counters
 		m_writtenTX = 0;
+		m_tsrWritten = false;
 		m_readRX = 0;
 		m_txSlotCounter = 0;
 		m_txFrameCounter = 0;
@@ -291,6 +292,21 @@ namespace dsp56k
 		}
 	}
 
+	/*	TSR is a null data register (56362 UM 8.3.11): writing it services the transmitters like writing all enabled TX
+		registers - TDE, TEDE, TODE and TUE clear - but the next slot is not transmitted. TDE comes back at that slot as if
+		data had gone out (8.3.6.12). Firmware counts slots with it: wait for TDE, write TSR, repeat, so that a transmit
+		DMA it enables then lines its first word up with slot 0.
+	*/
+	void Esai::writeTSR()
+	{
+		m_tsrWritten = true;
+		m_writtenTX = getEnabledTransmitters();
+
+		m_sr.clear(M_TUE);
+		m_sr.clear(M_TDE);
+		m_sr.clear(M_TEDE, M_TODE);
+	}
+
 	TWord Esai::readRX(const uint32_t _index)
 	{
 		if(!inputEnabled(_index))
@@ -415,7 +431,12 @@ namespace dsp56k
 		if(!tem)
 			return;
 
-		m_txFrame[m_txSlotCounter] = m_tx;
+		// a slot that TSR was written for is not driven, the transmit pins are high impedance
+		if(m_tsrWritten)
+			m_txFrame[m_txSlotCounter] = TxSlot{};
+		else
+			m_txFrame[m_txSlotCounter] = m_tx;
+		m_tsrWritten = false;
 
 //		m_tx.fill(0);
 
