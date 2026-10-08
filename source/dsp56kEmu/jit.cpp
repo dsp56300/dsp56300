@@ -207,6 +207,12 @@ namespace dsp56k
 
 		m_loops.insert(std::make_pair(_begin, _end));
 		m_loopEnds.insert(_end);
+
+		/*	Code can jump into the tail of a loop before its DO has ever run. What was compiled then holds LA without the loop
+			end code, so the loop ran its body once and left without retiring. Recompile it, as for a moved loop end.
+		*/
+		for (auto& it : m_chains)
+			it.second->forgetLoopEnd(_end);
 	}
 
 	void Jit::removeLoop(const JitBlockInfo& _info)

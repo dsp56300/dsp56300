@@ -208,6 +208,7 @@ namespace  dsp56k
 		void enableBranchAtLoopEnd();
 		void do_twoWordCallAtLoopEnd();
 		void do_callToLoopEndPlusOne();
+		void do_loopTailOutsideItsLoop();
 		void enableDynamicFastInterrupts(bool _enable);
 		void callAtVectorAddress();
 		void callAfterRepAtVectorAddress();

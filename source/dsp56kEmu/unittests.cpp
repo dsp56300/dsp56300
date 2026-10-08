@@ -8039,6 +8039,7 @@ namespace dsp56k
 		do_callAtLoopEnd();
 		do_twoWordCallAtLoopEnd();
 		do_callToLoopEndPlusOne();
+		do_loopTailOutsideItsLoop();
 		do_callNotAtLoopEnd();
 		jsr_rts();
 		ccrBackendParity();
@@ -9161,6 +9162,62 @@ namespace dsp56k
 			verify(dsp.regs().r[1].var == (forever ? 4u : 5u));
 			verify((dsp.getSR().var & SR_FV) == 0);
 		}
+	}
+
+	/*	Code that jumps into the tail of a DO loop runs the loop's last instruction outside the loop. A boot loader in the
+		interrupt vector region does that, the vector region only makes the blocks shorter. The tail ran before the loop's
+		DO was ever compiled and registering the loop later did not recompile it, so the loop ran its body once and the RTS
+		behind it returned through the DO's stack entry. The subroutine is called twice: the shortcut into the tail, then
+		the loop
+	*/
+	void UnitTests::do_loopTailOutsideItsLoop()
+	{
+		for(const auto vector : {false, true})
+		{
+			enableDynamicFastInterrupts(vector);
+
+			dsp.resetHW();
+			dsp.regs().r[0] = TReg24(0);
+			dsp.regs().r[1] = TReg24(0);
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0)));
+
+			// the JIT keeps its loop registry for the whole DSP, so each variant has addresses of its own
+			TWord pc = vector ? 0xe0 : 0x640;
+			if(vector)
+			{
+				pc = emitToMemory("tst b", pc);					// $e0
+				pc = emitToMemory("jeq $e6", pc);				// $e1: the shortcut into the tail of the loop
+				pc = emitToMemory("do #4,>$e7", pc);			// $e2-$e3, LA = $e6
+			}
+			else
+			{
+				pc = emitToMemory("tst b", pc);					// $640
+				pc = emitToMemory("jeq $646", pc);				// $641
+				pc = emitToMemory("do #4,>$647", pc);			// $642-$643, LA = $646
+			}
+			pc = emitToMemory("move (r0)+", pc);				// the body
+			pc = emitToMemory("nop", pc);
+			pc = emitToMemory("move (r1)+", pc);				// LA, also run by the shortcut
+			emitToMemory("rts", pc);
+
+			const auto* call = vector ? "jsr $e0" : "jsr $640";
+
+			pc = 0x100;
+			pc = emitToMemory(call, pc);						// $100, b = 0: the shortcut
+			pc = emitToMemory("inc b", pc);
+			pc = emitToMemory(call, pc);						// $102, b != 0: the loop
+			const auto returnPC = pc;
+			emitToMemory("nop", pc);
+
+			dsp.setPC(0x100);
+			execUntil(returnPC);
+
+			// four passes, and the shortcut ran the tail once more
+			verifyLoopRetired(4);
+			verify(dsp.regs().r[1].var == 5);
+		}
+
+		enableDynamicFastInterrupts(false);
 	}
 
 	void UnitTests::do_multi()

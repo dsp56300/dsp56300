@@ -71,6 +71,30 @@ namespace dsp56k
 		e.singleOpCache = nullptr;
 	}
 
+	void JitBlockChain::forgetLoopEnd(const TWord _loopEnd)
+	{
+		const TWord la = _loopEnd - 1;
+
+		if(auto* block = getBlock(la))
+		{
+			// compiled with this loop end already, it ends there with the loop end code, see JitBlock::getInfo
+			const auto& info = block->getInfo();
+			const auto hasLoopEnd = block->getPCFirst() + block->getPMemSize() == _loopEnd &&
+				(info.terminationReason == JitBlockInfo::TerminationReason::LoopEnd || info.hasFlag(JitBlockInfo::Flags::BranchAtLoopEnd));
+
+			// code that is being generated links to it already, it goes when that is done, see create()
+			if(!hasLoopEnd && isBeingGeneratedRecursive(block))
+				m_loopEndsToForget.push_back(_loopEnd);
+			else if(!hasLoopEnd)
+				destroy(block);
+		}
+
+		// A destroyed single instruction block is kept for reuse by its opcode and would come back without the loop end. A two
+		// word instruction starts a word earlier.
+		releaseSingleOpCache(la);
+		releaseSingleOpCache(la - 1);
+	}
+
 	bool JitBlockChain::canBeDefaultExecuted(TWord _pc) const
 	{
 		if(_pc >= m_jitCache.size())
@@ -175,6 +199,15 @@ namespace dsp56k
 		}
 
 		emit(_pc);
+
+		if(m_generatingBlocks.empty() && !m_loopEndsToForget.empty())
+		{
+			std::vector<TWord> loopEnds;
+			loopEnds.swap(m_loopEndsToForget);
+			for (const auto loopEnd : loopEnds)
+				forgetLoopEnd(loopEnd);
+		}
+
 		if(_execute)
 			exec(_pc);
 	}
