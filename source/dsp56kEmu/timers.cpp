@@ -121,15 +121,16 @@ namespace dsp56k
 				injectInterrupt(Vba_TIMER0_Compare, _index);
 
 			_t.m_tcsr.set(Timer::M_TCF);
+		}
 
-			// The counter restarts from TLR each time it reaches TCPR. An update can count further than one period, and
-			// a counter left above TCPR would only reach it again after the overflow, so what is left of the last
-			// period counts on from TLR
-			if(mode(_index) != ModePWM && _t.m_tcsr.test(Timer::M_TRM))
-			{
-				const TWord period = (tcpr - _t.m_tlr) & 0xffffff;
-				_t.m_tcr = (_t.m_tlr + (period ? overshoot % period : 0)) & 0xffffff;
-			}
+		// The counter restarts from TLR each time it reaches TCPR. A TCPR of zero is reached on the wrap, which raises no
+		// compare but restarts all the same: firmware runs a period of $1000000 - TLR that way (reference simulator). An
+		// update can count further than one period, and a counter left above TCPR would only reach it again after the
+		// overflow, so what is left of the last period counts on from TLR
+		if (!measures && (reached || (overflow && !tcpr)) && m != ModePWM && _t.m_tcsr.test(Timer::M_TRM))
+		{
+			const TWord period = (tcpr - _t.m_tlr) & 0xffffff;
+			_t.m_tcr = (_t.m_tlr + (period ? overshoot % period : 0)) & 0xffffff;
 		}
 	}
 

@@ -9695,20 +9695,22 @@ namespace dsp56k
 		lies in that range and never otherwise, which firmware uses to hold the output at one level. In the reference
 		simulator TLR $FFDFF8 with TCPR 0 raised no compare interrupt at all, TLR $FFFBFE with TCPR $FFFF9F one per
 		overflow. The emulator raised the first on every timer update. In timer mode the wrap to zero is the overflow,
-		not a compare with a TCPR of zero either. The counts below run the same setups as the simulator did
+		not a compare with a TCPR of zero either, but a timer with TRM restarts there all the same: a period of $1000000 -
+		TLR, which firmware runs a software UART with. The counts below run the same setups as the simulator did
 	*/
 	void UnitTests::timerPwmCompare()
 	{
-		struct Case { TWord tcsr; TWord tlr; TWord tcpr; bool compares; };
+		struct Case { TWord tcsr; TWord tlr; TWord tcpr; bool compares; bool restarts; };
 
 		constexpr TWord interrupts = (1 << Timer::M_TE) | (1 << Timer::M_TOIE) | (1 << Timer::M_TCIE);
 		constexpr TWord pwm = interrupts | (7 << Timer::M_TC0) | (1 << Timer::M_TRM);
 
 		constexpr Case cases[] =
 		{
-			{pwm,        0xffdff8, 0x000000, false},		// TCPR outside TLR..$FFFFFF
-			{pwm,        0xfffbfe, 0xffff9f, true},		// once a period
-			{interrupts, 0xffdff8, 0x000000, false},		// timer mode, no TRM: the wrap to zero is no compare
+			{pwm,        0xffdff8, 0x000000, false, true},		// TCPR outside TLR..$FFFFFF
+			{pwm,        0xfffbfe, 0xffff9f, true,  true},		// once a period
+			{interrupts, 0xffdff8, 0x000000, false, false},		// timer mode, no TRM: the wrap to zero is no compare
+			{interrupts | (1 << Timer::M_TRM), 0xfff350, 0x000000, false, true},	// ... and with TRM it restarts there
 		};
 
 		// fast interrupts count them: compares in r7, overflows in r6
@@ -9746,7 +9748,7 @@ namespace dsp56k
 			const auto compares = dsp.regs().r[7].var;
 			const auto overflows = dsp.regs().r[6].var;
 
-			verify(overflows > 0);
+			verify(c.restarts ? overflows > 2 : overflows == 1);
 			verify(c.compares ? (compares > 0 && compares + 1 >= overflows && overflows + 1 >= compares) : compares == 0);
 		}
 	}
