@@ -23,7 +23,8 @@ namespace dsp56k
 
 		const uint32_t diffDiv2 = static_cast<uint32_t>(diff >> 1);
 
-		m_lastClock = clock;
+		// an odd instruction is half a timer clock, it counts with the next update instead of getting lost
+		m_lastClock = clock - (diff & 1);
 
 		// The prescaler is a 21 bit counter clocked by the prescaler input, reloaded from TPLR when
 		// it reaches zero. Its output is one tick per TPLR+1 input clocks, and that output is what
