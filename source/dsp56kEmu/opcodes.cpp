@@ -72,7 +72,16 @@ namespace dsp56k
 	const OpcodeInfo* Opcodes::findNonParallelOpcodeInfo(TWord _opcode) const
 	{
 		assert(isNonParallelOpcode(_opcode));
-		return findOpcodeInfo(_opcode, m_opcodesNonParallel);
+
+		if(const auto* oi = findOpcodeInfo(_opcode, m_opcodesNonParallel))
+			return oi;
+
+		/*	The chip runs any undefined operation code as ILLEGAL (56300 FM 2.3.2.2): a NOP, then the illegal instruction
+			interrupt. Firmware has been seen to run $000040, which the JIT compiled as an empty block that it entered over
+			and over, until the stack overflowed. The disassembler prints such a word as data, see
+			Disassembler::disassemble
+		*/
+		return &getOpcodeInfoAt(Illegal);
 	}
 
 	const OpcodeInfo* Opcodes::findParallelMoveOpcodeInfo(TWord _opcode) const

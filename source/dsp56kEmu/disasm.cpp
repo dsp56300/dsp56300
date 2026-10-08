@@ -2219,8 +2219,9 @@ namespace dsp56k
 
 		if(Opcodes::isNonParallelOpcode(op))
 		{
+			// an undefined opcode decodes as ILLEGAL, see Opcodes::findNonParallelOpcodeInfo, but it is data here
 			const auto* oi = m_opcodes.findNonParallelOpcodeInfo(op);
-			if(oi)
+			if(oi && match(*oi, op))
 			{
 				m_line.opName = g_opNames[oi->m_instruction];
 				m_line.instA = oi->m_instruction;

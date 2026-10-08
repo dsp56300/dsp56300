@@ -233,6 +233,7 @@ namespace dsp56k
 		esaiClockCycleDeadline();
 		esaiEvenSlotInterrupts();
 		esaiReceiveLastSlotInterrupt();
+		undefinedOpcode();
 		esaiResetClearsStatus();
 		esaiControlRegisterReadBack();
 		dmaPendingRequestAtArm();
@@ -475,6 +476,22 @@ namespace dsp56k
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Data));
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Even_Data));
 		verify(!dsp.hasPendingInterrupt(Vba_ESAI_Receive_Data));
+	}
+
+	/*	An undefined opcode runs as ILLEGAL, which carries on with the next instruction here, see DSP::op_Trap. The JIT
+		compiled $000040, which firmware runs, as an empty block that it entered until the stack overflowed
+	*/
+	void UnitTests::undefinedOpcode()
+	{
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(1)));
+		emitToMemory(0x000040, 0, 0xec0);
+		emitToMemory("inc a", 0xec1);
+		emitToMemory(0x0c0ec2, 0, 0xec2);	// jmp $ec2
+
+		dsp.setPC(0xec0);
+		execUntil(0xec2);
+
+		verify(dsp.aluA().var == 2);
 	}
 
 	/*	RLIE raises "receive last slot" once the last slot of a frame ended, whatever the slot masks say, in network mode
