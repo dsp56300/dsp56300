@@ -1180,6 +1180,10 @@ namespace dsp56k
 	{
 		mem.forEachAlias(_offset, [this](const TWord _addr)
 		{
+			// the cache covers internal P only. memWriteP checks before it calls, a write the JIT reports does not
+			if(_addr >= m_opcodeCache.size())
+				return;
+
 			m_opcodeCache[_addr].op = &DSP::op_ResolveCache;
 			if constexpr(!g_useJIT)
 				m_opcodeCycleCache[_addr] = 0;
