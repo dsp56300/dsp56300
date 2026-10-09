@@ -268,6 +268,10 @@ namespace dsp56k
 		const OpcodeInfo* findParallelMoveOpcodeInfo(TWord _opcode) const;
 		const OpcodeInfo* findParallelAluOpcodeInfo(TWord _opcode) const;
 
+		// What a parallel word runs: the move it returns, ILLEGAL for a word that is not defined, and the ALU operation
+		// in _alu, nullptr for none
+		const OpcodeInfo* findParallelOpcodeInfo(TWord _opcode, const OpcodeInfo*& _alu) const;
+
 		static bool isParallelOpcode(const TWord _opcode)
 		{
 			return OpcodeInfo::isParallelOpcode(_opcode);

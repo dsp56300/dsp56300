@@ -238,6 +238,7 @@ namespace dsp56k
 		esaiReceiveLastSlotInterrupt();
 		esaiTimeSlotRegister();
 		undefinedOpcode();
+		undefinedParallelOpcode();
 		illegalKeepsRegisters();
 		esaiResetClearsStatus();
 		esaiControlRegisterReadBack();
@@ -532,6 +533,42 @@ namespace dsp56k
 		execUntil(0xec2);
 
 		verify(dsp.aluA().var == 2);
+	}
+
+	/*	A parallel word whose move field matches no move runs as ILLEGAL and its ALU operation does not run. The JIT took
+		$083100 for a word of length 0 and decoded it forever, and dereferenced a nullptr for $083110. An ALU byte that
+		matches no operation does nothing and the move runs alone. All three as the reference simulator runs them
+	*/
+	void UnitTests::undefinedParallelOpcode()
+	{
+		auto run = [&](const TWord _op)
+		{
+			emitToMemory(_op, 0, 0xec0);
+			emitToMemory("inc a", 0xec1);
+			emitToMemory(0x0c0ec2, 0, 0xec2);	// jmp $ec2
+
+			dsp.setPC(0xec0);
+			execUntil(0xec2);
+		};
+
+		// no move: ILLEGAL, the ADD B,A of $083110 does not run either
+		for(const TWord op : {0x083100, 0x083110})
+		{
+			dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(1)));
+			dsp.setALU(true, TReg56(static_cast<TReg56::MyType>(0x10)));
+			run(op);
+			verify(dsp.aluA().var == 2);
+		}
+
+		// no ALU operation: $080004 runs the move of $080000, move a,x:(r0)-n0 x0,a
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(1)));
+		dsp.regs().x.var = 0x123456;
+		dsp.regs().r[0].var = 0x100;
+		dsp.regs().n[0].var = 1;
+		dsp.regs().m[0].var = 0xffffff;
+		run(0x080004);
+		verify(dsp.aluA().var == 0x123456000001);
+		verify(dsp.regs().r[0].var == 0xff);
 	}
 
 	/*	ILLEGAL stores the registers for a debugger in the middle of a block, which goes on with them. It shifted X1 into

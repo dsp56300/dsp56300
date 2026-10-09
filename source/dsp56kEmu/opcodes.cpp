@@ -96,6 +96,26 @@ namespace dsp56k
 		return findOpcodeInfo(_opcode, m_opcodesAlu);
 	}
 
+	const OpcodeInfo* Opcodes::findParallelOpcodeInfo(const TWord _opcode, const OpcodeInfo*& _alu) const
+	{
+		/*	As the reference simulator runs them: a word whose move field matches no move is ILLEGAL and its ALU operation
+			does not run, $083100 and $083110 take the illegal instruction interrupt and $083110 adds nothing. An ALU byte
+			that matches no operation does nothing, the move runs alone, $080004 runs as $080000. Both used to decode to
+			nullptr, which the JIT dereferenced, or to a word of length 0 that the JIT decoded over and over.
+			The disassembler prints both as data, as the simulator does, see Disassembler::disassemble
+		*/
+		const auto* oiMove = findParallelMoveOpcodeInfo(_opcode);
+
+		if(!oiMove)
+		{
+			_alu = nullptr;
+			return &getOpcodeInfoAt(Illegal);
+		}
+
+		_alu = (_opcode & 0xff) ? findParallelAluOpcodeInfo(_opcode) : nullptr;
+		return oiMove;
+	}
+
 	const OpcodeInfo& Opcodes::getOpcodeInfoAt(size_t _index)
 	{
 		return g_opcodes[_index];
@@ -155,8 +175,8 @@ namespace dsp56k
 			return 1;
 		}
 
-		const auto* oiAlu = (_op & 0xff) ? findParallelAluOpcodeInfo(_op) : nullptr;
-		const auto* oiMove = findParallelMoveOpcodeInfo(_op);
+		const OpcodeInfo* oiAlu;
+		const auto* oiMove = findParallelOpcodeInfo(_op, oiAlu);
 
 		uint32_t res = 0;
 

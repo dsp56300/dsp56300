@@ -301,24 +301,8 @@ namespace dsp56k
 			return;
 		}
 
-		const auto* oiMove = m_opcodes.findParallelMoveOpcodeInfo(_op);
-		if(!oiMove)
-		{
-			m_opcodes.findParallelMoveOpcodeInfo(_op);		// retry here to help debugging
-			assert(0 && "illegal instruction");
-		}
-
-		const OpcodeInfo* oiAlu = nullptr;
-
-		if(_op & 0xff)
-		{
-			oiAlu = m_opcodes.findParallelAluOpcodeInfo(_op);
-			if(!oiAlu)
-			{
-				m_opcodes.findParallelAluOpcodeInfo(_op);	// retry here to help debugging
-				assert(0 && "invalid instruction");						
-			}
-		}
+		const OpcodeInfo* oiAlu;
+		const auto* oiMove = m_opcodes.findParallelOpcodeInfo(_op, oiAlu);
 
 		switch (oiMove->m_instruction)
 		{
