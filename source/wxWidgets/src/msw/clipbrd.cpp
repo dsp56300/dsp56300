@@ -34,7 +34,6 @@
     #include "wx/intl.h"
     #include "wx/log.h"
     #include "wx/dataobj.h"
-    #include "wx/dcmemory.h"
 #endif
 
 #if wxUSE_METAFILE
@@ -240,6 +239,8 @@ bool wxSetClipboardData(wxDataFormat dataFormat,
                             numColors = 3;
                             break;
                         case BI_RGB:
+                        case BI_RLE8:
+                        case BI_RLE4:
                             numColors = ds.dsBmih.biClrUsed;
                             if ( !numColors )
                             {
@@ -582,26 +583,6 @@ bool wxClipboard::AddData( wxDataObject *data )
         return false;
 
     wxCHECK_MSG( data, false, wxT("data is invalid") );
-
-    const wxDataFormat format = data->GetPreferredFormat();
-    if ( format == wxDF_BITMAP || format == wxDF_DIB )
-    {
-        wxBitmapDataObject* bmpData = (wxBitmapDataObject*)data;
-        wxBitmap bmp = bmpData->GetBitmap();
-        wxASSERT_MSG( bmp.IsOk(), wxS("Invalid bitmap") );
-        // Replace 0RGB bitmap with its RGB copy
-        // to ensure compatibility with applications
-        // not recognizing bitmaps in 0RGB format.
-        if ( bmp.GetDepth() == 32 && !bmp.HasAlpha() )
-        {
-            wxBitmap bmpRGB(bmp.GetSize(), 24);
-            wxMemoryDC dc(bmpRGB);
-            dc.DrawBitmap(bmp, 0, 0);
-            dc.SelectObject(wxNullBitmap);
-
-            bmpData->SetBitmap(bmpRGB);
-        }
-    }
 
 #if wxUSE_OLE_CLIPBOARD
     HRESULT hr = OleSetClipboard(data->GetInterface());

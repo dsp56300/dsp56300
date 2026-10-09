@@ -1311,6 +1311,7 @@ IMPORTANT: please read docs/tech/tn0016.txt before modifying this file!
     wx/creddlg.h
     wx/bmpbndl.h
     wx/filedlgcustomize.h
+    wx/persist/combobox.h
 </set>
 
 <!-- ====================================================================== -->
@@ -2283,6 +2284,7 @@ IMPORTANT: please read docs/tech/tn0016.txt before modifying this file!
     wx/msw/datectrl.h
     wx/msw/calctrl.h
     wx/generic/activityindicator.h
+    wx/msw/mfc.h
 </set>
 <set var="MSW_RSC" hints="files">
     <!-- Resources must be installed together with headers: -->
@@ -3242,6 +3244,7 @@ IMPORTANT: please read docs/tech/tn0016.txt before modifying this file!
 
 <set var="OPENGL_HDR_PLATFORM" hints="files">
     <if cond="TOOLKIT=='OSX_COCOA'">wx/osx/glcanvas.h</if>
+    <if cond="TOOLKIT=='OSX_IPHONE'">wx/osx/glcanvas.h</if>
     <if cond="TOOLKIT=='COCOA'">wx/cocoa/glcanvas.h</if>
     <if cond="TOOLKIT=='GTK' and TOOLKIT_VERSION=='4'">
         wx/gtk/glcanvas.h

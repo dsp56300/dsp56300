@@ -76,18 +76,28 @@ public:
     */
     wxArrayString(const wxArrayString& array);
 
-    ///@{
     /**
         Constructor from a C string array. Pass a size @a sz and an array @a arr.
-    **/
+     */
     wxArrayString(size_t sz, const char** arr);
+
+    /**
+        Constructor from a C wide string array. Pass a size @a sz and an array @a arr.
+     */
     wxArrayString(size_t sz, const wchar_t** arr);
-    ///@}
 
     /**
         Constructor from a wxString array. Pass a size @a sz and array @a arr.
     */
     wxArrayString(size_t sz, const wxString* arr);
+
+    /**
+        Constructs the container with the contents of the initializer_list @a list.
+
+        @since 3.2.4
+    */
+    template<typename T>
+    wxArrayString(std::initializer_list<T> list);
 
     /**
         Destructor frees memory occupied by the array strings. For performance

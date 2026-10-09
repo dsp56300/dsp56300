@@ -25,7 +25,7 @@ Files
 * functions.cmake
     * contains various wxWidgets specific functions and macros used throughout
       the CMake files
-    * Every function should contain a short description of it's parameters as
+    * Every function should contain a short description of its parameters as
       a comment before the function/macro
 * install.cmake
     * Handles definitions for the `install` and `uninstall` target
@@ -36,7 +36,7 @@ Files
     * Includes all other cmake files
 * options.cmake
     * All user selectable build options should be defined in this file via
-      calls to `wx_option()`
+      calls to `wx_option()` or `wx_option_auto()`
 * policies.cmake
     * [CMake policies][2] for wxWidgets should be defined in this file
 * setup.cmake

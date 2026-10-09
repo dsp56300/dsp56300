@@ -52,7 +52,7 @@ wx_top_builddir = @wx_top_builddir@
 
 DESTDIR = 
 WX_RELEASE = 3.2
-WX_VERSION = $(WX_RELEASE).1
+WX_VERSION = $(WX_RELEASE).11
 LIBDIRNAME = $(wx_top_builddir)/lib
 TEST_CXXFLAGS = $(__test_PCH_INC) $(WX_CPPFLAGS) -D__WX$(TOOLKIT)__ \
 	$(__WXUNIV_DEFINE_p) $(__DEBUG_DEFINE_p) $(__EXCEPTIONS_DEFINE_p) \
@@ -265,6 +265,7 @@ TEST_GUI_OBJECTS =  \
 	test_gui_garbage.o \
 	test_gui_safearrayconverttest.o \
 	test_gui_settings.o \
+	test_gui_textwrap.o \
 	test_gui_socket.o \
 	test_gui_tlw.o \
 	test_gui_dataview.o \
@@ -448,7 +449,7 @@ COND_wxUSE_REGEX_builtin___LIB_REGEX_p = \
 
 ### Targets: ###
 
-all: test$(EXEEXT) $(__test_drawing___depname) $(__test_drawingplugin___depname) $(__test_gui___depname) $(__test_gui_bundle___depname) $(__test_allheaders___depname) $(__test_allheaders_bundle___depname) data data-image-sample data-images fr ja
+all: test$(EXEEXT) $(__test_drawing___depname) $(__test_drawingplugin___depname) $(__test_gui___depname) $(__test_gui_bundle___depname) $(__test_allheaders___depname) $(__test_allheaders_bundle___depname) data data-image-sample data-images en_GB fr ja
 
 install: 
 
@@ -497,10 +498,10 @@ test$(EXEEXT): $(TEST_OBJECTS)
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	sed -e "s/\$${MACOSX_BUNDLE_GUI_IDENTIFIER}/org.wxwidgets.test_gui/" \
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_EXECUTABLE_NAME}/test_gui/" \
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_BUNDLE_NAME}/test_gui/" \
-@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_COPYRIGHT}/Copyright 2002-2022 wxWidgets/" \
+@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_COPYRIGHT}/Copyright 2002-2026 wxWidgets/" \
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_BUNDLE_VERSION}/$(WX_VERSION)/" \
-@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_INFO_STRING}/test_gui version $(WX_VERSION), (c) 2002-2022 wxWidgets/" \
-@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_LONG_VERSION_STRING}/$(WX_VERSION), (c) 2002-2022 wxWidgets/" \
+@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_INFO_STRING}/test_gui version $(WX_VERSION), (c) 2002-2026 wxWidgets/" \
+@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_LONG_VERSION_STRING}/$(WX_VERSION), (c) 2002-2026 wxWidgets/" \
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_SHORT_VERSION_STRING}/$(WX_RELEASE)/" \
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	$(top_srcdir)/src/osx/carbon/Info.plist.in >test_gui.app/Contents/Info.plist
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	
@@ -530,10 +531,10 @@ test$(EXEEXT): $(TEST_OBJECTS)
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	sed -e "s/\$${MACOSX_BUNDLE_GUI_IDENTIFIER}/org.wxwidgets.test_allheaders/" \
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_EXECUTABLE_NAME}/test_allheaders/" \
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_BUNDLE_NAME}/test_allheaders/" \
-@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_COPYRIGHT}/Copyright 2002-2022 wxWidgets/" \
+@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_COPYRIGHT}/Copyright 2002-2026 wxWidgets/" \
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_BUNDLE_VERSION}/$(WX_VERSION)/" \
-@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_INFO_STRING}/test_allheaders version $(WX_VERSION), (c) 2002-2022 wxWidgets/" \
-@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_LONG_VERSION_STRING}/$(WX_VERSION), (c) 2002-2022 wxWidgets/" \
+@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_INFO_STRING}/test_allheaders version $(WX_VERSION), (c) 2002-2026 wxWidgets/" \
+@COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_LONG_VERSION_STRING}/$(WX_VERSION), (c) 2002-2026 wxWidgets/" \
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	-e "s/\$${MACOSX_BUNDLE_SHORT_VERSION_STRING}/$(WX_RELEASE)/" \
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	$(top_srcdir)/src/osx/carbon/Info.plist.in >test_allheaders.app/Contents/Info.plist
 @COND_PLATFORM_MACOSX_1_USE_GUI_1@	
@@ -577,13 +578,25 @@ data-image-sample:
 
 data-images: 
 	@mkdir -p image
-	@for f in bitfields.bmp 8bpp-colorsused-large.bmp 8bpp-colorsused-negative.bmp rle4-delta-320x240.bmp rle8-delta-320x240.bmp rle8-delta-320x240-expected.bmp horse_grey.bmp horse_grey_flipped.bmp horse_rle4.bmp horse_rle4_flipped.bmp horse_rle8.bmp horse_rle8_flipped.bmp horse_bicubic_50x50.png horse_bicubic_100x100.png horse_bicubic_150x150.png horse_bicubic_300x300.png horse_bilinear_50x50.png horse_bilinear_100x100.png horse_bilinear_150x150.png horse_bilinear_300x300.png horse_box_average_50x50.png horse_box_average_100x100.png horse_box_average_150x150.png horse_box_average_300x300.png cross_bicubic_256x256.png cross_bilinear_256x256.png cross_box_average_256x256.png cross_nearest_neighb_256x256.png paste_input_background.png paste_input_black.png paste_input_overlay_transparent_border_opaque_square.png paste_input_overlay_transparent_border_semitransparent_circle.png paste_input_overlay_transparent_border_semitransparent_square.png paste_result_background_plus_circle_plus_square.png paste_result_background_plus_overlay_transparent_border_opaque_square.png paste_result_background_plus_overlay_transparent_border_semitransparent_square.png paste_result_no_background_square_over_circle.png wx.png toucan.png toucan_hue_0.538.png toucan_sat_-0.41.png toucan_bright_-0.259.png toucan_hsv_0.538_-0.41_-0.259.png toucan_light_46.png toucan_dis_240.png toucan_grey.png toucan_mono_255_255_255.png width-times-height-overflow.bmp width_height_32_bit_overflow.pgm; do \
+	@for f in bitfields.bmp bitfields-alpha.bmp 8bpp-colorsused-large.bmp 8bpp-colorsused-negative.bmp 32bpp_rgb.bmp 32bpp_rgb.ico 32bpp_rgb_a0.ico badrle4.bmp rgb16-3103.bmp rgb32-7187.bmp rgb32bf.bmp rgba32.bmp rle4-delta-320x240.bmp rle8-delta-320x240.bmp rle8-delta-320x240-expected.bmp horse_grey.bmp horse_grey_flipped.bmp horse_rle4.bmp horse_rle4_flipped.bmp horse_rle8.bmp horse_rle8_flipped.bmp horse_bicubic_50x50.png horse_bicubic_100x100.png horse_bicubic_150x150.png horse_bicubic_300x300.png horse_bilinear_50x50.png horse_bilinear_100x100.png horse_bilinear_150x150.png horse_bilinear_300x300.png horse_box_average_50x50.png horse_box_average_100x100.png horse_box_average_150x150.png horse_box_average_300x300.png cross_bicubic_256x256.png cross_bilinear_256x256.png cross_box_average_256x256.png cross_nearest_neighb_256x256.png paste_input_background.png paste_input_black.png paste_input_overlay_transparent_border_opaque_square.png paste_input_overlay_transparent_border_semitransparent_circle.png paste_input_overlay_transparent_border_semitransparent_square.png paste_result_background_plus_circle_plus_square.png paste_result_background_plus_overlay_transparent_border_opaque_square.png paste_result_background_plus_overlay_transparent_border_semitransparent_square.png paste_result_no_background_square_over_circle.png wx.png toucan.png toucan_hue_0.538.png toucan_sat_-0.41.png toucan_bright_-0.259.png toucan_hsv_0.538_-0.41_-0.259.png toucan_light_46.png toucan_dis_240.png toucan_grey.png toucan_mono_255_255_255.png width-times-height-overflow.bmp width_height_32_bit_overflow.pgm bad_truncated.gif; do \
 	if test ! -f image/$$f -a ! -d image/$$f ; \
 	then x=yep ; \
 	else x=`find $(srcdir)/image/$$f -newer image/$$f -print` ; \
 	fi; \
 	case "$$x" in ?*) \
 	cp -pRf $(srcdir)/image/$$f image ;; \
+	esac; \
+	done
+
+en_GB: 
+	@mkdir -p ./intl/en_GB
+	@for f in internat.po internat.mo; do \
+	if test ! -f ./intl/en_GB/$$f -a ! -d ./intl/en_GB/$$f ; \
+	then x=yep ; \
+	else x=`find $(srcdir)/intl/en_GB/$$f -newer ./intl/en_GB/$$f -print` ; \
+	fi; \
+	case "$$x" in ?*) \
+	cp -pRf $(srcdir)/intl/en_GB/$$f ./intl/en_GB ;; \
 	esac; \
 	done
 
@@ -1163,6 +1176,9 @@ test_gui_safearrayconverttest.o: $(srcdir)/misc/safearrayconverttest.cpp $(TEST_
 test_gui_settings.o: $(srcdir)/misc/settings.cpp $(TEST_GUI_ODEP)
 	$(CXXC) -c -o $@ $(TEST_GUI_CXXFLAGS) $(srcdir)/misc/settings.cpp
 
+test_gui_textwrap.o: $(srcdir)/misc/textwrap.cpp $(TEST_GUI_ODEP)
+	$(CXXC) -c -o $@ $(TEST_GUI_CXXFLAGS) $(srcdir)/misc/textwrap.cpp
+
 test_gui_socket.o: $(srcdir)/net/socket.cpp $(TEST_GUI_ODEP)
 	$(CXXC) -c -o $@ $(TEST_GUI_CXXFLAGS) $(srcdir)/net/socket.cpp
 
@@ -1260,4 +1276,4 @@ failtest_allheaders:
 @IF_GNU_MAKE@-include ./.deps/*.d
 
 .PHONY: all install uninstall clean distclean test_gui_bundle \
-	test_allheaders_bundle data data-image-sample data-images fr ja
+	test_allheaders_bundle data data-image-sample data-images en_GB fr ja

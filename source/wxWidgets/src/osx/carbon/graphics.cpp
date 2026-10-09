@@ -31,7 +31,6 @@
     #include "wx/osx/dcmemory.h"
     #include "wx/osx/private.h"
     #include "wx/osx/core/cfdictionary.h"
-    #include "wx/osx/private/available.h"
 #else
     #include "CoreServices/CoreServices.h"
     #include "ApplicationServices/ApplicationServices.h"
@@ -1482,15 +1481,9 @@ public:
         if (width <= 0)
             return true;
 
-        // no offset if overall scale is not odd integer
-        const wxGraphicsMatrix matrix(GetTransform());
-        double x = GetContentScaleFactor(), y = x;
-        matrix.TransformDistance(&x, &y);
-        if (!wxIsSameDouble(fmod(wxMin(fabs(x), fabs(y)), 2.0), 1.0))
-            return false;
-
         // offset if pen width is odd integer
-        return wxIsSameDouble(fmod(width, 2.0), 1.0);
+        const int w = int(width);
+        return (w & 1) && wxIsSameDouble(width, w);
     }
     //
     // text
@@ -1517,6 +1510,8 @@ public:
     virtual void DrawRectangle( wxDouble x, wxDouble y, wxDouble w, wxDouble h ) wxOVERRIDE;
 
     void SetNativeContext( CGContextRef cg );
+
+    class OffsetHelper;
 
     wxDECLARE_NO_COPY_CLASS(wxMacCoreGraphicsContext);
 
@@ -1559,34 +1554,35 @@ private:
 // wxMacCoreGraphicsContext implementation
 //-----------------------------------------------------------------------------
 
-class wxQuartzOffsetHelper
+class wxMacCoreGraphicsContext::OffsetHelper
 {
 public :
-    wxQuartzOffsetHelper( CGContextRef cg, double scaleFactor, bool offset )
+    OffsetHelper(bool shouldOffset, CGContextRef cg, const wxGraphicsPen& pen)
     {
+        m_shouldOffset = shouldOffset;
+        if (!shouldOffset)
+            return;
+
+        m_offset = CGSizeMake(0.5, 0.5);
         m_cg = cg;
-        m_offset = offset;
-        if ( m_offset )
+        double width = static_cast<wxMacCoreGraphicsPenData*>(pen.GetRefData())->GetWidth();
+        if (width <= 0)
         {
-            const double f = 0.5 / scaleFactor;
-            m_userOffset = CGSizeMake(f, f);
-            CGContextTranslateCTM( m_cg, m_userOffset.width , m_userOffset.height );
-        }
-        else
-        {
-            m_userOffset = CGSizeMake(0.0, 0.0);
+            // For 1-pixel pen width, offset by half a device pixel
+            m_offset = CGContextConvertSizeToUserSpace(cg, m_offset);
         }
 
+        CGContextTranslateCTM(cg, m_offset.width, m_offset.height);
     }
-    ~wxQuartzOffsetHelper( )
+    ~OffsetHelper()
     {
-        if ( m_offset )
-            CGContextTranslateCTM( m_cg, -m_userOffset.width , -m_userOffset.height );
+        if (m_shouldOffset)
+            CGContextTranslateCTM(m_cg, -m_offset.width, -m_offset.height);
     }
 public :
-    CGSize m_userOffset;
+    CGSize m_offset;
     CGContextRef m_cg;
-    bool m_offset;
+    bool m_shouldOffset;
 } ;
 
 void wxMacCoreGraphicsContext::Init()
@@ -2150,36 +2146,27 @@ void wxMacCoreGraphicsContext::ResetClip()
 {
     if ( m_cgContext )
     {
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_13
-        if ( WX_IS_MACOS_OR_IOS_AVAILABLE(10, 13, 11, 0) )
-        {
-            CGContextResetClip(m_cgContext);
-        }
-        else
-#endif
-        {
-            // there is no way for clearing the clip, we can only revert to the stored
-            // state, but then we have to make sure everything else is NOT restored
-            // Note: This trick works as expected only if a state with no clipping
-            // path is stored on the top of the stack. It's guaranteed to work only
-            // when no PushState() was called before because in this case a reference
-            // state (initial state without clipping region) is on the top of the stack.
-            wxASSERT_MSG(m_stateStackLevel == 0,
-                         "Resetting the clip may not work when PushState() was called before");
-            CGAffineTransform transform = CGContextGetCTM( m_cgContext );
-            CGContextRestoreGState( m_cgContext );
-            CGContextSaveGState( m_cgContext );
-            CGAffineTransform transformNew = CGContextGetCTM( m_cgContext );
-            transformNew = CGAffineTransformInvert( transformNew ) ;
-            CGContextConcatCTM( m_cgContext, transformNew);
-            CGContextConcatCTM( m_cgContext, transform);
-            // Retain antialiasing mode
-            DoSetAntialiasMode(m_antialias);
-            // Retain interpolation quality
-            DoSetInterpolationQuality(m_interpolation);
-            // Retain composition mode
-            DoSetCompositionMode(m_composition);
-        }
+        // there is no way for clearing the clip, we can only revert to the stored
+        // state, but then we have to make sure everything else is NOT restored
+        // Note: This trick works as expected only if a state with no clipping
+        // path is stored on the top of the stack. It's guaranteed to work only
+        // when no PushState() was called before because in this case a reference
+        // state (initial state without clipping region) is on the top of the stack.
+        wxASSERT_MSG(m_stateStackLevel == 0,
+                     "Resetting the clip may not work when PushState() was called before");
+        CGAffineTransform transform = CGContextGetCTM( m_cgContext );
+        CGContextRestoreGState( m_cgContext );
+        CGContextSaveGState( m_cgContext );
+        CGAffineTransform transformNew = CGContextGetCTM( m_cgContext );
+        transformNew = CGAffineTransformInvert( transformNew ) ;
+        CGContextConcatCTM( m_cgContext, transformNew);
+        CGContextConcatCTM( m_cgContext, transform);
+        // Retain antialiasing mode
+        DoSetAntialiasMode(m_antialias);
+        // Retain interpolation quality
+        DoSetInterpolationQuality(m_interpolation);
+        // Retain composition mode
+        DoSetCompositionMode(m_composition);
     }
     else
     {
@@ -2239,7 +2226,7 @@ void wxMacCoreGraphicsContext::StrokePath( const wxGraphicsPath &path )
     if (m_composition == wxCOMPOSITION_DEST)
         return;
 
-    wxQuartzOffsetHelper helper( m_cgContext, GetContentScaleFactor(), ShouldOffset() );
+    OffsetHelper helper(ShouldOffset(), m_cgContext, m_pen);
     wxMacCoreGraphicsPenData* penData = (wxMacCoreGraphicsPenData*)m_pen.GetRefData();
 
     penData->Apply(this);
@@ -2319,7 +2306,7 @@ void wxMacCoreGraphicsContext::DrawPath( const wxGraphicsPath &path , wxPolygonF
     if ( !m_pen.IsNull() )
         ((wxMacCoreGraphicsPenData*)m_pen.GetRefData())->Apply(this);
 
-    wxQuartzOffsetHelper helper( m_cgContext, GetContentScaleFactor(), ShouldOffset() );
+    OffsetHelper helper(ShouldOffset(), m_cgContext, m_pen);
 
     CGContextAddPath( m_cgContext , (CGPathRef) path.GetNativePath() );
     CGContextDrawPath( m_cgContext , mode );
@@ -2437,7 +2424,7 @@ void wxMacCoreGraphicsContext::DrawBitmap( const wxBitmap &bmp, wxDouble x, wxDo
     if (EnsureIsValid())
     {
         CGRect r = CGRectMake( (CGFloat) x , (CGFloat) y , (CGFloat) w , (CGFloat) h );
-        wxOSXDrawNSImage( m_cgContext, &r, bmp.GetNSImage());
+        wxOSXDrawNSImage( m_cgContext, &r, bmp.GetNSImage(), m_composition);
     }
 #else
     wxGraphicsBitmap bitmap = GetRenderer()->CreateBitmap(bmp);
@@ -2500,7 +2487,7 @@ void wxMacCoreGraphicsContext::DrawIcon( const wxIcon &icon, wxDouble x, wxDoubl
 #if wxOSX_USE_COCOA
     {
         CGRect r = CGRectMake( (CGFloat) x , (CGFloat) y , (CGFloat) w , (CGFloat) h );
-        wxOSXDrawNSImage( m_cgContext, &r, icon.GetNSImage());
+        wxOSXDrawNSImage( m_cgContext, &r, icon.GetNSImage(), m_composition);
     }
 #endif
 
@@ -2733,7 +2720,7 @@ void wxMacCoreGraphicsContext::DrawRectangle( wxDouble x, wxDouble y, wxDouble w
 
     if ( !m_pen.IsNull() )
     {
-        wxQuartzOffsetHelper helper( m_cgContext, GetContentScaleFactor(), ShouldOffset() );
+        OffsetHelper helper(ShouldOffset(), m_cgContext, m_pen);
         ((wxMacCoreGraphicsPenData*)m_pen.GetRefData())->Apply(this);
         CGContextStrokeRect(m_cgContext, rect);
     }

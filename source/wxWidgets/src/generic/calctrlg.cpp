@@ -24,7 +24,7 @@
     #include "wx/dcclient.h"
     #include "wx/settings.h"
     #include "wx/brush.h"
-    #include "wx/combobox.h"
+    #include "wx/choice.h"
     #include "wx/listbox.h"
     #include "wx/stattext.h"
     #include "wx/textctrl.h"
@@ -127,7 +127,7 @@ wxGenericCalendarCtrl::wxGenericCalendarCtrl(wxWindow *parent,
 
 void wxGenericCalendarCtrl::Init()
 {
-    m_comboMonth = NULL;
+    m_choiceMonth = NULL;
     m_spinYear = NULL;
     m_staticYear = NULL;
     m_staticMonth = NULL;
@@ -227,7 +227,7 @@ wxGenericCalendarCtrl::~wxGenericCalendarCtrl()
 
     if ( !HasFlag(wxCAL_SEQUENTIAL_MONTH_SELECTION) )
     {
-        delete m_comboMonth;
+        delete m_choiceMonth;
         delete m_staticMonth;
         delete m_spinYear;
         delete m_staticYear;
@@ -250,32 +250,30 @@ void wxGenericCalendarCtrl::SetWindowStyleFlag(long style)
 }
 
 // ----------------------------------------------------------------------------
-// Create the wxComboBox and wxSpinCtrl
+// Create the wxChoice and wxSpinCtrl
 // ----------------------------------------------------------------------------
 
 void wxGenericCalendarCtrl::CreateMonthComboBox()
 {
-    m_comboMonth = new wxComboBox(GetParent(), wxID_ANY,
-                                  wxEmptyString,
+    m_choiceMonth = new wxChoice(GetParent(), wxID_ANY,
                                   wxDefaultPosition,
                                   wxDefaultSize,
-                                  0, NULL,
-                                  wxCB_READONLY | wxCLIP_SIBLINGS);
+                                  0, NULL);
 
     wxDateTime::Month m;
     for ( m = wxDateTime::Jan; m < wxDateTime::Inv_Month; wxNextMonth(m) )
     {
-        m_comboMonth->Append(wxDateTime::GetMonthName(m));
+        m_choiceMonth->Append(wxDateTime::GetMonthName(m));
     }
 
-    m_comboMonth->SetSelection(GetDate().GetMonth());
-    m_comboMonth->SetSize(wxDefaultCoord,
+    m_choiceMonth->SetSelection(GetDate().GetMonth());
+    m_choiceMonth->SetSize(wxDefaultCoord,
                           wxDefaultCoord,
                           wxDefaultCoord,
                           wxDefaultCoord,
                           wxSIZE_AUTO_WIDTH|wxSIZE_AUTO_HEIGHT);
 
-    m_comboMonth->Bind(wxEVT_COMBOBOX, &wxGenericCalendarCtrl::OnMonthChange, this);
+    m_choiceMonth->Bind(wxEVT_CHOICE, &wxGenericCalendarCtrl::OnMonthChange, this);
 }
 
 void wxGenericCalendarCtrl::CreateYearSpinCtrl()
@@ -301,14 +299,14 @@ bool wxGenericCalendarCtrl::Destroy()
         m_staticYear->Destroy();
     if ( m_spinYear )
         m_spinYear->Destroy();
-    if ( m_comboMonth )
-        m_comboMonth->Destroy();
+    if ( m_choiceMonth )
+        m_choiceMonth->Destroy();
     if ( m_staticMonth )
         m_staticMonth->Destroy();
 
     m_staticYear = NULL;
     m_spinYear = NULL;
-    m_comboMonth = NULL;
+    m_choiceMonth = NULL;
     m_staticMonth = NULL;
 
     return wxControl::Destroy();
@@ -359,7 +357,7 @@ void wxGenericCalendarCtrl::ShowCurrentControls()
     {
         if ( AllowMonthChange() )
         {
-            m_comboMonth->Show();
+            m_choiceMonth->Show();
             m_staticMonth->Hide();
 
             if ( AllowYearChange() )
@@ -373,7 +371,7 @@ void wxGenericCalendarCtrl::ShowCurrentControls()
         }
         else
         {
-            m_comboMonth->Hide();
+            m_choiceMonth->Hide();
             m_staticMonth->Show();
         }
 
@@ -386,7 +384,7 @@ void wxGenericCalendarCtrl::ShowCurrentControls()
 
 wxControl *wxGenericCalendarCtrl::GetMonthControl() const
 {
-    return AllowMonthChange() ? (wxControl *)m_comboMonth : (wxControl *)m_staticMonth;
+    return AllowMonthChange() ? (wxControl *)m_choiceMonth : (wxControl *)m_staticMonth;
 }
 
 wxControl *wxGenericCalendarCtrl::GetYearControl() const
@@ -455,7 +453,7 @@ bool wxGenericCalendarCtrl::SetDate(const wxDateTime& date)
                 if ( !(GetWindowStyle() & wxCAL_SEQUENTIAL_MONTH_SELECTION) )
                 {
                     // update the controls
-                    m_comboMonth->SetSelection(m_date.GetMonth());
+                    m_choiceMonth->SetSelection(m_date.GetMonth());
 
                     if ( AllowYearChange() )
                     {
@@ -668,16 +666,18 @@ size_t wxGenericCalendarCtrl::GetWeek(const wxDateTime& date) const
 // ----------------------------------------------------------------------------
 
 // this is a composite control and it must arrange its parts each time its
-// size or position changes: the combobox and spinctrl are along the top of
+// size or position changes: the choice and spinctrl are along the top of
 // the available area and the calendar takes up the rest of the space
 
-// the static controls are supposed to be always smaller than combo/spin so we
+// the static controls are supposed to be always smaller than choice/spin so we
 // always use the latter for size calculations and position the static to take
 // the same space
 
 // the constants used for the layout
-#define VERT_MARGIN    5           // distance between combo and calendar
-#define HORZ_MARGIN    5           //                            spin
+static const int VERT_MARGIN  =  5;  // distance between choice and calendar
+static const int HORZ_MARGIN  =  5;  // distance between choice and spin
+static const int DAY_MARGIN   =  2;  // distance between day rows and column
+static const int WEEK_MARGIN  =  4;  // extra width of the week column
 
 wxSize wxGenericCalendarCtrl::DoGetBestSize() const
 {
@@ -685,17 +685,17 @@ wxSize wxGenericCalendarCtrl::DoGetBestSize() const
     const_cast<wxGenericCalendarCtrl *>(this)->RecalcGeometry();
 
     wxCoord width = 7*m_widthCol + m_calendarWeekWidth,
-            height = 7*m_heightRow + m_rowOffset + VERT_MARGIN;
+            height = 7*m_heightRow + m_rowOffset + FromDIP(VERT_MARGIN);
 
     if ( !HasFlag(wxCAL_SEQUENTIAL_MONTH_SELECTION) )
     {
-        const wxSize bestSizeCombo = m_comboMonth->GetBestSize();
+        const wxSize bestSizeChoice = m_choiceMonth->GetBestSize();
         const wxSize bestSizeSpin = m_spinYear->GetBestSize();
 
-        height += wxMax(bestSizeCombo.y, bestSizeSpin.y)
-                    + VERT_MARGIN;
+        height += wxMax(bestSizeChoice.y, bestSizeSpin.y)
+                    + FromDIP(VERT_MARGIN);
 
-        wxCoord w2 = bestSizeCombo.x + HORZ_MARGIN + bestSizeSpin.x;
+        wxCoord w2 = bestSizeChoice.x + FromDIP(HORZ_MARGIN) + bestSizeSpin.x;
         if ( width < w2 )
             width = w2;
     }
@@ -715,21 +715,21 @@ void wxGenericCalendarCtrl::DoMoveWindow(int x, int y, int width, int height)
 
     if ( !HasFlag(wxCAL_SEQUENTIAL_MONTH_SELECTION) && m_staticMonth )
     {
-        wxSize sizeCombo = m_comboMonth->GetEffectiveMinSize();
-        wxSize sizeStatic = m_staticMonth->GetSize();
-        wxSize sizeSpin = m_spinYear->GetSize();
+        wxSize sizeChoice = m_choiceMonth->GetEffectiveMinSize();
+        wxSize sizeStatic = m_staticMonth->GetEffectiveMinSize();
+        wxSize sizeSpin = m_spinYear->GetEffectiveMinSize();
 
-        int maxHeight = wxMax(sizeSpin.y, sizeCombo.y);
+        int maxHeight = wxMax(sizeSpin.y, sizeChoice.y);
         int dy = (maxHeight - sizeStatic.y) / 2;
-        m_comboMonth->Move(x, y + (maxHeight - sizeCombo.y)/2);
-        m_staticMonth->SetSize(x, y + dy, sizeCombo.x, -1);
+        m_choiceMonth->SetSize(x, y + (maxHeight - sizeChoice.y)/2, sizeChoice.x, -1);
+        m_staticMonth->SetSize(x, y + dy, sizeChoice.x, -1);
 
-        int xDiff = sizeCombo.x + HORZ_MARGIN;
+        int xDiff = sizeChoice.x + FromDIP(HORZ_MARGIN);
 
         m_spinYear->SetSize(x + xDiff, y + (maxHeight - sizeSpin.y)/2, width - xDiff, maxHeight);
         m_staticYear->SetSize(x + xDiff, y + dy, width - xDiff, sizeStatic.y);
 
-        yDiff = maxHeight + VERT_MARGIN;
+        yDiff = maxHeight + FromDIP(VERT_MARGIN);
     }
     else // no controls on the top
     {
@@ -776,11 +776,11 @@ void wxGenericCalendarCtrl::RecalcGeometry()
     }
 
     m_calendarWeekWidth = HasFlag( wxCAL_SHOW_WEEK_NUMBERS )
-        ? dc.GetTextExtent( wxString::Format( wxT( "%d" ), 42 )).GetWidth() + 4 : 0;
+        ? dc.GetTextExtent( wxString::Format( wxT( "%d" ), 42 )).GetWidth() + FromDIP(WEEK_MARGIN) : 0;
 
     // leave some margins
-    m_widthCol += 2;
-    m_heightRow += 2;
+    m_widthCol += FromDIP(DAY_MARGIN);
+    m_heightRow += FromDIP(DAY_MARGIN);
 
     m_rowOffset = HasFlag(wxCAL_SEQUENTIAL_MONTH_SELECTION) ? m_heightRow : 0; // conditional in relation to style
 }
@@ -850,10 +850,12 @@ void wxGenericCalendarCtrl::OnPaint(wxPaintEvent& WXUNUSED(event))
         if ( AllowMonthChange() )
         {
             wxDateTime ldpm = wxDateTime(1,m_date.GetMonth(), m_date.GetYear()) - wxDateSpan::Day(); // last day prev month
+            int rectx = FromDIP(4);
+            int recty = FromDIP(3);
             // Check if range permits change
             if ( IsDateInRange(ldpm) && ( ( ldpm.GetYear() == m_date.GetYear() ) ? true : AllowYearChange() ) )
             {
-                m_leftArrowRect = wxRect(larrowx - 3, arrowy - 3, (arrowheight / 2) + 8, (arrowheight + 6));
+                m_leftArrowRect = wxRect(larrowx - rectx + 1, arrowy - recty, (arrowheight / 2) + 2 * rectx, (arrowheight + 2 * recty));
                 dc.SetBrush(*wxBLACK_BRUSH);
                 dc.SetPen(*wxBLACK_PEN);
                 dc.DrawPolygon(3, leftarrow, larrowx , arrowy, wxWINDING_RULE);
@@ -863,7 +865,7 @@ void wxGenericCalendarCtrl::OnPaint(wxPaintEvent& WXUNUSED(event))
             wxDateTime fdnm = wxDateTime(1,m_date.GetMonth(), m_date.GetYear()) + wxDateSpan::Month(); // first day next month
             if ( IsDateInRange(fdnm) && ( ( fdnm.GetYear() == m_date.GetYear() ) ? true : AllowYearChange() ) )
             {
-                m_rightArrowRect = wxRect(rarrowx - 4, arrowy - 3, (arrowheight / 2) + 8, (arrowheight + 6));
+                m_rightArrowRect = wxRect(rarrowx - rectx, arrowy - recty, (arrowheight / 2) + 2 * rectx, (arrowheight + 2 * recty));
                 dc.SetBrush(*wxBLACK_BRUSH);
                 dc.SetPen(*wxBLACK_PEN);
                 dc.DrawPolygon(3, rightarrow, rarrowx , arrowy, wxWINDING_RULE);
@@ -898,7 +900,9 @@ void wxGenericCalendarCtrl::OnPaint(wxPaintEvent& WXUNUSED(event))
                 n = wd;
             wxCoord dayw, dayh;
             dc.GetTextExtent(m_weekdays[n], &dayw, &dayh);
-            dc.DrawText(m_weekdays[n], x0 + (wd*m_widthCol) + ((m_widthCol- dayw) / 2), y); // center the day-name
+            int dayx = x0 + (wd * m_widthCol) + ((m_widthCol - dayw) / 2);
+            int dayy = y + m_heightRow / 2 - dayh / 2;
+            dc.DrawText(m_weekdays[n], dayx, dayy); // center the day-name
         }
     }
 
@@ -919,7 +923,11 @@ void wxGenericCalendarCtrl::OnPaint(wxPaintEvent& WXUNUSED(event))
         {
             const int weekNr = date.GetWeekOfYear();
             wxString text = wxString::Format( wxT( "%d" ), weekNr );
-            dc.DrawText( text, m_calendarWeekWidth - dc.GetTextExtent( text ).GetWidth() - 2, y + m_heightRow * i );
+            wxCoord weekw, weekh;
+            dc.GetTextExtent(text, &weekw, &weekh);
+            int weekx = m_calendarWeekWidth - weekw - (FromDIP(WEEK_MARGIN) / 2);
+            int weeky = (i * m_heightRow) + (y + m_heightRow / 2 - weekh / 2);
+            dc.DrawText(text, weekx, weeky);
             date += wxDateSpan::Week();
         }
     }
@@ -957,8 +965,8 @@ void wxGenericCalendarCtrl::OnPaint(wxPaintEvent& WXUNUSED(event))
                 // don't use wxDate::Format() which prepends 0s
                 unsigned int day = date.GetDay();
                 wxString dayStr = wxString::Format(wxT("%u"), day);
-                wxCoord width;
-                dc.GetTextExtent(dayStr, &width, NULL);
+                wxCoord width, height;
+                dc.GetTextExtent(dayStr, &width, &height);
 
                 bool changedColours = false,
                      changedFont = false;
@@ -1020,7 +1028,7 @@ void wxGenericCalendarCtrl::OnPaint(wxPaintEvent& WXUNUSED(event))
                 }
 
                 wxCoord x = wd*m_widthCol + (m_widthCol - width) / 2 + x0;
-                dc.DrawText(dayStr, x, y + 1);
+                dc.DrawText(dayStr, x, y + m_heightRow / 2 - height / 2);
 
                 if ( !isSel && attr && attr->HasBorder() )
                 {
@@ -1038,16 +1046,17 @@ void wxGenericCalendarCtrl::OnPaint(wxPaintEvent& WXUNUSED(event))
                     dc.SetPen(pen);
                     dc.SetBrush(*wxTRANSPARENT_BRUSH);
 
+                    int shapeSize = wxMin(m_widthCol, m_heightRow) - 1;
+                    wxRect shapeRect(x + width / 2 - shapeSize / 2, y, shapeSize, shapeSize);
+
                     switch ( attr->GetBorder() )
                     {
                         case wxCAL_BORDER_SQUARE:
-                            dc.DrawRectangle(x - 2, y,
-                                             width + 4, m_heightRow);
+                            dc.DrawRectangle(shapeRect);
                             break;
 
                         case wxCAL_BORDER_ROUND:
-                            dc.DrawEllipse(x - 2, y,
-                                           width + 4, m_heightRow);
+                            dc.DrawEllipse(shapeRect);
                             break;
 
                         default:
@@ -1117,15 +1126,6 @@ void wxGenericCalendarCtrl::RefreshDate(const wxDateTime& date)
 
     rect.width = 7*m_widthCol;
     rect.height = m_heightRow;
-
-#ifdef __WXMSW__
-    // VZ: for some reason, the selected date seems to occupy more space under
-    //     MSW - this is probably some bug in the font size calculations, but I
-    //     don't know where exactly. This fix is ugly and leads to more
-    //     refreshes than really needed, but without it the selected days
-    //     leaves even more ugly underscores on screen.
-    rect.Inflate(0, 1);
-#endif // MSW
 
 #if DEBUG_PAINT
     wxLogDebug("*** refreshing week %d at (%d, %d)-(%d, %d)\n",
@@ -1567,7 +1567,7 @@ void wxGenericCalendarCtrl::OnMonthChange(wxCommandEvent& event)
     {
         // The date must have been changed to ensure it's in valid range,
         // reflect this in the month choice control.
-        m_comboMonth->SetSelection(dt.GetMonth());
+        m_choiceMonth->SetSelection(dt.GetMonth());
     }
 
     SetDateAndNotify(dt);

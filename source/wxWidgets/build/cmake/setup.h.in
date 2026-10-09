@@ -18,7 +18,7 @@
 #cmakedefine wxINSTALL_PREFIX "@wxINSTALL_PREFIX@"
 
 /* Define if ssize_t type is available.  */
-#cmakedefine HAVE_SSIZE_T
+#cmakedefine HAVE_SSIZE_T 1
 
 /* Define if you have the ANSI C header files.  */
 #cmakedefine STDC_HEADERS 1
@@ -500,7 +500,6 @@
 
 #cmakedefine01 wxUSE_DIRDLG
 
-
 #cmakedefine01 wxUSE_FILEDLG
 
 #cmakedefine01 wxUSE_FINDREPLDLG
@@ -598,7 +597,6 @@
 #cmakedefine01 wxUSE_SVG
 
 #cmakedefine01 wxUSE_DC_TRANSFORM_MATRIX
-
 
 
 #cmakedefine01 wxUSE_IMAGE
@@ -1247,6 +1245,9 @@
 
 /* Define if setpriority() is available. */
 #cmakedefine HAVE_SETPRIORITY 1
+
+/* Define if xkbcommon is available */
+#cmakedefine HAVE_XKBCOMMON 1
 
 /* Define if xlocale.h header file exists. */
 #cmakedefine HAVE_XLOCALE_H 1

@@ -69,7 +69,6 @@ public:
 
     virtual ~wxGLCanvasEGL();
 
-
     // implement wxGLCanvasBase methods
     // --------------------------------
 
@@ -117,6 +116,14 @@ public:
     // is responsible for freeing the pointer
     static EGLConfig *InitConfig(const wxGLAttributes& dispAttrs);
 
+    // private Wayland-specific callbacks
+#if wxABI_VERSION >= 30203
+    void CreateWaylandSubsurface();
+    void DestroyWaylandSubsurface();
+
+    void OnWLFrameCallback();
+#endif // wxABI_VERSION >= 3.2.3
+
     bool m_readyToDraw;
     wl_compositor *m_wlCompositor;
     wl_subcompositor *m_wlSubcompositor;
@@ -124,6 +131,32 @@ public:
     wl_egl_window *m_wlEGLWindow;
 
 private:
+    // Call eglCreatePlatformWindowSurface() when using EGL 1.5 or later,
+    // otherwise try eglCreatePlatformWindowSurfaceEXT() if it's available and
+    // fall back on eglCreateWindowSurface() otherwise.
+    //
+    // This function uses m_display and m_config which must be initialized
+    // before using it.
+    //
+    // Window parameter is passed twice because some of the functions above
+    // take it by value while others take it by pointer and this depends on
+    // whether we use X11 or Wayland. Use wrappers below taking correct window
+    // type instead of calling this function directly.
+    EGLSurface
+    DoCallCreatePlatformWindowSurface(wxUIntPtr windowID, void* windowPtr) const;
+
+    // This one is for X11.
+    EGLSurface CallCreatePlatformWindowSurface(wxUIntPtr xwindow) const
+    {
+        return DoCallCreatePlatformWindowSurface(xwindow, &xwindow);
+    }
+
+    // And this one is for Wayland.
+    EGLSurface CallCreatePlatformWindowSurface(struct wl_egl_window* window) const
+    {
+        return DoCallCreatePlatformWindowSurface(wxPtrToUInt(window), window);
+    }
+
 
     EGLConfig *m_config;
     EGLDisplay m_display;
@@ -136,6 +169,9 @@ private:
 
     // the global/default versions of the above
     static EGLConfig *ms_glEGLConfig;
+
+    friend void wxEGLUpdatePosition(wxGLCanvasEGL* win);
+    friend void wxEGLUpdateGeometry(GtkWidget* widget, wxGLCanvasEGL* win);
 };
 
 // ----------------------------------------------------------------------------
