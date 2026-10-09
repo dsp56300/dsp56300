@@ -74,10 +74,13 @@ namespace dsp56k
 			if(wc - m_readCount.load(std::memory_order_acquire) >= Capacity)
 			{
 				std::unique_lock<std::mutex> lock(m_readMtx);
+				// seq_cst against the completion: it either sees this waiter, or this check sees its read count
+				m_waiters.fetch_add(1, std::memory_order_seq_cst);
 				m_readCv.wait(lock, [&]()
 				{
-					return m_terminated || wc - m_readCount.load(std::memory_order_acquire) < Capacity;
+					return m_terminated || wc - m_readCount.load(std::memory_order_seq_cst) < Capacity;
 				});
+				m_waiters.fetch_sub(1, std::memory_order_relaxed);
 				if(m_terminated)
 					return;
 			}
@@ -104,12 +107,16 @@ namespace dsp56k
 				m_completionCallback(wc, result);
 
 				slot.contributions.store(0, std::memory_order_relaxed);
-				m_readCount.store(wc + 1, std::memory_order_release);
+				m_readCount.store(wc + 1, std::memory_order_seq_cst);
 
+				// only a producer that ran out of room waits for this, most frames complete without one
+				if(m_waiters.load(std::memory_order_seq_cst))
 				{
-					std::lock_guard<std::mutex> lock(m_readMtx);
+					{
+						std::lock_guard<std::mutex> lock(m_readMtx);
+					}
+					m_readCv.notify_all();
 				}
-				m_readCv.notify_all();
 			}
 		}
 
@@ -141,6 +148,7 @@ namespace dsp56k
 		std::array<Slot, Capacity> m_data{};
 
 		std::atomic<uint64_t> m_readCount{0};
+		std::atomic<uint32_t> m_waiters{0};	// producers blocked on m_readCv
 		uint32_t m_producerCount = 0;
 		bool m_terminated = false;
 		std::array<std::atomic<uint64_t>, MaxProducers> m_writeCounts{};

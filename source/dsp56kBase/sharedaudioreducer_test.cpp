@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <iostream>
 #include <random>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -45,8 +46,101 @@ struct DefaultReduce
 	}
 };
 
-int main()
+// Performance mode, "sharedAudioReducerTest perf": what the reducer itself costs per frame, headless on any platform.
+// Producers that only add frames measure the synchronisation alone; producers that spin for a few microseconds per
+// frame, with jitter, behave like DSP threads and show how much the reducer adds to their work
+namespace perf
 {
+	using Frame = std::array<int32_t, 4>;
+
+	struct Reduce
+	{
+		void operator()(Frame& _dst, const Frame& _src) const
+		{
+			for(size_t i = 0; i < _dst.size(); ++i)
+				_dst[i] += _src[i];
+		}
+	};
+
+	void spin(const std::chrono::nanoseconds _duration)
+	{
+		const auto end = std::chrono::steady_clock::now() + _duration;
+		while(std::chrono::steady_clock::now() < end)
+		{
+		}
+	}
+
+	// prints the wall time per frame, all producers running in parallel
+	template<uint32_t Producers>
+	bool run(const uint64_t _frames, const uint32_t _workNs)
+	{
+		dsp56k::SharedAudioReducer<Frame, BufferCapacity, Producers, Reduce> reducer;
+
+		std::array<uint32_t, Producers> ids{};
+		for(auto& id : ids)
+			id = reducer.addProducer();
+
+		std::atomic<int64_t> sum{0};
+		reducer.setCompletionCallback([&](uint64_t, const Frame& _frame)
+		{
+			sum.fetch_add(_frame[0], std::memory_order_relaxed);
+		});
+
+		std::vector<std::thread> threads;
+		const auto start = std::chrono::steady_clock::now();
+
+		for(uint32_t p = 0; p < Producers; ++p)
+		{
+			threads.emplace_back([&, p]
+			{
+				std::mt19937 rng(42 + p);
+				std::uniform_int_distribution<uint32_t> jitter(0, _workNs / 2);
+
+				for(uint64_t i = 0; i < _frames; ++i)
+				{
+					if(_workNs)
+						spin(std::chrono::nanoseconds(_workNs * 3 / 4 + jitter(rng)));
+					reducer.addFrame(ids[p], Frame{1, 0, 0, 0});
+				}
+			});
+		}
+
+		for(auto& t : threads)
+			t.join();
+
+		const auto ns = std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - start).count() / static_cast<double>(_frames);
+
+		std::cout << "perf: producers " << Producers << ", work " << _workNs << " ns per frame: " << ns << " ns per frame";
+		if(_workNs)
+			std::cout << ", " << (ns / _workNs - 1.0) * 100.0 << " % above the work";
+		std::cout << std::endl;
+
+		if(sum.load() != static_cast<int64_t>(_frames * Producers))
+		{
+			std::cerr << "perf: FAILED, sum " << sum.load() << " instead of " << _frames * Producers << std::endl;
+			return false;
+		}
+		return true;
+	}
+
+	int main()
+	{
+		std::cout << "perf: " << std::thread::hardware_concurrency() << " hardware threads, capacity " << BufferCapacity << std::endl;
+
+		for(int rep = 0; rep < 3; ++rep)
+		{
+			if(!run<2>(2'000'000, 0) || !run<2>(300'000, 3000) || !run<9>(500'000, 0) || !run<9>(100'000, 3000))
+				return 1;
+		}
+		return 0;
+	}
+}
+
+int main(int _argc, char* _argv[])
+{
+	if(_argc > 1 && std::string(_argv[1]) == "perf")
+		return perf::main();
+
 	dsp56k::SharedAudioReducer<TestFrame, BufferCapacity, ProducerCount, DefaultReduce> reducer;
 
 	std::vector<uint32_t> producerIds(ProducerCount);
