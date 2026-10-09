@@ -295,6 +295,9 @@ namespace dsp56k
 		void			injectExternalInterrupt			(const TWord _vba);
 		void			processExternalInterrupts		();
 
+		// Also asked from other threads. An interrupt moves from the external ring to the pending ones and from there
+		// to the processing mode, each time to the next before it leaves the previous. The mode is looked at again
+		// last: a thread that read it before the DSP took an interrupt finds both rings empty, but not the mode
 		bool			hasPendingInterrupts			() const
 		{
 			if(m_processingMode != Default)
@@ -306,7 +309,7 @@ namespace dsp56k
 			if(!m_pendingInterrupts.empty())
 				return true;
 
-			return false;
+			return m_processingMode != Default;
 		}
 
 		// the queue is bounded and injectExternalInterrupt blocks when it is full, which is fatal for a
@@ -321,26 +324,17 @@ namespace dsp56k
 			return !m_pendingExternalInterrupts.empty();
 		}
 
-		// DSP thread only. Edge triggered sources use it to latch one request until the core takes it
+		// Edge triggered sources use it to latch one request until the core takes it
 		bool			hasPendingInterrupt				(const TWord _vba) const
 		{
-			for(size_t i=0; i<m_pendingInterrupts.size(); ++i)
-			{
-				if(m_pendingInterrupts[i] == _vba)
-					return true;
-			}
-			return false;
+			return m_pendingInterrupts.anyOf([&](const TWord _v) { return _v == _vba; });
 		}
 
-		// DSP thread only. Whether a request with a vector in [_first, _last] is pending, the vectors of one peripheral
+		// Whether a request with a vector in [_first, _last] is pending, the vectors of one peripheral. Also asked from
+		// other threads, by a host that waits for its host commands, see hasPendingInterrupts for the order to ask in
 		bool			hasPendingInterrupt				(const TWord _first, const TWord _last) const
 		{
-			for(size_t i=0; i<m_pendingInterrupts.size(); ++i)
-			{
-				if(m_pendingInterrupts[i] >= _first && m_pendingInterrupts[i] <= _last)
-					return true;
-			}
-			return false;
+			return m_pendingInterrupts.anyOf([&](const TWord _v) { return _v >= _first && _v <= _last; });
 		}
 
 		void			clearOpcodeCache				();

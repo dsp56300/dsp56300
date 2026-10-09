@@ -252,6 +252,7 @@ namespace  dsp56k
 		void movepPeripheralEa();
 		void shiTransmitEmptyAfterReset();
 		void maskedInterruptKeepsPeripheralsRunning();
+		void externalInterruptsWaitForRoom();
 		void esaiClockBacklogWaitsForRequest();
 		void writeRegAndJitMode();
 		void memoryMirror();

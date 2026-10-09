@@ -1446,9 +1446,18 @@ namespace dsp56k
 
 	void DSP::processExternalInterrupts()
 	{
-		// the device decides how often it raises an interrupt, so each one is queued
-		while(!m_pendingExternalInterrupts.empty())
-			queueInterrupt(m_pendingExternalInterrupts.pop_front());
+		// The device decides how often it raises an interrupt, so each one is queued, but no more are pending at a
+		// time than the external ring holds. A host that sends host commands faster than the DSP takes them filled
+		// the pending ring past its end, which overwrote its oldest entries: the DSP ran commands out of order with
+		// the words they read. The rest waits in the external ring, and a host queue waits for room there.
+		// An interrupt is queued before it leaves the external ring: a host that polls both rings from its thread to
+		// know whether the DSP took everything it gave would otherwise find it in neither for a moment, for as long
+		// as the scheduler holds the DSP's thread there
+		while(!m_pendingExternalInterrupts.empty() && m_pendingInterrupts.size() < m_pendingExternalInterrupts.capacity())
+		{
+			queueInterrupt(m_pendingExternalInterrupts.front());
+			m_pendingExternalInterrupts.pop_front();
+		}
 	}
 
 	uint32_t DSP::calcOpcodeCycles(const TWord _pc) const

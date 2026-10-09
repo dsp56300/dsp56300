@@ -194,6 +194,22 @@ namespace dsp56k
 			return m_data[wrapCounter(loadReadRlx())];
 		}
 
+		// Whether an entry passes _pred, looked at between one snapshot of both ends. Safe on a thread that does not
+		// pop: what the consumer pops meanwhile may still be seen, but nothing that is still there is skipped, as with
+		// an index from front() that the consumer moves on under the loop
+		template<typename TPred> bool anyOf(const TPred& _pred) const
+		{
+			const auto r = loadReadAcq();
+			const auto w = loadWriteAcq();
+
+			for(auto i = r; i != w && i - r < C; ++i)
+			{
+				if(_pred(m_data[wrapCounter(i)]))
+					return true;
+			}
+			return false;
+		}
+
 		void clear()
 		{
 			while( !empty() )

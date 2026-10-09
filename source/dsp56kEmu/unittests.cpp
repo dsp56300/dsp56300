@@ -249,6 +249,7 @@ namespace dsp56k
 		movepPeripheralEa();
 		shiTransmitEmptyAfterReset();
 		maskedInterruptKeepsPeripheralsRunning();
+		externalInterruptsWaitForRoom();
 		esaiClockBacklogWaitsForRequest();
 
 		// register access
@@ -2727,6 +2728,49 @@ namespace dsp56k
 			execStep();
 		verify(!dsp.hasPendingInterrupts());
 		verify(dsp.aluA().var == 1);
+
+		dsp.resetHW();
+	}
+
+	/*	A host that sends host commands faster than the DSP takes them keeps the external ring full. Only as many as
+		that ring holds are pending at a time, the rest wait there: the pending ring took them all, ran past its end
+		and overwrote its oldest requests, and the DSP ran host commands out of order with the words they read
+	*/
+	void UnitTests::externalInterruptsWaitForRoom()
+	{
+		dsp.resetHW();									// I1:I0 = 3 after reset, nothing is taken
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+
+		emitToMemory("inc a", Vba_IRQA);
+		emitToMemory("nop", Vba_IRQA + 1);
+
+		constexpr TWord loop = 0x100;
+		emitToMemory("nop", loop);
+		emitToMemory(0x0af080, loop, loop + 1);			// jmp >loop
+		dsp.setPC(loop);
+
+		// as a host queue sends them: whenever there is room, far more often than the pending ring has entries
+		uint32_t injected = 0;
+		for(int i = 0; i < 64; ++i)
+		{
+			while(!dsp.pendingExternalInterruptsFull())
+			{
+				dsp.injectExternalInterrupt(Vba_IRQA);
+				++injected;
+			}
+			dsp.processExternalInterrupts();
+			verify(dsp.m_pendingInterrupts.size() <= dsp.m_pendingExternalInterrupts.capacity());
+		}
+
+		// unmasked, each one is taken, once
+		dsp.sr_clear(static_cast<CCRMask>(SR_I0 | SR_I1));
+		for(int i = 0; i < 1000 && dsp.hasPendingInterrupts(); ++i)
+		{
+			peripheralsX.resetDelayCycles(dsp.getInstructionCounter(), 0);
+			execStep();
+		}
+		verify(!dsp.hasPendingInterrupts());
+		verify(dsp.aluA().var == static_cast<TReg56::MyType>(injected));
 
 		dsp.resetHW();
 	}
