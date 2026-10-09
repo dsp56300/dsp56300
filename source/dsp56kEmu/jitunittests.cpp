@@ -71,6 +71,7 @@ namespace dsp56k
 		blockDestroyedWhileRunning();
 		branchOutOfPMemory();
 		receivePollAfterClockRestart();
+		doLoopExitOnPendingInterrupt();
 	}
 
 	JitUnittests::~JitUnittests()
@@ -1347,6 +1348,68 @@ namespace dsp56k
 		esai.writeReceiveControlRegister(0);
 		clock.setCyclesPerSample(oldCycles);
 		clock.setClockSource(oldSource);
+	}
+
+	/*	A DO loop whose body is one block runs all of its iterations inside that block. An interrupt that reached the
+		queue right before the block started waited for the end of the loop, the chip takes it in the first iteration.
+		With doLoopExitOnPendingInterrupt the block is left at the end of an iteration while an interrupt is queued.
+		The interrupt here reaches the queue the way an external one does, when the peripherals run before the block
+	*/
+	void JitUnittests::doLoopExitOnPendingInterrupt()
+	{
+		constexpr TWord g_iterations = 16;
+
+		const auto oldConfig = dsp.getJit().getConfig();
+
+		// the PC and LC that the interrupt is taken with
+		auto taken = std::make_shared<std::pair<TWord, TWord>>();
+		const auto vba = dsp.registerInterruptFunc([this, taken]
+		{
+			*taken = {dsp.getPC().toWord(), dsp.regs().lc.var};
+		});
+
+		// each run has its own code, so its blocks are compiled with its config
+		auto run = [&](const TWord _pc, const bool _exitOnInterrupt)
+		{
+			auto config = oldConfig;
+			config.doLoopExitOnPendingInterrupt = _exitOnInterrupt;
+			dsp.getJit().setConfig(config);
+
+			dsp.resetHW();
+			dsp.regs().r[0] = TReg24(0);
+			dsp.regs().m[0] = TReg24(0xffffff);
+
+			const TWord loopBegin = _pc + 2;
+			const TWord loopEnd = _pc + 4;					// the first address after the loop
+
+			emitToMemory(0x061080, loopEnd - 1, _pc);		// do #16,>loopEnd: LA is the last instruction
+			emitToMemory("nop", _pc + 2);
+			emitToMemory("move (r0)+", _pc + 3);
+			emitToMemory(0x0af080, loopEnd, loopEnd);		// jmp >loopEnd, parks the DSP after the loop
+
+			dsp.setPC(_pc);
+			execStep();
+			verify(dsp.getPC().toWord() == loopBegin);
+
+			dsp.injectExternalInterrupt(vba);
+			peripheralsX.resetDelayCycles(dsp.getInstructionCounter(), 0);
+
+			*taken = {0, 0};
+			for(uint32_t i = 0; i < 64 && (dsp.getPC().toWord() != loopEnd || dsp.hasPendingInterrupts()); ++i)
+				execStep();
+
+			verify(dsp.regs().r[0].var == g_iterations);
+		};
+
+		// taken after the first iteration
+		run(0x3300, true);
+		verify(taken->first == 0x3302 && taken->second == g_iterations - 1);
+
+		// without, the loop ends first
+		run(0x3340, false);
+		verify(taken->first == 0x3344);
+
+		dsp.getJit().setConfig(oldConfig);
 	}
 
 	void JitUnittests::emit(const TWord _opA, TWord _opB, TWord _pc)

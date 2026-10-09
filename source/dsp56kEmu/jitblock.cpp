@@ -728,6 +728,23 @@ namespace dsp56k
 				m_asm.jz(skip);
 			}
 
+			// while an interrupt is queued, leave at this iteration boundary and let the dispatcher take it
+			if(m_config.doLoopExitOnPendingInterrupt)
+			{
+				const auto* execInterrupts = asmjit::func_as_ptr(&dspExecInterrupts);
+				const RegGP func(*this);
+#ifdef HAVE_ARM64
+				const RegGP expected(*this);
+				m_asm.mov(r64(func), m_mem.makePtr(r64(func), &m_dsp.getInterruptFunc(), sizeof(uint64_t)));
+				m_asm.mov(r64(expected), asmjit::Imm(execInterrupts));
+				m_asm.cmp(r64(func), r64(expected));
+#else
+				m_asm.mov(r64(func), asmjit::Imm(execInterrupts));
+				m_asm.cmp(m_dspRegPool.makeDspPtr(&m_dsp.getInterruptFunc(), sizeof(uint64_t)), r64(func));
+#endif
+				m_asm.jz(skip);
+			}
+
 #ifdef HAVE_ARM64
 			RegGP temp(*this, false);
 			JitReg32 t;

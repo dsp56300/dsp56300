@@ -36,6 +36,9 @@ namespace dsp56k
 	
 	template<typename Ta, typename Tb> void dspExecPeripherals(DSP* _dsp) noexcept;
 
+	// the interrupt function while an interrupt is queued
+	void dspExecInterrupts(DSP* _dsp) noexcept;
+
 	static constexpr bool g_useJIT = g_jitSupported;
 
 	class DSP final

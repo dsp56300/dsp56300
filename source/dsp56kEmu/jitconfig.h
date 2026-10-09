@@ -43,6 +43,14 @@ namespace dsp56k
 		// maximum number of iterations of a do loop before the Jit block is exited (and later re-entered), giving a time slice for interrupts/peripherals
 		uint32_t maxDoIterations = 0;
 
+		/*	A DO loop whose body is a single block runs all of its iterations inside that block, so an interrupt that is
+			queued meanwhile waits until the loop has ended. The chip takes it at the next instruction. With this, the
+			block is left at the end of an iteration while an interrupt is queued, and the interrupt is taken at that
+			iteration boundary. It costs a test of the interrupt state per iteration, and unlike maxDoIterations a loop
+			runs on inside its block while nothing is queued. REP stays uninterruptible, as it is on the chip
+		*/
+		bool doLoopExitOnPendingInterrupt = false;
+
 		// needs to be true if there is code that executes code in interrupt regions as regular jumps
 		bool dynamicFastInterrupts = false;
 
