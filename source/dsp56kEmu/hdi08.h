@@ -147,6 +147,18 @@ namespace dsp56k
 			return dsp56k::bittest<TWord, HCR_HRIE>(m_hcr.load(std::memory_order_acquire));
 		}
 
+		bool hostCommandInterruptEnabled() const
+		{
+			return dsp56k::bittest<TWord, HCR_HCIE>(m_hcr.load(std::memory_order_acquire));
+		}
+
+		// A host command, the interrupt at _vector. The chip holds it until HCIE allows it, the caller waits for that,
+		// see HDI08Queue::writeHostCommand. Several are taken one after the other, in the order they came
+		void injectHostCommand(TWord _vector);
+
+		// the DSP cannot take another external interrupt until it took one of those that are pending
+		bool hostCommandsFull() const;
+
 		void setWriteTxCallback(const CallbackTx& _callback)
 		{
 			m_callbackTx = _callback;

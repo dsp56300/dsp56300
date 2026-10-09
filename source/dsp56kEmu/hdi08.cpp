@@ -219,6 +219,16 @@ namespace dsp56k
 		return m_dataRX.full();
 	}
 
+	void HDI08::injectHostCommand(const TWord _vector)
+	{
+		m_periph.getDSP().injectExternalInterrupt(_vector);
+	}
+
+	bool HDI08::hostCommandsFull() const
+	{
+		return m_periph.getDSP().pendingExternalInterruptsFull();
+	}
+
 	TWord HDI08::readHDR() const
 	{
 //		LOG("Read HDR: " << HEX(m_hdr));

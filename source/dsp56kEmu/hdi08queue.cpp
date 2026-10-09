@@ -47,6 +47,15 @@ namespace dsp56k
 		sendPendingData();
 	}
 
+	void HDI08Queue::writeHostCommand(const TWord _vector)
+	{
+		std::lock_guard lock(m_mutex);
+
+		m_dataRX.push_back(HostCommand | (_vector & DataMask));
+
+		sendPendingData();
+	}
+
 	void HDI08Queue::exec()
 	{
 		std::lock_guard lock(m_mutex);
@@ -58,6 +67,12 @@ namespace dsp56k
 	{
 		std::lock_guard lock(m_mutex);
 		m_hdi08.push_back(&_hdi08);
+	}
+
+	bool HDI08Queue::empty() const
+	{
+		std::lock_guard lock(m_mutex);
+		return m_dataRX.empty();
 	}
 
 	bool HDI08Queue::rxEmpty() const
@@ -78,6 +93,16 @@ namespace dsp56k
 		for (const auto* hdi08 : m_hdi08)
 		{
 			if(hdi08->dataRXFull())
+				return true;
+		}
+		return false;
+	}
+
+	inline bool HDI08Queue::hostCommandsBlocked() const
+	{
+		for (const auto* hdi08 : m_hdi08)
+		{
+			if(!hdi08->hostCommandInterruptEnabled() || hdi08->hostCommandsFull())
 				return true;
 		}
 		return false;
@@ -116,7 +141,7 @@ namespace dsp56k
 				bool defer = false;
 				for (auto* hdi08 : m_hdi08)
 				{
-					if(hdi08->hasPendingHostFlags01() || hdi08->hasRXData())
+					if(hdi08->hasPendingHostFlags01() || (m_flagsWaitForEmptyRx && hdi08->hasRXData()))
 					{
 						defer = true;
 						break;
@@ -131,6 +156,16 @@ namespace dsp56k
 
 				for (auto* hdi08 : m_hdi08)
 					hdi08->setPendingHostFlags01(hf01);
+			}
+			else if(d & HostCommand)
+			{
+				// Waits like a data word for the flag change in front of it. Without HCIE the chip holds it pending, a
+				// full queue of external interrupts would block this thread, which may be the one to drain it
+				if(hasPendingHostFlags() || hostCommandsBlocked())
+					break;
+
+				for (auto* hdi08 : m_hdi08)
+					hdi08->injectHostCommand(d & DataMask);
 			}
 			else
 			{

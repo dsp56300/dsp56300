@@ -21,11 +21,25 @@ namespace dsp56k
 
 		void writeHostFlags(uint8_t _flag0, uint8_t _flag1);
 
+		// A host command, in order with the words and host flag changes around it: it waits for the DSP to see the
+		// flag change in front of it, as data words do, and for the DSP to enable host command interrupts (HCIE). The
+		// host does not wait for the DSP to take it: several may be pending, the DSP takes them one after the other
+		// and each vector reads the words written before it from the receive FIFO
+		void writeHostCommand(TWord _vector);
+
+		// By default a host flag change waits until the DSP has read every word in front of it. Some firmware leaves
+		// a word in the receive register that nothing reads, its flag changes waited forever. Off, a flag change
+		// waits only for the DSP to see the one before it
+		void setFlagsWaitForEmptyRx(const bool _wait) { m_flagsWaitForEmptyRx = _wait; }
+
 		void exec();
 
 		void addHDI08(HDI08& _hdi08);
 
 		bool rxEmpty() const;
+
+		// nothing waits in the queue any more: words, flags and host commands all went on to the DSP
+		bool empty() const;
 
 		size_t size() const { return m_hdi08.size(); }
 		HDI08* get(const size_t _index) const { return m_hdi08[_index]; }
@@ -33,6 +47,7 @@ namespace dsp56k
 	private:
 		bool rxFull() const;
 		bool hasPendingHostFlags() const;
+		bool hostCommandsBlocked() const;
 		void sendPendingData();
 
 		static constexpr uint8_t HostFlagInvalid = 0xff;
@@ -44,6 +59,7 @@ namespace dsp56k
 		// represented exactly instead of being OR-ed into a word that could keep the stale bit set.
 		static constexpr TWord DataMask   = 0x00ffffff;
 		static constexpr TWord FlagUpdate = 0x80000000;
+		static constexpr TWord HostCommand = 0x40000000;	// the vector in bits 23..0
 		static constexpr TWord FlagHf0    = 0x01000000;
 		static constexpr TWord FlagHf1    = 0x02000000;
 
@@ -53,6 +69,8 @@ namespace dsp56k
 		uint8_t m_lastHostFlag0 = HostFlagInvalid;
 		uint8_t m_lastHostFlag1 = HostFlagInvalid;
 
-		std::mutex m_mutex;
+		bool m_flagsWaitForEmptyRx = true;
+
+		mutable std::mutex m_mutex;
 	};
 }

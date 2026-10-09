@@ -244,6 +244,7 @@ namespace dsp56k
 		dmaPendingRequestAtArm();
 		essiDmaPendingRequestAtArm();
 		hostQueueDataWaitsForHostFlags();
+		hostQueueHostCommands();
 		hostStatusRegisterReadOnly();
 		movepPeripheralEa();
 		shiTransmitEmptyAfterReset();
@@ -717,6 +718,63 @@ namespace dsp56k
 		verify(hdi08.hasRXData());
 
 		hdi08.clearRX();
+		hdi08.reset();
+	}
+
+	/*	Host commands go through the queue in order with the words around them: the host does not wait for the DSP to
+		take one, and each vector reads the word written before it from the receive FIFO. A command waits for HCIE
+	*/
+	void UnitTests::hostQueueHostCommands()
+	{
+		auto& hdi08 = peripheralsX.getHDI08();
+
+		HDI08Queue queue;
+		queue.addHDI08(hdi08);
+
+		// the vector moves the word the host sent to x:(r1)+
+		constexpr TWord vector = 0x80;
+		emitToMemory("movep x:<<$ffffc6,x:(r1)+", vector);
+		emitToMemory("nop", vector + 1);
+
+		constexpr TWord loop = 0x100;
+		emitToMemory("nop", loop);
+		emitToMemory(0x0af080, loop, loop + 1);			// jmp >loop
+		dsp.setPC(loop);
+
+		dsp.regs().r[1].var = 0x10;
+		dsp.regs().m[1].var = 0xffffff;
+		dsp.memory().set(MemArea_X, 0x10, 0);
+		dsp.memory().set(MemArea_X, 0x11, 0);
+
+		const TWord words[2] = {0x111111, 0x222222};
+
+		// without HCIE the command waits in the queue, the word goes on
+		hdi08.writeControlRegister(0);
+		queue.writeRX(&words[0], 1);
+		queue.writeHostCommand(vector);
+		verify(hdi08.hasRXData());
+		verify(!dsp.hasPendingExternalInterrupts());
+
+		hdi08.writeControlRegister(1 << HDI08::HCR_HCIE);
+		queue.exec();
+		verify(dsp.hasPendingExternalInterrupts());
+
+		// the next one goes in before the DSP took the first one
+		queue.writeRX(&words[1], 1);
+		queue.writeHostCommand(vector);
+
+		const auto sr0 = dsp.getSR().var;
+		dsp.setSR(sr0 & ~0x300);			// I1:I0 = 0, so that they are taken
+		peripheralsX.resetDelayCycles(dsp.getInstructionCounter(), 0);
+		for(int i=0; i<16 && dsp.hasPendingInterrupts(); ++i)
+			execStep();
+		dsp.setSR(sr0);
+
+		verify(dsp.memory().get(MemArea_X, 0x10) == words[0]);
+		verify(dsp.memory().get(MemArea_X, 0x11) == words[1]);
+		verify(!hdi08.hasRXData());
+
+		hdi08.writeControlRegister(0);
 		hdi08.reset();
 	}
 
