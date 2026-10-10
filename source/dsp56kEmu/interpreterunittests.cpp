@@ -13,6 +13,66 @@ namespace dsp56k
 		testCycleAccounting();
 		
 		runAllTests();
+
+		// last: it runs the DSP through 400 interrupted loops, which the timer tests must not inherit
+		testInterruptKeepsLazyCCR();
+	}
+
+	void InterpreterUnitTests::testInterruptKeepsLazyCCR()
+	{
+		// An interrupt taken between a cmp and the Bcc that tests it must not change where the branch goes.
+		// In a JIT build, execInterrupt runs the vector through the JIT even while the DSP runs on the
+		// interpreter; the JIT reads SR as it is, so a JSR in the vector used to stack an SR without the
+		// condition codes the interpreter had not computed yet (ccrCache), and the RTI brought back stale
+		// bits: the branch after the cmp went the wrong way.
+		if constexpr(!g_useJIT)
+			return;
+
+		dsp.resetHW();
+
+		// $100: move #$43,r1   $101: clr b x:(r1),a   $102: cmp #3,a   $103: ble $100   $104: (wrong way)
+		const TWord loop[] = {0x314300, 0x56e11b, 0x014385, 0x05f7dd};
+		for(TWord i = 0; i < 4; ++i)
+			dsp.memWriteP(0x100 + i, loop[i]);
+		dsp.memWriteP(0x104, 0x000000);
+		dsp.memWriteP(0x76, 0x0bf080);	// ESAI_1 receive last slot vector: jsr $300
+		dsp.memWriteP(0x77, 0x000300);
+		dsp.memWriteP(0x300, 0x000000);	// nop
+		dsp.memWriteP(0x301, 0x000004);	// rti
+		dsp.memWrite(MemArea_X, 0x43, 0);			// 0 <= 3: the branch is always taken
+		dsp.memWrite(MemArea_X, 0xFFFFFF, 0xaa0000);	// IPRC
+		dsp.memWrite(MemArea_X, 0xFFFFFE, 0x000431);	// IPRP
+		auto sr = dsp.regs().sr;
+		sr.var &= ~0x300u;							// interrupt mask 0
+		dsp.regs().sr = sr;
+		dsp.setPC(0x100);
+
+		// the interrupt is injected after each of the loop's instructions in turn; after the cmp is the case
+		int wrong = 0;
+		for(int iter = 0; iter < 400; ++iter)
+		{
+			for(int k = 0; k < 8 && dsp.getPC().toWord() != 0x100; ++k)
+				dsp.execInterpreter();
+			for(int k = 0; k < iter % 4; ++k)
+				dsp.execInterpreter();
+			dsp.injectInterrupt(0x76);
+			for(int k = 0; k < 10; ++k)
+			{
+				dsp.execInterpreter();
+				if(dsp.getPC().toWord() == 0x104)
+				{
+					++wrong;
+					dsp.setPC(0x100);
+					break;
+				}
+			}
+		}
+		verify(wrong == 0);
+
+		// leave no interrupt set-up behind for the tests that follow
+		dsp.memWrite(MemArea_X, 0xFFFFFF, 0);
+		dsp.memWrite(MemArea_X, 0xFFFFFE, 0);
+		dsp.resetHW();
 	}
 
 	void InterpreterUnitTests::testCycleAccounting()
