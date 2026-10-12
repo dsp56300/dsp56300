@@ -2599,6 +2599,98 @@ namespace dsp56k
 		dsp.getJit().setConfig(oldConfig);
 	}
 
+	/*	A DE triggered block completes after two instructions per word, and the word count depends on the counter mode.
+		DCO is the count minus one in counter mode A only. A two-dimensional address on either side selects counter mode
+		B, DCOH lines of DCOL words, each one less, and three-dimensional mode splits DCO into three counters. The delay
+		took the whole register as the count: $001000 in mode B is two words and completed after 8194 instructions
+	*/
+	void UnitTests::dmaBlockDelayFollowsCounterMode()
+	{
+		constexpr TWord de = 1 << 23;
+		constexpr TWord deBlock = de | (3 << 19);			// DE, DTM = block, triggered by DE, DE cleared afterwards
+		constexpr TWord toY = 1 << 2;						// DDS = Y, DSS = X
+
+		auto& dma = peripheralsX.getDMA();
+
+		dsp.resetHW();
+
+		constexpr TWord loop = 0xe40;
+		emitToMemory(0x0c0000 | loop, 0, loop);				// jmp loop, one instruction per step
+		dsp.setPC(loop);
+
+		// the instructions until channel 0 completes, at most _max
+		auto instructionsUntilDone = [&](const uint64_t _max)
+		{
+			const auto start = dsp.getInstructionCounter();
+			while((peripheralsX.read(XIO_DCR0, Nop) & de) && dsp.getInstructionCounter() - start < _max)
+			{
+				execStep();
+				dma.exec();
+			}
+			return dsp.getInstructionCounter() - start;
+		};
+
+		// counter mode B, two-dimensional with DOR3 on both sides: two lines of one word, 5 apart
+		for(TWord i=0; i<8; ++i)
+		{
+			dsp.memory().set(MemArea_X, 0x100 + i, 0x100 + i);
+			dsp.memory().set(MemArea_Y, 0x200 + i, 0);
+		}
+
+		peripheralsX.write(XIO_DOR3, 5);
+		peripheralsX.write(XIO_DSR0, 0x100);
+		peripheralsX.write(XIO_DDR0, 0x200);
+		peripheralsX.write(XIO_DCO0, 0x001000);
+		peripheralsX.write(XIO_DCR0, deBlock | (0x1b << 4) | toY);
+
+		verify(dsp.memory().get(MemArea_Y, 0x200) == 0x100);
+		verify(dsp.memory().get(MemArea_Y, 0x205) == 0x105);
+		for(TWord i=1; i<5; ++i)
+			verify(dsp.memory().get(MemArea_Y, 0x200 + i) == 0);
+
+		verify((peripheralsX.read(XIO_DCR0, Nop) & de) != 0);
+		auto n = instructionsUntilDone(64);
+		verify(n >= 4 && n < 16);
+
+		// counter mode A, post-increment on both sides: the same register is 4097 words
+		peripheralsX.write(XIO_DSR0, 0x1000);
+		peripheralsX.write(XIO_DDR0, 0x4000);
+		peripheralsX.write(XIO_DCO0, 0x001000);
+		peripheralsX.write(XIO_DCR0, deBlock | (0x2d << 4) | toY);
+
+		n = instructionsUntilDone(100);
+		verify((peripheralsX.read(XIO_DCR0, Nop) & de) != 0);
+		n += instructionsUntilDone(8300);
+		verify(n >= 8194 && n < 8194 + 16);
+
+		// three-dimensional destination in counter mode E, DCOH[23-18] DCOM[17-12] DCOL[11-0], source fixed: two lines of
+		// two words, DOR2 between the lines. DCOL took DCOM's bits with it and moved 4098 words per line
+		constexpr TWord d3d = 1 << 10;
+		constexpr TWord dest3dModeE = 0x26 << 4;			// DAM: the source does not update, the destination is 3D, mode E
+
+		for(TWord i=0; i<0x20; ++i)
+			dsp.memory().set(MemArea_Y, 0x300 + i, 0);
+		dsp.memory().set(MemArea_X, 0x120, 0xabcdef);
+
+		peripheralsX.write(XIO_DOR2, 0xf);
+		peripheralsX.write(XIO_DOR3, 0);
+		peripheralsX.write(XIO_DSR0, 0x120);
+		peripheralsX.write(XIO_DDR0, 0x300);
+		peripheralsX.write(XIO_DCO0, (1 << 12) | 1);
+		peripheralsX.write(XIO_DCR0, deBlock | d3d | dest3dModeE | toY);
+
+		n = instructionsUntilDone(64);
+		verify(n >= 8 && n < 32);
+
+		for(TWord i=0; i<0x20; ++i)
+		{
+			const auto written = i == 0 || i == 1 || i == 0x10 || i == 0x11;
+			verify(dsp.memory().get(MemArea_Y, 0x300 + i) == (written ? 0xabcdef : 0));
+		}
+
+		peripheralsX.write(XIO_DCR0, 0);
+	}
+
 	/*	A channel that is enabled while its request is raised. A DCR write that selects the request source and
 		enables the channel at once waits for the next request: firmware arms its ESAI receive channel that way while
 		RDF has been pending for many slots, and serving that request put its input a word ahead of the hardware. A
@@ -8332,6 +8424,7 @@ namespace dsp56k
 		dmaDelayedBlockTransfer();
 		dmaBlockTriggeredByRequest();
 		dmaExternalBusWrites();
+		dmaBlockDelayFollowsCounterMode();
 		do_forever();
 		dorShortAddress();
 		trapContinues();

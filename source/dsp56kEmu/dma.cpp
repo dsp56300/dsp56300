@@ -209,7 +209,14 @@ namespace dsp56k
 			// The data arrives earlier than on the chip, which only matters to firmware that races the DMA
 			m_dataTransferred = execTransfer();
 
-			m_pendingTransfer = std::max(1, static_cast<int32_t>((m_dco + 1) << 1));
+			// DCO is the word count minus one in counter mode A only. Three-dimensional mode splits it into three counters,
+			// and a two-dimensional address on either side selects counter mode B with two: lines and words per line
+			const auto dualCounter = getSourceAddressGenMode() <= AddressGenMode::DualCounterDOR3 || getDestinationAddressGenMode() <= AddressGenMode::DualCounterDOR3;
+			const auto words = bitvalue(m_dcr, D3d) ? (m_dcohInit + 1) * (m_dcomInit + 1) * (m_dcolInit + 1)
+				: dualCounter ? (m_dcohInit + 1) * (m_dcolInit + 1)
+				: m_dco + 1;
+
+			m_pendingTransfer = std::max(1, static_cast<int32_t>(words << 1));
 			m_peripherals.setDelayCycles(m_pendingTransfer);
 			m_lastClock = m_peripherals.getDSP().getInstructionCounter();
 			return;
@@ -584,7 +591,7 @@ namespace dsp56k
 		case 0b10:
 			_h = (m_dco >> 18) & 0x3ff;
 			_m = (m_dco >> 12) & 0x3f;
-			_l = (m_dco) & 0xffff;
+			_l = (m_dco) & 0xfff;
 			break;
 		default:
 			// reserved

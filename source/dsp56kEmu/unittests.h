@@ -90,6 +90,7 @@ namespace  dsp56k
 		void dmaDelayedBlockTransfer();
 		void dmaBlockTriggeredByRequest();
 		void dmaExternalBusWrites();
+		void dmaBlockDelayFollowsCounterMode();
 		void dmaPendingRequestAtArm();
 		void essiDmaPendingRequestAtArm();
 		void cmpu();
