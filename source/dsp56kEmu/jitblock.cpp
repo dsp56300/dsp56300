@@ -597,9 +597,10 @@ namespace dsp56k
 
 		const auto isLoopStart = info.hasFlag(JitBlockInfo::Flags::IsLoopBodyBegin);
 		const auto isLoopEnd = info.terminationReason == JitBlockInfo::TerminationReason::LoopEnd;
-		// A P write is reported after the block returns and only the last address is kept, so a loop that writes P
-		// memory must not iterate inside the block
-		const auto isLoopBody = isLoopStart && isLoopEnd && !info.hasFlag(JitBlockInfo::Flags::WritesPMemAtLoopEnd);
+		// A P write is reported after the block returns and only the last address is kept, and a block is compiled for the
+		// addressing and SR modes at its start and switches to code for a changed mode only after it returns, so a loop
+		// that writes P memory, an Mn or the MR must not iterate inside the block
+		const auto isLoopBody = isLoopStart && isLoopEnd && !info.hasFlag(JitBlockInfo::Flags::WritesPMemAtLoopEnd) && !info.hasFlag(JitBlockInfo::Flags::ModeChange);
 		const auto isLoopForever = info.hasFlag(JitBlockInfo::Flags::IsLoopForever) != 0;
 
 		bool childIsConditional = false;

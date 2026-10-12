@@ -8434,6 +8434,7 @@ namespace dsp56k
 		conditionalCallAtVectorAddress();
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
+		doLoopChangesMode();
 		do_twoWordCallAtLoopEnd();
 		do_callToLoopEndPlusOne();
 		do_loopTailOutsideItsLoop();
@@ -9411,6 +9412,57 @@ namespace dsp56k
 		verify((dsp.regs().sr.var & SR_LF) == 0);
 
 		enableDynamicFastInterrupts(false);
+	}
+
+	/*	A DO loop body that is a single block iterates inside the block, and a block is compiled for the addressing modes
+		and SR mode bits at its start. A body that changes them as its last instruction, by an Mn or an MR write, ran
+		the remaining iterations with the old mode (EMU-116)
+	*/
+	void UnitTests::doLoopChangesMode()
+	{
+		// m1 becomes modulo 2 at the end of the first iteration: linear $100 -> $101, then modulo 2 based at $100,
+		// $101 -> $100 -> $101
+		dsp.resetHW();
+		dsp.regs().r[1].var = 0x100;
+		dsp.regs().m[1].var = 0xffffff;
+		dsp.x0(TWord(0x000001));
+
+		TWord pc = 0x100;
+		pc = emitToMemory("do #$3,>$104", pc);					// $100-$101, loop end at $103
+		pc = emitToMemory("move x:(r1)+,x1", pc);				// $102
+		pc = emitToMemory("move x0,m1", pc);					// $103, last instruction of the loop
+		auto returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x100);
+		execUntil(returnPC);
+
+		verify(dsp.regs().m[1].var == 1);
+		verify(dsp.regs().r[1].var == 0x101);
+
+		// scaling up from the end of the first iteration: the first move writes a1, the others a1 << 1
+		dsp.resetHW();
+		dsp.regs().r[2].var = 0x200;
+		dsp.regs().m[2].var = 0xffffff;
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0x00100000000000)));
+		for(TWord i=0; i<3; ++i)
+			dsp.memory().set(MemArea_X, 0x200 + i, 0);
+
+		pc = 0x180;
+		pc = emitToMemory("do #$3,>$184", pc);					// $180-$181, loop end at $183
+		pc = emitToMemory("move a,x:(r2)+", pc);				// $182
+		pc = emitToMemory("ori #$08,mr", pc);					// $183, S1, last instruction of the loop
+		returnPC = pc;
+		emitToMemory("nop", pc);
+
+		dsp.setPC(0x180);
+		execUntil(returnPC);
+
+		verify(dsp.memory().get(MemArea_X, 0x200) == 0x100000);
+		verify(dsp.memory().get(MemArea_X, 0x201) == 0x200000);
+		verify(dsp.memory().get(MemArea_X, 0x202) == 0x200000);
+
+		dsp.resetHW();
 	}
 
 	void UnitTests::do_callAtLoopEnd()
