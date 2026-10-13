@@ -123,8 +123,9 @@ namespace dsp56k
 
 		void terminate();
 
-		void setReadRxCallback(ReadRxCallback _callback) { m_readRxCallback = std::move(_callback); }
-		void setWriteTxCallback(WriteTxCallback _callback) { m_writeTxCallback = std::move(_callback); }
+		// Published like setCallback() below: voice expansion swaps them while the DSP thread may be inside one
+		void setReadRxCallback(ReadRxCallback _callback) { publish(m_readRxCallback, m_readRxCallbacks, std::move(_callback)); }
+		void setWriteTxCallback(WriteTxCallback _callback) { publish(m_writeTxCallback, m_writeTxCallbacks, std::move(_callback)); }
 
 		bool hasRingBuffers() const { return m_useRingBuffers; }
 
@@ -309,8 +310,18 @@ namespace dsp56k
 
 		std::atomic<bool> m_terminated{false};
 
-		ReadRxCallback m_readRxCallback;
-		WriteTxCallback m_writeTxCallback;
+		template<typename T> static void publish(std::atomic<const T*>& _current, std::vector<std::unique_ptr<T>>& _owned, T&& _callback)
+		{
+			auto cb = std::make_unique<T>(std::move(_callback));
+			auto* const c = cb.get();
+			_owned.emplace_back(std::move(cb));
+			_current.store(c, std::memory_order_release);
+		}
+
+		std::atomic<const ReadRxCallback*> m_readRxCallback{nullptr};
+		std::atomic<const WriteTxCallback*> m_writeTxCallback{nullptr};
+		std::vector<std::unique_ptr<ReadRxCallback>> m_readRxCallbacks;
+		std::vector<std::unique_ptr<WriteTxCallback>> m_writeTxCallbacks;
 		uint64_t m_readFrameIndex = 0;
 		uint64_t m_writeFrameIndex = 0;
 	};

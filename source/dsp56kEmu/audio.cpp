@@ -10,20 +10,20 @@ namespace dsp56k
 
 		if(_useRingBuffers)
 		{
-			m_readRxCallback = [this](uint64_t& _frameIndex, RxFrame& _values)
+			setReadRxCallback([this](uint64_t& _frameIndex, RxFrame& _values)
 			{
 				m_audioInputs.waitNotEmpty();
 				_values = m_audioInputs.pop_front();
 				++_frameIndex;
-			};
+			});
 
-			m_writeTxCallback = [this](uint64_t& _frameIndex, const TxFrame& _values)
+			setWriteTxCallback([this](uint64_t& _frameIndex, const TxFrame& _values)
 			{
 				m_audioOutputs.waitNotFull();
 				m_audioOutputs.push_back(_values);
 				++_frameIndex;
 				(*m_callback.load(std::memory_order_acquire))(this);
-			};
+			});
 		}
 	}
 
@@ -51,13 +51,15 @@ namespace dsp56k
 	{
 		if (m_terminated.load(std::memory_order_acquire))
 			return;
-		m_readRxCallback(m_readFrameIndex, _values);
+		if (const auto* cb = m_readRxCallback.load(std::memory_order_acquire); cb && *cb)
+			(*cb)(m_readFrameIndex, _values);
 	}
 
 	void Audio::writeTXimpl(const TxFrame& _values)
 	{
 		if (m_terminated.load(std::memory_order_acquire))
 			return;
-		m_writeTxCallback(m_writeFrameIndex, _values);
+		if (const auto* cb = m_writeTxCallback.load(std::memory_order_acquire); cb && *cb)
+			(*cb)(m_writeFrameIndex, _values);
 	}
 }
