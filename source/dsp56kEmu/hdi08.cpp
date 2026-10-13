@@ -36,12 +36,11 @@ namespace dsp56k
 		dsp56k::bitset<TWord, HSR_HRDF>(m_hsr, m_dataRX.empty() ? 0 : 1);
 
 		// Apply pending host flags, if applicable
-		const auto hf01 = m_pendingHostFlags01.load(std::memory_order_acquire);
+		// taken in one go: a second change stored between a load and a store of -1 would be lost for good
+		const auto hf01 = m_pendingHostFlags01.exchange(-1, std::memory_order_acq_rel);
 
 		if(hf01 < 0)
 			return m_hsr;
-
-		m_pendingHostFlags01.store(-1, std::memory_order_release);
 
 		m_hsr &= ~0x18;
 		m_hsr |= static_cast<uint32_t>(hf01);
