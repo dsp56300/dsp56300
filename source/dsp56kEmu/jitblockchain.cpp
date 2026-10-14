@@ -41,15 +41,16 @@ namespace dsp56k
 
 	JitBlockChain::~JitBlockChain()
 	{
-		for (size_t i = 0; i < m_jitCache.size(); ++i)
+		// an entry holds a block or single op cache only where its MMU block was made private
+		m_jitCache.forEachPrivate([this](const size_t _i)
 		{
-			auto& e = m_jitCache[i];
+			auto& e = m_jitCache[_i];
 
 			if(e.block)
 				destroy(e.block);
 
-			releaseSingleOpCache(static_cast<TWord>(i));
-		}
+			releaseSingleOpCache(static_cast<TWord>(_i));
+		});
 
 		m_jitCache.clear();
 	}
