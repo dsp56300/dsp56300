@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -215,13 +216,18 @@ namespace dsp56k
 		template<typename T, typename TFunc>
 		void processAudioOutput(const uint32_t _frames, const TFunc& _readOutputCbk)
 		{
-			for (uint32_t i = 0; i < _frames; ++i)
+			// One wait for many frames: a wait per frame woke this thread for every frame the DSP wrote. At most half
+			// of the ring at once, the DSP must find room for the frames after them
+			constexpr uint32_t maxChunk = static_cast<uint32_t>(decltype(m_audioOutputs)::capacity() / 2);
+
+			for (uint32_t i = 0; i < _frames;)
 			{
-				m_audioOutputs.waitNotEmpty();
-				m_audioOutputs.pop_front([&](TxFrame& _frame)
+				const auto count = std::min(_frames - i, maxChunk);
+				m_audioOutputs.pop_front(count, [&](const size_t _j, TxFrame& _frame)
 				{
-					_readOutputCbk(i, _frame);
+					_readOutputCbk(i + static_cast<uint32_t>(_j), _frame);
 				});
+				i += count;
 			}
 		}
 

@@ -88,11 +88,15 @@ namespace dsp56k
 		{
 		}
 
+		// The one waiter waits for its whole deficit at once and gets one inner credit when the notifies have covered
+		// it: a wait for a block of frames wakes once, not once per frame. A negative count is always that one
+		// waiter's deficit, so the notify that takes the count from below zero to zero or above is the one to wake it,
+		// and no other notify posts a credit that a later wait could consume without anything produced
 		void notify()
 		{
 			const auto prev = m_count.fetch_add(1, std::memory_order_release);
 
-	        if (prev < 0)
+	        if (prev == -1)
 		        m_sem.notify();
 		}
 
@@ -100,20 +104,8 @@ namespace dsp56k
 		{
 			const auto prev = m_count.fetch_add(static_cast<int>(_count), std::memory_order_release);
 
-	        if (prev < 0)
-	        {
-				// Post exactly one inner credit per waiter in deficit, i.e. min(_count, -prev). Posting
-				// _count regardless mints spurious credits whenever the deficit is smaller than the batch:
-				// they sit in the inner semaphore forever, and a later wait() that goes into deficit consumes
-				// one and returns although nothing was produced - the consumer reads a frame that is not
-				// there and the ring counters desync from the semaphore counts. With the batched ring pushes
-				// (emplace_back(count)/pop_front(count)) racing single-frame pops this intermittently
-				// corrupted frames and permanently wedged the audio pipeline.
-				const auto deficit = -prev;
-				const auto wake = deficit < static_cast<int>(_count) ? deficit : static_cast<int>(_count);
-				for (int i = 0; i < wake; ++i)
-					m_sem.notify();
-	        }
+	        if (prev < 0 && prev + static_cast<int>(_count) >= 0)
+				m_sem.notify();
 		}
 
 		void wait()
@@ -131,12 +123,7 @@ namespace dsp56k
 			const int prev = m_count.fetch_sub(count, std::memory_order_acquire);
 
 			if (prev < count)
-			{
-				// This call's own deficit is count - max(prev, 0): a negative prev belongs to waits that
-				// already accounted for it themselves (mirror of the notify() clamp above).
-				for (int i = prev > 0 ? prev : 0; i < count; ++i)
-					m_sem.wait();
-			}
+				m_sem.wait();
 		}
 
 		bool tryWait()
