@@ -209,6 +209,9 @@ namespace dsp56k
 		if(g_useJIT)
 		{
 			LOGJITPC(vba);
+			// the JIT reads SR as it is: resolve the condition codes the interpreter computes lazily first, or a
+			// JSR in the vector stacks stale ones and the RTI restores them
+			updateDirtyCCR();
 			const auto pc = getPC();
 			m_jit.getTrampoline().execOne(&reg, vba, m_jitEntries[vba]);
 			if(m_processingMode != LongInterrupt)
