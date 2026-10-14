@@ -232,6 +232,7 @@ namespace  dsp56k
 		void callInsideLoopAtVectorAddress();
 		void do_callAtLoopEnd();
 		void doLoopChangesMode();
+		void jitBlockAtRegionEnd();
 		void do_callNotAtLoopEnd();
 		void jsr_rts();
 		void ccrBackendParity();

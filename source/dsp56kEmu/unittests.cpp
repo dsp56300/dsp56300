@@ -8435,6 +8435,7 @@ namespace dsp56k
 		callInsideLoopAtVectorAddress();
 		do_callAtLoopEnd();
 		doLoopChangesMode();
+		jitBlockAtRegionEnd();
 		do_twoWordCallAtLoopEnd();
 		do_callToLoopEndPlusOne();
 		do_loopTailOutsideItsLoop();
@@ -9461,6 +9462,52 @@ namespace dsp56k
 		verify(dsp.memory().get(MemArea_X, 0x200) == 0x100000);
 		verify(dsp.memory().get(MemArea_X, 0x201) == 0x200000);
 		verify(dsp.memory().get(MemArea_X, 0x202) == 0x200000);
+
+		dsp.resetHW();
+	}
+
+	/*	The JIT keeps its blocks in arrays that cover all of P memory, and the regions of them that nothing has written yet
+		share one default page. A block that started at the last entry of such a region made only the next one private
+		and wrote its entry into the shared page, where every untouched region saw it at that offset: a write to P memory
+		there destroyed the block, a lookup there found it
+	*/
+	void UnitTests::jitBlockAtRegionEnd()
+	{
+		dsp.resetHW();
+		dsp.setALU(false, TReg56(static_cast<TReg56::MyType>(0)));
+		dsp.regs().m[1].var = 0xffffff;
+		dsp.x0(TWord(0xffffff));
+
+		// the last entries of two regions of 16384 words that no other test uses
+		constexpr TWord pc = 0x5ffff;
+		constexpr TWord otherPC = 0x77fff;
+		constexpr TWord returnPC = 0x70000;
+
+		// m1 keeps its mode. The write keeps the block from being linked to the block at returnPC, which would run on
+		// into the empty memory behind it instead of going back to the dispatcher there
+		auto p = emitToMemory("inc a", pc);
+		p = emitToMemory("move x0,m1", p);
+		emitToMemory(0x0af080, returnPC, p);					// jmp >returnPC
+
+		emitToMemory("nop", returnPC);
+
+		auto run = [&]
+		{
+			dsp.setPC(pc);
+			execUntil(returnPC);
+		};
+
+		run();
+
+		const auto func = dsp.m_jitEntries[pc];
+
+		emitToMemory("inc b", otherPC);						// any change, a nop would not change the empty memory there
+
+		verify(dsp.m_jitEntries[pc] == func);
+
+		run();
+
+		verify(dsp.aluA().var == 2);
 
 		dsp.resetHW();
 	}

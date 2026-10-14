@@ -112,7 +112,7 @@ namespace dsp56k
 		const auto first = _block->getPCFirst();
 		const auto last = first + _block->getPMemSize();
 
-		ensureSize(last - 1);
+		ensureSize(first, last - 1);
 
 		for (auto i = first; i < last; ++i)
 		{
@@ -132,7 +132,7 @@ namespace dsp56k
 		const auto first = _block->getPCFirst();
 		const auto last = first + _block->getPMemSize();
 
-		ensureSize(last - 1);
+		ensureSize(first, last - 1);
 
 		for(auto i=first; i<last; ++i)
 		{
@@ -148,7 +148,7 @@ namespace dsp56k
 	{
 //		LOG("Create @ " << HEX(_pc));// << std::endl << cacheEntry.block->getDisasm());
 
-		ensureCacheSize(_pc+1);
+		ensureCacheSize(_pc, _pc+1);
 
 		if(!makeRoomForFirstInstruction(_pc))
 		{
@@ -366,7 +366,7 @@ namespace dsp56k
 		if(!_allowCreate && _pc >= m_jitCache.size())
 			return nullptr;
 
-		ensureSize(_pc);
+		ensureSize(_pc, _pc);
 
 		{
 			const auto& e = m_jitCache[_pc];
@@ -538,10 +538,10 @@ namespace dsp56k
 		return false;
 	}
 
-	bool JitBlockChain::ensureSize(const size_t _address)
+	bool JitBlockChain::ensureSize(const size_t _first, const size_t _last)
 	{
-		const auto a = m_jitCache.ensureBlockForIndex(_address);
-		const auto b = m_jitFuncs.ensureBlockForIndex(_address);
+		const auto a = m_jitCache.ensureBlocksForRange(_first, _last);
+		const auto b = m_jitFuncs.ensureBlocksForRange(_first, _last);
 		return a || b;
 	}
 
@@ -550,9 +550,9 @@ namespace dsp56k
 		m_jit.onFuncsResized(*this);
 	}
 
-	bool JitBlockChain::ensureCacheSize(const size_t _address)
+	bool JitBlockChain::ensureCacheSize(const size_t _first, const size_t _last)
 	{
-		return m_jitCache.ensureBlockForIndex(_address);
+		return m_jitCache.ensureBlocksForRange(_first, _last);
 	}
 
 	bool JitBlockChain::ensureFuncSize(const size_t _address)

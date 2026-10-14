@@ -141,6 +141,19 @@ namespace dsp56k
 			return ensureBlockFallback(_index);
 		}
 
+		// Ensure private memory for every block that holds an element of [_first, _last]. A write to an element of a block
+		// that is not private goes to the default block, which every block that is not private shares
+		bool ensureBlocksForRange(size_t _first, size_t _last)
+		{
+			if (!m_useMmu)
+				return ensureBlockFallback(_last);
+
+			bool res = false;
+			for (auto i = _first - _first % m_blockSize; i <= _last; i += m_blockSize)
+				res |= ensureBlockMmu(i);
+			return res;
+		}
+
 		// Ensure size covers at least _index+1 entries (non-MMU grow, MMU no-op if in range)
 		bool ensureSize(size_t _index)
 		{

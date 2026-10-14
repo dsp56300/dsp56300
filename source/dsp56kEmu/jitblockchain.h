@@ -104,9 +104,9 @@ namespace dsp56k
 		bool isBeingGeneratedRecursive(const JitBlockRuntimeData* _block) const;
 		bool isBeingGenerated(const JitBlockRuntimeData* _block) const;
 
-		bool ensureCacheSize(size_t _address);
+		bool ensureCacheSize(size_t _first, size_t _last);
 		bool ensureFuncSize(size_t _address);
-		bool ensureSize(size_t _address);
+		bool ensureSize(size_t _first, size_t _last);
 
 		void onFuncsResized() const;
 
