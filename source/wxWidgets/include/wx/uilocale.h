@@ -14,6 +14,7 @@
 
 #if wxUSE_INTL
 
+#include "wx/datetime.h"
 #include "wx/localedefs.h"
 #include "wx/string.h"
 #include "wx/vector.h"
@@ -154,16 +155,38 @@ public:
     int CompareStrings(const wxString& lhs, const wxString& rhs,
                        int flags = wxCompare_CaseSensitive) const;
 
+#if wxUSE_DATETIME
+#if wxABI_VERSION >= 30203
+    // Get the full (default) or abbreviated localized month name
+    // returns empty string on error
+    wxString GetMonthName(wxDateTime::Month month,
+                          wxDateTime::NameFlags flags = wxDateTime::Name_Full) const;
+
+    // Get the full (default) or abbreviated localized weekday name
+    // returns empty string on error
+    wxString GetWeekDayName(wxDateTime::WeekDay weekday,
+                            wxDateTime::NameFlags flags = wxDateTime::Name_Full) const;
+#endif // wxABI_VERSION >= 3.2.3
+#endif // wxUSE_DATETIME
+
     // Note that this class is not supposed to be used polymorphically, hence
     // its dtor is not virtual.
     ~wxUILocale();
 
+#if wxABI_VERSION >= 30202
+    // Return the locale ID representing the default system locale, which would
+    // be set is UseDefault() is called.
+    static wxLocaleIdent GetSystemLocaleId();
+#endif // wxABI_VERSION >= 3.2.2
+
     // Try to get user's (or OS's) preferred language setting.
     // Return wxLANGUAGE_UNKNOWN if the language-guessing algorithm failed
+    // Prefer using GetSystemLocaleId() above.
     static int GetSystemLanguage();
 
     // Try to get user's (or OS's) default locale setting.
     // Return wxLANGUAGE_UNKNOWN if the locale-guessing algorithm failed
+    // Prefer using GetSystemLocaleId() above.
     static int GetSystemLocale();
 
     // Try to retrieve a list of user's (or OS's) preferred UI languages.

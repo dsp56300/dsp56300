@@ -269,6 +269,7 @@
             misc/garbage.cpp
             misc/safearrayconverttest.cpp
             misc/settings.cpp
+            misc/textwrap.cpp
             <!--
                 This one is intentionally duplicated here (it is also part of
                 non-GUI test) as sockets behave differently in console and GUI
@@ -350,10 +351,23 @@
     <wx-data id="data-images">
         <srcdir>$(SRCDIR)/image</srcdir>
         <dstdir>image</dstdir>
+        <!--
+            Don't forget to update build/cmake/tests/gui/CMakeLists.txt when
+            adding new files here!
+         -->
         <files>
             bitfields.bmp
+            bitfields-alpha.bmp
             8bpp-colorsused-large.bmp
             8bpp-colorsused-negative.bmp
+            32bpp_rgb.bmp
+            32bpp_rgb.ico
+            32bpp_rgb_a0.ico
+            badrle4.bmp
+            rgb16-3103.bmp
+            rgb32-7187.bmp
+            rgb32bf.bmp
+            rgba32.bmp
             rle4-delta-320x240.bmp
             rle8-delta-320x240.bmp
             rle8-delta-320x240-expected.bmp
@@ -406,6 +420,8 @@
 
             width-times-height-overflow.bmp
             width_height_32_bit_overflow.pgm
+
+            bad_truncated.gif
         </files>
     </wx-data>
 
@@ -415,6 +431,7 @@
         <files>internat.po internat.mo</files>
     </template>
 
+    <wx-data id="en_GB" template="catalog"/>
     <wx-data id="fr" template="catalog"/>
     <wx-data id="ja" template="catalog"/>
 

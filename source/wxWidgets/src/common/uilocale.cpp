@@ -24,12 +24,18 @@
 
 #include "wx/arrstr.h"
 #include "wx/intl.h"
+#include "wx/log.h"
+#include "wx/tokenzr.h"
+#include "wx/utils.h"
 
 #ifndef __WINDOWS__
     #include "wx/language.h"
 #endif
 
+#include "wx/private/elfversion.h"
 #include "wx/private/uilocale.h"
+
+#define TRACE_I18N wxS("i18n")
 
 // ----------------------------------------------------------------------------
 // helper functions
@@ -109,6 +115,13 @@ wxLocaleIdent wxLocaleIdent::FromTag(const wxString& tag)
 
     wxLocaleIdent locId;
 
+    // 0. Check for special locale identifiers "C" and "POSIX"
+    if (IsDefaultCLocale(tag))
+    {
+        locId.Language(tag);
+        return locId;
+    }
+
     // 1. Handle platform-dependent cases
 
     // 1a. Check for modifier in POSIX tag
@@ -152,8 +165,11 @@ wxLocaleIdent wxLocaleIdent::FromTag(const wxString& tag)
     //
     // Make sure we don't extract the region identifier erroneously as a sortorder identifier
     {
-        wxString tagTemp = tagMain.BeforeFirst('_', &tagRest);
-        if (tagRest.length() > 4 && locId.m_modifier.empty() && locId.m_charset.empty())
+        wxString tagTemp = tagMain.BeforeLast('_', &tagRest);
+        if (!tagTemp.empty() &&
+                tagRest.length() > 4 &&
+                    locId.m_modifier.empty() &&
+                        locId.m_charset.empty())
         {
             // Windows sortorder found
             locId.SortOrder(tagRest);
@@ -390,7 +406,11 @@ wxString wxLocaleIdent::GetTag(wxLocaleTagType tagType) const
             if (!m_charset.empty())
                 tag << '.' << m_charset;
             if (!m_script.empty())
-                tag << '@' << wxUILocale::GetScriptAliasFromName(m_script);
+            {
+                const wxString& script = wxUILocale::GetScriptAliasFromName(m_script);
+                if (!script.empty())
+                    tag << '@' << script;
+            }
             else if (!m_modifier.empty())
                 tag << '@' << m_modifier;
             break;
@@ -526,7 +546,14 @@ wxUILocale::wxUILocale(const wxLocaleIdent& localeId)
         return;
     }
 
-    m_impl = wxUILocaleImpl::CreateForLocale(localeId);
+    if (IsDefaultCLocale(localeId.GetLanguage()))
+    {
+        m_impl = wxUILocaleImpl::CreateStdC();
+    }
+    else
+    {
+        m_impl = wxUILocaleImpl::CreateForLocale(localeId);
+    }
 }
 
 wxUILocale::wxUILocale(const wxUILocale& loc)
@@ -585,6 +612,26 @@ wxString wxUILocale::GetLocalizedName(wxLocaleName name, wxLocaleForm form) cons
     return m_impl->GetLocalizedName(name, form);
 }
 
+#if wxUSE_DATETIME
+wxELF_VERSION_COMPAT("_ZNK10wxUILocale12GetMonthNameEN10wxDateTime5MonthENS0_9NameFlagsE", "3.2.3")
+wxString wxUILocale::GetMonthName(wxDateTime::Month month, wxDateTime::NameFlags flags) const
+{
+    if (!m_impl)
+        return wxString();
+
+    return m_impl->GetMonthName(month, flags);
+}
+
+wxELF_VERSION_COMPAT("_ZNK10wxUILocale14GetWeekDayNameEN10wxDateTime7WeekDayENS0_9NameFlagsE", "3.2.3")
+wxString wxUILocale::GetWeekDayName(wxDateTime::WeekDay weekday, wxDateTime::NameFlags flags) const
+{
+    if (!m_impl)
+        return wxString();
+
+    return m_impl->GetWeekDayName(weekday, flags);
+}
+#endif // wxUSE_DATETIME
+
 wxLayoutDirection wxUILocale::GetLayoutDirection() const
 {
     if (!m_impl)
@@ -632,12 +679,20 @@ wxUILocale::~wxUILocale()
 }
 
 
+/* static */
+wxELF_VERSION_COMPAT("_ZN10wxUILocale17GetSystemLocaleIdEv", "3.2.2")
+wxLocaleIdent wxUILocale::GetSystemLocaleId()
+{
+    wxUILocale defaultLocale(wxUILocaleImpl::CreateUserDefault());
+    return defaultLocale.GetLocaleId();
+}
+
 /*static*/
 int wxUILocale::GetSystemLanguage()
 {
     const wxLanguageInfos& languagesDB = wxGetLanguageInfos();
     size_t count = languagesDB.size();
-    wxVector<wxString> preferred = wxUILocaleImpl::GetPreferredUILanguages();
+    wxVector<wxString> preferred = wxUILocale::GetPreferredUILanguages();
 
     for (wxVector<wxString>::const_iterator j = preferred.begin();
         j != preferred.end();
@@ -677,17 +732,54 @@ int wxUILocale::GetSystemLanguage()
 /*static*/
 int wxUILocale::GetSystemLocale()
 {
-    // Create default wxUILocale
-    wxUILocale defaultLocale(wxUILocaleImpl::CreateUserDefault());
+    const wxLocaleIdent locId = GetSystemLocaleId();
 
-    // Find corresponding wxLanguageInfo
-    const wxLanguageInfo* defaultLanguage = wxUILocale::FindLanguageInfo(defaultLocale.GetLocaleId());
-    return defaultLanguage ? defaultLanguage->Language : wxLANGUAGE_UNKNOWN;
+    // Find wxLanguageInfo corresponding to the default locale.
+    const wxLanguageInfo* defaultLanguage = wxUILocale::FindLanguageInfo(locId);
+
+    // Check if it really corresponds to this locale: we could find it via the
+    // fallback on the language, which is something that it generally makes
+    // sense for FindLanguageInfo() to do, but in this case we really need the
+    // locale.
+    if ( defaultLanguage )
+    {
+        // We have to handle the "C" locale specially as its name is different
+        // from the "en-US" tag found for it, but we do still want to return
+        // English for it.
+        const wxString tag = locId.GetTag(wxLOCALE_TAGTYPE_BCP47);
+        if ( tag == defaultLanguage->LocaleTag || IsDefaultCLocale(tag) )
+            return defaultLanguage->Language;
+    }
+
+    return wxLANGUAGE_UNKNOWN;
 }
 
 /* static */
 wxVector<wxString> wxUILocale::GetPreferredUILanguages()
 {
+    // The WXLANGUAGE variable may contain a colon separated list of language
+    // codes in the order of preference. It is modelled after GNU's LANGUAGE:
+    // http://www.gnu.org/software/gettext/manual/html_node/The-LANGUAGE-variable.html
+    wxString languageFromEnv;
+    if (wxGetEnv("WXLANGUAGE", &languageFromEnv) && !languageFromEnv.empty())
+    {
+        wxVector<wxString> preferred;
+        wxStringTokenizer tknzr(languageFromEnv, ":");
+        while (tknzr.HasMoreTokens())
+        {
+            const wxString tok = tknzr.GetNextToken();
+            if (const wxLanguageInfo* li = wxUILocale::FindLanguageInfo(tok))
+            {
+                preferred.push_back(li->CanonicalName);
+            }
+        }
+        if (!preferred.empty())
+        {
+            wxLogTrace(TRACE_I18N, " - using languages override from WXLANGUAGE: '%s'", languageFromEnv);
+            return preferred;
+        }
+    }
+
     return wxUILocaleImpl::GetPreferredUILanguages();
 }
 
@@ -813,9 +905,12 @@ const wxLanguageInfo* wxUILocale::FindLanguageInfo(const wxLocaleIdent& locId)
     CreateLanguagesDB();
 
     const wxLanguageInfo* infoRet = NULL;
+
+    wxString lang = locId.GetLanguage();
     wxString localeTag = locId.GetTag(wxLOCALE_TAGTYPE_BCP47);
-    if (IsDefaultCLocale(locId.GetLanguage()))
+    if (IsDefaultCLocale(lang))
     {
+        lang = wxS("en");
         localeTag = "en-US";
     }
 
@@ -832,7 +927,7 @@ const wxLanguageInfo* wxUILocale::FindLanguageInfo(const wxLocaleIdent& locId)
             break;
         }
 
-        if (wxStricmp(localeTag, info->LocaleTag.BeforeFirst(wxS('-'))) == 0)
+        if (wxStricmp(lang, info->LocaleTag.BeforeFirst(wxS('-'))) == 0)
         {
             // a match -- but maybe we'll find an exact one later, so continue
             // looking
@@ -847,5 +942,24 @@ const wxLanguageInfo* wxUILocale::FindLanguageInfo(const wxLocaleIdent& locId)
 
     return infoRet;
 }
+
+#if wxUSE_DATETIME
+int wxUILocaleImpl::ArrayIndexFromFlag(wxDateTime::NameFlags flags)
+{
+    switch (flags)
+    {
+        case wxDateTime::Name_Full:
+            return 0;
+
+        case wxDateTime::Name_Abbr:
+            return 1;
+
+        default:
+            wxFAIL_MSG("unknown wxDateTime::NameFlags value");
+    }
+
+    return -1;
+}
+#endif // wxUSE_DATETIME
 
 #endif // wxUSE_INTL

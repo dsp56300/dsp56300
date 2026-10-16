@@ -38,6 +38,8 @@
 
 #include "wx/renderer.h"
 
+#include "wx/generic/private/drawbitmap.h"
+
 #ifdef __WXMAC__
     #include "wx/osx/private.h"
 #endif
@@ -100,6 +102,8 @@ protected:
     void OnChar( wxKeyEvent &event );
     void OnKeyUp( wxKeyEvent &event );
     void OnKillFocus( wxFocusEvent &event );
+
+    void IncreaseSizeForText( const wxString& text );
 
     bool AcceptChanges();
     void Finish( bool setfocus );
@@ -426,22 +430,41 @@ wxTreeTextCtrl::wxTreeTextCtrl(wxGenericTreeCtrl *owner,
     m_owner = owner;
     m_aboutToFinish = false;
 
+    // Create the text hidden to show it with the correct size -- which we
+    // can't determine before creating it.
+    Hide();
+    Create(m_owner, wxID_ANY, m_startValue);
+
     wxRect rect;
     m_owner->GetBoundingRect(m_itemEdited, rect, true);
 
-    // corrects position and size for better appearance
+    const wxSize textSize = rect.GetSize();
+    wxSize fullSize = GetSizeFromTextSize(textSize);
+
+    // Ensure that the text field covers tree item.
+    fullSize.x = wxMax(fullSize.x, textSize.x + 5);
+
+    // Correct position for better appearance.
 #ifdef __WXMSW__
     rect.x -= 5;
-    rect.width += 10;
-#elif defined(__WXGTK__)
-    rect.x -= 5;
-    rect.y -= 2;
-    rect.width  += 8;
-    rect.height += 4;
-#endif // platforms
+#else
+    rect.x -= (fullSize.x - textSize.x) / 2;
+#endif
 
-    (void)Create(m_owner, wxID_ANY, m_startValue,
-                 rect.GetPosition(), rect.GetSize());
+    if ( fullSize.y > textSize.y )
+        rect.y -= (fullSize.y - textSize.y) / 2;
+
+    // Also check that the control fits into the parent window.
+    const int totalWidth = m_owner->GetClientSize().x;
+    if ( rect.x + fullSize.x > totalWidth )
+    {
+        fullSize.x = totalWidth - rect.x;
+    }
+
+    rect.SetSize(fullSize);
+
+    SetSize(rect);
+    Show();
 
     SelectAll();
 }
@@ -531,28 +554,55 @@ void wxTreeTextCtrl::OnChar( wxKeyEvent &event )
             break;
 
         default:
+            if ( !m_aboutToFinish )
+            {
+#if wxUSE_UNICODE
+                wxChar ch = event.GetUnicodeKey();
+#else
+                wxChar ch = event.m_keyCode < 256 &&
+                                event.m_keyCode >= 0 &&
+                                    wxIsprint(event.m_keyCode)
+                                ? (wxChar)event.m_keyCode
+                                : WXK_NONE;
+#endif
+                if ( ch != WXK_NONE )
+                {
+                    wxString value = GetValue();
+
+                    long from, to;
+                    GetSelection( &from, &to );
+                    if ( from != to )
+                    {
+                        value.Remove( from, to - from );
+                    }
+
+                    IncreaseSizeForText( value + ch );
+                }
+            }
             event.Skip();
     }
 }
 
 void wxTreeTextCtrl::OnKeyUp( wxKeyEvent &event )
 {
-    if ( !m_aboutToFinish )
-    {
-        // auto-grow the textctrl:
-        wxSize parentSize = m_owner->GetSize();
-        wxPoint myPos = GetPosition();
-        wxSize mySize = GetSize();
-        int sx, sy;
-        GetTextExtent(GetValue() + wxT("M"), &sx, &sy);
-        if (myPos.x + sx > parentSize.x)
-            sx = parentSize.x - myPos.x;
-        if (mySize.x > sx)
-            sx = mySize.x;
-        SetSize(sx, wxDefaultCoord);
-    }
-
+    // This function is only preserved in 3.2 branch to avoid warnings from the
+    // ABI compatibility checked, as this class (wrongly) uses public visibility
+    // there, even though it's not public at all -- and so we can't remove any
+    // of its functions, even if they're not needed any longer.
     event.Skip();
+}
+
+void wxTreeTextCtrl::IncreaseSizeForText( const wxString& text )
+{
+    // auto-grow the textctrl:
+    wxSize parentSize = m_owner->GetClientSize();
+    wxPoint myPos = GetPosition();
+    wxSize mySize = GetSize();
+    int sx = GetSizeFromText(text).x;
+    if (myPos.x + sx > parentSize.x)
+        sx = parentSize.x - myPos.x;
+    if (sx > mySize.x)
+        SetSize(sx, wxDefaultCoord);
 }
 
 void wxTreeTextCtrl::OnKillFocus( wxFocusEvent &event )
@@ -714,7 +764,7 @@ wxGenericTreeItem *wxGenericTreeItem::HitTest(const wxPoint& point,
                 if ( (GetImage() != NO_IMAGE) && theCtrl->HasImages() )
                 {
                     int image_h;
-                    theCtrl->GetImageList()->GetSize(GetImage(),
+                    theCtrl->GetImageLogicalSize(theCtrl, GetImage(),
                                                         image_w, image_h);
                 }
 
@@ -851,7 +901,7 @@ wxGenericTreeItem::DoCalculateSize(wxGenericTreeCtrl* control,
     int image = GetCurrentImage();
     if ( image != NO_IMAGE && control->HasImages() )
     {
-        control->GetImageList()->GetSize(image, image_w, image_h);
+        control->GetImageLogicalSize(control, image, image_w, image_h);
         image_w += MARGIN_BETWEEN_IMAGE_AND_TEXT;
     }
 
@@ -1285,6 +1335,8 @@ bool wxGenericTreeCtrl::SetFont( const wxFont &font )
 
     m_normalFont = font;
     m_boldFont = m_normalFont.Bold();
+
+    CalculateLineHeight();
 
     if (m_anchor)
         m_anchor->RecursiveResetTextSize();
@@ -2385,7 +2437,7 @@ void wxGenericTreeCtrl::CalculateLineHeight()
         for (int i = 0; i < n ; i++)
         {
             int width = 0, height = 0;
-            GetImageList()->GetSize(i, width, height);
+            GetImageLogicalSize(this, i, width, height);
             if (height > m_lineHeight) m_lineHeight = height;
         }
     }
@@ -2399,7 +2451,7 @@ void wxGenericTreeCtrl::CalculateLineHeight()
         for (int i = 0; i < n ; i++)
         {
             int width = 0, height = 0;
-            m_imagesState.GetImageList()->GetSize(i, width, height);
+            m_imagesState.GetImageLogicalSize(this, i, width, height);
             if (height > m_lineHeight) m_lineHeight = height;
         }
     }
@@ -2413,7 +2465,7 @@ void wxGenericTreeCtrl::CalculateLineHeight()
         for (int i = 0; i < n ; i++)
         {
             int width = 0, height = 0;
-            m_imagesButtons.GetImageList()->GetSize(i, width, height);
+            m_imagesButtons.GetImageLogicalSize(this, i, width, height);
             if (height > m_lineHeight) m_lineHeight = height;
         }
     }
@@ -2442,9 +2494,8 @@ void wxGenericTreeCtrl::UpdateAfterImageListChange()
     if (m_anchor)
         m_anchor->RecursiveResetSize();
 
-    // Don't do any drawing if we're setting the list to NULL,
-    // since we may be in the process of deleting the tree control.
-    if (GetImageList())
+    // Don't do this if we're in the process of deleting the tree control.
+    if (HasImages())
         CalculateLineHeight();
 }
 
@@ -2517,7 +2568,7 @@ void wxGenericTreeCtrl::PaintItem(wxGenericTreeItem *item, wxDC& dc)
     {
         if ( HasImages() )
         {
-            GetImageList()->GetSize(image, image_w, image_h);
+            GetImageLogicalSize(this, image, image_w, image_h);
             image_w += MARGIN_BETWEEN_IMAGE_AND_TEXT;
         }
         else
@@ -2648,27 +2699,24 @@ void wxGenericTreeCtrl::PaintItem(wxGenericTreeItem *item, wxDC& dc)
 
     if ( state != wxTREE_ITEMSTATE_NONE )
     {
-        dc.SetClippingRegion( item->GetX(), item->GetY(), state_w, total_h );
-        GetStateImageList()->Draw( state, dc,
-                                item->GetX(),
-                                item->GetY() +
-                                    (total_h > state_h ? (total_h-state_h)/2
-                                                       : 0),
-                                wxIMAGELIST_DRAW_TRANSPARENT );
-        dc.DestroyClippingRegion();
+        wxDCClipper clip(dc, item->GetX(), item->GetY(), state_w, total_h);
+
+        wxDrawImageBitmap(this, m_imagesState, state,
+                          dc,
+                          item->GetX(),
+                          item->GetY() +
+                          (total_h > state_h ? (total_h-state_h)/2 : 0));
     }
 
     if ( image != NO_IMAGE )
     {
-        dc.SetClippingRegion(item->GetX() + state_w, item->GetY(),
+        wxDCClipper clip(dc, item->GetX() + state_w, item->GetY(),
                              image_w, total_h);
-        GetImageList()->Draw( image, dc,
-                                 item->GetX() + state_w,
-                                 item->GetY() +
-                                    (total_h > image_h ? (total_h-image_h)/2
-                                                       : 0),
-                                 wxIMAGELIST_DRAW_TRANSPARENT );
-        dc.DestroyClippingRegion();
+        wxDrawImageBitmap(this, image,
+                          dc,
+                          item->GetX() + state_w,
+                          item->GetY() +
+                          (total_h > image_h ? (total_h-image_h)/2 : 0));
     }
 
     dc.SetBackgroundMode(wxBRUSHSTYLE_TRANSPARENT);
@@ -2830,22 +2878,18 @@ wxGenericTreeCtrl::PaintLevel(wxGenericTreeItem *item,
             if ( m_imagesButtons.HasImages() )
             {
                 // draw the image button here
-                int image_h = 0,
-                    image_w = 0;
                 int image = item->IsExpanded() ? wxTreeItemIcon_Expanded
                                                : wxTreeItemIcon_Normal;
                 if ( item->IsSelected() )
                     image += wxTreeItemIcon_Selected - wxTreeItemIcon_Normal;
 
-                wxImageList* const
-                    imageListButtons = m_imagesButtons.GetImageList();
-                imageListButtons->GetSize(image, image_w, image_h);
+                int image_w, image_h;
+                m_imagesButtons.GetImageLogicalSize(this, image, image_w, image_h);
                 int xx = x - image_w/2;
                 int yy = y_mid - image_h/2;
 
                 wxDCClipper clip(dc, xx, yy, image_w, image_h);
-                imageListButtons->Draw(image, dc, xx, yy,
-                                         wxIMAGELIST_DRAW_TRANSPARENT);
+                wxDrawImageBitmap(this, m_imagesButtons, image, dc, xx, yy);
             }
             else // no custom buttons
             {
@@ -3006,10 +3050,6 @@ void wxGenericTreeCtrl::OnPaint( wxPaintEvent &WXUNUSED(event) )
 
     dc.SetFont( m_normalFont );
     dc.SetPen( m_dottedPen );
-
-    // this is now done dynamically
-    //if(GetImageList() == NULL)
-    // m_lineHeight = (int)(dc.GetCharHeight() + 4);
 
     int y = 2;
     PaintLevel( m_anchor, dc, 0, y );
@@ -3447,7 +3487,7 @@ bool wxGenericTreeCtrl::GetBoundingRect(const wxTreeItemId& item,
         if ( image != NO_IMAGE && HasImages() )
         {
             int image_h;
-            GetImageList()->GetSize( image, image_w, image_h );
+            GetImageLogicalSize( this, image, image_w, image_h );
             image_w += MARGIN_BETWEEN_IMAGE_AND_TEXT;
         }
 
@@ -3997,8 +4037,6 @@ void wxGenericTreeCtrl::CalculatePositions()
     dc.SetFont( m_normalFont );
 
     dc.SetPen( m_dottedPen );
-    //if(GetImageList() == NULL)
-    // m_lineHeight = (int)(dc.GetCharHeight() + 4);
 
     int y = 2;
     CalculateLevel( m_anchor, dc, 0, y ); // start recursion

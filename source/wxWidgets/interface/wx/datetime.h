@@ -96,7 +96,7 @@ public:
 
         ///@{
         /// zones from GMT (= Greenwich Mean Time): they're guaranteed to be
-        /// consequent numbers, so writing something like `GMT0 + offset' is
+        /// consequent numbers, so writing something like `GMT0 + offset` is
         /// safe if abs(offset) <= 12
 
         // underscore stands for minus
@@ -852,7 +852,7 @@ public:
 
     /**
         This function does the same as the standard ANSI C @c strftime(3)
-        function (http://www.cplusplus.com/reference/clibrary/ctime/strftime.html).
+        function (https://cplusplus.com/reference/ctime/strftime/).
         Please see its description for the meaning of @a format parameter.
 
         Notice that POSIX @c "%g", @c "%G", @c "%V" and @c "%z" format
@@ -935,14 +935,12 @@ public:
     bool ParseDateTime(const wxString& datetime, wxString::const_iterator *end);
 
     /**
-        This function parses the string @a date according to the given
-        @e format. The system @c strptime(3) function is used whenever
-        available, but even if it is not, this function is still implemented,
-        although support for locale-dependent format specifiers such as
-        @c "%c", @c "%x" or @c "%X" may not be perfect and GNU extensions such
-        as @c "%z" and @c "%Z" are not implemented. This function does handle
-        the month and weekday names in the current locale on all platforms,
-        however.
+        Parses the string @a date according to the given @e format.
+
+        This function is similar to @c strptime(3) but doesn't use it and
+        implements the parsing itself, with support for all the standard
+        (POSIX) formatting specifiers as well as a number of GNU extensions
+        such as `%l`, `%F`, `%z` (but not `%Z`, currently) etc.
 
         Please see the description of the ANSI C function @c strftime(3) for
         the syntax of the format string.

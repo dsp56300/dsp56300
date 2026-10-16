@@ -367,8 +367,8 @@ extern int wxOSXGetIdFromSelector(SEL action );
         wxMenuItemImpl* impl = [nsMenuItem implementation];
         if ( impl )
         {
-            wxMenuItem* menuitem = impl->GetWXPeer();
-            return menuitem->GetMenu()->HandleCommandProcess(menuitem);
+            if ( wxMenuItem* menuitem = impl->GetWXPeer() )
+                return menuitem->GetMenu()->HandleCommandProcess(menuitem);
         }
     }
     // otherwise feed back command into common menubar
@@ -597,6 +597,7 @@ extern int wxOSXGetIdFromSelector(SEL action );
         }
         return editor;
     } 
+#if wxUSE_SEARCHCTRL
     else if ([anObject isKindOfClass:[wxNSSearchField class]])
     {
         wxNSSearchField* sf = (wxNSSearchField*) anObject;
@@ -611,6 +612,7 @@ extern int wxOSXGetIdFromSelector(SEL action );
         }
         return editor;
     }
+#endif // wxUSE_SEARCHCTRL
     else if ([anObject isKindOfClass:[wxNSComboBox class]])
     {
         wxNSComboBox * cb = (wxNSComboBox*) anObject;

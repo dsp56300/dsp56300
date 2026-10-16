@@ -19,6 +19,7 @@
     #include "wx/menu.h"
 #endif // WX_PRECOMP
 
+#include "wx/private/bmpbndl.h"
 #include "wx/osx/private.h"
 #include "wx/osx/private/available.h"
 
@@ -86,9 +87,11 @@ SEL wxOSXGetSelectorFromID(int menuId )
     wxUnusedVar(sender);
     if ( impl )
     {
-        wxMenuItem* menuitem = impl->GetWXPeer();
-        if ( menuitem->GetMenu()->HandleCommandProcess(menuitem) == false )
+        if ( wxMenuItem* menuitem = impl->GetWXPeer() )
         {
+            // Ignore the return value as there doesn't seem anything to do
+            // with it here.
+            menuitem->GetMenu()->HandleCommandProcess(menuitem);
         }
      }
 }
@@ -247,9 +250,9 @@ public :
 
     ~wxMenuItemCocoaImpl();
 
-    void SetBitmap( const wxBitmap& bitmap ) wxOVERRIDE
+    void SetBitmap( const wxBitmapBundle& bitmap ) wxOVERRIDE
     {
-        [m_osxMenuItem setImage:bitmap.GetNSImage()];
+        [m_osxMenuItem setImage:wxOSXGetImageFromBundle(bitmap)];
     }
 
     void Enable( bool enable ) wxOVERRIDE
