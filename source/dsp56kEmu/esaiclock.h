@@ -95,6 +95,9 @@ namespace dsp56k
 
 		const uint64_t* m_dspInstructionCounter = nullptr;
 		uint64_t m_lastClock = 0;
+		// counter when the last slot was served, to space a catch up. None after a restart of the clock or the counter
+		static constexpr uint64_t g_noneServed = ~0ull;
+		uint64_t m_lastServed = g_noneServed;
 		uint32_t m_cyclesPerSample = 2133;				// estimated cycles per sample before calculated
 
 		ClockSource m_clockSource = ClockSource::Instructions;

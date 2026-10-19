@@ -23,16 +23,32 @@ namespace dsp56k
 		// DSP::resetHW starts the counter over. The time since the last slot would come out negative, a huge unsigned
 		// number, and serving every slot that is "due" by then would never end. The clock starts over with the counter
 		if(*m_dspInstructionCounter < m_lastClock)
+		{
 			m_lastClock = *m_dspInstructionCounter;
+			m_lastServed = g_noneServed;
+		}
 
 		auto diff = *m_dspInstructionCounter - m_lastClock;
 
 		if(diff < m_cyclesPerSample)
 			return instructionsForCycles(static_cast<uint32_t>(m_cyclesPerSample - diff));
 
-		/*	A clock that is behind serves its slots back to back (see the end of this function), where the chip has a slot
+		/*	A clock that is behind - a long JIT block kept the peripherals from running - catches up at twice the rate of
+			its slots, half a slot period apart, and not back to back. Firmware gets a slot period after a frame sync on the
+			chip, and some of it needs part of that: the Nord Lead 2X arms the DMA channel for slots 1 to 3 and 0 after it
+			saw the frame sync. Served an instruction after slot 0, slot 1 went out before the channel was armed, and the
+			whole stream a slot late from then on. Peripherals also run when another one asks for it, so the spacing is
+			checked here and not only returned as the delay
+		*/
+		const auto sinceServed = m_lastServed != g_noneServed && *m_dspInstructionCounter >= m_lastServed ? *m_dspInstructionCounter - m_lastServed : m_cyclesPerSample;
+		const auto catchUpPeriod = m_cyclesPerSample >> 1;
+
+		if(sinceServed < catchUpPeriod)
+			return instructionsForCycles(static_cast<uint32_t>(catchUpPeriod - sinceServed));
+
+		/*	A clock that is behind serves its slots closer together (see above), where the chip has a slot
 			period between two of them. The DSP takes the request of one slot before the next one starts unless it masks
-			interrupts for that long. Back to back, a few masked instructions are enough, and the request that the next
+			interrupts for that long. Closer together, fewer masked instructions are enough, and the request that the next
 			slot raises while the previous one still waits is lost (DSP::injectInterrupt, one pending flag per source).
 			Firmware that counts its slots by its interrupts falls out of step then. The Virus B runs one transmit
 			interrupt per slot through a buffer of alternating left and right words, and a patch change, whose DO loop
@@ -63,6 +79,7 @@ namespace dsp56k
 			}
 		}
 
+		m_lastServed = *m_dspInstructionCounter;
 		m_lastClock += m_cyclesPerSample;
 
 		auto advanceClock = [](Clock& _c)
@@ -103,10 +120,10 @@ namespace dsp56k
 		if(m_tickCallback)
 			m_tickCallback();
 
-		// Behind by a whole slot or more: ask to be called again right away. One slot is still served per call,
-		// so the DSP keeps its chance to run - and to refill a transmit register - between two of them.
+		// Behind by a whole slot or more: the next slot follows half a slot period later, see the top of this function.
+		// One slot is served per call, serving all that are due at once left the core no room to refill a transmit register
 		if(diff >= (m_cyclesPerSample<<1))
-			return 0;
+			return instructionsForCycles(static_cast<uint32_t>(catchUpPeriod));
 
 		const auto delay = static_cast<uint32_t>((m_cyclesPerSample << 1) - diff);
 
@@ -218,6 +235,7 @@ namespace dsp56k
 	void EsxiClock::restartClock()
 	{
 		m_lastClock = *m_dspInstructionCounter;
+		m_lastServed = g_noneServed;
 		m_periph.setDelayCycles(0);
 	}
 
@@ -293,6 +311,7 @@ namespace dsp56k
 
 		m_cyclesPerSample = cyclesPerSample;
 		m_lastClock = *m_dspInstructionCounter;
+		m_lastServed = g_noneServed;
 		m_periph.setDelayCycles(0);
 	}
 	void EsxiClock::setEsaiDivider(Esxi* _esai, const TWord _dividerTX, const TWord _dividerRX)
