@@ -69,24 +69,24 @@ namespace dsp56k
 			return;
 
 		// spinning while the bit is clear waits for it to be set
-		constexpr bool expected = BitValue == BitClear;
+		serialStatusSpin(getFieldValue<Inst, Field_qqqqqq>(op) + 0xffff80, getBit<Inst>(op), BitValue == BitClear);
+	}
 
-		const auto bit = getBit<Inst>(op);
-		const auto addr = getFieldValue<Inst, Field_qqqqqq>(op) + 0xffff80;
-
+	void JitOps::serialStatusSpin(const TWord _addr, const TWord _bit, const bool _waitForSet) const
+	{
 		SkipToSlotFunc func = nullptr;
 
 		if(dynamic_cast<Peripherals56362*>(getBlock().dsp().getPeriph(0)))
 		{
-			if(addr == Esai::M_SAISR)
-				func = esaiSkipToSlot<expected>(bit);
+			if(_addr == Esai::M_SAISR)
+				func = _waitForSet ? esaiSkipToSlot<true>(_bit) : esaiSkipToSlot<false>(_bit);
 		}
 		else if(dynamic_cast<Peripherals56303*>(getBlock().dsp().getPeriph(0)))
 		{
-			if(addr == Essi::ESSI0_SSISR)
-				func = essiSkipToSlot<expected, 0>(bit);
-			else if(addr == Essi::ESSI1_SSISR)
-				func = essiSkipToSlot<expected, 1>(bit);
+			if(_addr == Essi::ESSI0_SSISR)
+				func = _waitForSet ? essiSkipToSlot<true, 0>(_bit) : essiSkipToSlot<false, 0>(_bit);
+			else if(_addr == Essi::ESSI1_SSISR)
+				func = _waitForSet ? essiSkipToSlot<true, 1>(_bit) : essiSkipToSlot<false, 1>(_bit);
 		}
 
 		if(!func)
@@ -95,6 +95,84 @@ namespace dsp56k
 		const FuncArg r0(m_block, 0);
 		m_block.mem().makeDspPtr(r0);
 		m_block.stack().call(asmjit::func_as_ptr(func));
+	}
+
+	/*	The same spin in two instructions: a btst of the status register, and a branch on carry back to it. The Nord Lead
+		2X waits for the transmit frame sync with btst #TFS,x:>$ffb3 / jcc, then arms the DMA channel that feeds its slots
+		1, 2, 3 and 0. It has to be armed before slot 1 starts. Spinning, the clock reached slot 0 late, served slot 1 an
+		instruction after it to catch up, and the stream went out a slot late until the next miss shifted it back
+	*/
+	template<Instruction Inst> void JitOps::btstSerialStatusSpinloop(const TWord op) const
+	{
+		if constexpr (Inst == Btst_qq)
+		{
+			btstSerialStatusSpin(getFieldValueMemArea<Btst_qq>(op), getFieldValue<Btst_qq, Field_qqqqqq>(op) + 0xffff80, getBit<Btst_qq>(op));
+		}
+		else
+		{
+			static_assert(Inst == Btst_ea);
+
+			// an absolute address is known while compiling, any other is not
+			if((getFieldValue<Btst_ea, Field_MMM>(op) << 3 | getFieldValue<Btst_ea, Field_RRR>(op)) == MMMRRR_AbsAddr)
+				btstSerialStatusSpin(getFieldValueMemArea<Btst_ea>(op), m_opWordB, getBit<Btst_ea>(op));
+		}
+	}
+
+	template void JitOps::btstSerialStatusSpinloop<Btst_qq>(TWord) const;
+	template void JitOps::btstSerialStatusSpinloop<Btst_ea>(TWord) const;
+
+	void JitOps::btstSerialStatusSpin(const EMemArea _area, TWord _addr, const TWord _bit) const
+	{
+		if(_area != MemArea_X)
+			return;
+
+		// a 16 bit address of the peripheral range, in Sixteen-bit Compatibility mode
+		if(_addr < 0x10000 && isPeriphAddress(_addr))
+			_addr |= 0xff0000;
+
+		const auto& mem = m_block.dsp().memory();
+
+		const auto pc = m_pcCurrentOp + m_opcodes.getOpcodeLength(m_opWordA);
+		const auto op = mem.get(MemArea_P, pc);
+
+		Instruction inst, instB;
+		m_opcodes.getInstructionTypes(op, inst, instB);
+
+		TWord target;
+		TWord cccc;
+
+		switch(inst)
+		{
+		case Jcc_xxx:
+			target = getFieldValue<Jcc_xxx, Field_aaaaaaaaaaaa>(op);
+			cccc = getFieldValue<Jcc_xxx, Field_CCCC>(op);
+			break;
+		case Jcc_ea:
+			if((getFieldValue<Jcc_ea, Field_MMM>(op) << 3 | getFieldValue<Jcc_ea, Field_RRR>(op)) != MMMRRR_AbsAddr)
+				return;
+			target = mem.get(MemArea_P, pc + 1);
+			cccc = getFieldValue<Jcc_ea, Field_CCCC>(op);
+			break;
+		case Bcc_xxx:
+			target = pc + getRelativeAddressOffset<Bcc_xxx>(op);
+			cccc = getFieldValue<Bcc_xxx, Field_CCCC>(op);
+			break;
+		case Bcc_xxxx:
+			target = pc + signextend<int, 24>(static_cast<int>(mem.get(MemArea_P, pc + 1)));
+			cccc = getFieldValue<Bcc_xxxx, Field_CCCC>(op);
+			break;
+		default:
+			return;
+		}
+
+		if((target & 0xffffff) != m_pcCurrentOp)
+			return;
+
+		// btst copies the bit to the carry: looping while it is clear waits for the bit to be set
+		if(cccc == CCCC_CarryClear)
+			serialStatusSpin(_addr, _bit, true);
+		else if(cccc == CCCC_CarrySet)
+			serialStatusSpin(_addr, _bit, false);
 	}
 
 	// Brclr

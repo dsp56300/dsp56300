@@ -343,6 +343,9 @@ namespace dsp56k
 
 		template<Instruction Inst, ExpectedBitValue BitValue>
 		void serialStatusSpinloop(TWord op, bool _loopsToItself) const;
+		void serialStatusSpin(TWord _addr, TWord _bit, bool _waitForSet) const;
+		template<Instruction Inst> void btstSerialStatusSpinloop(TWord op) const;
+		void btstSerialStatusSpin(EMemArea _area, TWord _addr, TWord _bit) const;
 
 #ifndef HAVE_ARM64
 		void signed24To56(const JitReg64& _dst, const JitReg64& _src) const;

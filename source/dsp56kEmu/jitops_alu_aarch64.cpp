@@ -348,6 +348,8 @@ namespace dsp56k
 
 	void JitOps::op_Btst_ea(TWord op)
 	{
+		btstSerialStatusSpinloop<Btst_ea>(op);
+
 		DspValue r(m_block);
 		readMem<Btst_ea>(r, op);
 		copyBitToCCR(r.get(), getBit<Btst_ea>(op), CCRB_C);
@@ -369,6 +371,8 @@ namespace dsp56k
 
 	void JitOps::op_Btst_qq(TWord op)
 	{
+		btstSerialStatusSpinloop<Btst_qq>(op);
+
 		DspValue r(m_block);
 		readMem<Btst_qq>(r, op);
 		copyBitToCCR(r.get(), getBit<Btst_qq>(op), CCRB_C);

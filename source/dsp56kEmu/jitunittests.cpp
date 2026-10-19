@@ -71,6 +71,7 @@ namespace dsp56k
 		blockDestroyedWhileRunning();
 		branchOutOfPMemory();
 		receivePollAfterClockRestart();
+		receivePollBtstBranchAfterClockRestart();
 		doLoopExitOnPendingInterrupt();
 	}
 
@@ -1346,6 +1347,72 @@ namespace dsp56k
 		verify(dsp.getCycles() - start < g_cyclesPerSample * 3 / 2);
 
 		esai.writeReceiveControlRegister(0);
+		clock.setCyclesPerSample(oldCycles);
+		clock.setClockSource(oldSource);
+	}
+
+	/*	The same poll in two instructions, a btst of the status register and a branch on carry back to it, as the Nord
+		Lead 2X waits for its transmit frame sync. Spinning, it ran past the slot like the one-instruction form did
+	*/
+	void JitUnittests::receivePollBtstBranchAfterClockRestart()
+	{
+		constexpr uint32_t g_cyclesPerSample = 72;
+
+		auto& esai = peripheralsX.getEsai();
+		auto& clock = peripheralsX.getEsaiClock();
+
+		const auto oldSource = clock.getClockSource();
+		const auto oldCycles = clock.getCyclesPerSample();
+
+		for(uint32_t variant=0; variant<2; ++variant)
+		{
+			const TWord pc = 0x3240 + variant * 0x10;
+
+			dsp.resetHW();
+
+			clock.setCyclesPerSample(g_cyclesPerSample);
+			clock.setClockSource(EsxiClock::ClockSource::Cycles);
+
+			for(uint32_t i=0; i<4; ++i)
+			{
+				clock.restartClock();
+				dsp.fastForward(16, 16);
+				clock.exec();
+			}
+
+			TWord end;
+
+			if(variant == 0)
+			{
+				dsp.memWriteP(pc, 0x017328);			// btst #8,x:<<$ffffb3		RDF
+				dsp.memWriteP(pc + 1, 0x0af0a0);		// jcc >pc
+				dsp.memWriteP(pc + 2, pc);
+				end = pc + 3;
+			}
+			else
+			{
+				dsp.memWriteP(pc, 0x0b7028);			// btst #8,x:>$ffffb3
+				dsp.memWriteP(pc + 1, 0xffffb3);
+				dsp.memWriteP(pc + 2, 0x0d1040);		// bcc >pc, relative to the bcc
+				dsp.memWriteP(pc + 3, 0xfffffe);
+				end = pc + 4;
+			}
+			emitToMemory("nop", end);
+
+			esai.writeReceiveClockControlRegister(1 << Esai::M_RDC0);		// two slots per frame
+			esai.writeEmptyAudioIn(2);
+			esai.writeReceiveControlRegister((1 << Esai::M_RMOD0) | (1 << Esai::M_RE0));	// restarts the clock
+
+			const auto start = dsp.getCycles();
+
+			dsp.setPC(pc);
+			execUntil(end);
+
+			verify(dsp.getCycles() - start < g_cyclesPerSample * 3 / 2);
+
+			esai.writeReceiveControlRegister(0);
+		}
+
 		clock.setCyclesPerSample(oldCycles);
 		clock.setClockSource(oldSource);
 	}
