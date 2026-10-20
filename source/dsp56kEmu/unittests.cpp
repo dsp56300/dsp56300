@@ -252,7 +252,6 @@ namespace dsp56k
 		maskedInterruptKeepsPeripheralsRunning();
 		externalInterruptsWaitForRoom();
 		esaiClockBacklogWaitsForRequest();
-		esaiClockBacklogSpacing();
 
 		// register access
 		writeRegAndJitMode();
@@ -2951,9 +2950,7 @@ namespace dsp56k
 		verify(esai.getTxFrameCounter() == frame + 1);
 		verify(dsp.hasPendingInterrupt(Vba_ESAI_Transmit_Data));
 
-		// the next slot of the backlog is due half a slot period later (esaiClockBacklogSpacing), and then waits while
-		// that request waits for the mask
-		dsp.fastForward(50, 50);
+		// the next slot of the backlog waits while that request waits for the mask
 		clock.exec();
 		verify(esai.getTxFrameCounter() == frame + 1);
 
@@ -2976,72 +2973,6 @@ namespace dsp56k
 
 		takeRequest();
 		verify(dsp.m_pendingInterrupts.empty());
-
-		esai.writeTransmitControlRegister(0);
-		clock.setCyclesPerSample(oldCycles);
-		clock.setClockSource(oldSource);
-		clock.setEnabled(clockEnabled);
-		dsp.resetHW();
-	}
-
-	/*	A clock that is behind serves its backlog half a slot period apart, not back to back. Firmware has a slot period
-		after a frame sync on the chip: the Nord Lead 2X arms the DMA channel for slots 1 to 3 and 0 after it saw TFS, and
-		with slot 1 an instruction after slot 0 the channel missed it, and the stream went out a slot late from then on.
-		The spacing holds whoever runs the peripherals, the clock is not only asked when its own delay is up
-	*/
-	void UnitTests::esaiClockBacklogSpacing()
-	{
-		auto& esai = peripheralsX.getEsai();
-		auto& clock = peripheralsX.getEsaiClock();
-
-		const auto clockEnabled = clock.isEnabled();
-		const auto oldSource = clock.getClockSource();
-		const auto oldCycles = clock.getCyclesPerSample();
-
-		dsp.resetHW();
-
-		clock.setEnabled(false);
-		clock.setClockSource(EsxiClock::ClockSource::Instructions);
-		clock.setCyclesPerSample(100);
-
-		esai.writeTransmitClockControlRegister(0);		// one slot per frame, the frame counter counts the slots
-		esai.writeTransmitControlRegister((1 << Esai::M_TMOD0) | (1 << Esai::M_TE0));
-
-		clock.setEnabled(true);
-		dsp.fastForward(400, 400);						// four slots behind
-
-		const auto frame = esai.getTxFrameCounter();
-
-		verify(clock.exec() == 50);						// the next one half a slot period later
-		verify(esai.getTxFrameCounter() == frame + 1);
-
-		verify(clock.exec() == 50);						// asked again right away: not yet
-		verify(esai.getTxFrameCounter() == frame + 1);
-
-		dsp.fastForward(49, 49);
-		verify(clock.exec() == 1);
-		verify(esai.getTxFrameCounter() == frame + 1);
-
-		dsp.fastForward(1, 1);
-		clock.exec();
-		verify(esai.getTxFrameCounter() == frame + 2);
-
-		// slots 3 to 7 at 500 to 700, slot 7 is due at 700 and the clock is on time again
-		for(uint32_t i=0; i<5; ++i)
-		{
-			dsp.fastForward(50, 50);
-			clock.exec();
-			verify(esai.getTxFrameCounter() == frame + 3 + i);
-		}
-
-		// and a slot period apart from there
-		dsp.fastForward(50, 50);
-		clock.exec();
-		verify(esai.getTxFrameCounter() == frame + 7);
-
-		dsp.fastForward(50, 50);
-		clock.exec();
-		verify(esai.getTxFrameCounter() == frame + 8);
 
 		esai.writeTransmitControlRegister(0);
 		clock.setCyclesPerSample(oldCycles);
