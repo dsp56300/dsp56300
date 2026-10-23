@@ -70,7 +70,7 @@ public:
 
     ~wxOSXPasteboardSinkItem()
     {
-
+        [m_item release];
     }
 
     virtual void SetData(const wxDataFormat& format, const void *buf, size_t datasize)
@@ -546,11 +546,17 @@ wxDragResult wxDropSource::DoDragDrop(int flags)
 
         if ( mouseUpTarget != NULL )
         {
-            wxMouseEvent wxevent(wxEVT_LEFT_DOWN);
-            ((wxWidgetCocoaImpl*)mouseUpTarget->GetPeer())->SetupMouseEvent(wxevent , theEvent) ;
-            wxevent.SetEventType(wxEVT_LEFT_UP);
+            const auto wxpeer = (wxWidgetCocoaImpl*)mouseUpTarget->GetPeer();
+            for ( auto wxevent : wxpeer->TranslateMouseEvent(theEvent) )
+            {
+                if ( wxevent.GetEventType() == wxEVT_LEFT_DOWN )
+                {
+                    wxevent.SetEventType(wxEVT_LEFT_UP);
 
-            mouseUpTarget->HandleWindowEvent(wxevent);
+                    mouseUpTarget->HandleWindowEvent(wxevent);
+                    break;
+                }
+            }
         }
 
         gCurrentSource = NULL;

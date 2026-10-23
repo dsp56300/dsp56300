@@ -264,6 +264,20 @@ void wxAppConsoleBase::CleanUp()
     wxDELETE(m_mainLoop);
 }
 
+// The error code to return if OnInit() fails: this is a wxApp member variable
+// in 3.3, but this would break ABI in 3.2, so use a global for it instead.
+static int gs_errorExitCode = -1;
+
+void wxAppConsoleBase::SetErrorExitCode(int code)
+{
+    gs_errorExitCode = code;
+}
+
+int wxAppConsoleBase::GetErrorExitCode() const
+{
+    return gs_errorExitCode;
+}
+
 // ----------------------------------------------------------------------------
 // OnXXX() callbacks
 // ----------------------------------------------------------------------------
@@ -432,7 +446,10 @@ bool wxAppConsoleBase::ProcessIdle()
     // synthesize an idle event and check if more of them are needed
     wxIdleEvent event;
     event.SetEventObject(this);
-    ProcessEvent(event);
+
+    // Don't let exceptions propagate from the user-defined handler, we may be
+    // called from an extern "C" callback (e.g. this is the case in wxGTK).
+    SafelyProcessEvent(event);
 
 #if wxUSE_LOG
     // flush the logged messages if any (do this after processing the events
@@ -556,15 +573,18 @@ void wxAppConsoleBase::ProcessPendingEvents()
         // from it when they don't have any more pending events
         while (!m_handlersWithPendingEvents.IsEmpty())
         {
-            // In ProcessPendingEvents(), new handlers might be added
-            // and we can safely leave the critical section here.
-            wxLEAVE_CRIT_SECT(m_handlersWithPendingEventsLocker);
-
             // NOTE: we always call ProcessPendingEvents() on the first event handler
             //       with pending events because handlers auto-remove themselves
             //       from this list (see RemovePendingEventHandler) if they have no
             //       more pending events.
-            m_handlersWithPendingEvents[0]->ProcessPendingEvents();
+            wxEvtHandler* const handler = m_handlersWithPendingEvents[0];
+
+            // In ProcessPendingEvents(), new handlers might be added
+            // and we can safely leave the critical section here as we're not
+            // accessing m_handlersWithPendingEvents while we don't hold it.
+            wxLEAVE_CRIT_SECT(m_handlersWithPendingEventsLocker);
+
+            handler->ProcessPendingEvents();
 
             wxENTER_CRIT_SECT(m_handlersWithPendingEventsLocker);
         }

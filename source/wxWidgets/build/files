@@ -1143,6 +1143,7 @@ GUI_CMN_HDR =
     wx/peninfobase.h
     wx/persist.h
     wx/persist/bookctrl.h
+    wx/persist/combobox.h
     wx/persist/dataview.h
     wx/persist/splitter.h
     wx/persist/toplevel.h
@@ -2112,6 +2113,7 @@ MSW_HDR =
     wx/msw/menu.h
     wx/msw/menuitem.h
     wx/msw/metafile.h
+    wx/msw/mfc.h
     wx/msw/minifram.h
     wx/msw/missing.h
     wx/msw/msgdlg.h
@@ -2817,8 +2819,6 @@ WEBVIEW_GTK_HDR =
 
 WEBVIEW_GTK_SRC =
     src/gtk/webview_webkit.cpp
-
-WEBVIEW2_GTK_SRC =
     src/gtk/webview_webkit2.cpp
 
 WEBVIEW_WEBKIT2_EXTENSION_SRC =
@@ -3008,9 +3008,15 @@ OPENGL_OSX_COCOA_SRC =
     src/osx/cocoa/glcanvas.mm
     src/osx/glcanvas_osx.cpp
 
+OPENGL_OSX_COCOA_HDR =
+    wx/osx/glcanvas.h
+
 OPENGL_OSX_IPHONE_SRC =
     src/osx/iphone/glcanvas.mm
     src/osx/glcanvas_osx.cpp
+
+OPENGL_OSX_IPHONE_HDR =
+    wx/osx/glcanvas.h
 
 # Misc plugin sources:
 

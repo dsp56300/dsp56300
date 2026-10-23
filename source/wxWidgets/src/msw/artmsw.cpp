@@ -23,6 +23,7 @@
 #endif
 
 #include "wx/image.h"
+#include "wx/display.h"
 #include "wx/dynlib.h"
 #include "wx/volume.h"
 #include "wx/msw/private.h"
@@ -132,8 +133,12 @@ MSWGetBitmapFromIconLocation(const TCHAR* path, int index, const wxSize& size)
     // the same anyhow, of course, but if it isn't, the actual icon size would
     // be size.x in both directions as we only pass "x" to SHDefExtractIcon()
     // above.
+    //
+    // Also always use the primary display scale factor here because this is
+    // what SHDefExtractIcon() uses.
     wxIcon icon;
-    if ( !icon.InitFromHICON((WXHICON)hIcon, size.x, size.x) )
+    if ( !icon.InitFromHICON((WXHICON)hIcon, size.x, size.x,
+                             wxDisplay().GetScaleFactor()) )
         return wxNullBitmap;
 
     return wxBitmap(icon);
@@ -209,6 +214,9 @@ wxBitmap wxWindowsArtProvider::CreateBitmap(const wxArtID& id,
 {
     wxBitmap bitmap;
 
+    // We don't have any window here, so if we call GetNativeSizeHint(), it
+    // will use the primary monitor DPI scale factor, which is consistent with
+    // what MSWGetBitmapFromIconLocation() does.
     const wxSize
         sizeNeeded = size.IsFullySpecified()
                         ? size
@@ -307,14 +315,20 @@ wxSize wxArtProvider::GetNativeDIPSizeHint(const wxArtClient& client)
     }
     else if ( client == wxART_FRAME_ICON )
     {
+        // We're supposed to return a DPI-independent value here, but
+        // ::GetSystemMetrics() uses the primary monitor DPI, so undo this by
+        // explicitly dividing by its scale.
         return wxSize(::GetSystemMetrics(SM_CXSMICON),
-                      ::GetSystemMetrics(SM_CYSMICON));
+                      ::GetSystemMetrics(SM_CYSMICON))
+                / wxDisplay().GetScaleFactor();
     }
     else if ( client == wxART_CMN_DIALOG ||
               client == wxART_MESSAGE_BOX )
     {
+        // As above, we need to convert to DIPs explicitly.
         return wxSize(::GetSystemMetrics(SM_CXICON),
-                      ::GetSystemMetrics(SM_CYICON));
+                      ::GetSystemMetrics(SM_CYICON))
+                / wxDisplay().GetScaleFactor();
     }
     else if (client == wxART_BUTTON)
     {

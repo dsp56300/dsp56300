@@ -955,7 +955,6 @@ void wxWebViewIE::ClearSelection()
     if(document)
     {
         wxCOMPtr<IHTMLSelectionObject> selection;
-        wxString selected;
         HRESULT hr = document->get_selection(&selection);
         if(SUCCEEDED(hr))
         {
@@ -995,7 +994,8 @@ bool wxWebViewIE::MSWSetEmulationLevel(wxWebViewIE_EmulationLevel level)
         wxT("\\FeatureControl\\FEATURE_BROWSER_EMULATION");
 
     wxRegKey key(wxRegKey::HKCU, IE_EMULATION_KEY);
-    if ( !key.Exists() )
+    // Check the existence of the key and create it if it does not exist
+    if ( !key.Exists() && !key.Create() )
     {
         wxLogWarning(_("Failed to find web view emulation level in the registry"));
         return false;
@@ -1770,7 +1770,7 @@ HRESULT STDMETHODCALLTYPE VirtualProtocol::ParseUrl(
             case wxPARSE_SECURITY_URL:
             case wxPARSE_SECURITY_DOMAIN:
             {
-                if ( cchResult < secLen )
+                if ( cchResult <= secLen )
                     return S_FALSE;
                 wcscpy(pwzResult, m_handler->GetSecurityURL().wc_str());
                 *pcchResult = secLen;

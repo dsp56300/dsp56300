@@ -14,7 +14,7 @@ dnl ---------------------------------------------------------------------------
 dnl initialization
 dnl ---------------------------------------------------------------------------
 
-AC_INIT([wxWidgets], [3.2.1], [wx-dev@googlegroups.com])
+AC_INIT([wxWidgets], [3.2.11], [wx-dev@googlegroups.com])
 
 dnl the file passed to AC_CONFIG_SRCDIR should be specific to our package
 AC_CONFIG_SRCDIR([wx-config.in])
@@ -40,7 +40,7 @@ dnl wx_release_number += 1
 
 wx_major_version_number=3
 wx_minor_version_number=2
-wx_release_number=1
+wx_release_number=11
 wx_subrelease_number=0
 
 WX_RELEASE=$wx_major_version_number.$wx_minor_version_number
@@ -705,6 +705,7 @@ WX_ARG_DISABLE(compat30,     [  --disable-compat30      disable wxWidgets 3.0 co
 
 WX_ARG_DISABLE(rpath,        [  --disable-rpath         disable use of rpath for uninstalled builds], wxUSE_RPATH)
 
+WX_ARG_DISABLE(symver,       [  --disable-symver        disable use of ELF symbols versioning even if supported], wxUSE_ELF_SYMVER)
 WX_ARG_DISABLE(visibility,   [  --disable-visibility    disable use of ELF symbols visibility even if supported], wxUSE_VISIBILITY)
 WX_ARG_DISABLE(tls,          [  --disable-tls           disable use of compiler TLS support], wxUSE_COMPILER_TLS)
 
@@ -1038,7 +1039,7 @@ WX_ARG_FEATURE(joystick,    [  --enable-joystick       use wxJoystick], wxUSE_JO
 WX_ARG_FEATURE(metafile,    [  --enable-metafile       use wxMetaFile], wxUSE_METAFILE)
 WX_ARG_FEATURE(dragimage,   [  --enable-dragimage      use wxDragImage], wxUSE_DRAGIMAGE)
 WX_ARG_FEATURE(accessibility,[  --enable-accessibility  enable accessibility support], wxUSE_ACCESSIBILITY)
-WX_ARG_FEATURE(uiactionsim,  [  --enable-uiactionsim    use wxUIActionSimulator (experimental)], wxUSE_UIACTIONSIMULATOR)
+WX_ARG_FEATURE(uiactionsim,  [  --enable-uiactionsim    use wxUIActionSimulator], wxUSE_UIACTIONSIMULATOR)
 WX_ARG_FEATURE(dctransform,  [  --enable-dctransform    use wxDC::SetTransformMatrix and related], wxUSE_DC_TRANSFORM_MATRIX)
 WX_ARG_FEATURE(webviewwebkit,[  --enable-webviewwebkit  use wxWebView WebKit backend], wxUSE_WEBVIEW_WEBKIT)
 WX_ARG_FEATURE(glcanvasegl,  [  --disable-glcanvasegl   disable wxGLCanvas EGL backend], wxUSE_GLCANVAS_EGL)
@@ -1064,6 +1065,7 @@ dnl ---------------------------------------------------------------------------
 WX_ARG_FEATURE(dccache,     [  --enable-dccache        cache temporary wxDC objects (Win32 only)], wxUSE_DC_CACHEING)
 WX_ARG_FEATURE(ps-in-msw,   [  --enable-ps-in-msw      use PS printing in wxMSW (Win32 only)], wxUSE_POSTSCRIPT_ARCHITECTURE_IN_MSW)
 WX_ARG_FEATURE(ownerdrawn,  [  --enable-ownerdrawn     use owner drawn controls (Win32 and OS/2 only)], wxUSE_OWNER_DRAWN)
+WX_ARG_FEATURE(taskbarbutton,[  --enable-taskbarbutton  enable wxTaskBarButton (Win32 only)], wxUSE_TASKBARBUTTON)
 WX_ARG_FEATURE(uxtheme,     [  --enable-uxtheme        enable support for Windows XP themed look (Win32 only)], wxUSE_UXTHEME)
 WX_ARG_FEATURE(wxdib,       [  --enable-wxdib          use wxDIB class (Win32 only)], wxUSE_DIB)
 WX_ARG_FEATURE(webviewie,   [  --enable-webviewie      use wxWebView IE backend (Win32 only)], wxUSE_WEBVIEW_IE)
@@ -2382,21 +2384,42 @@ fi dnl End of pre-C++11 only checks section
 dnl Find pkg-config outside of any conditional.  Done before any PKG_* call.
 PKG_PROG_PKG_CONFIG
 
-dnl When cross-compiling, don't use .pc files on the build system, they are at
-dnl best useless and can be harmful (e.g. they may define options inappropriate
-dnl for the cross-build, resulting in the failure of all the subsequent tests).
+dnl When cross-compiling for another system from Linux, don't use .pc files on
+dnl the build system, they are at best useless and can be harmful (e.g. they
+dnl may define options inappropriate for the cross-build, resulting in the
+dnl failure of all the subsequent tests).
 if test "$build" != "$host"; then
-    dnl pkg.m4 forbids the use of PKG_XXX, so undo it here to avoid autoconf
-    dnl errors.
-    m4_pattern_allow([PKG_CONFIG_LIBDIR])
+    dnl Assume that using pkg-config does work when cross-compiling to another
+    dnl Linux system, e.g. when targeting ARM Linux from x86_64 system.
+    case "${host}" in
+        *-linux-*)
+            ;;
 
-    dnl If pkg-config libdir is already defined, we suppose that they know what
-    dnl they're doing and leave it alone, but if not, set it to a path in which
-    dnl no .pc files will be found.
-    if test -z "$PKG_CONFIG_LIBDIR"; then
-        PKG_CONFIG_LIBDIR=/dev/null
-        export PKG_CONFIG_LIBDIR
-    fi
+        * )
+            dnl But otherwise only do it if a host-specific pkg-config is
+            dnl available as using the build system one is not going to work.
+            case "$PKG_CONFIG" in
+                */$host-pkg-config )
+                    ;;
+
+                * )
+                    AC_MSG_WARN([Not using native pkg-config when cross-compiling.])
+
+                    dnl pkg.m4 forbids the use of PKG_XXX, so undo it here to avoid autoconf
+                    dnl errors.
+                    m4_pattern_allow([PKG_CONFIG_LIBDIR])
+
+                    dnl If pkg-config libdir is already defined, we suppose that they know what
+                    dnl they're doing and leave it alone, but if not, set it to a path in which
+                    dnl no .pc files will be found.
+                    if test -z "$PKG_CONFIG_LIBDIR"; then
+                        PKG_CONFIG_LIBDIR=/dev/null
+                        export PKG_CONFIG_LIBDIR
+                    fi
+                    ;;
+            esac
+            ;;
+    esac
 fi
 
 dnl ---------------------------------------------------------------------------
@@ -2513,6 +2536,7 @@ if test "$wxUSE_ZLIB" != "no" ; then
                 [
                     #include <zlib.h>
                     #include <stdio.h>
+                    #include <stdlib.h>
 
                     int main()
                     {
@@ -2598,6 +2622,7 @@ if test "$wxUSE_LIBPNG" != "no" ; then
                 [
                     #include <png.h>
                     #include <stdio.h>
+                    #include <stdlib.h>
 
                     int main()
                     {
@@ -2949,8 +2974,12 @@ if test "$wxUSE_EXPAT" != "no"; then
         wxCFLAGS_C99=$ac_cv_prog_cc_c99
         AC_SUBST(wxCFLAGS_C99)
 
-        dnl Expat needs this:
-        AC_CONFIG_SUBDIRS([src/expat/expat])
+        dnl Don't check for docbook: we don't need to generate the
+        dnl documentation and, worse, Expat configure can actually fail the
+        dnl build if docbook is found but docbook2man is not the expected
+        dnl variant.
+        AX_SUBDIRS_CONFIGURE([src/expat/expat],
+            [[--without-docbook]])
     fi
 
     wxUSE_XML=yes
@@ -3842,7 +3871,7 @@ if test "$wxUSE_OPENGL" = "yes" -o "$wxUSE_OPENGL" = "auto"; then
     dnl look in glcanvas.h for the list of platforms supported by wxGlCanvas:
 
     if test "$wxUSE_OSX_COCOA" = 1; then
-        OPENGL_LIBS="-framework OpenGL -framework AGL"
+        OPENGL_LIBS="-framework OpenGL"
     elif test "$wxUSE_MSW" = 1; then
         OPENGL_LIBS="-lopengl32 -lglu32"
     elif test "$wxUSE_MOTIF" = 1 -o "$wxUSE_X11" = 1 -o "$wxUSE_GTK" = 1 -o "$wxUSE_QT" = 1; then
@@ -3890,7 +3919,7 @@ if test "$wxUSE_OPENGL" = "yes" -o "$wxUSE_OPENGL" = "auto"; then
 
                         if test "$WXGTK3" = 1; then
                             if test "$wxUSE_GLCANVAS_EGL" != "no"; then
-                                PKG_CHECK_MODULES(EGL, [egl >= 1.5],
+                                PKG_CHECK_MODULES(EGL, [egl >= 1.4],
                                     [
                                         OPENGL_LIBS="$OPENGL_LIBS $EGL_LIBS"
                                         AC_DEFINE(wxUSE_GLCANVAS_EGL)
@@ -3905,7 +3934,7 @@ if test "$wxUSE_OPENGL" = "yes" -o "$wxUSE_OPENGL" = "auto"; then
                                         )
                                     ],
                                     [
-                                        AC_MSG_NOTICE([EGL 1.5+ not available. Will use GLX.])
+                                        AC_MSG_NOTICE([EGL 1.4+ not available. Will use GLX.])
                                     ]
                                 )
                                 if test "$have_wayland" != 1; then
@@ -3975,8 +4004,84 @@ dnl --- the marker for quick search, leave it here: SHARED_LIB_SETUP ---
 
 if test "$wxUSE_SHARED" = "yes"; then
 
-    dnl use versioned symbols if available on the platform
-    WX_VERSIONED_SYMBOLS([\$(wx_top_builddir)/version-script])
+    dnl use versioned symbols if available on the platform and not disabled
+    if test "$wxUSE_ELF_SYMVER" != "no"; then
+        WX_VERSIONED_SYMBOLS([\$(wx_top_builddir)/version-script])
+
+        if test "$wx_cv_version_script" = "yes"; then
+            dnl We want to use either __symver__ attribute (preferably, as it
+            dnl works with LTO) or .symver, but to avoid checking for both of
+            dnl them, use the header file which can check if the attribute is
+            dnl available. Just remember to pretend that we do have support
+            dnl for this before including it, as it relies on this symbol,
+            dnl which we'll define below only if things do indeed work.
+            saveCppflags="$CPPFLAGS"
+            CPPFLAGS="$saveCppflags -I${srcdir}/include -DwxHAVE_ELF_SYMVER"
+
+            saveLdflags="$LDFLAGS"
+            LDFLAGS="$saveLdflags -Wl,--version-script,conftest.sym"
+
+            AC_CACHE_CHECK([if using multiple ELF symbol versions is supported],
+                wx_cv_elf_symver_multiple,
+                [
+                    echo "lib_new {}; lib_old { *; };" >conftest.sym
+                    AC_LANG_PUSH(C++)
+                    AC_LINK_IFELSE([
+                        AC_LANG_SOURCE([
+                            #include "wx/private/elfversion.h"
+                            extern "C" {
+                            wxELF_SYMVER("_foo","_foo@lib_old")
+                            wxELF_SYMVER("_foo","_foo@@lib_new")
+                            void foo() {}
+                            }
+                            int main() { return 0; }
+                        ])],
+                        wx_cv_elf_symver_multiple=yes,
+                        wx_cv_elf_symver_multiple=no
+                    )
+                    AC_LANG_POP()
+                    rm -f conftest.sym
+                ]
+            )
+
+            if test "$wx_cv_elf_symver_multiple" = "yes"; then
+                wx_cv_elf_symver=yes
+            else
+                AC_CACHE_CHECK([if using ELF symbol versions is supported],
+                    wx_cv_elf_symver,
+                    [
+                        echo "lib_new {}; lib_old { *; };" >conftest.sym
+                        AC_LANG_PUSH(C++)
+                        AC_LINK_IFELSE([
+                            AC_LANG_SOURCE([
+                                #include "wx/private/elfversion.h"
+                                extern "C" {
+                                wxELF_SYMVER("_foo","_foo@@lib_new")
+                                void foo() {}
+                                }
+                                int main() { return 0; }
+                            ])],
+                            wx_cv_elf_symver=yes,
+                            wx_cv_elf_symver=no
+                        )
+                        AC_LANG_POP()
+                        rm -f conftest.sym
+                    ]
+                )
+            fi
+
+            if test "$wx_cv_elf_symver" = "yes"; then
+                AC_DEFINE(wxHAVE_ELF_SYMVER)
+            fi
+
+            if test "$wx_cv_elf_symver_multiple" = "yes"; then
+                AC_DEFINE(wxHAVE_ELF_SYMVER_MULTIPLE)
+            fi
+
+            LDFLAGS="$saveLdflags"
+            CPPFLAGS="$saveCppflags"
+        fi
+    fi
 
     dnl test for GCC's visibility support (sets CFLAGS_VISIBILITY, which is
     dnl assigned to CFLAGS and CXXFLAGS below)
@@ -4035,23 +4140,35 @@ if test "$wxUSE_SHARED" = "yes"; then
         install_name_tool=`which ${HOST_PREFIX}install_name_tool`
         if test "$install_name_tool" -a -x "$install_name_tool"; then
             DYLIB_RPATH_POSTLINK="${HOST_PREFIX}install_name_tool -id \$@ \$@"
+            dnl Note that the script below doesn't use realpath because it's
+            dnl only available since macOS 13 and doesn't even use readlink -f
+            dnl because this is only available since macOS 12, while we still
+            dnl need to support 10.10.
             cat <<EOF >change-install-names
 #!/bin/sh
-libnames=\`cd lib ; ls -1 | grep '\.[[0-9]][[0-9]]*\.dylib\$'\`
+set -e
+[[ -z "\${WXDEBUG_X}" ]] || set -x
+destdir=\$1
+libdir=\$2
+bindir=\$3
+build_libdir=\$4
+libnames=\$(cd \${build_libdir}; printf '%s\n' libwx*${WX_RELEASE}.dylib)
 changes=''
-for dep in \${libnames} ; do
-    changes="\${changes} -change \${4}/\${dep} \${3}/\${dep}"
+for libname in \${libnames} ; do
+    target=\$(readlink \${build_libdir}/\$(readlink \${build_libdir}/\${libname}))
+    changes="\${changes} -change \${build_libdir}/\${target} \${libdir}/\${target}"
 done
-for i in \${libnames} ; do
-    ${HOST_PREFIX}install_name_tool \${changes} -id \${3}/\${i} \${1}/\${i}
+for libname in \${libnames} ; do
+    target=\$(readlink \${build_libdir}/\$(readlink \${build_libdir}/\${libname}))
+    ${HOST_PREFIX}install_name_tool \${changes} -id \${libdir}/\${libname} \${destdir}\${libdir}/\${target}
 done
 
-if test -f "\${2}/wxrc-${WX_RELEASE}" ; then
-    ${HOST_PREFIX}install_name_tool \${changes} \${2}/wxrc-${WX_RELEASE}
+if test -f \${destdir}\${bindir}/wxrc-${WX_RELEASE} ; then
+    ${HOST_PREFIX}install_name_tool \${changes} \${destdir}\${bindir}/wxrc-${WX_RELEASE}
 fi
 EOF
             chmod +x change-install-names
-            DYLIB_RPATH_INSTALL="\$(wx_top_builddir)/change-install-names \${DESTDIR}\${libdir} \${DESTDIR}\${bindir} \${libdir} \$(wx_top_builddir)/lib"
+            DYLIB_RPATH_INSTALL="\$(wx_top_builddir)/change-install-names \"\${DESTDIR}\" \${libdir} \${bindir} \$(wx_top_builddir)/lib"
         fi
 
         dnl the HEADER_PAD_OPTION is required by some wx samples to avoid the error:
@@ -4105,7 +4222,11 @@ if test "$wxUSE_DEBUG_INFO" = "yes"; then
     DEBUG_INFO=1
 fi
 
-WX_VERSION_TAG=`echo WX${lib_unicode_suffix}${WX_LIB_FLAVOUR}_${WX_RELEASE} | tr '[[a-z]]' '[[A-Z]]'`
+wxELF_VERSION_PREFIX=`echo WX${lib_unicode_suffix}${WX_LIB_FLAVOUR}_ | tr '[[a-z]]' '[[A-Z]]'`
+if test "$wxUSE_ELF_SYMVER" != "no"; then
+    AC_DEFINE_UNQUOTED(wxELF_VERSION_PREFIX, "$wxELF_VERSION_PREFIX")
+fi
+WX_VERSION_TAG="${wxELF_VERSION_PREFIX}${WX_RELEASE}"
 
 TOOLCHAIN_NAME="${TOOLKIT_DIR}${TOOLKIT_VERSION}${WIDGET_SET}${lib_unicode_suffix}${WX_LIB_FLAVOUR}-${WX_RELEASE}${HOST_SUFFIX}"
 
@@ -4867,7 +4988,7 @@ if test "$TOOLKIT" != "MSW"; then
 
           *-*-irix* )
                 dnl gcc under IRIX doesn't seem to like -pthread, but it
-                dnl doesn't give an error for it neither, just a warning
+                dnl doesn't give an error for it either, just a warning
                 dnl message -- but this is still very annoying
                 if test "x$GCC" = "xyes"; then
                     THREAD_OPTS=""
@@ -5227,13 +5348,20 @@ else
         x86_64-*-mingw* )
         ;;
         *-*-mingw32* )
-            dnl check if the compiler accepts -mthreads
+            dnl check if the compiler is gcc and accepts -mthreads (clang just
+            dnl ignores this option but it doesn't need it, so explicitly fail
+            dnl the test for it)
             AC_CACHE_CHECK([if compiler supports -mthreads],
                 wx_cv_cflags_mthread,
                 [
                     CFLAGS_OLD="$CFLAGS"
                     CFLAGS="-mthreads $CFLAGS"
-                    AC_TRY_COMPILE([], [],
+                    AC_TRY_COMPILE([],
+                        [
+#ifdef __clang__
+#error no
+#endif
+                        ],
                         wx_cv_cflags_mthread=yes,
                         wx_cv_cflags_mthread=no
                     )
@@ -5622,7 +5750,9 @@ if test "$wxUSE_FSWATCHER" = "yes"; then
                 [whether inotify is usable],
                 wx_cv_inotify_usable,
                 AC_LINK_IFELSE(
-                    [AC_LANG_SOURCE([int main() { return inotify_init(); }])],
+                    [AC_LANG_SOURCE([
+                       #include <sys/inotify.h>
+                       int main() { return inotify_init(); }])],
                     [wx_cv_inotify_usable=yes],
                     [wx_cv_inotify_usable=no]
                 )
@@ -5652,6 +5782,25 @@ if test "$wxUSE_FSWATCHER" = "yes"; then
         SAMPLES_SUBDIRS="$SAMPLES_SUBDIRS fswatcher"
     else
         AC_MSG_WARN([wxFileSystemWatcher won't be available on this platform])
+    fi
+fi
+
+dnl ---------------------------------------------------------------------------
+dnl xkbcommon library for key code translations in wxGTK
+dnl ---------------------------------------------------------------------------
+if test "$wxUSE_GTK" = 1; then
+    if test "$USE_WIN32" != 1 -a "$USE_DARWIN" != 1; then
+        PKG_CHECK_MODULES(XKBCOMMON, [xkbcommon],
+            [
+                CFLAGS="$XKBCOMMON_CFLAGS $CFLAGS"
+                CXXFLAGS="$XKBCOMMON_CFLAGS $CXXFLAGS"
+                GUI_TK_LIBRARY="$GUI_TK_LIBRARY $XKBCOMMON_LIBS"
+                AC_DEFINE(HAVE_XKBCOMMON)
+            ],
+            [
+                AC_MSG_WARN([libxkbcommon not found, key codes in key events may be incorrect])
+            ]
+        )
     fi
 fi
 
@@ -5750,6 +5899,9 @@ if test "$USE_UNIX" = 1 ; then
         AC_TRY_LINK([
                 #include <sys/ioctl.h>
                 #include <sys/soundcard.h>
+                #ifdef HAVE_UNISTD_H
+                # include <unistd.h> /* needed for ioctl() on Solaris */
+                #endif
             ],
             [
                 ioctl(0, SNDCTL_DSP_SPEED, 0);
@@ -5761,6 +5913,9 @@ if test "$USE_UNIX" = 1 ; then
                 AC_TRY_LINK([
                         #include <sys/ioctl.h>
                         #include <sys/soundcard.h>
+                        #ifdef HAVE_UNISTD_H
+                        # include <unistd.h> /* needed for ioctl() on Solaris */
+                        #endif
                     ],
                     [
                         ioctl(0, SNDCTL_DSP_SPEED, 0);
@@ -7477,15 +7632,27 @@ if test "$wxUSE_WEBVIEW" = "yes"; then
         if test "$wxUSE_GTK" = 1; then
             if test "$WXGTK3" = 1; then
                 PKG_CHECK_MODULES([WEBKIT],
-                                  [webkit2gtk-4.0],
+                                  [webkit2gtk-4.1],
                                   [
                                     USE_WEBVIEW_WEBKIT2=1
                                     CXXFLAGS="$CXXFLAGS $WEBKIT_CFLAGS"
                                     EXTRALIBS_WEBVIEW="$WEBKIT_LIBS"
                                   ],
                                   [
-                                    AC_MSG_WARN([webkit2gtk not found, falling back to webkitgtk])
+                                    AC_MSG_WARN([webkit2gtk-4.1 not found, falling back to webkit2gtk-4.0])
                                   ])
+                if test "$USE_WEBVIEW_WEBKIT2" = 0; then
+                    PKG_CHECK_MODULES([WEBKIT],
+                                      [webkit2gtk-4.0],
+                                      [
+                                        USE_WEBVIEW_WEBKIT2=1
+                                        CXXFLAGS="$CXXFLAGS $WEBKIT_CFLAGS"
+                                        EXTRALIBS_WEBVIEW="$WEBKIT_LIBS"
+                                      ],
+                                      [
+                                        AC_MSG_WARN([webkit2gtk-4.0 not found, falling back to webkitgtk])
+                                      ])
+                fi
             fi
             if test "$USE_WEBVIEW_WEBKIT2" = 0; then
                 webkitgtk=webkit-1.0
@@ -7674,6 +7841,10 @@ if test "$wxUSE_MSW" = 1 ; then
 
     if test "$wxUSE_POSTSCRIPT_ARCHITECTURE_IN_MSW" = "yes"; then
         AC_DEFINE(wxUSE_POSTSCRIPT_ARCHITECTURE_IN_MSW)
+    fi
+
+    if test "$wxUSE_TASKBARBUTTON" = "yes"; then
+        AC_DEFINE(wxUSE_TASKBARBUTTON)
     fi
 
     if test "$wxUSE_UXTHEME" = "yes"; then
@@ -8530,14 +8701,16 @@ dnl Set the flags to be used for the library build itself using the flag names
 dnl used everywhere above.
 dnl
 dnl Also get rid of duplicates in the flags, which results in dramatically
-dnl shorter build logs and so is well worth it (but preserve some special
-dnl flags which are explicitly allowed to occur multiple times, as all their
-dnl occurrences must be preserved).
+dnl shorter build logs and so is well worth it.
 dedup_flags()
 {
     printf "%s " "$@" |
         awk 'BEGIN { RS=" "; ORS=" " }
-            { if ($0=="-arch" || $0=="-framework" || !seen[[$0]]++) print }'
+        {
+            if ($0=="") next
+            if ($0=="-arch" || $0=="-framework") { x=$0; next }
+            if (x!="") x=x " " $0; else x=$0; if (!seen[[x]]++) print x; x=""
+        }'
 }
 
 WX_CPPFLAGS=`dedup_flags "$CPPFLAGS"`
@@ -8746,12 +8919,7 @@ for subdir in $SUBDIRS; do
                 done
             else
                 dnl assume that everything compiles for utils &c
-                dnl any that shouldn't be built can be added to
-                dnl DISABLED_UTILS, DISABLED_DEMOS
-                disabled_var=DISABLED_`echo $subdir | tr '[[a-z]]' '[[A-Z]]'`
-                eval "disabled=\$$disabled_var"
-                disabled=/`echo X $disabled | sed 's@ @/|/@g'`/
-                makefiles=`(cd $srcdir ; find $subdir -name Makefile.in) | $EGREP -v "$disabled"`
+                makefiles=`(cd $srcdir ; find $subdir -name Makefile.in)`
             fi
         else
             dnl we build wxBase only

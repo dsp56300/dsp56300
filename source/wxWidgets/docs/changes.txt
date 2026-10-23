@@ -6,6 +6,23 @@ Note: This file contains the list of changes since wxWidgets 3.x, please see
       docs/changes_30.txt for the changes in the previous versions.
 
 
+INCOMPATIBLE CHANGES SINCE 3.2.0
+================================
+
+While 3.2.x versions are not supposed to have any incompatible changes in
+theory, this section describes such changes as they exist in practice:
+
+- wxWidgets 3.2.4 added possibility to initialize wxArrayString and similar
+  classes from std::initializer_list<>, which may introduce ambiguities in the
+  existing code overloading some functions to take multiple classes implicitly
+  constructible from initializer lists, e.g. std::vector<std::wxString> and
+  wxArrayString. Such problems can be fixed by explicitly specifying the class
+  to use but it is also possible to predefine wxNO_INITIALIZER_LIST to disable
+  support for std::initializer_list<> in wxWidgets and fix compilation without
+  modifying the application code. wxWidgets 3.2.8 extended initializer_list<>
+  support to wxVector, so the same considerations apply to it too.
+
+
 INCOMPATIBLE CHANGES SINCE 3.0.x:
 =================================
 
@@ -145,6 +162,9 @@ Changes in behaviour not resulting in compilation errors
 - wxDateTime::ParseRfc822Date() now interprets a 2-digit year as 19xx, or
   20xx for 00..29, whereas earlier e.g. 95 was interpreted literally as 95 AD.
 
+- wxPoint ctor taking wxRealPoint now rounds its coordinates instead of
+  truncating them.
+
 
 Changes in behaviour which may result in build errors
 -----------------------------------------------------
@@ -230,6 +250,675 @@ Changes in behaviour which may result in build errors
 
 - Microsoft Visual Studio 2003 (a.k.a. MSVC 7) is not supported any longer, the
   minimum required version is now 2005.
+
+
+3.2.11: (released 2026-07-07)
+-----------------------------
+
+All:
+
+- Support defining wxNO_IMPLICIT_WXSTRING_CONV_TO_PTR in wxString (#26307).
+- Fix wxCondition and wxSemaphore::WaitTimeout() after 2038 under Unix (#26466).
+- Fix buffer overflow in wxGethostby{addr,name}_r() (dxbjavid, #26528).
+- Fix buffer overflow in wxTarInputStream (dxbjavid, #26530).
+- Fix out-of-bounds read in wxFileType::ExpandCommand() (dxbjavid, #26531).
+- Fix buffer overflow in wxVsnprintf() (dxbjavid, #26522).
+- Fix out-of-bounds read in wxRegEx::Replace() (dxbjavid, #26541).
+- Fix out-of-bounds read in wxUString (dxbjavid, #26548).
+- Fix wxDateTime::Format() handling of invalid format (dxbjavid, #26543).
+- Fix buffer overflow in wxGethostbyxxx_r() on some systems (dxbjavid, #26553).
+
+All (GUI):
+
+- Fix wxCaret position in scrolled windows (#26282).
+- Correct delta-RLE bitmap background colour (Brian Nixon, #23599).
+- Correct loading of `BI_BITFIELDS` bitmaps (Brian Nixon, #23601).
+- Fix loading 32bpp BMP files without valid alpha (#24219).
+- Fix buffer overwrite when loading malformed BMPs with invalid RLE data.
+- Avoid out-of-bounds palette read in 8bpp BMP decoder (MarkLee131, #26438).
+- Avoid out-of-bounds palette write in wxIFFDecoder (MarkLee131, #26440).
+- Avoid out-of-bounds read in wxPCXHandler (MarkLee131, #26441).
+- Avoid out-of-bounds read in wxXPMDecoder (MarkLee131, #26442).
+- Fix reading ANI images with invalid frame count (dxbjavid, #26492).
+- Avoid out-of-bounds write for invalid BMP RLE runs (dxbjavid, #26496).
+- Fix out-of-bounds read when loading invalid 4bpp BMPs (dxbjavid, #26511).
+- Avoid out-of-bounds write on bad BMHD chunk in wxIFFDecoder (jmestwa, #26497).
+- Fix write overflow in TGA files with invalid colour map (dxbjavid, #26493).
+- Fix read overflow in wxXPMDecoder on unterminated quote (dxbjavid, #26499).
+- Fix read overflow in wxXPMDecoder on invalid width (dxbjavid, #26519).
+- Reject more invalid GIFs and do it without leaking memory (dxbjavid, #26501).
+- Fix buffer overflows decoding invalid GIFs (dxbjavid, #26521, #26524).
+- Fix multiple buffer overflows in wxIFFDecoder (dxbjavid, #26505, #26518).
+- Fix multiple buffer overflows in wxSound (dxbjavid, #26506, #26525).
+- Fix reading too short extra field in ZIP64 files (dxbjavid, #26507).
+- Fix out-of-bounds table read in wxMBConvUTF7::ToWChar() (dxbjavid, #26517).
+- Fix buffer overflow reading corrupted message catalogs (dxbjavid, #26513).
+- Fix buffer overflow for too big tables in wxHTML (dxbjavid, #26554).
+- Add wxGrid::GetFrozen{Row,Col}LabelWindow() (Jorge Moraleda, #26617).
+- Fix wxPG macros with wxNO_IMPLICIT_WXSTRING_ENCODING (Lunar-YZ, #26651).
+
+wxGTK:
+
+- Fix copy/paste when a clipboard manager is running (David Edmundson, #26265).
+- Fix crash with EGL-based wxGLCanvas in wxNotebook (Florian Larysch, #26340).
+- Fix possible wxTextCtrl crash with GSpell attached (#26464).
+- Fix drawing of very large bitmaps (#25656).
+- Fix memory leak in wxDataViewChoiceRenderer.
+- Fix resource leak when using EGL with X11 (Florian Larysch, #26341).
+- Fix showing title bar under Wayland with wxBORDER_NONE (#26357).
+- Remove wrong maximum text length limitation in "picker" controls (#26314).
+- Fix appearance of dashed lines drawn by wxDC::DrawLine() (#26449).
+- Fix non-resizable TLW size when client size is set to initial size (#26480).
+
+wxMSW:
+
+- Fix wxBufferedPaintDC when using RTL layout (AliKet, #26266).
+- Use default style in wxTextCtrl::SetValue() (#26320).
+
+wxOSX:
+
+- Fix crash after destroying wxFileSystemWatcher (Juraj Kavka, #26658).
+- Fix possible crash in wxFont::SetNativeFontInfo() (Václav Slavík, #26411).
+
+
+3.2.10: (released 2026-03-03)
+-----------------------------
+
+All (GUI):
+
+- Fix stc.h with wxNO_IMPLICIT_WXSTRING_ENCODING (reid-p, arch1t3cht, #25047).
+- Fix right/middle click events in vertical wxAuiToolBar (#26242).
+
+wxMSW:
+
+- Add MSVS 2026 solution files (PB, #26140).
+- Don't use first image for wxListCtrl items without images (#26062).
+- Fix regression in wxStaticBitmap::SetBitmap() in 3.2.9 (#26106).
+- Handle font names longer than 31 characters (moi15moi, #25333).
+
+wxOSX:
+
+- Fix install names after "make install" (#25675).
+- Fix bug when deleting wxDataViewCtrl items (Hartwig Wiesmann, #26138).
+- Fix crash on some key presses in wxDataViewCtrl (#26160).
+- Fix memory leaks in a number of controls (#26208).
+- Fix regression in wxFileDialog filters in 3.2.9 (#26148).
+- Improve wxRichTextCtrl handling of cursor keys (Lee Ockert, #26064).
+- Many appearance fixes for macOS 26 Tahoe (#26058, #25767, #26121).
+- Show applications launched from keyboard under macOS 26 (#26095).
+
+
+3.2.9: (released 2025-12-12)
+----------------------------
+
+All:
+
+- Backport several CMake enhancements from 3.3 (Maarten Bent, #25448, #25998).
+- Fix using wxSOCKET_NOWAIT_READ and wxSOCKET_WAITALL_WRITE together (#17114).
+- Make wxPlatformInfo::Get() thread-safe (#25459).
+- Fix CMake build under Alpine Linux and other systems using musl (#25749).
+
+All (GUI):
+
+- Respect menu path style in wxFileHistory::AddFilesToMenu() (Bill Su, #25451).
+- Don't assert in wxGridSizer::Calc{Cols,Rows}() if sizer is empty (#25641).
+- Fix bitmap position in wxDC::DrawLabel() in high DPI (Blake Madden, #25888).
+- Fix calling wxDataViewCtrl::Collapse() from event handler (#25631).
+- Fix selecting columns in wxGrid with mouse (Dietmar Schwertberger, #25884).
+- Improve wxActivityIndicator dots colour contrast with background (#25405).
+- Update wxGenericTreeCtrl item height after changing its font (#16428).
+- Respect HTML5 charset attribute in wxHTML (Kees van der Oord, #25546).
+
+wxGTK:
+
+- Add support for using EGL 1.4 (and not 1.5) in wxGLCanvas (#22325).
+- Fix crash deleting wxTextCtrl from wxEVT_TEXT_ENTER handler (#26006).
+- Fix handling total window size with GNOME with X11 (#25348).
+- Fix height of read-only wxBitmapComboBox (#25468).
+- Fix memory leak when using wxOverlay (#24500).
+- Fix missing wxEVT_CHAR for Ctrl-Letter in non-US layouts (#25384).
+- Fix regression when unmaximizing windows under XFCE/MATE (#25708).
+- Fix wxGLCanvas scale when using EGL/Wayland in high DPI (Popax21, #23733).
+- Show system default window buttons under Wayland (#25562).
+
+wxMSW
+
+- Fix regression in wxTreeCtrl indent size in high DPI (Maarten Bent, #25282).
+- Fix using wxNO_IMPLICIT_WXSTRING_ENCODING with PCH (#25568).
+- Fix crash when copying wxBitmaps if GDI resources are exhausted (#24703).
+- Fix MSVS debug visualizer for wxString (#25684).
+- Fix wxStyledTextCtrl support in screen readers (Maarten Bent, #25963).
+- Fix TAB behaviour in a panel with notebook as only active child (#25443).
+- Reduce GDI resource usage in wxStaticBitmap (Alex Shvartzkop, #25698).
+- Significantly improve performance of drawing bitmaps in wxAUI (#23841).
+
+wxOSX:
+
+- Fix crash on startup when using Farsi as system language (#25561).
+- Fix showing extra controls in wxFileDialog (jey5nd6, #25717).
+- Do not activate "Close" button on Cmd-C (nobugshere, #25346).
+- Fix memory leak in wxColour::Set() (#25569).
+- Fix regression with configure build under macOS < 12 (#25675).
+- Fix build under macOS 26 Tahoe (#25798).
+- Fix build problem with memset_s() with PCH enabled (#24687).
+- Fix invisible labels in wxGrid with native header control (#26014).
+- Fix nested markup attributes handling (Václav Slavík, #25864).
+- Fix possible use of already destroyed wxTimers (Federico Perini, #25871).
+- Fix handling of multiple filters in wxFileDialog (#25918).
+- Fix value in wxEVT_SPIN with non-0 initial value (Robert Roebling, #26002).
+- Improve appearance of wxSpinCtrl (Robert Roebling, #26002).
+
+
+3.2.8.1: (released 2025-05-25)
+------------------------------
+
+This hotfix release corrects regressions in 3.2.8 for configure builds on
+platforms using ELF if --with-flavour is specified (#25436) or LTO is used
+with clang (#25438).
+
+
+3.2.8: (released 2025-04-24)
+----------------------------
+
+All:
+
+- Allow initializing wxVector<> from std::initializer_list<> (#25290).
+- Update Brazilian Portuguese translations (Felipe).
+- Ensure that all headers are installed by CMake (Maarten Bent, #25266).
+- Fix ABI breakage for versioned symbols in 3.2.7 under Unix (#25327).
+
+All (GUI):
+
+- Fix crash when using wxPropertyGrid on high DPI screen (#25286).
+- Add "@USER@" macro to HTML and richtext printing (Blake-Madden, #25318).
+- Fix "@PAGECNT@" when there is only one page (Blake-Madden, #25320).
+
+wxGTK:
+
+- Fix regression in numpad key event generation in 3.2.7 (#25263).
+- Make key events for punctuation keys more consistent with wxMSW.
+- Fix for computing wxStaticText best size with non-default font (#24781).
+- Fix handling exceptions in wxApp idle event handler (#25312).
+
+wxMSW:
+
+- Fix menu padding regression in high DPI under Windows 11 (taler21, #25117).
+- Allow using mouse wheel in wxSpinCtrlDouble (David Langhals, #24935).
+
+wxOSX:
+
+- Fix building third party libraries with Xcode 16.3 (David Connet).
+
+
+3.2.7: (released 2025-03-20)
+----------------------------
+
+All:
+
+- Avoid trailing space in `wx-config --c[xx]flags` (Tobiasz Laskowski, #24812).
+- Fix building using gcc 14 under Solaris (Alan Coopersmith, #24869).
+- Avoid warnings in event table macros with clang 19 (Lauri Nurmi, #25064).
+- Add wxNO_UNUSED_VARIABLES to enable warnings about them (Lauri Nurmi, #24882).
+- Install all translations in "make install" (Scott Talbert, #24880).
+- Fix compilation with clang 19 (Lauri Nurmi, #24922).
+- Fix crash in wxWebRequestCURL when connection was refused (#24885).
+- Fix build with libc++ v19 (#24959).
+- Add wxApp::SetErrorExitCode() to better handle initialization errors (#24770).
+- Fix buffer read overflow when compiling RE ending with backslash (#25040).
+- Fix crash in wxWebRequest::Close() with recent libcurl (#24969).
+- Make wxTempFile::Commit() really atomic (#25088).
+- Improve CMake install target and many other fixes (Maarten Bent, #24792).
+- Use full toolkit version in wxGetLibraryVersionInfo() (Lauri Nurmi, #25175).
+
+All (GUI):
+
+- Improve wxPropGrid checkboxes in high DPI (Alex Shvartzkop, #24650, #24651).
+- Don't break AUI layout if Update() called when window is iconized (#24930).
+- Improve wxInfoBar appearance (#24838, #24902, #25048).
+- Fix multiple bugs in wxStaticText::Wrap() (#23339).
+- Show wxAuiToolBar long help text in frame status bar (Bill Su, #25157).
+- Recognize "current" and "pressed" in wxBitmapButton XRC handler (#25114).
+- Fix wrong row parameter in wxEVT_GRID_ROW_MOVE events (Tony Kennedy).
+- Add subitem support to wxGenericListCtrl::HitTest() (Lauri Nurmi, #25153).
+- Fix off by one error in wxImage::ResampleNearest() (Alex Shvartzkop, #25171).
+- Fix WX_GL_COMPAT_PROFILE spelling (#24964).
+
+wxGTK:
+
+- Many fixes to key event generation (#25053, #25199, #25200).
+- Fix copy-pasting text under more Wayland compositors (Weston, kwin) (#24701).
+- Fix wxDropSource::DoDragDrop() sometimes not returning with Wayland (#25116).
+- Fix insufficient wxStaticBox borders size (#25045).
+- Fix unwanted "All pages" selection in the printing dialog (#24868).
+- Fix size of wxDataViewCustomRenderer which was ignored in some cases (#24227).
+- Respect the minimum size of controls in wxToolBar (#25210).
+- Don't consume Ctrl-C when using SDL-based wxSound (Kyriet, #25067).
+- Avoid repaint problems when using wxWindow::Update() with Wayland (#25036).
+- Generate wxEVT_ENTER_WINDOW in icon part of wxSearchCtrl too (#24245).
+
+wxMSW:
+
+- Fix regression in wxDateTime support for years > 3000 in 3.2.5 (#25228).
+- Improve print preview in high DPI (taler21, #24815).
+- Fix position of the icons in the printout (#24673).
+- Fix events generated when toast-based notifications are dismissed (#24320).
+- Fix height of wxOwnerDrawnComboBox popup in high DPI (Maarten Bent, #24850).
+- Fix background colour of owner-drawn wxListBox items (#24917).
+- Fix handling pending events without an event loop (Stefan Battmer, #18109).
+- Fix indent of imageless wxTreeCtrl in high DPI (taler21, #24941).
+- Fix possible crash during session termination (#24903).
+- Make wxKill(wxKILL_CHILDREN) work recursively (Wolfgang Dautermann, #25069).
+- Use ReplaceFile() in wxRenameFile() to make operation atomic (#25088).
+- Fix padding of wxMenu in high DPI (taler21, #24821).
+- Recognize Windows Server 2025 in wxGetOsDescription() (PB, #25066).
+- Fix spurious assert failures in wxFileSystemWatcher with Samba (#18953).
+- Fix build errors in wx/vector.h if "new" is redefined (#24994).
+- Fix -Wdeprecated-copy-dtor warnings in the headers with gcc 14 (#24248).
+
+wxOSX:
+
+- Fix build with macOS 15 SDK (#24724, #24879).
+- Fix not making dialogs modal in some circumstances (Dmitry Makarenko, #25087).
+- Fix missing mouse events in scrolled windows under macOS 14+ (#24790, #24809).
+- Fix regression in GetPreferredUILanguage() in some cases (#24804).
+- Fix Z-order of auto-complete popup of wxStyledTextCtrl (#25202).
+- Fix CMake build with PCH disabled (Maarten Bent, #24851).
+- Fix truncating labels of newly added wxNotebook pages (#25194).
+- Fix truncating wxEvent time stamp after ~25 days (Artur Sochirca, #24960).
+- Implement clipboard events for single-line wxTextCtrl too (#25165).
+- Implement wxCursor::GetHotSpot() (Daniel Collins, #24961).
+- Handle wxSYS_CURSOR_[XY] in wxSystemSettings (Daniel Collins, #24962).
+
+
+3.2.6: (released 2024-09-09)
+----------------------------
+
+All:
+
+- Backport multiple fixes to CMake build system from 3.3 (Maarten Bent, #24616).
+- Fix regression in wxTranslations language resolution introduced in 3.2.3 (#24297).
+- Add wxTranslations::AddAvailableCatalog() overload with msgid language (#24297).
+
+All (GUI):
+
+- Fix resource leak in wxBitmapBundle in some circumstances (#24703).
+- Speed up using XRC when using wxXRC_NO_RELOADING (John de Rooij, #24536).
+- Fix wxGridBagSizer with different horz/vert gaps (Alex Shvartzkop, #24550).
+- Dark mode appearance fixes for wxActivityIndicator, wxHyperlinkCtrl, etc.
+- Fix using wxNOT_FOUND index with wxDataViewChoiceByIndexRenderer (Konstantin
+  S. Matveyev, #24741).
+- Improve wxWizard appearance in high DPI (taler21, #24743).
+- Fix wxPropertyGrid row height in high DPI (taler21, #24607).
+
+wxGTK:
+
+- Fix possible crash during drag-and-drop (#24677).
+- Fix using wxDatePickerCtrl in ca_ES, cs_CZ and some other locales (#24533).
+- Fix wxListBox minimum size regression in 3.2.5 (#24551).
+- Fix wxBitmapComboBox bitmaps scaling in high DPI (#24563).
+- Allow positioning wxDialog at specified position, at least under X11 (#24552).
+- Fix incorrect handling of ligatures in wxStyledTextCtrl (Funami580, #13168).
+- Fix using wrong keyboard layout in key events (Ivan Sorokin, #24772).
+- Fix wrong wxStaticText layout on non-first wxWizard page (#19053).
+
+wxMSW:
+
+- More Windows Server versions in wxGetOsDescription() (PB, #24598, #24603).
+- Fix using wx/wxprec.h with vcpkg (Maarten Bent, #24353, #24632).
+- Fix wxNotebook size calculation in high DPI (#24606).
+- Fix size of dragged text in wxDataViewCtrl in high DPI (taler21, #24648).
+- Fix crash when using static wx libraries in a DLL (#24730).
+- Fix some warnings from Windows SDK headers with MSVC /W4 (#23716).
+
+wxOSX:
+
+- Fix regression with not accepting focus under macOS 14+ (#24605, #24667).
+- Improve wxSlider ticks appearance (Hartwig Wiesmann, #24532).
+- Fix wrong wxSlider label in some cases (Hartwig Wiesmann, #24539).
+- Fix handling diagonal scrolling when using trackpad (#24516).
+- Improve wxScrollBar precision (Alex Contreras, #24669).
+- Improve context menus in wxDataViewCtrl (Václav Slavík, #24697).
+
+
+3.2.5: (released 2024-05-14)
+----------------------------
+
+All:
+
+- Add support for "%F" format specifier to wxDateTime (#24173).
+- Support dates > 2038 if time_t is 64-bit (Lauri Nurmi, #24464).
+- Restore possible ABI incompatibility with wx < 3.2.3 in wxString.
+- Set request and response for wxEVT_WEBREQUEST_DATA events (#24416).
+
+All (GUI):
+
+- Fix division-by-zero in wxRichTextCtrl (#23763).
+- Make wxGraphicsContext offsetting consistent across scales (#23485).
+- Improve error checking when saving TIFF images (Brian Delalex, #23214).
+- Fix crash in wxLogGui when wxUSE_LOG_DIALOG==0 (Randalphwa, #24087).
+- Use wxUILocale in wxFloatProperty (Miguel Gimenez, Artur Wieczorek, #24140).
+- Fix crash in wxImage::InitAlpha() if image is invalid (Randalphwa, #24260).
+- Fix wxLogStatus() when wxNO_IMPLICIT_WXSTRING_ENCODING is defined (#24267).
+- Don't let exceptions escape from event handlers called during idle processing.
+- Fix reading some previously not loaded GIF images (Mark Wagner, #22799).
+- Fix wxGrid selection after deleting rows/cols (Dietmar Schwertberger, 24286).
+- Auto-grow in-place editor in generic wxListCtrl again (taler21, #24293).
+- Center labels in generic wxListCtrl correctly again (taler21, #24292).
+- Fix label display after editing it in generic wxListCtrl (taler21, #24311).
+- Improve multiple selection UI in generic wxListCtrl (taler21, #24332).
+- Fix item deselection in multi-selection generic wxListCtrl (taler21, #24312).
+- Reduce flicker when closing wxAuiNotebook tab (Eran Ifrah, #24372).
+- Don't include Ctrl+I/Ctrl+H in "TAB"/"cut" key categories (#24254).
+- Make text in wxGenericMessageDialog more readable (Jeff Young, #24412).
+- Fix handling non-square bitmaps in wxBitmapBundle (#24433, #24434).
+- Add wxTE_PROCESS_ENTER to wxSpinCtrl[Double] XRC handlers (JohnKnow, #24481).
+- Update popup menu UI before showing it (Bill Su, #24641).
+
+wxGTK:
+
+- Fix copying/pasting text under Wayland (#24391).
+- Fix alpha in bitmaps created from SVG (Tim Eliseo, #24064).
+- Improve desktop environment detection, notably under Wayland (#24050).
+- Fix wxSystemSettings::GetMetric() scrollbar width calculation for GTK3 (#24057).
+- Minimal wxVideoMode support for Wayland (#24021).
+- Fix wxCheckBox::SetValue() when in undetermined state (#24074).
+- Fix for incorrect preferred size from empty wxChoice with GTK3 (#23382).
+- wxDropSource::GiveFeedback() fixes (#24051).
+- Fix wxCheckBox undetermined state showing as checked with some themes (#24074).
+- Fix crash with GTK3 if console program is using a GUI wxApp class (#24081).
+- Generic wxDataViewCtrl drag hint fixes (#24084).
+- Ensure wxListBox best size is at least the minimum required by GTK3.
+- Support setting thickness when creating wxGauge with GTK >= 3.20 (#24107).
+- Fix handling binary data in wxSecretStore (Martin Corino, #24351).
+- Make GTKSuppressDiagnostics(), broken since 3.2.1, work again (#24432).
+- Fix wxTE_PROCESS_ENTER in wxGTK comboboxes with autocomplete (#24394).
+- Fix -Wdeprecated-copy-dtor warnings in the headers with gcc 14 (#24502).
+- Position popup menu shown from keyboard correctly (#24522).
+
+wxMSW:
+
+- Add support for line spacing and bullet style attributes to wxTextCtrl
+  (Blake-Madden, #24046, #24069).
+- Fix possible crash in wxFileSystemWatcher (Rick van der Sluijs, #24119).
+- Fix restoring hidden top level windows (Christian Walther, #24117).
+- Add support for VT_UI8 OLE VARIANT type (Miguel Gimenez, #24115).
+- Fix using "Alt" when wxGrid has focus (Dietmar Schwertberger, #24247).
+- Fix wxButton::GetDefaultSize() in high DPI under MSW (#24283).
+- Improve native MSW dialog DPI awareness (Maarten Bent, #24196).
+- Fix bug with not showing some wxStaticText labels (#24365).
+- Fix button size of generic wxColourPickerCtrl in high DPI (taler21, #24456).
+
+wxOSX:
+
+- Updates for macOS 14 Sonoma support (#23916, #24054, #24067, #24073, #24515).
+- Restore activation for non-bundled applications (#24056, #24062).
+- Fix wrong tooltips for cells with custom renderers in wxDataViewCtrl (#24370).
+- Fix handling of nested modal dialogs (WakA, #24418).
+- Fix translations when using zh-Hans-CN locale (#24396).
+- Add filters support to wxFileDialog::ShowWindowModal() (Gammasoft, #24438).
+- Fix installation on some Apple Silicon Macs (Thomas Holder, #23143, #24524).
+- Recognize macOS 15 Sequoia in wxGetOsDescription() (Tobias Taschner, #24647).
+
+wxQt:
+
+- Fix wxAnyButton Current/Normal state confusing (David Karoly, #24129).
+
+
+3.2.4: (released 2023-11-11)
+----------------------------
+
+All:
+
+- Allow creating wxArrays from std::initializer_list (Lotendan, #23966).
+- Fix regression in wxTranslations::AddCatalog() return value (#24019).
+
+All (GUI):
+
+- Fix possible crash when dragging pages in wxAuiNotebook (#24027).
+- Fix refreshing multiple selection items in generic wxListCtrl.
+
+wxGTK:
+
+- Fix some regressions introduced in 3.2.3:
+  * Don't crash in console apps linked with GUI libraries (#23981).
+  * Fix possible crash and too high CPU use when using EGL (#24018).
+  * Fix losing clipboard contents when clearing a different selection (#23988).
+
+wxMSW:
+
+- Fix MSVS warning about redundant "const" in wx/itemid.h (#23590).
+
+wxOSX:
+
+- Fix showing windows for background apps under macOS Sonoma (#23893).
+
+
+3.2.3: (released 2023-10-10)
+----------------------------
+
+All:
+
+- Fix wxTranslations::AddStdCatalog() and add AddAvailableCatalog() (#18227).
+- Add move ctor and assignment operator to wxString (Pavel Tyunin, #23224).
+- Enable large file support in Unix CMake builds (Maarten Bent, #22750).
+- Make wxSocket::Peek() work with UDP too (Brian Nixon, #23594, #23604).
+- Update Georgian translations (NorwayFun, #22673).
+- Don't use invalid iterator in wxString in UTF-8 build (Ian Day, #23305).
+- Fix wrong description for some languages (Ulrich Telle, #23419).
+- Fix infinite loop in wxFTP::GetFilesList() (#23519).
+- Use grep instead of fgrep and egrep in makefiles/scripts (#23537).
+- Use /etc/os-release if lsb_release isn't available (Scott Talbert, #23712).
+- Add wxUILocale::GetMonthName() and GetWeekDayName() (Ulrich Telle, #23556).
+- Support WAV files with LIST chunks under Unix (A. Jiang, #23859).
+- Fix CMake build if wxWidgets directory contained "++" (Maarten Bent, #22738).
+
+All (GUI):
+
+- Don't allow pasting characters forbidden by wxTextValidator (#10281).
+- Fix wxFLEX_GROWMODE_ALL in wxFlexGridSizer with proportions (#23253).
+- Make wxListCtrl checkboxes behaviour more consistent (Maarten Bent, #23869).
+- Fix wxEditorDialogProperty in wxPropertyGrid (#23272).
+- Fix entering dates in wxGenericDatePicker in nb_NO and other locales
+  using names for the months in short date format (#23310).
+- Fix wx-config output when using NanoSVG library (#23373).
+- Fix bug modifying shared images in wxImage::Clear() (#23555).
+- Add EVT_FULLSCREEN event macro (Christian Beier, #23566).
+- Clear old attributes when changing wxGrid table (Brian Nixon, #23607).
+- Fix background colour of wxVListBox (Maarten Bent, #23641).
+- Fix return value of wxAuiToolBarItem::GetDisabledBitmap() (taler21, #23666).
+- Fix buffer overflow in wxHTMLDataObject::GetDataHere() (mcorino, #23660).
+- Fix crash when loading some mal-formed GIFs (PB, #23409).
+- Relax checks on character entry in numeric validators (#12968, #23561).
+- Fix wxRibbonToolBar::GetToolByPos() and DeleteToolByPos() (mcorino, #23457).
+- Update wxOwnerDrawnComboBox best size when adding items (Reza Karimi, #23681).
+- Keep wxProgressDialog size when updating the message (Oleg Samarin, #23727).
+- Fix crash when deleting selected item in wxGenericListCtrl (#23729).
+- Use DIPs for toolbar image sizes in wxPropertyGrid.
+- Fix undefined behaviour in wxImage::Paste() (aurel32, #23791).
+- Fix EVT_PRESS_AND_TAP() event macro definition (Kumazuma, #23819).
+- Fix wxFileHistory formatting after calling Load() (Hartwig Wiesmann, #23799).
+- Fix wxRichTextCtrl layout in high DPI (mbc-one, Maarten Bent, #23828).
+- Ensure current cell stays valid when wxGrid table changes (CookieLau, #23751).
+- Always give focus to the currently shown wxSimplebook page (#23914).
+
+wxGTK:
+
+- Fix key codes with Shift on non-US keyboards (Ivan Sorokin, #17643, #23379).
+- Fix possible crash when using IME under Wayland (#23760).
+- Avoid catastrophic slowdown when hiding wxGLCanvas under Wayland (#23512).
+- Give better error if EGL version is < 1.5 (Fabrice de Gans, #22325, #23855).
+- Fix hiding wxGLCanvas under Wayland (Joan Bruguera, #22580).
+- Fix page origin when printing in landscape (Alex Shvartzkop, #23860).
+- Fix wxComboCtrl popup behaviour under Wayland (Alex Shvartzkop, #23908).
+- Dramatically optimize adding many items to wxChoice (Ian McInerney, #23443).
+- Improve and document wxGLCanvas::CreateSurface() (Dan Gudmundsson, #23366).
+- Fix loading WebKit2 extension when using wxWebView (Scott Talbert, #23497).
+- Fix editing cells without values in wxDataViewCtrl (#23523).
+- Fix showing popup menu with GTK/Wayland without active event (#23892).
+- Fix uninitialized wxKeyEvent::m_isRepeat (jolz, #23593).
+- Improve best size computation of wxTextCtrl (Alex Shvartzkop, #23610).
+- Fix missing borders for scrollable windows, e.g. wxListCtrl (#23236).
+- Fix TAB navigation in wxPropertyGrid (Adrian Lopez, #23354).
+- Fix GSource leak when using wxIdleEvent::RequestMore() (#23364).
+- Allow using libwebkit2gtk-4.1 and libsoup-3.0 (Scott Talbert, #23630).
+- Support Numpad Enter for ending wxListCtrl editing (Scott Talbert, #23762).
+- Improve dark mode detection (Colin Kinloch and Paul Cornett, #23764).
+- Fix wxPreferencesEditor size under Wayland (#23924).
+- Fix not showing text in wxBusyInfo (#23936).
+- Make wxRB_SINGLE really work (Stefan Hansson, #23652).
+- Fix (not) refreshing virtual wxListCtrl after deleting its last item.
+
+wxMSW:
+
+- Fix (deprecated) build without Unicode support broken in 3.2.2 (#23516).
+- Fix crash when using wxBitmapDataObject in wxDataObjectComposite (#23564).
+- Fix setting locale for wxLANGUAGE_UKRAINIAN (Ulrich Telle, #23210).
+- Fix matching wildcards ending with "*.*" in wxDir (#23905).
+- Don't reset custom wxToolBar background on system colour change (#23386).
+- Fix wxUILocale::GetPreferredUILanguages() with OS < 10 (Brian Nixon, #23416).
+- Fix building with LLVM clang (Sergey Khalyutn, Maarten Bent, #23464).
+- Fix discrepancy between GDI and Direct2D in high DPI (Kumazuma, #23486).
+- Fix wxTreeCtrl::ScrollTo() with hidden root item (#23534).
+- Fix hang in wxFileDialog if COINIT_MULTITHREADED was used (#23578).
+- Fix handling of RLE-compressed bitmaps (Brian Nixon, #23573).
+- Fix wxWindow::GetTextExtent() with given font in high DPI (#23542).
+- Fix drawing owner-drawn menu items with bitmaps (Jacob Gillespie, #23230).
+- Improve ScrollTo() with wxDV_VARIABLE_LINE_HEIGHT (Jens Göpfert, #23102).
+- Fix libraries names in Arch64 CMake build (Tobias Taschner, #23347).
+- Fix using wxComboCtrl with AUI floating pane as parent (#23399).
+- Fix wrong wxWindowsPrintNativeData initialization (Stefan Ziegler, #23685).
+- Fix position of wxStaticBox label after DPI change (Maarten Bent, #23740).
+- Fix background colour of empty cells in wxDataViewCtrl (#23708).
+- Fix possible (even if rare) crash in printer progress dialog (#23927).
+- Fix "+" button not appearing in wxTreeCtrl after adding a child (#23718).
+- Fix phantom mouse events after dismissing wxFileDialog (charvey2718, #10924).
+
+wxOSX:
+
+- Fix missing key events for ⌘+⎇+Letter combinations (#23671).
+- Add support for wxDP_DROPDOWN under macOS 10.15.4+ (Lauri Nurmi, #23520).
+- Fix initial width of empty wxTextCtrl (#23295).
+- Fix underlined fonts sometimes appearing without underline (#23264).
+- Respect composition mode when drawing bitmaps (#23240).
+- Fix background colour of shaped windows, e.g. wxRichToolTip (#23296).
+- Fix memory leak in wxFileDialog using custom controls (#23304).
+- Restore setting C-level locale when using wxLocale (#23557).
+- Check column for wxEVT_DATAVIEW_ITEM_ACTIVATED (Hartwig Wiesmann, #23636).
+- Fix spurious -Wundeclared-selector with Xcode 14 (Hartwig Wiesmann, #23639).
+- Recognize macOS 14 Sonoma in wxGetOsDescription() (Tobias Taschner, #23615).
+- Fix setting Chinese locales (#23209).
+- Wrap wxStaticText contents (#23341).
+- Fix invisible wxStaticLine under macOS >= 13 (#23913).
+
+wxUniv:
+
+- Fix resetting the hint in wxTextCtrl when it gets focus (Kvaz1r, #23511).
+- Fix creating wxRadioBox without any items (Kvaz1r, #23784).
+
+
+3.2.2.1: (released 2023-02-13)
+------------------------------
+
+This hotfix corrects a regression in 3.2.2 which resulted in not drawing any
+icons for the non-root item of wxGenericTreeCtrl in this release (see #23255).
+
+
+3.2.2: (released 2023-02-08)
+----------------------------
+
+All:
+
+- Fix regression in saving TIFF images that could end up truncated (#23048).
+- Fix long standing bug in parsing wxHTTP responses.
+- Fix wx-config generation in CMake builds (Maarten Bent, #22806).
+- Fix compilation of code using wxTransformMatrix with recent gcc (#22790).
+- Fix memory leak when destroying wxThread (Antti Nietosvaara, #22840).
+- Add serial number to wxwin.m4 file (#22848).
+- Update Expat submodule to include the fix for CVE-2022-40674.
+- Update zlib to 1.2.13.1 to include the fix for CVE-2022-37434 (#22919).
+- Allow 'T' separator in wxDateTime::ParseDateTime() (Blake-Madden, #22999).
+- Add Serbian translations (Nikola Jović).
+- Fix MT-safety problem in wxZipInputStream (#23054).
+- Fix building all samples in release build with CMake (#23106).
+- Fix using pkg-config when cross-compiling (#22886, #23037, #23171).
+- Fix compilation problem in wxUILocale code when using musl (Khem Raj, #23050).
+- Add wxUILocale::GetSystemLocaleId() replacing GetSystemLocale() (#23114).
+- Fail when setting unsupported "mixed" locale under Unix (#23218).
+
+All (GUI):
+
+- Improve wxWebView::RunScriptAsync() performance (Tobias Taschner, #22781).
+- Fix data race when processing events generated in a worker thread.
+- Fix compilation problem in wx/propgrid/editors.h (Loïc Bartoletti, #22875).
+- Fix wxGeneric{List,Tree}Ctrl high DPI icons (Gerhard Stein, #22887, #22916).
+- Add macros for event tables for missing wxWebView events (PB, #22949).
+- Improve month selection in wxGenericCalendarCtrl (Lauri Nurmi, #22853).
+- Fix maximum length of wxPropertyGrid editors (#23033).
+- Add support for Caps/Num/Scroll Lock to wxGetKeyState() (elfmz, #23195).
+- Fix wxToolBar::GetToolBitmapSize() in high DPI under non-MSW (#23222).
+
+wxGTK:
+
+- Fix resizing wxGLCanvas with EGL and Wayland (Carl Hetherington, #22811).
+- Fix missing X11 libraries when linking with wxGTK2 statically (#22813).
+- Fix compilation with GTK 3.22.z and z < 25 (#22816).
+- Fix compilation with GTK < 2.21.8 (mkirkham, #22830).
+- Fix display artefacts when using AUI without compositor under X11 (#23135).
+- Allow selecting and copying text in wxMessageDialog (Ian McInerney, #23039).
+- Fix initial size of top-level window on Wayland (#23041).
+- Improve size and behaviour of in-place editor in wxTreeCtrl (taler21, #23001).
+
+wxMSW:
+
+- Fix crashes when using wxTextCtrl with MinGW TDM 64 (#22639).
+- Avoid appending extraneous NUL bytes to wxTextDataObject text (#22928).
+- Improve resizing of some windows on DPI change (#23091).
+- Fix wrong size of native MSW icons in wxArtProvider in high DPI (#23127).
+- Fix glitch in drawing wxStaticBox with a control as label (#22952).
+- Save windows geometry correctly when using Aero Snap (Randalphwa, #22730).
+- Fix generating wxEVT_TEXT_ENTER in wxBitmapComboBox (#16318).
+- Fix return value of wxZoomGestureEvent::GetZoomFactor() (s-murphree, #22818).
+- Update top level icon resolution on DPI change (#22807).
+- Fix scaling of standard MSW icons in high DPI (#23031).
+- Fix menu items with custom font in high DPI (#22957).
+- Remove "Printing" from title when printing to PDF (Blake-Madden, #22836).
+- Fix sometimes missing overwrite prompt in "Save" file dialog (#22898).
+- Set wxUSE_TASKBARBUTTON correctly when building using configure (#22900).
+- Queue wxWebViewEdge events to avoid hangs (Tobias Taschner, #23025).
+- Fix getting printer information in the print dialog (Stefan Ziegler, #23068).
+- Fix building samples with clang under MSYS (Maarten Bent, #23057).
+- Fix memory leak when allocating command line arguments (#23081).
+- Include wxrc.exe in 64-bit wxMSW MSVC dev archive too (Danny Scott, #23122).
+- Don't disable wxComboBox after recreating it (Oleksandra Yushchenko, #23132).
+- Fix wxJoystick::GetProductName() returning nothing (Maarten Bent, #23172).
+- Work around MSVS 2022 optimizer bug in wxImage::ShrinkBy() (#23164).
+- Fix link error with wxSimplebook in DLL builds (Mark Roszko, #22805).
+- Avoid errors when including wx/msw/msvcrt.h before other wx headers (#23194).
+
+wxOSX:
+
+- Fix possible crash in menu item event handling (#23040).
+- Fix regression in text drawing when using clipping (#22629).
+- Don't round fractional point size when creating fonts (#23144).
+- Do round size returned by wxFont::GetPixelSize().
+- Map wxFONTFAMILY_DEFAULT to wxFONTFAMILY_SWISS as in the other ports (#23158).
+- Generate wxEVT_DATAVIEW_COLUMN_HEADER_RIGHT_CLICK (#22833).
+- Fix wxDataViewCtrl::HitTest() (Vojtěch Bubník, #22789).
+- Fix position of the controls in wxStaticBox after resizing it (#22837).
+- Ensure that "Window" menu is inserted before "Help" (#22871).
+- Fix compiling with Xcode 7.3 and macOS 11 SDK (crazbot, #22988).
+- Always call wxTaskBarIcon::GetPopupMenu() (William Lindnilsson, #23008).
+- Fix scaling wxTaskBarIcon in high DPI (William Lindnilsson, #23042).
+- Add margins around wxListCtrl items to improve appearance (#23155).
+- Fix shortcuts handling in wxWebView (#23151).
+- Make wxLOCALE_FORM_ENGLISH actually work (Ulrich Telle, Lauri Nurmi, #23190).
+- Fix "Window" menu item not being translated sometimes (#23204).
+- Fix wxLocale::GetCurrent() when the current locale is "C".
+- Fix wxLocale::Init(wxLANGUAGE_DEFAULT) with "mixed" locales (#23114).
+
+wxQt:
+
+- Fix creating wxFont using fractional point size (Ali Kettab, #23163).
 
 
 3.2.1: (released 2022-09-09)

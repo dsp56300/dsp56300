@@ -656,7 +656,7 @@ enum
 
         @since 3.1.0
     */
-    wx_GL_COMPAT_PROFILE,
+    WX_GL_COMPAT_PROFILE,
 
     /**
         Request a forward-compatible context.
@@ -877,6 +877,19 @@ public:
                long style = 0,
                const wxString& name = "GLCanvas",
                const wxPalette& palette = wxNullPalette);
+
+
+    /**
+       Re-creates EGLSurface. To be used after a reparent or other
+       changes that may invalidate the EGL drawing surface.
+
+       Only available when wxUSE_GLCANVAS_EGL is enabled.
+
+       @return @true if surface is successfully recreated
+
+       @since 3.2.3
+    */
+    bool CreateSurface();
 
     /**
         Determines if a canvas having the specified attributes is available.

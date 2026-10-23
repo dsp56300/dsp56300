@@ -164,10 +164,6 @@ public :
         }
         [menu setDelegate:controller];
         [m_osxMenu setImplementation:this];
-        // gc aware
-        if ( m_osxMenu )
-            CFRetain(m_osxMenu);
-        [m_osxMenu release];
     }
 
     virtual ~wxMenuCocoaImpl();
@@ -256,11 +252,29 @@ public :
 
         if ( windowMenu == nil )
         {
-            windowMenu = [[NSMenu alloc] initWithTitle:nsWindowMenuTitle];
+            NSString* nsHelpMenuTitle = wxNSStringWithWxString(wxStripMenuCodes(wxApp::s_macHelpMenuTitleName, wxStrip_Menu));
+            NSString* nsAlternateHelpTitle = wxNSStringWithWxString(wxStripMenuCodes(_("&Help"), wxStrip_Menu));
+
+            NSMenuItem* helpMenu = nil;
+            NSInteger numberOfMenus = [m_osxMenu numberOfItems];
+            if ( numberOfMenus > 0 )
+            {
+                NSMenuItem* lastMenu = [m_osxMenu itemAtIndex:numberOfMenus-1];
+                if ([[lastMenu title] isEqualToString:nsHelpMenuTitle] ||
+                    [[lastMenu title] isEqualToString:nsAlternateHelpTitle])
+                {
+                    helpMenu = lastMenu;
+                }
+            }
+
+            windowMenu = [[NSMenu alloc] initWithTitle:nsAlternateWindowMenuTitle];
             NSMenuItem* windowMenuItem = [[NSMenuItem alloc] initWithTitle:nsWindowMenuTitle action:nil keyEquivalent:@""];
             [windowMenuItem setSubmenu:windowMenu];
             [windowMenu release];
-            [m_osxMenu addItem:windowMenuItem];
+            if (helpMenu == nil )
+                [m_osxMenu addItem:windowMenuItem];
+            else
+                [m_osxMenu insertItem:windowMenuItem atIndex:numberOfMenus-1];
             [windowMenuItem release];
         }
         return windowMenu;
@@ -396,9 +410,7 @@ wxMenuCocoaImpl::~wxMenuCocoaImpl()
 {
     [m_osxMenu setDelegate:nil];
     [m_osxMenu setImplementation:nil];
-    // gc aware
-    if ( m_osxMenu )
-        CFRelease(m_osxMenu);
+    [m_osxMenu release];
 }
 
 wxMenuImpl* wxMenuImpl::Create( wxMenu* peer, const wxString& title )

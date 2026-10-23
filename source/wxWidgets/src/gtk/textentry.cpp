@@ -43,6 +43,7 @@ class wxTextCoalesceData
 public:
     wxTextCoalesceData(GtkWidget* widget, gulong handlerAfterKeyPress)
         : m_handlerAfterKeyPress(handlerAfterKeyPress)
+        , m_widget(widget)
     {
         m_inKeyPress = false;
         m_pendingTextChanged = false;
@@ -52,12 +53,17 @@ public:
         g_signal_handler_block(widget, m_handlerAfterKeyPress);
     }
 
-    void StartHandlingKeyPress(GtkWidget* widget)
+    ~wxTextCoalesceData()
+    {
+        g_signal_handler_disconnect(m_widget, m_handlerAfterKeyPress);
+    }
+
+    void StartHandlingKeyPress()
     {
         m_inKeyPress = true;
         m_pendingTextChanged = false;
 
-        g_signal_handler_unblock(widget, m_handlerAfterKeyPress);
+        g_signal_handler_unblock(m_widget, m_handlerAfterKeyPress);
     }
 
     bool SetPendingIfInKeyPress()
@@ -70,9 +76,9 @@ public:
         return true;
     }
 
-    bool EndHandlingKeyPressAndCheckIfPending(GtkWidget* widget)
+    bool EndHandlingKeyPressAndCheckIfPending()
     {
-        g_signal_handler_block(widget, m_handlerAfterKeyPress);
+        g_signal_handler_block(m_widget, m_handlerAfterKeyPress);
 
         wxASSERT( m_inKeyPress );
         m_inKeyPress = false;
@@ -89,6 +95,7 @@ private:
     bool m_inKeyPress;
     bool m_pendingTextChanged;
     const gulong m_handlerAfterKeyPress;
+    GtkWidget* const m_widget;
 
     wxDECLARE_NO_COPY_CLASS(wxTextCoalesceData);
 };
@@ -120,14 +127,14 @@ extern "C" {
 // to send a single wxEVT_TEXT even if we received several (typically two, when
 // the selected text in the control is replaced by new text) "changed" signals.
 static gboolean
-wx_gtk_text_after_key_press(GtkWidget* widget,
+wx_gtk_text_after_key_press(GtkWidget*,
                             GdkEventKey* WXUNUSED(gdk_event),
                             wxTextEntry* entry)
 {
     wxTextCoalesceData* const data = entry->GTKGetCoalesceData();
     wxCHECK_MSG( data, FALSE, "must be non-null if this handler is called" );
 
-    if ( data->EndHandlingKeyPressAndCheckIfPending(widget) )
+    if ( data->EndHandlingKeyPressAndCheckIfPending() )
     {
         entry->GTKOnTextChanged();
     }
@@ -313,39 +320,41 @@ public:
     // for wxTextAutoCompleteFixed.
     virtual bool ChangeCompleter(wxTextCompleter* completer) = 0;
 
-    // We should toggle off wxTE_PROCESS_ENTER flag of our wxTextEntry while
+    // We need to turn off wxTE_PROCESS_ENTER flag of our wxTextEntry while
     // the completion popup is shown to let it see Enter event and process it
     // on its own (e.g. to dismiss itself). This is done by "grab-notify" signal
     // see wxTextCtrl::OnChar()
-    void ToggleProcessEnterFlag(bool toggleOff)
+    void GTKOnPopupShown(bool shown)
     {
         wxWindow* const win = GetEditableWindow(m_entry);
 
-        long flags = win->GetWindowStyleFlag();
-        if ( toggleOff )
+        if ( shown )
         {
-            // Store the original window flags before we change them.
-            m_hadProcessEnterFlag = (flags & wxTE_PROCESS_ENTER) != 0;
-            if ( !m_hadProcessEnterFlag )
-            {
-                // No need to do anything, it was already off.
+            // If this is not the first call showing the popup, nothing to do
+            // other than updating the count.
+            if ( m_popupShownCount++ )
                 return;
-            }
 
-            flags &= ~wxTE_PROCESS_ENTER;
+            // We're showing the popup for the first time, remember if we have
+            // wxTE_PROCESS_ENTER flag.
+            m_hadProcessEnterFlag = win->HasFlag(wxTE_PROCESS_ENTER);
+
+            // And don't do anything if we don't.
+            if ( !m_hadProcessEnterFlag )
+                return;
         }
-        else // Restore the original flags.
+        else
         {
-            if ( !m_hadProcessEnterFlag )
-            {
-                // We hadn't turned it off, no need to turn it back on.
+            // If popup is still shown, nothing to do.
+            if ( --m_popupShownCount )
                 return;
-            }
 
-            flags |= wxTE_PROCESS_ENTER;
+            // Popup was hidden, restore the flag below if we had it.
+            if ( !m_hadProcessEnterFlag )
+                return;
         }
 
-        win->SetWindowStyleFlag(flags);
+        win->ToggleWindowStyle(wxTE_PROCESS_ENTER);
     }
 
     virtual ~wxTextAutoCompleteData()
@@ -377,6 +386,7 @@ protected:
           m_widgetEntry(entry->GetEntry())
     {
         // This will be really set in ToggleProcessEnterFlag().
+        m_popupShownCount = 0;
         m_hadProcessEnterFlag = false;
 
         GtkEntryCompletion* const completion = gtk_entry_completion_new();
@@ -420,8 +430,12 @@ protected:
     // And its GTK widget.
     GtkEntry* const m_widgetEntry;
 
+    // Number of times GTKOnPopupShown() was called with true argument minus
+    // the number of times it was called with false argument.
+    int m_popupShownCount;
+
     // True if the window had wxTE_PROCESS_ENTER flag before we turned it off
-    // in ToggleProcessEnterFlag().
+    // in GTKOnPopupShown().
     bool m_hadProcessEnterFlag;
 
     wxDECLARE_NO_COPY_CLASS(wxTextAutoCompleteData);
@@ -574,7 +588,7 @@ wx_gtk_entry_parent_grab_notify (GtkWidget *widget,
 {
     g_return_if_fail (GTK_IS_ENTRY(widget));
 
-    bool toggleOff = false;
+    bool shown = false;
 
     if ( gtk_widget_has_focus(widget) )
     {
@@ -584,10 +598,10 @@ wx_gtk_entry_parent_grab_notify (GtkWidget *widget,
         // shown on screen.
 
         if ( !was_grabbed )
-            toggleOff = true;
+            shown = true;
     }
 
-    data->ToggleProcessEnterFlag(toggleOff);
+    data->GTKOnPopupShown(shown);
 }
 
 } // extern "C"
@@ -974,7 +988,7 @@ void wxTextEntry::GTKEntryOnKeypress(GtkWidget* widget) const
         m_coalesceData = new wxTextCoalesceData(widget, handler);
     }
 
-    m_coalesceData->StartHandlingKeyPress(widget);
+    m_coalesceData->StartHandlingKeyPress();
 }
 
 int wxTextEntry::GTKEntryIMFilterKeypress(GdkEventKey* event) const

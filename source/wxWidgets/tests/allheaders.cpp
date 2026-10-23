@@ -382,13 +382,14 @@
     GCC_TURN_OFF(padded)
 #endif // gcc >= 4.6
 
-// Do the same for clang too except here we don't bother with the individual
-// warnings and just enable the usual ones because clang mostly includes all
-// the useful warnings in them anyhow.
+// Do the same for clang too except here most of the useful warnings are
+// already included in -Wall, so we just need a few more.
 #ifdef CLANG_TURN_ON
     CLANG_TURN_ON(all)
     CLANG_TURN_ON(extra)
     CLANG_TURN_ON(pedantic)
+
+    CLANG_TURN_ON(shorten-64-to-32)
 
     // We use long long, variadic macros and empty macro arguments (which are a
     // C99 extension) even in C++98 builds.
@@ -452,4 +453,6 @@ TEST_CASE("wxNO_IMPLICIT_WXSTRING_ENCODING", "[string]")
     // wxNO_IMPLICIT_WXSTRING_ENCODING must be set
     s = "Hello, implicit encoding";
 #endif
+
+    wxLogSysError(wxASCII_STR("Bogus error for testing"));
 }

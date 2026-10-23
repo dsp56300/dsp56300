@@ -263,6 +263,19 @@ wxWindowMac::~wxWindowMac()
     delete GetPeer() ;
 }
 
+void wxWindowMac::MacClipsToBounds( bool clip )
+{
+    if ( m_peer )
+        m_peer->ClipsToBounds(clip);
+}
+
+void wxWindowMac::MacSetClipChildren( bool clip )
+{
+    m_clipChildren = clip ;
+    if ( m_peer )
+        m_peer->UseClippingView(clip);
+}
+
 WXWidget wxWindowMac::GetHandle() const
 {
     if ( GetPeer() )
@@ -397,20 +410,9 @@ bool wxWindowMac::Create(wxWindowMac *parent,
     {
         SetPeer(wxWidgetImpl::CreateUserPane( this, parent, id, pos, size , style, GetExtraStyle() ));
         MacPostControlCreate(pos, size) ;
+        if ( m_clipChildren )
+            m_peer->UseClippingView(m_clipChildren);
     }
-
-#ifndef __WXUNIVERSAL__
-    // Don't give scrollbars to wxControls unless they ask for them
-    if ( (! IsKindOf(CLASSINFO(wxControl))
-#if wxUSE_STATUSBAR
-        && ! IsKindOf(CLASSINFO(wxStatusBar))
-#endif
-        )
-         || (IsKindOf(CLASSINFO(wxControl)) && ((style & wxHSCROLL) || (style & wxVSCROLL))))
-    {
-        MacCreateScrollBars( style ) ;
-    }
-#endif
 
     wxWindowCreateEvent event((wxWindow*)this);
     GetEventHandler()->AddPendingEvent(event);
@@ -439,6 +441,22 @@ void wxWindowMac::MacPostControlCreate(const wxPoint& pos,
     {
         SetPosition(pos);
     }
+
+#ifndef __WXUNIVERSAL__
+    const long style = GetWindowStyle();
+
+    // Don't give scrollbars to wxControls unless they ask for them
+    if ( (! IsKindOf(CLASSINFO(wxControl))
+#if wxUSE_STATUSBAR
+        && ! IsKindOf(CLASSINFO(wxStatusBar))
+#endif
+        )
+         || (IsKindOf(CLASSINFO(wxControl)) && ((style & wxHSCROLL) || (style & wxVSCROLL))))
+    {
+        MacCreateScrollBars( style ) ;
+    }
+#endif
+
 }
 
 void wxWindowMac::DoSetWindowVariant( wxWindowVariant variant )
@@ -871,9 +889,10 @@ bool wxWindowMac::SetCursor(const wxCursor& cursor)
 bool wxWindowMac::DoPopupMenu(wxMenu *menu, int x, int y)
 {
 #ifndef __WXUNIVERSAL__
+    const wxPoint mouse = wxGetMousePosition();
+
     if ( x == wxDefaultCoord && y == wxDefaultCoord )
     {
-        wxPoint mouse = wxGetMousePosition();
         x = mouse.x;
         y = mouse.y;
     }
@@ -881,6 +900,14 @@ bool wxWindowMac::DoPopupMenu(wxMenu *menu, int x, int y)
     {
         ClientToScreen( &x , &y ) ;
     }
+
+    if ( x == mouse.x )
+    {
+        // move the menu just off the cursor so that no menu item is pre-selected,
+        // for consistency with native popups and other platforms
+        x += 1;
+    }
+
     menu->GetPeer()->PopUp(this, x, y);
     return true;
 #else
@@ -1048,13 +1075,6 @@ wxSize wxWindowMac::DoGetBestSize() const
             if ( IsKindOf( CLASSINFO( wxScrollBar ) ) )
             {
                 r.height = 16 ;
-            }
-            else
-#endif
-#if wxUSE_SPINBTN
-            if ( IsKindOf( CLASSINFO( wxSpinButton ) ) )
-            {
-                r.height = 24 ;
             }
             else
 #endif
@@ -2113,42 +2133,45 @@ bool wxWindowMac::MacIsChildOfClientArea( const wxWindow* child ) const
 void wxWindowMac::MacRepositionScrollBars()
 {
 #if wxUSE_SCROLLBAR
-    if ( !m_hScrollBar && !m_vScrollBar )
-        return ;
-
-    int scrlsize = m_hScrollBar ? m_hScrollBar->GetSize().y : ( m_vScrollBar ? m_vScrollBar->GetSize().x : MAC_SCROLLBAR_SIZE ) ;
-    int adjust = MacHasScrollBarCorner() ? scrlsize - 1 : 0 ;
-
-    // get real client area
-    int width, height ;
-    GetSize( &width , &height );
-
-    width -= MacGetLeftBorderSize() + MacGetRightBorderSize();
-    height -= MacGetTopBorderSize() + MacGetBottomBorderSize();
-
-    wxPoint vPoint( width - scrlsize, 0 ) ;
-    wxSize vSize( scrlsize, height - adjust ) ;
-    wxPoint hPoint( 0 , height - scrlsize ) ;
-    wxSize hSize( width - adjust, scrlsize ) ;
-
-    if ( m_vScrollBar )
-        m_vScrollBar->SetSize( vPoint.x , vPoint.y, vSize.x, vSize.y , wxSIZE_ALLOW_MINUS_ONE );
-    if ( m_hScrollBar )
-        m_hScrollBar->SetSize( hPoint.x , hPoint.y, hSize.x, hSize.y, wxSIZE_ALLOW_MINUS_ONE );
-    if ( m_growBox )
+    if ( m_hScrollBar || m_vScrollBar )
     {
-        if ( MacHasScrollBarCorner() )
+        int scrlsize = m_hScrollBar ? m_hScrollBar->GetSize().y : ( m_vScrollBar ? m_vScrollBar->GetSize().x : MAC_SCROLLBAR_SIZE ) ;
+        int adjust = MacHasScrollBarCorner() ? scrlsize - 1 : 0 ;
+
+        // get real client area
+        int width, height ;
+        GetSize( &width , &height );
+
+        width -= MacGetLeftBorderSize() + MacGetRightBorderSize();
+        height -= MacGetTopBorderSize() + MacGetBottomBorderSize();
+
+        wxPoint vPoint( width - scrlsize, 0 ) ;
+        wxSize vSize( scrlsize, height - adjust ) ;
+        wxPoint hPoint( 0 , height - scrlsize ) ;
+        wxSize hSize( width - adjust, scrlsize ) ;
+
+        if ( m_vScrollBar )
+            m_vScrollBar->SetSize( vPoint.x , vPoint.y, vSize.x, vSize.y , wxSIZE_ALLOW_MINUS_ONE );
+        if ( m_hScrollBar )
+            m_hScrollBar->SetSize( hPoint.x , hPoint.y, hSize.x, hSize.y, wxSIZE_ALLOW_MINUS_ONE );
+        if ( m_growBox )
         {
-            m_growBox->SetSize( width - scrlsize, height - scrlsize, wxDefaultCoord, wxDefaultCoord, wxSIZE_USE_EXISTING );
-            if ( !m_growBox->IsShown() )
-                m_growBox->Show();
-        }
-        else
-        {
-            if ( m_growBox->IsShown() )
-                m_growBox->Hide();
+            if ( MacHasScrollBarCorner() )
+            {
+                m_growBox->SetSize( width - scrlsize, height - scrlsize, wxDefaultCoord, wxDefaultCoord, wxSIZE_USE_EXISTING );
+                if ( !m_growBox->IsShown() )
+                    m_growBox->Show();
+            }
+            else
+            {
+                if ( m_growBox->IsShown() )
+                    m_growBox->Hide();
+            }
         }
     }
+
+    if( GetPeer() )
+        GetPeer()->AdjustClippingView(m_hScrollBar, m_vScrollBar);
 #endif
 }
 
@@ -2736,4 +2759,21 @@ bool wxWidgetImpl::NeedsFrame() const
 
 void wxWidgetImpl::SetDrawingEnabled(bool WXUNUSED(enabled))
 {
+}
+
+void wxWidgetImpl::ClipsToBounds(bool WXUNUSED(clip))
+{
+}
+
+void wxWidgetImpl::AdjustClippingView(wxScrollBar* WXUNUSED(horizontal), wxScrollBar* WXUNUSED(vertical))
+{
+}
+
+void wxWidgetImpl::UseClippingView(bool WXUNUSED(clip))
+{
+}
+
+WXWidget wxWidgetImpl::GetContainer() const
+{
+    return GetWXWidget();
 }

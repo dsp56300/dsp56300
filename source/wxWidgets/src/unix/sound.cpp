@@ -660,7 +660,25 @@ bool wxSound::LoadWAV(const void* data_, size_t length, bool copyData)
     if (waveformat.uiSize != 16)
         return false;
 
-    if (memcmp(&data[FMT_INDEX + waveformat.uiSize + 8], "data", 4) != 0)
+    // Skip the "LIST" chunk if present.
+    wxUint32 data_offset = FMT_INDEX + waveformat.uiSize + 8;
+    if (memcmp(&data[data_offset], "LIST", 4) == 0)
+    {
+        wxUint32 list_chunk_length;
+        memcpy(&list_chunk_length, &data[data_offset + 4], 4);
+        list_chunk_length = wxUINT32_SWAP_ON_BE(list_chunk_length);
+        if (length - (data_offset + 8u) < list_chunk_length)
+            return false;
+
+        data_offset += (list_chunk_length + 8u);
+    }
+
+    // After skipping any LIST chunk we must still have room for the
+    // 8-byte "data" chunk header that follows.
+    if (length - data_offset < 8u)
+        return false;
+
+    if (memcmp(&data[data_offset], "data", 4) != 0)
         return false;
 
     if (waveformat.uiFormatTag != WAVE_FORMAT_PCM)
@@ -694,11 +712,13 @@ bool wxSound::LoadWAV(const void* data_, size_t length, bool copyData)
 
     // get the sound data size
     wxUint32 ul;
-    memcpy(&ul, &data[FMT_INDEX + waveformat.uiSize + 12], 4);
+    memcpy(&ul, &data[data_offset + 4u], 4);
     ul = wxUINT32_SWAP_ON_BE(ul);
 
-    // ensure we actually have at least that much data in the input
-    if (ul > length - FMT_INDEX - waveformat.uiSize - 16)
+    // ensure we actually have at least that much data in the input; use
+    // data_offset rather than the fixed FMT_INDEX + uiSize + 16 expression
+    // so that an optional LIST chunk is accounted for here as well.
+    if (ul > length - data_offset - 8u)
         return false;
 
     m_data = new wxSoundData;
@@ -716,8 +736,7 @@ bool wxSound::LoadWAV(const void* data_, size_t length, bool copyData)
     else
         m_data->m_dataWithHeader = const_cast<wxUint8*>(data);
 
-    m_data->m_data =
-        (&m_data->m_dataWithHeader[FMT_INDEX + waveformat.uiSize + 8]);
+    m_data->m_data = (&m_data->m_dataWithHeader[data_offset]);
 
     return true;
 }

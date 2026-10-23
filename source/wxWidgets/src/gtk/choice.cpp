@@ -141,11 +141,13 @@ bool wxChoice::GTKHandleFocusOut()
 
 void wxChoice::GTKInsertComboBoxTextItem( unsigned int n, const wxString& text )
 {
-#ifdef __WXGTK3__
-    gtk_combo_box_text_insert_text(GTK_COMBO_BOX_TEXT(m_widget), n, wxGTK_CONV(text));
-#else
-    gtk_combo_box_insert_text( GTK_COMBO_BOX( m_widget ), n, wxGTK_CONV( text ) );
-#endif
+    GtkComboBox* combobox = GTK_COMBO_BOX( m_widget );
+    GtkTreeModel *model = gtk_combo_box_get_model( combobox );
+    GtkListStore *store = GTK_LIST_STORE( model );
+    GtkTreeIter iter;
+
+    gtk_list_store_insert_with_values(store, &iter, n, m_stringCellIndex,
+                                      wxGTK_CONV(text).data(), -1);
 }
 
 int wxChoice::DoInsertItems(const wxArrayStringsAdapter & items,
@@ -161,6 +163,8 @@ int wxChoice::DoInsertItems(const wxArrayStringsAdapter & items,
 
     int n = wxNOT_FOUND;
 
+    gtk_widget_freeze_child_notify(m_widget);
+
     for ( int i = 0; i < count; ++i )
     {
         n = pos + i;
@@ -174,6 +178,9 @@ int wxChoice::DoInsertItems(const wxArrayStringsAdapter & items,
         m_clientData.Insert( NULL, n );
         AssignNewItemClientData(n, clientData, i, type);
     }
+
+    gtk_widget_thaw_child_notify(m_widget);
+
 
     InvalidateBestSize();
 
@@ -370,11 +377,41 @@ wxSize wxChoice::DoGetSizeFromTextSize(int xlen, int ylen) const
     // a GtkEntry for wxComboBox and a GtkCellView for wxChoice
     GtkWidget* childPart = gtk_bin_get_child(GTK_BIN(m_widget));
 
+#ifdef __WXGTK3__
+    // Preferred size for wxChoice can be incorrect when control is empty,
+    // work around this by temporarily adding an item.
+    GtkTreeModel* model = NULL;
+    if (GTK_IS_CELL_VIEW(childPart))
+    {
+        model = gtk_combo_box_get_model(GTK_COMBO_BOX(m_widget));
+        GtkTreeIter iter;
+        if (gtk_tree_model_get_iter_first(model, &iter))
+            model = NULL;
+        else
+        {
+            gtk_list_store_insert_with_values
+            (
+                GTK_LIST_STORE(model),
+                NULL,                   // No output iterator.
+                -1,                     // Position: append.
+                m_stringCellIndex,      // Text column index.
+                "Gg",                   // This column value.
+                -1                      // Terminate the list of values.
+            );
+        }
+    }
+#endif
+
     // We are interested in the difference of sizes between the whole contol
     // and its child part. I.e. arrow, separators, etc.
     GtkRequisition req;
     gtk_widget_get_preferred_size(childPart, NULL, &req);
     wxSize totalS = GTKGetPreferredSize(m_widget);
+
+#ifdef __WXGTK3__
+    if (model)
+        gtk_list_store_clear(GTK_LIST_STORE(model));
+#endif
 
     wxSize tsize(xlen + totalS.x - req.width, totalS.y);
 
