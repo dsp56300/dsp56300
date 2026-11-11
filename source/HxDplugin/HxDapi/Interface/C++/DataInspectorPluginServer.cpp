@@ -97,7 +97,7 @@ std::vector<TConverterClassID> InternalClassIDsOrFactoryFuncs;
 void RegisterDataTypeConverter(
     TExternalDataTypeConverterFactoryFunction ConverterFactoryFunc)
 {
-    InternalClassIDsOrFactoryFuncs.push_back(ConverterFactoryFunc);
+    InternalClassIDsOrFactoryFuncs.push_back((TConverterClassID)ConverterFactoryFunc);
 }
 
 BOOL __stdcall GetDataTypeConverterClassIDs(
