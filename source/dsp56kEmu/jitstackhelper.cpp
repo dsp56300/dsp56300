@@ -22,7 +22,7 @@ namespace dsp56k
 	constexpr size_t g_functionCallSize = 8;
 	constexpr auto g_stackReg = asmjit::x86::rsp;
 #endif
-#ifdef _MSC_VER
+#ifdef _WIN32
 	constexpr size_t g_shadowSpaceSize = 32;
 #else
 	constexpr size_t g_shadowSpaceSize = 0;
