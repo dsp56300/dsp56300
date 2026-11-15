@@ -1,4 +1,6 @@
 #include <iostream>
+#include <sstream>
+#include "assembler.h"
 #include "jitdspregpool.h"
 #include "jitunittests.h"
 
@@ -73,6 +75,7 @@ namespace dsp56k
 		receivePollAfterClockRestart();
 		receivePollBtstBranchAfterClockRestart();
 		doLoopExitOnPendingInterrupt();
+		doLoopIterationLimits();
 	}
 
 	JitUnittests::~JitUnittests()
@@ -1477,6 +1480,91 @@ namespace dsp56k
 		verify(taken->first == 0x3344);
 
 		dsp.getJit().setConfig(oldConfig);
+	}
+
+	// Firmware-free coverage of loop batching, including the ARM64 zero-mask regression.
+	void JitUnittests::doLoopIterationLimits()
+	{
+		const std::pair<uint32_t, uint32_t> limits[] = {{32, 8}, {4, 2}, {1, 1}, {1, 2}, {4, 1}, {32, 1}};
+		for(const auto& limit : limits)
+		for(const bool linked : {false, true})
+		for(unsigned body = 0; body < 3; ++body)
+		{
+			if(m_logging)
+				std::cout << "DO iteration limits: block=" << limit.first << ", do=" << limit.second
+					<< ", linked=" << linked << ", body=" << body << std::endl;
+
+			DefaultMemoryValidator validator;
+			Memory memory(validator, 0x40000);
+			memory.setExternalMemory(0x20000, true);
+			Peripherals56362 x;
+			PeripheralsNop y;
+			DSP machine(memory, &x, &y);
+			auto config = machine.getJit().getConfig();
+			config.maxInstructionsPerBlock = limit.first;
+			config.maxDoIterations = limit.second;
+			config.linkJitBlocks = linked;
+			machine.getJit().setConfig(config);
+			machine.resetHW();
+
+			Assembler assembler;
+			auto emitProgram = [&](const std::string& _source, TWord _pc)
+			{
+				const auto result = assembler.assemble(_source.c_str());
+				verify(result.success());
+				for(unsigned i = 0; i < result.wordCount; ++i)
+				{
+					memory.set(MemArea_P, _pc + i, result.word[i]);
+					machine.clearOpcodeCache(_pc + i);
+				}
+				return _pc + result.wordCount;
+			};
+			constexpr TWord start = 0x400;
+			auto pc = emitProgram("move #>$ffffff,m0", start);
+			pc = emitProgram(body == 2 ? "move #>$22000,r0" : "move #>$100,r0", pc);
+			pc = emitProgram("move #>$654321,x0", pc);
+			// The long immediate puts the loop count in the low bits of X1.
+			pc = emitProgram("move #>3,x1", pc);
+			pc = emitProgram("clr a", pc);
+			const auto loop = pc;
+			pc = emitProgram(body == 0 ? "inc a" : "move x0,x:(r0)+", pc + 2);
+			const auto end = pc;
+			std::ostringstream address;
+			address << std::hex << end;
+			// The assembler expects the address after the loop and encodes LA itself.
+			verify(emitProgram("do x1,>$" + address.str(), loop) == loop + 2);
+			emitProgram("jmp $" + address.str(), end);
+			machine.setPC(start);
+			unsigned iterationReturns = 0;
+			for(unsigned step = 0; step < 100 && machine.getPC().toWord() != end; ++step)
+			{
+				const auto beforePC = machine.getPC().toWord();
+				const auto beforeLC = machine.regs().lc.var;
+				machine.exec();
+				if(limit.second == 1 && beforePC == loop + 2 && beforeLC > 1)
+				{
+					++iterationReturns;
+					verify(machine.getPC().toWord() == loop + 2);
+					verify(machine.regs().lc.var == beforeLC - 1);
+				}
+			}
+			if(limit.second == 1)
+				verify(iterationReturns == 2);
+			verify(machine.getPC().toWord() == end);
+			verify(machine.getCycles() == 21);
+			if(body == 0)
+			{
+				int64_t value = 0;
+				verify(machine.readRegToInt(Reg_A, value) && value == 3);
+			}
+			else
+			{
+				const TWord base = body == 2 ? 0x22000 : 0x100;
+				for(unsigned i = 0; i < 3; ++i)
+					verify(memory.get(MemArea_X, base + i) == 0x654321);
+				verify(memory.get(MemArea_X, base + 3) != 0x654321);
+			}
+		}
 	}
 
 	void JitUnittests::emit(const TWord _opA, TWord _opB, TWord _pc)
