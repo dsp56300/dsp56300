@@ -711,6 +711,11 @@ namespace dsp56k
 			if (!isLoopBody)
 				return false;
 
+			// One iteration always returns to the dispatcher. Do not emit a test
+			// with a zero mask, which is not an encodable ARM64 logical immediate.
+			if(m_config.maxDoIterations == 1)
+				return false;
+
 			/*	A DO FOREVER has no loop counter, so there is nothing to bound the in-block jump
 				with - maxDoIterations tests LC and LC never moves. Such a block would spin without
 				ever returning to the dispatcher and interrupts and peripherals would starve, so
