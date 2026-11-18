@@ -1,6 +1,6 @@
 #include <iostream>
 
-#if defined(_WIN32) && defined(_DEBUG)
+#if defined(_MSC_VER) && defined(_DEBUG)
 #include <crtdbg.h>
 #endif
 
@@ -12,10 +12,12 @@
 
 int main(int _argc, char* _argv[])
 {
-#if defined(_WIN32) && defined(_DEBUG)
+#if defined(_MSC_VER) && defined(_DEBUG)
 	// Route failed asserts to stderr instead of a modal dialog. A Debug run that pops a message box blocks
 	// forever under CI or any non-interactive harness, and the failure then looks like a hang rather than a
 	// test failure. Keeps the assert text; the process still aborts, so the exit code stays meaningful.
+	// Only Microsoft's debug CRT asks before it aborts, and only it provides these two functions: mingw-w64
+	// declares them in <crtdbg.h> but its runtime has no import for them, so the guard follows the compiler.
 	for(const auto reportType : {_CRT_WARN, _CRT_ERROR, _CRT_ASSERT})
 	{
 		_CrtSetReportMode(reportType, _CRTDBG_MODE_FILE);
