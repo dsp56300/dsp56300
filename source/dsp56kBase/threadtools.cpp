@@ -43,6 +43,7 @@ namespace dsp56k
 
 	void SetThreadName( DWORD dwThreadID, const char* threadName)
 	{
+#ifdef _MSC_VER
 		THREADNAME_INFO info;
 		info.dwType = 0x1000;
 		info.szName = threadName;
@@ -56,6 +57,11 @@ namespace dsp56k
 		__except(EXCEPTION_EXECUTE_HANDLER)
 		{
 		}
+#else
+		// Non-MSVC compilers use SetThreadDescription instead.
+		(void)dwThreadID;
+		(void)threadName;
+#endif
 	}
 
 	// SetThreadDescription is Win10 1607+. Load it dynamically so we stay compatible with Win7.

@@ -49,7 +49,7 @@ namespace dsp56k
 												   JitReg128(24), JitReg128(25),  JitReg128(26),  JitReg128(27), JitReg128(28), JitReg128(29), JitReg128(30), JitReg128(31),
 	/* we use the non-volatile ones last */        JitReg128(8) , JitReg128(9) ,  JitReg128(10),  JitReg128(11), JitReg128(12), JitReg128(13), JitReg128(14), JitReg128(15) };
 #else
-#ifdef _MSC_VER
+#ifdef _WIN32
 	static constexpr JitReg64 g_funcArgGPs[] = {asmjit::x86::rcx, asmjit::x86::rdx, asmjit::x86::r8, asmjit::x86::r9};
 
 	static constexpr JitReg64 g_nonVolatileGPs[] = { asmjit::x86::rbx, asmjit::x86::rbp, asmjit::x86::rdi, asmjit::x86::rsi, asmjit::x86::rsp
@@ -91,7 +91,7 @@ namespace dsp56k
 	// hoisting them saves no prolog and only buys 10 extra saves per interrupt entry in execOne.
 	// regDspPtr is deliberately NOT here: no block touches it, and the trampoline keeps it live.
 	// EVERY entry into a block must go through JitTrampoline for this to hold.
-#ifdef _MSC_VER
+#ifdef _WIN32
 	static constexpr JitReg64 g_trampolineSavedGPs[] = { asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::rsi, asmjit::x86::rbp, asmjit::x86::rdi, asmjit::x86::r14, asmjit::x86::r15 };
 #else
 	static constexpr JitReg64 g_trampolineSavedGPs[] = { asmjit::x86::rbp, asmjit::x86::r12, asmjit::x86::r13, asmjit::x86::r14, asmjit::x86::r15 };
