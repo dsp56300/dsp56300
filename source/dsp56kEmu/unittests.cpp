@@ -4503,6 +4503,7 @@ namespace dsp56k
 	{
 		rep_multi();
 		do_multi();
+		doShortAddress();
 		jsr_rts();
 	}
 
@@ -4551,6 +4552,41 @@ namespace dsp56k
 		execUntil(0x101);
 
 		verify(dsp.regs().a.var == 0x00000007000000);
+	}
+
+	void UnitTests::doShortAddress()
+	{
+		for(const auto relative : {false, true})
+		{
+			for(const auto area : {MemArea_X, MemArea_Y})
+			{
+				for(const TWord count : {0u, 1u, 4u})
+				{
+					dsp.resetHW();
+					dsp.regs().r[0].var = 0;
+					dsp.regs().r[1].var = 0;
+					dsp.memory().set(MemArea_X, 0x2c, area == MemArea_X ? count : 7);
+					dsp.memory().set(MemArea_Y, 0x2c, area == MemArea_Y ? count : 7);
+
+					// DO/DOR X/Y:<$2c: the count differs from the address and from the other memory space.
+					const TWord op = (relative ? 0x062c10 : 0x062c00) | (area == MemArea_Y ? 0x40 : 0);
+					TWord pc = emitToMemory(op, relative ? 3 : 0x303, 0x300);
+					pc = emitToMemory("move (r0)+", pc);
+					pc = emitToMemory("move (r1)+", pc);
+					emitToMemory("rts", pc);
+
+					const auto returnPC = emitToMemory("jsr $300", 0x100);
+					emitToMemory("nop", returnPC);
+					dsp.setPC(0x100);
+					execUntil(returnPC);
+
+					verify(dsp.regs().r[0].var == count);
+					verify(dsp.regs().r[1].var == count);
+					verify(dsp.regs().sp.var == 0);
+					verify((dsp.getSR().var & SR_LF) == 0);
+				}
+			}
+		}
 	}
 
 	void UnitTests::do_multi()

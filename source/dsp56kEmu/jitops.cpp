@@ -602,6 +602,14 @@ namespace dsp56k
 		do_exec(lc, m_pcCurrentOp + displacement);
 	}
 
+	void JitOps::op_Dor_aa(TWord op)
+	{
+		DspValue lc(m_block);
+		readMem<Dor_aa>(lc, op);
+		const auto displacement = pcRelativeAddressExt<Dor_aa>();
+		do_exec(lc, m_pcCurrentOp + displacement);
+	}
+
 	void JitOps::op_Dor_xxx(TWord op)
 	{
         const auto loopcount = getFieldValue<Dor_xxx,Field_hhhh, Field_iiiiiiii>(op);

@@ -160,6 +160,7 @@ namespace  dsp56k
 		void multiInstructionTests();
 		void rep_multi();
 		void do_multi();
+		void doShortAddress();
 		void jsr_rts();
 
 		Peripherals56362 peripheralsX;

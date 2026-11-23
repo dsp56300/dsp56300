@@ -250,7 +250,7 @@ namespace dsp56k
 	inline void DSP::op_Do_aa(const TWord op)
 	{
 		const auto addr = absAddressExt<Do_aa>();
-		const auto loopCount = effectiveAddress<Do_aa>(op);
+		const auto loopCount = readMem<Do_aa>(op);
 		do_exec(loopCount, addr);
 	}
 	inline void DSP::op_Do_xxx(const TWord op)
@@ -282,8 +282,8 @@ namespace dsp56k
 	}
 	inline void DSP::op_Dor_aa(const TWord op)
 	{
-		const auto loopCount = effectiveAddress<Do_aa>(op);
-		const auto displacement = pcRelativeAddressExt<Dor_ea>();
+		const auto loopCount = readMem<Dor_aa>(op);
+		const auto displacement = pcRelativeAddressExt<Dor_aa>();
 		do_exec(loopCount, pcCurrentInstruction + displacement);
 	}
 	inline void DSP::op_Dor_xxx(const TWord op)
