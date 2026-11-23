@@ -4568,7 +4568,7 @@ namespace dsp56k
 					dsp.memory().set(MemArea_X, 0x2c, area == MemArea_X ? count : 7);
 					dsp.memory().set(MemArea_Y, 0x2c, area == MemArea_Y ? count : 7);
 
-					// DO/DOR X/Y:<$2c: the count differs from the address and from the other memory space.
+					// count differs from the address and from the other memory space
 					const TWord op = (relative ? 0x062c10 : 0x062c00) | (area == MemArea_Y ? 0x40 : 0);
 					TWord pc = emitToMemory(op, relative ? 3 : 0x303, 0x300);
 					pc = emitToMemory("move (r0)+", pc);
